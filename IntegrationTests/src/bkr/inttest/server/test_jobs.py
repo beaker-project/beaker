@@ -19,7 +19,6 @@ class TestJobsController(unittest.TestCase):
         testutil.set_identity_user(self.user)
         if not Distro.by_name(u'BlueShoeLinux5-5'):
             data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
-        data_setup.create_task(name=u'/distribution/install')
         data_setup.create_product(product_name=u'the_product')
 
     def tearDown(self):

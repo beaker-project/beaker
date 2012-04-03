@@ -44,7 +44,6 @@ class TestBeakerd(unittest.TestCase):
 
     def test_reservations_are_created(self):
         with session.begin():
-            data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
             system = data_setup.create_system(owner=user, status=u'Automated',
                     shared=True, lab_controller=self.lab_controller)
@@ -72,7 +71,6 @@ class TestBeakerd(unittest.TestCase):
 
     def test_empty_and_element(self):
         with session.begin():
-            data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
             job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
@@ -86,7 +84,6 @@ class TestBeakerd(unittest.TestCase):
 
     def test_or_lab_controller(self):
         with session.begin():
-            data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
             lc1 = data_setup.create_labcontroller(u'lab1')
             lc2 = data_setup.create_labcontroller(u'lab2')
@@ -289,7 +286,6 @@ class TestBeakerd(unittest.TestCase):
     
     def test_fail_harness_repo(self):
         with session.begin():
-            data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
             system = data_setup.create_system(owner=user, status=u'Automated', shared=True,
                     lab_controller=self.lab_controller)
@@ -322,7 +318,6 @@ class TestBeakerd(unittest.TestCase):
     
     def test_success_harness_repo(self):
         with session.begin():
-            data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
             system = data_setup.create_system(owner=user, status=u'Automated',
                     shared=True, lab_controller=self.lab_controller)

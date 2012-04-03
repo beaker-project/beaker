@@ -39,7 +39,6 @@ class TestLabController(unittest.TestCase):
                 </job>
                      ''' % (distro_tree.distro.name, self.lc_fqdn, system.fqdn)))
             controller = Jobs()
-            data_setup.create_task(name=u'/distribution/install')
             session.flush()
             self.job = controller.process_xmljob(xmljob, user)
         beakerd.new_recipes()

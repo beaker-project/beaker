@@ -120,7 +120,7 @@ class TestSubmitTask(SeleniumTestCase):
         self.assertEqual(self.get_task_info_field('Priority'), 'Low')
         self.assertEqual(self.get_task_info_field('Destructive'), 'False')
         self.assertEqual(self.get_task_info_field('Requires'),
-                '\n'.join(['beaker', 'rpm', 'coreutils']))
+                '\n'.join(['beaker', 'coreutils', 'rpm']))
 
     def get_task_info_field(self, field_label):
         """Returns the value of a field in the task info table."""

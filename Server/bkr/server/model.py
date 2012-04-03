@@ -18,7 +18,7 @@ from sqlalchemy.sql.expression import join
 from sqlalchemy.exceptions import InvalidRequestError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from identity import LdapSqlAlchemyIdentityProvider
-from cobbler_utils import consolidate, string_to_hash
+from bkr.server.installopts import InstallOptions
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
 from sqlalchemy.util import OrderedDict
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -731,6 +731,7 @@ command_queue_table = Table('command_queue', metadata,
     Column('task_id', String(255)),
     Column('updated', DateTime, default=datetime.utcnow),
     Column('callback', String(255)),
+    Column('rendered_kickstart_id', Integer, ForeignKey('rendered_kickstart.id')),
     mysql_engine='InnoDB',
 )
 
@@ -904,6 +905,7 @@ recipe_table = Table('recipe',metadata,
                 ForeignKey('distro_tree.id')),
         Column('system_id', Integer,
                 ForeignKey('system.id')),
+        Column('rendered_kickstart_id', Integer, ForeignKey('rendered_kickstart.id')),
         Column('result', TaskResult.db_type(), nullable=False,
                 default=TaskResult.new),
         Column('status', TaskStatus.db_type(), nullable=False,
@@ -912,6 +914,8 @@ recipe_table = Table('recipe',metadata,
         Column('finish_time',DateTime),
         Column('_host_requires',UnicodeText()),
         Column('_distro_requires',UnicodeText()),
+        # This column is actually a custom user-supplied kickstart *template*
+        # (if not NULL), the generated kickstart for the recipe is defined above
         Column('kickstart',UnicodeText()),
         # type = recipe, machine_recipe or guest_recipe
         Column('type', String(30), nullable=False),
@@ -1101,6 +1105,17 @@ recipe_task_result_table = Table('recipe_task_result',metadata,
         Column('log', UnicodeText()),
         Column('start_time',DateTime, default=datetime.utcnow),
         mysql_engine='InnoDB',
+)
+
+# This is for storing final generated kickstarts to be provisioned,
+# not user-supplied kickstart templates or anything else like that.
+rendered_kickstart_table = Table('rendered_kickstart', metadata,
+    Column('id', Integer, primary_key=True),
+    # Either kickstart or url should be populated -- if url is present,
+    # it means fetch the kickstart from there instead
+    Column('kickstart', UnicodeText),
+    Column('url', UnicodeText),
+    mysql_engine='InnoDB',
 )
 
 task_table = Table('task',metadata,
@@ -1437,18 +1452,6 @@ class User(MappedObject):
                 return True
         return False
 
-    def ssh_keys_ks(self, end=False):
-        end = end and "%end\n" or ""
-        if self.sshpubkeys:
-            key_ks_text = "\n".join("echo %s >> /root/.ssh/authorized_keys" % ssh_key\
-                                    for ssh_key in self.sshpubkeys)
-            key_ks_text = "%%post\nmkdir -p /root/.ssh\n%s\nrestorecon -R /root/.ssh\n"\
-                          "chmod go-w /root /root/.ssh /root/.ssh/authorized_keys\n%s"\
-                        % (key_ks_text, end)
-            return key_ks_text
-        else:
-            return None
-
 
 class Permission(MappedObject):
     """
@@ -1611,199 +1614,6 @@ class System(SystemObject):
         host_requires.appendChild(xmland)
         return host_requires
 
-    def remote(self):
-        class CobblerAPI:
-            def __init__(self, system):
-                self.system = system
-                url = "http://%s/cobbler_api" % system.lab_controller.fqdn
-                self.remote = bkr.timeout_xmlrpclib.ServerProxy(url, allow_none=True)
-                self.token = self.remote.login(system.lab_controller.username,
-                                               system.lab_controller.password)
-
-            def version(self):
-                return self.remote.version()
-
-            def get_system(self):
-                try:
-                    system_id = self.remote.get_system_handle(self.system.fqdn, 
-                                                                self.token)
-                except xmlrpclib.Fault, msg:
-                    system_id = self.remote.new_system(self.token)
-                    try:
-                        ipaddress = socket.gethostbyname_ex(self.system.fqdn)[2][0]
-                    except socket.gaierror:
-                        raise BX(_('%s does not resolve to an ip address' %
-                                                              self.system.fqdn))
-                    self.remote.modify_system(system_id, 
-                                              'name', 
-                                              self.system.fqdn, 
-                                              self.token)
-                    self.remote.modify_system(system_id, 
-                                              'modify_interface',
-                                              {'ipaddress-eth0': ipaddress}, 
-                                              self.token)
-                    profile = self.remote.get_item_names('profile')[0]
-                    self.remote.modify_system(system_id, 
-                                              'profile', 
-                                              profile,
-                                              self.token)
-                    self.remote.modify_system(system_id, 
-                                              'netboot-enabled', 
-                                              False, 
-                                              self.token)
-                    self.remote.save_system(system_id, 
-                                            self.token)
-                return system_id
-
-            def get_event_log(self, task_id):
-                return self.remote.get_event_log(task_id)
-
-            def wait_for_event(self, task_id):
-                """ Wait for cobbler task to finish, return True on success
-                    raise an exception if it fails.
-                    raise an exception if it takes more then 5 minutes
-                """
-                try:
-                    expiredelta = datetime.utcnow() + timedelta(minutes=10)
-                    while(True): 
-                        for line in self.get_event_log(task_id).split('\n'):
-                            if line.find("### TASK COMPLETE ###") != -1:
-                                return True
-                            if line.find("### TASK FAILED ###") != -1:
-                                raise CobblerTaskFailedException(_("Cobbler Task:%s Failed" % task_id))
-                        if datetime.utcnow() > expiredelta:
-                            raise CobblerTaskFailedException(_('Cobbler Task:%s Timed out' % task_id))
-    
-                        time.sleep(5)
-                except CobblerTaskFailedException, e:
-                    self.system.activity.append(SystemActivity(self.system.user,service='Cobbler API',action='Task',field_name='', new_value='Fail: %s' % e))
-                    raise
-
-            def provision(self, 
-                          distro=None, 
-                          kickstart=None,
-                          ks_meta=None,
-                          kernel_options=None,
-                          kernel_options_post=None,
-                          ks_appends=None):
-                """
-                Provision the System
-                make xmlrpc call to lab controller
-                """
-                if not distro:
-                    return False
-
-                system_id = self.get_system()
-                profile = distro.install_name
-                systemprofile = profile
-                try:
-                    profile_id = self.remote.get_profile_handle(profile, self.token)
-                except xmlrpclib.Fault, fault:
-                    raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
-                if not profile_id:
-                    raise BX(_("%s profile not found on %s" % (profile, self.system.lab_controller.fqdn)))
-                if ks_appends:
-                    ks_appends_text = '#raw\n%s\n#end raw' % '\n'.join(["%s" % ks for ks in ks_appends])
-                    ks_file = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % self.system.fqdn
-                    if self.remote.read_or_write_snippet(ks_file,
-                                                         False,
-                                                         ks_appends_text,
-                                                         self.token):
-                        ks_meta['ks_appends'] = True
-                    else:
-                        raise BX(_("Failed to save ks_appends"))
-
-                self.remote.modify_system(system_id, 
-                                          'ksmeta',
-                                           ks_meta,
-                                           self.token)
-                self.remote.modify_system(system_id,
-                                           'kopts',
-                                           kernel_options,
-                                           self.token)
-                self.remote.modify_system(system_id,
-                                           'kopts_post',
-                                           kernel_options_post,
-                                           self.token)
-                if kickstart:
-                    # We always wrap the user-supplied kickstart with #raw/#end raw, 
-                    # so that users don't need to worry about escaping their 
-                    # kickstarts from Cobbler's cheetah. If a user really does 
-                    # want to do fancy Cobbler template stuff, they can put 
-                    # #end raw and #raw lines in the appropriate place in their 
-                    # kickstart.
-                    kickstart = """
-#if $varExists('method') and $mgmt_parameters.has_key("method_%%s" %% $method) and \
- $tree.find("nfs://") != -1
-$SNIPPET("install_method")
-#else
-url --url=$tree
-#end if
-#raw
-%s
-#end raw""" % kickstart
-
-                    kickfile = '/var/lib/cobbler/kickstarts/%s.ks' % self.system.fqdn
-                    if not self.remote.read_or_write_kickstart_template(kickfile,
-                            False, kickstart, self.token):
-                        raise BX(_("Failed to save kickstart"))
-                    self.remote.modify_system(system_id, 'kickstart', kickfile, self.token)
-                else:
-                    self.remote.modify_system(system_id, 'kickstart', '', self.token)
-
-                self.remote.modify_system(system_id, 
-                                     'profile', 
-                                     systemprofile, 
-                                     self.token)
-                self.remote.modify_system(system_id, 
-                                     'netboot-enabled', 
-                                     True, 
-                                     self.token)
-                try:
-                    self.remote.save_system(system_id, self.token)
-                except xmlrpclib.Fault, msg:
-                    raise BX(_("Failed to provision system %s" % self.system.fqdn))
-                try:
-                    self.remote.clear_system_logs(system_id, self.token)
-                except xmlrpclib.Fault, msg:
-                    raise BX(_("Failed to clear %s logs" % self.system.fqdn))
-
-            def clear_netboot(self, service=None):
-                """ Clear the system's Cobbler netboot configuration. """
-                # XXX we should actually add this to the command queue
-                system_id = self.get_system()
-                self.remote.modify_system(system_id, 'netboot-enabled', False, self.token)
-
-            def release(self, power=True):
-                """ Turn off netboot and turn off system by default
-                """
-                system_id = self.get_system()
-                self.remote.modify_system(system_id, 
-                                          'netboot-enabled', 
-                                          False, 
-                                          self.token)
-                self.remote.save_system(system_id, 
-                                        self.token)
-                if self.system.power and power:
-                    self.system.action_power(action="off")
-
-            def remove(self):
-                """ Removes this system's record from Cobbler. """
-                try:
-                    self.remote.remove_system(self.system.fqdn, self.token)
-                except xmlrpclib.Fault, e:
-                    # system record probably does not actually exist
-                    log.debug('Ignoring exception from Cobbler while removing %s: %s',
-                            self.system.fqdn, e)
-                    pass
-
-        # remote methods are only available if we have a lab controller
-        #  Here is where we would add other types of lab controllers
-        #  right now we only support cobbler
-        if self.lab_controller:
-            return CobblerAPI(self)
-    remote = property(remote)
-
     @classmethod
     def all(cls, user=None, system=None): 
         """
@@ -1956,39 +1766,28 @@ url --url=$tree
         return (major,version)
     excluded_families=property(excluded_families)
 
-    def install_options(self, distro_tree, ks_meta = '', kernel_options = '',
-                           kernel_options_post = ''):
+    def install_options(self, distro_tree):
         """
         Return install options based on distro selected.
         Inherit options from Arch -> Family -> Update
         """
-        override = dict(ks_meta = string_to_hash(ks_meta), 
-                       kernel_options = string_to_hash(kernel_options), 
-                       kernel_options_post = string_to_hash(kernel_options_post))
-        results = dict(ks_meta = {},
-                       kernel_options = {},
-                       kernel_options_post = {})
+        result = distro_tree.install_options()
         if distro_tree.arch in self.provisions:
             pa = self.provisions[distro_tree.arch]
-            node = self.provision_to_dict(pa)
-            consolidate(node,results)
+            pa_opts = InstallOptions.from_strings(pa.ks_meta, pa.kernel_options,
+                    pa.kernel_options_post)
+            result = result.combined_with(pa_opts)
             if distro_tree.distro.osversion.osmajor in pa.provision_families:
                 pf = pa.provision_families[distro_tree.distro.osversion.osmajor]
-                node = self.provision_to_dict(pf)
-                consolidate(node,results)
+                pf_opts = InstallOptions.from_strings(pf.ks_meta,
+                        pf.kernel_options, pf.kernel_options_post)
+                result = result.combined_with(pf_opts)
                 if distro_tree.distro.osversion in pf.provision_family_updates:
                     pfu = pf.provision_family_updates[distro_tree.distro.osversion]
-                    node = self.provision_to_dict(pfu)
-                    consolidate(node,results)
-        consolidate(override,results)
-        return results
-
-    def provision_to_dict(self, provision):
-        ks_meta = string_to_hash(provision.ks_meta)
-        kernel_options = string_to_hash(provision.kernel_options)
-        kernel_options_post = string_to_hash(provision.kernel_options_post)
-        return dict(ks_meta = ks_meta, kernel_options = kernel_options,
-                            kernel_options_post = kernel_options_post)
+                    pfu_opts = InstallOptions.from_strings(pfu.ks_meta,
+                            pfu.kernel_options, pfu.kernel_options_post)
+                    result = result.combined_with(pfu_opts)
+        return result
 
     def is_free(self):
         try:
@@ -2391,111 +2190,31 @@ url --url=$tree
                 self.action_power(action=u'on')
             elif action == ReleaseAction.reprovision:
                 if self.reprovision_distro_tree:
-                    self.action_auto_provision(distro=self.reprovision_distro_tree)
+                    from bkr.server.kickstart import generate_kickstart
+                    install_options = self.system.install_options(self.distro_tree)
+                    kickstart = generate_kickstart(install_options,
+                            distro_tree=self.reprovision_distro_tree,
+                            system=self, user=self.owner)
+                    self.action_provision(distro_tree=self.reprovision_distro_tree,
+                            rendered_kickstart=rendered_kickstart)
+                    self.action_power(action=u'reboot')
             else:
                 raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
         elif self.remote:
             self.remote.release()
 
-    def action_provision(self, 
-                         distro=None,
-                         ks_meta=None,
-                         kernel_options=None,
-                         kernel_options_post=None,
-                         kickstart=None,
-                         ks_appends=None):
+    def action_provision(self, distro_tree, rendered_kickstart, service=u'Scheduler'):
         try:
-            if not self.can_provision_now(identity.current.user): #Needs to be an authorised user to do this
-                return False
-        except AttributeError, e: #Anonymous can't provision now
+            user = identity.current.user
+        except:
+            user = None
+        if self.lab_controller:
+            self.command_queue.append(CommandActivity(user=user,
+                    service=service, action=u'provision',
+                    status=CommandStatus.queued,
+                    rendered_kickstart=rendered_kickstart))
+        else:
             return False
-
-        if identity.current.user.rootpw_expired:
-            raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
-
-        if identity.current.user.sshpubkeys:
-            end = distro and (distro.osversion.osmajor.osmajor.startswith("Fedora") or \
-                              distro.osversion.osmajor.osmajor.startswith("RedHatEnterpriseLinux7"))
-            if not ks_appends:
-                ks_appends = []
-            ks_appends = ks_appends + [identity.current.user.ssh_keys_ks(end)]
-
-        if not self.remote:
-            return False
-        self.remote.provision(distro=distro, 
-                              ks_meta=ks_meta,
-                              kernel_options=kernel_options,
-                              kernel_options_post=kernel_options_post,
-                              kickstart=kickstart,
-                              ks_appends=ks_appends)
-
-    def action_auto_provision(self, 
-                             distro=None,
-                             ks_meta=None,
-                             kernel_options=None,
-                             kernel_options_post=None,
-                             kickstart=None,
-                             ks_appends=None):
-        if not self.remote:
-            return False
-
-        results = self.install_options(distro, ks_meta,
-                                               kernel_options,
-                                               kernel_options_post)
-
-        if kickstart:
-            # Newer Kickstarts need %end after each section.
-            if distro.osversion.osmajor.osmajor.startswith("Fedora") or \
-               distro.osversion.osmajor.osmajor.startswith("RedHatEnterpriseLinux7"):
-                end = "%end"
-            else:
-                end = ""
-            # add in cobbler packages snippet...
-            packages_slot = 0
-            nopackages = True
-            for line in kickstart.split('\n'):
-                # Add the length of line + newline
-                packages_slot += len(line) + 1
-                if line.find('%packages') == 0:
-                    nopackages = False
-                    break
-            beforepackages = kickstart[:packages_slot-1]
-            afterpackages = kickstart[packages_slot:]
-            # if no %packages section then add it
-            if nopackages:
-                beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
-                if end:
-                    afterpackages = "%%end\n%s" % afterpackages
-            # Fill in basic requirements for RHTS
-            kicktemplate = """
-%(beforepackages)s
-#end raw
-$SNIPPET("rhts_packages")
-#raw
-%(afterpackages)s
-#end raw
-
-%%pre
-$SNIPPET("rhts_pre")
-%(end)s
-
-%%post
-$SNIPPET("rhts_post")
-%(end)s
-#raw
-           """
-            kickstart = kicktemplate % dict(
-                                        beforepackages = beforepackages,
-                                        afterpackages = afterpackages,
-                                        end = end)
-
-        self.remote.provision(distro=distro,
-                              kickstart=kickstart,
-                              ks_appends=ks_appends,
-                              **results)
-        if self.power:
-            self.action_power(service=u'Scheduler', action=u'reboot',
-                              callback="bkr.server.model.auto_power_cmd_handler")
 
     def action_power(self, action=u'reboot', service=u'Scheduler', callback=None):
         try:
@@ -3229,6 +2948,10 @@ class DistroTree(MappedObject):
             if image.image_type == image_type:
                 return image
 
+    def install_options(self):
+        # eventually this will do more...
+        return InstallOptions.from_strings('', '', '')
+
 class DistroTreeRepo(MappedObject):
 
     pass
@@ -3330,10 +3053,12 @@ class DistroTreeActivity(Activity):
         return u'DistroTree: %s' % self.object
 
 class CommandActivity(Activity):
-    def __init__(self, user, service, action, status, callback=None):
+    def __init__(self, user, service, action, status, callback=None,
+            rendered_kickstart=None):
         Activity.__init__(self, user, service, action, 'Command', '', '')
         self.status = status
         self.callback = callback
+        self.rendered_kickstart = rendered_kickstart
 
     def object_name(self):
         return "Command: %s %s" % (self.object.fqdn, self.action)
@@ -4633,6 +4358,18 @@ class Recipe(TaskBase):
                 return ("beaker-harness", "http://%s/harness/%s/"
                         % (self.servername, self.distro_tree.distro.osversion.osmajor))
 
+    def install_options(self):
+        ks_meta = {
+            'packages': ':'.join(p.package for p in self.packages),
+            'customrepos': '|'.join('%s,%s' % (r.name, r.url) for r in self.repos),
+            'harnessrepo': '%s,%s' % self.harness_repo(),
+            'taskrepo': '%s,%s' % self.task_repo(),
+            'partitions': self.partitionsKSMeta,
+        }
+        return InstallOptions(ks_meta, {}, {})\
+                .combined_with(InstallOptions.from_strings(self.ks_meta,
+                    self.kernel_options, self.kernel_options_post))
+
     def to_xml(self, recipe, clone=False, from_recipeset=False, from_machine=False):
         if not clone:
             recipe.setAttribute("id", "%s" % self.id)
@@ -5016,6 +4753,57 @@ class Recipe(TaskBase):
             # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
 
+    def provision(self):
+        from bkr.server.kickstart import generate_kickstart
+        install_options = self.system.install_options(self.distro_tree)\
+                .combined_with(self.install_options())
+        if self.kickstart:
+            # add in cobbler packages snippet...
+            packages_slot = 0
+            nopackages = True
+            for line in self.kickstart.split('\n'):
+                # Add the length of line + newline
+                packages_slot += len(line) + 1
+                if line.find('%packages') == 0:
+                    nopackages = False
+                    break
+            beforepackages = self.kickstart[:packages_slot-1]
+            afterpackages = self.kickstart[packages_slot:]
+            # if no %packages section then add it
+            if nopackages:
+                beforepackages = "%s\n%%packages --ignoremissing" % beforepackages
+                afterpackages = "{{ end }}\n%s" % afterpackages
+            # Fill in basic requirements for RHTS
+            kicktemplate = """
+%(beforepackages)s
+{{ snippet('rhts_packages') }}
+%(afterpackages)s
+
+%%pre
+{{ snippet('rhts_pre') }}
+{{ end }}
+
+%%post
+{{ snippet('rhts_post') }}
+{{ end }}
+           """
+            kickstart = kicktemplate % dict(
+                                        beforepackages = beforepackages,
+                                        afterpackages = afterpackages)
+            self.rendered_kickstart = generate_kickstart(install_options,
+                    distro_tree=self.distro_tree,
+                    system=self.system, user=self.recipeset.job.owner,
+                    recipe=self, kickstart=kickstart)
+        else:
+            ks_appends = [ks_append.ks_append for ks_append in self.ks_appends]
+            self.rendered_kickstart = generate_kickstart(install_options,
+                    distro_tree=self.distro_tree,
+                    system=self.system, user=self.recipeset.job.owner,
+                    recipe=self, ks_appends=ks_appends)
+
+        self.system.action_provision(self.distro_tree, self.rendered_kickstart)
+        self.system.action_power(action=u'reboot',
+                                 callback='bkr.server.model.auto_power_cmd_handler')
 
     def release_system(self):
         """ Release the system and remove the watchdog
@@ -5813,6 +5601,9 @@ class RecipeTaskResult(TaskBase):
 
     short_path = property(short_path)
 
+class RenderedKickstart(MappedObject):
+
+    pass
 
 class Task(MappedObject):
     """
@@ -6134,6 +5925,7 @@ System.mapper = mapper(System, system_table,
                      'command_queue':relation(CommandActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object', cascade='all, delete, delete-orphan'),
+                     'dyn_command_queue': dynamic_loader(CommandActivity),
                      'reprovision_distro_tree':relation(DistroTree, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
                                       cascade="all, delete, delete-orphan"),
@@ -6240,7 +6032,8 @@ mapper(DistroTree, distro_tree_table, properties={
         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()]),
 })
 mapper(DistroTreeRepo, distro_tree_repo_table, properties={
-    'distro_tree': relation(DistroTree, backref='repos'),
+    'distro_tree': relation(DistroTree, backref=backref('repos',
+        order_by=[distro_tree_repo_table.c.repo_type, distro_tree_repo_table.c.repo_id])),
 })
 mapper(DistroTreeImage, distro_tree_image_table, properties={
     'distro_tree': relation(DistroTree, backref='images'),
@@ -6310,6 +6103,7 @@ mapper(CommandActivity, command_queue_table, inherits=Activity,
        properties={'status': column_property(command_queue_table.c.status,
                         extension=CallbackAttributeExtension()),
                    'system':relation(System, uselist=False),
+                   'rendered_kickstart': relation(RenderedKickstart, uselist=False),
                   })
 
 mapper(Note, note_table,
@@ -6339,7 +6133,8 @@ mapper(Task, task_table,
                                         secondary=task_packages_runfor_map,
                                         backref='tasks'),
                       'required':relation(TaskPackage,
-                                        secondary=task_packages_required_map),
+                                        secondary=task_packages_required_map,
+                                        order_by=[task_package_table.c.package]),
                       'needs':relation(TaskPropertyNeeded),
                       'bugzillas':relation(TaskBugzilla, backref='task',
                                             cascade='all, delete-orphan'),
@@ -6402,6 +6197,7 @@ mapper(Recipe, recipe_table,
                                         backref='recipes'),
                       'system':relation(System, uselist=False,
                                         backref='recipes'),
+                      'rendered_kickstart': relation(RenderedKickstart, backref='recipes'),
                       'watchdog':relation(Watchdog, uselist=False,
                                          cascade="all, delete, delete-orphan"),
                       'systems':relation(System, 
@@ -6470,6 +6266,7 @@ mapper(RecipeTaskResult, recipe_task_result_table,
         properties = {'logs':relation(LogRecipeTaskResult, backref='parent'),
                      }
       )
+mapper(RenderedKickstart, rendered_kickstart_table)
 mapper(Reservation, reservation_table, properties={
         'user': relation(User, backref=backref('reservations',
             order_by=[reservation_table.c.start_time.desc()])),

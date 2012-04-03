@@ -46,12 +46,12 @@ from bkr.server.widgets import SystemArches
 from bkr.server.widgets import TaskSearchForm
 from bkr.server.authentication import Auth
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.cobbler_utils import hash_to_string, string_to_hash
 from bkr.server.jobs import Jobs
 from bkr.server.recipes import Recipes
 from bkr.server.recipesets import RecipeSets
 from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
+from bkr.server.kickstart import KickstartController
 from bkr.server.controller_utilities import Utility, SystemSaveForm, SearchOptions, SystemTab
 from bkr.server.bexceptions import *
 from cherrypy import request, response
@@ -218,6 +218,7 @@ class Root(RPCRoot):
     retentiontag = RetentionTagController()
     report_problem = ReportProblemController()
     systems = SystemsController()
+    kickstart = KickstartController()
 
     for entry_point in pkg_resources.iter_entry_points('bkr.controllers'):
         controller = entry_point.load()
@@ -403,11 +404,7 @@ class Root(RPCRoot):
         except NoResultFound:
             return dict(ks_meta=None)
         install_options = system.install_options(distro_tree)
-        ks_meta = hash_to_string(install_options['ks_meta'])
-        kernel_options = hash_to_string(install_options['kernel_options'])
-        kernel_options_post = hash_to_string(install_options['kernel_options_post'])
-        return dict(ks_meta = ks_meta, kernel_options = kernel_options,
-                    kernel_options_post = kernel_options_post)
+        return install_options.as_strings()
 
     @expose(format='json')
     def change_priority_recipeset(self, priority, recipeset_id):
@@ -1675,24 +1672,29 @@ class Root(RPCRoot):
             flash( _(u"Your root password has expired, please change or clear it in order to submit jobs.") )
             redirect(u"/view/%s" % system.fqdn)
 
-        # XXX
-
         try:
             can_provision_now = system.can_provision_now(user) #Check perms
             if can_provision_now:
-                system.action_provision(distro = distro, ks_meta = string_to_hash(ks_meta),
-                                                         kernel_options = string_to_hash(koptions),
-                                                         kernel_options_post = string_to_hash(koptions_post))
+                from bkr.server.kickstart import generate_kickstart
+                install_options = system.install_options(distro_tree).combined_with(
+                        InstallOptions.from_strings(ks_meta, koptions, koptions_post))
+                kickstart = generate_kickstart(install_options,
+                        distro_tree=distro_tree, system=system, user=user)
+                system.action_provision(distro_tree, kickstart, service=u'WEBUI')
             else: #This shouldn't happen, maybe someone is trying to be funny
                 raise BX('User: %s has insufficent permissions to provision %s' % (user.user_name, system.fqdn))
         except Exception, msg:
             log.exception('Failed to provision system %s', id)
-            activity = SystemActivity(identity.current.user, 'WEBUI', 'Provision', 'Distro', "", "%s: %s" % (msg, distro.install_name))
+            activity = SystemActivity(user=identity.current.user, service=u'WEBUI',
+                    action=u'Provision', field_name=u'Distro Tree',
+                    old_value=u'', new_value=u'%s: %s' % (msg, distro_tree))
             system.activity.append(activity)
             flash(_(u"%s" % msg))
             redirect("/view/%s" % system.fqdn)
 
-        activity = SystemActivity(identity.current.user, 'WEBUI', 'Provision', 'Distro', "", "Success: %s" % distro.install_name)
+        activity = SystemActivity(user=identity.current.user, service=u'WEBUI',
+                action=u'Provision', field_name=u'Distro Tree',
+                old_value=u'', new_value=u'Success: %s' % distro_tree)
         system.activity.append(activity)
 
         if reboot:

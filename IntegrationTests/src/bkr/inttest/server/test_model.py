@@ -3,6 +3,7 @@ import time
 import unittest
 import email
 from turbogears.database import session
+from bkr.server.installopts import InstallOptions
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
         Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, LabControllerDistroTree, \
@@ -67,9 +68,10 @@ class TestSystem(unittest.TestCase):
         system = data_setup.create_system()
         system.provisions[distro_tree.arch] = Provision(arch=distro_tree.arch,
                 kernel_options='console=ttyS0 ksdevice=eth0')
-        opts = system.install_options(distro_tree, kernel_options='ksdevice=eth1')
+        opts = system.install_options(distro_tree).combined_with(
+                InstallOptions.from_strings('', u'ksdevice=eth1', ''))
         # ksdevice should be overriden but console should be inherited
-        self.assertEqual(opts['kernel_options'],
+        self.assertEqual(opts.kernel_options,
                 dict(console='ttyS0', ksdevice='eth1'))
 
 class TestSystemKeyValue(unittest.TestCase):

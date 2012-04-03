@@ -436,13 +436,11 @@ def scheduled_recipes(*args):
                             except IndexError:
                                 # We have uneven tasks
                                 pass
-      
-                harness_repo_details = recipe.harness_repo()
-                task_repo_details = recipe.task_repo()
+
                 repo_fail = []
-                if not harness_repo_details:
+                if not recipe.harness_repo():
                     repo_fail.append(u'harness')
-                if not task_repo_details:
+                if not recipe.task_repo():
                     repo_fail.append(u'task')
 
                 if repo_fail:
@@ -450,9 +448,6 @@ def scheduled_recipes(*args):
                     log.error(repo_fail_msg)
                     recipe.recipeset.abort(repo_fail_msg)
                     break
-                else:
-                    harnessrepo = '%s,%s' % harness_repo_details
-                    taskrepo = '%s,%s' % task_repo_details
 
                 # Start the first task in the recipe
                 try:
@@ -465,32 +460,8 @@ def scheduled_recipes(*args):
                                                                             e))
                     break
 
-                ks_meta = "recipeid=%s packages=%s" % (recipe.id,
-                                                       ":".join([p.package for p in recipe.packages]))
-                customrepos= "|".join(["%s,%s" % (r.name, r.url) for r in recipe.repos])
-                ks_meta = "%s customrepos=%s harnessrepo=%s taskrepo=%s" % (ks_meta, customrepos, harnessrepo, taskrepo)
-                user = recipe.recipeset.job.owner
-                if user.root_password:
-                    ks_meta = "password=%s %s" % (user.root_password, ks_meta)
-                # If ks_meta is defined from recipe pass it along.
-                # add it last to allow for overriding previous settings.
-                if recipe.ks_meta:
-                    ks_meta = "%s %s" % (ks_meta, recipe.ks_meta)
-                if recipe.partitionsKSMeta:
-                    ks_meta = "%s partitions=%s" % (ks_meta, recipe.partitionsKSMeta)
-                if user.sshpubkeys:
-                    end = recipe.distro_tree and (recipe.distro_tree.distro.osversion.osmajor.osmajor.startswith("Fedora") or \
-                                             recipe.distro_tree.distro.osversion.osmajor.osmajor.startswith("RedHatEnterpriseLinux7"))
-                    key_ks = [user.ssh_keys_ks(end)]
-                else:
-                    key_ks = []
                 try:
-                    recipe.system.action_auto_provision(recipe.distro_tree,
-                                                     ks_meta,
-                                                     recipe.kernel_options,
-                                                     recipe.kernel_options_post,
-                                                     recipe.kickstart,
-                                                     recipe.ks_appends + key_ks)
+                    recipe.provision()
                     recipe.system.activity.append(
                          SystemActivity(recipe.recipeset.job.owner, 
                                         u'Scheduler',
@@ -498,11 +469,6 @@ def scheduled_recipes(*args):
                                         u'Distro Tree',
                                         u'',
                                         unicode(recipe.distro_tree)))
-                except CobblerTaskFailedException, e:
-                    log.error('Cobbler task failed for recipe %s: %s' % (recipe.id, e))
-                    recipe.system.mark_broken(reason=str(e), recipe=recipe)
-                    recipe.recipeset.abort(_(u'Cobbler task failed for recipe %s: %s')
-                            % (recipe.id, e))
                 except Exception, e:
                     log.exception("Failed to provision recipeid %s", recipe.id)
                     recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" % 

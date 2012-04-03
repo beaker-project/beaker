@@ -1,0 +1,82 @@
+{% if sysprofile %}
+{% for snippet_profile in sysprofile|split(';') %}
+# Snippet Profile: {{ snippet_profile }}
+{{ snippet(snippet_profile) }}
+{% endfor  %}
+{% else %}
+{{ snippet('install_method') }}
+
+key --skip
+
+{% if not manual %}
+# System bootloader configuration
+bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
+
+{{ mode|default('cmdline') }}
+
+{{ snippet('network') }}
+{#
+## Firewall configuration
+## firewall in kickstart metadata will enable the firewall
+## firewall=22:tcp,80:tcp will enable the firewall with ports 22 and 80 open.
+## always allow port 12432 so that beah harness will support multihost
+#}
+firewall
+{%- if firewall|default('disabled') == 'disabled' %} --disabled
+{%- else %} --enabled --port=12432:tcp{% if firewall is defined %},{{ firewall }}{% endif %}
+{% endif %}
+
+# System keyboard
+keyboard {{ keyboard|default('us') }}
+# System language
+lang {{ lang|default('en_US.UTF-8') }}
+
+reboot
+#Root password
+rootpw --iscrypted {{ password|default(user.root_password, True) }}
+# SELinux configuration
+selinux {{ selinux|default('--enforcing') }}
+
+# Configure the X Window System
+{% if skipx %}
+skipx
+{% else %}
+{% if not (distro_tree is arch('s390', 's390x')) %}
+xconfig --startxonboot
+{% endif %}
+{% endif %}
+
+# System timezone
+timezone {{ timezone|default('America/New_York') }}
+# Install OS instead of upgrade
+install
+
+{{ snippet('anaconda_repos') }}
+{{ snippet('rhts_devices') }}
+{{ snippet('rhts_partitions') }}
+{{ snippet('RedHatEnterpriseLinux6') }}
+{{ snippet('system') }}
+
+%packages --ignoremissing
+{%- if packages is undefined %} --default
+{% else %}
+
+{{ snippet('rhts_packages') }}
+{% endif %}
+
+{% endif %}{# manual #}
+
+{% endif %}{# sysprofile #}
+
+%pre --log=/dev/console
+{{ snippet('rhts_pre') }}
+{{ snippet('RedHatEnterpriseLinux6_pre') }}
+{{ snippet('system_pre') }}
+
+%post --log=/dev/console
+{{ snippet('rhts_post') }}
+{{ snippet('RedHatEnterpriseLinux6_post') }}
+{{ snippet('system_post') }}
+{{ snippet('ssh_keys') }}
+
+{{ ks_appends|join('\n') }}

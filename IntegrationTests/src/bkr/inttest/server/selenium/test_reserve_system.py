@@ -21,8 +21,6 @@ class ReserveWorkflow(SeleniumTestCase):
         self.distro_tree_x86_64= data_setup.create_distro_tree(
                 variant=u'Server', arch=u'x86_64', distro=self.distro)
 
-        data_setup.create_task(name=u'/distribution/install')
-        data_setup.create_task(name=u'/distribution/reservesys')
         self.system.lab_controller = self.lc
         self.system.shared = True
         self.system2.lab_controller = self.lc
@@ -120,8 +118,6 @@ class ReserveSystem(WebDriverTestCase):
             self.lc = data_setup.create_labcontroller()
             self.system = data_setup.create_system(arch=u'i386')
             self.distro_tree = data_setup.create_distro_tree(arch=u'i386')
-            data_setup.create_task(name=u'/distribution/install')
-            data_setup.create_task(name=u'/distribution/reservesys')
             self.system.lab_controller = self.lc
             self.system.shared = True
         self.browser = self.get_browser()

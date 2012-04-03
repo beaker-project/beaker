@@ -202,13 +202,6 @@ DESTDIR=$RPM_BUILD_ROOT make \
     %{?with_labcontroller:WITH_LABCONTROLLER=1} \
     %{?with_inttests:WITH_INTTESTS=1} \
     install
-%if %{with labcontroller}
-ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/redhat6.ks
-ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/CentOS6.ks
-ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/RedHatStorageSoftwareAppliance3.ks
-ln -s RedHatEnterpriseLinuxServer5.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/CentOS5.ks
-ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment.ks
-%endif
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -341,8 +334,6 @@ fi
 %{_sysconfdir}/cron.hourly/cobbler_expire_distros
 %{_sysconfdir}/cron.daily/beaker_expire_osversion
 %{_var}/lib/cobbler/triggers/sync/post/osversion.trigger
-%{_var}/lib/cobbler/snippets/*
-%{_var}/lib/cobbler/kickstarts/*
 %attr(-,apache,root) %{_var}/www/beaker/*
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy

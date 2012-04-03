@@ -1,0 +1,6 @@
+{% set repo_base = distro_tree.url_in_lab(system.lab_controller, 'http') %}
+{% if repo_base %}
+{% for repo in distro_tree.repos %}
+repo --name=beaker-{{ repo.repo_id }} --cost=100 --baseurl={{ repo_base|urljoin(repo.path) }}
+{% endfor %}
+{% endif %}

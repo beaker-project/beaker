@@ -11,8 +11,6 @@ class WorkflowSimpleTest(unittest.TestCase):
         self.distro = data_setup.create_distro(tags=[u'STABLE'])
         self.distro_tree = data_setup.create_distro_tree(distro=self.distro)
         self.task = data_setup.create_task()
-        data_setup.create_task(name=u'/distribution/install')
-        data_setup.create_task(name=u'/distribution/reservesys')
 
     def test_submit_job(self):
         out = run_client(['bkr', 'workflow-simple', '--random',

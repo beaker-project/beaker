@@ -42,7 +42,6 @@ class TestBeakerd(unittest.TestCase):
         system1.lab_controller = lab1
         system2.lab_controller = lab1
 
-        data_setup.create_task(name=u'/distribution/install')
         session.flush()
 
         # Create two jobs, one requiring distro_tree1 and one requiring distro_tree2

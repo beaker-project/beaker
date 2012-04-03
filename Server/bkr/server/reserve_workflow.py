@@ -9,7 +9,6 @@ from bkr.server.model import (osversion_table, distro_table, osmajor_table, arch
                               Task, Arch, OSMajor, DistroTag, SystemType, OSVersion, DistroTree)
 from bkr.server.model import Job
 from bkr.server.jobs import Jobs as JobController
-from bkr.server.cobbler_utils import hash_to_string
 from bexceptions import *
 import re
 import logging

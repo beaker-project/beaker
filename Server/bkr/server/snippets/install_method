@@ -1,0 +1,15 @@
+{% set url = distro_tree.url_in_lab(system.lab_controller, method|default(None)) %}
+{% set parsed_url = url|parsed_url %}
+{% if parsed_url.scheme == 'nfs' or parsed_url.scheme.startswith('nfs+') %}
+{#
+## The NFS URL syntax we expect here is a Cobbler-ism,
+## and does not confrom to the real NFS URL scheme (RFC 2224). Oh well.
+## It looks like: nfs://server:/absolute/path/to/dir/
+#}
+{% set server = parsed_url.netloc.rstrip(':') %}
+{% set dir = parsed_url.path %}
+nfs --server {{ server }} --dir {{ dir }}
+#url --url={{ url }}
+{% else %}
+url --url={{ url }}
+{% endif %}

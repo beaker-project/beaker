@@ -32,7 +32,7 @@ from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arc
         LabControllerDistroTree, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
         LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
-        SystemGroup, DistroTreeRepo
+        SystemGroup, DistroTreeRepo, TaskPackage
 
 log = logging.getLogger(__name__)
 
@@ -227,7 +227,7 @@ def create_system_activity(user=None, **kw):
     return activity
 
 def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
-        uploader=None, owner=None, priority=u'Manual', valid=None):
+        uploader=None, owner=None, priority=u'Manual', valid=None, requires=None):
     if name is None:
         name = unique_name(u'/distribution/test_task_%s')
     if uploader is None:
@@ -252,7 +252,9 @@ def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
     if exclude_osmajor:
         for osmajor in exclude_osmajor:
             TaskExcludeOSMajor(task_id=task.id, osmajor=OSMajor.lazy_create(osmajor=osmajor))
-        
+    if requires:
+        for require in requires:
+            task.required.append(TaskPackage.lazy_create(package=require))
     return task
 
 def create_tasks(xmljob):

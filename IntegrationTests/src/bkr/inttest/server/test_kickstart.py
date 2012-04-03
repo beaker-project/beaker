@@ -1,0 +1,694 @@
+
+import unittest
+import tempfile
+import re
+import pkg_resources
+import jinja2
+import xmltramp
+from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
+        CommandActivity, Provision, SSHPubKey
+from bkr.server.kickstart import template_env
+from bkr.server.jobs import Jobs
+from bkr.server.jobxml import XmlJob
+from bkr.inttest import data_setup
+
+def compare_expected(name, recipe_id, actual):
+    expected = pkg_resources.resource_string('bkr.inttest',
+            'server/kickstarts/%s.expected' % name)
+    expected = expected.replace('@RECIPEID@', str(recipe_id))
+    if expected != actual:
+        expected_path = pkg_resources.resource_filename('bkr.inttest',
+                'server/kickstarts/%s.expected' % name)
+        actual_temp = tempfile.NamedTemporaryFile(prefix='beaker-kickstart-test-',
+                suffix='-actual', delete=False)
+        actual_temp.write(re.sub(r'\b%s\b' % recipe_id, '@RECIPEID@', actual))
+        raise AssertionError('diff -u %s %s' % (expected_path, actual_temp.name))
+
+class KickstartTest(unittest.TestCase):
+
+    maxDiff = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.orig_template_loader = template_env.loader
+        template_env.loader = jinja2.ChoiceLoader([cls.orig_template_loader,
+                jinja2.DictLoader({
+                    'snippets/per_lab/lab_env/lab.test-kickstart.invalid': '''
+cat << EOF > /etc/profile.d/rh-env.sh
+export LAB_CONTROLLER=lab.test-kickstart.invalid
+export DUMPSERVER=netdump.test-kickstart.invalid
+export NFSSERVERS="RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhel4-nfs.test-kickstart.invalid:/export/home RHEL5,rhel5-nfs.test-kickstart.invalid:/export/home RHEL6,rhel6-nfs.test-kickstart.invalid:/export/home NETAPP, SOLARIS,"
+export LOOKASIDE=http://download.test-kickstart.invalid/lookaside/
+export BUILDURL=http://download.test-kickstart.invalid
+EOF
+cat << EOF > /etc/profile.d/rh-env.csh
+setenv LAB_CONTROLLER lab.test-kickstart.invalid
+setenv DUMPSERVER netdump.test-kickstart.invalid
+setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhel4-nfs.test-kickstart.invalid:/export/home RHEL5,rhel5-nfs.test-kickstart.invalid:/export/home RHEL6,rhel6-nfs.test-kickstart.invalid:/export/home NETAPP, SOLARIS,"
+setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
+setenv BUILDURL http://download.test-kickstart.invalid
+EOF
+'''
+                })])
+
+        session.begin()
+        cls.user = data_setup.create_user(password=u'password')
+        cls.user.root_password = '$1$beaker$yMeLK4p1IVkFa80RyTkpE.'
+        cls.lab_controller = data_setup.create_labcontroller(
+                fqdn=u'lab.test-kickstart.invalid')
+        cls.system = data_setup.create_system(arch=u'x86_64',
+                fqdn=u'test01.test-kickstart.invalid', status=u'Automated',
+                lab_controller=cls.lab_controller)
+        cls.system.loaned = cls.user
+        cls.system.user = cls.user
+        cls.system_s390x = data_setup.create_system(arch=u's390x',
+                fqdn=u'test02.test-kickstart.invalid', status=u'Automated',
+                lab_controller=cls.lab_controller)
+        cls.system_s390x.loaned = cls.user
+        cls.system_s390x.user = cls.user
+
+        cls.rhel39 = data_setup.create_distro(name=u'RHEL3-U9',
+                osmajor=u'RedHatEnterpriseLinux3', osminor=u'9')
+        cls.rhel39_as_x86_64 = data_setup.create_distro_tree(
+                distro=cls.rhel39, variant=u'AS', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-3/U9/AS/x86_64/tree/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/RHEL-3/U9/AS/x86_64/tree/'])
+        cls.rhel39_as_x86_64.repos[:] = [
+            DistroTreeRepo(repo_id=u'repo-AS-x86_64', repo_type=u'os',
+                    path=u'../repo-AS-x86_64'),
+            DistroTreeRepo(repo_id=u'repo-debug-AS-x86_64', repo_type=u'debug',
+                    path=u'../repo-debug-AS-x86_64'),
+            DistroTreeRepo(repo_id=u'repo-srpm-AS-x86_64', repo_type=u'source',
+                    path=u'../repo-srpm-AS-x86_64'),
+        ]
+
+        cls.rhel49 = data_setup.create_distro(name=u'RHEL4-U9',
+                osmajor=u'RedHatEnterpriseLinux4', osminor=u'9')
+        cls.rhel49_as_x86_64 = data_setup.create_distro_tree(
+                distro=cls.rhel49, variant=u'AS', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-4/U9/AS/x86_64/tree/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/RHEL-4/U9/AS/x86_64/tree/'])
+        cls.rhel49_as_x86_64.repos[:] = [
+            DistroTreeRepo(repo_id=u'AS', repo_type=u'os',
+                    path=u'../repo-AS-x86_64'),
+        ]
+
+        cls.rhel58server = data_setup.create_distro(name=u'RHEL5-Server-U8',
+                osmajor=u'RedHatEnterpriseLinuxServer5', osminor=u'8')
+        cls.rhel58server_x86_64 = data_setup.create_distro_tree(
+                distro=cls.rhel58server, variant=None, arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-5-Server/U8/x86_64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/RHEL-5-Server/U8/x86_64/os/'])
+        cls.rhel58server_x86_64.repos[:] = [
+            DistroTreeRepo(repo_id=u'Cluster', repo_type=u'addon',
+                    path=u'Cluster'),
+            DistroTreeRepo(repo_id=u'ClusterStorage', repo_type=u'addon',
+                    path=u'ClusterStorage'),
+            DistroTreeRepo(repo_id=u'Server', repo_type=u'os',
+                    path=u'Server'),
+            DistroTreeRepo(repo_id=u'VT', repo_type=u'addon',
+                    path=u'VT'),
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug',
+                    path=u'../debug'),
+        ]
+
+        cls.rhel62 = data_setup.create_distro(name=u'RHEL-6.2',
+                osmajor=u'RedHatEnterpriseLinux6', osminor=u'2')
+        cls.rhel62_server_x86_64 = data_setup.create_distro_tree(
+                distro=cls.rhel62, variant=u'Server', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/RHEL-6.2/Server/x86_64/os/'])
+        cls.rhel62_server_x86_64.repos[:] = [
+            DistroTreeRepo(repo_id=u'HighAvailability', repo_type=u'addon',
+                    path=u'HighAvailability'),
+            DistroTreeRepo(repo_id=u'LoadBalancer', repo_type=u'addon',
+                    path=u'LoadBalancer'),
+            DistroTreeRepo(repo_id=u'ResilientStorage', repo_type=u'addon',
+                    path=u'ResilientStorage'),
+            DistroTreeRepo(repo_id=u'ScalableFileSystem', repo_type=u'addon',
+                    path=u'ScalableFileSystem'),
+            DistroTreeRepo(repo_id=u'Server', repo_type=u'os', path=u'Server'),
+            DistroTreeRepo(repo_id=u'optional-x86_64-os', repo_type=u'addon',
+                    path=u'../../optional/x86_64/os'),
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug',
+                    path=u'../debug'),
+            DistroTreeRepo(repo_id=u'optional-x86_64-debug', repo_type=u'debug',
+                    path=u'../../optional/x86_64/debug'),
+        ]
+        cls.rhel62_server_s390x = data_setup.create_distro_tree(
+                distro=cls.rhel62, variant=u'Server', arch=u's390x',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/s390x/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/RHEL-6.2/Server/s390x/os/'])
+        cls.rhel62_server_s390x.repos[:] = [
+            DistroTreeRepo(repo_id=u'Server', repo_type=u'os', path=u'Server'),
+            DistroTreeRepo(repo_id=u'optional-s390x-os', repo_type=u'addon',
+                    path=u'../../optional/s390x/os'),
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug',
+                    path=u'../debug'),
+            DistroTreeRepo(repo_id=u'optional-s390x-debug', repo_type=u'debug',
+                    path=u'../../optional/s390x/debug'),
+        ]
+
+        cls.rhel70nightly = data_setup.create_distro(name=u'RHEL-7.0-20120314.0',
+                osmajor=u'RedHatEnterpriseLinux7', osminor=u'0')
+        cls.rhel70nightly_workstation_x86_64 = data_setup.create_distro_tree(
+                distro=cls.rhel70nightly, variant=u'Workstation', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/'])
+        cls.rhel70nightly_workstation_x86_64.repos[:] = [
+            DistroTreeRepo(repo_id=u'repos_debug_Workstation_optional',
+                    repo_type=u'debug',
+                    path=u'../../../Workstation-optional/x86_64/debuginfo'),
+            DistroTreeRepo(repo_id=u'repos_debug_Workstation', repo_type=u'debug',
+                    path=u'../debuginfo'),
+            DistroTreeRepo(repo_id=u'repos_Workstation-optional', repo_type=u'addon',
+                    path=u'../../../Workstation-optional/x86_64/os'),
+            DistroTreeRepo(repo_id=u'repos_Workstation', repo_type=u'os', path=u'.'),
+            DistroTreeRepo(repo_id=u'repos_addons_ScalableFileSystem',
+                    repo_type=u'addon', path=u'addons/ScalableFileSystem'),
+        ]
+
+        cls.f16 = data_setup.create_distro(name=u'Fedora-16',
+                osmajor=u'Fedora16', osminor=u'0')
+        cls.f16_x86_64 = data_setup.create_distro_tree(
+                distro=cls.f16, variant=u'Fedora', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-16/GOLD/Fedora/x86_64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-16/GOLD/Fedora/x86_64/os/'])
+        cls.f16_x86_64.repos[:] = [
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+        ]
+
+        session.flush()
+
+    @classmethod
+    def tearDownClass(cls):
+        template_env.loader = cls.orig_template_loader
+        session.rollback()
+
+    def provision_recipe(self, xml, system):
+        xmljob = XmlJob(xmltramp.parse(xml))
+        job = Jobs().process_xmljob(xmljob, self.user)
+        recipe = job.recipesets[0].recipes[0]
+        recipe.system = system
+        session.flush()
+        recipe.provision()
+        session.flush()
+        return recipe
+
+    def test_rhel3_defaults(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL3-U9" />
+                            <distro_variant op="=" value="AS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('RedHatEnterpriseLinux3-scheduler-defaults', recipe.id,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_rhel4_defaults(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL4-U9" />
+                            <distro_variant op="=" value="AS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('RedHatEnterpriseLinux4-scheduler-defaults', recipe.id,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_rhel5server_defaults(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL5-Server-U8" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('RedHatEnterpriseLinuxServer5-scheduler-defaults', recipe.id,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_rhel6_defaults(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('RedHatEnterpriseLinux6-scheduler-defaults', recipe.id,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_rhel6_http(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="method=http">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('RedHatEnterpriseLinux6-scheduler-http', recipe.id,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_rhel6_ondisk(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="ondisk=/dev/sda">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('RedHatEnterpriseLinux6-scheduler-ondisk', recipe.id,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_rhel6_partitions(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="ext4" name="home" size="5" />
+                        </partitions>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('RedHatEnterpriseLinux6-scheduler-partitions', recipe.id,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_rhel6_repos(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <repos>
+                            <repo name="custom"
+                            url="http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux6/"/>
+                        </repos>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('RedHatEnterpriseLinux6-scheduler-repos', recipe.id,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_rhel6_s390x(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="s390x" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system_s390x)
+        compare_expected('RedHatEnterpriseLinux6-scheduler-s390x', recipe.id,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_rhel7_defaults(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('RedHatEnterpriseLinux7-scheduler-defaults', recipe.id,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_fedora16_defaults(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-16" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('Fedora16-scheduler-defaults', recipe.id,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_grubport(self):
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.loaned = self.user
+        system.user = self.user
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
+                ks_meta=u'grubport=0x02f8')
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assert_(
+                r'''/bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)$/\1--port=0x02f8\2/' /boot/grub/grub.conf'''
+                in recipe.rendered_kickstart.kickstart.splitlines(),
+                recipe.rendered_kickstart.kickstart)
+
+    def test_rhel5_devices(self):
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.loaned = self.user
+        system.user = self.user
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
+                ks_meta=u'scsidevices=cciss')
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL5-Server-U8" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assert_('device scsi cciss' in recipe.rendered_kickstart.kickstart.splitlines(),
+                recipe.rendered_kickstart.kickstart)
+
+    def test_rhel6_devices(self):
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.loaned = self.user
+        system.user = self.user
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
+                ks_meta=u'scsidevices=cciss')
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assert_('device cciss' in recipe.rendered_kickstart.kickstart.splitlines(),
+                recipe.rendered_kickstart.kickstart)
+
+    def test_kopts_post(self):
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.loaned = self.user
+        system.user = self.user
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
+                kernel_options_post=u'console=ttyS0,9600n8 pci=nomsi')
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assert_('bootloader --location=mbr --append="console=ttyS0,9600n8 pci=nomsi"'
+                in recipe.rendered_kickstart.kickstart.splitlines(),
+                recipe.rendered_kickstart.kickstart)
+
+    def test_partitions_lvm(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition type="lvm" fs="btrfs" name="butter" size="25" />
+                        </partitions>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assert_('''
+part /boot --fstype ext3 --size 200 --recommended
+part / --fstype ext3 --size 1024 --grow --asprimary
+part swap --recommended --asprimary
+part pv.001 --size=25605
+volgroup TestVolume001 pv.001
+logvol /butter --fstype btrfs --name=butter --vgname=TestVolume001 --size=25600
+'''
+                in recipe.rendered_kickstart.kickstart,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_sshkeys(self):
+        user = data_setup.create_user(password=u'password')
+        user.root_password = '$1$beaker$yMeLK4p1IVkFa80RyTkpE.'
+        user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'lolthisismykey', u'description'))
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.loaned = user
+        system.user = user
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assert_('''
+mkdir -p /root/.ssh
+echo ssh-rsa lolthisismykey description >> /root/.ssh/authorized_keys
+restorecon -R /root/.ssh
+chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
+'''
+                in recipe.rendered_kickstart.kickstart,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_ksappends(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <ks_appends>
+                            <ks_append>
+%post
+echo Hello World
+%end</ks_append>
+                        </ks_appends>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assert_(recipe.rendered_kickstart.kickstart.endswith('''
+%post
+echo Hello World
+%end'''),
+                recipe.rendered_kickstart.kickstart)
+
+    def test_custom_kickstart(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <kickstart><![CDATA[
+install
+lang en_AU.UTF-8
+timezone --utc Australia/Brisbane
+rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
+selinux --enforcing
+firewall --service=ssh
+bootloader --location=mbr
+
+%packages
+mysillypackage
+%end
+                        ]]></kickstart>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_(k.startswith('url --url=http://lab.test-kickstart.invalid'
+                '/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/\n'), k)
+        self.assert_('''
+install
+lang en_AU.UTF-8
+timezone --utc Australia/Brisbane
+rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
+selinux --enforcing
+firewall --service=ssh
+bootloader --location=mbr
+'''
+                in k, k)
+        self.assert_('\nmysillypackage\n' in k, k)
+        # should also contain the various Beaker bits
+        self.assert_('\n# Check in with Beaker Server\n' in k, k)
+        self.assert_('\n# Add Harness Repo\n' in k, k)
+        self.assert_('\nyum -y install beah\n' in k, k)

@@ -156,3 +156,20 @@ Ensure that you have an up-to-date database backup before proceeding.
 Then run beaker-init to create the new distro tables.
 
 Finally, import distros using the beaker-import command on each lab controller.
+
+
+Provision via the command queue
+-------------------------------
+
+Run the following SQL:
+
+    ALTER TABLE command_queue
+        ADD rendered_kickstart_id INT NULL,
+        ADD CONSTRAINT command_queue_rendered_kickstart_id_fk
+            FOREIGN KEY (rendered_kickstart_id)
+            REFERENCES rendered_kickstart (id);
+    ALTER TABLE recipe
+        ADD rendered_kickstart_id INT NULL AFTER system_id,
+        ADD CONSTRAINT recipe_rendered_kickstart_id_fk
+            FOREIGN KEY (rendered_kickstart_id)
+            REFERENCES rendered_kickstart (id);

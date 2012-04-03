@@ -65,8 +65,6 @@ class SystemGroupUserTake(SeleniumTestCase):
             data_setup.add_system_lab_controller(self.manual_system,lc)
             session.flush()
             self.distro_tree = data_setup.create_distro_tree()
-            data_setup.create_task(name=u'/distribution/install')
-            data_setup.create_task(name=u'/distribution/reservesys')
         self.login(user=self.user.user_name,password='password')
 
     def test_schedule_provision_system_has_user(self):

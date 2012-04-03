@@ -6,8 +6,9 @@ from sqlalchemy import and_
 from turbogears import expose, identity, controllers
 from bkr.server.bexceptions import BX
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree
+from bkr.server.installopts import InstallOptions
+from bkr.server.kickstart import generate_kickstart
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.cobbler_utils import hash_to_string
 from turbogears.database import session
 
 log = logging.getLogger(__name__)
@@ -165,18 +166,20 @@ class SystemsController(controllers.Controller):
             raise BX(_(u'Distro tree %s cannot be provisioned on %s')
                     % (distro_tree, system.fqdn))
 
-        ks_meta = ks_meta or ''
-        if identity.current.user.root_password:
-            ks_meta = "password=%s %s" % (identity.current.user.root_password, ks_meta)
+        if identity.current.user.rootpw_expired:
+            raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
 
         # ensure system-specific defaults are used
         # (overriden by this method's arguments)
-        options = system.install_options(distro_tree, ks_meta=ks_meta,
-                kernel_options=kernel_options or '',
-                kernel_options_post=kernel_options_post or '')
+        options = system.install_options(distro_tree).combined_with(
+                InstallOptions.from_strings(ks_meta or '',
+                    kernel_options or '',
+                    kernel_options_post or ''))
+        rendered_kickstart = generate_kickstart(options,
+                distro_tree=distro_tree,
+                system=system, user=identity.current.user, kickstart=kickstart)
         try:
-            system.action_provision(distro_tree=distro_tree,
-                    kickstart=kickstart, **options)
+            system.action_provision(distro_tree, rendered_kickstart, service=u'XMLRPC')
         except Exception, e:
             log.exception('Failed to provision')
             system.activity.append(SystemActivity(user=identity.current.user,

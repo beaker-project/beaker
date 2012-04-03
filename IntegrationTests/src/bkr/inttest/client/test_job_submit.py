@@ -13,8 +13,6 @@ class JobSubmitTest(unittest.TestCase):
         data_setup.create_product(product_name=u'the_product')
         if not Distro.by_name(u'BlueShoeLinux5-5'):
             data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
-        data_setup.create_task(name=u'/distribution/install')
-        data_setup.create_task(name=u'/distribution/reservesys')
 
     def test_submit_job(self):
         out = run_client(['bkr', 'job-submit',
