@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.1
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -346,6 +346,14 @@ fi
 %endif
 
 %changelog
+* Wed Apr 04 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-9
+- service queue msgs' fixed to also be sent on direct exchange
+  (rmancy@redhat.com)
+
+* Wed Apr 04 2012 Raymond Mancy <rmancy@redhat.com>
+- service queue msgs' fixed to also be sent on direct exchange
+  (rmancy@redhat.com)
+
 * Tue Apr 03 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-8
 - Put service queue messages onto direct exchange, not just default exchange
   (rmancy@redhat.com)
