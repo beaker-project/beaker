@@ -21,8 +21,13 @@ def _parse(s): # based on Cobbler's string_to_hash
 def _unparse(d):
     # items are sorted for predictable ordering of the output,
     # but a better solution would be to use OrderedDict in Python 2.7+
-    return ' '.join('%s=%s' % (key, pipes.quote(value))
-            for key, value in sorted(d.iteritems()))
+    items = []
+    for key, value in sorted(d.iteritems()):
+        if value is None:
+            items.append(key)
+        else:
+            items.append('%s=%s' % (key, pipes.quote(str(value))))
+    return ' '.join(items)
 
 def _consolidate(base, other): # based on Cobbler's consolidate
     result = dict(base)

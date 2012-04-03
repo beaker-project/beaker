@@ -60,6 +60,7 @@ popd
 {% set repo_base = distro_tree.url_in_lab(system.lab_controller, 'http') %}
 {% if repo_base %}
 {% for repo in distro_tree.repos %}
+{% if var('no_%s_repos' % repo.repo_type) is undefined %}
 cat << EOF >/etc/yum.repos.d/beaker-{{ repo.repo_id }}.repo
 [beaker-{{ repo.repo_id }}]
 name=beaker-{{ repo.repo_id }}
@@ -68,6 +69,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
+{% endif %}
 {% endfor %}
 {% endif %}
 {% endif %}

@@ -64,8 +64,13 @@ template_env.tests.update({
     'osversion': is_osversion,
 })
 
+@jinja2.contextfunction
+def var(context, name):
+    return context.resolve(name)
+
 template_env.globals.update({
     're': re,
+    'var': var,
 })
 
 def kickstart_template(distro_tree):

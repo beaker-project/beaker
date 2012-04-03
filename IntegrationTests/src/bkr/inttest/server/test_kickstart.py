@@ -692,3 +692,27 @@ bootloader --location=mbr
         self.assert_('\n# Check in with Beaker Server\n' in k, k)
         self.assert_('\n# Add Harness Repo\n' in k, k)
         self.assert_('\nyum -y install beah\n' in k, k)
+
+    def test_no_debug_repos(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="no_debug_repos">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('repo --name=beaker-debug' not in k, k)
+        self.assert_('repo --name=beaker-optional-x86_64-debug' not in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-debug.repo' not in k, k)
+        self.assert_('/etc/yum.repos.d/beaker-optional-x86_64-debug.repo' not in k, k)
