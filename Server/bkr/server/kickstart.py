@@ -42,8 +42,18 @@ class TemplateRenderingEnvironment(object):
 # http://jinja.pocoo.org/docs/api/#custom-filters
 # http://jinja.pocoo.org/docs/api/#custom-tests
 
+def dictsplit(s, delim=',', pairsep=':'):
+    """
+    Returns a dict based on a sequence of key-value pairs encoded in a string,
+    like this:
+
+        type:mdraid,part:swap,size:256
+    """
+    return dict(pair.split(pairsep, 1) for pair in s.split(delim))
+
 template_env.filters.update({
     'split': string.split,
+    'dictsplit': dictsplit,
     'urljoin': urlparse.urljoin,
     'parsed_url': urlparse.urlparse,
 })
@@ -70,6 +80,8 @@ def var(context, name):
 
 template_env.globals.update({
     're': re,
+    'chr': chr,
+    'ord': ord,
     'var': var,
 })
 
