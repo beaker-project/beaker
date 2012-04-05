@@ -1,0 +1,88 @@
+{% if sysprofile %}
+{% for snippet_profile in sysprofile|split(';') %}
+# Snippet Profile: {{ snippet_profile }}
+{{ snippet(snippet_profile) }}
+{% endfor  %}
+{% else %}
+{{ snippet('install_method') }}
+
+{% if not manual %}
+authconfig --enableshadow --enablemd5
+# System bootloader configuration
+bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
+
+# Use text mode install
+{{ mode|default('text') }}
+
+{{ snippet('network') }}
+{#
+## Firewall configuration
+## firewall in kickstart metadata will enable the firewall
+## firewall=22:tcp,80:tcp will enable the firewall with ports 22 and 80 open.
+## always allow port 12432 so that beah harness will support multihost
+#}
+firewall
+{%- if firewall|default('disabled') == 'disabled' %} --disabled
+{%- else %} --enabled --port=12432:tcp{% if firewall is defined %},{{ firewall }}{% endif %}
+{% endif %}
+
+# Run the Setup Agent on first boot
+firstboot --disable
+# System keyboard
+keyboard {{ keyboard|default('us') }}
+mouse none
+# System language
+lang {{ lang|default('en_US.UTF-8') }}
+langsupport --default {{ lang|default('en_US.UTF-8') }} {{ lang|default('en_US.UTF-8') }}
+
+reboot
+#Root password
+rootpw --iscrypted {{ password|default(user.root_password, True) }}
+{% if skipx %}
+# Do not configure the X Window System
+skipx
+{% endif %}
+# System timezone
+timezone {{ timezone|default('America/New_York') }}
+# Install OS instead of upgrade
+install
+
+{{ snippet('rhts_scsi_ethdevices') }}
+{{ snippet('rhts_partitions') }}
+{{ snippet('RedHatEnterpriseLinux3') }}
+{{ snippet('system') }}
+
+%packages --resolvedeps --ignoremissing
+{#
+## If packages variable is set add additional packages to this install
+## packages=httpd:selinux:kernel
+#}
+{% if packages %}
+{{ snippet('rhts_packages') }}
+{% else %}
+@development-tools
+@development-libs
+{% endif %}
+
+{% endif %}{# manual #}
+
+{% endif %}{# sysprofile #}
+
+%pre
+(
+PATH=/usr/bin:$PATH
+{{ snippet('rhts_pre') }}
+{{ snippet('RedHatEnterpriseLinux3_pre') }}
+{{ snippet('system_pre') }}
+) 2>&1 | /usr/bin/tee /dev/console
+
+%post
+(
+PATH=/usr/bin:$PATH
+{{ snippet('rhts_post') }}
+{{ snippet('RedHatEnterpriseLinux3_post') }}
+{{ snippet('system_post') }}
+{{ snippet('ssh_keys') }}
+) 2>&1 | /usr/bin/tee /dev/console
+
+{{ ks_appends|join('\n') }}

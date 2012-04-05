@@ -30,8 +30,8 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from rhts import testinfo
 from rhts.testinfo import ParserError, ParserWarning
-from sqlalchemy import exceptions
 from sqlalchemy.orm import joinedload, joinedload_all
+from sqlalchemy.orm.exc import NoResultFound
 from subprocess import *
 
 import rpm
@@ -84,15 +84,15 @@ class Tasks(RPCRoot):
 
         The *filter* argument must be an XML-RPC structure (dict), with any of the following keys:
 
-            'install_name'
-                Distro install name. Include only tasks which are compatible 
+            'distro_name'
+                Distro name. Include only tasks which are compatible 
                 with this distro.
             'osmajor'
                 OSVersion OSMajor, like RedHatEnterpriseLinux6.  Include only
                 tasks which are compatible with this OSMajor.
             'names'
-                Task name. Include only tasks that are named. useful when
-                combined with osmajor or install_name.
+                Task name. Include only tasks that are named. Useful when
+                combined with 'osmajor' or 'distro_name'.
             'packages'
                 List of package names. Include only tasks which have a Run-For 
                 entry matching any of these packages.
@@ -109,12 +109,15 @@ class Tasks(RPCRoot):
           name is the name of the matching tasks.
           arches is an array of arches which this task does not apply for.
         Call :meth:`tasks.to_dict` to fetch metadata for a particular task.
+
+        .. versionchanged:: 0.9
+           Changed 'install_name' to 'distro_name' in the *filter* argument.
         """
-        if 'install_name' in filter and filter['install_name']:
+        if filter.get('distro_name'):
             try:
-                distro = Distro.by_install_name(filter['install_name'])
-            except InvalidRequestError, err:
-                raise BX(_('Invalid Distro: %s ' % filter['install_name']))   
+                distro = Distro.by_name(filter['distro_name'])
+            except NoResultFound:
+                raise BX(_(u'Invalid Distro: %s') % filter['distro_name'])
             tasks = distro.tasks()
         elif 'osmajor' in filter and filter['osmajor']:
             try:
@@ -261,15 +264,16 @@ class Tasks(RPCRoot):
                           system = 1)
             return dict(tasks=tasks,hidden=hidden,task_widget=self.task_widget)
 
-        if kw.get('distro_id'):
-            try:
-                tasks = tasks.join(['recipe','distro']).filter(Distro.id==kw.get('distro_id'))
-                hidden = dict(distro = 1,
-                              osmajor = 1,
-                              arch = 1,
-                             )
-            except InvalidRequestError:
-                return "<div>Invalid data:<br>%r</br></div>" % kw
+        if kw.get('distro_tree_id'):
+            tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree)\
+                    .filter(DistroTree.id == kw.get('distro_tree_id'))
+        elif kw.get('distro_id'):
+            tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree, DistroTree.distro)\
+                    .filter(Distro.id == kw.get('distro_id'))
+            hidden = dict(distro = 1,
+                          osmajor = 1,
+                          arch = 1,
+                         )
         if kw.get('task_id'):
             try:
                 tasks = tasks.join('task').filter(Task.id==kw.get('task_id'))
@@ -296,15 +300,19 @@ class Tasks(RPCRoot):
             kw['task'] = kw.get('task').replace('%2F','/')
             tasks = tasks.join('task').filter(Task.name.like('%s' % kw.get('task').replace('*','%%')))
         if kw.get('distro'):
-            tasks = tasks.join(['recipe','distro']).filter(Distro.install_name.like('%%%s%%' % kw.get('distro')))
+            tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree, DistroTree.distro)\
+                    .filter(Distro.name.like('%%%s%%' % kw.get('distro')))
         if kw.get('arch_id'):
-            tasks = tasks.join(['recipe','distro','arch']).filter(Arch.id==kw.get('arch_id'))
+            tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree, DistroTree.arch)\
+                    .filter(Arch.id == kw.get('arch_id'))
         if kw.get('status'):
             tasks = tasks.filter(RecipeTask.status == kw['status'])
         if kw.get('result'):
             tasks = tasks.filter(RecipeTask.result == kw['result'])
         if kw.get('osmajor_id'):
-            tasks = tasks.join(['recipe','distro','osversion','osmajor']).filter(OSMajor.id==kw.get('osmajor_id'))
+            tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree,
+                    DistoTree.distro, Distro.osversion, OSVersion.osmajor)\
+                    .filter(OSMajor.id == kw.get('osmajor_id'))
         if kw.get('whiteboard'):
             tasks = tasks.join(['recipe']).filter(Recipe.whiteboard==kw.get('whiteboard'))
         return dict(tasks = tasks,

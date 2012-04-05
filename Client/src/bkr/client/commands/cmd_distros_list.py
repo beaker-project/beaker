@@ -16,8 +16,7 @@ Synopsis
 Description
 -----------
 
-Prints to stdout the details of all matching Beaker distros. The output 
-contains a header line, followed by one line per distro.
+Prints to stdout the details of all matching Beaker distros.
 
 Options
 -------
@@ -31,24 +30,10 @@ Options
    Limit to distros with the given name. <name> is interpreted as a SQL LIKE 
    pattern (the % character matches any substring).
 
-.. option:: --treepath <url>
-
-   Limit to distros with the given tree path. <url> is interpreted as a SQL LIKE 
-   pattern (the % character matches any substring).
-
-.. option:: --labcontroller <fqdn>
-
-   Limit to distros which are available on the given lab controller. <fqdn> is 
-   interpreted as a SQL LIKE pattern (the % character matches any substring).
-
 .. option:: --family <family>
 
    Limit to distros of the given family (major version), for example 
    ``RedHatEnterpriseLinuxServer5``.
-
-.. option:: --arch <arch>
-
-   Limit to distros for the given arch.
 
 .. option:: --limit <number>
 
@@ -67,18 +52,29 @@ the exit status will be 1.
 Examples
 --------
 
-List details of all RHEL5.6 Server nightly trees from a particular date::
+List details of all RHEL6 distros with the RELEASED tag::
 
-    bkr distros-list --name "RHEL5.6-Server-20101110%"
+    bkr distros-list --family RedHatEnterpriseLinux6 --tag RELEASED
+
+History
+-------
+
+Prior to version 0.9, this command also accepted :option:`--treepath`, 
+:option:`--labcontroller`, and :option:`--arch` filter options. Use 
+:program:`bkr distro-trees-list` instead.
 
 See also
 --------
 
-:manpage:`bkr(1)`
+:manpage:`bkr(1)`, :manpage:`bkr-distro-trees-list(1)`
 """
 
 
 import sys
+try:
+    import json
+except ImportError:
+    import simplejson as json
 from bkr.client import BeakerCommand
 
 
@@ -107,24 +103,9 @@ class Distros_List(BeakerCommand):
             help="filter by name, use % for wildcard",
         )
         self.parser.add_option(
-            "--treepath",
-            default=None,
-            help="filter by treepath, use % for wildcard",
-        )
-        self.parser.add_option(
-            "--labcontroller",
-            default=None,
-            help="filter by lab controller, use % for wildcard",
-        )
-        self.parser.add_option(
             "--family",
             default=None,
             help="filter by family",
-        )
-        self.parser.add_option(
-            "--arch",
-            default=None,
-            help="filter by arch",
         )
 
 
@@ -133,19 +114,14 @@ class Distros_List(BeakerCommand):
         password = kwargs.pop("password", None)
         filter = dict( limit    = kwargs.pop("limit", None),
                        name     = kwargs.pop("name", None),
-                       treepath = kwargs.pop("treepath", None),
-                       labcontroller = kwargs.pop("labcontroller", None),
                        family   = kwargs.pop("family", None),
-                       arch     = kwargs.pop("arch", None),
                        tags     = kwargs.pop("tag", []),
                      )
 
         self.set_hub(username, password)
         distros = self.hub.distros.filter(filter)
         if distros:
-            print "InstallName,Name,Arch,OSVersion,Variant,Method,Virt,[Tags,],{LabController:Path,}"
-            for distro in distros:
-                print ','.join([str(d) for d in distro])
+            print json.dumps(distros, indent=4)
         else:
             sys.stderr.write("Nothing Matches\n")
             sys.exit(1)

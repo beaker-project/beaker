@@ -68,6 +68,9 @@ Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
 Requires:       libxslt-python
+%if !(0%{?rhel} >= 6) || !(0%{?fedora} >= 14)
+Requires:       python-simplejson
+%endif
 Requires:       libxml2-python
 
 %if %{with server}
@@ -139,6 +142,7 @@ Requires:	python-setuptools
 Requires:	python-xmltramp
 Requires:       python-krbV
 Requires:       python-concurrentloghandler
+Requires:       python-gevent >= 1.0
 
 %package lab-controller-addDistro
 Summary:        addDistro scripts for Lab Controller
@@ -198,13 +202,6 @@ DESTDIR=$RPM_BUILD_ROOT make \
     %{?with_labcontroller:WITH_LABCONTROLLER=1} \
     %{?with_inttests:WITH_INTTESTS=1} \
     install
-%if %{with labcontroller}
-ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/redhat6.ks
-ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/CentOS6.ks
-ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/RedHatStorageSoftwareAppliance3.ks
-ln -s RedHatEnterpriseLinuxServer5.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/CentOS5.ks
-ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment.ks
-%endif
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -219,6 +216,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment
 /sbin/chkconfig --add beaker-proxy
 /sbin/chkconfig --add beaker-watchdog
 /sbin/chkconfig --add beaker-transfer
+/sbin/chkconfig --add beaker-provision
 %endif
 
 %if %{with server}
@@ -234,6 +232,7 @@ if [ "$1" -ge "1" ]; then
         /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
         /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
         /sbin/service beaker-transfer condrestart >/dev/null 2>&1 || :
+        /sbin/service beaker-provision condrestart >/dev/null 2>&1 || :
 fi
 %endif
 
@@ -251,9 +250,11 @@ if [ "$1" -eq "0" ]; then
         /sbin/service beaker-proxy stop >/dev/null 2>&1 || :
         /sbin/service beaker-watchdog stop >/dev/null 2>&1 || :
         /sbin/service beaker-transfer stop >/dev/null 2>&1 || :
+        /sbin/service beaker-provision stop >/dev/null 2>&1 || :
         /sbin/chkconfig --del beaker-proxy || :
         /sbin/chkconfig --del beaker-watchdog || :
         /sbin/chkconfig --del beaker-transfer || :
+        /sbin/chkconfig --del beaker-provision || :
 fi
 %endif
 
@@ -318,6 +319,7 @@ fi
 %files lab-controller
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
+%{_sysconfdir}/beaker/power-scripts/
 %{python_sitelib}/bkr/labcontroller/
 %{python_sitelib}/bkr.labcontroller-%{version}-*
 %{python_sitelib}/bkr.labcontroller-%{version}-py%{pyver}.egg-info/
@@ -326,18 +328,18 @@ fi
 %{_bindir}/%{name}-transfer
 %{_bindir}/%{name}-osversion
 %{_bindir}/%{name}-import
+%{_bindir}/%{name}-provision
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.hourly/cobbler_expire_distros
 %{_sysconfdir}/cron.daily/beaker_expire_osversion
 %{_var}/lib/cobbler/triggers/sync/post/osversion.trigger
-%{_var}/lib/cobbler/snippets/*
-%{_var}/lib/cobbler/kickstarts/*
 %attr(-,apache,root) %{_var}/www/beaker/*
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
+%{_sysconfdir}/init.d/%{name}-provision
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %{_var}/lib/beaker/osversion_data
 

@@ -11,11 +11,12 @@ is installed on your system. See :manpage:`bkr(1)`.
    :maxdepth: 1
 
    bkr
+   bkr-distro-trees-list
+   bkr-distro-trees-verify
    bkr-distros-edit-version
    bkr-distros-list
    bkr-distros-tag
    bkr-distros-untag
-   bkr-distros-verify
    bkr-harness-test
    bkr-job-cancel
    bkr-job-clone

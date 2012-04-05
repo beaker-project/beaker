@@ -18,8 +18,6 @@ class SystemOwnerTake(SeleniumTestCase):
             self.manual_system.owner = self.user
             lc = data_setup.create_labcontroller(u'test-lc')
             data_setup.add_system_lab_controller(self.manual_system,lc)
-            session.flush()
-            self.distro = data_setup.create_distro()
         self.login(user=self.user.user_name,password='password')
 
     def tearDown(self):
@@ -66,9 +64,7 @@ class SystemGroupUserTake(SeleniumTestCase):
             data_setup.add_system_lab_controller(self.automated_system,lc)
             data_setup.add_system_lab_controller(self.manual_system,lc)
             session.flush()
-            self.distro = data_setup.create_distro()
-            data_setup.create_task(name=u'/distribution/install')
-            data_setup.create_task(name=u'/distribution/reservesys')
+            self.distro_tree = data_setup.create_distro_tree()
         self.login(user=self.user.user_name,password='password')
 
     def test_schedule_provision_system_has_user(self):
@@ -271,7 +267,7 @@ class SystemGroupUserTake(SeleniumTestCase):
             if reraise:
                 raise
             self.verificationErrors.append('No Schedule provision option for system %s' % system_fqdn)
-        sel.select("provision_prov_install", "label=%s" % self.distro.install_name)
+        sel.select("provision_prov_install", "label=%s" % self.distro_tree)
         sel.click("link=Schedule provision")
         sel.wait_for_page_to_load("30000")
         try:

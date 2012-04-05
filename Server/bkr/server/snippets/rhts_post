@@ -1,0 +1,176 @@
+{% if recipe %}
+echo {{ recipe.id }} > /root/RECIPE.TXT
+{% endif %}
+# Enable post-install boot notification
+{{ snippet('post_anamon') }}
+{{ snippet('readahead_sysconfig') }}
+
+{#
+## Turn on ntpd
+#}
+/sbin/chkconfig ntpdate on
+/sbin/chkconfig ntpd on
+echo 'OPTIONS="$OPTIONS -x"' >>/etc/sysconfig/ntpd
+
+{% if grubport %}
+{#
+#/bin/sed -i 's/^serial.*/serial --port={{ grubport }} --speed=115200/' /boot/grub/grub.conf
+#}
+/bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)$/\1--port={{ grubport }}\2/' /boot/grub/grub.conf
+{% endif %}
+
+# If efibootmgr exists then re-order boot options
+if [ -x '/usr/sbin/efibootmgr' ]; then
+    BOOT=$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print $2}' | awk -F, '{print $1}')
+    EFI=$(/usr/sbin/efibootmgr -v | grep Boot$BOOT | awk '{print $NF}')
+    PXE_SLOT=$(/usr/sbin/efibootmgr -v | grep -Ei '(netboot|pxe)' |cut -c5-8)
+    # If There is no Netboot Entry we can't continue
+    # You have to manually setup a Netboot entry first
+    # from EFI maint menu.
+    if [ ! -z $PXE_SLOT ]; then
+       NEWBOOT=$(echo $BOOT| sed -e 's/$PXE_SLOT,//')
+       # its cheesy. but it works.
+       NEWBOOT=$(echo $NEWBOOT| sed -e 's/,$PXE_SLOT,//')
+       NEWBOOT=$(echo $NEWBOOT| sed -e 's/,$PXE_SLOT//')
+       /usr/sbin/efibootmgr -o $PXE_SLOT,$NEWBOOT
+       /usr/sbin/efibootmgr -n $BOOT
+    fi
+fi
+
+{% if not yum %}
+{% if distro is osmajor('RedHatEnterpriseLinux3') %}
+{% set yum = 'yum-2.2.2-1.rhts.EL3.noarch.rpm' %}
+{% elif distro is osmajor('RedHatEnterpriseLinux4') %}
+{% set yum = 'yum-2.2.2-1.rhts.EL4.noarch.rpm' %}
+{% endif %}
+{% endif %}
+
+{% if yum %}
+# Install Yum
+pushd /root
+/usr/bin/wget -N http://{{ system.lab_controller.fqdn }}/beaker/{{ yum }}
+/bin/rpm -Uvh {{ yum }}
+popd
+{% endif %}
+
+# Add Repos
+{% if distro is osmajor('RedHatEnterpriseLinux7') %}
+{{ snippet('print_repos') }}
+{% else %}
+{% set repo_base = distro_tree.url_in_lab(system.lab_controller, 'http') %}
+{% if repo_base %}
+{% for repo in distro_tree.repos %}
+{% if var('no_%s_repos' % repo.repo_type) is undefined %}
+cat << EOF >/etc/yum.repos.d/beaker-{{ repo.repo_id }}.repo
+[beaker-{{ repo.repo_id }}]
+name=beaker-{{ repo.repo_id }}
+baseurl={{ repo_base|urljoin(repo.path) }}
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if customrepos %}
+{% for repo in customrepos|split('|') %}
+{% set repo_id, url = repo|split(',', 1) %}
+cat << EOF >/etc/yum.repos.d/{{ repo_id }}.repo
+[{{ repo_id }}]
+name={{ repo_id }}
+baseurl={{ url }}
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+{% endfor %}
+{% endif %}
+
+#Add Task Repo
+{% if taskrepo %}
+{% set reponame, repourl = taskrepo.split(',', 1) %}
+cat << EOF >/etc/yum.repos.d/{{ reponame }}.repo
+[{{ reponame }}]
+name={{ reponame }}
+baseurl={{ repourl }}
+enabled=1
+gpgcheck=0
+EOF
+{% endif %}
+
+
+# Add Harness Repo
+{% if harnessrepo %}
+{% set reponame, repourl = harnessrepo.split(',', 1) %}
+cat << EOF >/etc/yum.repos.d/{{ reponame }}.repo
+[{{ reponame }}]
+name={{ reponame }}
+baseurl={{ repourl }}
+enabled=1
+gpgcheck=0
+EOF
+{% endif %}
+
+# fill the yum cache and redirect output to /dev/null
+# This speeds up yum because of a bug where it will update stdout too often.
+# http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
+yum check-update > /dev/null 2>&1 || true
+# Install old rhts commands
+yum -y install rhts-test-env-lab rhts-legacy
+# Install new harness
+yum -y install beah
+# This may fail if you are outside of Red Hat..
+yum -y install beakerlib-redhat
+
+cp /etc/beah_beaker.conf{,.default}
+cat << EOF > /etc/beah_beaker.conf
+# see /etc/beah_beaker.conf.default for commented configuration
+
+[DEFAULT]
+# LAB_CONTROLLER: URI of Beaker's XML-RPC handler
+LAB_CONTROLLER=http://{{ system.lab_controller.fqdn }}:8000
+#
+# HOSTNAME: Pretend to be machine with given name.
+# NOTE: This is mostly pointless as usually correct name is assigned by DHCP.
+HOSTNAME={{ system.fqdn }}
+{% if recipe %}
+RECIPEID={{ recipe.id }}
+{% endif %}
+
+# Turn on hard limits on upload sizes:
+FILE_SIZE_LIMIT=200000000
+TASK_SIZE_LIMIT=800000000
+
+EOF
+
+cp /etc/beah.conf{,.default}
+cat << EOF > /etc/beah.conf
+# see /etc/beah.conf.default for commented configuration
+
+[DEFAULT]
+# Turn on more verbose logging and redirect to console. This is useful for
+# debugging harness' problems.
+LOG=Info
+CONSOLE_LOG=Console
+# To turn on debug logging uncomment the following line. Warning: this is
+# rather verbose! This also requires LOG to be Debug.
+#DEVEL=True
+
+[TASK]
+INTERFACE=
+
+EOF
+
+chkconfig --level 345 beah-srv on
+chkconfig --level 345 beah-beaker-backend on
+chkconfig --level 345 beah-fwd-backend on
+
+# turn on rhts-compat by default (it will save us one reboot):
+chkconfig --add rhts-compat
+chkconfig --level 345 rhts-compat on
+
+#Add test user account
+useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
+{{ snippet('lab_env') }}
+{{ snippet('post_s390_reboot') }}

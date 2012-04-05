@@ -1,0 +1,7 @@
+This directory contains "known good" kickstarts for testing.
+
+*.expected: these are used by the test suite to ensure the kickstart we are
+generating are correct.
+
+*.cobbler: these are the equivalent kickstarts produced by Cobbler
+with Beaker 0.8. These are kept for historical reference.

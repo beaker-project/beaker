@@ -16,7 +16,7 @@ class TestTasks(unittest.TestCase):
         from bkr.server.jobs import Jobs
         self.controller = Jobs()
         self.task = data_setup.create_task(name=u'/fake/task/here')
-        distro = data_setup.create_distro()
+        distro_tree = data_setup.create_distro_tree()
         self.user = data_setup.create_user()
         self.xmljob = XmlJob(xmltramp.parse('''
             <job>
@@ -33,7 +33,7 @@ class TestTasks(unittest.TestCase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''' % (distro.name, self.task.name)))
+            ''' % (distro_tree.distro.name, self.task.name)))
         session.flush()
 
     def tearDown(self):

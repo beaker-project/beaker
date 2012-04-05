@@ -216,7 +216,10 @@ class Modeller(object):
             operators = self.structure['boolean']
         return operators
         
-class Search:
+class Search(object):
+
+    def __init__(self, query):
+        self.queri = query
 
     @classmethod
     def get_search_options_worker(cls,search,col_type):
@@ -405,24 +408,18 @@ class Search:
         return table_options
 
 
-class RecipeSearch(Search):
-    def __init__(self,recipe):
-        self.queri = recipe
+class RecipeSearch(Search): pass
 
 class JobSearch(Search):
     search_table = []
-    def __init__(self,job):
-        self.queri = job
 
 class TaskSearch(Search):
     search_table = []
-    def __init__(self,task):
-        self.queri = task
 
 class DistroSearch(Search):
     search_table = []
-    def __init__(self,distro):
-        self.queri = distro
+
+class DistroTreeSearch(Search): pass
 
 class KeySearch(Search):
     search_table = []
@@ -437,19 +434,13 @@ class KeySearch(Search):
 
 class SystemReserveSearch(Search):
     search_table = []
-    def __init__(self,system_reserve=None):
-        self.queri = system_reserve
 
 class ActivitySearch(Search):
     search_table = [] 
-    def __init__(self,activity):
-        self.queri = activity
-    
+
 class HistorySearch(Search):
     search_table = []   
-    def __init__(self,activity):
-        self.queri = activity 
-   
+
 class SystemSearch(Search): 
     class_external_mapping = {}
     search_table = []
@@ -823,9 +814,9 @@ class Recipe(SystemObject):
                             'System' : MyColumn(col_type='string', column=model.System.fqdn,
                                 relations=[model.Recipe.system]),
                             'Arch' : MyColumn(col_type='string', column=model.Arch.arch,
-                                relations=[model.Recipe.distro, model.Distro.arch]),
+                                relations=[model.Recipe.distro_tree, model.DistroTree.arch]),
                             'Distro' : MyColumn(col_type='string', column=model.Distro.name,
-                                relations=[model.Recipe.distro]),
+                                relations=[model.Recipe.distro_tree, model.DistroTree.distro]),
                             'Status' : MyColumn(col_type='string', column=model.Recipe.status),
                             'Result' : MyColumn(col_type='string', column=model.Recipe.result),
                          }
@@ -989,14 +980,9 @@ class Task(SystemObject):
 
 class Distro(SystemObject):
     search = DistroSearch
-    search_values_dict = { 'Virt' : ['True','False'] }
     searchable_columns = {
                             'Name' : MyColumn(col_type='string',column=model.Distro.name),
-                            'InstallName' : MyColumn(col_type='string',column=model.Distro.install_name),
                             'OSMajor' : MyColumn(col_type='string',column=model.OSMajor.osmajor,relations=['osversion','osmajor']),
-                            'Arch' : MyColumn(col_type='string',column=model.Arch.arch,relations='arch'),
-                            'Virt' : MyColumn(col_type='boolean',column=model.Distro.virt),
-                            'Breed' : MyColumn(col_type='string',column=model.Breed.breed, relations=['breed']),
                             'Tag' : MyColumn(col_type='string', column=model.DistroTag.tag, relations=['_tags'])
                          }
     search_values_dict = {'Tag' : lambda: [e.tag for e in model.DistroTag.list_by_tag(u'')]}
@@ -1015,6 +1001,23 @@ class Distro(SystemObject):
         ids = [r.id for r in query]  
         return not_(model.distro_table.c.id.in_(ids)) 
 
+class DistroTree(SystemObject):
+    search = DistroTreeSearch
+    searchable_columns = {
+        'Name':    MyColumn(col_type='string', column=model.Distro.name, relations='distro'),
+        'Variant': MyColumn(col_type='string', column=model.DistroTree.variant),
+        'Arch':    MyColumn(col_type='string', column=model.Arch.arch, relations='arch'),
+        'OSMajor': MyColumn(col_type='string', column=model.OSMajor.osmajor,
+                            relations=['distro', 'osversion', 'osmajor']),
+        'Tag':     MyColumn(col_type='string', column=model.DistroTag.tag,
+                            relations=['distro', '_tags']),
+    }
+    search_values_dict = {
+        'Arch':    lambda: [unicode(arch) for arch in model.Arch.query.order_by(model.Arch.arch)],
+        'Tag':     lambda: [unicode(tag) for tag in model.DistroTag.query.order_by(model.DistroTag.tag)],
+    }
+
+    tag_is_not_filter = Distro.tag_is_not_filter
 
 class SystemReserve(System):
     search = SystemReserveSearch

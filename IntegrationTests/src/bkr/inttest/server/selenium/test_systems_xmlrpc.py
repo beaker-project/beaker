@@ -25,7 +25,9 @@ import time
 import datetime
 import xmlrpclib
 import crypt
+from nose.plugins.skip import SkipTest
 from turbogears.database import session
+from nose.plugins.skip import SkipTest
 
 from bkr.inttest.server.selenium import XmlRpcTestCase
 from bkr.inttest.assertions import assert_datetime_within, \
@@ -217,6 +219,7 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
 
     @with_transaction
     def setUp(self):
+        raise SkipTest('Cobbler removal')
         self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
         self.stub_cobbler_thread.start()
         self.lab_controller = data_setup.create_labcontroller(
@@ -321,7 +324,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
         self.lab_controller = data_setup.create_labcontroller(
                 fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
-        self.distro = data_setup.create_distro(arch=u'i386')
+        self.distro_tree = data_setup.create_distro_tree(arch=u'i386')
         self.usable_system = data_setup.create_system(arch=u'i386',
                 owner=User.by_user_name(data_setup.ADMIN_USER),
                 status=u'Manual', shared=True)
@@ -330,8 +333,8 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 password=u'onoffonoff', power_id=u'asdf')
         self.usable_system.lab_controller = self.lab_controller
         self.usable_system.user = data_setup.create_user(password=u'password')
-        self.usable_system.provisions[self.distro.arch] = Provision(
-                arch=self.distro.arch,
+        self.usable_system.provisions[self.distro_tree.arch] = Provision(
+                arch=self.distro_tree.arch,
                 kernel_options='ksdevice=eth0 console=ttyS0')
         self.stub_cobbler_thread.start()
         self.server = self.get_server()
@@ -380,6 +383,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
 
     def test_provision(self):
+        raise SkipTest('Cobbler removal')
         kickstart = '''
             %%pre
             kickstart lol!
@@ -413,46 +417,48 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 'reboot')
 
     def test_provision_without_reboot(self):
+        raise SkipTest('Cobbler removal')
         self.server.auth.login_password(self.usable_system.user.user_name,
                 'password')
         self.server.systems.provision(self.usable_system.fqdn,
-                self.distro.install_name, None, None, None, None,
+                self.distro_tree.id, None, None, None, None,
                 False) # this last one is reboot=False
         self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
 
     def test_refuses_to_provision_distro_with_mismatched_arch(self):
         with session.begin():
-            distro = data_setup.create_distro(arch=u'x86_64')
+            distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
         self.server.auth.login_password(self.usable_system.user.user_name,
                 'password')
         try:
-            self.server.systems.provision(self.usable_system.fqdn, distro.install_name)
+            self.server.systems.provision(self.usable_system.fqdn, distro_tree.id)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('cannot be provisioned on system' in e.faultString)
 
     def test_refuses_to_provision_distro_not_in_lc(self):
         with session.begin():
-            for lca in self.distro.lab_controller_assocs:
-                session.delete(lca)
+            self.distro_tree.lab_controller_assocs[:] = []
         self.server.auth.login_password(self.usable_system.user.user_name,
                 'password')
         try:
-            self.server.systems.provision(self.usable_system.fqdn, self.distro.install_name)
+            self.server.systems.provision(self.usable_system.fqdn, self.distro_tree.id)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('cannot be provisioned on system' in e.faultString)
 
     def test_kernel_options_inherited_from_defaults(self):
+        raise SkipTest('Cobbler removal')
         system = self.usable_system
         self.server.auth.login_password(system.user.user_name, 'password')
-        self.server.systems.provision(system.fqdn, self.distro.install_name,
+        self.server.systems.provision(system.fqdn, self.distro_tree.id,
                 None, 'ksdevice=eth1')
         # console=ttyS0 comes from arch default, created in setUp()
         kopts = self.stub_cobbler_thread.cobbler.systems[system.fqdn]['kopts']
         self.assertEqual(kopts, {'ksdevice': 'eth1', 'console': 'ttyS0'})
 
     def test_provision_user_ssh_keys(self):
+        raise SkipTest('Cobbler removal')
         with session.begin():
             system = self.usable_system
             user = system.user
@@ -463,13 +469,14 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                           '4mBw==', u'man@moon')
             user.sshpubkeys.append(k)
         self.server.auth.login_password(user.user_name, 'password')
-        self.server.systems.provision(system.fqdn, self.distro.install_name,
+        self.server.systems.provision(system.fqdn, self.distro_tree.id,
                 'method=nfs', 'noapic', 'noapic runlevel=3', '')
         snippet_filename = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % system.fqdn
         self.assert_('man@moon' in
                 self.stub_cobbler_thread.cobbler.snippets[snippet_filename])
 
     def test_provision_systemwide_root_password(self):
+        raise SkipTest('Cobbler removal')
         with session.begin():
             system = self.usable_system
             user = system.user
@@ -481,31 +488,35 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         self.assert_(crypt.crypt('terces', hashed_password) == hashed_password)
 
     def test_provision_user_root_password(self):
+        raise SkipTest('Cobbler removal')
         with session.begin():
             system = self.usable_system
             user = system.user
             user.root_password = 'gyfrinachol'
         self.server.auth.login_password(user.user_name, 'password')
-        self.server.systems.provision(system.fqdn, self.distro.install_name,
+        self.server.systems.provision(system.fqdn, self.distro_tree.id,
                 'method=nfs', 'noapic', 'noapic runlevel=3', '')
         self.assert_(crypt.crypt('gyfrinachol', user.root_password) ==
                      self.stub_cobbler_thread.cobbler.systems[system.fqdn]['ksmeta']['password'])
 
     def test_ssh_key_ksappend_has_end(self):
+        raise SkipTest('Cobbler removal')
         system = self.usable_system
         user = system.user
         with session.begin():
             user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'AAAAxyz', u'abc@def'))
-            distro = data_setup.create_distro(name='RedHatEnterpriseLinux7.8.9', arch=u'i386',
+            distro = data_setup.create_distro(name='RedHatEnterpriseLinux7.8.9',
                                               osmajor=u'RedHatEnterpriseLinux7')
+            distro_tree = data_setup.create_distro_tree(distro=distro, arch=u'i386')
         self.server.auth.login_password(user.user_name, 'password')
-        self.server.systems.provision(system.fqdn, distro.install_name)
+        self.server.systems.provision(system.fqdn, distro_tree.id)
         beakerd.queued_commands()
         snippet_filename = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % system.fqdn
         print self.stub_cobbler_thread.cobbler.snippets[snippet_filename]
         self.assert_('%end' in self.stub_cobbler_thread.cobbler.snippets[snippet_filename])
 
     def test_provision_expired_user_root_password(self):
+        raise SkipTest('Cobbler removal')
         system = self.usable_system
         user = system.user
         with session.begin():
@@ -515,8 +526,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                       .set(90, user=User.by_user_name(data_setup.ADMIN_USER))
         self.server.auth.login_password(user.user_name, 'password')
         try:
-            self.server.systems.provision(system.fqdn, self.distro.install_name,
-                                          'method=nfs', 'noapic', 'noapic runlevel=3', '')
+            self.server.systems.provision(system.fqdn, self.distro_tree.id)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('root password has expired' in e.faultString, e.faultString)

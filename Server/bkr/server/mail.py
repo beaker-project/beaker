@@ -49,8 +49,8 @@ def failed_recipes(job):
             for recipe in recipeset.recipes:
                 if recipe.is_failed():
                     msg = "%s\t\tRecipeID: %s Arch: %s System: %s Distro: %s OSVersion: %s Status: %s Result: %s\n" \
-                           % (msg, recipe.id, recipe.distro.arch, recipe.system, recipe.distro,
-                              recipe.distro.osversion, recipe.status, recipe.result)
+                           % (msg, recipe.id, recipe.distro_tree.arch, recipe.system, recipe.distro_tree.distro,
+                              recipe.distro_tree.distro.osversion, recipe.status, recipe.result)
                     for task in recipe.tasks:
                         if task.is_failed():
                             msg = "%s\t\t\tTaskID: %s TaskName: %s StartTime: %s Duration: %s Status: %s Result: %s\n" \

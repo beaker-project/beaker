@@ -1,0 +1,11 @@
+# Check in with Beaker Server
+python << _EOF_
+import xmlrpclib
+server = xmlrpclib.Server("http://{{ system.lab_controller.fqdn }}:8000")
+server.install_start("{{ system.fqdn }}")
+_EOF_
+
+{#
+## Enable installation monitoring
+#}
+{{ snippet('pre_anamon') }}
