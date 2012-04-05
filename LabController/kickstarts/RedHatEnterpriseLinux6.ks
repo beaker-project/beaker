@@ -15,6 +15,11 @@ url --url=$tree
 
 key --skip
 
+# privide interactive if people add manual in ks_mate
+#if $getVar('manual','') != ''
+ignoredisk --interactive
+#end if
+
 #if $getVar('system_name', '') != '' and $getVar('manual', 'False') == 'False'
 # System bootloader configuration
 bootloader --location=mbr #slurp
