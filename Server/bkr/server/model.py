@@ -2182,8 +2182,8 @@ class System(SystemObject):
 
     def action_release(self):
         # Attempt to remove Netboot entry and turn off machine
-        if self.remote and self.release_action:
-            self.remote.release(power=False)
+        self.clear_netboot()
+        if self.release_action:
             if self.release_action == ReleaseAction.power_off:
                 self.action_power(action=u'off')
             elif action == ReleaseAction.leave_on:
@@ -2200,8 +2200,6 @@ class System(SystemObject):
                     self.action_power(action=u'reboot')
             else:
                 raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
-        elif self.remote:
-            self.remote.release()
 
     def action_provision(self, distro_tree, rendered_kickstart, service=u'Scheduler'):
         try:
@@ -2228,6 +2226,10 @@ class System(SystemObject):
             self.command_queue.append(activity)
         else:
             return False
+
+    def clear_netboot(self):
+        # XXX TODO implement this
+        pass
 
     def __repr__(self):
         return self.fqdn

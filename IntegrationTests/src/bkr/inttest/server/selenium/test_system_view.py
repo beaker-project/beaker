@@ -250,19 +250,6 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_value('fqdn'), 'looooool')
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=670912
-    def test_renaming_system_removes_from_cobbler(self):
-        self.login()
-        sel = self.selenium
-        self.go_to_system_view()
-        old_fqdn = self.system.fqdn
-        new_fqdn = 'commodore64.example.com'
-        sel.type('fqdn', new_fqdn)
-        sel.click('link=Save Changes')
-        sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_value('fqdn'), new_fqdn)
-        self.assert_(old_fqdn in self.stub_cobbler_thread.cobbler.removed_systems)
-
     def test_add_arch(self):
         orig_date_modified = self.system.date_modified
         self.login()

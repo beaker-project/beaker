@@ -1491,8 +1491,6 @@ class Root(RPCRoot):
         system.vendor=kw['vendor']
         system.lender=kw['lender']
         system.hypervisor=kw['hypervisor']
-        if kw['fqdn'] != system.fqdn and system.lab_controller:
-            system.remote.remove()
         system.fqdn=kw['fqdn']
         system.status_reason = kw['status_reason']
         system.date_modified = datetime.utcnow()
