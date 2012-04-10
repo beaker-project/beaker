@@ -258,22 +258,16 @@ class Tasks(RPCRoot):
         if 'recipe_id' in kw: #most likely we are coming here from a LinkRemoteFunction in recipe_widgets
             tasks = tasks.filter(Recipe.id == kw['recipe_id'])
 
-            hidden = dict(distro = 1,
-                          osmajor = 1,
-                          arch = 1,
-                          system = 1)
+            hidden = dict(distro_tree=1, system=1)
             return dict(tasks=tasks,hidden=hidden,task_widget=self.task_widget)
 
         if kw.get('distro_tree_id'):
             tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree)\
                     .filter(DistroTree.id == kw.get('distro_tree_id'))
+            hidden = dict(distro_tree=1)
         elif kw.get('distro_id'):
             tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree, DistroTree.distro)\
                     .filter(Distro.id == kw.get('distro_id'))
-            hidden = dict(distro = 1,
-                          osmajor = 1,
-                          arch = 1,
-                         )
         if kw.get('task_id'):
             try:
                 tasks = tasks.join('task').filter(Task.id==kw.get('task_id'))
