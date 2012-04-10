@@ -599,8 +599,8 @@ def queued_commands(*args):
         running_commands = CommandActivity.query\
                          .filter(CommandActivity.status==CommandStatus.running)
         if running_commands.count() >= MAX_RUNNING_COMMANDS:
-            log.debug('Throttling Commands: %s >= %s' % (running_commands.count(), 
-                                                        MAX_RUNNING_COMMANDS))
+            log.debug('Throttling Commands: %s >= %s', running_commands.count(),
+                                                       MAX_RUNNING_COMMANDS)
             return
         # limit is an int between 1 and MAX_RUNNING_COMMANDS
         limit = MAX_RUNNING_COMMANDS - running_commands.count()
@@ -620,31 +620,31 @@ def queued_commands(*args):
             if CommandActivity.query.filter(and_(CommandActivity.status==CommandStatus.running,
                                                    CommandActivity.system==cmd.system))\
                                     .count():
-                log.info('Skipping power %s (command %d), command already running on machine: %s' %
-                         (cmd.action, cmd.id, cmd.system))
+                log.info('Skipping power %s (command %s), command already running on machine: %s',
+                         cmd.action, cmd.id, cmd.system)
                 continue
             if not cmd.system.lab_controller or not cmd.system.power:
-                log.error('Command %d aborted, power control not available for machine: %s' %
-                          (cmd.id, cmd.system))
+                log.error('Command %s aborted, power control not available for machine: %s',
+                          cmd.id, cmd.system)
                 cmd.status = CommandStatus.aborted
                 cmd.new_value = u'Power control unavailable'
                 cmd.log_to_system_history()
             else:
                 try:
-                    log.info('Executing power %s command (%d) on machine: %s' %
-                             (cmd.action, cmd.id, cmd.system))
+                    log.info('Executing power %s command (%s) on machine: %s',
+                             cmd.action, cmd.id, cmd.system)
                     cmd.task_id = cmd.system.remote.power(cmd.action)
                     cmd.updated = datetime.utcnow()
                     cmd.status = CommandStatus.running
                 except ProtocolError, err:
-                    log.warning('Error (%d) submitting power command (%d) for %s, will retry: %s' %
-                                (err.errcode, cmd.id, cmd.system, err.errmsg))
+                    log.warning('Error (%s) submitting power command (%s) for %s, will retry: %s',
+                                err.errcode, cmd.id, cmd.system, err.errmsg)
                 except socket.error, err:
-                    log.warning('Socket error (%d) submitting power command (%d) for %s, will retry: %s' %
-                                (err.errno, cmd.id, cmd.system, err.strerror))
+                    log.warning('Socket error (%s) submitting power command (%s) for %s, will retry: %s',
+                                err.errno, cmd.id, cmd.system, err.strerror)
                 except Exception, msg:
-                    log.error('Cobbler power exception submitting \'%s\' command (%d) for machine %s: %s' %
-                              (cmd.action, cmd.id, cmd.system, msg))
+                    log.error('Cobbler power exception submitting \'%s\' command (%s) for machine %s: %s',
+                              cmd.action, cmd.id, cmd.system, msg)
                     cmd.new_value = unicode(msg)
                     cmd.status = CommandStatus.failed
                     cmd.log_to_system_history()
