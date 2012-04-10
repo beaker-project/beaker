@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.1
-Release:        5%{?dist}
+Release:        5.1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -346,6 +346,9 @@ fi
 %endif
 
 %changelog
+* Tue Apr 10 2012 Bill Peck <bpeck@redhat.com> 0.8.1-5.1
+- more resilient logging in command queue thread (dcallagh@redhat.com)
+
 * Fri Mar 16 2012 Bill Peck <bpeck@redhat.com> 0.8.1-5
 - 803713 Fix for job matrix result box not generating links with 'job_ids' when
   being generated via job id box (rmancy@redhat.com)
