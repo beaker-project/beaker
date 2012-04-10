@@ -351,6 +351,25 @@ fi
 * Tue Apr 10 2012 Bill Peck <bpeck@redhat.com> 0.8.1-5.1
 - more resilient logging in command queue thread (dcallagh@redhat.com)
 
+* Wed Apr 04 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-9
+- service queue msgs' fixed to also be sent on direct exchange
+  (rmancy@redhat.com)
+
+* Wed Apr 04 2012 Raymond Mancy <rmancy@redhat.com>
+- service queue msgs' fixed to also be sent on direct exchange
+  (rmancy@redhat.com)
+
+* Tue Apr 03 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-8
+- Put service queue messages onto direct exchange, not just default exchange
+  (rmancy@redhat.com)
+
+* Tue Apr 03 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-7
+- Fix _auth_interval typo, and change eso.topic subjects to be prefixed with
+  beaker.* (rmancy@redhat.com)
+
+* Wed Mar 21 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-6
+- Qpid changes (rmancy@redhat.com)
+
 * Fri Mar 16 2012 Bill Peck <bpeck@redhat.com> 0.8.1-5
 - 803713 Fix for job matrix result box not generating links with 'job_ids' when
   being generated via job id box (rmancy@redhat.com)
