@@ -1471,28 +1471,7 @@ class SystemObject(MappedObject):
         tables = cls.get_dict().keys()
         tables.sort()
         return tables
-   
-    @classmethod
-    def get_allowable_dict(cls, allowable_properties):
-        tables = dict( system = dict( joins=[], cls=cls)) 
-        for property in allowable_properties:      
-            try:
 
-                property_got = cls.mapper.get_property(property)
-	    except InvalidRequestError: pass 
-            try:
-                remoteTables = property_got.mapper.class_._get_dict()          
-            except: pass
-             
-            for key in remoteTables.keys():             
-                joins=[property_got.key]
-                joins.extend(remoteTables[key]['joins'])     
-                tables['%s/%s' % (property_got.key,key)] = dict( joins=joins, cls=remoteTables[key]['cls'])
-            
-            tables['system/%s' % property_got.key] = dict(joins=[property_got.key], cls=property_got.mapper.class_)
-        
-        return tables 
-    
     @classmethod
     def get_dict(cls):
         tables = dict( system = dict(joins=[], cls=cls))
@@ -1502,7 +1481,7 @@ class SystemObject(MappedObject):
                 remoteTables = {}
                 try: 
                     remoteTables = property.mapper.class_._get_dict()
-                except: pass
+                except Exception: pass
                 for key in remoteTables.keys(): 
                     joins = [property.key]
                     joins.extend(remoteTables[key]['joins']) 
@@ -1519,7 +1498,7 @@ class SystemObject(MappedObject):
                 remoteTables = {}
                 try:
                     remoteTables = property.mapper.class_._get_dict()
-                except: pass
+                except Exception: pass
                 for key in remoteTables.keys():
                     joins = [property.key]
                     joins.extend(remoteTables[key]['joins'])
@@ -1792,7 +1771,7 @@ class System(SystemObject):
     def is_free(self):
         try:
             user = identity.current.user
-        except:
+        except Exception:
             user = None
 
         if not self.user and (not self.loaned or self.loaned == user):
@@ -2056,7 +2035,7 @@ class System(SystemObject):
         for arch in archinfo:
             try:
                 new_arch = Arch.by_name(arch)
-            except:
+            except NoResultFound:
                 new_arch = Arch(arch=arch)
             if new_arch not in self.arch:
                 self.arch.append(new_arch)
@@ -2192,32 +2171,37 @@ class System(SystemObject):
                 if self.reprovision_distro_tree:
                     from bkr.server.kickstart import generate_kickstart
                     install_options = self.system.install_options(self.distro_tree)
-                    kickstart = generate_kickstart(install_options,
+                    rendered_kickstart = generate_kickstart(install_options,
                             distro_tree=self.reprovision_distro_tree,
                             system=self, user=self.owner)
-                    self.action_provision(distro_tree=self.reprovision_distro_tree,
+                    self.configure_netboot(distro_tree=self.reprovision_distro_tree,
+                            kernel_options=install_options.as_strings()['kernel_options'],
                             rendered_kickstart=rendered_kickstart)
                     self.action_power(action=u'reboot')
             else:
                 raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
 
-    def action_provision(self, distro_tree, rendered_kickstart, service=u'Scheduler'):
+    def configure_netboot(self, distro_tree, kernel_options,
+            rendered_kickstart, service=u'Scheduler'):
         try:
             user = identity.current.user
-        except:
+        except Exception:
             user = None
         if self.lab_controller:
-            self.command_queue.append(CommandActivity(user=user,
-                    service=service, action=u'provision',
-                    status=CommandStatus.queued,
-                    rendered_kickstart=rendered_kickstart))
+            command = CommandActivity(user=user,
+                    service=service, action=u'configure_netboot',
+                    status=CommandStatus.queued)
+            command.distro_tree = distro_tree
+            command.kernel_options = kernel_options
+            command.rendered_kickstart = rendered_kickstart
+            self.command_queue.append(command)
         else:
             return False
 
     def action_power(self, action=u'reboot', service=u'Scheduler', callback=None):
         try:
             user = identity.current.user
-        except:
+        except Exception:
             user = None
 
         if self.lab_controller and self.power:
@@ -2254,7 +2238,7 @@ class System(SystemObject):
         """Sets the system status to Broken and notifies its owner."""
         try:
             user = identity.current.user
-        except:
+        except Exception:
             user = None
         log.warning('Marking system %s as broken' % self.fqdn)
         sa = SystemActivity(user, service, u'Changed', u'Status', unicode(self.status), u'Broken')
@@ -3356,7 +3340,7 @@ class TaskBase(MappedObject):
         try:
             if self.owner == user or (user.in_group(['admin','queue_admin'])):
                 return True
-        except:
+        except Exception:
             return
 
 class Job(TaskBase):
@@ -3997,21 +3981,18 @@ class RecipeSetResponse(MappedObject):
 
     @classmethod
     def by_jobs(cls,job_ids):
-        try:
-            job_ids_type = type(job_ids)
-            if job_ids_type == type(list()):
-                clause = Job.id.in_(job_ids)
-            elif job_ids_type == int:
-                clause = Job.id == job_id
-            else:
-                raise BeakerException('job_ids needs to be either type \'int\' or \'list\'. Found %s' % job_ids_type)
-            queri = cls.query.outerjoin(['recipesets','job']).filter(clause)
-            results = {}
-            for elem in queri:
-                results[elem.recipe_set_id] = elem.comment
-            return results
- 
-        except: raise
+        job_ids_type = type(job_ids)
+        if job_ids_type == type(list()):
+            clause = Job.id.in_(job_ids)
+        elif job_ids_type == int:
+            clause = Job.id == job_id
+        else:
+            raise BeakerException('job_ids needs to be either type \'int\' or \'list\'. Found %s' % job_ids_type)
+        queri = cls.query.outerjoin(['recipesets','job']).filter(clause)
+        results = {}
+        for elem in queri:
+            results[elem.recipe_set_id] = elem.comment
+        return results
 
 class RecipeSet(TaskBase):
     """
@@ -4098,10 +4079,8 @@ class RecipeSet(TaskBase):
 
     @classmethod
     def by_job_id(cls,job_id):
-        try:
-            queri = RecipeSet.query.outerjoin(['job']).filter(Job.id == job_id)
-            return queri
-        except: raise 
+        queri = RecipeSet.query.outerjoin(['job']).filter(Job.id == job_id)
+        return queri
 
     def cancel(self, msg=None):
         """

@@ -72,6 +72,7 @@ import string
 import pkg_resources
 import rdflib.graph
 import formencode.variabledecode
+from sqlalchemy.orm.exc import NoResultFound
 
 # for debugging
 import sys
@@ -415,7 +416,7 @@ class Root(RPCRoot):
         try:
             recipeset = RecipeSet.by_id(recipeset_id)
             old_priority = recipeset.priority
-        except:
+        except NoResultFound:
             log.error('No rows returned for recipeset_id %s in change_priority_recipeset:%s' % (recipeset_id,e))
             return { 'success' : None, 'msg' : 'RecipeSet is not valid' }
 
@@ -763,7 +764,7 @@ class Root(RPCRoot):
         if system_id and key_value_id and key_type:
             try:
                 system = System.by_id(system_id,identity.current.user)
-            except:
+            except NoResultFound:
                 flash(_(u"Invalid Permision"))
                 redirect("/")
         else:
@@ -799,7 +800,7 @@ class Root(RPCRoot):
         if system_id and arch_id:
             try:
                 system = System.by_id(system_id,identity.current.user)
-            except:
+            except NoResultFound:
                 flash(_(u"Invalid Permision"))
                 redirect("/")
         else:
@@ -826,7 +827,7 @@ class Root(RPCRoot):
         if system_id and group_id:
             try:
                 system = System.by_id(system_id,identity.current.user)
-            except:
+            except NoResultFound:
                 flash(_(u"Invalid Permision"))
                 redirect("/")
         else:

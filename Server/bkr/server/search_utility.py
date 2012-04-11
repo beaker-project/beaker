@@ -4,6 +4,7 @@ import sqlalchemy
 from turbogears import flash, identity
 from sqlalchemy import or_, and_, not_
 from sqlalchemy.sql import visitors, select
+from sqlalchemy.orm.exc import NoResultFound
 from turbogears.database import session
 from bkr.server.model import Key as KeyModel
 import logging
@@ -851,7 +852,7 @@ class Task(SystemObject):
             try:
                 model.OSMajor.query.filter(model.OSMajor.osmajor == y).one()
                 wildcard = False
-            except:
+            except NoResultFound:
                 return 'False'
             queri = queri.filter(model.OSMajor.osmajor == y)
         ids = [r.id for r in queri]
@@ -892,7 +893,7 @@ class Task(SystemObject):
         else:
             try:
                 valid_arch = model.Arch.query.filter(model.Arch.arch == y).one()
-            except:
+            except NoResultFound:
                 return 'False'
             queri = queri.filter(model.Arch.arch == y)
         log.debug(queri)
@@ -934,7 +935,7 @@ class Task(SystemObject):
             try:
                 valid_arch = model.Arch.query.filter(model.Arch.arch == y).one()
                 wildcard = False
-            except:
+            except NoResultFound:
                 return 'True'
         return cls._opposites_is_not_filter(x,y,wildcard=wildcard)
 
@@ -952,7 +953,7 @@ class Task(SystemObject):
             try:
                 model.OSMajor.query.filter(model.OSMajor.osmajor == y).one()
                 wildcard = False
-            except:
+            except NoResultFound:
                 return 'True'
         return cls._opposites_is_not_filter(x,y,wildcard)
 

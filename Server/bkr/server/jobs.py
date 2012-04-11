@@ -491,15 +491,13 @@ class Jobs(RPCRoot):
     @expose('json')
     def update_recipe_set_response(self,recipe_set_id,response_id):
         rs = RecipeSet.by_id(recipe_set_id)
-        try:
-            if rs.nacked is None:
-                rs.nacked = RecipeSetResponse(response_id=response_id)
-            else:
-                rs.nacked.response = Response.by_id(response_id)
-            
-            return {'success' : 1, 'rs_id' : recipe_set_id }
-        except: raise
-           
+        if rs.nacked is None:
+            rs.nacked = RecipeSetResponse(response_id=response_id)
+        else:
+            rs.nacked.response = Response.by_id(response_id)
+
+        return {'success' : 1, 'rs_id' : recipe_set_id }
+
     @expose(format='json')
     def save_response_comment(self,rs_id,comment):
         try:

@@ -101,7 +101,7 @@ class XmlJob(ElementWrapper):
     def __getattr__(self, attrname):
         try:
             return self.wrappedEl[attrname]
-        except: 
+        except Exception:
             raise AttributeError, attrname
 
 class XmlRecipeSet(ElementWrapper):
@@ -181,7 +181,7 @@ class XmlRecipe(ElementWrapper):
         elif attrname == 'kickstart':
             try:
                 return u''.join([t for t in self.wrappedEl['kickstart']])
-            except: 
+            except Exception:
                 return None
         elif attrname == 'role':
             return self.get_xml_attr('role', unicode, u'None')
