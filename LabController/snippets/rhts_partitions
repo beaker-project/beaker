@@ -1,5 +1,9 @@
 zerombr
+#if $getVar('ondisk', '') != ''
+clearpart --drives $getVar('ondisk','') --all --initlabel
+#else
 clearpart --all --initlabel
+#end if
 
 #if $getVar('partitions', '') != '' or $getVar('ondisk', '') != ''
 
