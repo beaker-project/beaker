@@ -15,7 +15,11 @@ $SNIPPET('readahead_sysconfig')
 ## Turn on ntpd
 /sbin/chkconfig ntpdate on
 /sbin/chkconfig ntpd on
-echo 'OPTIONS="\$OPTIONS -x"' >>/etc/sysconfig/ntpd
+GOT_G=\$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
+
+if [ -z "$GOT_G" ]; then
+    /bin/sed -i -r 's/(^OPTIONS\s*=\s*)(['\''|"])(.+)$/\1\2\-x \3 /' /etc/sysconfig/ntpd
+fi
 
 #if $getVar('grubport','') != ''
 #/bin/sed -i 's/^serial.*/serial --port=$grubport --speed=115200/' /boot/grub/grub.conf
