@@ -135,11 +135,11 @@ class CSVExportTest(WebDriverTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=785048
     def test_export_exclude_options(self):
-        system = data_setup.create_system(arch=u'i386')
-        distro = data_setup.create_distro(arch=u'i386')
-        system.excluded_osmajor.append(
-            ExcludeOSMajor(osmajor=distro.osversion.osmajor, arch=distro.arch))
-        session.flush()
+        with session.begin():
+            system = data_setup.create_system(arch=u'i386')
+            distro = data_setup.create_distro(arch=u'i386')
+            system.excluded_osmajor.append(
+                ExcludeOSMajor(osmajor=distro.osversion.osmajor, arch=distro.arch))
         login(self.browser)
         csv_request = self.get_csv('exclude')
         csv_rows = [row for row in csv.DictReader(csv_request) if row['fqdn'] == system.fqdn]
