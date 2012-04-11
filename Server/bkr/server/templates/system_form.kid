@@ -99,7 +99,7 @@ $(document).ready(function(){
        </th>
        <td class="list">
         ${display_field_for("status")}
-        <span py:if="not tg.identity.anonymous" py:strip="1">
+        <span py:if="not tg.identity.anonymous and system_actions is not None" py:strip="1">
             ${system_actions.display(loan_options=options['loan'], report_problem_options=options['report_problem'])}
         </span>
        </td>

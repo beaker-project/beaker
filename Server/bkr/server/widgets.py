@@ -1305,6 +1305,8 @@ class SystemForm(Form):
             d["report_problem"] = d["options"]["report_problem"]
         if d["options"].has_key("system_actions"):
             d["system_actions"] = d["options"]["system_actions"]
+        else:
+            d['system_actions'] = None
         if d["options"].has_key("system"):
             d["system"] = d["options"]["system"]
         if d["options"].has_key("owner_change"):
