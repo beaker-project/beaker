@@ -26,7 +26,7 @@ def make_scan_link(id):
 def make_fake_link(name=None,id=None,text=None,attrs=None):
     # make something look like a href
     a  = Element('a')
-    a.attrib['class'] = "list"
+    a.attrib['class'] = "link"
     a.attrib['style'] = "color:#22437f;cursor:pointer"
     if name is not None:
         a.attrib['name'] = name

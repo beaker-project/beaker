@@ -97,6 +97,25 @@ jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js',
 
 local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime_v2.js')
 
+class GroupPermissions(Widget):
+
+    javascript = [LocalJSLink('bkr', '/static/javascript/group_permission.js'),
+        LocalJSLink('bkr', '/static/javascript/util.js'),
+        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
+    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')]
+    member_widgets = ['form', 'grid']
+    template = """
+        <div xmlns:py="http://purl.org/kid/ns#">
+            <script type='text/javascript'>
+                var permissions_form_id = "${form.name}"
+                 var permissions_grid_id = "${grid.name}"
+                 var group_id = "${value.group_id}"
+            </script>
+            ${grid.display(value.permissions)}
+            <p></p>
+            ${form.display(action='./save_group_permissions', value=value)}
+        </div>
+        """
 
 class PowerTypeForm(CompoundFormField):
     """Dynmaically modifies power arguments based on Power Type Selection"""
@@ -371,7 +390,7 @@ class myPaginateDataGrid(PaginateDataGrid):
 class LabControllerDataGrid(myPaginateDataGrid):
     javascript = [LocalJSLink('bkr','/static/javascript/lab_controller_remove.js'),
                   LocalJSLink('bkr', '/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
-    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
+    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')]
 
 class SingleSelectFieldJSON(SingleSelectField):
     params = ['for_column']

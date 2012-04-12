@@ -4,7 +4,7 @@ $(document).ready(function() {
         var id_regex = /delete_note_(\d+)/
         var id = element_id.replace(id_regex, "$1")
         var callback = on_complete(id)
-        delete_and_confirm('../delete_note',{'id':id}, callback)
+        do_and_confirm('../delete_note',{'id':id}, callback, undefined, 'delete')
     });
 
 });
