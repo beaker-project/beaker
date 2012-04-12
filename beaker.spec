@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -348,6 +348,10 @@ fi
 %endif
 
 %changelog
+* Fri Apr 13 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-2
+- more %%d issues in command_queue. (bpeck@redhat.com)
+- Merge remote branch 'origin/release-0.8.1-5.1' into release-0.8.2
+  (rmancy@redhat.com)
 * Fri Apr 13 2012 Steven Lawrance <stl@redhat.com> 0.8.1-5.2
 - more %%d issues in command_queue. (bpeck@redhat.com)
 
