@@ -549,19 +549,17 @@ def running_commands(*args):
         session.begin()
         cmd = CommandActivity.query.get(cmd_id)
         if not cmd:
-            log.error('Command %d get() failed. Deleted?' % (cmd_id))
+            log.error('Command %s get() failed. Deleted?', cmd_id)
         else:
             try:
                 for line in cmd.system.remote.get_event_log(cmd.task_id).split('\n'):
                     if line.find("### TASK COMPLETE ###") != -1:
-                        log.info('Power %s command (%d) completed on machine: %s' %
-                                 (cmd.action, cmd.id, cmd.system))
+                        log.info('Power %s command (%s) completed on machine: %s', cmd.action, cmd.id, cmd.system)
                         cmd.status = CommandStatus.by_name(u'Completed')
                         cmd.log_to_system_history()
                         break
                     if line.find("### TASK FAILED ###") != -1:
-                        log.error('Cobbler power task %s (command %d) failed for machine: %s' %
-                                  (cmd.task_id, cmd.id, cmd.system))
+                        log.error('Cobbler power task %s (command %s) failed for machine: %s', cmd.task_id, cmd.id, cmd.system)
                         cmd.status = CommandStatus.by_name(u'Failed')
                         cmd.new_value = u'Cobbler task failed'
                         if cmd.system.status == SystemStatus.by_name(u'Automated'):
@@ -570,20 +568,16 @@ def running_commands(*args):
                         break
                 if (cmd.status == CommandStatus.by_name(u'Running')) and \
                    (datetime.utcnow() >= cmd.updated + timedelta(seconds=COMMAND_TIMEOUT)):
-                        log.error('Cobbler power task %s (command %d) timed out on machine: %s' %
-                                  (cmd.task_id, cmd.id, cmd.system))
+                        log.error('Cobbler power task %s (command %s) timed out on machine: %s', cmd.task_id, cmd.id, cmd.system)
                         cmd.status = CommandStatus.by_name(u'Aborted')
-                        cmd.new_value = u'Timeout of %d seconds exceeded' % COMMAND_TIMEOUT
+                        cmd.new_value = u'Timeout of %s seconds exceeded' % COMMAND_TIMEOUT
                         cmd.log_to_system_history()
             except ProtocolError, err:
-                log.warning('Error (%d) querying power command (%d) for %s, will retry: %s' %
-                            (err.errcode, cmd.id, cmd.system, err.errmsg))
+                log.warning('Error (%s) querying power command (%s) for %s, will retry: %s', err.errcode, cmd.id, cmd.system, err.errmsg)
             except socket.error, err:
-                log.warning('Socket error (%d) querying power command (%d) for %s, will retry: %s' %
-                            (err.errno, cmd.id, cmd.system, err.strerror))
+                log.warning('Socket error (%s) querying power command (%s) for %s, will retry: %s', err.errno, cmd.id, cmd.system, err.strerror)
             except Exception, msg:
-                log.error('Cobbler power exception processing command %d for machine %s: %s' %
-                          (cmd.id, cmd.system, msg))
+                log.error('Cobbler power exception processing command %s for machine %s: %s', cmd.id, cmd.system, msg)
                 cmd.status = CommandStatus.by_name(u'Failed')
                 cmd.new_value = unicode(msg)
                 cmd.log_to_system_history()
@@ -623,7 +617,7 @@ def queued_commands(*args):
             # I'm not sure how this would happen since id came from the above
             # query, maybe a race condition?
             if not cmd:
-                log.error('Command %d get() failed. Deleted?', cmd_id)
+                log.error('Command %s get() failed. Deleted?', cmd_id)
                 continue
             # Skip queued commands if something is already running on that system
             if CommandActivity.query.filter(and_(CommandActivity.status==CommandStatus.by_name(u'Running'),
@@ -742,7 +736,7 @@ def daemonize(daemon_func, daemon_pid_file=None, daemon_start_dir="/", daemon_ou
             # exit from first parent
             sys.exit(0)
     except OSError, ex:
-        sys.stderr.write("fork #1 failed: (%d) %s\n" % (ex.errno, ex.strerror))
+        sys.stderr.write("fork #1 failed: (%s) %s\n" % (ex.errno, ex.strerror))
         sys.exit(1)
 
     # decouple from parent environment
@@ -762,7 +756,7 @@ def daemonize(daemon_func, daemon_pid_file=None, daemon_start_dir="/", daemon_ou
             # exit from second parent
             sys.exit(0)
     except OSError, ex:
-        sys.stderr.write("fork #2 failed: (%d) %s\n" % (ex.errno, ex.strerror))
+        sys.stderr.write("fork #2 failed: (%s) %s\n" % (ex.errno, ex.strerror))
         sys.exit(1)
 
     # redirect stdin, stdout and stderr
