@@ -348,6 +348,9 @@ fi
 %endif
 
 %changelog
+* Fri Apr 13 2012 Steven Lawrance <stl@redhat.com> 0.8.1-5.2
+- more %%d issues in command_queue. (bpeck@redhat.com)
+
 * Thu Apr 12 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-1
 - 740321 Do not show power control buttons when system has no lab controller
   (stl@redhat.com)
@@ -404,6 +407,7 @@ fi
 - Use python-daemon in beakerd (stl@redhat.com)
 - qpid: Remove use of headers exchange, add direct (rmancy@redhat.com)
 - New option --suppress-install-task (mganisin@redhat.com)
+
 * Tue Apr 10 2012 Bill Peck <bpeck@redhat.com> 0.8.1-5.1
 - more resilient logging in command queue thread (dcallagh@redhat.com)
 
