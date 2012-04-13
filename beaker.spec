@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.1
-Release:        5.1%{?dist}
+Release:        5.2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -346,6 +346,9 @@ fi
 %endif
 
 %changelog
+* Fri Apr 13 2012 Steven Lawrance <stl@redhat.com> 0.8.1-5.2
+- more %%d issues in command_queue. (bpeck@redhat.com)
+
 * Tue Apr 10 2012 Bill Peck <bpeck@redhat.com> 0.8.1-5.1
 - more resilient logging in command queue thread (dcallagh@redhat.com)
 
