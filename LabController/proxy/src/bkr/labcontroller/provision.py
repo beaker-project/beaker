@@ -52,30 +52,40 @@ def build_power_env(command):
 
 shutting_down = False
 
+def handle_power(command):
+    script = find_power_script(command['power_type'])
+    env = build_power_env(command)
+    # We try the command up to 5 times, because some power commands
+    # are flakey (apparently)...
+    for attempt in range(1, 6):
+        logger.debug('Launching power script %s (attempt %s) with env %r',
+                script, attempt, env)
+        # N.B. the timeout value used here affects daemon shutdown time,
+        # make sure the init script is kept up to date!
+        p = MonitoredSubprocess([script], env=env,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                timeout=300)
+        logger.debug('Waiting on power script pid %s', p.pid)
+        p.dead.wait()
+        out = p.stdout_reader.get()
+        err = p.stderr_reader.get()
+        if p.returncode == 0 or shutting_down:
+            break
+    if p.returncode != 0:
+        raise ValueError('Power script %s failed after %s attempts with exit status %s:\n%s'
+                % (script, attempt, p.returncode, err[:150]))
+
 def handle_command(poller, command):
     poller.mark_command_running(command['id'])
     try:
-        script = find_power_script(command['power_type'])
-        env = build_power_env(command)
-        # We try the command up to 5 times, because some power commands
-        # are flakey (apparently)...
-        for attempt in range(1, 6):
-            logger.debug('Launching power script %s (attempt %s) with env %r',
-                    script, attempt, env)
-            # N.B. the timeout value used here affects daemon shutdown time,
-            # make sure the init script is kept up to date!
-            p = MonitoredSubprocess([script], env=env,
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    timeout=300)
-            logger.debug('Waiting on power script pid %s', p.pid)
-            p.dead.wait()
-            out = p.stdout_reader.get()
-            err = p.stderr_reader.get()
-            if p.returncode == 0 or shutting_down:
-                break
-        if p.returncode != 0:
-            raise ValueError('Power script %s failed after %s attempts with exit status %s:\n%s'
-                    % (script, attempt, p.returncode, err[:150]))
+        if command['action'] in (u'on', u'off'):
+            handle_power(command)
+        elif command['action'] == u'reboot':
+            handle_power(dict(command.items() + [('action', u'off')]))
+            handle_power(dict(command.items() + [('action', u'on')]))
+        else:
+            raise ValueError('Unrecognised action %s' % command['action'])
+            # XXX or should we just ignore it and leave it queued?
     except Exception, e:
         logger.exception('Error processing command %s', command['id'])
         poller.mark_command_failed(command['id'],
