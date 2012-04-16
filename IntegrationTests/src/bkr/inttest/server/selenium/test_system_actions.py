@@ -129,7 +129,7 @@ class SystemAction(WebDriverTestCase):
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
 
         self.mail_capture.captured_mails[:] = []
-        b.get(get_server_base() + 'recipes/%s' % job.id)
+        b.get(get_server_base() + 'recipes/%s' % job.recipesets[0].recipes[0].id)
         b.find_element_by_link_text('Report Problem with system').click()
         b.find_element_by_id('problem_description').send_keys('I broke it')
         b.find_element_by_xpath('//input[@value=\'Report\']').click()
