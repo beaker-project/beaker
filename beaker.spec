@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -348,6 +348,10 @@ fi
 %endif
 
 %changelog
+* Tue Apr 17 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-3
+- test: Fix job.id to be id of recipe (rmancy@redhat.com)
+- 731615 fix mistake in RELAX NG schema for <device/> (dcallagh@redhat.com)
+- 812722 Remove pidfile if it exists before starting beakerd (stl@redhat.com)
 * Fri Apr 13 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-2
 - more %%d issues in command_queue. (bpeck@redhat.com)
 - Merge remote branch 'origin/release-0.8.1-5.1' into release-0.8.2
