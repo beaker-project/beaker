@@ -30,8 +30,7 @@
    <th class="list" py:if="not hidden.has_key('rid')">Run ID</th>
    <th class="list" py:if="not hidden.has_key('task')">Task</th>
    <th class="list" py:if="hidden.has_key('task')">&nbsp;</th>
-   <th class="list" py:if="not hidden.has_key('distro')">Distro Tree</th>
-   <th class="list" py:if="not hidden.has_key('arch')">Arch</th>
+   <th class="list" py:if="not hidden.has_key('distro_tree')">Distro Tree</th>
    <th class="list" py:if="not hidden.has_key('system')">System</th>
    <th class="list" py:if="not hidden.has_key('start')"><br>StartTime</br><br>[FinishTime]</br><br>[Duration]</br></th>
    <th class="list" py:if="not hidden.has_key('logs')">Logs</th>
@@ -55,11 +54,8 @@
      ${task.link}
     </td>
     <td class="list task" py:if="hidden.has_key('task')">&nbsp;</td>
-    <td class="list task" py:if="not hidden.has_key('distro')">
+    <td class="list task" py:if="not hidden.has_key('distro_tree')">
      ${task.recipe.distro_tree == None and ' ' or task.recipe.distro_tree.link}
-    </td>
-    <td class="list task" py:if="not hidden.has_key('arch')">
-     ${task.recipe.distro_tree.arch}
     </td>
     <td class="list task" py:if="not hidden.has_key('system')">
      ${task.recipe.system == None and ' ' or task.recipe.system.link}
@@ -93,10 +89,7 @@
     <td class="list result">
      &nbsp;&nbsp;${task_result.short_path}
     </td>
-    <td class="list result" py:if="not hidden.has_key('distro')">
-     &nbsp;
-    </td>
-    <td class="list result" py:if="not hidden.has_key('arch')">
+    <td class="list result" py:if="not hidden.has_key('distro_tree')">
      &nbsp;
     </td>
     <td class="list result" py:if="not hidden.has_key('system')">

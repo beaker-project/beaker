@@ -144,6 +144,7 @@ class LabControllers(RPCRoot):
         if arch not in distro.osversion.arches:
             distro.osversion.arches.append(arch)
         distro_tree.date_created = datetime.fromtimestamp(float(new_distro['tree_build_time']))
+        distro.date_created = datetime.fromtimestamp(float(new_distro['tree_build_time']))
 
         if 'repos' in new_distro:
             for repo in new_distro['repos']:

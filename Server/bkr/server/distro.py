@@ -187,7 +187,9 @@ class Distros(RPCRoot):
 
         distros_grid =  myPaginateDataGrid(fields=[
                                   myPaginateDataGrid.Column(name='id', getter=lambda x: make_link(url = '/distros/view?id=%s' % x.id, text = x.id), title='ID', options=dict(sortable=True)),
-                                  myPaginateDataGrid.Column(name='name', getter=lambda x: x.name, title='Name', options=dict(sortable=True)),
+                                  myPaginateDataGrid.Column(name='name',
+                                    getter=lambda x: make_link(url='/distros/view?id=%s' % x.id, text=x.name),
+                                    title='Name', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='osversion.osmajor.osmajor', getter=lambda x: x.osversion.osmajor, title='OS Major Version', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='osversion.osminor', getter=lambda x: x.osversion.osminor, title='OS Minor Version', options=dict(sortable=True)),
                                   myPaginateDataGrid.Column(name='date_created',

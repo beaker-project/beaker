@@ -94,6 +94,40 @@
     </tbody>
 </table>
 
+<h2>Repos</h2>
+<table class="list">
+    <thead>
+        <tr class="list">
+            <th class="list">Repo ID</th>
+            <th class="list">Type</th>
+            <th class="list" style="width: 70%;">Path</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr py:for="i, repo in enumerate(value.repos)" class="list ${i%2 and 'odd' or 'even'}">
+            <td class="list">${repo.repo_id}</td>
+            <td class="list">${repo.repo_type}</td>
+            <td class="list">${repo.path}</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>Images</h2>
+<table class="list">
+    <thead>
+        <tr class="list">
+            <th class="list">Image Type</th>
+            <th class="list" style="width: 70%;">Path</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr py:for="i, image in enumerate(value.images)" class="list ${i%2 and 'odd' or 'even'}">
+            <td class="list">${image.image_type}</td>
+            <td class="list">${image.path}</td>
+        </tr>
+    </tbody>
+</table>
+
 <h2>Executed Tasks</h2>
 ${form_task.display(value=dict(distro_tree_id=value.id),
         target_dom='task_items',
