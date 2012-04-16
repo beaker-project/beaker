@@ -13,7 +13,7 @@ import DocXMLRPCServer
 import socket
 
 from bkr.labcontroller.proxy import Proxy, RepeatTimer
-from bkr.labcontroller.config import get_conf
+from bkr.labcontroller.config import get_conf, load_conf
 from bkr.labcontroller.utils import add_rotating_file_logger
 from kobo.exceptions import ShutdownException
 from kobo.process import daemonize
@@ -148,10 +148,9 @@ def main():
                       help="specify a pid file")
     (opts, args) = parser.parse_args()
 
+    if opts.config:
+        load_conf(opts.config)
     conf = get_conf()
-    config = opts.config
-    if config is not None:
-        conf.load_from_file(config)
 
     pid_file = opts.pid_file
     if pid_file is None:
