@@ -134,3 +134,37 @@ class JobSchemaTest(unittest.TestCase):
             </job>
             ''',
             'Expecting an element hostRequires, got nothing')
+
+    def test_device(self):
+        self.assert_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires/>
+                        <hostRequires>
+                            <device op="="
+                                    type="network" bus="pci" driver="e1000e"
+                                    vendor_id="8086" device_id="10d3"
+                                    subsys_vendor_id="8086" subsys_device_id="a01f"
+                                    />
+                        </hostRequires>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+
+    def test_device_driver(self):
+        self.assert_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires/>
+                        <hostRequires>
+                            <device op="=" driver="e1000e" />
+                        </hostRequires>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
