@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.2
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -348,6 +348,11 @@ fi
 %endif
 
 %changelog
+* Wed Apr 18 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-4
+- 813642 Check each named beakerd thread instead of relying on active thread count
+  (stl@redhat.com)
+- 731615 fix <device/> to not add an empty query. (bpeck@redhat.com)
+
 * Tue Apr 17 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-3
 - test: Fix job.id to be id of recipe (rmancy@redhat.com)
 - 731615 fix mistake in RELAX NG schema for <device/> (dcallagh@redhat.com)
