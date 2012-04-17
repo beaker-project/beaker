@@ -695,6 +695,15 @@ class DistroSystemsFilterTest(unittest.TestCase):
         self.assert_(with_e1000 not in systems)
         self.assert_(with_tg3 in systems)
 
+        # this filter does nothing, but at least it shouldn't explode
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires>
+                <device op="=" />
+            </hostRequires>
+            """))
+        self.assert_(with_e1000 in systems)
+        self.assert_(with_tg3 in systems)
+
 class UserTest(unittest.TestCase):
 
     def setUp(self):
