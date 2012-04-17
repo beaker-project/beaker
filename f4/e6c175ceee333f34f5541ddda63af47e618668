@@ -1,0 +1,8 @@
+Change-Id: If4e6c175ceee333f34f5541ddda63af47e618668
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Steven Lawrance <stl@redhat.com>
+Submitted-by: Steven Lawrance <stl@redhat.com>
+Submitted-at: Tue, 17 Apr 2012 19:02:36 -0400
+Reviewed-on: http://gerrit.beaker-project.org/1014
+Project: beaker
+Branch: refs/heads/release-0.8.2
