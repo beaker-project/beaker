@@ -74,6 +74,14 @@ class TestSystem(unittest.TestCase):
         self.assertEqual(opts.kernel_options,
                 dict(console='ttyS0', ksdevice='eth1'))
 
+    def test_mark_broken_updates_history(self):
+        system = data_setup.create_system(status = SystemStatus.automated)
+        system.mark_broken(reason = "Attacked by cyborgs")
+        session.flush()
+        system_activity = system.dyn_activity.filter(SystemActivity.field_name == u'Status').first()
+        self.assertEqual(system_activity.old_value, u'Automated')
+        self.assertEqual(system_activity.new_value, u'Broken')
+
 class TestSystemKeyValue(unittest.TestCase):
 
     def setUp(self):

@@ -2209,6 +2209,7 @@ class System(SystemObject):
             status = CommandStatus.queued
             activity = CommandActivity(user, service, action, status, callback)
             self.command_queue.append(activity)
+            return activity
         else:
             return False
 

@@ -1,12 +1,9 @@
 import unittest, datetime, os, threading
-from nose.plugins.skip import SkipTest
-from time import sleep
-from nose.plugins.skip import SkipTest
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, LabController
 import sqlalchemy.orm
 from turbogears.database import session
-from bkr.inttest import data_setup, stub_cobbler
+from bkr.inttest import data_setup
 from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 from bkr.server.tools import beakerd
@@ -14,16 +11,10 @@ from bkr.server.tools import beakerd
 class TestBeakerd(unittest.TestCase):
 
     def setUp(self):
-        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
-        self.stub_cobbler_thread.start()
         with session.begin():
-            self.lab_controller = data_setup.create_labcontroller(
-                    fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+            self.lab_controller = data_setup.create_labcontroller()
             data_setup.create_system(lab_controller=self.lab_controller,
                     shared=True)
-
-    def tearDown(self):
-        self.stub_cobbler_thread.stop()
 
     def test_loaned_machine_can_be_scheduled(self):
         with session.begin():
@@ -321,7 +312,8 @@ class TestBeakerd(unittest.TestCase):
             user = data_setup.create_user()
             system = data_setup.create_system(owner=user, status=u'Automated',
                     shared=True, lab_controller=self.lab_controller)
-            job = data_setup.create_job(owner=user)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            job = data_setup.create_job(owner=user, distro_tree=distro_tree)
             recipe = job.recipesets[0].recipes[0]
             recipe._host_requires = (
                     '<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
@@ -339,7 +331,6 @@ class TestBeakerd(unittest.TestCase):
             for r in Recipe.query:
                 if r.system:
                     r.system.lab_controller = self.lab_controller
-        raise SkipTest('Cobbler removal')
         beakerd.scheduled_recipes()
         with session.begin():
             job = Job.by_id(job.id)
@@ -349,7 +340,8 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             system = data_setup.create_system(shared=True,
                     lab_controller=self.lab_controller)
-            job = data_setup.create_job()
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            job = data_setup.create_job(distro_tree=distro_tree)
             job.recipesets[0].recipes[0]._host_requires = (u"""
                 <hostRequires>
                     <hostname op="=" value="%s" />
@@ -359,116 +351,11 @@ class TestBeakerd(unittest.TestCase):
         beakerd.new_recipes()
         beakerd.processed_recipesets()
         beakerd.queued_recipes()
-        raise SkipTest('Cobbler removal')
         beakerd.scheduled_recipes()
-        raise SkipTest('Cobbler removal')
-        beakerd.queued_commands()
 
         with session.begin():
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.running)
-            self.assertEqual(self.stub_cobbler_thread.cobbler\
-                    .system_actions[system.fqdn], 'reboot')
-
-class TestPowerFailures(unittest.TestCase):
-
-    def setUp(self):
-        raise SkipTest('Cobbler removal')
-        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
-        self.stub_cobbler_thread.start()
-        with session.begin():
-            self.lab_controller = data_setup.create_labcontroller(
-                    fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
-
-    def tearDown(self):
-        self.stub_cobbler_thread.stop()
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=738423
-    def test_unreserve(self):
-        with session.begin():
-            user = data_setup.create_user()
-            automated_system = data_setup.create_system(fqdn=u'raise1.example.org',
-                                                        lab_controller=self.lab_controller,owner = user,
-                                                        status = SystemStatus.automated)
-            automated_system.reserve(u'Scheduler', user)
-            session.flush()
-            automated_system.unreserve(u'Scheduler', user)
-        beakerd.queued_commands()
-        beakerd.running_commands()
-        with session.begin():
-            automated_system = System.query.get(automated_system.id)
-            system_activity = automated_system.dyn_activity\
-                    .filter(SystemActivity.field_name == u'Power').first()
-            self.assertEqual(system_activity.action, 'off')
-            self.assertTrue(system_activity.new_value.startswith('Failed'))
-
-    def test_automated_system_marked_broken(self):
-        with session.begin():
-            automated_system = data_setup.create_system(fqdn=u'broken1.example.org',
-                                                        lab_controller=self.lab_controller,
-                                                        status = SystemStatus.automated)
-            automated_system.action_power(u'on')
-        beakerd.queued_commands()
-        beakerd.running_commands()
-        with session.begin():
-            automated_system = System.query.get(automated_system.id)
-            self.assertEqual(automated_system.status, SystemStatus.broken)
-            system_activity = automated_system.activity[0]
-            self.assertEqual(system_activity.action, 'on')
-            self.assertTrue(system_activity.new_value.startswith('Failed'))
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=720672
-    def test_manual_system_status_not_changed(self):
-        with session.begin():
-            manual_system = data_setup.create_system(fqdn = u'broken2.example.org',
-                                                     lab_controller = self.lab_controller,
-                                                     status = SystemStatus.manual)
-            manual_system.action_power(u'on')
-        beakerd.queued_commands()
-        beakerd.running_commands()
-        with session.begin():
-            manual_system = System.query.get(manual_system.id)
-            self.assertEqual(manual_system.status, SystemStatus.manual)
-            system_activity = manual_system.activity[0]
-            self.assertEqual(system_activity.action, 'on')
-            self.assertTrue(system_activity.new_value.startswith('Failed'))
-
-    def test_mark_broken_updates_history(self):
-        with session.begin():
-            system = data_setup.create_system(status = SystemStatus.automated)
-            system.mark_broken(reason = "Attacked by cyborgs")
-        with session.begin():
             system = System.query.get(system.id)
-            system_activity = system.dyn_activity.filter(SystemActivity.field_name == u'Status').first()
-            self.assertEqual(system_activity.old_value, u'Automated')
-            self.assertEqual(system_activity.new_value, u'Broken')
-
-    def test_broken_power_aborts_recipe(self):
-        with session.begin():
-            system = data_setup.create_system(fqdn = u'broken.dreams.example.org',
-                                              lab_controller = self.lab_controller,
-                                              status = SystemStatus.automated,
-                                              shared = True)
-            job = data_setup.create_job()
-            job.recipesets[0].recipes[0]._host_requires = (u"""
-                <hostRequires>
-                    <hostname op="=" value="%s" />
-                </hostRequires>
-                """ % system.fqdn)
-
-        beakerd.new_recipes()
-        beakerd.processed_recipesets()
-        beakerd.queued_recipes()
-        raise SkipTest('Cobbler removal')
-        beakerd.scheduled_recipes()
-        beakerd.queued_commands()
-
-        with session.begin():
-            job = Job.query.get(job.id)
-            self.assertEqual(job.status, TaskStatus.running)
-
-        beakerd.running_commands()
-        with session.begin():
-            job = Job.query.get(job.id)
-            self.assertEqual(job.recipesets[0].recipes[0].status,
-                             TaskStatus.aborted)
+            self.assertEqual(system.command_queue[0].action, 'reboot')
+            self.assertEqual(system.command_queue[1].action, 'configure_netboot')

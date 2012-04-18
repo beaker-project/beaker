@@ -2,7 +2,9 @@
 from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase
 from bkr.inttest import data_setup
-from bkr.server.model import Distro, DistroTree, Arch, ImageType
+from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
+        System, SystemStatus, TaskStatus
+from bkr.server.tools import beakerd
 
 class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
 
@@ -119,3 +121,79 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         commands = self.server.labcontrollers.get_queued_command_details()
         # 10 is the configured limit in server-test.cfg
         self.assertEquals(len(commands), 10, commands)
+
+class TestPowerFailures(XmlRpcTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.lab_controller = data_setup.create_labcontroller()
+            self.lab_controller.user.password = u'logmein'
+        self.server = self.get_server()
+        self.server.auth.login_password(self.lab_controller.user.user_name,
+                u'logmein')
+
+    def test_automated_system_marked_broken(self):
+        with session.begin():
+            automated_system = data_setup.create_system(fqdn=u'broken1.example.org',
+                                                        lab_controller=self.lab_controller,
+                                                        status = SystemStatus.automated)
+            command = automated_system.action_power(u'on')
+        self.server.labcontrollers.mark_command_failed(command.id,
+                u'needs moar powa')
+        with session.begin():
+            session.refresh(automated_system)
+            self.assertEqual(automated_system.status, SystemStatus.broken)
+            system_activity = automated_system.activity[0]
+            self.assertEqual(system_activity.action, 'on')
+            self.assertTrue(system_activity.new_value.startswith('Failed'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=720672
+    def test_manual_system_status_not_changed(self):
+        with session.begin():
+            manual_system = data_setup.create_system(fqdn = u'broken2.example.org',
+                                                     lab_controller = self.lab_controller,
+                                                     status = SystemStatus.manual)
+            command = manual_system.action_power(u'on')
+        self.server.labcontrollers.mark_command_failed(command.id,
+                u'needs moar powa')
+        with session.begin():
+            session.refresh(manual_system)
+            self.assertEqual(manual_system.status, SystemStatus.manual)
+            system_activity = manual_system.activity[0]
+            self.assertEqual(system_activity.action, 'on')
+            self.assertTrue(system_activity.new_value.startswith('Failed'))
+
+    def test_broken_power_aborts_recipe(self):
+        # Start a recipe, let it be provisioned, mark the power command as failed,
+        # and the recipe should be aborted.
+        with session.begin():
+            system = data_setup.create_system(fqdn = u'broken.dreams.example.org',
+                                              lab_controller = self.lab_controller,
+                                              status = SystemStatus.automated,
+                                              shared = True)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            job = data_setup.create_job(distro_tree=distro_tree)
+            job.recipesets[0].recipes[0]._host_requires = (u"""
+                <hostRequires>
+                    <hostname op="=" value="%s" />
+                </hostRequires>
+                """ % system.fqdn)
+
+        beakerd.new_recipes()
+        beakerd.processed_recipesets()
+        beakerd.queued_recipes()
+        beakerd.scheduled_recipes()
+
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.status, TaskStatus.running)
+            system = System.query.get(system.id)
+            command = system.command_queue[0]
+            self.assertEquals(command.action, 'reboot')
+
+        self.server.labcontrollers.mark_command_failed(command.id,
+                u'needs moar powa')
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.aborted)

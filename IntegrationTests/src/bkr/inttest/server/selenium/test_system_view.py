@@ -28,7 +28,7 @@ import rdflib.graph
 from turbogears.database import session
 
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, get_server_base, stub_cobbler, \
+from bkr.inttest import data_setup, get_server_base, \
         assertions, with_transaction
 from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
@@ -39,10 +39,7 @@ class SystemViewTest(SeleniumTestCase):
 
     @with_transaction
     def setUp(self):
-        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
-        self.stub_cobbler_thread.start()
-        self.lab_controller = data_setup.create_labcontroller(
-                fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+        self.lab_controller = data_setup.create_labcontroller()
         self.system_owner = data_setup.create_user()
         self.unprivileged_user = data_setup.create_user(password=u'password')
         self.distro_tree = data_setup.create_distro_tree()
@@ -70,7 +67,6 @@ class SystemViewTest(SeleniumTestCase):
 
     def tearDown(self):
         self.selenium.stop()
-        self.stub_cobbler_thread.stop()
 
     def go_to_system_view(self, system=None):
         if system is None:

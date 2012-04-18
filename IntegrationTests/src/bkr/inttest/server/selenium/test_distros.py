@@ -1,69 +1,11 @@
 
-from nose.plugins.skip import SkipTest
 import xmlrpclib
 from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase
-from bkr.inttest import data_setup, stub_cobbler, with_transaction
+from bkr.inttest import data_setup, with_transaction
 
 def go_to_distro_view(sel, distro):
     sel.open('distros/view?id=%s' % distro.id)
-
-class DistroRescanTest(SeleniumTestCase):
-
-    @with_transaction
-    def setUp(self):
-        raise SkipTest('Cobbler removal')
-        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
-        self.stub_cobbler_thread.start()
-        self.lab_controller = data_setup.create_labcontroller(
-                fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-
-    def tearDown(self):
-        self.selenium.stop()
-        self.stub_cobbler_thread.stop()
-
-    def test_rescan(self):
-        # Create the distros
-        with session.begin():
-            distro1 = data_setup.create_distro(name=u'pivot')
-            dh_1 = self.stub_cobbler_thread.cobbler.get_distro_handle(distro1.install_name, 'logged_in')
-            distro2 = data_setup.create_distro(name=u'fisher')
-            dh_2 = self.stub_cobbler_thread.cobbler.get_distro_handle(distro2.install_name, 'logged_in')
-            distro3 = data_setup.create_distro(name=u'twentyniner')
-            dh_3 = self.stub_cobbler_thread.cobbler.get_distro_handle(distro3.install_name, 'logged_in')
-
-        # login
-        self.login(data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
-        sel = self.selenium
-
-        # Verify they have our lab controller
-        go_to_distro_view(sel, distro1)
-        self.failUnless(sel.is_text_present(self.lab_controller.fqdn))
-        go_to_distro_view(sel, distro2)
-        self.failUnless(sel.is_text_present(self.lab_controller.fqdn))
-        go_to_distro_view(sel, distro3)
-        self.failUnless(sel.is_text_present(self.lab_controller.fqdn))
-
-        # Remove one of the distros from our lab controller
-        self.stub_cobbler_thread.cobbler.remove_distro(dh_2, 'logged_in')
-
-        # re-scan
-        sel.open("labcontrollers/")
-        sel.wait_for_page_to_load('30000')
-        sel.click("//a[@href='rescan?id=%s']" % self.lab_controller.id)
-        sel.wait_for_page_to_load('30000')
-
-        # Verify that we still have the distros we should and the removed
-        # one has been removed.
-        go_to_distro_view(sel, distro1)
-        self.failUnless(sel.is_text_present(self.lab_controller.fqdn))
-        go_to_distro_view(sel, distro2)
-        self.failUnless(not sel.is_text_present(self.lab_controller.fqdn))
-        go_to_distro_view(sel, distro3)
-        self.failUnless(sel.is_text_present(self.lab_controller.fqdn))
-
 
 class DistroViewTest(SeleniumTestCase):
 
