@@ -15,10 +15,16 @@ from bkr.labcontroller.utils import add_rotating_file_logger
 from bkr.labcontroller.async import MonitoredSubprocess
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.labcontroller.proxy import ProxyHelper
+from bkr.labcontroller import netboot
 
 logger = logging.getLogger(__name__)
 
 class CommandQueuePoller(ProxyHelper):
+
+    def __init__(self, *args, **kwargs):
+        super(CommandQueuePoller, self).__init__(*args, **kwargs)
+        self.commands = {} #: dict of (id -> command info) for running commands
+        self.greenlets = {} #: dict of (command id -> greenlet which is running it)
 
     def get_queued_commands(self):
         return self.hub.labcontrollers.get_queued_command_details()
@@ -27,10 +33,55 @@ class CommandQueuePoller(ProxyHelper):
         self.hub.labcontrollers.mark_command_running(id)
 
     def mark_command_completed(self, id):
+        del self.commands[id]
+        del self.greenlets[id]
         self.hub.labcontrollers.mark_command_completed(id)
 
     def mark_command_failed(self, id, message):
+        del self.commands[id]
+        del self.greenlets[id]
         self.hub.labcontrollers.mark_command_failed(id, message)
+
+    def poll(self):
+        logger.debug('Polling for queued commands')
+        for command in self.get_queued_commands():
+            if command['id'] in self.commands:
+                # We've already seen it, ignore
+                continue
+            # This command has to wait for any other existing commands against the
+            # same system, to prevent collisions
+            predecessors = [self.greenlets[c['id']]
+                    for c in self.commands.itervalues()
+                    if c['fqdn'] == command['fqdn']]
+            self.commands[command['id']] = command
+            self.greenlets[command['id']] = gevent.spawn(self.handle, command, predecessors)
+
+    def handle(self, command, predecessors):
+        gevent.joinall(predecessors)
+        if shutting_down:
+            return
+        logger.debug('Handling command %r', command)
+        self.mark_command_running(command['id'])
+        try:
+            if command['action'] in (u'on', u'off'):
+                handle_power(command)
+            elif command['action'] == u'reboot':
+                handle_power(dict(command.items() + [('action', u'off')]))
+                handle_power(dict(command.items() + [('action', u'on')]))
+            elif command['action'] == u'configure_netboot':
+                handle_configure_netboot(command)
+            elif command['action'] == u'clear_netboot':
+                handle_clear_netboot(command)
+            else:
+                raise ValueError('Unrecognised action %s' % command['action'])
+                # XXX or should we just ignore it and leave it queued?
+        except Exception, e:
+            logger.exception('Error processing command %s', command['id'])
+            self.mark_command_failed(command['id'],
+                    '%s: %s' % (e.__class__.__name__, e))
+        else:
+            self.mark_command_completed(command['id'])
+        logger.debug('Finished handling command %s', command['id'])
 
 def find_power_script(power_type):
     customised = '/etc/beaker/power-scripts/%s' % power_type
@@ -43,17 +94,37 @@ def find_power_script(power_type):
 
 def build_power_env(command):
     env = dict(os.environ)
-    env['power_address'] = (command.get('power_address') or u'').encode('utf8')
-    env['power_id'] = (command.get('power_id') or u'').encode('utf8')
-    env['power_user'] = (command.get('power_user') or u'').encode('utf8')
-    env['power_pass'] = (command.get('power_passwd') or u'').encode('utf8')
-    env['power_mode'] = (command.get('action') or u'').encode('utf8')
+    env['power_address'] = (command['power'].get('address') or u'').encode('utf8')
+    env['power_id'] = (command['power'].get('id') or u'').encode('utf8')
+    env['power_user'] = (command['power'].get('user') or u'').encode('utf8')
+    env['power_pass'] = (command['power'].get('passwd') or u'').encode('utf8')
+    env['power_mode'] = command['action'].encode('utf8')
     return env
 
 shutting_down = False
 
+def handle_configure_netboot(command):
+    netboot.fetch_images(command['netboot']['kernel_url'],
+            command['netboot']['initrd_url'], command['fqdn'])
+    fqdn = command['fqdn']
+    arch = set(command['arch'])
+    ko = command['netboot']['kernel_options']
+    if 'i386' in arch or 'x86_64' in arch:
+        netboot.configure_pxelinux(fqdn, ko)
+        netboot.configure_efigrub(fqdn, ko)
+    if 's390' in arch or 's390x' in arch:
+        netboot.configure_zpxe(fqdn, ko)
+    if 'ppc' in arch or 'ppc64' in arch:
+        netboot.configure_yaboot(fqdn, ko)
+    if 'ia64' in arch:
+        netboot.configure_elilo(fqdn, ko)
+
+def handle_clear_netboot(command):
+    netboot.clear_images(command['fqdn'])
+    netboot.clear_pxelinux(command['fqdn'])
+
 def handle_power(command):
-    script = find_power_script(command['power_type'])
+    script = find_power_script(command['power']['type'])
     env = build_power_env(command)
     # We try the command up to 5 times, because some power commands
     # are flakey (apparently)...
@@ -74,26 +145,7 @@ def handle_power(command):
     if p.returncode != 0:
         raise ValueError('Power script %s failed after %s attempts with exit status %s:\n%s'
                 % (script, attempt, p.returncode, err[:150]))
-
-def handle_command(poller, command):
-    poller.mark_command_running(command['id'])
-    try:
-        if command['action'] in (u'on', u'off'):
-            handle_power(command)
-        elif command['action'] == u'reboot':
-            handle_power(dict(command.items() + [('action', u'off')]))
-            handle_power(dict(command.items() + [('action', u'on')]))
-        else:
-            raise ValueError('Unrecognised action %s' % command['action'])
-            # XXX or should we just ignore it and leave it queued?
-    except Exception, e:
-        logger.exception('Error processing command %s', command['id'])
-        poller.mark_command_failed(command['id'],
-                '%s: %s' % (e.__class__.__name__, e))
-    else:
-        # TODO submit complete stdout and stderr?
-        poller.mark_command_completed(command['id'])
-    logger.debug('Finished handling power command %s', command['id'])
+    # TODO submit complete stdout and stderr?
 
 def shutdown_handler(signum, frame):
     logger.info('Received signal %s, shutting down', signum)
@@ -118,10 +170,7 @@ def main_loop(poller=None, conf=None, foreground=False):
     logger.debug('Entering main provision loop')
     while True:
         try:
-            logger.debug('Polling for queued commands')
-            for command in poller.get_queued_commands():
-                logger.debug('Handling command %r', command)
-                gevent.spawn(handle_command, poller, command)
+            poller.poll()
             time.sleep(conf.get('SLEEP_TIME', 20))
         except ShutdownException:
             global shutting_down

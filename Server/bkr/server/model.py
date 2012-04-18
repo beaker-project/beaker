@@ -731,7 +731,8 @@ command_queue_table = Table('command_queue', metadata,
     Column('task_id', String(255)),
     Column('updated', DateTime, default=datetime.utcnow),
     Column('callback', String(255)),
-    Column('rendered_kickstart_id', Integer, ForeignKey('rendered_kickstart.id')),
+    Column('distro_tree_id', Integer, ForeignKey('distro_tree.id')),
+    Column('kernel_options', UnicodeText),
     mysql_engine='InnoDB',
 )
 
@@ -2159,30 +2160,31 @@ class System(SystemObject):
                     ExcludeOSVersion.arch_id == DistroTree.arch_id))
                     .correlate(distro_tree_table)))
 
-    def action_release(self):
+    def action_release(self, service=u'Scheduler'):
         # Attempt to remove Netboot entry and turn off machine
-        self.clear_netboot()
+        self.clear_netboot(service=service)
         if self.release_action:
             if self.release_action == ReleaseAction.power_off:
-                self.action_power(action=u'off')
+                self.action_power(action=u'off', service=service)
             elif action == ReleaseAction.leave_on:
-                self.action_power(action=u'on')
+                self.action_power(action=u'on', service=service)
             elif action == ReleaseAction.reprovision:
                 if self.reprovision_distro_tree:
                     from bkr.server.kickstart import generate_kickstart
                     install_options = self.system.install_options(self.distro_tree)
-                    rendered_kickstart = generate_kickstart(install_options,
-                            distro_tree=self.reprovision_distro_tree,
-                            system=self, user=self.owner)
-                    self.configure_netboot(distro_tree=self.reprovision_distro_tree,
-                            kernel_options=install_options.as_strings()['kernel_options'],
-                            rendered_kickstart=rendered_kickstart)
-                    self.action_power(action=u'reboot')
+                    if 'ks' not in install_options.kernel_options:
+                        rendered_kickstart = generate_kickstart(install_options,
+                                distro_tree=self.reprovision_distro_tree,
+                                system=self, user=self.owner)
+                        install_options.kernel_options['ks'] = rendered_kickstart.link
+                    self.configure_netboot(self.reprovision_distro_tree,
+                            install_options.kernel_options_str,
+                            service=service)
+                    self.action_power(action=u'reboot', service=service)
             else:
                 raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
 
-    def configure_netboot(self, distro_tree, kernel_options,
-            rendered_kickstart, service=u'Scheduler'):
+    def configure_netboot(self, distro_tree, kernel_options, service=u'Scheduler'):
         try:
             user = identity.current.user
         except Exception:
@@ -2193,7 +2195,6 @@ class System(SystemObject):
                     status=CommandStatus.queued)
             command.distro_tree = distro_tree
             command.kernel_options = kernel_options
-            command.rendered_kickstart = rendered_kickstart
             self.command_queue.append(command)
         else:
             return False
@@ -2211,9 +2212,15 @@ class System(SystemObject):
         else:
             return False
 
-    def clear_netboot(self):
-        # XXX TODO implement this
-        pass
+    def clear_netboot(self, service=u'Scheduler'):
+        try:
+            user = identity.current.user
+        except Exception:
+            user = None
+        if self.lab_controller:
+            self.command_queue.append(CommandActivity(user=user,
+                    service=service, action=u'clear_netboot',
+                    status=CommandStatus.queued))
 
     def __repr__(self):
         return self.fqdn
@@ -2346,13 +2353,7 @@ class System(SystemObject):
                 service=service, action=u'Returned', field_name=u'User',
                 old_value=self.user.user_name, new_value=u'')
         self.user = None
-        try:
-            self.action_release()
-        except Exception, error_msg:
-            msg = "Error: %s Action: %s" % (error_msg,self.release_action)
-            self.activity.append(SystemActivity(user=user,
-                    service=service, action=unicode(self.release_action),
-                    field_name=u'Return', old_value=u'', new_value=msg))
+        self.action_release(service=service)
         self.activity.append(activity)
 
     cc = association_proxy('_system_ccs', 'email_address')
@@ -3039,12 +3040,10 @@ class DistroTreeActivity(Activity):
         return u'DistroTree: %s' % self.object
 
 class CommandActivity(Activity):
-    def __init__(self, user, service, action, status, callback=None,
-            rendered_kickstart=None):
+    def __init__(self, user, service, action, status, callback=None):
         Activity.__init__(self, user, service, action, 'Command', '', '')
         self.status = status
         self.callback = callback
-        self.rendered_kickstart = rendered_kickstart
 
     def object_name(self):
         return "Command: %s %s" % (self.object.fqdn, self.action)
@@ -3054,6 +3053,12 @@ class CommandActivity(Activity):
                             self.new_value and u'%s: %s' % (self.status, self.new_value) \
                             or u'%s' % self.status)
         self.system.activity.append(sa)
+
+    def abort(self, msg=None):
+        log.error('Command %s aborted: %s', (self.id, msg))
+        self.status = CommandStatus.aborted
+        self.new_value = msg
+        self.log_to_system_history()
 
 # note model
 class Note(MappedObject):
@@ -4738,7 +4743,10 @@ class Recipe(TaskBase):
         from bkr.server.kickstart import generate_kickstart
         install_options = self.system.install_options(self.distro_tree)\
                 .combined_with(self.install_options())
-        if self.kickstart:
+        if 'ks' in install_options.kernel_options:
+            # Use it as is
+            pass
+        elif self.kickstart:
             # add in cobbler packages snippet...
             packages_slot = 0
             nopackages = True
@@ -4775,14 +4783,18 @@ class Recipe(TaskBase):
                     distro_tree=self.distro_tree,
                     system=self.system, user=self.recipeset.job.owner,
                     recipe=self, kickstart=kickstart)
+            install_options.kernel_options['ks'] = self.rendered_kickstart.link
         else:
             ks_appends = [ks_append.ks_append for ks_append in self.ks_appends]
             self.rendered_kickstart = generate_kickstart(install_options,
                     distro_tree=self.distro_tree,
                     system=self.system, user=self.recipeset.job.owner,
                     recipe=self, ks_appends=ks_appends)
+            install_options.kernel_options['ks'] = self.rendered_kickstart.link
 
-        self.system.action_provision(self.distro_tree, self.rendered_kickstart)
+        self.system.configure_netboot(self.distro_tree,
+                install_options.kernel_options_str,
+                service=u'Scheduler')
         self.system.action_power(action=u'reboot',
                                  callback='bkr.server.model.auto_power_cmd_handler')
 
@@ -5584,7 +5596,12 @@ class RecipeTaskResult(TaskBase):
 
 class RenderedKickstart(MappedObject):
 
-    pass
+    @property
+    def link(self):
+        if self.url:
+            return self.url
+        assert self.id is not None, 'not flushed?'
+        return absolute_url('/kickstart/%s' % self.id)
 
 class Task(MappedObject):
     """
@@ -6083,8 +6100,8 @@ mapper(CommandActivity, command_queue_table, inherits=Activity,
        polymorphic_identity=u'command_activity',
        properties={'status': column_property(command_queue_table.c.status,
                         extension=CallbackAttributeExtension()),
-                   'system':relation(System, uselist=False),
-                   'rendered_kickstart': relation(RenderedKickstart, uselist=False),
+                   'system':relation(System),
+                   'distro_tree': relation(DistroTree),
                   })
 
 mapper(Note, note_table,

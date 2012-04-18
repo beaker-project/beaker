@@ -67,6 +67,14 @@ class InstallOptions(object):
                 kernel_options=_unparse(self.kernel_options),
                 kernel_options_post=_unparse(self.kernel_options_post))
 
+    @property
+    def kernel_options_str(self):
+        return _unparse(self.kernel_options)
+
+    @property
+    def kernel_options_post_str(self):
+        return _unparse(self.kernel_options_post)
+
     def combined_with(self, other):
         """
         Returns a new InstallOptions which is the result of taking these

@@ -110,15 +110,6 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
             self.lc.user.password = u'logmein'
         self.server = self.get_server()
 
-    def test_only_returns_one_command_per_system(self):
-        with session.begin():
-            system = data_setup.create_system(lab_controller=self.lc)
-            system.action_power(action='off', service=u'testdata')
-            system.action_power(action='on', service=u'testdata')
-        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
-        commands = self.server.labcontrollers.get_queued_command_details()
-        self.assertEquals(len(commands), 1, commands)
-
     def test_obeys_max_running_commands_limit(self):
         with session.begin():
             for _ in xrange(15):

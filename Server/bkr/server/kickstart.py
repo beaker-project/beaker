@@ -117,7 +117,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
     # User-supplied templates don't get access to our model objects, in case
     # they do something foolish/naughty.
     restricted_context = {
-        'kernel_options_post': install_options.as_strings()['kernel_options_post'],
+        'kernel_options_post': install_options.kernel_options_post_str,
     }
     restricted_context.update(install_options.ks_meta)
     if distro_tree.distro.osversion.osmajor.osmajor == 'RedHatEnterpriseLinux7' \
@@ -154,7 +154,9 @@ def generate_kickstart(install_options, distro_tree, system, user,
             template = kickstart_template(distro_tree)
             result = template.render(context)
 
-    return RenderedKickstart(kickstart=result)
+    rendered_kickstart = RenderedKickstart(kickstart=result)
+    session.flush() # so that it has an id
+    return rendered_kickstart
 
 class KickstartController(object):
 

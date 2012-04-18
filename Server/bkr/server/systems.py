@@ -112,8 +112,21 @@ class SystemsController(controllers.Controller):
                 and system.user != identity.current.user:
             raise BX(_(u'System is in use'))
         if clear_netboot:
-            system.remote.clear_netboot(service=u'XMLRPC')
+            system.clear_netboot(service=u'XMLRPC')
         system.action_power(action, service=u'XMLRPC')
+        return system.fqdn # because turbogears makes us return something
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def clear_netboot(self, fqdn):
+        """
+        Clears any netboot configuration in effect for the system with the
+        given fully-qualified domain name.
+
+        .. verisonadded:: 0.9
+        """
+        system = System.by_fqdn(fqdn, identity.current.user)
+        system.clear_netboot(service=u'XMLRPC')
         return system.fqdn # because turbogears makes us return something
 
     @expose()
@@ -175,18 +188,13 @@ class SystemsController(controllers.Controller):
                 InstallOptions.from_strings(ks_meta or '',
                     kernel_options or '',
                     kernel_options_post or ''))
-        rendered_kickstart = generate_kickstart(options,
-                distro_tree=distro_tree,
-                system=system, user=identity.current.user, kickstart=kickstart)
-        try:
-            system.action_provision(distro_tree, rendered_kickstart, service=u'XMLRPC')
-        except Exception, e:
-            log.exception('Failed to provision')
-            system.activity.append(SystemActivity(user=identity.current.user,
-                    service=u'XMLRPC', action=u'Provision',
-                    field_name=u'Distro Tree', old_value=u'',
-                    new_value=u'%s: %s' % (e, distro_tree)))
-            raise
+        if 'ks' not in options.kernel_options:
+            rendered_kickstart = generate_kickstart(options,
+                    distro_tree=distro_tree,
+                    system=system, user=identity.current.user, kickstart=kickstart)
+            options.kernel_options['ks'] = rendered_kickstart.link
+        system.configure_netboot(distro_tree, options.kernel_options_str,
+                service=u'XMLRPC')
         system.activity.append(SystemActivity(user=identity.current.user,
                 service=u'XMLRPC', action=u'Provision',
                 field_name=u'Distro Tree', old_value=u'',

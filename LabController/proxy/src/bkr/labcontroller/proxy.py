@@ -510,6 +510,7 @@ class Proxy(ProxyHelper):
         kickstart
         """
         logger.debug("install_start")
+        self.hub.systems.clear_netboot(system_name)
         # extend watchdog by 3 hours 60 * 60 * 3
         kill_time = 10800
         # look up system recipe based on hostname...

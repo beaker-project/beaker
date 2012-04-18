@@ -164,10 +164,11 @@ Provision via the command queue
 Run the following SQL:
 
     ALTER TABLE command_queue
-        ADD rendered_kickstart_id INT NULL,
-        ADD CONSTRAINT command_queue_rendered_kickstart_id_fk
-            FOREIGN KEY (rendered_kickstart_id)
-            REFERENCES rendered_kickstart (id);
+        ADD distro_tree_id INT NULL,
+        ADD kernel_options TEXT NULL,
+        ADD CONSTRAINT command_queue_distro_tree_id_fk
+            FOREIGN KEY (distro_tree_id)
+            REFERENCES distro_tree (id);
     ALTER TABLE recipe
         ADD rendered_kickstart_id INT NULL AFTER system_id,
         ADD CONSTRAINT recipe_rendered_kickstart_id_fk

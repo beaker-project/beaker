@@ -1677,9 +1677,12 @@ class Root(RPCRoot):
                 from bkr.server.kickstart import generate_kickstart
                 install_options = system.install_options(distro_tree).combined_with(
                         InstallOptions.from_strings(ks_meta, koptions, koptions_post))
-                kickstart = generate_kickstart(install_options,
-                        distro_tree=distro_tree, system=system, user=user)
-                system.action_provision(distro_tree, kickstart, service=u'WEBUI')
+                if 'ks' not in install_options.kernel_options:
+                    kickstart = generate_kickstart(install_options,
+                            distro_tree=distro_tree, system=system, user=user)
+                    install_options.kernel_options['ks'] = kickstart.link
+                system.configure_netboot(distro_tree,
+                        install_options.kernel_options_str, service=u'WEBUI')
             else: #This shouldn't happen, maybe someone is trying to be funny
                 raise BX('User: %s has insufficent permissions to provision %s' % (user.user_name, system.fqdn))
         except Exception, msg:

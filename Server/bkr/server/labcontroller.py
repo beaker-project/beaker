@@ -221,46 +221,54 @@ class LabControllers(RPCRoot):
                     .count()
             if running_commands >= max_running_commands:
                 return []
-        # We want to return at most one queued command per system.
-        # This is an important invariant because it prevents the lab controller
-        # from running multiple power commands for the same system
-        # concurrently, which is not likely to work.
-        # Hence this subquery join hack, to make a "select first
-        # row per group" type of query.
-        subquery = session.query(CommandActivity.system_id,
-                func.min(CommandActivity.id).label('min_id'))\
-                .filter(CommandActivity.status == CommandStatus.queued)\
-                .group_by(CommandActivity.system_id).subquery()
         query = CommandActivity.query\
                 .join(CommandActivity.system)\
                 .options(contains_eager(CommandActivity.system))\
                 .filter(System.lab_controller == lab_controller)\
                 .filter(CommandActivity.status == CommandStatus.queued)\
-                .join((subquery, and_(
-                    CommandActivity.system_id == subquery.c.system_id,
-                    CommandActivity.id == subquery.c.min_id)))\
                 .order_by(CommandActivity.id)
         if max_running_commands:
             query = query.limit(max_running_commands - running_commands)
         result = []
         for cmd in query:
-            if not cmd.system.power:
-                log.error('Command %d aborted, power control not available for machine: %s' %
-                          (cmd.id, cmd.system))
-                cmd.status = CommandStatus.aborted
-                cmd.new_value = u'Power control unavailable'
-                cmd.log_to_system_history()
-                continue
-            result.append({
+            d = {
                 'id': cmd.id,
                 'action': cmd.action,
                 'fqdn': cmd.system.fqdn,
-                'power_type': cmd.system.power.power_type.name,
-                'power_address': cmd.system.power.power_address,
-                'power_id': cmd.system.power.power_id,
-                'power_user': cmd.system.power.power_user,
-                'power_passwd': cmd.system.power.power_passwd,
-            })
+                'arch': [arch.arch for arch in cmd.system.arch],
+            }
+            # Fill in details specific to the type of command
+            if cmd.action in (u'on', u'off', u'reboot'):
+                if not cmd.system.power:
+                    cmd.abort(u'Power control unavailable for %s' % cmd.system)
+                    continue
+                d['power'] = {
+                    'type': cmd.system.power.power_type.name,
+                    'address': cmd.system.power.power_address,
+                    'id': cmd.system.power.power_id,
+                    'user': cmd.system.power.power_user,
+                    'passwd': cmd.system.power.power_passwd,
+                }
+            elif cmd.action == u'configure_netboot':
+                distro_tree_url = cmd.distro_tree.url_in_lab(lab_controller, 'http')
+                if not distro_tree_url:
+                    cmd.abort(u'No usable URL found for distro tree %s in lab %s'
+                            % (cmd.distro_tree.id, lab_controller.fqdn))
+                    continue
+                kernel = cmd.distro_tree.image_by_type(ImageType.kernel)
+                if not kernel:
+                    cmd.abort(u'Kernel image not found for distro tree %s' % cmd.distro_tree.id)
+                    continue
+                initrd = cmd.distro_tree.image_by_type(ImageType.initrd)
+                if not initrd:
+                    cmd.abort(u'Initrd image not found for distro tree %s' % cmd.distro_tree.id)
+                    continue
+                d['netboot'] = {
+                    'kernel_url': urlparse.urljoin(distro_tree_url, kernel.path),
+                    'initrd_url': urlparse.urljoin(distro_tree_url, initrd.path),
+                    'kernel_options': cmd.kernel_options,
+                }
+            result.append(d)
         return result
 
     @cherrypy.expose
