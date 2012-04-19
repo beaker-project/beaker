@@ -86,7 +86,7 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def register_file(self, server, recipe_id, path, name, basepath):
+    def register_file(self, server, recipe_id, path, filename, basepath):
         """
         register file and return path to store
         """
@@ -96,10 +96,14 @@ class Recipes(RPCRoot):
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
 
         # Add the log to the DB if it hasn't been recorded yet.
-        if LogRecipe(path,name) not in recipe.logs:
-            # Pull log_server out of server_url.
-            recipe.log_server = urlparse.urlparse(server)[1]
-            recipe.logs.append(LogRecipe(path, name, server, basepath))
+        log_recipe = LogRecipe.lazy_create(parent=recipe,
+                                           path=path,
+                                           filename=filename,
+                                          )
+        log_recipe.server = server
+        log_recipe.basepath = basepath
+        # Pull log_server out of server_url.
+        recipe.log_server = urlparse.urlparse(server)[1]
         return '%s' % recipe.filepath
 
     @cherrypy.expose
@@ -154,7 +158,7 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def upload_file(self, recipe_id, path, name, size, md5sum, offset, data):
+    def upload_file(self, recipe_id, path, filename, size, md5sum, offset, data):
         """
         upload to recipe in pieces 
         """
@@ -163,12 +167,13 @@ class Recipes(RPCRoot):
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
 
-       # Add the log to the DB if it hasn't been recorded yet.
-        if LogRecipe(path,name) not in recipe.logs:
-            recipe.logs.append(LogRecipe(path, name))
-
+        # Add the log to the DB if it hasn't been recorded yet.
+        LogRecipe.lazy_create(parent=recipe,
+                              path=path,
+                              filename=filename,
+                             )
         return self.upload.uploadFile("%s/%s" % (recipe.filepath, path), 
-                                      name, 
+                                      filename, 
                                       size, 
                                       md5sum, 
                                       offset, 

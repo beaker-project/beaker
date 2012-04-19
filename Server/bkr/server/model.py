@@ -3440,8 +3440,26 @@ class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
-    def __init__(self, path=None, filename=None, server=None, basepath=None):
+    @classmethod
+    def lazy_create(cls, **kwargs):
+        """
+        Unlike the "real" lazy_create above, we can't rely on unique
+        constraints here because 'path' and 'filename' are TEXT columns and
+        MySQL can't index those. :-(
+
+        So we just use a query-then-insert approach. There is a race window
+        between querying and inserting, but it's about the best we can do.
+        """
+        item = cls.query.filter_by(**kwargs).first()
+        if item is None:
+            item = cls(**kwargs)
+            session.flush()
+        return item
+
+    def __init__(self, path=None, filename=None,
+                 server=None, basepath=None, parent=None):
         super(Log, self).__init__()
+        self.parent = parent
         self.path = path
         self.filename = filename
         self.server = server
