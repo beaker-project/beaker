@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.2
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -348,6 +348,12 @@ fi
 %endif
 
 %changelog
+* Thu Apr 19 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-5
+- Change Group's permissions table header to 'Permissions', and moved 'Contact
+  Owner' link to be beside owner field. (rmancy@redhat.com)
+- fix register and upload file methods to use lazy_create (bpeck@redhat.com)
+- 585153 report an error if T: or TR: is passed to bkr job-logs
+  (dcallagh@redhat.com)
 * Wed Apr 18 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-4
 - 813642 Check each named beakerd thread instead of relying on active thread count
   (stl@redhat.com)
