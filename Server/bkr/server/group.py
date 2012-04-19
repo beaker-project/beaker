@@ -307,7 +307,7 @@ class Groups(AdminPage):
         return template_data
 
     def show_permissions(self):
-        grid = widgets.DataGrid(fields=[('Group Name', lambda x: x.permission_name),
+        grid = widgets.DataGrid(fields=[('Permissions', lambda x: x.permission_name),
             (' ', lambda x: make_fake_link('','remove_permission_%s' % x.permission_id, 'Remove (-)'))])
         grid.name = 'group_permission_grid'
         return grid
