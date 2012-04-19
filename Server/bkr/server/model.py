@@ -5800,7 +5800,7 @@ class RecipeTaskResult(TaskBase):
     def delete(self, *args, **kw):
         self.logs = []
 
-    def to_xml(self):
+    def to_xml(self, *args, **kw):
         """
         Return result in xml
         """
