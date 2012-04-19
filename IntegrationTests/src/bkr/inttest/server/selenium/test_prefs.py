@@ -10,7 +10,10 @@ class UserPrefs(WebDriverTestCase):
 
     def setUp(self):
         self.browser = self.get_browser()
-        login(self.browser)
+        self.user = data_setup.create_user(password='password')
+        self.user2 = data_setup.create_user()
+        session.flush()
+        login(self.browser, user=self.user.user_name, password='password')
         self.browser.get(get_server_base() + 'prefs')
 
         self.clear_password = 'gyfrinachol'
@@ -19,6 +22,33 @@ class UserPrefs(WebDriverTestCase):
 
     def tearDown(self):
         self.browser.quit()
+
+    def test_modifying_email(self):
+        current_user_email = self.user.email_address
+        b = self.browser
+
+        # Try and use the same email as an existing user
+        e = b.find_element_by_name("email_address")
+        e.clear()
+        e.send_keys(self.user2.email_address)
+        b.find_element_by_id('UserPrefs').submit()
+        self.assert_(is_text_present(b, 'Email address is not unique'))
+
+        # Check invalid email
+        self.browser.get(get_server_base() + 'prefs')
+        e = b.find_element_by_name("email_address")
+        e.clear()
+        e.send_keys('InvalidEmailAddress')
+        b.find_element_by_id('UserPrefs').submit()
+        self.assert_(is_text_present(b, 'An email address must contain a single @'))
+
+        # Check new unused  and valid email
+        self.browser.get(get_server_base() + 'prefs')
+        e = b.find_element_by_name("email_address")
+        e.clear()
+        e.send_keys('%s@domain.com' % data_setup.unique_name('dude%s'))
+        b.find_element_by_id('UserPrefs').submit()
+        self.assert_(is_text_present(b, 'Email address changed'))
 
     def test_set_plaintext_password(self):
         b = self.browser

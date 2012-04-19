@@ -26,7 +26,7 @@ class UserFormSchema(validators.Schema):
     display_name = validators.String(not_empty=True)
     disabled = validators.StringBool(if_empty=False)
     email_address = validators.Email(not_empty=True)
-    chained_validators = [beaker_validators.UniqueEmail('user_id',
+    chained_validators = [beaker_validators.UniqueFormEmail('user_id',
                             'email_address'),
                           beaker_validators.UniqueUserName('user_id',
                             'user_name')]
