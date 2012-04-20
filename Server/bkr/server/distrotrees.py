@@ -4,11 +4,12 @@ import cherrypy
 from kid import Element
 from sqlalchemy.sql import exists
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears import expose, flash, redirect, paginate, identity
+from turbogears import expose, flash, redirect, paginate, identity, widgets
 from bkr.server.model import session, DistroTree, Distro, OSVersion, OSMajor, \
         LabController, LabControllerDistroTree, DistroTreeActivity, \
         distro_tree_lab_controller_map, lab_controller_table
-from bkr.server.widgets import TaskSearchForm, myPaginateDataGrid, SearchBar
+from bkr.server.widgets import TaskSearchForm, myPaginateDataGrid, SearchBar, \
+        DistroTreeInstallOptionsWidget
 from bkr.server.helpers import make_link
 from bkr.server.controller_utilities import Utility
 from bkr.server.xmlrpccontroller import RPCRoot
@@ -103,6 +104,8 @@ class DistroTrees(RPCRoot):
         is_admin = identity.current.user and identity.current.user.is_admin() or False
         return dict(title='Distro Tree',
                     value=distro_tree,
+                    tabber=widgets.Tabber(use_cookie=True),
+                    install_options_widget=DistroTreeInstallOptionsWidget(),
                     form_task=form_task,
                     lab_controllers=lab_controllers,
                     lab_controller_assocs=lab_controller_assocs,
@@ -149,6 +152,38 @@ class DistroTrees(RPCRoot):
                 new_value=None))
         flash(_(u'Deleted %s %s') % (lca.lab_controller, lca.url))
         redirect(str(lca.distro_tree.id))
+
+    @expose()
+    @identity.require(identity.in_group('admin'))
+    def install_options(self, distro_tree_id, **kwargs):
+        try:
+            distro_tree = DistroTree.by_id(distro_tree_id)
+        except NoResultFound:
+            flash(_(u'Invalid distro tree id %s') % distro_tree_id)
+            redirect('.')
+        if 'ks_meta' in kwargs:
+            distro_tree.activity.append(DistroTreeActivity(
+                    user=identity.current.user, service=u'WEBUI',
+                    action=u'Changed', field_name=u'InstallOption:ks_meta',
+                    old_value=distro_tree.ks_meta,
+                    new_value=kwargs['ks_meta']))
+            distro_tree.ks_meta = kwargs['ks_meta']
+        if 'kernel_options' in kwargs:
+            distro_tree.activity.append(DistroTreeActivity(
+                    user=identity.current.user, service=u'WEBUI',
+                    action=u'Changed', field_name=u'InstallOption:kernel_options',
+                    old_value=distro_tree.kernel_options,
+                    new_value=kwargs['kernel_options']))
+            distro_tree.kernel_options = kwargs['kernel_options']
+        if 'kernel_options_post' in kwargs:
+            distro_tree.activity.append(DistroTreeActivity(
+                    user=identity.current.user, service=u'WEBUI',
+                    action=u'Changed', field_name=u'InstallOption:kernel_options_post',
+                    old_value=distro_tree.kernel_options_post,
+                    new_value=kwargs['kernel_options_post']))
+            distro_tree.kernel_options_post = kwargs['kernel_options_post']
+        flash(_(u'Updated install options'))
+        redirect(str(distro_tree.id))
 
     # XMLRPC method for listing distro trees
     @cherrypy.expose

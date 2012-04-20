@@ -31,7 +31,10 @@ Ensure that you have an up-to-date database backup before proceeding.
         DROP virt,
         MODIFY arch_id INT NOT NULL,
         MODIFY date_created DATETIME NOT NULL,
-        ADD distro_id INT DEFAULT NULL AFTER id;
+        ADD distro_id INT DEFAULT NULL AFTER id,
+        ADD ks_meta TEXT AFTER variant,
+        ADD kernel_options TEXT AFTER ks_meta,
+        ADD kernel_options_post TEXT AFTER kernel_options;
     -- If your schema is old, it might still contain an obsolete "method" column as well:
     --ALTER TABLE distro_tree DROP method;
     UPDATE distro_tree
