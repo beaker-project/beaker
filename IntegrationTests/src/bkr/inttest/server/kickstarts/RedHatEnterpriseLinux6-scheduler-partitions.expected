@@ -91,7 +91,8 @@ server = xmlrpclib.Server("http://lab.test-kickstart.invalid:8000")
 server.install_start("test01.test-kickstart.invalid")
 _EOF_
 
-# XXX TODO pre_anamon
+wget -O /tmp/anamon 'http://lab.test-kickstart.invalid/beaker/anamon'
+python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
 
 # Error: no snippet data for RedHatEnterpriseLinux6_pre
 
@@ -101,7 +102,21 @@ _EOF_
 %post --log=/dev/console
 echo @RECIPEID@ > /root/RECIPE.TXT
 # Enable post-install boot notification
-# XXX TODO post_anamon
+
+wget -O /usr/local/sbin/anamon "http://lab.test-kickstart.invalid/beaker/anamon"
+wget -O /etc/rc.d/init.d/anamon "http://lab.test-kickstart.invalid/beaker/anamon.init"
+
+chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+test -d /selinux && restorecon /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+
+chkconfig --add anamon
+
+cat << __EOT__ > /etc/sysconfig/anamon
+XMLRPC_URL="http://lab.test-kickstart.invalid:8000/RPC2"
+RECIPE_ID="@RECIPEID@"
+LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
+__EOT__
+
 
 # readahead conflicts with auditd, see bug 561486 for detailed explanation.
 

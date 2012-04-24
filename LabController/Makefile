@@ -9,7 +9,8 @@ build:
 
 install:
 	for i in $(SUBDIRS); do $(MAKE) -C $$i install; done
-	$(INSTALL) aux/rhts-checkin $(DESTDIR)/var/www/beaker/rhts-checkin
+	$(INSTALL) aux/anamon $(DESTDIR)/var/www/beaker/anamon
+	$(INSTALL) aux/anamon.init $(DESTDIR)/var/www/beaker/anamon.init
 	$(INSTALL) aux/koan.init $(DESTDIR)/var/www/beaker/koan.init
 	$(INSTALL) conf.d/beaker-lab-controller.conf $(DESTDIR)/etc/httpd/conf.d/beaker-lab-controller.conf
 	$(INSTALL_EXEC) cron.hourly/cobbler_expire_distros $(DESTDIR)/etc/cron.hourly/cobbler_expire_distros
