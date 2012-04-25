@@ -520,7 +520,7 @@ sources = Workstation/source/SRPMS
             return repos
 
         repopath = self.parser.get('variant-%s.%s' % (variant, arch), 
-                               'repository', None)
+                               'repository', '')
         if repopath:
             repos.append(dict(
                               repoid=variant,
@@ -530,7 +530,7 @@ sources = Workstation/source/SRPMS
                         )
 
         debugrepopath = self.parser.get('variant-%s.%s' % (variant, arch), 
-                               'debuginfo', None)
+                               'debuginfo', '')
         if debugrepopath:
             repos.append(dict(
                               repoid='%s-debuginfo' % variant,
@@ -682,10 +682,10 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
         if not parser.parse(url):
             return False
         for r in cls.required:
-            if parser.get(r['section'], r['key'], None) == None:
+            if parser.get(r['section'], r['key'], '') == '':
                 return False
         for e in cls.excluded:
-            if parser.get(e['section'], e['key'], None) != None:
+            if parser.get(e['section'], e['key'], '') != '':
                 return False
         if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
             return False
@@ -806,10 +806,10 @@ mainimage = images/stage2.img
         if not parser.parse(url):
             return False
         for r in cls.required:
-            if parser.get(r['section'], r['key'], None) == None:
+            if parser.get(r['section'], r['key'], '') == '':
                 return False
         for e in cls.excluded:
-            if parser.get(e['section'], e['key'], None) != None:
+            if parser.get(e['section'], e['key'], '') != '':
                 return False
         if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
             return False
@@ -881,10 +881,10 @@ class TreeInfoFedora(TreeInfoBase, Importer):
         if not parser.parse(url):
             return False
         for r in cls.required:
-            if parser.get(r['section'], r['key'], None) == None:
+            if parser.get(r['section'], r['key'], '') == '':
                 return False
         for e in cls.excluded:
-            if parser.get(e['section'], e['key'], None) != None:
+            if parser.get(e['section'], e['key'], '') != '':
                 return False
         if not parser.get('general', 'family').startswith("Fedora"):
             return False
@@ -985,10 +985,10 @@ repository = LoadBalancer
         if not parser.parse(url):
             return False
         for r in cls.required:
-            if parser.get(r['section'], r['key'], None) == None:
+            if parser.get(r['section'], r['key'], '') == '':
                 return False
         for e in cls.excluded:
-            if parser.get(e['section'], e['key'], None) != None:
+            if parser.get(e['section'], e['key'], '') != '':
                 return False
         if parser.get('images-%s' % parser.get('general','arch'), 'kernel', '') == '':
             return False
@@ -1030,7 +1030,7 @@ repository = LoadBalancer
                                      'addons')
             addons = addons and addons.split(',') or []
             for addon in addons:
-                repopath = self.parser.get('addon-%s' % addon, 'repository', None)
+                repopath = self.parser.get('addon-%s' % addon, 'repository', '')
                 if repopath:
                     repos.append(dict(
                                       repoid=addon,
@@ -1095,10 +1095,10 @@ kernel = images/pxeboot/vmlinuz
         if not parser.parse(url):
             return False
         for r in cls.required:
-            if parser.get(r['section'], r['key'], None) == None:
+            if parser.get(r['section'], r['key'], '') == '':
                 return False
         for e in cls.excluded:
-            if parser.get(e['section'], e['key'], None) != None:
+            if parser.get(e['section'], e['key'], '') != '':
                 return False
         if parser.get('images-%s' % parser.get('general','arch'), 'kernel', '') == '':
             return False
@@ -1119,7 +1119,7 @@ kernel = images/pxeboot/vmlinuz
             addons = self.parser.get('general', 'addons')
             addons = addons and addons.split(',') or []
             for addon in addons:
-                repopath = self.parser.get('addon-%s' % addon, 'repository', None)
+                repopath = self.parser.get('addon-%s' % addon, 'repository', '')
                 if repopath:
                     repos.append(dict(
                                       repoid=addon,
