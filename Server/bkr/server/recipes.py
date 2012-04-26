@@ -86,7 +86,7 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def register_file(self, server, recipe_id, path, name, basepath):
+    def register_file(self, server, recipe_id, path, filename, basepath):
         """
         register file and return path to store
         """
@@ -96,17 +96,24 @@ class Recipes(RPCRoot):
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
 
         # Add the log to the DB if it hasn't been recorded yet.
-        if LogRecipe(path,name) not in recipe.logs:
-            # Pull log_server out of server_url.
-            recipe.log_server = urlparse.urlparse(server)[1]
-            recipe.logs.append(LogRecipe(path, name, server, basepath))
+        log_recipe = LogRecipe.lazy_create(parent=recipe,
+                                           path=path,
+                                           filename=filename,
+                                          )
+        log_recipe.server = server
+        log_recipe.basepath = basepath
+        # Pull log_server out of server_url.
+        recipe.log_server = urlparse.urlparse(server)[1]
         return '%s' % recipe.filepath
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def files(self, recipe_id):
         """
-        Return an array of logs for this recipe
+        Return an array of logs for the given recipe.
+
+        :param recipe_id: id of recipe
+        :type recipe_id: integer
         """
         try:
             recipe = Recipe.by_id(recipe_id)
@@ -151,7 +158,7 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def upload_file(self, recipe_id, path, name, size, md5sum, offset, data):
+    def upload_file(self, recipe_id, path, filename, size, md5sum, offset, data):
         """
         upload to recipe in pieces 
         """
@@ -160,12 +167,13 @@ class Recipes(RPCRoot):
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
 
-       # Add the log to the DB if it hasn't been recorded yet.
-        if LogRecipe(path,name) not in recipe.logs:
-            recipe.logs.append(LogRecipe(path, name))
-
+        # Add the log to the DB if it hasn't been recorded yet.
+        LogRecipe.lazy_create(parent=recipe,
+                              path=path,
+                              filename=filename,
+                             )
         return self.upload.uploadFile("%s/%s" % (recipe.filepath, path), 
-                                      name, 
+                                      filename, 
                                       size, 
                                       md5sum, 
                                       offset, 
@@ -264,8 +272,6 @@ class Recipes(RPCRoot):
     def index(self,*args,**kw):
         return self.recipes(recipes=session.query(MachineRecipe)
                 # need to join in case the user sorts by these related properties
-                .outerjoin(Recipe.status)
-                .outerjoin(Recipe.result)
                 .outerjoin(Recipe.system)
                 .outerjoin(Recipe.distro, Distro.arch),
                 *args, **kw)
@@ -276,8 +282,6 @@ class Recipes(RPCRoot):
     def mine(self,*args,**kw):
         return self.recipes(recipes=MachineRecipe.mine(identity.current.user)
                 # need to join in case the user sorts by these related properties
-                .outerjoin(Recipe.status)
-                .outerjoin(Recipe.result)
                 .outerjoin(Recipe.system)
                 .outerjoin(Recipe.distro, Distro.arch),
                 action='./mine', *args, **kw)
@@ -303,8 +307,8 @@ class Recipes(RPCRoot):
 		     widgets.PaginateDataGrid.Column(name='system.fqdn', getter=lambda x: x.system and x.system.link, title='System', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='distro.install_name', getter=lambda x: x.distro and x.distro.link, title='Distro', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
-		     widgets.PaginateDataGrid.Column(name='status.status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='result.result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
+                     widgets.PaginateDataGrid.Column(name='status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
+		     widgets.PaginateDataGrid.Column(name='result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
                      widgets.PaginateDataGrid.Column(name='action', getter=lambda x:self.action_widget(task=x), title='Action', options=dict(sortable=False)),
                     ])
 
@@ -338,3 +342,6 @@ class Recipes(RPCRoot):
                     recipe_widget        = self.recipe_widget,
                     recipe_tasks_widget  = self.recipe_tasks_widget,
                     recipe               = recipe)
+
+# hack for Sphinx
+recipes = Recipes

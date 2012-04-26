@@ -16,7 +16,7 @@ $ bugzilla login
 """
 
 BUGZILLA_URL = 'https://bugzilla.redhat.com/xmlrpc.cgi'
-GERRIT_HOSTNAME = 'beaker-gerrit.app.eng.bne.redhat.com'
+GERRIT_HOSTNAME = 'gerrit.beaker-project.org'
 GERRIT_SSH_PORT = 29418
 
 import sys

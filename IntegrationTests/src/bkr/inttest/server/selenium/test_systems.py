@@ -27,7 +27,7 @@ import lxml.etree
 from turbogears.database import session
 
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, get_server_base
+from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.assertions import assert_sorted
 from bkr.server.model import Cpu
 
@@ -36,9 +36,9 @@ def atom_xpath(expr):
 
 class TestSystemsGrid(SeleniumTestCase):
 
+    @with_transaction
     def setUp(self):
         data_setup.create_system()
-        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
@@ -71,8 +71,7 @@ class TestSystemGridSorting(SeleniumTestCase):
     # tests in this class can safely share the same firefox session
     @classmethod
     def setUpClass(cls):
-        try:
-            session.begin()
+        with session.begin():
             # ensure we have lots of systems
             for cores in [1, 2, 3]:
                 for vendor, model, status, type, user in zip(
@@ -85,9 +84,6 @@ class TestSystemGridSorting(SeleniumTestCase):
                             model=model, status=status, type=type)
                     system.user = data_setup.create_user()
                     system.cpu = Cpu(cores=cores)
-            session.commit()
-        finally:
-            session.close()
         cls.selenium = sel = cls.get_selenium()
         sel.start()
 
@@ -99,14 +95,14 @@ class TestSystemGridSorting(SeleniumTestCase):
 
     def check_column_sort(self, column):
         sel = self.selenium
-        sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
+        sel.click('//table[@id="widget"]/thead//th[%d]//a[@href]' % column)
         sel.wait_for_page_to_load('30000')
 
         cell_values = []
         while True:
             row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr/td[%d]' % column))
-            cell_values += [sel.get_table('widget.%d.%d' % (row, column - 1)) # zero-indexed 
-                           for row in range(0, row_count)]
+            cell_values += [sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
+                           for row in range(1, row_count + 1)]
             # Keeping scrolling through pages until we have seen at least two distinct cell values
             # (so that we can see that it is really sorted)
             if len(set(cell_values)) > 1:
@@ -191,8 +187,8 @@ class TestSystemsAtomFeed(unittest.TestCase):
         return int(xpath(feed))
 
     def test_all_systems(self):
-        systems = [data_setup.create_system() for _ in range(25)]
-        session.flush()
+        with session.begin():
+            systems = [data_setup.create_system() for _ in range(25)]
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'list_tgp_limit': '0'}))
@@ -202,8 +198,8 @@ class TestSystemsAtomFeed(unittest.TestCase):
             self.assert_(self.feed_contains_system(feed, system.fqdn))
 
     def test_link_to_rdfxml(self):
-        system = data_setup.create_system()
-        session.flush()
+        with session.begin():
+            system = data_setup.create_system()
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'list_tgp_limit': '0'}))
@@ -217,8 +213,8 @@ class TestSystemsAtomFeed(unittest.TestCase):
                 '%sview/%s?tg_format=rdfxml' % (get_server_base(), system.fqdn))
 
     def test_link_to_turtle(self):
-        system = data_setup.create_system()
-        session.flush()
+        with session.begin():
+            system = data_setup.create_system()
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'list_tgp_limit': '0'}))
@@ -232,10 +228,10 @@ class TestSystemsAtomFeed(unittest.TestCase):
                 '%sview/%s?tg_format=turtle' % (get_server_base(), system.fqdn))
 
     def test_filter_by_group(self):
-        data_setup.create_system(fqdn=u'nogroup.system')
-        self.group = data_setup.create_group()
-        data_setup.create_system(fqdn=u'grouped.system').groups.append(self.group)
-        session.flush()
+        with session.begin():
+            data_setup.create_system(fqdn=u'nogroup.system')
+            self.group = data_setup.create_group()
+            data_setup.create_system(fqdn=u'grouped.system').groups.append(self.group)
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'systemsearch-0.table': 'System/Group',

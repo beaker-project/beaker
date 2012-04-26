@@ -1,24 +1,23 @@
 from turbogears.database import session
 from bkr.server.model import SystemStatus
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 
 
 class SystemReturnTest(SeleniumTestCase):
 
+    @with_transaction
     def setUp(self):
         self.user = data_setup.create_user(password='password')
-        self.system = data_setup.create_system(shared=True)
+        self.system = data_setup.create_system(shared=True,
+                status=SystemStatus.manual)
         self.lc  = data_setup.create_labcontroller(fqdn='remove_me')
         self.system.lab_controller = self.lc
-        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
     def test_cant_return_sneakily(self):
         self.login() #login as admin
-        self.system.status = SystemStatus.by_name(u'Manual')
-        session.flush()
         sel = self.selenium
         sel.open('view/%s' % self.system.fqdn)
         sel.wait_for_page_to_load(3000)
@@ -37,8 +36,6 @@ class SystemReturnTest(SeleniumTestCase):
 
 
     def test_return_with_no_lc(self):
-        self.system.status = SystemStatus.by_name(u'Manual')
-        session.flush()
         sel = self.selenium
         self.login(user=self.user.user_name, password='password')
         sel.open('view/%s' % self.system.fqdn)

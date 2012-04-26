@@ -20,22 +20,23 @@
 import unittest
 import logging
 import xmlrpclib
+import datetime
 from turbogears.database import session
 from bkr.inttest.server.selenium import XmlRpcTestCase
 from bkr.inttest import data_setup
-from bkr.server.model import Job, Distro
+from bkr.server.model import Job, Distro, ConfigItem, User
 
 class JobUploadTest(XmlRpcTestCase):
 
     def setUp(self):
-        if not Distro.by_name(u'BlueShoeLinux5-5'):
-            data_setup.create_distro(name=u'BlueShoeLinux5-5')
-        data_setup.create_task(name=u'/distribution/install')
-        data_setup.create_task(name=u'/distribution/reservesys')
-        user = data_setup.create_user(password=u'password')
-        session.flush()
+        with session.begin():
+            if not Distro.by_name(u'BlueShoeLinux5-5'):
+                data_setup.create_distro(name=u'BlueShoeLinux5-5')
+            data_setup.create_task(name=u'/distribution/install')
+            data_setup.create_task(name=u'/distribution/reservesys')
+            self.user = data_setup.create_user(password=u'password')
         self.server = self.get_server()
-        self.server.auth.login_password(user.user_name, 'password')
+        self.server.auth.login_password(self.user.user_name, 'password')
 
     def test_ignore_missing_tasks(self):
         job_tid = self.server.jobs.upload('''
@@ -57,13 +58,14 @@ class JobUploadTest(XmlRpcTestCase):
             True # ignore_missing_tasks
         )
         self.assert_(job_tid.startswith('J:'))
-        job = Job.by_id(int(job_tid[2:]))
-        self.assertEqual(job.ttasks, 2) # not 3
-        recipe = job.recipesets[0].recipes[0]
-        self.assertEqual(len(recipe.tasks), 2)
-        self.assertEqual(recipe.tasks[0].task.name, u'/distribution/install')
-        # /asdf/notexist is silently dropped
-        self.assertEqual(recipe.tasks[1].task.name, u'/distribution/reservesys')
+        with session.begin():
+            job = Job.by_id(int(job_tid[2:]))
+            self.assertEqual(job.ttasks, 2) # not 3
+            recipe = job.recipesets[0].recipes[0]
+            self.assertEqual(len(recipe.tasks), 2)
+            self.assertEqual(recipe.tasks[0].task.name, u'/distribution/install')
+            # /asdf/notexist is silently dropped
+            self.assertEqual(recipe.tasks[1].task.name, u'/distribution/reservesys')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=601170
     def test_error_message_lists_all_invalid_tasks(self):
@@ -92,3 +94,31 @@ class JobUploadTest(XmlRpcTestCase):
         except xmlrpclib.Fault, e:
             self.assert_('/asdf/notexist1, /asdf/notexist2, /asdf/notexist3'
                     in e.faultString)
+
+    def test_reject_expired_root_password(self):
+        with session.begin():
+            ConfigItem.by_name('root_password_validity').set(90,
+                    user=User.by_user_name(data_setup.ADMIN_USER))
+            self.user.root_password = 'donttellanyone'
+            self.user.rootpw_changed = datetime.datetime.utcnow() - datetime.timedelta(days=99)
+        job_xml = '''
+            <job>
+                <whiteboard>job for user with expired password</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                            <distro_arch op="=" value="i386" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            '''
+        try:
+            self.server.jobs.upload(job_xml)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assert_('root password has expired' in e.faultString)

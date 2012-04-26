@@ -10,6 +10,7 @@ from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
 from bkr.server.group import Groups
+from bkr.server.configuration import Configuration
 from bkr.server.tag import Tags
 from bkr.server.osversion import OSVersions
 from bkr.server.distro_family import DistroFamily
@@ -23,7 +24,8 @@ from bkr.server.reserve_workflow import ReserveWorkflow
 from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
 from bkr.server.systems import SystemsController
-from bkr.server.widgets import myPaginateDataGrid
+from bkr.server.system_action import SystemAction as SystemActionController
+from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid
 from bkr.server.widgets import LoanWidget
 from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
@@ -42,6 +44,7 @@ from bkr.server.widgets import SystemProvision
 from bkr.server.widgets import SearchBar, SystemForm
 from bkr.server.widgets import SystemArches
 from bkr.server.widgets import TaskSearchForm
+from bkr.server.widgets import SystemActions
 from bkr.server.authentication import Auth
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.cobbler_utils import hash_to_string, string_to_hash
@@ -78,7 +81,7 @@ import sys
 import logging
 log = logging.getLogger("bkr.server.controllers")
 import breadcrumbs
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def identity_failure_url(errors):
     if identity.current.anonymous:
@@ -137,61 +140,13 @@ class Devices:
                     object_count = devices.count(),
                     list = devices)
 
-class ReportProblemController(object):
-
-    form_widget = ReportProblemForm()
-
-    @expose(template='bkr.server.templates.form-post')
-    @identity.require(identity.not_anonymous())
-    def index(self, system_id, recipe_id=None, problem_description=None, tg_errors=None):
-        """
-        Allows users to report a problem with a system to the system's owner.
-        """
-        try:
-            system = System.by_id(system_id, identity.current.user)
-        except InvalidRequestError:
-            flash(_(u'Unable to find system with id of %s' % system_id))
-            redirect('/')
-        recipe = None
-        if recipe_id is not None:
-            try:
-                recipe = Recipe.by_id(recipe_id)
-            except InvalidRequestError:
-                pass
-        return dict(
-            title=_(u'Report a problem with %s') % system.fqdn,
-            form=self.form_widget,
-            method='post',
-            action='submit',
-            value={'system_id': system_id, 'recipe_id': recipe_id},
-            options={'system': system, 'recipe': recipe}
-        )
-
-    @expose()
-    @error_handler(index)
-    @validate(form=form_widget)
-    @identity.require(identity.not_anonymous())
-    def submit(self, system_id, problem_description, recipe_id=None):
-        system = System.by_id(system_id, identity.current.user)
-        recipe = None
-        if recipe_id is not None:
-            try:
-                recipe = Recipe.by_id(recipe_id)
-            except InvalidRequestError:
-                pass
-        mail.system_problem_report(system, problem_description,
-                recipe, identity.current.user)
-        activity = SystemActivity(identity.current.user, u'WEBUI', u'Reported problem',
-                u'Status', None, problem_description)
-        system.activity.append(activity)
-        flash(_(u'Your problem report has been forwarded to the system owner'))
-        redirect('/view/%s' % system.fqdn)
 
 class Root(RPCRoot): 
     powertypes = PowerTypes()
     keytypes = KeyTypes()
     devices = Devices()
     groups = Groups()
+    configuration = Configuration()
     tags = Tags()
     distrofamily = DistroFamily()
     osversions = OSVersions()
@@ -212,7 +167,7 @@ class Root(RPCRoot):
     reserveworkflow = ReserveWorkflow()
     watchdogs = Watchdogs()
     retentiontag = RetentionTagController()
-    report_problem = ReportProblemController()
+    system_action = SystemActionController()
     systems = SystemsController()
 
     for entry_point in pkg_resources.iter_entry_points('bkr.controllers'):
@@ -225,7 +180,10 @@ class Root(RPCRoot):
     submit     = widgets.SubmitButton(name='submit')
 
     email      = widgets.TextField(name='email_address', label='Email Address')
-    root_password = widgets.TextField(name='root_password', label='Root Password')
+    root_password = widgets.TextField(name='_root_password', label='Root Password')
+    rootpw_expiry = widgets.TextField(name='rootpw_expiry',
+                                      label='Root Password Expiry',
+                                      attrs={'disabled': True})
     autoUsers  = widgets.AutoCompleteTextField(name='user',
                                            search_controller=url("/users/by_name"),
                                            search_param="input",
@@ -233,10 +191,15 @@ class Root(RPCRoot):
 
     prefs_form   = widgets.TableForm(
         'UserPrefs',
-        fields = [email, root_password],
+        fields = [email, root_password, rootpw_expiry],
         action = 'save_prefs',
         submit_text = _(u'Change'),
     )
+
+    rootpw_grid = BeakerDataGrid(fields=[
+                    ('Root Password', lambda x: x.value),
+                    ('Effective from', lambda x: x.valid_from)
+                 ])
 
     loan_form     = widgets.TableForm(
         'Loan',
@@ -284,6 +247,7 @@ class Root(RPCRoot):
     system_provision = SystemProvision(name='provision')
     arches_form = SystemArches(name='arches') 
     task_form = TaskSearchForm(name='tasks')
+    system_actions = SystemActions()
 
     @expose(format='json')
     def change_system_admin(self,system_id=None,group_id=None,cmd=None,**kw):
@@ -292,23 +256,26 @@ class Root(RPCRoot):
             return {'success' : 0}
 
         sys = System.by_id(system_id,identity.current.user)
-        if sys.is_admin() is None:
+        if not sys.is_admin():
             #Someone tried to be tricky...
             return {'success' : 0}
 
-        group = Group.by_id(group_id)
+        assoc = SystemGroup.query.filter(and_(
+                SystemGroup.system == sys, SystemGroup.group_id == group_id)).one()
+        if not assoc:
+            return {'success': 0}
         if cmd == 'add':
-            group.admin_systems.append(System.by_id(system_id,identity.current.user)) 
+            assoc.admin = True
             return { 'success' : 1 }
         if cmd == 'remove':
-            group.admin_systems.remove(System.by_id(system_id,identity.current.user))
+            assoc.admin = False
             return {'success' : 1 }
 
 
     @expose(format='json')
     def get_keyvalue_search_options(self,**kw):
         return_dict = {}
-        return_dict['keyvals'] = [x for x in Key.get_all_keys() if x != 'MODULE']
+        return_dict['keyvals'] = Key.get_all_keys()
         return return_dict
 
     @expose(format='json')
@@ -395,33 +362,29 @@ class Root(RPCRoot):
                     kernel_options_post = kernel_options_post)
 
     @expose(format='json')
-    def change_priority_recipeset(self,priority_id,recipeset_id): 
+    def change_priority_recipeset(self, priority, recipeset_id):
         user = identity.current.user
         if not user:
             return {'success' : None, 'msg' : 'Must be logged in' }
 
         try:
             recipeset = RecipeSet.by_id(recipeset_id)
-            old_priority = recipeset.priority.priority
+            old_priority = recipeset.priority
         except:
             log.error('No rows returned for recipeset_id %s in change_priority_recipeset:%s' % (recipeset_id,e))
             return { 'success' : None, 'msg' : 'RecipeSet is not valid' }
 
         try: 
-            priority_query = TaskPriority.by_id(priority_id)  # will throw an error here if priorty id is invalid 
-        except InvalidRequestError, (e):
-            log.error('No rows returned for priority_id %s in change_priority_recipeset:%s' % (priority_id,e)) 
-            return { 'success' : None, 'msg' : 'Priority not found', 'current_priority' : recipeset.priority.id }
-         
-        allowed_priority_ids = [elem.id for elem in recipeset.allowed_priorities(user)]
-       
-        if long(priority_id) not in allowed_priority_ids:
-            return {'success' : None, 'msg' : 'Insufficient privileges for that priority', 'current_priority' : recipeset.priority.id }
-         
+            priority = TaskPriority.from_string(priority)
+        except ValueError:
+            log.exception('Invalid priority')
+            return { 'success' : None, 'msg' : 'Priority not found', 'current_priority' : recipeset.priority.value }
 
-        activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'Priority', recipeset.priority.id,priority_id)
-        recipeset.priority = priority_query
-        session.add(recipeset)
+        if priority not in recipeset.allowed_priorities(user):
+            return {'success' : None, 'msg' : 'Insufficient privileges for that priority', 'current_priority' : recipeset.priority.value }
+
+        activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'Priority', recipeset.priority.value,priority.value)
+        recipeset.priority = priority
         recipeset.activity.append(activity)
         return {'success' : True } 
 
@@ -437,21 +400,33 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     def prefs(self, *args, **kw):
         user = identity.current.user
+
+        # Show all future root passwords, and the previous five
+        rootpw = ConfigItem.by_name('root_password')
+        rootpw_values = rootpw.values().filter(rootpw.value_class.valid_from > datetime.utcnow())\
+                       .order_by(rootpw.value_class.valid_from.desc()).all()\
+                      + rootpw.values().filter(rootpw.value_class.valid_from <= datetime.utcnow())\
+                       .order_by(rootpw.value_class.valid_from.desc())[:5]
+
         return dict(
-            title    = 'User Prefs',
-            forms    = [self.prefs_form, self.ssh_key_add_form],
-            widgets  = {},
-            action   = '/save_prefs',
-            ssh_keys = user.sshpubkeys,
-            value    = user,
-            options  = None)
+            title        = 'User Prefs',
+            prefs_form   = self.prefs_form,
+            ssh_key_form = self.ssh_key_add_form,
+            widgets      = {},
+            action       = '/save_prefs',
+            ssh_keys     = user.sshpubkeys,
+            value        = user,
+            rootpw       = rootpw.current_value(),
+            rootpw_grid  = self.rootpw_grid,
+            rootpw_values = rootpw_values,
+            options      = None)
 
 
     @expose()
     @identity.require(identity.not_anonymous())
     def save_prefs(self, *args, **kw):
         email = kw.get('email_address', None) 
-        root_password = kw.get('root_password', None) 
+        root_password = kw.get('_root_password', None)
         changes = []
         
         if email and email != identity.current.user.email_address:
@@ -479,7 +454,7 @@ class Root(RPCRoot):
         pubkey = kw.get('ssh_pub_key', None) 
         
         try:
-            keytype, keyval, keyident = pubkey.split()
+            keytype, keyval, keyident = pubkey.split(None, 2)
         except ValueError:
             flash(_(u"Invalid SSH key"))
             redirect('/prefs')
@@ -557,9 +532,9 @@ class Root(RPCRoot):
                     distro = Distro.query.filter(Distro.id == distro_id).one()
                 except KeyError:
                     raise
-            # I don't like duplicating this code in find_systems_for_distro() but it dies on trying to jsonify a Query object... 
-            systems_distro_query = distro.systems()
-            avail_systems_distro_query = System.available_for_schedule(identity.current.user,systems=systems_distro_query)
+            avail_systems_distro_query = System.by_type(type=SystemType.machine,
+                    systems=distro.systems(user=identity.current.user))\
+                    .order_by(None)
             warn = None
             if avail_systems_distro_query.count() < 1: 
                 warn = 'No Systems compatible with distro %s' % distro.install_name
@@ -707,14 +682,7 @@ class Root(RPCRoot):
                 my_fields = Utility.custom_systems_grid(system_columns_desc,extra_columns_desc)
             else: 
                 my_fields = Utility.custom_systems_grid(system_columns_desc)
-
-            systems = systems.reset_joinpoint().outerjoin('user')\
-                    .outerjoin('status').outerjoin('arch').outerjoin('type')\
-                    .distinct()
         else: 
-            systems = systems.reset_joinpoint().outerjoin('user')\
-                    .outerjoin('status').outerjoin('arch').outerjoin('type')\
-                    .distinct()
             use_custom_columns = False
             columns = None
             searchvalue = None
@@ -957,10 +925,17 @@ class Root(RPCRoot):
             can_admin = system.can_admin(user = identity.current.user)
         except AttributeError,e:
             can_admin = False
+
+        options['system_actions'] = self.system_actions
+        options['loan'] = {'system' : system.fqdn, 'name' : 'request_loan',
+            'action' : '../system_action/loan_request'}
+        options['report_problem'] = {'system' : system,
+            'name' : 'report_problem', 'action' : '../system_action/report_system_problem'}
+
         # If you have anything in your widgets 'javascript' variable,
         # do not return the widget here, the JS will not be loaded,
         # return it as an arg in return()
-        widgets = dict( 
+        widgets = dict(
                         labinfo   = self.labinfo_form,
                         details   = self.system_details,
                         exclude   = self.system_exclude,
@@ -968,9 +943,9 @@ class Root(RPCRoot):
                         notes     = self.system_notes,
                         groups    = self.system_groups,
                         install   = self.system_installoptions,
-                        arches    = self.arches_form 
+                        arches    = self.arches_form,
                       )
-        if system.type != SystemType.by_name(u'Virtual'):
+        if system.type != SystemType.virtual:
             widgets['provision'] = self.system_provision
             widgets['power'] = self.power_form
             widgets['power_action'] = self.power_action_form
@@ -1001,7 +976,7 @@ class Root(RPCRoot):
                                     arches    = '/save_arch',
                                     tasks     = '/tasks/do_search',
                                   ),
-            widgets_options = dict(power     = options,
+            widgets_options = dict(power  = options,
                                    power_history = system.command_queue[:10], # XXX filter to power commands
                                    history   = history_options or {},
                                    labinfo   = options,
@@ -1012,7 +987,7 @@ class Root(RPCRoot):
                                    notes     = dict(readonly = readonly,
                                                 notes = system.notes),
                                    groups    = dict(readonly = readonly,
-                                                groups = system.groups,
+                                                group_assocs = system.group_assocs,
                                                 system_id = system.id,
                                                 can_admin = can_admin),
                                    install   = dict(readonly = readonly,
@@ -1308,7 +1283,7 @@ class Root(RPCRoot):
                    id,
                    power_address,
                    power_type_id,
-                   release_action_id,
+                   release_action,
                    **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -1330,16 +1305,14 @@ class Root(RPCRoot):
                 system.reprovision_distro = reprovision_distro
 
         try:
-            release_action = ReleaseAction.by_id(release_action_id)
-        except InvalidRequestError:
+            release_action = ReleaseAction.from_string(release_action)
+        except ValueError:
             release_action = None
-        if system.release_action and system.release_action != release_action:
-            system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'release_action', '%s' % system.release_action, '%s' % release_action ))
-            system.release_action = release_action
-        else:
-            system.activity.append(SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'release_action', '%s' % system.release_action, '%s' % release_action ))
-            system.release_action = release_action
-            
+        system.activity.append(SystemActivity(identity.current.user, 'WEBUI',
+                'Changed', 'release_action',
+                '%s' % system.release_action, '%s' % release_action))
+        system.release_action = release_action
+
         if system.power:
             if power_address != system.power.power_address:
                 #Power Address Changed
@@ -1431,12 +1404,10 @@ class Root(RPCRoot):
                 redirect("/")
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
 
-        kw['status'] = SystemStatus.by_id(kw['status_id'])
         if kw['lab_controller_id'] == 0:
             kw['lab_controller'] = None
         else:
             kw['lab_controller'] = LabController.by_id(kw['lab_controller_id'])
-        kw['type'] = SystemType.by_id(kw['type_id'])
         if kw['hypervisor_id'] == 0:
             kw['hypervisor'] = None
         else:
@@ -1629,7 +1600,11 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to lookup distro for %s" % id) )
             redirect(u"/view/%s" % system.fqdn)
-    
+
+        if user.rootpw_expired:
+            flash( _(u"Your root password has expired, please change or clear it in order to submit jobs.") )
+            redirect(u"/view/%s" % system.fqdn)
+
         reserve_days = int(reserve_days)
         if reserve_days is None:#This should not happen
             log.debug('reserve_days has not been set in provision page, using default')
@@ -1677,7 +1652,11 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to lookup distro for %s" % id) )
             redirect(u"/view/%s" % system.fqdn)
-         
+
+        if user.rootpw_expired:
+            flash( _(u"Your root password has expired, please change or clear it in order to submit jobs.") )
+            redirect(u"/view/%s" % system.fqdn)
+
         try:
             can_provision_now = system.can_provision_now(user) #Check perms
             if can_provision_now:

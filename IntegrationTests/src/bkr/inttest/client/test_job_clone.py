@@ -1,15 +1,15 @@
 
 import unittest
 from turbogears.database import session
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client
 
 class JobCloneTest(unittest.TestCase):
 
     @classmethod
+    @with_transaction
     def setupClass(cls):
         cls.job = data_setup.create_completed_job()
-        session.flush()
 
     def test_can_clone_job(self):
         out = run_client(['bkr', 'job-clone', self.job.t_id])

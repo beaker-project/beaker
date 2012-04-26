@@ -17,8 +17,18 @@ PIDFILE=/var/run/beaker/${prog}.pid
 LOCKFILE=/var/lock/subsys/$prog
 RUN_AS=apache
 
+check_pidfile() {
+    status -p $PIDFILE $prog >& /dev/null
+    ret=$?
+    if [ "$ret" -eq 1 ]; then
+        # remove stale pidfile
+        rm -f -- "$PIDFILE"
+    fi
+}
+
 start() {
     echo -n $"Starting $prog: "
+    check_pidfile
     daemon --pidfile $PIDFILE --user $RUN_AS $prog
     RETVAL=$?
     echo
@@ -30,7 +40,7 @@ start() {
 
 stop() {
     echo -n $"Stopping $prog: "
-    killproc $prog
+    killproc -p $PIDFILE $prog
     RETVAL=$?
     echo 
     rm -f $LOCKFILE
@@ -66,7 +76,11 @@ case "$1" in
 	condrestart
 	;;
     reload)
-        ;;
+	echo -n $"Reloading $prog: "
+	killproc -p $PIDFILE $prog -HUP
+	RETVAL=$?
+	echo
+	;;
     *)
 	echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"
 	;;

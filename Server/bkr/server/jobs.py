@@ -20,6 +20,7 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
+from formencode.api import Invalid
 from sqlalchemy.exceptions import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
@@ -302,13 +303,12 @@ class Jobs(RPCRoot):
         recipeset_priority = xmlrecipeSet.get_xml_attr('priority',unicode,None) 
         if recipeset_priority is not None:
             try:
-                my_priority = TaskPriority.query.filter_by(priority = recipeset_priority).one()
+                my_priority = TaskPriority.from_string(recipeset_priority)
             except InvalidRequestError, (e):
                 raise BX(_('You have specified an invalid recipeSet priority:%s' % recipeset_priority))
             allowed_priorities = RecipeSet.allowed_priorities_initial(identity.current.user)
-            allowed = [elem for elem in allowed_priorities if elem.priority == recipeset_priority]
-            if allowed:
-                recipeSet.priority = allowed[0]
+            if my_priority in allowed_priorities:
+                recipeSet.priority = my_priority
             else:
                 recipeSet.priority = TaskPriority.default_priority() 
         else:
@@ -358,14 +358,21 @@ class Jobs(RPCRoot):
 
     def process_xmljob(self, xmljob, user, ignore_missing_tasks=False):
 
+        if user.rootpw_expired:
+            raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
+
         job_retention = xmljob.get_xml_attr('retention_tag',unicode,None)
         job_product = xmljob.get_xml_attr('product',unicode,None)
         tag, product = self._process_job_tag_product(retention_tag=job_retention, product=job_product)
         job = Job(whiteboard=unicode(xmljob.whiteboard), ttasks=0, owner=user)
         job.product = product
         job.retention_tag = tag
-
-        job.cc.extend(set(xmljob.iter_cc()))
+        email_validator = validators.Email(not_empty=True)
+        for addr in set(xmljob.iter_cc()):
+            try:
+                job.cc.append(email_validator.to_python(addr))
+            except Invalid, e:
+                raise BX(_('Invalid e-mail address %r in <cc/>: %s') % (addr, str(e)))
         for xmlrecipeSet in xmljob.iter_recipeSets():
             recipe_set = self._handle_recipe_set(xmlrecipeSet, user,
                     ignore_missing_tasks=ignore_missing_tasks)
@@ -539,7 +546,7 @@ class Jobs(RPCRoot):
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50)
     def index(self,*args,**kw): 
-        return self.jobs(jobs=session.query(Job).join('status').join('owner').outerjoin('result'),*args,**kw)
+        return self.jobs(jobs=session.query(Job).join('owner'),*args,**kw)
 
     @identity.require(identity.not_anonymous()) 
     @expose(template='bkr.server.templates.grid')
@@ -574,10 +581,10 @@ class Jobs(RPCRoot):
             widgets.PaginateDataGrid.Column(name='progress',
                 getter=lambda x: x.progress_bar, title='Progress',
                 options=dict(sortable=False)),
-		    widgets.PaginateDataGrid.Column(name='status.status',
+                    widgets.PaginateDataGrid.Column(name='status',
                 getter=lambda x:x.status, title='Status',
                 options=dict(sortable=True)),
-		    widgets.PaginateDataGrid.Column(name='result.result',
+		    widgets.PaginateDataGrid.Column(name='result',
                 getter=lambda x:x.result, title='Result',
                 options=dict(sortable=True)),
 		    widgets.PaginateDataGrid.Column(name='action',

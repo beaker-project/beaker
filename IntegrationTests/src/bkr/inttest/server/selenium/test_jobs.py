@@ -26,7 +26,7 @@ from turbogears.database import session
 from sqlalchemy import and_
 
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 from bkr.server.model import RetentionTag, Product, Distro, Job
 
 class TestViewJob(SeleniumTestCase):
@@ -39,10 +39,10 @@ class TestViewJob(SeleniumTestCase):
         self.selenium.stop()
 
     def test_cc_list(self):
-        user = data_setup.create_user(password=u'password')
-        job = data_setup.create_job(owner=user,
-                cc=[u'laika@mir.su', u'tereshkova@kosmonavt.su'])
-        session.flush()
+        with session.begin():
+            user = data_setup.create_user(password=u'password')
+            job = data_setup.create_job(owner=user,
+                    cc=[u'laika@mir.su', u'tereshkova@kosmonavt.su'])
         sel = self.selenium
         self.login(user=user.user_name, password='password')
         sel.open('')
@@ -58,9 +58,9 @@ class TestViewJob(SeleniumTestCase):
             'laika@mir.su; tereshkova@kosmonavt.su')
 
     def test_edit_job_whiteboard(self):
-        user = data_setup.create_user(password=u'asdf')
-        job = data_setup.create_job(owner=user)
-        session.flush()
+        with session.begin():
+            user = data_setup.create_user(password=u'asdf')
+            job = data_setup.create_job(owner=user)
         self.login(user=user.user_name, password='asdf')
         sel = self.selenium
         sel.open('jobs/%s' % job.id)
@@ -75,8 +75,8 @@ class TestViewJob(SeleniumTestCase):
         self.assertEqual(new_whiteboard, sel.get_value('name=whiteboard'))
 
     def test_datetimes_are_localised(self):
-        job = data_setup.create_completed_job()
-        session.flush()
+        with session.begin():
+            job = data_setup.create_completed_job()
         sel = self.selenium
         sel.open('jobs/%s' % job.id)
         sel.wait_for_page_to_load('30000')
@@ -91,8 +91,8 @@ class TestViewJob(SeleniumTestCase):
                 '[preceding-sibling::td[1]/b/text() = "Finished"]'))
 
     def test_invalid_datetimes_arent_localised(self):
-        job = data_setup.create_job()
-        session.flush()
+        with session.begin():
+            job = data_setup.create_job()
         sel = self.selenium
         sel.open('jobs/%s' % job.id)
         sel.wait_for_page_to_load('30000')
@@ -103,8 +103,8 @@ class TestViewJob(SeleniumTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=706435
     def test_task_result_datetimes_are_localised(self):
-        job = data_setup.create_completed_job()
-        session.flush()
+        with session.begin():
+            job = data_setup.create_completed_job()
         sel = self.selenium
         sel.open('jobs/%s' % job.id)
         sel.wait_for_page_to_load('30000')
@@ -127,12 +127,12 @@ class TestViewJob(SeleniumTestCase):
 
 class NewJobTest(SeleniumTestCase):
 
+    @with_transaction
     def setUp(self):
         if not Distro.by_name(u'BlueShoeLinux5-5'):
             data_setup.create_distro(name=u'BlueShoeLinux5-5')
         data_setup.create_task(name=u'/distribution/install')
         data_setup.create_product(product_name=u'the_product')
-        session.flush()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
@@ -214,9 +214,9 @@ class NewJobTest(SeleniumTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=661652
     def test_job_with_excluded_task(self):
-        distro = data_setup.create_distro(arch=u'ia64')
-        excluded_task = data_setup.create_task(exclude_arch=[u'ia64'])
-        session.flush()
+        with session.begin():
+            distro = data_setup.create_distro(arch=u'ia64')
+            excluded_task = data_setup.create_task(exclude_arch=[u'ia64'])
         self.login()
         sel = self.selenium
         sel.open('')
@@ -290,8 +290,8 @@ class NewJobTest(SeleniumTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=730983
     def test_duplicate_notify_cc_addresses_are_merged(self):
-        user = data_setup.create_user(password=u'hornet')
-        session.flush()
+        with session.begin():
+            user = data_setup.create_user(password=u'hornet')
         self.login(user.user_name, u'hornet')
         sel = self.selenium
         sel.open('')
@@ -327,6 +327,39 @@ class NewJobTest(SeleniumTestCase):
         self.assertEqual(sel.get_title(), 'My Jobs')
         job = Job.query.filter(Job.owner == user).order_by(Job.id.desc()).first()
         self.assertEqual(job.cc, ['person@example.invalid'])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=784237
+    def test_invalid_email_addresses_are_not_accepted_in_notify_cc(self):
+        self.login()
+        sel = self.selenium
+        sel.open('')
+        sel.click('link=New Job')
+        sel.wait_for_page_to_load('30000')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with invalid notify cc addresses</whiteboard>
+                <notify>
+                    <cc>asdf</cc>
+                </notify>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        sel.type('jobs_filexml', xml_file.name)
+        sel.click('//input[@value="Submit Data"]')
+        sel.wait_for_page_to_load('30000')
+        sel.click('//input[@value="Queue"]')
+        sel.wait_for_page_to_load('30000')
+        self.assert_('Failed to import job' in sel.get_text('css=.flash'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=741170
     # You will need a patched python-xmltramp for this test to pass.
@@ -364,6 +397,7 @@ class NewJobTest(SeleniumTestCase):
 
 class JobAttributeChange(SeleniumTestCase):
 
+    @with_transaction
     def setUp(self):
         self.password = 'password'
         self.the_group = data_setup.create_group()
@@ -375,7 +409,7 @@ class JobAttributeChange(SeleniumTestCase):
         self.user_one.groups.append(self.the_group)
         self.user_two.groups.append(self.the_group)
         self.the_job  = data_setup.create_job(owner=self.user_one)
-        session.flush()
+
         self.selenium = self.get_selenium()
         self.selenium.start()
 
@@ -383,13 +417,13 @@ class JobAttributeChange(SeleniumTestCase):
         self.selenium.stop()
 
     def test_change_product(self):
-        p1 = Product(u'first_product')
-        p2 = Product(u'second_product')
+        with session.begin():
+            p1 = Product(u'first_product')
+            p2 = Product(u'second_product')
 
-        self.the_job.product = p1
-        self.the_job.retention_tag = RetentionTag.query.filter(
-            RetentionTag.needs_product==True).first()
-        session.flush()
+            self.the_job.product = p1
+            self.the_job.retention_tag = RetentionTag.query.filter(
+                RetentionTag.needs_product==True).first()
 
         #With Owner
         sel = self.selenium
@@ -424,8 +458,9 @@ class JobAttributeChange(SeleniumTestCase):
         sel.open('jobs/%s' % self.the_job.id)
         sel.wait_for_page_to_load('30000')
         current_tag = sel.get_text("//select[@id='job_retentiontag']/option[@selected='']")
-        new_tag = RetentionTag.query.filter(and_(RetentionTag.tag != current_tag,
-            RetentionTag.needs_product==False)).first()
+        with session.begin():
+            new_tag = RetentionTag.query.filter(and_(RetentionTag.tag != current_tag,
+                RetentionTag.needs_product==False)).first()
         sel.select("job_retentiontag", "label=%s" % new_tag.tag)
         self.wait_and_try(lambda: self.assert_(sel.is_text_present("Tag has been updated")), wait_time=10)
 
@@ -435,8 +470,9 @@ class JobAttributeChange(SeleniumTestCase):
         sel.open('jobs/%s' % self.the_job.id)
         sel.wait_for_page_to_load('30000')
         current_tag = sel.get_text("//select[@id='job_retentiontag']/option[@selected='']")
-        new_tag = RetentionTag.query.filter(and_(RetentionTag.tag != current_tag,
-            RetentionTag.needs_product==False)).first()
+        with session.begin():
+            new_tag = RetentionTag.query.filter(and_(RetentionTag.tag != current_tag,
+                RetentionTag.needs_product==False)).first()
         sel.select("job_retentiontag", "label=%s" % new_tag.tag)
         self.wait_and_try(lambda: self.assert_(sel.is_text_present("Tag has been updated")), wait_time=10)
 
@@ -459,10 +495,10 @@ class CloneJobTest(SeleniumTestCase):
         self.selenium.stop()
 
     def test_cloning_recipeset_from_job_with_product(self):
-        job = data_setup.create_job()
-        job.retention_tag = RetentionTag.list_by_requires_product()[0]
-        job.product = Product(u'product_name')
-        session.flush()
+        with session.begin():
+            job = data_setup.create_job()
+            job.retention_tag = RetentionTag.list_by_requires_product()[0]
+            job.product = Product(u'product_name')
         self.login()
         sel =  self.selenium
         sel.open('jobs/clone?job_id=%s' % job.id)
@@ -474,8 +510,8 @@ class CloneJobTest(SeleniumTestCase):
         self.assertEqual(cloned_from_job,cloned_from_rs)
 
     def test_cloning_recipeset(self):
-        job = data_setup.create_job()
-        session.flush()
+        with session.begin():
+            job = data_setup.create_job()
         self.login()
         sel = self.selenium
         sel.open('jobs/clone?job_id=%s' % job.id)

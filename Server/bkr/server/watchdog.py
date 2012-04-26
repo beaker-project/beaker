@@ -1,13 +1,16 @@
-from turbogears import expose,paginate
+from turbogears import expose, paginate, identity
 from sqlalchemy.orm import contains_eager, joinedload_all
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.model import Watchdog, Recipe, RecipeSet, Job, System, RecipeTask
 from bkr.server.widgets import myPaginateDataGrid
+from datetime import timedelta
+import cherrypy
 
 import logging
 log = logging.getLogger(__name__)
 
 class Watchdogs(RPCRoot):
+    exposed = True
 
     @expose('bkr.server.templates.grid')
     @paginate('list', limit=50, max_limit=None)
@@ -35,3 +38,14 @@ class Watchdogs(RPCRoot):
                 object_count=query.count(),
                 list=query)
 
+    @identity.require(identity.in_group("admin"))
+    @cherrypy.expose
+    def extend(self, time):
+        '''Allow admins to push watchdog times out after an outage'''
+        watchdogs = []
+        for w in Watchdog.by_status(status=u'active'):
+            n_kill_time = w.kill_time + timedelta(seconds=time)
+            watchdogs.append("R:%s watchdog moved from %s to %s" % (
+                              w.recipe_id, w.kill_time, n_kill_time))
+            w.kill_time = n_kill_time
+        return "\n".join(watchdogs)

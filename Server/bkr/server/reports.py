@@ -190,11 +190,11 @@ class Reports(RPCRoot):
                         .filter(and_(
                             SystemStatusDuration.start_time <= dt,
                             or_(SystemStatusDuration.finish_time >= dt, SystemStatusDuration.finish_time == None)))\
-                        .group_by(SystemStatusDuration.status_id)\
-                        .values(SystemStatusDuration.status_id, func.count(System.id))
+                        .group_by(SystemStatusDuration.status)\
+                        .values(SystemStatusDuration.status, func.count(System.id))
                 idle = dict(idle_query)
-                for status_id, status_name in SystemStatus.get_all_status():
-                    retval['idle_%s' % status_name.lower()].append(idle.get(status_id, 0))
+                for status in SystemStatus:
+                    retval['idle_%s' % status.value.lower()].append(idle.get(status, 0))
         finally:
             reports_session.close()
         if tg_format == 'json':
@@ -251,7 +251,7 @@ class Reports(RPCRoot):
             group_id = [group_id]
         group_id = [int(x) for x in group_id]
         systems = reports_session.query(System)\
-                .filter(System.type_id == SystemType.by_name(u'Machine').id)
+                .filter(System.type == SystemType.machine)
         if arch_id:
             arch_clauses = [System.arch.any(id=x) for x in arch_id]
             systems = systems.filter(or_(*arch_clauses))
@@ -259,8 +259,8 @@ class Reports(RPCRoot):
             group_clauses = []
             if -1 in group_id:
                 group_id.remove(-1)
-                group_clauses.append(System.groups == None)
-            group_clauses.extend(System.groups.any(group_id=x) for x in group_id)
+                group_clauses.append(System.group_assocs == None)
+            group_clauses.extend(System.group_assocs.any(group_id=x) for x in group_id)
             systems = systems.filter(or_(*group_clauses))
         if only_shared:
             systems = systems.filter(System.shared == True)

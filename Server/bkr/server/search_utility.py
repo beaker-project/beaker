@@ -581,9 +581,7 @@ class SystemSearch(Search):
         for col in searchable:
             #if you have any custom columns (i.e Key/Value, then get their results here)
             if col.lower() == 'key/value':
-                #HACK to remove MODULE from Key/Value search. This is also implemented in
-                # get_value_search_options() to cater for an Ajax call
-                table_options[col] ={'keyvals' :  [x for x in KeyModel.get_all_keys() if x != 'MODULE']}
+                table_options[col] = {'keyvals': KeyModel.get_all_keys()}
                 expanded_keyvals = {}
                 for k in table_options[col]['keyvals']:
                     expanded_keyvals.update({ k : Key.search.get_search_options(k) } )
@@ -782,15 +780,15 @@ class System(SystemObject):
                           'NumaNodes' : MyColumn(column=model.Numa.nodes, col_type='numeric', relations='numa'),
                           'User'      : MyColumn(column=model.User.user_name, col_type='string',has_alias=True, relations='user'),
                           'Owner'     : MyColumn(column=model.User.user_name, col_type='string',has_alias=True, relations='owner'),
-                          'Status'    : MyColumn(column=model.SystemStatus.status, col_type='string', relations='status'),
+                          'Status'    : MyColumn(column=model.System.status, col_type='string'),
                           'Arch'      : MyColumn(column=model.Arch.arch, col_type='string', relations='arch'),
-                          'Type'      : MyColumn(column=model.SystemType.type, col_type='string', relations='type'),
+                          'Type'      : MyColumn(column=model.System.type, col_type='string'),
                           'PowerType' : MyColumn(column=model.PowerType.name, col_type='string', relations=['power','power_type']),
                           'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string',has_alias=True, relations='loaned'),
-                          'Group'     : MyColumn(column=model.Group.group_name, col_type='string',has_alias=True, relations ='groups')
+                          'Group'     : MyColumn(column=model.Group.group_name, col_type='string',has_alias=True, relations=['group_assocs', 'group'])
                          }  
-    search_values_dict = {'Status'    : lambda: model.SystemStatus.get_all_status_name(),
-                          'Type'      : lambda: model.SystemType.get_all_type_names(),
+    search_values_dict = {'Status'    : lambda: model.SystemStatus.values(),
+                          'Type'      : lambda: model.SystemType.values(),
                           'Hypervisor': lambda: [''] + model.Hypervisor.get_all_names(),
                          }
     @classmethod
@@ -826,14 +824,12 @@ class Recipe(SystemObject):
                                 relations=[model.Recipe.distro, model.Distro.arch]),
                             'Distro' : MyColumn(col_type='string', column=model.Distro.name,
                                 relations=[model.Recipe.distro]),
-                            'Status' : MyColumn(col_type='string', column=model.TaskStatus.status,
-                                relations=[model.Recipe.status]),
-                            'Result' : MyColumn(col_type='string', column=model.TaskResult.result,
-                                relations=[model.Recipe.result]),
+                            'Status' : MyColumn(col_type='string', column=model.Recipe.status),
+                            'Result' : MyColumn(col_type='string', column=model.Recipe.result),
                          }
 
-    search_values_dict = {'Status' : lambda: model.TaskStatus.get_all_status(),
-                          'Result' : lambda: model.TaskResult.get_all_results()}
+    search_values_dict = {'Status' : lambda: model.TaskStatus.values(),
+                          'Result' : lambda: model.TaskResult.values()}
     
 
 class Task(SystemObject):
@@ -1022,7 +1018,7 @@ class SystemReserve(System):
     search = SystemReserveSearch
     searchable_columns =  {
                             'Name'      : MyColumn(column=model.System.fqdn,col_type='string'),
-                            'Type'      : MyColumn(column=model.SystemType.type, col_type='string', relations='type'), 
+                            'Type'      : MyColumn(column=model.System.type, col_type='string'),
                             'Owner'     : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations='owner'),
                             'Shared'    : MyColumn(column=model.System.shared, col_type='boolean'),
                             'User'      : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations='user'),
@@ -1175,14 +1171,14 @@ class Job(SystemObject):
     searchable_columns = {
                            'Id' : MyColumn(col_type='numeric',column=model.Job.id), 
                            'Owner' : MyColumn(col_type='string',column=model.User.email_address, relations='owner'),
-                           'Status' : MyColumn(col_type='string', column=model.TaskStatus.status, relations='status'),
-                           'Result' : MyColumn(col_type='string',column=model.TaskResult.result, relations='result'),
+                           'Status' : MyColumn(col_type='string', column=model.Job.status),
+                           'Result' : MyColumn(col_type='string', column=model.Job.result),
                            'Whiteboard' : MyColumn(col_type='string', column=model.Job.whiteboard)
 
                          }
 
-    search_values_dict = {'Status' : lambda: model.TaskStatus.get_all_status(),
-                          'Result' : lambda: model.TaskResult.get_all_results()}
+    search_values_dict = {'Status' : lambda: model.TaskStatus.values(),
+                          'Result' : lambda: model.TaskResult.values()}
                          
             
 class Cpu(SystemObject):      

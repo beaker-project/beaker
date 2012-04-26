@@ -8,6 +8,7 @@ from bkr.server.bexceptions import BX
 from bkr.server.model import System, SystemActivity, SystemStatus, Distro
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.cobbler_utils import hash_to_string
+from turbogears.database import session
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class SystemsController(controllers.Controller):
         .. versionadded:: 0.6
         """
         system = System.by_fqdn(fqdn, identity.current.user)
-        if system.status != SystemStatus.by_name(u'Manual'):
+        if system.status != SystemStatus.manual:
             raise BX(_(u'Cannot reserve system with status %s') % system.status)
         system.reserve(service=u'XMLRPC', reservation_type=u'manual')
         return system.fqdn # because turbogears makes us return something
@@ -51,6 +52,28 @@ class SystemsController(controllers.Controller):
         system = System.by_fqdn(fqdn, identity.current.user)
         system.unreserve(service=u'XMLRPC')
         return system.fqdn # because turbogears makes us return something
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def delete(self, fqdn):
+        """
+        Delete a system with the given fully-qualified domain name.
+
+        The caller must be the owner of the system or an admin.
+
+        :param fqdn: fully-qualified domain name of the system to be deleted
+        :type fqdn: string
+
+        .. versionadded:: 0.8.2
+        """
+        system = System.by_fqdn(fqdn, identity.current.user)
+        if system.recipes:
+            raise ValueError("Can't delete system %s with recipes" % fqdn)
+        if system.owner != identity.current.user and \
+           not identity.current.user.is_admin():
+            raise ValueError("Can't delete system %s you don't own" % fqdn)
+        session.delete(system)
+        return 'Deleted %s' % fqdn
 
     @expose()
     @identity.require(identity.not_anonymous())

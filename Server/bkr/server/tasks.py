@@ -299,10 +299,10 @@ class Tasks(RPCRoot):
             tasks = tasks.join(['recipe','distro']).filter(Distro.install_name.like('%%%s%%' % kw.get('distro')))
         if kw.get('arch_id'):
             tasks = tasks.join(['recipe','distro','arch']).filter(Arch.id==kw.get('arch_id'))
-        if kw.get('status_id'):
-            tasks = tasks.join('status').filter(TaskStatus.id==kw.get('status_id'))
-        if kw.get('result_id'):
-            tasks = tasks.join('result').filter(TaskResult.id==kw.get('result_id'))
+        if kw.get('status'):
+            tasks = tasks.filter(RecipeTask.status == kw['status'])
+        if kw.get('result'):
+            tasks = tasks.filter(RecipeTask.result == kw['result'])
         if kw.get('osmajor_id'):
             tasks = tasks.join(['recipe','distro','osversion','osmajor']).filter(OSMajor.id==kw.get('osmajor_id'))
         if kw.get('whiteboard'):
@@ -471,6 +471,9 @@ class Tasks(RPCRoot):
             task.runfor.append(TaskPackage.lazy_create(package=runfor))
         task.priority = tinfo.priority
         task.destructive = tinfo.destructive
+        # Bug 772882. Remove duplicate required package here
+        # Avoid ORM insert in task_packages_required_map twice.
+        tinfo.requires = list(set(tinfo.requires))
         for require in tinfo.requires:
             task.required.append(TaskPackage.lazy_create(package=require))
         for need in tinfo.needs:

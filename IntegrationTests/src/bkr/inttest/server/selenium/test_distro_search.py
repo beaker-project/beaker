@@ -3,12 +3,13 @@ from selenium.webdriver.support.ui import Select
 from bkr.server.model import LabControllerDistro
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, is_text_present
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 from turbogears.database import session
 
 class Search(WebDriverTestCase):
     
     @classmethod
+    @with_transaction
     def setupClass(cls):
         cls.distro_one_name = data_setup.unique_name(u'nametest%s')
         cls.distro_one_breed = u'breedtest1'
@@ -49,26 +50,28 @@ class Search(WebDriverTestCase):
             osmajor=cls.distro_three_osmajor, osminor = cls.distro_three_osminor,
             arch=cls.distro_three_arch, virt=cls.distro_three_virt,
             tags =cls.distro_three_tags)
-        session.flush()
+
         cls.browser = cls.get_browser()
 
     def test_correct_items_count(self):
-        lc_1 = data_setup.create_labcontroller()
-        lc_2 = data_setup.create_labcontroller()
-        distro_name = data_setup.unique_name(u'distroname%s')
-        distro_breed = data_setup.unique_name(u'distrobreed%s')
-        distro_osmajor = data_setup.unique_name(u'osmajor%s')
-        distro_osminor = u'2'
-        distro_virt = True
-        distro_arch = u'i386'
-        distro_tags = None
+        with session.begin():
+            lc_1 = data_setup.create_labcontroller()
+            lc_2 = data_setup.create_labcontroller()
+            distro_name = data_setup.unique_name(u'distroname%s')
+            distro_breed = data_setup.unique_name(u'distrobreed%s')
+            distro_osmajor = data_setup.unique_name(u'osmajor%s')
+            distro_osminor = u'2'
+            distro_virt = True
+            distro_arch = u'i386'
+            distro_tags = None
 
-        distro = data_setup.create_distro(name=distro_name, breed=distro_breed,
-            osmajor=distro_osmajor, osminor=distro_osminor,
-            arch=distro_arch, virt=distro_virt,
-            tags=distro_tags)
-        session.flush()
-        distro.lab_controller_assocs[:] = [LabControllerDistro(lab_controller=lc_1), LabControllerDistro(lab_controller=lc_2)]
+            distro = data_setup.create_distro(name=distro_name, breed=distro_breed,
+                osmajor=distro_osmajor, osminor=distro_osminor,
+                arch=distro_arch, virt=distro_virt,
+                tags=distro_tags)
+            session.flush()
+            distro.lab_controller_assocs[:] = [LabControllerDistro(lab_controller=lc_1),
+                    LabControllerDistro(lab_controller=lc_2)]
 
         b = self.browser
         b.get(get_server_base() + 'distros')
@@ -202,7 +205,7 @@ class SearchOptionsTest(WebDriverTestCase):
         Select(b.find_element_by_name('distrosearch-0.operation'))\
                 .select_by_visible_text('is not')
         b.find_element_by_name('distrosearch-0.value').send_keys('x86_64')
-        b.find_element_by_name('distrosearch').submit()
+        b.find_element_by_xpath('//form[@name="distrosearch"]//input[@type="submit"]').click()
 
         self.assertEquals(Select(b.find_element_by_name('distrosearch-0.table'))
                 .first_selected_option.text,

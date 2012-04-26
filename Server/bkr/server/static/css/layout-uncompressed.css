@@ -9,11 +9,10 @@ body {
 	background-color: #d9d9d9;
 }
 
-a:link {
-
+a.link, a:link {
 	text-decoration: underline;
-    	cursor: pointer;
-	color: #22437F;
+    cursor: pointer;
+    color: #22437F;
 }
 
 a:visited {

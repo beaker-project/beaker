@@ -6,7 +6,7 @@ from bkr.server.widgets import ReserveWorkflow as ReserveWorkflowWidget
 from bkr.server.widgets import ReserveSystem
 from bkr.server.model import (osversion_table, distro_table, osmajor_table, arch_table, distro_tag_table,
                               Distro, Job, RecipeSet, MachineRecipe, System, RecipeTask, RecipeTaskParam,
-                              Task, Arch, OSMajor, DistroTag)
+                              Task, Arch, OSMajor, DistroTag, SystemType)
 from bkr.server.model import Job
 from bkr.server.jobs import Jobs as JobController
 from bkr.server.cobbler_utils import hash_to_string
@@ -121,7 +121,7 @@ class ReserveWorkflow:
                     please see your administrator.' % distro_install_name}
             systems_distro_query = distro.systems()
             systems_available = System.available_for_schedule(identity.current.user,
-                System.by_type(type='machine', systems=systems_distro_query))
+                System.by_type(type=SystemType.machine, systems=systems_distro_query))
             if systems_available.count() < 1:
                 # Not enough systems
                 return {'enough_systems' : 0, 'distro_id':None}
@@ -137,7 +137,8 @@ class ReserveWorkflow:
                 please see your administrator' % distro_install_name}
 
         systems_distro_query = distro.systems()
-        avail_systems_distro_query = System.available_for_schedule(identity.current.user,System.by_type(type='machine',systems=systems_distro_query))
+        avail_systems_distro_query = System.available_for_schedule(identity.current.user,
+                System.by_type(type=SystemType.machine, systems=systems_distro_query))
         enough_systems = 0
         if avail_systems_distro_query.count() > 0:
             enough_systems = 1

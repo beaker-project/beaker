@@ -1,5 +1,8 @@
-from threading import Thread
+from threading import Thread, Event
 import Queue, copy
+from logging import getLogger
+
+log = getLogger(__name__)
 
 class _QueueAccess:
 
@@ -28,6 +31,40 @@ class BkrThreadPool:
     @classmethod
     def get(self, name):
         return self._pool[name]
+
+
+class RepeatTimer(Thread):
+
+    def __init__(self, interval, function, stop_on_exception=True, args=[], kwargs={}):
+        Thread.__init__(self)
+        self.interval = interval
+        self.function = function
+        self.args = args
+        self.kwargs = kwargs
+        self.stop_on_exception = stop_on_exception
+        self.finished = Event()
+
+    def stop(self):
+        self.done = True
+        self.finished.set()
+
+    def run(self):
+        self.done = False
+        while True:
+            self.finished.wait(self.interval)
+            if self.done:
+                self.finished.clear()
+                break
+            if not self.finished.is_set():
+                try:
+                    self.function(*self.args, **self.kwargs)
+                except Exception, e:
+                    if self.stop_on_exception:
+                        self.finished.clear()
+                        raise
+                    # XXX Not strictly for auth'ing, think of something better
+                    log.exception('Login Fail')
+            self.finished.clear()
 
 
 def curry(f, *arg, **kw):

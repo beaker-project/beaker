@@ -40,19 +40,8 @@ def dummy():
 def init_db(user_name=None, password=None, user_display_name=None, user_email_address=None):
     get_engine()
     metadata.create_all()
+    session.begin()
 
-    #Setup ReleaseAction Table
-    if ReleaseAction.query.count() == 0:
-        poweroff    = ReleaseAction(u'PowerOff')
-        leaveon     = ReleaseAction(u'LeaveOn')
-        reprovision = ReleaseAction(u'ReProvision')
-
-    #Setup SystemStatus Table
-    if SystemStatus.query.count() == 0:
-        automated   = SystemStatus(u'Automated')
-        broken      = SystemStatus(u'Broken')
-        removed     = SystemStatus(u'Removed')
-        manual      = SystemStatus(u'Manual')
     try:
         admin = Group.by_name(u'admin')
     except InvalidRequestError:
@@ -79,14 +68,6 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
     if Permission.query.count() == 0:
         Permission(u'proxy_auth')
         admin.permissions.append(Permission(u'tag_distro'))
-
-    #Setup SystemTypes Table
-    if SystemType.query.count() == 0:
-        machine   = SystemType(u'Machine')
-        virtual   = SystemType(u'Virtual')
-        resource  = SystemType(u'Resource')
-        laptop    = SystemType(u'Laptop')
-        prototype = SystemType(u'Prototype')
 
     #Setup Hypervisors Table
     if Hypervisor.query.count() == 0:
@@ -121,14 +102,6 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         virsh       = PowerType(u'virsh')
         wti         = PowerType(u'wti')
 
-    #Setup CommandStatus Table
-    if CommandStatus.query.count() == 0:
-        queued    = CommandStatus(u'Queued')
-        running   = CommandStatus(u'Running')
-        completed = CommandStatus(u'Completed')
-        failed    = CommandStatus(u'Failed')
-        aborted   = CommandStatus(u'Aborted')
-
     #Setup key types
     if Key.query.count() == 0:
         DISKSPACE       = Key('DISKSPACE',True)
@@ -158,37 +131,6 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         VENDOR		= Key('VENDOR')
         XENCERT		= Key('XENCERT')
 
-    if TaskPriority.query.count() == 0:
-        low             = TaskPriority(priority=u'Low')
-        medium          = TaskPriority(priority=u'Medium')
-        normal          = TaskPriority(priority=u'Normal')
-        high            = TaskPriority(priority=u'High')
-        urgent          = TaskPriority(priority=u'Urgent')
-
-    #Setup Test Status
-    if TaskStatus.query.count() == 0:
-        NEW       = TaskStatus(status=u'New', severity=10)
-        PROCESSED = TaskStatus(status=u'Processed', severity=20)
-        QUEUEUD   = TaskStatus(status=u'Queued', severity=30)
-        SCHEDULED = TaskStatus(status=u'Scheduled', severity=40)
-        # RUNNING and WAITING are transient states.  It will never be final.
-        #  But having it the lowest Severity will show a job as 
-        #  Running until it finishes with either Completed, Cancelled or 
-        #  Aborted.
-        WAITING   = TaskStatus(status=u'Waiting', severity=7)
-        RUNNING   = TaskStatus(status=u'Running', severity=5)
-        COMPLETED = TaskStatus(status=u'Completed', severity=50)
-        CANCELLED = TaskStatus(status=u'Cancelled', severity=60)
-        ABORTED   = TaskStatus(status=u'Aborted', severity=70)
-
-    #Setup Test Result
-    if TaskResult.query.count() == 0:
-        NEW       = TaskResult(result=u'New', severity=10)
-        PASS      = TaskResult(result=u'Pass', severity=20)
-        WARN      = TaskResult(result=u'Warn', severity=30)
-        FAIL      = TaskResult(result=u'Fail', severity=40)
-        PANIC     = TaskResult(result=u'Panic', severity=50)
-
     #Setup ack/nak reposnses
     if Response.query.count() == 0:
         ACK      = Response(response=u'ack')
@@ -200,8 +142,21 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         ONETWENTYDAYS   = RetentionTag(tag=u'120days', needs_product=False, expire_in_days=120)
         ACTIVE          = RetentionTag(tag=u'active', needs_product=True)
         AUDIT           = RetentionTag(tag=u'audit', needs_product=True)
-        
-    session.flush()
+
+    try:
+        ConfigItem.by_name('root_password')
+    except NoResultFound:
+        rootpw_clear    = ConfigItem(name='root_password',
+                                     description=u'Plaintext root password for provisioned systems')
+    try:
+        ConfigItem.by_name('root_password_validity')
+    except NoResultFound:
+        rootpw_validity = ConfigItem(name='root_password_validity',
+                                     description=u"Maximum number of days a user's root password is valid for",
+                                     numeric=True)
+
+    session.commit()
+    session.close()
 
 def get_parser():
     usage = "usage: %prog [options]"

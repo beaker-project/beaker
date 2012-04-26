@@ -12,7 +12,8 @@ import SocketServer
 import DocXMLRPCServer
 import socket
 
-from bkr.labcontroller.proxy import Proxy, RepeatTimer
+from bkr.common.helpers import RepeatTimer
+from bkr.labcontroller.proxy import Proxy
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.utils import add_rotating_file_logger
 from kobo.exceptions import ShutdownException

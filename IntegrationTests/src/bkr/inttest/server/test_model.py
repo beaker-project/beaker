@@ -27,15 +27,15 @@ class TestSystem(unittest.TestCase):
         session.begin()
 
     def tearDown(self):
-        session.rollback()
+        session.commit()
         session.close()
 
     def test_create_system_params(self):
         owner = data_setup.create_user()
         new_system = System(fqdn=u'test_fqdn', contact=u'test@email.com',
                             location=u'Brisbane', model=u'Proliant', serial=u'4534534',
-                            vendor=u'Dell', type=SystemType.by_name(u'Machine'),
-                            status=SystemStatus.by_name(u'Automated'),
+                            vendor=u'Dell', type=SystemType.machine,
+                            status=SystemStatus.automated,
                             owner=owner)
         session.flush()
         self.assertEqual(new_system.fqdn, 'test_fqdn')
@@ -62,9 +62,9 @@ class TestSystem(unittest.TestCase):
         self.assert_(system.user is None)
 
     def test_install_options_override(self):
-        distro = data_setup.create_distro()
-        system = data_setup.create_system()
-        system.provisions[distro.arch] = Provision(
+        distro = data_setup.create_distro(arch=u'i386')
+        system = data_setup.create_system(arch=u'i386')
+        system.provisions[distro.arch] = Provision(arch=Arch.by_name(u'i386'),
                 kernel_options='console=ttyS0 ksdevice=eth0')
         opts = system.install_options(distro, kernel_options='ksdevice=eth1')
         # ksdevice should be overriden but console should be inherited
@@ -77,7 +77,7 @@ class TestSystemKeyValue(unittest.TestCase):
         session.begin()
 
     def tearDown(self):
-        session.rollback()
+        session.commit()
 
     def test_removing_key_type_cascades_to_key_value(self):
         # https://bugzilla.redhat.com/show_bug.cgi?id=647566
@@ -105,11 +105,15 @@ class TestBrokenSystemDetection(unittest.TestCase):
     # don't end up within the same second
 
     def setUp(self):
+        session.begin()
         self.system = data_setup.create_system()
-        self.system.status = SystemStatus.by_name(u'Automated')
+        self.system.status = SystemStatus.automated
         data_setup.create_completed_job(system=self.system)
         session.flush()
         time.sleep(1)
+
+    def tearDown(self):
+        session.commit()
 
     def abort_recipe(self, distro=None):
         if distro is None:
@@ -118,7 +122,7 @@ class TestBrokenSystemDetection(unittest.TestCase):
         recipe = data_setup.create_recipe(distro=distro)
         data_setup.create_job_for_recipes([recipe])
         recipe.system = self.system
-        recipe.tasks[0].status = TaskStatus.by_name(u'Running')
+        recipe.tasks[0].status = TaskStatus.running
         recipe.update_status()
         session.flush()
         recipe.abort()
@@ -126,18 +130,18 @@ class TestBrokenSystemDetection(unittest.TestCase):
     def test_multiple_suspicious_aborts_triggers_broken_system(self):
         # first aborted recipe shouldn't trigger it
         self.abort_recipe()
-        self.assertNotEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assertNotEqual(self.system.status, SystemStatus.broken)
         # another recipe with a different stable distro *should* trigger it
         self.abort_recipe()
-        self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assertEqual(self.system.status, SystemStatus.broken)
 
     def test_status_change_is_respected(self):
         # two aborted recipes should trigger it...
         self.abort_recipe()
         self.abort_recipe()
-        self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assertEqual(self.system.status, SystemStatus.broken)
         # then the owner comes along and marks it as fixed...
-        self.system.status = SystemStatus.by_name(u'Automated')
+        self.system.status = SystemStatus.automated
         self.system.activity.append(SystemActivity(service=u'WEBUI',
                 action=u'Changed', field_name=u'Status',
                 old_value=u'Broken',
@@ -146,9 +150,9 @@ class TestBrokenSystemDetection(unittest.TestCase):
         time.sleep(1)
         # another recipe aborts...
         self.abort_recipe()
-        self.assertNotEqual(self.system.status, SystemStatus.by_name(u'Broken')) # not broken! yet
+        self.assertNotEqual(self.system.status, SystemStatus.broken) # not broken! yet
         self.abort_recipe()
-        self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken')) # now it is
+        self.assertEqual(self.system.status, SystemStatus.broken) # now it is
 
     def test_counts_distinct_stable_distros(self):
         first_distro = data_setup.create_distro()
@@ -156,37 +160,52 @@ class TestBrokenSystemDetection(unittest.TestCase):
         # two aborted recipes for the same distro shouldn't trigger it
         self.abort_recipe(distro=first_distro)
         self.abort_recipe(distro=first_distro)
-        self.assertNotEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assertNotEqual(self.system.status, SystemStatus.broken)
         # .. but a different distro should
         self.abort_recipe()
-        self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assertEqual(self.system.status, SystemStatus.broken)
 
     def test_updates_modified_date(self):
         orig_date_modified = self.system.date_modified
         self.abort_recipe()
         self.abort_recipe()
-        self.assertEqual(self.system.status, SystemStatus.by_name(u'Broken'))
+        self.assertEqual(self.system.status, SystemStatus.broken)
         self.assert_(self.system.date_modified > orig_date_modified)
 
 class TestJob(unittest.TestCase):
 
-    def test_cc_property(self):
+    def setUp(self):
         session.begin()
-        try:
-            job = data_setup.create_job()
-            session.flush()
-            session.execute(job_cc_table.insert(values={'job_id': job.id,
-                    'email_address': u'person@nowhere.example.com'}))
-            session.refresh(job)
-            self.assertEquals(job.cc, ['person@nowhere.example.com'])
 
-            job.cc.append(u'korolev@nauk.su')
-            session.flush()
-            self.assertEquals(JobCc.query.filter_by(job_id=job.id).count(), 2)
-        finally:
-            session.rollback()
+    def tearDown(self):
+        session.commit()
+
+    def test_cc_property(self):
+        job = data_setup.create_job()
+        session.flush()
+        session.execute(job_cc_table.insert(values={'job_id': job.id,
+                'email_address': u'person@nowhere.example.com'}))
+        session.refresh(job)
+        self.assertEquals(job.cc, ['person@nowhere.example.com'])
+
+        job.cc.append(u'korolev@nauk.su')
+        session.flush()
+        self.assertEquals(JobCc.query.filter_by(job_id=job.id).count(), 2)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=784237
+    def test_mail_exception_doesnt_prevent_status_update(self):
+        job = data_setup.create_job()
+        job.cc.append(u'asdf')
+        data_setup.mark_job_running(job)
+        data_setup.mark_job_complete(job)
 
 class DistroByFilterTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
 
     def test_arch(self):
         excluded = data_setup.create_distro(arch=u'x86_64')
@@ -290,9 +309,13 @@ class DistroByFilterTest(unittest.TestCase):
 class DistroTest(unittest.TestCase):
 
     def setUp(self):
+        session.begin()
         self.distro = data_setup.create_distro(arch=u'i386')
         self.lc = data_setup.create_labcontroller()
         session.flush()
+
+    def tearDown(self):
+        session.commit()
 
     def test_all_systems_obeys_osmajor_exclusions(self):
         included_system = data_setup.create_system(arch=u'i386',
@@ -331,10 +354,14 @@ class DistroTest(unittest.TestCase):
 class DistroSystemsFilterTest(unittest.TestCase):
 
     def setUp(self):
+        session.begin()
         self.lc = data_setup.create_labcontroller()
         self.distro = data_setup.create_distro(arch=u'i386')
         self.user = data_setup.create_user()
         session.flush()
+
+    def tearDown(self):
+        session.commit()
 
     def test_system_vendor(self):
         excluded = data_setup.create_system(arch=u'i386', shared=True,
@@ -372,7 +399,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
 
     def test_system_type(self):
         excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, type=u'Virtual')
+                lab_controller=self.lc, type=SystemType.virtual)
         included = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc)
         session.flush()
@@ -623,11 +650,69 @@ class DistroSystemsFilterTest(unittest.TestCase):
         self.assert_(baremetal in systems)
         self.assert_(kvm in systems)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=731615
+    def test_filtering_by_device(self):
+        network_class = data_setup.create_device_class(u'NETWORK')
+        with_e1000 = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        with_e1000.devices.append(data_setup.create_device(
+                device_class_id=network_class.id,
+                vendor_id=u'8086', device_id=u'107c',
+                subsys_vendor_id=u'8086', subsys_device_id=u'1376',
+                bus=u'pci', driver=u'e1000',
+                description=u'82541PI Gigabit Ethernet Controller'))
+        with_tg3 = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        with_tg3.devices.append(data_setup.create_device(
+                device_class_id=network_class.id,
+                vendor_id=u'14e4', device_id=u'1645',
+                subsys_vendor_id=u'10a9', subsys_device_id=u'8010',
+                bus=u'pci', driver=u'tg3',
+                description=u'NetXtreme BCM5701 Gigabit Ethernet'))
+        session.flush()
+
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires>
+                <device op="=" driver="e1000" />
+            </hostRequires>
+            """))
+        self.assert_(with_e1000 in systems)
+        self.assert_(with_tg3 not in systems)
+
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires>
+                <device op="=" type="network" vendor_id="8086" />
+            </hostRequires>
+            """))
+        self.assert_(with_e1000 in systems)
+        self.assert_(with_tg3 not in systems)
+
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires>
+                <device op="=" vendor_id="14E4" device_id="1645" />
+            </hostRequires>
+            """))
+        self.assert_(with_e1000 not in systems)
+        self.assert_(with_tg3 in systems)
+
+        # this filter does nothing, but at least it shouldn't explode
+        systems = list(self.distro.systems_filter(self.user, """
+            <hostRequires>
+                <device op="=" />
+            </hostRequires>
+            """))
+        self.assert_(with_e1000 in systems)
+        self.assert_(with_tg3 in systems)
+
 class UserTest(unittest.TestCase):
 
     def setUp(self):
+        session.begin()
         self.user = data_setup.create_user()
         session.flush()
+
+    def tearDown(self):
+        session.commit()
 
     def test_dictionary_password_rejected(self):
         user = data_setup.create_user()

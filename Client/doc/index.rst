@@ -21,6 +21,7 @@ is installed on your system. See :manpage:`bkr(1)`.
    bkr-job-clone
    bkr-job-delete
    bkr-job-list
+   bkr-job-logs
    bkr-job-results
    bkr-job-submit
    bkr-job-watch
@@ -32,6 +33,7 @@ is installed on your system. See :manpage:`bkr(1)`.
    bkr-system-provision
    bkr-system-release
    bkr-system-reserve
+   bkr-system-delete
    bkr-task-add
    bkr-task-details
    bkr-task-list

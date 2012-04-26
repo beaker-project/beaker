@@ -67,12 +67,8 @@ class _SystemSaveFormHandler:
 
     @classmethod
     def status_change_handler(cls,current_val,new_val,**kw): 
-        bad_status = ['broken','removed']
-        good_status = ['automated','manual']
-        if new_val.status.lower() in good_status: 
-            if current_val:
-                if current_val.status.lower() in bad_status:
-                    kw['status_reason'] = None  #remove the status notes
+        if not new_val.bad and current_val and current_val.bad:
+            kw['status_reason'] = None  #remove the status notes
         return kw 
 
 
@@ -153,20 +149,12 @@ class Utility:
         return 'fqdn'
 
     @classmethod
-    def system_status_name(cls):
-        return 'status.status'
-
-    @classmethod
     def system_arch_name(cls):
         return 'arch.arch'
 
     @classmethod
     def system_user_name(cls):
         return 'user.user_name'
-
-    @classmethod
-    def system_type_name(cls):
-        return 'type.type'
 
     @classmethod
     def system_powertype_name(cls):

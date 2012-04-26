@@ -32,22 +32,22 @@ from turbogears import config
 from turbomail.control import interface
 from xmlrpclib import ProtocolError
 
-from os.path import dirname, exists, join
-from os import getcwd
-import bkr.server.scheduler
-from bkr.server.scheduler import add_onetime_task
 import socket
-from socket import gethostname
 import exceptions
 from datetime import datetime, timedelta
 import time
+import daemon
+import atexit
+import signal
+from lockfile import pidlockfile
+from daemon import pidfile
+import threading
 
 import logging
-#logging.basicConfig()
-#logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-#logging.getLogger('sqlalchemy.orm.unitofwork').setLevel(logging.DEBUG)
 
 log = logging.getLogger("beakerd")
+running = True
+event = threading.Event()
 
 from optparse import OptionParser
 
@@ -78,8 +78,7 @@ def get_parser():
 
 
 def new_recipes(*args):
-    recipes = Recipe.query.filter(
-            Recipe.status==TaskStatus.by_name(u'New'))
+    recipes = Recipe.query.filter(Recipe.status == TaskStatus.new)
     if not recipes.count():
         return False
     log.debug("Entering new_recipes routine")
@@ -122,8 +121,9 @@ def new_recipes(*args):
                 if len(recipe.systems) == 1:
                     try:
                         log.info("recipe ID %s matches one system, bumping priority" % recipe.id)
-                        recipe.recipeset.priority = TaskPriority.by_id(recipe.recipeset.priority.id + 1)
-                    except InvalidRequestError:
+                        recipe.recipeset.priority = TaskPriority.by_index(
+                                TaskPriority.index(recipe.recipeset.priority) + 1)
+                    except IndexError:
                         # We may already be at the highest priority
                         pass
                 if recipe.systems:
@@ -143,9 +143,7 @@ def new_recipes(*args):
     return True
 
 def processed_recipesets(*args):
-    recipesets = RecipeSet.query\
-                       .join(['status'])\
-                       .filter(RecipeSet.status==TaskStatus.by_name(u'Processed'))
+    recipesets = RecipeSet.query.filter(RecipeSet.status == TaskStatus.processed)
     if not recipesets.count():
         return False
     log.debug("Entering processed_recipes routine")
@@ -260,19 +258,15 @@ def processed_recipesets(*args):
 
 def dead_recipes(*args):
     recipes = Recipe.query\
-                    .join('status')\
-                    .outerjoin(['systems'])\
-                    .outerjoin(['distro',
-                                'lab_controller_assocs',
-                                'lab_controller'])\
+                    .outerjoin(Recipe.distro)\
                     .filter(
                          or_(
-                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
-                              System.id==None,
-                             ),
-                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
-                              LabController.id==None,
-                             ),
+                          and_(Recipe.status==TaskStatus.queued,
+                               not_(Recipe.systems.any()),
+                              ),
+                          and_(Recipe.status==TaskStatus.queued,
+                               not_(Distro.lab_controller_assocs.any()),
+                              )
                             )
                            )
 
@@ -300,7 +294,6 @@ def dead_recipes(*args):
     return True
 
 def queued_recipes(*args):
-    automated = SystemStatus.by_name(u'Automated')
     recipes = Recipe.query\
                     .join(Recipe.recipeset, RecipeSet.job)\
                     .join(Recipe.systems)\
@@ -310,9 +303,9 @@ def queued_recipes(*args):
                             LabControllerDistro.lab_controller_id == LabController.id,
                             System.lab_controller_id == LabController.id)))\
                     .filter(
-                         and_(Recipe.status==TaskStatus.by_name(u'Queued'),
+                         and_(Recipe.status==TaskStatus.queued,
                               System.user==None,
-                              System.status==automated,
+                              System.status==SystemStatus.automated,
                               LabController.disabled==False,
                               or_(
                                   RecipeSet.lab_controller==None,
@@ -327,8 +320,8 @@ def queued_recipes(*args):
     # Order recipes by priority.
     # FIXME Add secondary order by number of matched systems.
     if True:
-        recipes = recipes.join(Recipe.recipeset, RecipeSet.priority)\
-                .order_by(TaskPriority.id.desc())
+        recipes = recipes.join(Recipe.recipeset)\
+                .order_by(RecipeSet.priority.desc())
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
@@ -343,7 +336,7 @@ def queued_recipes(*args):
                        .filter(and_(System.user==None,
                                   Distro.id==recipe.distro_id,
                                   LabController.disabled==False,
-                                  System.status==automated,
+                                  System.status==SystemStatus.automated,
                                   or_(
                                       System.loan_id==None,
                                       System.loan_id==recipe.recipeset.job.owner_id,
@@ -364,7 +357,7 @@ def queued_recipes(*args):
             user = recipe.recipeset.job.owner
             if True: #FIXME if pools are defined add them here in the order requested.
                 systems = systems.order_by(case([(System.owner==user, 1),
-                          (and_(System.owner!=user, System.groups != None), 2)],
+                          (and_(System.owner!=user, System.group_assocs != None), 2)],
                               else_=3))
             if recipe.recipeset.lab_controller:
                 # First recipe of a recipeSet determines the lab_controller
@@ -419,10 +412,8 @@ def scheduled_recipes(*args):
     if All recipes in a recipeSet are in Scheduled state then move them to
      Running.
     """
-    recipesets = RecipeSet.query.join(RecipeSet.recipes)\
-            .group_by(RecipeSet.id)\
-            .having(func.min(Recipe.status_id) ==
-                TaskStatus.by_name(u'Scheduled').id)
+    recipesets = RecipeSet.query.filter(not_(RecipeSet.recipes.any(
+            Recipe.status != TaskStatus.scheduled)))
     if not recipesets.count():
         return False
     log.debug("Entering scheduled_recipes routine")
@@ -434,7 +425,7 @@ def scheduled_recipes(*args):
             # Go through each recipe in the recipeSet
             for recipe in recipeset.recipes:
                 # If one of the recipes gets aborted then don't try and run
-                if recipe.status != TaskStatus.by_name(u'Scheduled'):
+                if recipe.status != TaskStatus.scheduled:
                     break
                 recipe.waiting()
 
@@ -540,7 +531,7 @@ def scheduled_recipes(*args):
 COMMAND_TIMEOUT = 600
 def running_commands(*args):
     commands = CommandActivity.query\
-                              .filter(CommandActivity.status==CommandStatus.by_name(u'Running'))\
+                              .filter(CommandActivity.status==CommandStatus.running)\
                               .order_by(CommandActivity.updated.asc())
     if not commands.count():
         return False
@@ -549,42 +540,36 @@ def running_commands(*args):
         session.begin()
         cmd = CommandActivity.query.get(cmd_id)
         if not cmd:
-            log.error('Command %d get() failed. Deleted?' % (cmd_id))
+            log.error('Command %s get() failed. Deleted?', cmd_id)
         else:
             try:
                 for line in cmd.system.remote.get_event_log(cmd.task_id).split('\n'):
                     if line.find("### TASK COMPLETE ###") != -1:
-                        log.info('Power %s command (%d) completed on machine: %s' %
-                                 (cmd.action, cmd.id, cmd.system))
-                        cmd.status = CommandStatus.by_name(u'Completed')
+                        log.info('Power %s command (%s) completed on machine: %s', cmd.action, cmd.id, cmd.system)
+                        cmd.status = CommandStatus.completed
                         cmd.log_to_system_history()
                         break
                     if line.find("### TASK FAILED ###") != -1:
-                        log.error('Cobbler power task %s (command %d) failed for machine: %s' %
-                                  (cmd.task_id, cmd.id, cmd.system))
-                        cmd.status = CommandStatus.by_name(u'Failed')
+                        log.error('Cobbler power task %s (command %s) failed for machine: %s', cmd.task_id, cmd.id, cmd.system)
+                        cmd.status = CommandStatus.failed
                         cmd.new_value = u'Cobbler task failed'
-                        if cmd.system.status == SystemStatus.by_name(u'Automated'):
+                        if cmd.system.status == SystemStatus.automated:
                             cmd.system.mark_broken(reason='Cobbler power task failed')
                         cmd.log_to_system_history()
                         break
-                if (cmd.status == CommandStatus.by_name(u'Running')) and \
+                if (cmd.status == CommandStatus.running) and \
                    (datetime.utcnow() >= cmd.updated + timedelta(seconds=COMMAND_TIMEOUT)):
-                        log.error('Cobbler power task %s (command %d) timed out on machine: %s' %
-                                  (cmd.task_id, cmd.id, cmd.system))
-                        cmd.status = CommandStatus.by_name(u'Aborted')
-                        cmd.new_value = u'Timeout of %d seconds exceeded' % COMMAND_TIMEOUT
+                        log.error('Cobbler power task %s (command %s) timed out on machine: %s', cmd.task_id, cmd.id, cmd.system)
+                        cmd.status = CommandStatus.aborted
+                        cmd.new_value = u'Timeout of %s seconds exceeded' % COMMAND_TIMEOUT
                         cmd.log_to_system_history()
             except ProtocolError, err:
-                log.warning('Error (%d) querying power command (%d) for %s, will retry: %s' %
-                            (err.errcode, cmd.id, cmd.system, err.errmsg))
+                log.warning('Error (%s) querying power command (%s) for %s, will retry: %s', err.errcode, cmd.id, cmd.system, err.errmsg)
             except socket.error, err:
-                log.warning('Socket error (%d) querying power command (%d) for %s, will retry: %s' %
-                            (err.errno, cmd.id, cmd.system, err.strerror))
+                log.warning('Socket error (%s) querying power command (%s) for %s, will retry: %s', err.errno, cmd.id, cmd.system, err.strerror)
             except Exception, msg:
-                log.error('Cobbler power exception processing command %d for machine %s: %s' %
-                          (cmd.id, cmd.system, msg))
-                cmd.status = CommandStatus.by_name(u'Failed')
+                log.error('Cobbler power exception processing command %s for machine %s: %s', cmd.id, cmd.system, msg)
+                cmd.status = CommandStatus.failed
                 cmd.new_value = unicode(msg)
                 cmd.log_to_system_history()
         session.commit()
@@ -599,17 +584,17 @@ def queued_commands(*args):
     # Integer value stating max number of commands running
     MAX_RUNNING_COMMANDS = config.get("beaker.MAX_RUNNING_COMMANDS", 0)
     commands = CommandActivity.query\
-                              .filter(CommandActivity.status==CommandStatus.by_name(u'Queued'))\
+                              .filter(CommandActivity.status==CommandStatus.queued)\
                               .order_by(CommandActivity.created.asc())
     if not commands.count():
         return
     # Throttle total number of Running commands if set.
     if MAX_RUNNING_COMMANDS != 0:
         running_commands = CommandActivity.query\
-                         .filter(CommandActivity.status==CommandStatus.by_name(u'Running'))
+                         .filter(CommandActivity.status==CommandStatus.running)
         if running_commands.count() >= MAX_RUNNING_COMMANDS:
-            log.debug('Throttling Commands: %s >= %s' % (running_commands.count(), 
-                                                        MAX_RUNNING_COMMANDS))
+            log.debug('Throttling Commands: %s >= %s', running_commands.count(),
+                                                       MAX_RUNNING_COMMANDS)
             return
         # limit is an int between 1 and MAX_RUNNING_COMMANDS
         limit = MAX_RUNNING_COMMANDS - running_commands.count()
@@ -623,39 +608,39 @@ def queued_commands(*args):
             # I'm not sure how this would happen since id came from the above
             # query, maybe a race condition?
             if not cmd:
-                log.error('Command %d get() failed. Deleted?', cmd_id)
+                log.error('Command %s get() failed. Deleted?', cmd_id)
                 continue
             # Skip queued commands if something is already running on that system
-            if CommandActivity.query.filter(and_(CommandActivity.status==CommandStatus.by_name(u'Running'),
+            if CommandActivity.query.filter(and_(CommandActivity.status==CommandStatus.running,
                                                    CommandActivity.system==cmd.system))\
                                     .count():
-                log.info('Skipping power %s (command %d), command already running on machine: %s' %
-                         (cmd.action, cmd.id, cmd.system))
+                log.info('Skipping power %s (command %s), command already running on machine: %s',
+                         cmd.action, cmd.id, cmd.system)
                 continue
             if not cmd.system.lab_controller or not cmd.system.power:
-                log.error('Command %d aborted, power control not available for machine: %s' %
-                          (cmd.id, cmd.system))
-                cmd.status = CommandStatus.by_name(u'Aborted')
+                log.error('Command %s aborted, power control not available for machine: %s',
+                          cmd.id, cmd.system)
+                cmd.status = CommandStatus.aborted
                 cmd.new_value = u'Power control unavailable'
                 cmd.log_to_system_history()
             else:
                 try:
-                    log.info('Executing power %s command (%d) on machine: %s' %
-                             (cmd.action, cmd.id, cmd.system))
+                    log.info('Executing power %s command (%s) on machine: %s',
+                             cmd.action, cmd.id, cmd.system)
                     cmd.task_id = cmd.system.remote.power(cmd.action)
                     cmd.updated = datetime.utcnow()
-                    cmd.status = CommandStatus.by_name(u'Running')
+                    cmd.status = CommandStatus.running
                 except ProtocolError, err:
-                    log.warning('Error (%d) submitting power command (%d) for %s, will retry: %s' %
-                                (err.errcode, cmd.id, cmd.system, err.errmsg))
+                    log.warning('Error (%s) submitting power command (%s) for %s, will retry: %s',
+                                err.errcode, cmd.id, cmd.system, err.errmsg)
                 except socket.error, err:
-                    log.warning('Socket error (%d) submitting power command (%d) for %s, will retry: %s' %
-                                (err.errno, cmd.id, cmd.system, err.strerror))
+                    log.warning('Socket error (%s) submitting power command (%s) for %s, will retry: %s',
+                                err.errno, cmd.id, cmd.system, err.strerror)
                 except Exception, msg:
-                    log.error('Cobbler power exception submitting \'%s\' command (%d) for machine %s: %s' %
-                              (cmd.action, cmd.id, cmd.system, msg))
+                    log.error('Cobbler power exception submitting \'%s\' command (%s) for machine %s: %s',
+                              cmd.action, cmd.id, cmd.system, msg)
                     cmd.new_value = unicode(msg)
-                    cmd.status = CommandStatus.by_name(u'Failed')
+                    cmd.status = CommandStatus.failed
                     cmd.log_to_system_history()
     log.debug('Exiting queued_commands routine')
     return
@@ -665,123 +650,130 @@ def queued_commands(*args):
 
 @log_traceback(log)
 def new_recipes_loop(*args, **kwargs):
-    while True:
+    while running:
         if not new_recipes():
-            time.sleep(20)
+            event.wait()
+    log.debug("new recipes thread exiting")
 
 @log_traceback(log)
 def processed_recipesets_loop(*args, **kwargs):
-    while True:
+    while running:
         if not processed_recipesets():
-            time.sleep(20)
+            event.wait()
+    log.debug("processed recipesets thread exiting")
 
 @log_traceback(log)
 def command_queue_loop(*args, **kwargs):
-    while True:
+    while running:
         running_commands()
         queued_commands()
-        time.sleep(20)
+        event.wait()
+    log.debug("command queue thread exiting")
 
 @log_traceback(log)
-def main_loop():
-    while True:
+def main_recipes_loop(*args, **kwargs):
+    while running:
         dead_recipes()
         queued = queued_recipes()
         scheduled = scheduled_recipes()
         if not queued and not scheduled:
-            time.sleep(20)
+            event.wait()
+    log.debug("main recipes thread exiting")
 
 def schedule():
-    bkr.server.scheduler._start_scheduler()
+    global running
+    reload_config()
+
     if config.get('beaker.qpid_enabled') is True: 
        bb = ServerBeakerBus()
        bb.run()
-    log.debug("starting new recipes Thread")
-    # Create new_recipes Thread
-    add_onetime_task(action=new_recipes_loop,
-                      args=[lambda:datetime.now()])
-    log.debug("starting processed recipes Thread")
-    # Create processed_recipes Thread
-    add_onetime_task(action=processed_recipesets_loop,
-                      args=[lambda:datetime.now()],
-                      initialdelay=5)
-    log.debug("starting power commands Thread")
-    # Create command_queue Thread
-    add_onetime_task(action=command_queue_loop,
-                      args=[lambda:datetime.now()],
-                      initialdelay=10)
-    main_loop()
 
-def daemonize(daemon_func, daemon_pid_file=None, daemon_start_dir="/", daemon_out_log="/dev/null", daemon_err_log="/dev/null", *args, **kwargs):
-    """Robustly turn into a UNIX daemon, running in daemon_start_dir."""
+    beakerd_threads = set(["new_recipes", "processed_recipesets",\
+                           "command_queue", "main_recipes"])
 
-    if daemon_pid_file and os.path.exists(daemon_pid_file):
-        try:
-            f = open(daemon_pid_file, "r")
-            pid = f.read()
-            f.close()
-        except:
-            pid = None
+    log.debug("starting new recipes thread")
+    new_recipes_thread = threading.Thread(target=new_recipes_loop,
+                                          name="new_recipes")
+    new_recipes_thread.daemon = True
+    new_recipes_thread.start()
 
-        if pid:
-            try:
-                fn = os.path.join("/proc", pid, "cmdline")
-                f = open(fn, "r")
-                cmdline = f.read()
-                f.close()
-            except:
-                cmdline = None
+    log.debug("starting processed_recipes thread")
+    processed_recipesets_thread = threading.Thread(target=processed_recipesets_loop,
+                                                   name="processed_recipesets")
+    processed_recipesets_thread.daemon = True
+    processed_recipesets_thread.start()
 
-        if cmdline and cmdline.find(sys.argv[0]) >=0:
-            sys.stderr.write("A proces is still running, pid: %s\n" % pid)
-            sys.exit(1)
+    log.debug("starting power commands thread")
+    command_queue_thread = threading.Thread(target=command_queue_loop,
+                                            name="command_queue")
+    command_queue_thread.daemon = True
+    command_queue_thread.start()
 
-    # first fork
+    log.debug("starting main recipes thread")
+    main_recipes_thread = threading.Thread(target=main_recipes_loop,
+                                           name="main_recipes")
+    main_recipes_thread.daemon = True
+    main_recipes_thread.start()
+
     try:
-        if os.fork() > 0:
-            # exit from first parent
-            sys.exit(0)
-    except OSError, ex:
-        sys.stderr.write("fork #1 failed: (%d) %s\n" % (ex.errno, ex.strerror))
-        sys.exit(1)
+        while True:
+            time.sleep(20)
+            running_threads = set([t.name for t in threading.enumerate()])
+            if not running_threads.issuperset(beakerd_threads):
+                log.critical("a thread has died, shutting down")
+                rc = 1
+                running = False
+                event.set()
+                break
+            event.set()
+            event.clear()
+    except (SystemExit, KeyboardInterrupt):
+       log.info("shutting down")
+       running = False
+       event.set()
+       rc = 0
 
-    # decouple from parent environment
-    os.setsid()
-    os.chdir(daemon_start_dir)
-    os.umask(0)
+    new_recipes_thread.join(10)
+    processed_recipesets_thread.join(10)
+    command_queue_thread.join(10)
+    main_recipes_thread.join(10)
 
-    # second fork
-    try:
-        pid = os.fork()
-        if pid > 0:
-            # write pid to pid_file
-            if daemon_pid_file is not None:
-                f = open(daemon_pid_file, "w")
-                f.write("%s" % pid)
-                f.close()
-            # exit from second parent
-            sys.exit(0)
-    except OSError, ex:
-        sys.stderr.write("fork #2 failed: (%d) %s\n" % (ex.errno, ex.strerror))
-        sys.exit(1)
+    sys.exit(rc)
 
-    # redirect stdin, stdout and stderr
-    stdin = open("/dev/null", "r")
-    stdout = open(daemon_out_log, "a+", 0)
-    stderr = open(daemon_err_log, "a+", 0)
-    os.dup2(stdin.fileno(), sys.stdin.fileno())
-    os.dup2(stdout.fileno(), sys.stdout.fileno())
-    os.dup2(stderr.fileno(), sys.stderr.fileno())
+@atexit.register
+def atexit():
+    interface.stop()
 
-    # run the daemon loop
-    daemon_func(*args, **kwargs)
-    sys.exit(0)
+def sighup_handler(signal, frame):
+    log.info("received SIGHUP, reloading")
+    reload_config()
+    log.info("configuration reloaded")
+
+def sigterm_handler(signal, frame):
+    raise SystemExit("received SIGTERM")
+
+def reload_config():
+    for (_, logger) in logging.root.manager.loggerDict.items():
+        if hasattr(logger, 'handlers'):
+            for handler in logger.handlers:
+                logger.removeHandler(handler)
+    for handler in logging._handlerList[:]:
+        handler.flush()
+        handler.close()
+    if interface.running:
+        interface.stop()
+
+    load_config(opts.configfile)
+    config.update({'identity.krb_auth_qpid_principal':
+                       config.get('identity.krb_auth_beakerd_principal'),
+                   'identity.krb_auth_qpid_keytab':
+                       config.get('identity.krb_auth_beakerd_keytab')})
+    interface.start(config)
 
 def main():
+    global opts
     parser = get_parser()
     opts, args = parser.parse_args()
-    setupdir = dirname(dirname(__file__))
-    curdir = getcwd()
 
     # First look on the command line for a desired config file,
     # if it's not on the command line, then look for 'setup.py'
@@ -792,20 +784,32 @@ def main():
     # config file called 'default.cfg' packaged in the egg.
     load_config(opts.configfile)
 
-    interface.start(config)
+    if not opts.foreground:
+        log.debug("Launching beakerd daemon")
+        pid_file = opts.pid_file
+        if pid_file is None:
+            pid_file = config.get("PID_FILE", "/var/run/beaker/beakerd.pid")
+        d = daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(pid_file, acquire_timeout=0),
+                                 signal_map={signal.SIGHUP: sighup_handler,
+                                             signal.SIGTERM: sigterm_handler})
+        util_logger = logging.getLogger('bkr.server.util')
+        util_logger.disabled = True
+        for (_, logger) in logging.root.manager.loggerDict.items():
+            if hasattr(logger, 'handlers'):
+                for handler in logger.handlers:
+                    logger.removeHandler(handler)
+        for handler in logging._handlerList[:]:
+            handler.flush()
+            handler.close()
+        try:
+            d.open()
+        except pidlockfile.AlreadyLocked:
+            reload_config() # reopen logfiles
+            log.fatal("could not acquire lock on %s, exiting" % pid_file)
+            sys.stderr.write("could not acquire lock on %s" % pid_file)
+            sys.exit(1)
 
-    config.update({'identity.krb_auth_qpid_principal' : config.get('identity.krb_auth_beakerd_principal') })
-    config.update({'identity.krb_auth_qpid_keytab' : config.get('identity.krb_auth_beakerd_keytab') } )
-
-    pid_file = opts.pid_file
-    if pid_file is None:
-        pid_file = config.get("PID_FILE", "/var/run/beaker/beakerd.pid")
-
-
-    if opts.foreground:
-        schedule()
-    else:
-        daemonize(schedule, daemon_pid_file=pid_file)
+    schedule()
 
 if __name__ == "__main__":
     main()

@@ -12,5 +12,5 @@ function do_job_delete_complete(result) {
 
 
 function JobDelete(action, data, options) {
-    delete_and_confirm(action,data, do_job_delete_complete)
+    do_and_confirm(action, data, do_job_delete_complete, undefined, 'delete')
 }

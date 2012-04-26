@@ -15,7 +15,7 @@
 %endif
 
 Name:           beaker
-Version:        0.8.1
+Version:        0.8.2
 Release:        5%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -68,7 +68,7 @@ Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
 Requires:       libxslt-python
-
+Requires:       libxml2-python
 
 %if %{with server}
 %package server
@@ -83,6 +83,8 @@ Requires:       python-xmltramp
 Requires:       python-lxml
 Requires:       python-ldap
 Requires:       python-rdflib >= 3.0.0
+Requires:       python-daemon
+Requires:       python-lockfile >= 0.9
 Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
@@ -199,6 +201,7 @@ DESTDIR=$RPM_BUILD_ROOT make \
 %if %{with labcontroller}
 ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/redhat6.ks
 ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/CentOS6.ks
+ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/RedHatStorageSoftwareAppliance3.ks
 ln -s RedHatEnterpriseLinuxServer5.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/CentOS5.ks
 ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment.ks
 %endif
@@ -281,7 +284,6 @@ fi
 %{_bindir}/product-update
 %{_bindir}/beaker-repo-update
 %{_bindir}/%{name}-cleanup-visits
-%{_bindir}/%{name}-delete-system
 %{_sysconfdir}/init.d/%{name}d
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %attr(0755,root,root)%{_bindir}/%{name}d
@@ -346,6 +348,103 @@ fi
 %endif
 
 %changelog
+* Thu Apr 19 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-5
+- Change Group's permissions table header to 'Permissions', and moved 'Contact
+  Owner' link to be beside owner field. (rmancy@redhat.com)
+- fix register and upload file methods to use lazy_create (bpeck@redhat.com)
+- 585153 report an error if T: or TR: is passed to bkr job-logs
+  (dcallagh@redhat.com)
+* Wed Apr 18 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-4
+- 813642 Check each named beakerd thread instead of relying on active thread count
+  (stl@redhat.com)
+- 731615 fix <device/> to not add an empty query. (bpeck@redhat.com)
+
+* Tue Apr 17 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-3
+- test: Fix job.id to be id of recipe (rmancy@redhat.com)
+- 731615 fix mistake in RELAX NG schema for <device/> (dcallagh@redhat.com)
+- 812722 Remove pidfile if it exists before starting beakerd (stl@redhat.com)
+* Fri Apr 13 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-2
+- more %%d issues in command_queue. (bpeck@redhat.com)
+- Merge remote branch 'origin/release-0.8.1-5.1' into release-0.8.2
+  (rmancy@redhat.com)
+* Fri Apr 13 2012 Steven Lawrance <stl@redhat.com> 0.8.1-5.2
+- more %%d issues in command_queue. (bpeck@redhat.com)
+
+* Thu Apr 12 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-1
+- 740321 Do not show power control buttons when system has no lab controller
+  (stl@redhat.com)
+- 745254 Store the default root password in the database (stl@redhat.com)
+- 743663 Reject job submission if user's root password has expired
+  (stl@redhat.com)
+- 782075 Permit whitespace in ssh public key descriptions (stl@redhat.com)
+- 784875 add support for RedHatStorageSoftwareAppliance3 (bpeck@redhat.com)
+- 743819 add bkr watchdogs-extend command. (bpeck@redhat.com)
+- 773702 dead recipes routine processes the same recipe mutliple times
+  (bpeck@redhat.com)
+- 572836 Collect crash dump information useful for analysis when test
+  panics/stalls (bpeck@redhat.com)
+- 742569 delete system should be available over command line.
+  (bpeck@redhat.com)
+- 794543 also look for 'pxe' in EFI boot options (dcallagh@redhat.com)
+- 740957 only show systems of type Machine in reserve workflow
+  (dcallagh@redhat.com)
+- 797584 merge system_admin_map table into system_group (dcallagh@redhat.com)
+- 773124 use a nested transaction to avoid races in MappedObject.lazy_create
+  (dcallagh@redhat.com)
+- 585153 new bkr job-logs command to print URLs of recipe logs
+  (dcallagh@redhat.com)
+- 784237 prevent and handle invalid addresses in <cc/> (dcallagh@redhat.com)
+- 731615 support for selecting systems by device in recipes
+  (dcallagh@redhat.com)
+- 797162 Only update /etc/sysconfig/nptd with '-x' if it does not contain '-g'
+  (rmancy@redhat.com)
+- 750623 Ability to add permissions to group via the Groups page.
+  (rmancy@redhat.com)
+- 746093 Create ajax widgets for users wanting to report system problems and
+  request loans (rmancy@redhat.com)
+- 743319 add 'ignoredisk --interactive' if people select manual in ks_meta.
+  (ryang@redhat.com)
+- 751949 Remove log entries for already deleted jobs (rmancy@redhat.com)
+- 781369 Fix error when using '--wait' option on beaker client commands.
+  (rmancy@redhat.com)
+- 784863 Fix 500 when entering duplicate emails (rmancy@redhat.com)
+- 785048 Replace None with an empty string in csv export. (rmancy@redhat.com)
+- 772882 Clean duplicate required package list when uploading new tasks.
+  (ryang@redhat.com)
+- 747974 Only clear specially partitions if ondisk option is given. 
+  (ryang@redhat.com)
+
+- /distribution/beaker/custom_kickstart: initial version of test
+  (dcallagh@redhat.com)
+- tests: disable "slowness" test for large results (dcallagh@redhat.com)
+- Remove bkr.inttest.server.test_max_whiteboard, not relevant.
+  (rmancy@redhat.com)
+- avoid multiple concurrent get_distros AJAX requests (dcallagh@redhat.com)
+- avoid extraneous joins and DISTINCT on system grid pages
+  (dcallagh@redhat.com)
+- more resilient logging in command queue thread (dcallagh@redhat.com)
+- Use python-daemon in beakerd (stl@redhat.com)
+- qpid: Remove use of headers exchange, add direct (rmancy@redhat.com)
+- New option --suppress-install-task (mganisin@redhat.com)
+
+* Tue Apr 10 2012 Bill Peck <bpeck@redhat.com> 0.8.1-5.1
+- more resilient logging in command queue thread (dcallagh@redhat.com)
+
+* Wed Apr 04 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-9
+- service queue msgs' fixed to also be sent on direct exchange
+  (rmancy@redhat.com)
+
+* Tue Apr 03 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-8
+- Put service queue messages onto direct exchange, not just default exchange
+  (rmancy@redhat.com)
+
+* Tue Apr 03 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-7
+- Fix _auth_interval typo, and change eso.topic subjects to be prefixed with
+  beaker.* (rmancy@redhat.com)
+
+* Wed Mar 21 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-6
+- Qpid changes (rmancy@redhat.com)
+
 * Fri Mar 16 2012 Bill Peck <bpeck@redhat.com> 0.8.1-5
 - 803713 Fix for job matrix result box not generating links with 'job_ids' when
   being generated via job id box (rmancy@redhat.com)
@@ -429,7 +528,7 @@ fi
 - 770109 fix typo in search bar template ('operations' -> 'operation')
   (dcallagh@redhat.com)
 - 747614 Remove and disable readahead collector (mcsontos@redhat.com)
-- 765717 RFE make yum quiet when it pulls repos in %post for the first time
+- 765717 RFE make yum quiet when it pulls repos in %%post for the first time
   (bpeck@redhat.com)
 - 772538 Do not immediately abort power commands if communication with Cobbler
   fails (stl@redhat.com)
@@ -525,17 +624,31 @@ fi
 - beaker-osversion will die on inherited profiles (bpeck@redhat.com)
 
 * Wed Nov 02 2011 Raymond Mancy <rmancy@redhat.com> 0.8.0-6
-- upgrade to sqlalchemy 0.6, TurboGears 1.1, Python 2.6 for server and lab
-  controller (dcallagh@redhat.com)
+- fixes for integration tests
+
+* Fri Oct 28 2011 Bill Peck <bpeck@redhat.com> 0.8.0-5
+- fix warnings from osversion.trigger and remove osversion_data after
+  10 days
+
+* Fri Oct 28 2011 Bill Peck <bpeck@redhat.com> 0.8.0-4
 - 749242 removed log-delete deprecation error
-- 743852 Filter buttons in Recipe view not working (Queued, Running recipes)
-  (bpeck@redhat.com)
-- 718119 new osversion.trigger (bpeck@redhat.com)
-- 746683 bkr whoami command added (bpeck@redhat.com)
+
+* Thu Oct 27 2011 Bill Peck <bpeck@redhat.com> 0.8.0-3
+- add missing continue statements
+
+* Wed Oct 26 2011 Bill Peck <bpeck@redhat.com> 0.8.0-2
+- 718119 new osversion.trigger
+- 746683 bkr whoami command added
 
 * Tue Oct 18 2011 Dan Callaghan <dcallagh@redhat.com> 0.7.3-6
 - 746774 correctly handle multiple status changes within the same second
   (dcallagh@redhat.com)
+
+* Mon Oct 10 2011 Dan Callaghan <dcallagh@redhat.com> 0.8.0-1
+- upgrade to sqlalchemy 0.6, TurboGears 1.1, Python 2.6 for server and lab
+  controller (dcallagh@redhat.com)
+- 743852 Filter buttons in Recipe view not working (Queued, Running recipes)
+  (bpeck@redhat.com)
 
 * Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-5
 - 739893 - Client option to print xml of existing job
@@ -994,7 +1107,7 @@ fi
 - depend on our exact version of TurboGears (dcallagh@redhat.com)
 - show identity errors on the login form (dcallagh@redhat.com)
 
-* Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com>
+* Wed Feb 23 2011 Raymond Mancy <rmancy@redhat.com> 0.6.5-1
 - 678215 SQL instructions for replaceing '' with NULL for recipe.whiteboard
 (rmancy@redhat.com)
 - 676410 Fix matrix report view (rmancy@redhat.com)
@@ -1178,8 +1291,6 @@ fi
 * Wed Dec 01 2010 Raymond Mancy <rmancy@redhat.com> 0.5.63-2
 - Updated product-update to not print out debug msg (rmancy@redhat.com)
 
-* Wed Dec 01 2010 Raymond Mancy <rmancy@redhat.com>
-- Updated product-update to not print out debug msg (rmancy@redhat.com)
 * Tue Nov 30 2010 Bill Peck <bpeck@redhat.com> 0.5.63-1
 - Merge branch 'bz590951' into develop (bpeck@redhat.com)
 - add --cc command line option to workflows. (bpeck@redhat.com)

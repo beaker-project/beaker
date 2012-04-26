@@ -3,7 +3,7 @@ import unittest
 import xmltramp
 import pkg_resources
 from turbogears.database import session
-from bkr.server.model import TaskStatus, RecipeSet
+from bkr.server.model import RecipeSet
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
 from bkr.inttest import data_setup
@@ -12,6 +12,7 @@ from bkr.server.tools import beakerd
 class TestTasks(unittest.TestCase):
 
     def setUp(self):
+        session.begin()
         from bkr.server.jobs import Jobs
         self.controller = Jobs()
         self.task = data_setup.create_task(name=u'/fake/task/here')
@@ -35,17 +36,16 @@ class TestTasks(unittest.TestCase):
             ''' % (distro.name, self.task.name)))
         session.flush()
 
+    def tearDown(self):
+        session.rollback()
+        session.close()
+
     def test_enable_task(self):
         self.task.valid=True
         session.flush()
         self.controller.process_xmljob(self.xmljob, self.user)
         
     def test_disable_task(self):
-        try:
-            session.begin()
-            self.task.valid=False
-            session.flush()
-            self.assertRaises(BX, lambda: self.controller.process_xmljob(self.xmljob, self.user))
-        finally:
-            session.rollback()
-            session.close()
+        self.task.valid=False
+        session.flush()
+        self.assertRaises(BX, lambda: self.controller.process_xmljob(self.xmljob, self.user))

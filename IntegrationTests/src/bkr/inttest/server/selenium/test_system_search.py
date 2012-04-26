@@ -1,13 +1,14 @@
 #!/usr/bin/python
 from bkr.server.model import Numa, User, Key, Key_Value_String
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 import unittest, time, re, os, datetime
 from turbogears.database import session
 
 class SearchColumns(SeleniumTestCase):
 
     @classmethod
+    @with_transaction
     def setUpClass(cls): 
         cls.group = data_setup.create_group()
         cls.system_with_group = data_setup.create_system(shared=True)
@@ -16,7 +17,6 @@ class SearchColumns(SeleniumTestCase):
         cls.system_with_numa.numa = Numa(nodes=2)
         cls.system_with_serial = data_setup.create_system()
         cls.system_with_serial.serial = u'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        session.flush()
         cls.selenium = cls.get_selenium()
         cls.selenium.start()
 
@@ -75,6 +75,7 @@ class SearchColumns(SeleniumTestCase):
 class Search(SeleniumTestCase):
 
     @classmethod
+    @with_transaction
     def setUpClass(cls):
         cls.selenium = cls.get_selenium()
         cls.system_one_details = { 'fqdn' : u'a1',
@@ -104,7 +105,6 @@ class Search(SeleniumTestCase):
                                     'owner' : data_setup.create_user(),}
         cls.system_three = data_setup.create_system(**cls.system_three_details)
         cls.system_three.numa = Numa(nodes=1)
-        session.flush()
         cls.selenium.start()
 
     @classmethod
@@ -122,8 +122,8 @@ class Search(SeleniumTestCase):
         self.assertEquals(sel.get_title(), 'Free Systems')
         self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
 
-        self.system_one.loaned = User.by_user_name(self.BEAKER_LOGIN_USER)
-        session.flush()
+        with session.begin():
+            self.system_one.loaned = User.by_user_name(self.BEAKER_LOGIN_USER)
         sel.open('free')
         sel.wait_for_page_to_load("30000")
         self.assertEquals(sel.get_title(), 'Free Systems')
@@ -302,11 +302,11 @@ class Search(SeleniumTestCase):
 class HypervisorSearchTest(SeleniumTestCase):
 
     def setUp(self):
-        self.user = data_setup.create_user(password=u'hypervisin')
-        self.kvm = data_setup.create_system(loaned=self.user, hypervisor=u'KVM')
-        self.xen = data_setup.create_system(loaned=self.user, hypervisor=u'Xen')
-        self.phys = data_setup.create_system(loaned=self.user, hypervisor=None)
-        session.flush()
+        with session.begin():
+            self.user = data_setup.create_user(password=u'hypervisin')
+            self.kvm = data_setup.create_system(loaned=self.user, hypervisor=u'KVM')
+            self.xen = data_setup.create_system(loaned=self.user, hypervisor=u'Xen')
+            self.phys = data_setup.create_system(loaned=self.user, hypervisor=None)
         self.selenium = self.get_selenium()
         self.selenium.start()
         self.login(user=self.user.user_name, password=u'hypervisin')
@@ -326,7 +326,8 @@ class HypervisorSearchTest(SeleniumTestCase):
         self.assertEqual(sel.get_title(), 'My Systems')
         row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
         self.assertEquals(row_count, 1)
-        self.assertEquals(sel.get_table('widget.0.0'), self.kvm.fqdn)
+        self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[1]/td[1]'),
+                self.kvm.fqdn)
 
     def test_search_hypervisor_is_not(self):
         sel = self.selenium
@@ -340,8 +341,10 @@ class HypervisorSearchTest(SeleniumTestCase):
         self.assertEqual(sel.get_title(), 'My Systems')
         row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
         self.assertEquals(row_count, 2)
-        self.assertEquals(sel.get_table('widget.0.0'), self.xen.fqdn)
-        self.assertEquals(sel.get_table('widget.1.0'), self.phys.fqdn)
+        self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[1]/td[1]'),
+                self.xen.fqdn)
+        self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[2]/td[1]'),
+                self.phys.fqdn)
 
     def test_search_hypervisor_is_blank(self):
         sel = self.selenium
@@ -355,4 +358,5 @@ class HypervisorSearchTest(SeleniumTestCase):
         self.assertEqual(sel.get_title(), 'My Systems')
         row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
         self.assertEquals(row_count, 1)
-        self.assertEquals(sel.get_table('widget.0.0'), self.phys.fqdn)
+        self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[1]/td[1]'),
+                self.phys.fqdn)

@@ -106,8 +106,8 @@ class CSV(RPCRoot):
                         # Also assumes its a machine.  we have to pick something
                         system = System(fqdn=data['fqdn'],
                                         owner=identity.current.user,
-                                        type=SystemType.by_name('Machine'),
-                                        status=SystemStatus.by_name('Broken'))
+                                        type=SystemType.machine,
+                                        status=SystemStatus.broken)
                     if system.can_admin(identity.current.user):
                         # Remove fqdn, can't change that via csv.
                         data.pop('fqdn')
@@ -206,8 +206,8 @@ class CSV(RPCRoot):
     def to_datastruct(self):
         datastruct = dict()
         for csv_key in self.csv_keys:
-            val = unicode(getattr(self, csv_key, None))
-            datastruct[csv_key] = getattr(self, csv_key, None) 
+            val = getattr(self, csv_key, None) or ''
+            datastruct[csv_key] = unicode(val)
         yield datastruct
 
 class CSV_System(CSV):
@@ -307,8 +307,8 @@ class CSV_System(CSV):
                 log.append("%s: Invalid Status None" % system.fqdn)
                 return False
             try:
-                systemstatus = SystemStatus.by_name(data['status'])
-            except InvalidRequestError:
+                systemstatus = SystemStatus.from_string(data['status'])
+            except ValueError:
                 log.append("%s: Invalid Status %s" % (system.fqdn,
                                                       data['status']))
                 return False
@@ -322,8 +322,8 @@ class CSV_System(CSV):
                 log.append("%s: Invalid Type None" % system.fqdn)
                 return False
             try:
-                systemtype = SystemType.by_name(data['type'])
-            except InvalidRequestError:
+                systemtype = SystemType.from_string(data['type'])
+            except ValueError:
                 log.append("%s: Invalid Type %s" % (system.fqdn,
                                                      data['type']))
                 return False

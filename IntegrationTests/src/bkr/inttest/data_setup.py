@@ -31,7 +31,8 @@ from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
         LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
-        LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag
+        LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
+        SystemGroup, DeviceClass
 
 log = logging.getLogger(__name__)
 
@@ -131,11 +132,16 @@ def create_group(permissions=None):
         group.permissions.extend(Permission.by_name(name) for name in permissions)
     return group
 
+def create_permission(name=None):
+    if not name:
+        name = unique_name('permission%s')
+    return Permission(name)
+
 def add_user_to_group(user,group):
     user.groups.append(group)
 
-def add_group_to_system(system,group):
-    system.groups.append(group)
+def add_group_to_system(system, group, admin=False):
+    system.group_assocs.append(SystemGroup(group=group, admin=admin))
 
 def create_distro(name=None, breed=u'Dan',
         osmajor=u'DansAwesomeLinux6', osminor=u'9',
@@ -166,7 +172,7 @@ def create_distro(name=None, breed=u'Dan',
         os.makedirs(harness_dir)
     return distro
 
-def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
+def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
         owner=None, fqdn=None, shared=False, exclude_osmajor=[],
         exclude_osversion=[], hypervisor=None, **kw):
     if owner is None:
@@ -175,8 +181,8 @@ def create_system(arch=u'i386', type=u'Machine', status=u'Automated',
         fqdn = unique_name(u'system%s.testdata')
     if System.query.filter(System.fqdn == fqdn).count():
         raise ValueError('Attempted to create duplicate system %s' % fqdn)
-    system = System(fqdn=fqdn,type=SystemType.by_name(type), owner=owner, 
-                status=SystemStatus.by_name(status), **kw)
+    system = System(fqdn=fqdn,type=type, owner=owner,
+                status=status, **kw)
     system.shared = shared
     system.arch.append(Arch.by_name(arch))
     configure_system_power(system)
@@ -319,8 +325,9 @@ def create_completed_job(**kwargs):
     mark_job_complete(job, **kwargs)
     return job
 
-def mark_recipe_complete(recipe, result=u'Pass', system=None,
+def mark_recipe_complete(recipe, result=TaskResult.pass_, system=None,
         start_time=None, finish_time=None, **kwargs):
+    assert result in TaskResult
     if system is None:
         recipe.system = create_system(arch=recipe.arch)
     else:
@@ -332,13 +339,12 @@ def mark_recipe_complete(recipe, result=u'Pass', system=None,
     recipe.system.reservations.append(reservation)
     for recipe_task in recipe.tasks:
         recipe_task.start_time = start_time or datetime.datetime.utcnow()
-        recipe_task.status = TaskStatus.by_name(u'Running')
+        recipe_task.status = TaskStatus.running
     recipe.update_status()
     for recipe_task in recipe.tasks:
-        rtr = RecipeTaskResult(recipetask=recipe_task,
-                result=TaskResult.by_name(result))
+        rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
         recipe_task.finish_time = finish_time or datetime.datetime.utcnow()
-        recipe_task.status = TaskStatus.by_name(u'Completed')
+        recipe_task.status = TaskStatus.completed
         recipe_task.results.append(rtr)
     recipe.update_status()
 
@@ -380,7 +386,7 @@ def playback_task_results(task, xmltask):
     # Start task
     task.start()
     # Record Result
-    task._result(xmltask.result, u'/', 0, u'(%s)' % xmltask.result)
+    task._result(TaskResult.from_string(xmltask.result), u'/', 0, u'(%s)' % xmltask.result)
     # Stop task
     if xmltask.status == u'Aborted':
         task.abort()
@@ -422,14 +428,19 @@ def create_test_env(type):#FIXME not yet using different types
     """
 
     arches = Arch.query.all()
-    system_type = SystemType.by_name(u'Machine') #This could be extended into a list and looped over
+    system_type = SystemType.machine #This could be extended into a list and looped over
     users = [create_user() for i in range(10)]
     lc = create_labcontroller()
     for arch in arches:
         create_distro(arch=arch)
         for user in users:
-            system = create_system(owner=user, arch=arch.arch, type=system_type.type, status=u'Automated', shared=True)
+            system = create_system(owner=user, arch=arch.arch, type=system_type, status=u'Automated', shared=True)
             system.lab_controller = lc
 
-def create_device(**kw):
-    device = Device(**kw)
+def create_device_class(device_class):
+    return DeviceClass.lazy_create(device_class=device_class)
+
+def create_device(device_class=None, **kwargs):
+    if device_class is not None:
+        kwargs['device_class_id'] = create_device_class(device_class).id
+    return Device.lazy_create(**kwargs)

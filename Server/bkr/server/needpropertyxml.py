@@ -234,9 +234,9 @@ class XmlGroup(ElementWrapper):
             # - '!=' - search for system which is member of any group
             # - '==' - search for system which is not member of any group
             if op == '__eq__':
-                query = System.groups == None
+                query = System.group_assocs == None
             else:
-                query = System.groups != None
+                query = System.group_assocs != None
         return (joins, query)
 
 
@@ -358,8 +358,7 @@ class XmlSystemType(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
-            joins = joins.join(System.type)
-            query = SystemType.type == value
+            query = System.type == value
         return (joins, query)
 
 class XmlHostName(ElementWrapper):
@@ -439,6 +438,35 @@ class XmlNumaNodeCount(ElementWrapper):
             query = getattr(Numa.nodes, op)(value)
         return (joins, query)
 
+class XmlDevice(ElementWrapper):
+    """
+    Pick a system with a matching device.
+    """
+
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 '!=' : '__ne__'}
+
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        query = None
+        filter_clauses = []
+        for attr in ['bus', 'driver', 'vendor_id', 'device_id',
+                     'subsys_vendor_id', 'subsys_device_id']:
+            value = self.get_xml_attr(attr, unicode, None)
+            if value:
+                filter_clauses.append(getattr(Device, attr) == value)
+        if self.get_xml_attr('type', unicode, None):
+            filter_clauses.append(Device.device_class.has(
+                    DeviceClass.device_class ==
+                    self.get_xml_attr('type', unicode, None)))
+        if filter_clauses:
+            if op == '__eq__':
+                query = System.devices.any(and_(*filter_clauses))
+            else:
+                query = not_(System.devices.any(and_(*filter_clauses)))
+        return (joins, query)
+
 subclassDict = {
     'host'                : XmlHost,
     'distro'              : XmlDistro,
@@ -463,6 +491,7 @@ subclassDict = {
     'numa_node_count'     : XmlNumaNodeCount,
     'group'               : XmlGroup,
     'hypervisor'          : XmlHypervisor,
+    'device'              : XmlDevice,
     }
 
 def apply_filter(filter, query):

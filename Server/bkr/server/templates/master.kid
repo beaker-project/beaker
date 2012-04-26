@@ -28,7 +28,6 @@
 
 <?python
 from bkr.server.model import device_classes
-from bkr.server.model import system_types
 from bkr.server.reports import Reports
 ?>
 <div id="fedora-header">
@@ -152,6 +151,7 @@ from bkr.server.reports import Reports
                         <img class="corner_inset_right" alt="" src="${tg.url('/static/images/corner_inset_right.png')}"/>
                     </li>
                     <li><a href="${tg.url('/groups/admin')}">Groups</a></li>
+                    <li><a href="${tg.url('/configuration')}">Configuration</a></li>
                     <li><a href="${tg.url('/retentiontag/admin')}">Retention Tags</a></li>
                     <li><a href="${tg.url('/labcontrollers')}">Lab Controllers</a></li>
                     <li><a href="${tg.url('/powertypes')}">Power Types</a></li>

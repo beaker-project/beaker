@@ -1,21 +1,22 @@
 import unittest
 import datetime
 from time import sleep
-from bkr.server.model import TaskStatus, Job, System, User
+from bkr.server.model import Job, System, User
 import sqlalchemy.orm
 from turbogears.database import session
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 
 class TestGroupXml(unittest.TestCase):
 
+    @with_transaction
     def setUp(self):
         self.lc = data_setup.create_labcontroller()
         self.distro = data_setup.create_distro(arch=u'i386')
         self.user = data_setup.create_user()
-        session.flush()
 
+    @with_transaction
     def _test_group(self, test_op, test_name, matching_ids):
         """
         Check the group selector

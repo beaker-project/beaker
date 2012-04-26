@@ -42,7 +42,8 @@ class SeleniumTestCase(unittest.TestCase):
     BEAKER_LOGIN_USER = u'admin'
     BEAKER_LOGIN_PASSWORD = u'testing'
 
-    def wait_and_try(self, f, wait_time=30):
+    @classmethod
+    def wait_and_try(cls, f, wait_time=30):
         start_time = datetime.now()
         while True:
             try:
@@ -56,8 +57,8 @@ class SeleniumTestCase(unittest.TestCase):
                 else:
                     sleep(0.25)
                     pass
-
-    def wait_for_condition(self, cond, wait_time=30):
+    @classmethod
+    def wait_for_condition(cls, cond, wait_time=30):
         start_time = time.time()
         while True:
             if cond():

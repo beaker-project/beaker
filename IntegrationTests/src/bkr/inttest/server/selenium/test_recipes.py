@@ -20,6 +20,7 @@ import unittest
 import logging
 import re
 from turbogears.database import session
+from nose.plugins.skip import SkipTest
 
 from bkr.server.model import Job, TaskResult, RecipeTaskResult
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
@@ -35,18 +36,17 @@ class TestRecipesDataGrid(SeleniumTestCase):
     @classmethod
     def setUpClass(cls):
         # create a bunch of jobs
-        cls.user = user = data_setup.create_user(password='password')
-        arches = [u'i386', u'x86_64', u'ia64']
-        distro_names = [u'DAN5-Server-U5', u'DAN5-Client-U5',
-                u'DAN6-Server-U1', u'DAN6-Server-RC3']
-        for arch in arches:
-            for distro_name in distro_names:
-                distro = data_setup.create_distro(name=distro_name, arch=arch)
-                data_setup.create_job(owner=user, distro=distro)
-                data_setup.create_completed_job(owner=user, distro=distro)
-        session.flush()
+        with session.begin():
+            cls.user = user = data_setup.create_user(password='password')
+            arches = [u'i386', u'x86_64', u'ia64']
+            distro_names = [u'DAN5-Server-U5', u'DAN5-Client-U5',
+                    u'DAN6-Server-U1', u'DAN6-Server-RC3']
+            for arch in arches:
+                for distro_name in distro_names:
+                    distro = data_setup.create_distro(name=distro_name, arch=arch)
+                    data_setup.create_job(owner=user, distro=distro)
+                    data_setup.create_completed_job(owner=user, distro=distro)
 
-        # XXX we could save a *lot* of time by reusing Firefox instances across tests
         cls.selenium = sel = cls.get_selenium()
         sel.start()
 
@@ -64,17 +64,17 @@ class TestRecipesDataGrid(SeleniumTestCase):
         cls.selenium.stop()
 
     # see https://bugzilla.redhat.com/show_bug.cgi?id=629147
-    def check_column_sort(self, column):
+    def check_column_sort(self, column, sort_key=None):
         sel = self.selenium
         sel.open('recipes/mine')
-        sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
+        sel.click('//table[@id="widget"]/thead//th[%d]//a[@href]' % column)
         sel.wait_for_page_to_load('30000')
         row_count = int(sel.get_xpath_count(
                 '//table[@id="widget"]/tbody/tr/td[%d]' % column))
         self.assertEquals(row_count, 24)
-        cell_values = [sel.get_table('widget.%d.%d' % (row, column - 1)) # zero-indexed
-                       for row in range(0, row_count)]
-        assert_sorted(cell_values)
+        cell_values = [sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
+                       for row in range(1, row_count + 1)]
+        assert_sorted(cell_values, key=sort_key)
 
     def test_can_sort_by_whiteboard(self):
         self.check_column_sort(2)
@@ -89,7 +89,9 @@ class TestRecipesDataGrid(SeleniumTestCase):
         self.check_column_sort(5)
 
     def test_can_sort_by_status(self):
-        self.check_column_sort(7)
+        order = ['New', 'Processed', 'Queued', 'Scheduled', 'Waiting',
+                'Running', 'Completed', 'Cancelled', 'Aborted']
+        self.check_column_sort(7, sort_key=lambda status: order.index(status))
 
     def test_can_sort_by_result(self):
         self.check_column_sort(8)
@@ -99,14 +101,14 @@ class TestRecipesDataGrid(SeleniumTestCase):
         column = 1
         sel = self.selenium
         sel.open('recipes/mine')
-        sel.click('//table[@id="widget"]/thead/th[%d]//a[@href]' % column)
+        sel.click('//table[@id="widget"]/thead//th[%d]//a[@href]' % column)
         sel.wait_for_page_to_load('30000')
         row_count = int(sel.get_xpath_count(
                 '//table[@id="widget"]/tbody/tr/td[%d]' % column))
         self.assertEquals(row_count, 24)
         cell_values = []
-        for row in range(0, row_count):
-            raw_value = sel.get_table('widget.%d.%d' % (row, column - 1)) # zero-indexed
+        for row in range(1, row_count + 1):
+            raw_value = sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
             m = re.match(r'R:(\d+)$', raw_value)
             assert m.group(1)
             cell_values.append(int(m.group(1)))
@@ -115,15 +117,15 @@ class TestRecipesDataGrid(SeleniumTestCase):
 class TestRecipeView(WebDriverTestCase):
 
     def setUp(self):
-        self.user = user = data_setup.create_user(display_name=u'Bob Brown',
-                password='password')
-        self.system_owner = data_setup.create_user()
-        self.system = data_setup.create_system(owner=self.system_owner, arch=u'x86_64')
-        distro = data_setup.create_distro(arch=u'x86_64')
-        self.job = data_setup.create_completed_job(owner=user, distro=distro, server_log=True)
-        for recipe in self.job.all_recipes:
-            recipe.system = self.system
-        session.flush()
+        with session.begin():
+            self.user = user = data_setup.create_user(display_name=u'Bob Brown',
+                    password='password')
+            self.system_owner = data_setup.create_user()
+            self.system = data_setup.create_system(owner=self.system_owner, arch=u'x86_64')
+            distro = data_setup.create_distro(arch=u'x86_64')
+            self.job = data_setup.create_completed_job(owner=user, distro=distro, server_log=True)
+            for recipe in self.job.all_recipes:
+                recipe.system = self.system
         self.browser = self.get_browser()
         login(self.browser, user=user.user_name, password='password')
 
@@ -134,16 +136,6 @@ class TestRecipeView(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'recipes/mine')
         b.find_element_by_link_text(recipe.t_id).click()
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=623603
-    # see also TestSystemView.test_can_report_problem
-    def test_can_report_problem(self):
-        b = self.browser
-        recipe = list(self.job.all_recipes)[0]
-        self.go_to_recipe_view(recipe)
-        b.find_element_by_link_text('Report problem with system').click()
-        self.assertEqual(b.title,
-                'Report a problem with %s' % self.system.fqdn)
 
     def test_log_url_looks_right(self):
         b = self.browser
@@ -159,11 +151,11 @@ class TestRecipeView(WebDriverTestCase):
         self.assert_(r_server_link == r.logs[0].server + '/' + r.logs[0].filename)
 
     def test_task_pagination(self):
-        num_of_tasks = 35
-        the_tasks = [data_setup.create_task() for t in range(num_of_tasks)]
-        the_recipe = data_setup.create_recipe(task_list=the_tasks)
-        the_job = data_setup.create_job_for_recipes([the_recipe], owner=self.user)
-        session.flush()
+        with session.begin():
+            num_of_tasks = 35
+            the_tasks = [data_setup.create_task() for t in range(num_of_tasks)]
+            the_recipe = data_setup.create_recipe(task_list=the_tasks)
+            the_job = data_setup.create_job_for_recipes([the_recipe], owner=self.user)
 
         b = self.browser
         self.go_to_recipe_view(the_recipe)
@@ -173,14 +165,14 @@ class TestRecipeView(WebDriverTestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=751330
     def test_fetching_large_results_is_not_too_slow(self):
-        tasks = [data_setup.create_task() for _ in range(700)]
-        recipe = data_setup.create_recipe(task_list=tasks)
-        pass_ = TaskResult.by_name(u'Pass')
-        for rt in recipe.tasks:
-            rt.results = [RecipeTaskResult(path=u'result_%d' % i,
-                    result=pass_, score=i) for i in range(10)]
-        job = data_setup.create_job_for_recipes([recipe], owner=self.user)
-        session.flush()
+        raise SkipTest('"slowness" is too subjective')
+        with session.begin():
+            tasks = [data_setup.create_task() for _ in range(700)]
+            recipe = data_setup.create_recipe(task_list=tasks)
+            for rt in recipe.tasks:
+                rt.results = [RecipeTaskResult(path=u'result_%d' % i,
+                        result=TaskResult.pass_, score=i) for i in range(10)]
+            job = data_setup.create_job_for_recipes([recipe], owner=self.user)
 
         b = self.browser
         self.go_to_recipe_view(recipe)

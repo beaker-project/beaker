@@ -38,5 +38,8 @@ class BeakerVersionTagger(VersionTagger):
                 bz_number = m.group(1)
                 subject = '%s %s' % (bz_number, subject)
 
+            # Escape rpm macros
+            subject = subject.replace('%', '%%')
+
             changelog.append(subject)
         return '\n'.join(changelog)

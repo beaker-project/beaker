@@ -41,7 +41,7 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def register_file(self, server, task_id, path, name, basepath):
+    def register_file(self, server, task_id, path, filename, basepath):
         """
         register file and return path to store
         """
@@ -50,15 +50,19 @@ class RecipeTasks(RPCRoot):
         except InvalidRequestError:
             raise BX(_('Invalid task ID: %s' % task_id))
 
-       # Add the log to the DB if it hasn't been recorded yet.
-        if LogRecipeTask(path,name) not in recipetask.logs:
-            recipetask.recipe.log_server = urlparse.urlparse(server)[1]
-            recipetask.logs.append(LogRecipeTask(path, name, server, basepath))
+        # Add the log to the DB if it hasn't been recorded yet.
+        log_recipe = LogRecipeTask.lazy_create(parent=recipetask,
+                                               path=path, 
+                                               filename=filename,
+                                              )
+        log_recipe.server = server
+        log_recipe.basepath = basepath
+        recipetask.recipe.log_server = urlparse.urlparse(server)[1]
         return '%s' % recipetask.filepath
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def upload_file(self, task_id, path, name, size, md5sum, offset, data):
+    def upload_file(self, task_id, path, filename, size, md5sum, offset, data):
         """
         upload to task in pieces
         """
@@ -68,11 +72,13 @@ class RecipeTasks(RPCRoot):
             raise BX(_('Invalid task ID: %s' % task_id))
 
         # Add the log to the DB if it hasn't been recorded yet.
-        if LogRecipeTask(path,name) not in recipetask.logs:
-            recipetask.logs.append(LogRecipeTask(path, name))
+        LogRecipeTask.lazy_create(parent=recipetask,
+                                  path=path, 
+                                  filename=filename,
+                                 )
 
         return self.upload.uploadFile("%s/%s" % (recipetask.filepath,path),
-                                      name,
+                                      filename,
                                       size,
                                       md5sum,
                                       offset,
@@ -80,7 +86,7 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def register_result_file(self, server, result_id, path, name, basepath):
+    def register_result_file(self, server, result_id, path, filename, basepath):
         """
         register file and return path to store
         """
@@ -89,15 +95,18 @@ class RecipeTasks(RPCRoot):
         except InvalidRequestError:
             raise BX(_('Invalid result ID: %s' % result_id))
 
-       # Add the log to the DB if it hasn't been recorded yet.
-        if LogRecipeTaskResult(path,name) not in result.logs:
-            result.recipetask.recipe.log_server = urlparse.urlparse(server)[1]
-            result.logs.append(LogRecipeTaskResult(path, name, server, basepath))
+        log_recipe = LogRecipeTaskResult.lazy_create(parent=result,
+                                                     path=path, 
+                                                     filename=filename,
+                                                    )
+        log_recipe.server = server
+        log_recipe.basepath = basepath
+        result.recipetask.recipe.log_server = urlparse.urlparse(server)[1]
         return '%s' % result.filepath
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def result_upload_file(self, result_id, path, name, size, md5sum, offset, data):
+    def result_upload_file(self, result_id, path, filename, size, md5sum, offset, data):
         """
         upload to result in pieces
         """
@@ -107,11 +116,13 @@ class RecipeTasks(RPCRoot):
             raise BX(_('Invalid result ID: %s' % result_id))
 
         # Add the log to the DB if it hasn't been recorded yet.
-        if LogRecipeTaskResult(path,name) not in result.logs:
-            result.logs.append(LogRecipeTaskResult(path, name))
+        LogRecipeTaskResult.lazy_create(parent=result,
+                                        path=path, 
+                                        filename=filename,
+                                       )
 
         return self.upload.uploadFile("%s/%s" % (result.filepath,path),
-                                      name,
+                                      filename,
                                       size,
                                       md5sum,
                                       offset,

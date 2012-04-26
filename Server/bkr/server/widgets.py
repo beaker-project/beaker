@@ -5,7 +5,6 @@ import turbogears as tg
 from turbojson import jsonify
 from turbogears.widgets.rpc import RPC
 from sqlalchemy import distinct
-import model
 import re
 import random
 import search_utility
@@ -21,8 +20,9 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 RepeatingFieldSet, SelectionField, WidgetsList,
                                 PasswordField)
 
-from bkr.server import search_utility
+from bkr.server import model, search_utility
 from bkr.server.bexceptions import BeakerException
+from bkr.server.helpers import make_fake_link
 import logging
 log = logging.getLogger(__name__)
 
@@ -39,6 +39,18 @@ class Hostname(validators.Regex):
         # Hostnames are case-insensitive, so let's force it to lowercase here 
         # for consistency
         return super(Hostname, self)._to_python(value, state).lower()
+
+class ValidEnumValue(validators.FancyValidator):
+    def __init__(self, enum_type):
+        super(ValidEnumValue, self).__init__()
+        self.enum_type = enum_type
+    def _to_python(self, value, state):
+        try:
+            return self.enum_type.from_string(value)
+        except ValueError:
+            raise Invalid(self.message('invalid', state), value, state)
+    def _from_python(self, value, state):
+        return value.value
 
 class UtilJSON:
      @classmethod
@@ -85,6 +97,25 @@ jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js',
 
 local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime_v2.js')
 
+class GroupPermissions(Widget):
+
+    javascript = [LocalJSLink('bkr', '/static/javascript/group_permission.js'),
+        LocalJSLink('bkr', '/static/javascript/util.js'),
+        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
+    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')]
+    member_widgets = ['form', 'grid']
+    template = """
+        <div xmlns:py="http://purl.org/kid/ns#">
+            <script type='text/javascript'>
+                var permissions_form_id = "${form.name}"
+                 var permissions_grid_id = "${grid.name}"
+                 var group_id = "${value.group_id}"
+            </script>
+            ${grid.display(value.permissions)}
+            <p></p>
+            ${form.display(action='./save_group_permissions', value=value)}
+        </div>
+        """
 
 class PowerTypeForm(CompoundFormField):
     """Dynmaically modifies power arguments based on Power Type Selection"""
@@ -168,7 +199,7 @@ class ReserveSystem(TableForm):
 
 class ReserveWorkflow(Form): 
     javascript = [LocalJSLink('bkr', '/static/javascript/loader.js'),
-                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v5.js'),
+                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v6.js'),
                  ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
@@ -359,7 +390,7 @@ class myPaginateDataGrid(PaginateDataGrid):
 class LabControllerDataGrid(myPaginateDataGrid):
     javascript = [LocalJSLink('bkr','/static/javascript/lab_controller_remove.js'),
                   LocalJSLink('bkr', '/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
-    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
+    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')]
 
 class SingleSelectFieldJSON(SingleSelectField):
     params = ['for_column']
@@ -709,7 +740,7 @@ class PowerActionForm(Form):
     def update_params(self, d):
         super(PowerActionForm, self).update_params(d)
         if 'power' in d['value'] and 'lab_controller' in d['value']:
-            if d['value']['power']:
+            if d['value']['power'] and d['value']['lab_controller']:
                 d['enabled'] = True
 
     def display(self, value, *args, **kw):
@@ -753,10 +784,10 @@ class TaskSearchForm(RemoteForm):
               TextField(name='whiteboard', label=_(u'Recipe Whiteboard')),
               SingleSelectField(name='osmajor_id', label=_(u'Family'),validator=validators.Int(),
                                 options=model.OSMajor.get_all),
-              SingleSelectField(name='status_id', label=_(u'Status'),validator=validators.Int(),
-                                options=model.TaskStatus.get_all),
-              SingleSelectField(name='result_id', label=_(u'Result'),validator=validators.Int(),
-                                options=model.TaskResult.get_all),
+              SingleSelectField(name='status', label=_(u'Status'), validator=ValidEnumValue(model.TaskStatus),
+                                options=lambda: [(None, 'All')] + [(status, status.value) for status in model.TaskStatus]),
+              SingleSelectField(name='result', label=_(u'Result'), validator=ValidEnumValue(model.TaskResult),
+                                options=lambda: [(None, 'All')] + [(result, result.value) for result in model.TaskResult]),
              ]
     before = 'task_search_before()'
     on_complete = 'task_search_complete()'
@@ -808,7 +839,7 @@ class PowerForm(Form):
     template = "bkr.server.templates.system_power"
     member_widgets = ["id", "power", "power_type_id", "power_address", 
                       "power_user", "power_passwd", "power_id",
-                       "release_action_id", "reprovision_distro_id"]
+                       "release_action", "reprovision_distro_id"]
     params = []
     params_doc = {}
 
@@ -824,11 +855,11 @@ class PowerForm(Form):
         self.power_user = TextField(name='power_user', label=_(u'Power Login'))
         self.power_passwd = TextField(name='power_passwd', label=_(u'Power Password'))
         self.power_id = TextField(name='power_id', label=_(u'Power Port/Plug/etc'))
-        self.release_action_id = RadioButtonList(name='release_action_id',
-                                             label=_(u'Release Action'),
-                                           options=model.ReleaseAction.get_all,
-                                            default=1,
-                                             validator=validators.NotEmpty())
+        self.release_action = RadioButtonList(name='release_action',
+                label=_(u'Release Action'),
+                options=[(ra, unicode(ra)) for ra in model.ReleaseAction],
+                default=model.ReleaseAction.power_off,
+                validator=ValidEnumValue(model.ReleaseAction))
         self.reprovision_distro_id = SingleSelectField(name='reprovision_distro_id',
                                                 label=_(u'Reprovision Distro'),
                                                 options=[],
@@ -836,9 +867,6 @@ class PowerForm(Form):
 
     def update_params(self, d):
         super(PowerForm, self).update_params(d)
-        if 'release_action' in d['value']:
-            release_action = d['value']['release_action']
-            d['value']['release_action_id'] = release_action.id
         if 'reprovision_distro' in d['value']:
             reprovision_distro = d['value']['reprovision_distro']
             d['value']['reprovision_distro_id'] = reprovision_distro.id
@@ -1030,7 +1058,7 @@ class SystemGroups(Form):
     javascript = [LocalJSLink('bkr','/static/javascript/system_admin.js')]
     template = "bkr.server.templates.system_groups"
     member_widgets = ["id", "group"]
-    params = ['options', 'readonly', 'groups','can_admin']
+    params = ['options', 'readonly', 'group_assocs', 'can_admin']
     
     def __init__(self, *args, **kw):
         super(SystemGroups, self).__init__(*args, **kw)
@@ -1044,8 +1072,8 @@ class SystemGroups(Form):
         super(SystemGroups, self).update_params(d)
         if 'readonly' in d['options']:
             d['readonly'] = d['options']['readonly']
-        if 'groups' in d['options']:
-            d['groups'] = d['options']['groups']
+        if 'group_assocs' in d['options']:
+            d['group_assocs'] = d['options']['group_assocs']
         if 'system_id' in d['options']:
             d['system_id'] = d['options']['system_id']
         if 'can_admin' in d['options']:
@@ -1237,10 +1265,10 @@ class SystemForm(Form):
                          validator=Hostname(),
                          attrs={'maxlength':'255',
                                 'size':'60'}),
-               SingleSelectField(name='status_id',
+               SingleSelectField(name='status',
                                  label=_(u'Condition'),
-                                 options=model.SystemStatus.get_all_status,
-                                 validator=validators.NotEmpty()),
+                                 options=[(status, unicode(status)) for status in model.SystemStatus],
+                                 validator=ValidEnumValue(model.SystemStatus)),
                TextArea(name='status_reason', label=_(u'Condition Report'),attrs={'rows':3,'cols':27},validator=validators.MaxLength(255)),
                SingleSelectField(name='lab_controller_id',
                                  label=_(u'Lab Controller'),
@@ -1252,10 +1280,10 @@ class SystemForm(Form):
                TextField(name='date_modified', label=_(u'Last Modification')),
                TextField(name='date_lastcheckin', label=_(u'Last Checkin')),
                TextField(name='serial', label=_(u'Serial Number')),
-               SingleSelectField(name='type_id',
+               SingleSelectField(name='type',
                                  label=_(u'Type'),
-                                 options=model.SystemType.get_all_types,
-                                 validator=validators.NotEmpty()),
+                                 options=[(type, unicode(type)) for type in model.SystemType],
+                                 validator=ValidEnumValue(model.SystemType)),
                TextField(name='location', label=_(u'Location')),
                TextField(name='lender', label=_(u'Lender'),
                          help_text=_(u'Name of the organisation which has '
@@ -1290,6 +1318,16 @@ class SystemForm(Form):
 
     def update_params(self, d):
         super(SystemForm, self).update_params(d)
+        if d["options"].has_key("loan"):
+            d["loan"] = d["options"]["loan"]
+        if d["options"].has_key("report_problem"):
+            d["report_problem"] = d["options"]["report_problem"]
+        if d["options"].has_key("system_actions"):
+            d["system_actions"] = d["options"]["system_actions"]
+        else:
+            d['system_actions'] = None
+        if d["options"].has_key("system"):
+            d["system"] = d["options"]["system"]
         if d["options"].has_key("owner_change"):
             d["owner_change"] = d["options"]["owner_change"]
         if d["options"].has_key("user_change"):
@@ -1376,17 +1414,76 @@ class RecipeSetWidget(CompoundWidget):
         d['can_ack_nak'] = can_ack_nak
 
 
+class RecipeTaskActionWidget(RPC):
+    template = 'bkr.server.templates.action'
+    """
+    RecipeTaskActionWidget will display the appropriate actions for a task
+    """
+    def __init__(self, *args, **kw):
+        super(RecipeTaskActionWidget,self).__init__(*args, **kw)
+    
+    def display(self, task, *args, **params): 
+        params['task'] = task
+        return super(RecipeTaskActionWidget, self).display(*args, **params)
+
+
+class ReportProblemForm(RemoteForm):
+    template = 'bkr.server.templates.report_problem_form'
+    fields=[
+        TextArea(name='description', label='Description of problem',
+            validator=validators.NotEmpty())]
+    desc = 'Report Problem'
+    submit = Button(name='submit')
+    submit_text = 'Report'
+    member_widgets = ['submit']
+    params = ['system', 'recipe']
+    name = 'problem'
+    on_success = 'success(\'Your problem as been reported, Thankyou\')'
+    on_failure = 'failure(\'We were unable to report your problem at this time\')'
+ 
+    def update_params(self, d):
+        super(ReportProblemForm, self).update_params(d)
+        d['system'] = d['options']['system']
+        d['recipe'] = d['options'].get('recipe')
+        d['hidden_fields'] = []
+        d['hidden_fields'].append(HiddenField(name='system', attrs= {'value' : d['system'] }))
+        if d['recipe']:
+            d['hidden_fields'].append(HiddenField(name='recipe_id', attrs={'value' : d['recipe'].id}))
+        d['submit'].attrs.update({'onClick' :  "return ! system_action_remote_form_request('%s', %s, '%s');" % (
+            d['options']['name'], jsonify.encode(self.get_options(d)), d['action'])})
+
+
+class RecipeActionWidget(RecipeTaskActionWidget, CompoundWidget):
+    template = 'bkr.server.templates.recipe_action'
+    javascript = [LocalJSLink('bkr', '/static/javascript/util.js'), 
+        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
+    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')]
+    problem_form = ReportProblemForm()
+    params = ['report_problem_options', 'report_link']
+    member_widgets = ['problem_form']
+
+    def __init__(self, *args, **kw):
+        super(RecipeActionWidget, self).__init__(*args, **kw)
+
+    def display(self, task, **params):
+        if task.system:
+            params['report_link'] = make_fake_link(attrs={'onclick' : "show_field('report_problem_recipe','%s')" % self.problem_form.desc},
+                text='Report Problem with system')
+            params['report_problem_options'] = {'system' : task.system,
+                'recipe' : task, 'name' : 'report_problem_recipe',
+                'action' : '../system_action/report_system_problem'}
+        else:
+            params['report_link'] = None
+        return super(RecipeActionWidget,self).display(task, **params)
+
+
 class RecipeWidget(CompoundWidget):
     css = []
     template = "bkr.server.templates.recipe_widget"
     params = ['recipe']
     member_widgets = ['recipe_tasks_widget','action_widget']
+    action_widget = RecipeActionWidget()
     recipe_tasks_widget = RecipeTasksWidget()
-
-    def __init__(self, *args, **kw):
-        self.action_widget = RecipeActionWidget()
-        super(RecipeWidget,self).__init__(*args, **kw)
-    
 
 
 class ProductWidget(SingleSelectField, RPC):
@@ -1448,7 +1545,7 @@ class RetentionTagWidget(SingleSelectField, RPC): #FIXME perhaps I shoudl create
 
 
 class PriorityWidget(SingleSelectField):   
-   validator = validators.NotEmpty()
+   validator = ValidEnumValue(model.TaskPriority)
    params = ['default','controller'] 
    def __init__(self,*args,**kw): 
        self.options = [] 
@@ -1456,19 +1553,16 @@ class PriorityWidget(SingleSelectField):
 
    def display(self,obj,value=None,**params):           
        if 'priorities' in params: 
-           params['options'] =  params['priorities']       
+           params['options'] = [(pri, pri.value) for pri in params['priorities']]
        else:
-           params['options'] = [(elem.id,elem.priority) for elem in TaskPriority.query.all()]
+           params['options'] = [(pri, pri.value) for pri in model.TaskPriority]
        if isinstance(obj,model.Job):
            if 'id_prefix' in params:
                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) }
        elif obj:
            if 'id_prefix' in params:
                params['attrs'] = {'id' : '%s_%s' % (params['id_prefix'],obj.id) } 
-           try:
-               value = obj.priority.id 
-           except AttributeError,(e):
-               log.error('Object %s passed to display does not have a valid priority: %s' % (type(obj),e))
+           value = obj.priority
        return super(PriorityWidget,self).display(value or None,**params)
 
 class AlphaNavBar(Widget):
@@ -1479,24 +1573,25 @@ class AlphaNavBar(Widget):
         self.letters = letters 
         self.keyword = keyword
 
-class ReportProblemForm(Form):
-    template = 'bkr.server.templates.report_problem_form'
-    name = 'report_problem'
-    fields=[
-        TextArea(name='problem_description', label=_(u'Description of problem'),
-                validator=validators.NotEmpty())
-    ]
-    hidden_fields=[
-        HiddenField(name='system_id'),
-        HiddenField(name='recipe_id')
-    ]
-    submit_text = _(u'Report problem')
-    params = ['system', 'recipe']
+
+class RequestLoan(RemoteForm):
+    template = 'bkr.server.templates.request_loan'
+    fields = [TextArea(name='message', label='Loan Request',
+        validator=validators.NotEmpty()),]
+    member_widgets=['submit']
+    desc = 'Request Loan'
+    submit = Button(name='submit')
+    submit_text = 'Request'
+    on_success = 'success(\'Your loan request has been sent succesfully\')'
+    on_failure = 'failure(\'We were unable to send you loan request at this time\')';
 
     def update_params(self, d):
-        super(ReportProblemForm, self).update_params(d)
+        super(RequestLoan, self).update_params(d)
         d['system'] = d['options']['system']
-        d['recipe'] = d['options'].get('recipe')
+        d['hidden_fields'] = [HiddenField(name='system', attrs = {'value' : d['system']})]
+        d['submit'].attrs.update({'onClick' : "return ! system_action_remote_form_request('%s', %s, '%s');" % (
+            d['options']['name'], jsonify.encode(self.get_options(d)), d['action'])})
+
 
 class JobWhiteboard(RPC, CompoundWidget):
     """
@@ -1561,32 +1656,13 @@ class LoanWidget(Widget):
         return super(LoanWidget, self).display(*args, **params)
 
 
-
-class RecipeTaskActionWidget(RPC):
-    template = 'bkr.server.templates.action'
-    """
-    RecipeTaskActionWidget will display the appropriate actions for a task
-    """
-    def __init__(self, *args, **kw):
-        super(RecipeTaskActionWidget,self).__init__(*args, **kw)
-    
-    def display(self, task, *args, **params): 
-        params['task'] = task
-        return super(RecipeTaskActionWidget, self).display(*args, **params)
-
-class RecipeActionWidget(RecipeTaskActionWidget):
-    template = 'bkr.server.templates.recipe_action'
-    params = ['show_report']
-
-    def __init__(self, *args, **kw):
-        super(RecipeActionWidget, self).__init__(*args, **kw)
-
-    def display(self, task, **params):
-        if task.system:
-            params['show_report'] = task.system.report_problem_href(recipe_id=task.id)
-        else:
-            params['show_report'] = None
-        return super(RecipeActionWidget,self).display(task, **params)
+class SystemActions(CompoundWidget):
+    template = 'bkr.server.templates.system_actions'
+    problem  = ReportProblemForm(name='problem')
+    loan = RequestLoan(name='loan')
+    member_widgets = ['problem', 'loan']
+    params = ['report_problem_options', 'loan_options']
+    name = 'system_actions'
 
 
 class TaskActionWidget(RPC):

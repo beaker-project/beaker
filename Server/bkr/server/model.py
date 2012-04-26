@@ -11,11 +11,11 @@ from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         or_, and_, not_, select, case, func)
 
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
-        query, object_mapper, mapper
+        query, object_mapper, mapper, column_property
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
-from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.exceptions import InvalidRequestError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from identity import LdapSqlAlchemyIdentityProvider
 from cobbler_utils import consolidate, string_to_hash
@@ -27,8 +27,9 @@ from xmlrpclib import ProtocolError
 import time
 from kid import Element
 from bkr.server.bexceptions import BeakerException, BX, CobblerTaskFailedException
+from bkr.server.enum import DeclEnum
 from bkr.server.helpers import *
-from bkr.server.util import unicode_truncate
+from bkr.server.util import unicode_truncate, absolute_url
 from bkr.server import mail
 import traceback
 from BasicAuthTransport import BasicAuthTransport
@@ -54,6 +55,97 @@ from xml.dom.minidom import Node, parseString
 
 import logging
 log = logging.getLogger(__name__)
+
+class TaskStatus(DeclEnum):
+
+    symbols = [
+        ('new',       u'New',       dict(severity=10, finished=False, queued=True)),
+        ('processed', u'Processed', dict(severity=20, finished=False, queued=True)),
+        ('queued',    u'Queued',    dict(severity=30, finished=False, queued=True)),
+        ('scheduled', u'Scheduled', dict(severity=40, finished=False, queued=True)),
+        # RUNNING and WAITING are transient states.  It will never be final.
+        #  But having it the lowest Severity will show a job as 
+        #  Running until it finishes with either Completed, Cancelled or 
+        #  Aborted.
+        ('waiting',   u'Waiting',   dict(severity=7, finished=False, queued=False)),
+        ('running',   u'Running',   dict(severity=5, finished=False, queued=False)),
+        ('completed', u'Completed', dict(severity=50, finished=True, queued=False)),
+        ('cancelled', u'Cancelled', dict(severity=60, finished=True, queued=False)),
+        ('aborted',   u'Aborted',   dict(severity=70, finished=True, queued=False)),
+    ]
+
+    @classmethod
+    def max(cls):
+        return max(cls, key=lambda s: s.severity)
+
+class CommandStatus(DeclEnum):
+
+    symbols = [
+        ('queued',    u'Queued',    dict()),
+        ('running',   u'Running',   dict()),
+        ('completed', u'Completed', dict()),
+        ('failed',    u'Failed',    dict()),
+        ('aborted',   u'Aborted',   dict()),
+    ]
+
+class TaskResult(DeclEnum):
+
+    symbols = [
+        ('new',   u'New',   dict(severity=10)),
+        ('pass_', u'Pass',  dict(severity=20)),
+        ('warn',  u'Warn',  dict(severity=30)),
+        ('fail',  u'Fail',  dict(severity=40)),
+        ('panic', u'Panic', dict(severity=50)),
+    ]
+
+    @classmethod
+    def min(cls):
+        return min(cls, key=lambda r: r.severity)
+
+class TaskPriority(DeclEnum):
+
+    symbols = [
+        ('low',    u'Low',    dict()),
+        ('medium', u'Medium', dict()),
+        ('normal', u'Normal', dict()),
+        ('high',   u'High',   dict()),
+        ('urgent', u'Urgent', dict()),
+    ]
+
+    @classmethod
+    def default_priority(cls):
+        return cls.normal
+
+class SystemStatus(DeclEnum):
+
+    # Changing a system from a "bad" status to a "good" status will cause its 
+    # status_reason to be cleared, see 
+    # bkr.server.controller_utilities._SystemSaveFormHandler
+
+    symbols = [
+        ('automated', u'Automated', dict(bad=False)),
+        ('broken',    u'Broken',    dict(bad=True)),
+        ('manual',    u'Manual',    dict(bad=False)),
+        ('removed',   u'Removed',   dict(bad=True)),
+    ]
+
+class SystemType(DeclEnum):
+
+    symbols = [
+        ('laptop',    u'Laptop',    dict()),
+        ('machine',   u'Machine',   dict()),
+        ('prototype', u'Prototype', dict()),
+        ('resource',  u'Resource',  dict()),
+        ('virtual',   u'Virtual',   dict()),
+    ]
+
+class ReleaseAction(DeclEnum):
+
+    symbols = [
+        ('power_off',   u'PowerOff',    dict()),
+        ('leave_on',    u'LeaveOn',     dict()),
+        ('reprovision', u'ReProvision', dict()),
+    ]
 
 xmldoc = xml.dom.minidom.Document()
 
@@ -86,10 +178,8 @@ system_table = Table('system', metadata,
            ForeignKey('tg_user.user_id'), nullable=False),
     Column('user_id', Integer,
            ForeignKey('tg_user.user_id')),
-    Column('type_id', Integer,
-           ForeignKey('system_type.id'), nullable=False),
-    Column('status_id', Integer,
-           ForeignKey('system_status.id'), nullable=False),
+    Column('type', SystemType.db_type(), nullable=False),
+    Column('status', SystemStatus.db_type(), nullable=False),
     Column('status_reason',Unicode(255)),
     Column('shared', Boolean, default=False),
     Column('private', Boolean, default=False),
@@ -100,8 +190,7 @@ system_table = Table('system', metadata,
     Column('mac_address',String(18)),
     Column('loan_id', Integer,
            ForeignKey('tg_user.user_id')),
-    Column('release_action_id', Integer,
-           ForeignKey('release_action.id')),
+    Column('release_action', ReleaseAction.db_type()),
     Column('reprovision_distro_id', Integer,
            ForeignKey('distro.id')),
     Column('hypervisor_id', Integer,
@@ -123,27 +212,6 @@ system_device_map = Table('system_device_map', metadata,
     Column('device_id', Integer,
            ForeignKey('device.id'),
            primary_key=True),
-    mysql_engine='InnoDB',
-)
-
-system_type_table = Table('system_type', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('type', Unicode(100), nullable=False),
-    mysql_engine='InnoDB',
-)
-
-release_action_table = Table('release_action', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('action', Unicode(100), nullable=False),
-    mysql_engine='InnoDB',
-)
-
-system_status_table = Table('system_status', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('status', Unicode(100), nullable=False),
     mysql_engine='InnoDB',
 )
 
@@ -324,7 +392,7 @@ device_table = Table('device', metadata,
     Column('subsys_device_id',String(255)),
     Column('subsys_vendor_id',String(255)),
     Column('bus',String(255)),
-    Column('driver',String(255)),
+    Column('driver', String(255), index=True),
     Column('description',String(255)),
     Column('device_class_id', Integer,
            ForeignKey('device_class.id'), nullable=False),
@@ -332,6 +400,7 @@ device_table = Table('device', metadata,
            default=datetime.utcnow, nullable=False),
     mysql_engine='InnoDB',
 )
+Index('ix_device_pciid', device_table.c.vendor_id, device_table.c.device_id)
 
 locked_table = Table('locked', metadata,
     Column('id', Integer, autoincrement=True,
@@ -357,13 +426,6 @@ power_table = Table('power', metadata,
     Column('power_user', String(255)),
     Column('power_passwd', String(255)),
     Column('power_id', String(255)),
-    mysql_engine='InnoDB',
-)
-
-command_status_table = Table('command_status', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('status', Unicode(255), nullable=False),
     mysql_engine='InnoDB',
 )
 
@@ -541,14 +603,7 @@ system_group_table = Table('system_group', metadata,
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    mysql_engine='InnoDB',
-)
-
-system_admin_map_table = Table('system_admin_map', metadata, 
-    Column('system_id', Integer, ForeignKey('system.id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    Column('admin', Boolean, nullable=False, default=False),
     mysql_engine='InnoDB',
 )
 
@@ -647,8 +702,7 @@ command_queue_table = Table('command_queue', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id',
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('status_id', Integer,
-           ForeignKey('command_status.id'), nullable=False),
+    Column('status', CommandStatus.db_type(), nullable=False),
     Column('task_id', String(255)),
     Column('updated', DateTime, default=datetime.utcnow),
     Column('callback', String(255)),
@@ -698,26 +752,6 @@ key_value_int_table = Table('key_value_int', metadata,
     mysql_engine='InnoDB',
 )
 
-task_status_table = Table('task_status',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('status', Unicode(20)),
-        Column('severity', Integer),
-        mysql_engine='InnoDB',
-)
-
-task_result_table = Table('task_result',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('result', Unicode(20)),
-        Column('severity', Integer),
-        mysql_engine='InnoDB',
-)
-
-task_priority_table = Table('task_priority',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('priority', Unicode(20)),
-        mysql_engine='InnoDB',
-)
-
 job_table = Table('job',metadata,
         Column('id', Integer, primary_key=True),
         Column('owner_id', Integer,
@@ -725,10 +759,10 @@ job_table = Table('job',metadata,
         Column('whiteboard',Unicode(2000)),
         Column('retention_tag_id', Integer, ForeignKey('retention_tag.id'), nullable=False),
         Column('product_id', Integer, ForeignKey('product.id'),nullable=True),
-        Column('result_id', Integer,
-                ForeignKey('task_result.id')),
-        Column('status_id', Integer,
-                ForeignKey('task_status.id'), default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
+        Column('result', TaskResult.db_type(), nullable=False,
+                default=TaskResult.new),
+        Column('status', TaskStatus.db_type(), nullable=False,
+                default=TaskStatus.new),
         Column('deleted', DateTime, default=None, index=True),
         Column('to_delete', DateTime, default=None, index=True),
         # Total tasks
@@ -755,13 +789,13 @@ recipe_set_table = Table('recipe_set',metadata,
         Column('id', Integer, primary_key=True),
         Column('job_id', Integer,
                 ForeignKey('job.id'), nullable=False),
-        Column('priority_id', Integer,
-                ForeignKey('task_priority.id'), default=select([task_priority_table.c.id], limit=1).where(task_priority_table.c.priority==u'Normal').correlate(None)),
+        Column('priority', TaskPriority.db_type(), nullable=False,
+                default=TaskPriority.default_priority()),
         Column('queue_time',DateTime, nullable=False, default=datetime.utcnow),
-        Column('result_id', Integer,
-                ForeignKey('task_result.id')),
-        Column('status_id', Integer,
-                ForeignKey('task_status.id'), default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
+        Column('result', TaskResult.db_type(), nullable=False,
+                default=TaskResult.new),
+        Column('status', TaskStatus.db_type(), nullable=False,
+                default=TaskStatus.new),
         Column('lab_controller_id', Integer,
                 ForeignKey('lab_controller.id')),
         # Total tasks
@@ -779,8 +813,8 @@ recipe_set_table = Table('recipe_set',metadata,
 
 log_recipe_table = Table('log_recipe', metadata,
         Column('id', Integer, primary_key=True),
-        Column('recipe_id', Integer,
-                ForeignKey('recipe.id')),
+        Column('recipe_id', Integer, ForeignKey('recipe.id'),
+            nullable=False),
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
@@ -791,8 +825,8 @@ log_recipe_table = Table('log_recipe', metadata,
 
 log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('id', Integer, primary_key=True),
-        Column('recipe_task_id', Integer,
-                ForeignKey('recipe_task.id')),
+        Column('recipe_task_id', Integer, ForeignKey('recipe_task.id'),
+            nullable=False),
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
@@ -804,7 +838,7 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
 log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_task_result_id', Integer,
-                ForeignKey('recipe_task_result.id')),
+                ForeignKey('recipe_task_result.id'), nullable=False),
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
@@ -830,8 +864,7 @@ reservation_table = Table('reservation', metadata,
 system_status_duration_table = Table('system_status_duration', metadata,
         Column('id', Integer, primary_key=True),
         Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
-        Column('status_id', Integer, ForeignKey('system_status.id'),
-            nullable=False),
+        Column('status', SystemStatus.db_type(), nullable=False),
         Column('start_time', DateTime, index=True, nullable=False,
             default=datetime.utcnow),
         Column('finish_time', DateTime, index=True),
@@ -846,10 +879,10 @@ recipe_table = Table('recipe',metadata,
                 ForeignKey('distro.id')),
         Column('system_id', Integer,
                 ForeignKey('system.id')),
-        Column('result_id', Integer,
-                ForeignKey('task_result.id')),
-        Column('status_id', Integer,
-                ForeignKey('task_status.id'),default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
+        Column('result', TaskResult.db_type(), nullable=False,
+                default=TaskResult.new),
+        Column('status', TaskStatus.db_type(), nullable=False,
+                default=TaskStatus.new),
         Column('start_time',DateTime),
         Column('finish_time',DateTime),
         Column('_host_requires',UnicodeText()),
@@ -964,10 +997,10 @@ recipe_task_table =Table('recipe_task',metadata,
         Column('task_id', Integer, ForeignKey('task.id'), nullable=False),
         Column('start_time',DateTime),
         Column('finish_time',DateTime),
-        Column('result_id', Integer,
-                ForeignKey('task_result.id')),
-        Column('status_id', Integer,
-                ForeignKey('task_status.id'),default=select([task_status_table.c.id], limit=1).where(task_status_table.c.status==u'New').correlate(None)),
+        Column('result', TaskResult.db_type(), nullable=False,
+                default=TaskResult.new),
+        Column('status', TaskStatus.db_type(), nullable=False,
+                default=TaskStatus.new),
         Column('role', Unicode(255)),
         mysql_engine='InnoDB',
 )
@@ -1037,8 +1070,8 @@ recipe_task_result_table = Table('recipe_task_result',metadata,
         Column('recipe_task_id', Integer,
                 ForeignKey('recipe_task.id')),
         Column('path', Unicode(2048)),
-        Column('result_id', Integer,
-                ForeignKey('task_result.id')),
+        Column('result', TaskResult.db_type(), nullable=False,
+                default=TaskResult.new),
         Column('score', Numeric(10)),
         Column('log', UnicodeText()),
         Column('start_time',DateTime, default=datetime.utcnow),
@@ -1131,19 +1164,54 @@ task_type_map = Table('task_type_map',metadata,
     mysql_engine='InnoDB',
 )
 
+config_item_table = Table('config_item', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', Unicode(255), unique=True),
+    Column('description', Unicode(255)),
+    Column('numeric', Boolean, default=False),
+    Column('readonly', Boolean, default=False),
+    mysql_engine='InnoDB',
+)
+
+config_value_string_table = Table('config_value_string', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('config_item_id', Integer, ForeignKey('config_item.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    Column('modified', DateTime, default=datetime.utcnow),
+    Column('user_id', Integer, ForeignKey('tg_user.user_id'), nullable=False),
+    Column('valid_from', DateTime, default=datetime.utcnow),
+    Column('value', TEXT, nullable=True),
+    mysql_engine='InnoDB',
+)
+
+config_value_int_table = Table('config_value_int', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('config_item_id', Integer, ForeignKey('config_item.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    Column('modified', DateTime, default=datetime.utcnow),
+    Column('user_id', Integer, ForeignKey('tg_user.user_id'), nullable=False),
+    Column('valid_from', DateTime, default=datetime.utcnow),
+    Column('value', Integer, nullable=True),
+    mysql_engine='InnoDB',
+)
+
 class MappedObject(object):
 
     query = session.query_property()
 
     @classmethod
     def lazy_create(cls, **kwargs):
-        item = None
+        """
+        Returns the instance identified by the given uniquely-identifying 
+        attributes. If it doesn't exist yet, it is inserted first.
+        """
+        session.begin_nested()
         try:
-            item = cls.query.filter_by(**kwargs).one()
-        except NoResultFound:
             item = cls(**kwargs)
-            session.add(item)
-            session.flush([item])
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            item = cls.query.filter_by(**kwargs).one()
         return item
 
     def __init__(self, **kwargs):
@@ -1305,9 +1373,31 @@ class User(MappedObject):
             self.rootpw_changed = None
 
     def _get_root_password(self):
-        return self._root_password
+        if self._root_password:
+            return self._root_password
+        else:
+            pw = ConfigItem.by_name('root_password').current_value()
+            if pw:
+                salt = ''.join([random.choice(string.digits + string.ascii_letters)
+                                for i in range(8)])
+                return crypt.crypt(pw, "$1$%s$" % salt)
 
     root_password = property(_get_root_password, _set_root_password)
+
+    @property
+    def rootpw_expiry(self):
+        if not self._root_password:
+            return
+        validity = ConfigItem.by_name('root_password_validity').current_value()
+        if validity:
+            return self.rootpw_changed + timedelta(days=validity)
+
+    @property
+    def rootpw_expired(self):
+        if self.rootpw_expiry and self.rootpw_expiry < datetime.utcnow():
+            return True
+        else:
+            return False
 
     def __repr__(self):
         return self.user_name
@@ -1340,7 +1430,13 @@ class Permission(MappedObject):
     A relationship that determines what each Group can do
     """
     @classmethod
-    def by_name(cls, permission_name):
+    def by_id(cls, id):
+      return cls.query.filter_by(permission_id=id).one()
+
+    @classmethod
+    def by_name(cls, permission_name, anywhere=False):
+        if anywhere:
+            return cls.query.filter(cls.permission_name.like('%%%s%%' % permission_name)).all()
         return cls.query.filter(cls.permission_name == permission_name).one()
 
     def __init__(self, permission_name):
@@ -1429,24 +1525,6 @@ class Group(MappedObject):
     def by_id(cls, id):
         return cls.query.filter_by(group_id=id).one()
 
-    def can_admin_system(self,system_id=None,*args,**kw):
-        if system_id is None:
-            log.debug('can_admin_system called with no system_id')
-            return False
-        try:
-            user = identity.current.user
-        except AttributeError:
-            user = None
-        try:
-            system = System.by_id(system_id, user)
-        except NoResultFound:
-            log.debug('Unable to see system id %s' % system_id)
-            return False
-        if system in self.admin_systems:
-            return True
-        else:
-            return False
-
     def __repr__(self):
         return self.display_name
 
@@ -1470,6 +1548,9 @@ class Group(MappedObject):
         except Exception, e: 
             log.error(e)
             return
+
+    systems = association_proxy('system_assocs', 'system',
+            creator=lambda system: SystemGroup(system=system))
 
 class System(SystemObject):
 
@@ -1497,7 +1578,7 @@ class System(SystemObject):
         """ Return xml describing this system """
         fields = dict(
                       hostname    = 'fqdn',
-                      system_type = ['type','type'],
+                      system_type = 'type',
                      )
                       
         host_requires = xmldoc.createElement('hostRequires')
@@ -1505,13 +1586,8 @@ class System(SystemObject):
         for key in fields.keys():
             require = xmldoc.createElement(key)
             require.setAttribute('op', '=')
-            if isinstance(fields[key], list):
-                obj = self
-                for field in fields[key]:
-                    obj = getattr(obj, field, None)
-                require.setAttribute('value', obj or '')
-            else:
-                require.setAttribute('value', getattr(self, fields[key], None) or '')
+            value = getattr(self, fields[key], None) or u''
+            require.setAttribute('value', unicode(value))
             xmland.appendChild(require)
         host_requires.appendChild(xmland)
         return host_requires
@@ -1754,15 +1830,8 @@ url --url=$tree
         
         """
         if system is None:
-            query = cls.query.outerjoin(['groups','users'], aliased=True)
-        else:
-            try: 
-                query = system.outerjoin(['groups','users'], aliased=True)
-            except AttributeError, (e):
-                log.error('A non Query object has been passed into the all method, using default query instead: %s' % e)        
-                query = cls.query.outerjoin(['groups','users'], aliased=True)
-
-        return cls.permissable_systems(query,user)
+            system = cls.query
+        return cls.permissable_systems(query=system, user=user)
 
     @classmethod
     def permissable_systems(cls, query, user=None, *arg, **kw):
@@ -1777,10 +1846,9 @@ url --url=$tree
             if not user.is_admin():
                 query = query.filter(
                             or_(System.private==False,
-                              and_(System.private==True,
-                                   or_(User.user_id==user.user_id,
-                                       System.owner==user,
-                                        System.user==user))))
+                                System.groups.any(Group.users.contains(user)),
+                                System.owner == user,
+                                System.user == user))
         else:
             query = query.filter(System.private==False)
          
@@ -1799,7 +1867,7 @@ url --url=$tree
         """ 
         Will return systems that are available to user for scheduling
         """
-        return cls._available(user, systems=systems, system_status=SystemStatus.by_name(u'Automated'))
+        return cls._available(user, systems=systems, system_status=SystemStatus.automated)
 
     @classmethod
     def _available(self, user, system_status=None, systems=None):
@@ -1809,21 +1877,21 @@ url --url=$tree
         """
 
         query = System.all(user, system=systems)
-        if type(system_status) is list:
+        if system_status is None:
+            query = query.filter(or_(System.status==SystemStatus.automated,
+                    System.status==SystemStatus.manual))
+        elif isinstance(system_status, list):
             query = query.filter(or_(*[System.status==k for k in system_status]))
-        elif type(system_status) is SystemStatus:
+        else:
             query = query.filter(System.status==system_status)
-        else: #Possibly we are none or somthing else...
-            query = query.filter(or_(System.status==SystemStatus.by_name(u'Automated'),
-                    System.status==SystemStatus.by_name(u'Manual')))
- 
+
         query = query.filter(or_(and_(System.owner==user), 
                                 System.loaned == user,
                                 and_(System.shared==True, 
-                                     System.groups==None,
+                                     System.group_assocs==None,
                                     ),
                                 and_(System.shared==True,
-                                     User.user_id==user.user_id
+                                     System.groups.any(Group.users.contains(user)),
                                     )
                                 )
                             )
@@ -1840,7 +1908,7 @@ url --url=$tree
     @classmethod
     def available_order(cls, user, systems=None):
         return cls.available_for_schedule(user,systems=systems).order_by(case([(System.owner==user, 1),
-                          (and_(System.owner!=user, Group.systems==None), 2)],
+                          (and_(System.owner!=user, System.group_assocs != None), 2)],
                               else_=3))
 
     @classmethod
@@ -1885,7 +1953,7 @@ url --url=$tree
                 query = System.all(user)
             else:
                 query = System.all()
-        return query.filter(System.type.has(SystemType.type == type))
+        return query.filter(System.type == type)
 
     @classmethod
     def by_arch(cls,arch,query=None):
@@ -1971,10 +2039,8 @@ url --url=$tree
 
         user_groups = user.groups
         if user_groups:
-            admins = self.query.filter(System.admins.any(
-                and_(Group.group_id.in_([g.group_id for g in user_groups]),
-                System.id == self.id )))
-            if admins.count():
+            if any(ga.admin and ga.group in user_groups
+                    for ga in self.group_assocs):
                 return True
 
         return False
@@ -1986,13 +2052,15 @@ url --url=$tree
         return False
 
     def can_provision_now(self,user=None):
-        if user is not None and self.loaned == user:
+        if user is None:
+            return False
+        elif self.loaned == user:
             return True
-        elif user is not None and self._user_in_systemgroup(user):
+        elif self._user_in_systemgroup(user):
             return True
         elif user is None:
             return False
-        if self.status==SystemStatus.by_name('Manual'): #If it's manual then we us our original perm system.
+        if self.status==SystemStatus.manual: #If it's manual then we us our original perm system.
             return self._has_regular_perms(user)
         return False
 
@@ -2221,25 +2289,15 @@ url --url=$tree
     def updateDevices(self, deviceinfo):
         currentDevices = []
         for device in deviceinfo:
-            try:
-                mydevice = Device.query.filter_by(vendor_id = device['vendorID'],
+            device_class = DeviceClass.lazy_create(device_class=device['type'])
+            mydevice = Device.lazy_create(vendor_id = device['vendorID'],
                                    device_id = device['deviceID'],
                                    subsys_vendor_id = device['subsysVendorID'],
                                    subsys_device_id = device['subsysDeviceID'],
                                    bus = device['bus'],
                                    driver = device['driver'],
-                                   description = device['description']).one()
-            except InvalidRequestError:
-                mydevice = Device(vendor_id       = device['vendorID'],
-                                     device_id       = device['deviceID'],
-                                     subsys_vendor_id = device['subsysVendorID'],
-                                     subsys_device_id = device['subsysDeviceID'],
-                                     bus            = device['bus'],
-                                     driver         = device['driver'],
-                                     device_class   = device['type'],
-                                     description    = device['description'])
-                session.add(mydevice)
-                session.flush([mydevice])
+                                   device_class_id = device_class.id,
+                                   description = device['description'])
             if mydevice not in self.devices:
                 self.devices.append(mydevice)
                 self.activity.append(SystemActivity(
@@ -2342,7 +2400,7 @@ url --url=$tree
                     )
                   )
         )
-        if self.type.type != 'Virtual':
+        if self.type != SystemType.virtual:
             distros = distros.filter(distro_table.c.virt==False)
         return distros
 
@@ -2350,7 +2408,15 @@ url --url=$tree
         # Attempt to remove Netboot entry and turn off machine
         if self.remote and self.release_action:
             self.remote.release(power=False)
-            self.release_action.do(self)
+            if self.release_action == ReleaseAction.power_off:
+                self.action_power(action=u'off')
+            elif action == ReleaseAction.leave_on:
+                self.action_power(action=u'on')
+            elif action == ReleaseAction.reprovision:
+                if self.reprovision_distro:
+                    self.action_auto_provision(distro=self.reprovision_distro)
+            else:
+                raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
         elif self.remote:
             self.remote.release()
 
@@ -2366,6 +2432,9 @@ url --url=$tree
                 return False
         except AttributeError, e: #Anonymous can't provision now
             return False
+
+        if identity.current.user.rootpw_expired:
+            raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
 
         if identity.current.user.sshpubkeys:
             end = distro and (distro.osversion.osmajor.osmajor.startswith("Fedora") or \
@@ -2458,7 +2527,7 @@ $SNIPPET("rhts_post")
             user = None
 
         if self.lab_controller and self.power:
-            status = CommandStatus.by_name(u'Queued')
+            status = CommandStatus.queued
             activity = CommandActivity(user, service, action, status, callback)
             self.command_queue.append(activity)
         else:
@@ -2492,14 +2561,14 @@ $SNIPPET("rhts_post")
         log.warning('Marking system %s as broken' % self.fqdn)
         sa = SystemActivity(user, service, u'Changed', u'Status', unicode(self.status), u'Broken')
         self.activity.append(sa)
-        self.status = SystemStatus.by_name(u'Broken')
+        self.status = SystemStatus.broken
         self.date_modified = datetime.utcnow()
         mail.broken_system_notify(self, reason, recipe)
 
     def suspicious_abort(self):
-        if self.status == SystemStatus.by_name(u'Broken'):
+        if self.status == SystemStatus.broken:
             return # nothing to do
-        if self.type != SystemType.by_name(u'Machine'):
+        if self.type != SystemType.machine:
             return # prototypes get more leeway, and virtual machines can't really "break"...
         reliable_distro_tag = get('beaker.reliable_distro_tag', None)
         if not reliable_distro_tag:
@@ -2516,7 +2585,7 @@ $SNIPPET("rhts_post")
             .subquery()
         nonaborted_recipe_subquery = session.query(func.max(Recipe.finish_time))\
             .filter(and_(
-                Recipe.status != TaskStatus.by_name(u'Aborted'),
+                Recipe.status != TaskStatus.aborted,
                 Recipe.system == self))\
             .subquery()
         count = self.dyn_recipes.join(Recipe.distro)\
@@ -2606,6 +2675,9 @@ $SNIPPET("rhts_post")
 
     cc = association_proxy('_system_ccs', 'email_address')
 
+    groups = association_proxy('group_assocs', 'group',
+            creator=lambda group: SystemGroup(group=group))
+
 class SystemStatusAttributeExtension(AttributeExtension):
 
     def set(self, state, child, oldchild, initiator):
@@ -2629,6 +2701,10 @@ class SystemCc(SystemObject):
         super(SystemCc, self).__init__()
         self.email_address = email_address
 
+class SystemGroup(MappedObject):
+
+    pass
+
 class Hypervisor(SystemObject):
 
     def __repr__(self):
@@ -2646,117 +2722,8 @@ class Hypervisor(SystemObject):
         return [h.hypervisor for h in cls.query]
 
     @classmethod
-    @sqla_cache
     def by_name(cls, hvisor):
         return cls.query.filter_by(hypervisor=hvisor).one()
-
-class SystemType(SystemObject):
-
-    def __init__(self, type=None):
-        super(SystemType, self).__init__()
-        self.type = type
-
-    def __repr__(self):
-        return self.type
-
-    @classmethod
-    def get_all_types(cls):
-        """
-        Desktop, Server, Virtual
-        """
-        all_types = cls.query
-        return [(type.id, type.type) for type in all_types]
-    @classmethod
-    def get_all_type_names(cls):
-        all_types = cls.query
-        return [type.type for type in all_types]
-
-    @classmethod
-    @sqla_cache
-    def by_name(cls, systemtype):
-        return cls.query.filter_by(type=systemtype).one()
-
-
-class ReleaseAction(SystemObject):
-
-    def __init__(self, action=None):
-        super(ReleaseAction, self).__init__()
-        self.action = action
-
-    def __repr__(self):
-        return self.action
-
-    @classmethod
-    def get_all(cls):
-        """
-        PowerOff, LeaveOn or ReProvision
-        """
-        all_actions = cls.query
-        return [(raction.id, raction.action) for raction in all_actions]
-
-    @classmethod
-    def by_id(cls, id):
-        """ 
-        Look up ReleaseAction by id.
-        """
-        return cls.query.filter_by(id=id).one()
-
-    def do(self, *args, **kwargs):
-        try:
-            getattr(self, self.action)(*args, **kwargs)
-        except Exception ,msg:
-            raise BX(_('%s' % msg))
-
-    def PowerOff(self, system):
-        """ Turn off system
-        """
-        system.action_power(action='off')
-
-    def LeaveOn(self, system):
-        """ Leave system running
-        """
-        system.action_power(action='on')
-
-    def ReProvision(self, system):
-        """ re-provision the system 
-        """
-        if system.reprovision_distro:
-            system.action_auto_provision(distro=system.reprovision_distro)
-
-
-class SystemStatus(SystemObject):
-
-    def __init__(self, status=None):
-        super(SystemStatus, self).__init__()
-        self.status = status
-
-    def __repr__(self):
-        return self.status
-
-    @classmethod
-    def get_all_status(cls):
-        """
-        Available, InUse, Offline
-        """
-        all_status = cls.query
-        return [(status.id, status.status) for status in all_status]
-
-    @classmethod
-    def get_all_status_name(cls):
-       all_status_name = cls.query
-       return [status_name.status for status_name in all_status_name]      
-
-
-    @classmethod
-    @sqla_cache
-    def by_name(cls, systemstatus):
-        return cls.query.filter_by(status=systemstatus).one()
- 
-    @classmethod
-    @sqla_cache
-    def by_id(cls,status_id):
-        return cls.query.filter_by(id=status_id).one()
-
 
 
 class Arch(MappedObject):
@@ -3044,24 +3011,7 @@ class DeviceClass(SystemObject):
 
 
 class Device(SystemObject):
-    def __init__(self, vendor_id=None, device_id=None, subsys_device_id=None, subsys_vendor_id=None, bus=None, driver=None, device_class=None, description=None):
-        super(Device, self).__init__()
-        if not device_class:
-            device_class = "NONE"
-        try:
-            dc = DeviceClass.query.filter_by(device_class = device_class).one()
-        except InvalidRequestError:
-            dc = DeviceClass(device_class = device_class)
-            session.add(dc)
-            session.flush([dc])
-        self.vendor_id = vendor_id
-        self.device_id = device_id
-        self.subsys_vendor_id = subsys_vendor_id
-        self.subsys_device_id = subsys_device_id
-        self.bus = bus
-        self.driver = driver
-        self.description = description
-        self.device_class = dc
+    pass
 
 
 class Locked(MappedObject):
@@ -3102,21 +3052,6 @@ class PowerType(MappedObject):
 
 class Power(SystemObject):
     pass
-
-
-class CommandStatus(MappedObject):
-
-    def __init__(self, status=None):
-        super(CommandStatus, self).__init__()
-        self.status = status
-
-    def __repr__(self):
-        return self.status
-
-    @classmethod
-    @sqla_cache
-    def by_name(cls, name):
-        return cls.query.filter_by(status=name).one()
 
 
 class Serial(MappedObject):
@@ -3279,7 +3214,7 @@ class Distro(MappedObject):
         elif not systems:
             systems = System.query
         
-        return systems.join(join).filter(and_(
+        return systems.join(*join).filter(and_(
                 System.arch.contains(self.arch),
                 not_(System.excluded_osmajor.any(and_(
                         ExcludeOSMajor.osmajor == self.osversion.osmajor,
@@ -3396,8 +3331,8 @@ class CommandActivity(Activity):
 
     def log_to_system_history(self):
         sa = SystemActivity(self.user, self.service, self.action, u'Power', u'',
-                            self.new_value and self.status.status + ": " + self.new_value \
-                            or self.status.status)
+                            self.new_value and u'%s: %s' % (self.status, self.new_value) \
+                            or u'%s' % self.status)
         self.system.activity.append(sa)
 
 # note model
@@ -3413,10 +3348,22 @@ class Note(MappedObject):
 
 
 class Key(SystemObject):
+
+    # Obsoleted keys are ones which have been replaced by real, structured 
+    # columns on the system table (and its related tables). We disallow users 
+    # from searching on these keys in the web UI, to encourage them to migrate 
+    # to the structured columns instead (and to avoid the costly queries that 
+    # sometimes result).
+    obsoleted_keys = [u'MODULE', u'PCIID']
+
     @classmethod
     def get_all_keys(cls):
-       all_keys = cls.query
-       return [key.key_name for key in all_keys]
+        """
+        This method's name is deceptive, it actually excludes "obsoleted" keys.
+        """
+        all_keys = cls.query
+        return [key.key_name for key in all_keys
+                if key.key_name not in cls.obsoleted_keys]
 
     @classmethod
     def by_name(cls, key_name):
@@ -3489,89 +3436,30 @@ class Key_Value_Int(MappedObject):
                                   Key_Value_Int.system==system)).one()
 
 
-
-class TaskPriority(MappedObject):
-
-    @classmethod
-    def default_priority(cls):
-        return cls.query.filter_by(id=3).one()
-
-    @classmethod
-    def by_id(cls,id):
-      return cls.query.filter_by(id=id).one()
-
-class TaskStatus(MappedObject):
-
-    @classmethod
-    @sqla_cache
-    def max(cls):
-        return cls.query.order_by(TaskStatus.severity.desc()).first()
-
-    @classmethod
-    @sqla_cache
-    def by_name(cls, status_name):
-        return cls.query.filter_by(status=status_name).one()
-
-    @classmethod
-    def get_all(cls):
-        return [(0,"All")] + [(status.id, status.status) for status in cls.query]
-
-    @classmethod
-    def get_all_status(cls):
-        all = cls.query
-        return [elem.status for elem in all]
-
-    def __cmp__(self, other):
-        if hasattr(other,'severity'):
-            other = other.severity
-        if self.severity < other:
-            return -1
-        if self.severity == other:
-            return 0
-        if self.severity > other:
-            return 1
-
-    def __repr__(self):
-        return "%s" % (self.status)
-
-
-class TaskResult(MappedObject):
-    @classmethod
-    @sqla_cache
-    def by_name(cls, result_name):
-        return cls.query.filter_by(result=result_name).one()
-
-    @classmethod
-    def get_results(cls):
-        return [(result.id,result.result) for result in cls.query]
-
-    @classmethod
-    def get_all(cls):
-        return [(0,"All")] + [(result.id, result.result) for result in cls.query]
-
-    @classmethod
-    def get_all_results(cls):
-        return [elem.result for elem in cls.query]
-
-    def __cmp__(self, other):
-        if hasattr(other,'severity'):
-            other = other.severity
-        if self.severity < other:
-            return -1
-        if self.severity == other:
-            return 0
-        if self.severity > other:
-            return 1
-
-    def __repr__(self):
-        return "%s" % (self.result)
-
 class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
-    def __init__(self, path=None, filename=None, server=None, basepath=None):
+    @classmethod
+    def lazy_create(cls, **kwargs):
+        """
+        Unlike the "real" lazy_create above, we can't rely on unique
+        constraints here because 'path' and 'filename' are TEXT columns and
+        MySQL can't index those. :-(
+
+        So we just use a query-then-insert approach. There is a race window
+        between querying and inserting, but it's about the best we can do.
+        """
+        item = cls.query.filter_by(**kwargs).first()
+        if item is None:
+            item = cls(**kwargs)
+            session.flush()
+        return item
+
+    def __init__(self, path=None, filename=None,
+                 server=None, basepath=None, parent=None):
         super(Log, self).__init__()
+        self.parent = parent
         self.path = path
         self.filename = filename
         self.server = server
@@ -3628,6 +3516,7 @@ class Log(MappedObject):
                     tid      = '%s:%s' % (self.type, self.id),
                     filepath = self.parent.filepath,
                     basepath = self.basepath,
+                    url      = urlparse.urljoin(absolute_url('/'), self.log_url()),
                    )
 
     @classmethod 
@@ -3706,32 +3595,21 @@ class TaskBase(MappedObject):
         """
         Simply state if the task is finished or not
         """
-        if self.status in [TaskStatus.by_name(u'Completed'),
-                           TaskStatus.by_name(u'Cancelled'),
-                           TaskStatus.by_name(u'Aborted')]:
-            return True
-        else:
-            return False
+        return self.status.finished
 
     def is_queued(self):
         """
         State if the task is queued
         """ 
-        if self.status in [TaskStatus.by_name(u'New'),
-                           TaskStatus.by_name(u'Processed'),
-                           TaskStatus.by_name(u'Queued'),
-                           TaskStatus.by_name(u'Scheduled')]:
-            return True
-        else:
-            return False 
+        return self.status.queued
 
     def is_failed(self):
         """ 
         Return True if the task has failed
         """
-        if self.result in [TaskResult.by_name(u'Warn'),
-                           TaskResult.by_name(u'Fail'),
-                           TaskResult.by_name(u'Panic')]:
+        if self.result in [TaskResult.warn,
+                           TaskResult.fail,
+                           TaskResult.panic]:
             return True
         else:
             return False
@@ -3833,7 +3711,7 @@ class Job(TaskBase):
         if not query:
             query = cls.query
         query = query.join(cls.recipesets, RecipeSet.recipes).filter(and_(Recipe.finish_time < datetime.utcnow() - delta,
-            cls.status_id.in_([TaskStatus.by_name(u'Completed').id,TaskStatus.by_name(u'Aborted').id,TaskStatus.by_name(u'Cancelled').id])))
+            cls.status.in_([status for status in TaskStatus if status.finished])))
         return query
 
     @classmethod
@@ -3953,6 +3831,9 @@ class Job(TaskBase):
             job.whiteboard = kw.get('whiteboard') 
         if not isinstance(distro_id,list):
             distro_id = [distro_id]
+
+        if job.owner.rootpw_expired:
+            raise BX(_(u"Your root password has expired, please change or clear it in order to submit jobs."))
 
         for id in distro_id: 
             try:
@@ -4074,10 +3955,24 @@ class Job(TaskBase):
                     valid_jobs.append(j)
             return valid_jobs
         elif query:
-            query = query.filter(cls.status_id.in_([TaskStatus.by_name('Completed').id, TaskStatus.by_name('Aborted').id, TaskStatus.by_name('Cancelled').id]))
+            query = query.filter(cls.status.in_([status for status in TaskStatus if status.finished]))
             query = query.filter(and_(Job.to_delete == None, Job.deleted == None))
             query = query.filter(Job.owner==identity.current.user)
             return query
+
+    def delete(self):
+        """Deletes entries relating to a Job and it's children
+
+            currently only removes log entries of a job and child tasks and marks
+            the job as deleted.
+            It does not delete other mapped relations or the job row itself.
+            it does not remove log FS entries
+
+
+        """
+        for rs in self.recipesets:
+            rs.delete()
+        self.deleted = datetime.utcnow()
 
     def counts_as_deleted(self):
         return self.deleted or self.to_delete
@@ -4128,10 +4023,9 @@ class Job(TaskBase):
         title.text = "Set all RecipeSet priorities"        
         content = Element('td')
         content.attrib['colspan'] = colspan
-        priorities = TaskPriority.query.all()
-        for p in priorities:
+        for p in TaskPriority:
             id = '%s%s' % (prefix, self.id)
-            a_href = make_fake_link(unicode(p.id), id, p.priority)
+            a_href = make_fake_link(p.value, id, p.value)
             content.append(a_href)
         
         span.append(title)
@@ -4202,7 +4096,7 @@ class Job(TaskBase):
                     id              = "J:%s" % self.id,
                     worker          = None,
                     state_label     = "%s" % self.status,
-                    state           = self.status.id,
+                    state           = self.status.value,
                     method          = "%s" % self.whiteboard,
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
@@ -4243,16 +4137,16 @@ class Job(TaskBase):
         self.wtasks = 0
         self.ftasks = 0
         self.ktasks = 0
-        max_result = None
+        max_result = TaskResult.min()
         min_status = TaskStatus.max()
         for recipeset in self.recipesets:
             self.ptasks += recipeset.ptasks
             self.wtasks += recipeset.wtasks
             self.ftasks += recipeset.ftasks
             self.ktasks += recipeset.ktasks
-            if recipeset.status < min_status:
+            if recipeset.status.severity < min_status.severity:
                 min_status = recipeset.status
-            if recipeset.result > max_result:
+            if recipeset.result.severity > max_result.severity:
                 max_result = recipeset.result
         self._change_status(min_status)
         self.result = max_result
@@ -4459,7 +4353,7 @@ class RecipeSet(TaskBase):
 
     def to_xml(self, clone=False, from_job=True, *args, **kw):
         recipeSet = xmldoc.createElement("recipeSet")
-        recipeSet.setAttribute('priority', self.priority.priority)
+        recipeSet.setAttribute('priority', unicode(self.priority))
         return_node = recipeSet 
 
         if not clone:
@@ -4479,20 +4373,19 @@ class RecipeSet(TaskBase):
             return_node = job
         return return_node
 
+    def delete(self):
+        for r in self.recipes:
+            r.delete()
+
     @classmethod
     def allowed_priorities_initial(cls,user):
         if not user:
             return
         if user.in_group(['admin','queue_admin']):
-            return TaskPriority.query.all()
-        default_id = TaskPriority.default_priority().id
-        return TaskPriority.query.filter(TaskPriority.id < default_id)
-        
-    @classmethod
-    def by_status(cls, status, query=None):
-        if not query:
-            query=cls.query
-        return query.join('status').filter(TaskStatus.status==status)
+            return [pri for pri in TaskPriority]
+        default = TaskPriority.default_priority()
+        return [pri for pri in TaskPriority
+                if TaskPriority.index(pri) < TaskPriority.index(default)]
 
     @classmethod
     def by_tag(cls, tag, query=None):
@@ -4521,20 +4414,6 @@ class RecipeSet(TaskBase):
             queri = RecipeSet.query.outerjoin(['job']).filter(Job.id == job_id)
             return queri
         except: raise 
-     
-    @classmethod
-    def iter_recipeSets(self, status=u'Assigned'):
-        self.recipeSets = []
-        while True:
-            recipeSet = RecipeSet.by_status(status).join('priority')\
-                            .order_by(priority.c.priority)\
-                            .filter(not_(RecipeSet.id.in_(self.recipeSets)))\
-                            .first()
-            if recipeSet:
-                self.recipeSets.append(recipeSet.id)
-            else:
-                return
-            yield recipeSet
 
     def cancel(self, msg=None):
         """
@@ -4547,7 +4426,7 @@ class RecipeSet(TaskBase):
         """
         Method to cancel all recipes in this recipe set.
         """ 
-        self._change_status(TaskStatus.by_name(u'Cancelled'))
+        self._change_status(TaskStatus.cancelled)
         for recipe in self.recipes:
             recipe._cancel(msg)
 
@@ -4562,7 +4441,7 @@ class RecipeSet(TaskBase):
         """
         Method to abort all recipes in this recipe set.
         """
-        self._change_status(TaskStatus.by_name(u'Aborted'))
+        self._change_status(TaskStatus.aborted)
         for recipe in self.recipes:
             recipe._abort(msg)
 
@@ -4599,16 +4478,16 @@ class RecipeSet(TaskBase):
         self.wtasks = 0
         self.ftasks = 0
         self.ktasks = 0
-        max_result = None
+        max_result = TaskResult.min()
         min_status = TaskStatus.max()
         for recipe in self.recipes:
             self.ptasks += recipe.ptasks
             self.wtasks += recipe.wtasks
             self.ftasks += recipe.ftasks
             self.ktasks += recipe.ktasks
-            if recipe.status < min_status:
+            if recipe.status.severity < min_status.severity:
                 min_status = recipe.status
-            if recipe.result > max_result:
+            if recipe.result.severity > max_result.severity:
                 max_result = recipe.result
         self._change_status(min_status)
         self.result = max_result
@@ -4649,7 +4528,7 @@ class RecipeSet(TaskBase):
                     id              = "RS:%s" % self.id,
                     worker          = None,
                     state_label     = "%s" % self.status,
-                    state           = self.status.id,
+                    state           = self.status.value,
                     method          = None,
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
@@ -4665,10 +4544,10 @@ class RecipeSet(TaskBase):
         if not user:
             return [] 
         if user.in_group(['admin','queue_admin']):
-            return TaskPriority.query.all()
+            return [pri for pri in TaskPriority]
         elif user == self.job.owner: 
-            return TaskPriority.query.filter(TaskPriority.id <= self.priority.id)
-            
+            return [pri for pri in TaskPriority
+                    if TaskPriority.index(pri) <= TaskPriority.index(self.priority)]
 
     def cancel_link(self):
         """ return link to cancel this recipe
@@ -4747,37 +4626,13 @@ class Recipe(TaskBase):
                 logs_to_return.extend(rt_log)
         return logs_to_return
 
-    def delete(self, dryrun, *args, **kw):
+    def delete(self):
         """
         How we delete a Recipe.
         """
-        full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
-        if dryrun is True:
-            if not (os.access(full_recipe_logpath,os.R_OK)): #See if it exists
-                return None
-            elif not (os.access(full_recipe_logpath,os.W_OK)): #See if we can write it
-                raise BX(_(u'Incorrect perms to delete %s:' % full_recipe_logpath))
-            else:
-                return full_recipe_logpath #success
-        else:
-            try:
-                shutil.rmtree(full_recipe_logpath)
-                return_val = full_recipe_logpath
-            except OSError, e:
-                if e.errno == errno.ENOENT: #File/Dir does not exist
-                    pass #Maybe the logs don't exist?? Carry on...
-                    return_val = None
-                elif e.errno == errno.EACCES: #Incorrect perms
-                    raise BX(_(u'Incorrect perms to delete %s:' % full_recipe_logpath))
-                else:
-                    raise BX(_(u'Received unexpected error: %s' % e.errstr))
-
-            self.logs = []
-
-            for task in self.tasks:
-                task_to_delete = RecipeTask.by_id(task.id)
-                task_to_delete.delete()
-            return return_val
+        self.logs = []
+        for task in self.tasks:
+            task.delete()
 
     def task_repo(self):
         if self.distro:
@@ -4971,8 +4826,8 @@ class Recipe(TaskBase):
         """
         if session.connection(Recipe).execute(recipe_table.update(
           and_(recipe_table.c.id==self.id,
-               recipe_table.c.status_id==TaskStatus.by_name(u'Processed').id)),
-          status_id=TaskStatus.by_name(u'Queued').id).rowcount == 1:
+               recipe_table.c.status==TaskStatus.processed)),
+          status=TaskStatus.queued).rowcount == 1:
             self._queue()
             self.update_status()
         else:
@@ -4991,8 +4846,8 @@ class Recipe(TaskBase):
         """
         if session.connection(Recipe).execute(recipe_table.update(
           and_(recipe_table.c.id==self.id,
-               recipe_table.c.status_id==TaskStatus.by_name(u'New').id)),
-          status_id=TaskStatus.by_name(u'Processed').id).rowcount == 1:
+               recipe_table.c.status==TaskStatus.new)),
+          status=TaskStatus.processed).rowcount == 1:
             self._process()
             self.update_status()
         else:
@@ -5047,8 +4902,8 @@ class Recipe(TaskBase):
         """
         if session.connection(Recipe).execute(recipe_table.update(
           and_(recipe_table.c.id==self.id,
-               recipe_table.c.status_id==TaskStatus.by_name(u'Queued').id)),
-          status_id=TaskStatus.by_name(u'Scheduled').id).rowcount == 1:
+               recipe_table.c.status==TaskStatus.queued)),
+          status=TaskStatus.scheduled).rowcount == 1:
             self._schedule()
             self.update_status()
         else:
@@ -5067,8 +4922,8 @@ class Recipe(TaskBase):
         """
         if session.connection(Recipe).execute(recipe_table.update(
           and_(recipe_table.c.id==self.id,
-               recipe_table.c.status_id==TaskStatus.by_name(u'Scheduled').id)),
-          status_id=TaskStatus.by_name(u'Waiting').id).rowcount == 1:
+               recipe_table.c.status==TaskStatus.scheduled)),
+          status=TaskStatus.waiting).rowcount == 1:
             self._waiting()
             self.update_status()
         else:
@@ -5092,7 +4947,7 @@ class Recipe(TaskBase):
         """
         Method to cancel all tasks in this recipe.
         """
-        self._change_status(TaskStatus.by_name(u'Cancelled'))
+        self._change_status(TaskStatus.cancelled)
         for task in self.tasks:
             task._cancel(msg)
 
@@ -5111,7 +4966,7 @@ class Recipe(TaskBase):
         """
         Method to abort all tasks in this recipe.
         """
-        self._change_status(TaskStatus.by_name(u'Aborted'))
+        self._change_status(TaskStatus.aborted)
         for task in self.tasks:
             task._abort(msg)
 
@@ -5145,37 +5000,33 @@ class Recipe(TaskBase):
         Update number of passes, failures, warns, panics..
         """
         self.ptasks = 0
-        task_pass = TaskResult.by_name(u'Pass')
         self.wtasks = 0
-        task_warn = TaskResult.by_name(u'Warn')
         self.ftasks = 0
-        task_fail = TaskResult.by_name(u'Fail')
         self.ktasks = 0
-        task_panic = TaskResult.by_name(u'Panic')
 
-        max_result = None
+        max_result = TaskResult.min()
         min_status = TaskStatus.max()
         # I think this loop could be replaced with some sql which would be more efficient.
         for task in self.tasks:
             if task.is_finished():
-                if task.result == task_pass:
+                if task.result == TaskResult.pass_:
                     self.ptasks += 1
-                if task.result == task_warn:
+                if task.result == TaskResult.warn:
                     self.wtasks += 1
-                if task.result == task_fail:
+                if task.result == TaskResult.fail:
                     self.ftasks += 1
-                if task.result == task_panic:
+                if task.result == TaskResult.panic:
                     self.ktasks += 1
-            if task.status < min_status:
+            if task.status.severity < min_status.severity:
                 min_status = task.status
-            if task.result > max_result:
+            if task.result.severity > max_result.severity:
                 max_result = task.result
         self._change_status(min_status)
         self.result = max_result
 
         # Record the start of this Recipe.
         if not self.start_time \
-           and self.status == TaskStatus.by_name(u'Running'):
+           and self.status == TaskStatus.running:
             self.start_time = datetime.utcnow()
 
         if self.start_time and not self.finish_time and self.is_finished():
@@ -5202,7 +5053,7 @@ class Recipe(TaskBase):
                     id              = "R:%s" % self.id,
                     worker          = dict(name = "%s" % self.system),
                     state_label     = "%s" % self.status,
-                    state           = self.status.id,
+                    state           = self.status.value,
                     method          = "%s" % self.whiteboard,
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
@@ -5554,9 +5405,9 @@ class RecipeTask(TaskBase):
         """
         Update number of passes, failures, warns, panics..
         """
-        max_result = None
+        max_result = TaskResult.min()
         for result in self.results:
-            if result.result > max_result:
+            if result.result.severity > max_result.severity:
                 max_result = result.result
         self.result = max_result
 
@@ -5571,7 +5422,7 @@ class RecipeTask(TaskBase):
         """
         Moved from New -> Queued
         """
-        self._change_status(TaskStatus.by_name(u'Queued'))
+        self._change_status(TaskStatus.queued)
 
     def process(self):
         """
@@ -5584,7 +5435,7 @@ class RecipeTask(TaskBase):
         """
         Moved from Queued -> Processed
         """
-        self._change_status(TaskStatus.by_name(u'Processed'))
+        self._change_status(TaskStatus.processed)
 
     def schedule(self):
         """
@@ -5597,7 +5448,7 @@ class RecipeTask(TaskBase):
         """
         Moved from Processed -> Scheduled
         """
-        self._change_status(TaskStatus.by_name(u'Scheduled'))
+        self._change_status(TaskStatus.scheduled)
 
     def waiting(self):
         """
@@ -5610,7 +5461,7 @@ class RecipeTask(TaskBase):
         """
         Moved from Scheduled -> Waiting
         """
-        self._change_status(TaskStatus.by_name(u'Waiting'))
+        self._change_status(TaskStatus.waiting)
 
     def start(self, watchdog_override=None):
         """
@@ -5623,7 +5474,7 @@ class RecipeTask(TaskBase):
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         if not self.start_time:
             self.start_time = datetime.utcnow()
-        self._change_status(TaskStatus.by_name(u'Running'))
+        self._change_status(TaskStatus.running)
         self.recipe.watchdog.recipetask = self
         if watchdog_override:
             self.recipe.watchdog.kill_time = watchdog_override
@@ -5664,7 +5515,7 @@ class RecipeTask(TaskBase):
             raise BX(_('recipe task %s was never started' % self.id))
         if self.start_time and not self.finish_time:
             self.finish_time = datetime.utcnow()
-        self._change_status(TaskStatus.by_name(u'Completed'))
+        self._change_status(TaskStatus.completed)
         self.update_status()
         return True
 
@@ -5679,7 +5530,7 @@ class RecipeTask(TaskBase):
         """
         Cancel this task
         """
-        return self._abort_cancel(u'Cancelled', msg)
+        return self._abort_cancel(TaskStatus.cancelled, msg)
 
     def abort(self, msg=None):
         """
@@ -5692,7 +5543,7 @@ class RecipeTask(TaskBase):
         """
         Abort this task
         """
-        return self._abort_cancel(u'Aborted', msg)
+        return self._abort_cancel(TaskStatus.aborted, msg)
     
     def _abort_cancel(self, status, msg=None):
         """
@@ -5704,10 +5555,10 @@ class RecipeTask(TaskBase):
         if not self.is_finished():
             if self.start_time:
                 self.finish_time = datetime.utcnow()
-            self._change_status(TaskStatus.by_name(status))
+            self._change_status(status)
             self.results.append(RecipeTaskResult(recipetask=self,
                                        path=u'/',
-                                       result=TaskResult.by_name(u'Warn'),
+                                       result=TaskResult.warn,
                                        score=0,
                                        log=msg))
         return True
@@ -5716,25 +5567,25 @@ class RecipeTask(TaskBase):
         """
         Record a pass result 
         """
-        return self._result(u'Pass', path, score, summary)
+        return self._result(TaskResult.pass_, path, score, summary)
 
     def fail(self, path, score, summary):
         """
         Record a fail result 
         """
-        return self._result(u'Fail', path, score, summary)
+        return self._result(TaskResult.fail, path, score, summary)
 
     def warn(self, path, score, summary):
         """
         Record a warn result 
         """
-        return self._result(u'Warn', path, score, summary)
+        return self._result(TaskResult.warn, path, score, summary)
 
     def panic(self, path, score, summary):
         """
         Record a panic result 
         """
-        return self._result(u'Panic', path, score, summary)
+        return self._result(TaskResult.panic, path, score, summary)
 
     def _result(self, result, path, score, summary):
         """
@@ -5744,7 +5595,7 @@ class RecipeTask(TaskBase):
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         recipeTaskResult = RecipeTaskResult(recipetask=self,
                                    path=path,
-                                   result=TaskResult.by_name(result),
+                                   result=result,
                                    score=score,
                                    log=summary)
         self.results.append(recipeTaskResult)
@@ -5761,7 +5612,7 @@ class RecipeTask(TaskBase):
                     id              = "T:%s" % self.id,
                     worker          = dict(name = "%s" % self.recipe.system),
                     state_label     = "%s" % self.status,
-                    state           = self.status.id,
+                    state           = self.status.value,
                     method          = "%s" % self.task.name,
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
@@ -5949,7 +5800,7 @@ class RecipeTaskResult(TaskBase):
     def delete(self, *args, **kw):
         self.logs = []
 
-    def to_xml(self):
+    def to_xml(self, *args, **kw):
         """
         Return result in xml
         """
@@ -5973,7 +5824,7 @@ class RecipeTaskResult(TaskBase):
                     id              = "TR:%s" % self.id,
                     worker          = dict(name = "%s" % None),
                     state_label     = "%s" % self.result,
-                    state           = self.result.id,
+                    state           = self.result.value,
                     method          = "%s" % self.path,
                     result          = "%s" % self.result,
                     is_finished     = True,
@@ -6209,19 +6060,77 @@ class CallbackAttributeExtension(AttributeExtension):
                 log.error("command callback failed: %s" % e)
         return value
 
+class ConfigItem(MappedObject):
+    @classmethod
+    def by_name(cls, name):
+        return cls.query.filter_by(name=name).one()
+
+    @classmethod
+    def list_by_name(cls, name, find_anywhere=False):
+        if find_anywhere:
+            q = cls.query.filter(ConfigItem.name.like('%%%s%%' % name))
+        else:
+            q = cls.query.filter(ConfigItem.name.like('%s%%' % name))
+        return q
+
+    def _value_class(self):
+        if self.numeric:
+            return ConfigValueInt
+        else:
+            return ConfigValueString
+    value_class = property(_value_class)
+
+    def values(self):
+        return self.value_class.query.filter(self.value_class.config_item_id == self.id)
+
+    def current_value(self):
+        v = self.values().\
+            filter(and_(self.value_class.valid_from <= datetime.utcnow(), self.value_class.config_item_id == self.id)).\
+            order_by(self.value_class.valid_from.desc()).first()
+        if v:
+            return v.value
+
+    def next_value(self):
+        return self.values().filter(self.value_class.valid_from > datetime.utcnow()).\
+                order_by(self.value_class.valid_from.asc()).first()
+
+    def set(self, value, valid_from=None, user=None):
+        if user is None:
+            try:
+                user = identity.current.user
+            except AttributeError, e:
+                raise BX(_('Settings may not be changed anonymously'))
+        if valid_from:
+            if valid_from < datetime.utcnow():
+                raise BX(_('%s is in the past') % valid_from)
+        self.value_class(self, value, user, valid_from)
+
+class ConfigValueString(MappedObject):
+    def __init__(self, config_item, value, user, valid_from=None):
+        super(ConfigValueString, self).__init__()
+        self.config_item = config_item
+        self.value = value
+        self.user = user
+        if valid_from:
+            self.valid_from = valid_from
+
+class ConfigValueInt(MappedObject):
+    def __init__(self, config_item, value, user, valid_from=None):
+        super(ConfigValueInt, self).__init__()
+        self.config_item = config_item
+        self.value = value
+        self.user = user
+        if valid_from:
+            self.valid_from = valid_from
 
 # set up mappers between identity tables and classes
-SystemType.mapper = mapper(SystemType, system_type_table)
 Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
-SystemStatus.mapper = mapper(SystemStatus, system_status_table)
-mapper(ReleaseAction, release_action_table)
 System.mapper = mapper(System, system_table,
                    properties = {
-                     'status':relation(SystemStatus,uselist=False,
+                     'status': column_property(system_table.c.status,
                         extension=SystemStatusAttributeExtension()),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
-                     'type':relation(SystemType, uselist=False),
                      'arch':relation(Arch,
                                      order_by=[arch_table.c.arch],
                                         secondary=system_arch_map,
@@ -6267,7 +6176,6 @@ System.mapper = mapper(System, system_table,
                      'command_queue':relation(CommandActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object', cascade='all, delete, delete-orphan'),
-                     'release_action':relation(ReleaseAction, uselist=False),
                      'reprovision_distro':relation(Distro, uselist=False),
                       '_system_ccs': relation(SystemCc, backref='system',
                                       cascade="all, delete, delete-orphan"),
@@ -6287,9 +6195,7 @@ System.mapper = mapper(System, system_table,
                      })
 
 mapper(SystemCc, system_cc_table)
-mapper(SystemStatusDuration, system_status_duration_table, properties={
-        'status': relation(SystemStatus),
-})
+mapper(SystemStatusDuration, system_status_duration_table)
 
 Cpu.mapper = mapper(Cpu, cpu_table, properties={
     'flags': relation(CpuFlag, cascade='all, delete, delete-orphan'),
@@ -6340,7 +6246,6 @@ mapper(Power, power_table,
         properties = {'power_type':relation(PowerType,
                                            backref='power_control')
     })
-mapper(CommandStatus, command_status_table)
 
 mapper(Serial, serial_table)
 mapper(SerialType, serial_type_table)
@@ -6391,9 +6296,12 @@ mapper(User, users_table,
 
 mapper(Group, groups_table,
     properties=dict(users=relation(User, uselist=True, secondary=user_group_table, backref='groups'),
-        systems=relation(System, secondary=system_group_table, backref='groups'),
-        admin_systems=relation(System, secondary=system_admin_map_table,
-            backref='admins')))
+    ))
+
+mapper(SystemGroup, system_group_table, properties={
+    'system': relation(System, backref=backref('group_assocs', cascade='all, delete-orphan')),
+    'group': relation(Group, backref=backref('system_assocs', cascade='all, delete-orphan')),
+})
 
 mapper(Permission, permissions_table,
         properties=dict(groups=relation(Group,
@@ -6427,7 +6335,8 @@ mapper(DistroActivity, distro_activity_table, inherits=Activity,
 
 mapper(CommandActivity, command_queue_table, inherits=Activity,
        polymorphic_identity=u'command_activity',
-       properties={'status':relation(CommandStatus, extension=CallbackAttributeExtension()),
+       properties={'status': column_property(command_queue_table.c.status,
+                        extension=CallbackAttributeExtension()),
                    'system':relation(System, uselist=False),
                   })
 
@@ -6486,10 +6395,8 @@ mapper(TaskBugzilla, task_bugzilla_table)
 mapper(Job, job_table,
         properties = {'recipesets':relation(RecipeSet, backref='job'),
                       'owner':relation(User, uselist=False, backref='jobs'),
-                      'result':relation(TaskResult, uselist=False),
                       'retention_tag':relation(RetentionTag, uselist=False,backref='jobs'),
                       'product':relation(Product, uselist=False, backref='jobs'),
-                      'status':relation(TaskStatus, uselist=False),
                       '_job_ccs': relation(JobCc, backref='job')})
 
 mapper(JobCc, job_cc_table)
@@ -6504,9 +6411,6 @@ mapper(Response,response_table)
 
 mapper(RecipeSet, recipe_set_table,
         properties = {'recipes':relation(Recipe, backref='recipeset'),
-                      'priority':relation(TaskPriority, uselist=False),
-                      'result':relation(TaskResult, uselist=False),
-                      'status':relation(TaskStatus, uselist=False),
                       'activity':relation(RecipeSetActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
                         backref='object'),
@@ -6542,9 +6446,7 @@ mapper(Recipe, recipe_table,
                                       backref='recipes'),
                       'repos':relation(RecipeRepo),
                       'rpms':relation(RecipeRpm, backref='recipe'),
-                      'result':relation(TaskResult, uselist=False),
-                      'status':relation(TaskStatus, uselist=False),
-                      'logs':relation(LogRecipe, backref='parent'),
+                      'logs':relation(LogRecipe, backref='parent', cascade='delete, delete-orphan'),
                       '_roles':relation(RecipeRole),
                       'custom_packages':relation(TaskPackage,
                                         secondary=task_packages_custom_map),
@@ -6573,10 +6475,8 @@ mapper(RecipeTask, recipe_task_table,
                       'bugzillas':relation(RecipeTaskBugzilla, 
                                            backref='recipetask'),
                       'task':relation(Task, uselist=False, backref='runs'),
-                      'result':relation(TaskResult, uselist=False),
-                      'status':relation(TaskStatus, uselist=False),
                       '_roles':relation(RecipeTaskRole),
-                      'logs':relation(LogRecipeTask, backref='parent'),
+                      'logs':relation(LogRecipeTask, backref='parent', cascade='delete, delete-orphan'),
                       'watchdog':relation(Watchdog, uselist=False),
                      }
       )
@@ -6595,13 +6495,10 @@ mapper(RecipeTaskComment, recipe_task_comment_table,
 mapper(RecipeTaskBugzilla, recipe_task_bugzilla_table)
 mapper(RecipeTaskRpm, recipe_task_rpm_table)
 mapper(RecipeTaskResult, recipe_task_result_table,
-        properties = {'result':relation(TaskResult, uselist=False),
-                      'logs':relation(LogRecipeTaskResult, backref='parent'),
+        properties = {'logs':relation(LogRecipeTaskResult, backref='parent',
+                           cascade='delete, delete-orphan'),
                      }
       )
-mapper(TaskPriority, task_priority_table)
-mapper(TaskStatus, task_status_table)
-mapper(TaskResult, task_result_table)
 mapper(Reservation, reservation_table, properties={
         'user': relation(User, backref=backref('reservations',
             order_by=[reservation_table.c.start_time.desc()])),
@@ -6609,6 +6506,15 @@ mapper(Reservation, reservation_table, properties={
 })
 mapper(SSHPubKey, sshpubkey_table,
         properties=dict(user=relation(User, uselist=False, backref='sshpubkeys')))
+mapper(ConfigItem, config_item_table)
+mapper(ConfigValueInt, config_value_int_table,
+       properties = {'config_item': relation(ConfigItem, uselist=False),
+                     'user': relation(User)}
+      )
+mapper(ConfigValueString, config_value_string_table,
+       properties = {'config_item': relation(ConfigItem, uselist=False),
+                     'user': relation(User)}
+      )
 
 ## Static list of device_classes -- used by master.kid
 global _device_classes
@@ -6620,22 +6526,12 @@ def device_classes():
     for device_class in _device_classes:
         yield device_class
 
-global _system_types
-_system_types = None
-def system_types():
-    global _system_types
-    if not _system_types:
-        _system_types = SystemType.query.all()
-    for system_type in _system_types:
-        yield system_type
-
 # available in python 2.7+ importlib
 def import_module(modname):
      __import__(modname)
      return sys.modules[modname]
 
 def auto_power_cmd_handler(command, new_status):
-    if (new_status == CommandStatus.by_name(u'Failed') or \
-        new_status == CommandStatus.by_name(u'Aborted')) \
+    if new_status in (CommandStatus.failed, CommandStatus.aborted) \
        and command.system.open_reservation:
         command.system.open_reservation.recipe.abort("Power command failed")
