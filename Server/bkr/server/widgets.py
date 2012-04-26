@@ -1577,3 +1577,6 @@ class JobPageActionWidget(JobActionWidget):
     def __init__(self, *args, **kw):
         super(JobPageActionWidget, self).__init__(*args, **kw)
 
+class DistroTreeInstallOptionsWidget(Widget):
+    template = 'bkr.server.templates.distrotree_install_options'
+    params = ['readonly']

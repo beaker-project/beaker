@@ -469,6 +469,9 @@ distro_tree_table = Table('distro_tree', metadata,
     Column('distro_id', Integer, ForeignKey('distro.id'), nullable=False),
     Column('arch_id', Integer, ForeignKey('arch.id'), nullable=False),
     Column('variant', Unicode(25)),
+    Column('ks_meta', UnicodeText),
+    Column('kernel_options', UnicodeText),
+    Column('kernel_options_post', UnicodeText),
     Column('date_created', DateTime, nullable=False, default=datetime.utcnow),
     UniqueConstraint('distro_id', 'arch_id', 'variant'),
     mysql_engine='InnoDB',
@@ -2937,8 +2940,8 @@ class DistroTree(MappedObject):
                 return image
 
     def install_options(self):
-        # eventually this will do more...
-        return InstallOptions.from_strings('', '', '')
+        return InstallOptions.from_strings(self.ks_meta,
+                self.kernel_options, self.kernel_options_post)
 
 class DistroTreeRepo(MappedObject):
 

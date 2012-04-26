@@ -44,6 +44,9 @@
     </tbody>
 </table>
 
+<div class="tabber">
+
+<div class="tabbertab">
 <h2>Lab Controllers</h2>
 <table class="list lab_controllers">
     <thead>
@@ -93,7 +96,14 @@
     </form>
     </tbody>
 </table>
+</div>
 
+<div class="tabbertab">
+<h2>Install Options</h2>
+${install_options_widget.display(value, readonly=readonly)}
+</div>
+
+<div class="tabbertab">
 <h2>Repos</h2>
 <table class="list">
     <thead>
@@ -111,7 +121,9 @@
         </tr>
     </tbody>
 </table>
+</div>
 
+<div class="tabbertab">
 <h2>Images</h2>
 <table class="list">
     <thead>
@@ -127,12 +139,17 @@
         </tr>
     </tbody>
 </table>
+</div>
 
+<div class="tabbertab">
 <h2>Executed Tasks</h2>
 ${form_task.display(value=dict(distro_tree_id=value.id),
         target_dom='task_items',
         update='task_items')}
 <div id="task_items" />
+</div>
+
+</div>
 
 </body>
 </html>
