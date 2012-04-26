@@ -309,6 +309,24 @@ class LabControllers(RPCRoot):
         cmd.log_to_system_history()
         return True
 
+    @cherrypy.expose
+    @identity.require(identity.in_group('lab_controller'))
+    def clear_running_commands(self, message=None):
+        """
+        Called by beaker-provision on startup. Any commands which are Running
+        at this point must be left over from an earlier crash.
+        """
+        lab_controller = identity.current.user.lab_controller
+        running_commands = CommandActivity.query\
+                .join(CommandActivity.system)\
+                .filter(System.lab_controller == lab_controller)\
+                .filter(CommandActivity.status == CommandStatus.running)
+        for cmd in running_commands:
+            cmd.status = CommandStatus.failed
+            cmd.new_value = message
+            cmd.log_to_system_history()
+        return True
+
     def make_lc_remove_link(self, lc):
         if lc.removed is not None:
             return make_link(url  = 'unremove?id=%s' % lc.id,

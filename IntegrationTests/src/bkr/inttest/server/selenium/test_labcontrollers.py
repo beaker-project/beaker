@@ -3,7 +3,7 @@ from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase
 from bkr.inttest import data_setup
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
-        System, SystemStatus, TaskStatus
+        System, SystemStatus, TaskStatus, CommandActivity, CommandStatus
 from bkr.server.tools import beakerd
 
 class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
@@ -121,6 +121,19 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         commands = self.server.labcontrollers.get_queued_command_details()
         # 10 is the configured limit in server-test.cfg
         self.assertEquals(len(commands), 10, commands)
+
+    def test_clear_running_commands(self):
+        with session.begin():
+            command = CommandActivity(
+                    user=None, service=u'testdata', action=u'on',
+                    status=CommandStatus.running)
+            system = data_setup.create_system(lab_controller=self.lc)
+            system.command_queue.append(command)
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        self.server.labcontrollers.clear_running_commands(u'Staleness')
+        with session.begin():
+            session.refresh(command)
+            self.assertEquals(command.status, CommandStatus.failed)
 
 class TestPowerFailures(XmlRpcTestCase):
 
