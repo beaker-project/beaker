@@ -400,7 +400,7 @@ device_table = Table('device', metadata,
     Column('subsys_device_id',String(255)),
     Column('subsys_vendor_id',String(255)),
     Column('bus',String(255)),
-    Column('driver',String(255)),
+    Column('driver', String(255), index=True),
     Column('description',String(255)),
     Column('device_class_id', Integer,
            ForeignKey('device_class.id'), nullable=False),
@@ -408,6 +408,7 @@ device_table = Table('device', metadata,
            default=datetime.utcnow, nullable=False),
     mysql_engine='InnoDB',
 )
+Index('ix_device_pciid', device_table.c.vendor_id, device_table.c.device_id)
 
 locked_table = Table('locked', metadata,
     Column('id', Integer, autoincrement=True,
@@ -843,8 +844,8 @@ recipe_set_table = Table('recipe_set',metadata,
 
 log_recipe_table = Table('log_recipe', metadata,
         Column('id', Integer, primary_key=True),
-        Column('recipe_id', Integer,
-                ForeignKey('recipe.id')),
+        Column('recipe_id', Integer, ForeignKey('recipe.id'),
+            nullable=False),
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
@@ -855,8 +856,8 @@ log_recipe_table = Table('log_recipe', metadata,
 
 log_recipe_task_table = Table('log_recipe_task', metadata,
         Column('id', Integer, primary_key=True),
-        Column('recipe_task_id', Integer,
-                ForeignKey('recipe_task.id')),
+        Column('recipe_task_id', Integer, ForeignKey('recipe_task.id'),
+            nullable=False),
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
@@ -868,7 +869,7 @@ log_recipe_task_table = Table('log_recipe_task', metadata,
 log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_task_result_id', Integer,
-                ForeignKey('recipe_task_result.id')),
+                ForeignKey('recipe_task_result.id'), nullable=False),
         Column('path', UnicodeText()),
         Column('filename', UnicodeText(), nullable=False),
         Column('start_time',DateTime, default=datetime.utcnow),
@@ -1462,7 +1463,13 @@ class Permission(MappedObject):
     A relationship that determines what each Group can do
     """
     @classmethod
-    def by_name(cls, permission_name):
+    def by_id(cls, id):
+      return cls.query.filter_by(permission_id=id).one()
+
+    @classmethod
+    def by_name(cls, permission_name, anywhere=False):
+        if anywhere:
+            return cls.query.filter(cls.permission_name.like('%%%s%%' % permission_name)).all()
         return cls.query.filter(cls.permission_name == permission_name).one()
 
     def __init__(self, permission_name):
@@ -2052,25 +2059,15 @@ class System(SystemObject):
     def updateDevices(self, deviceinfo):
         currentDevices = []
         for device in deviceinfo:
-            try:
-                mydevice = Device.query.filter_by(vendor_id = device['vendorID'],
+            device_class = DeviceClass.lazy_create(device_class=device['type'])
+            mydevice = Device.lazy_create(vendor_id = device['vendorID'],
                                    device_id = device['deviceID'],
                                    subsys_vendor_id = device['subsysVendorID'],
                                    subsys_device_id = device['subsysDeviceID'],
                                    bus = device['bus'],
                                    driver = device['driver'],
-                                   description = device['description']).one()
-            except InvalidRequestError:
-                mydevice = Device(vendor_id       = device['vendorID'],
-                                     device_id       = device['deviceID'],
-                                     subsys_vendor_id = device['subsysVendorID'],
-                                     subsys_device_id = device['subsysDeviceID'],
-                                     bus            = device['bus'],
-                                     driver         = device['driver'],
-                                     device_class   = device['type'],
-                                     description    = device['description'])
-                session.add(mydevice)
-                session.flush([mydevice])
+                                   device_class_id = device_class.id,
+                                   description = device['description'])
             if mydevice not in self.devices:
                 self.devices.append(mydevice)
                 self.activity.append(SystemActivity(
@@ -2695,24 +2692,7 @@ class DeviceClass(SystemObject):
 
 
 class Device(SystemObject):
-    def __init__(self, vendor_id=None, device_id=None, subsys_device_id=None, subsys_vendor_id=None, bus=None, driver=None, device_class=None, description=None):
-        super(Device, self).__init__()
-        if not device_class:
-            device_class = "NONE"
-        try:
-            dc = DeviceClass.query.filter_by(device_class = device_class).one()
-        except InvalidRequestError:
-            dc = DeviceClass(device_class = device_class)
-            session.add(dc)
-            session.flush([dc])
-        self.vendor_id = vendor_id
-        self.device_id = device_id
-        self.subsys_vendor_id = subsys_vendor_id
-        self.subsys_device_id = subsys_device_id
-        self.bus = bus
-        self.driver = driver
-        self.description = description
-        self.device_class = dc
+    pass
 
 
 class Locked(MappedObject):
@@ -3077,10 +3057,22 @@ class Note(MappedObject):
 
 
 class Key(SystemObject):
+
+    # Obsoleted keys are ones which have been replaced by real, structured 
+    # columns on the system table (and its related tables). We disallow users 
+    # from searching on these keys in the web UI, to encourage them to migrate 
+    # to the structured columns instead (and to avoid the costly queries that 
+    # sometimes result).
+    obsoleted_keys = [u'MODULE', u'PCIID']
+
     @classmethod
     def get_all_keys(cls):
-       all_keys = cls.query
-       return [key.key_name for key in all_keys]
+        """
+        This method's name is deceptive, it actually excludes "obsoleted" keys.
+        """
+        all_keys = cls.query
+        return [key.key_name for key in all_keys
+                if key.key_name not in cls.obsoleted_keys]
 
     @classmethod
     def by_name(cls, key_name):
@@ -3157,8 +3149,26 @@ class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
-    def __init__(self, path=None, filename=None, server=None, basepath=None):
+    @classmethod
+    def lazy_create(cls, **kwargs):
+        """
+        Unlike the "real" lazy_create above, we can't rely on unique
+        constraints here because 'path' and 'filename' are TEXT columns and
+        MySQL can't index those. :-(
+
+        So we just use a query-then-insert approach. There is a race window
+        between querying and inserting, but it's about the best we can do.
+        """
+        item = cls.query.filter_by(**kwargs).first()
+        if item is None:
+            item = cls(**kwargs)
+            session.flush()
+        return item
+
+    def __init__(self, path=None, filename=None,
+                 server=None, basepath=None, parent=None):
         super(Log, self).__init__()
+        self.parent = parent
         self.path = path
         self.filename = filename
         self.server = server
@@ -3659,6 +3669,20 @@ class Job(TaskBase):
             query = query.filter(Job.owner==identity.current.user)
             return query
 
+    def delete(self):
+        """Deletes entries relating to a Job and it's children
+
+            currently only removes log entries of a job and child tasks and marks
+            the job as deleted.
+            It does not delete other mapped relations or the job row itself.
+            it does not remove log FS entries
+
+
+        """
+        for rs in self.recipesets:
+            rs.delete()
+        self.deleted = datetime.utcnow()
+
     def counts_as_deleted(self):
         return self.deleted or self.to_delete
 
@@ -4055,6 +4079,10 @@ class RecipeSet(TaskBase):
             return_node = job
         return return_node
 
+    def delete(self):
+        for r in self.recipes:
+            r.delete()
+
     @classmethod
     def allowed_priorities_initial(cls,user):
         if not user:
@@ -4302,37 +4330,13 @@ class Recipe(TaskBase):
                 logs_to_return.extend(rt_log)
         return logs_to_return
 
-    def delete(self, dryrun, *args, **kw):
+    def delete(self):
         """
         How we delete a Recipe.
         """
-        full_recipe_logpath = '%s/%s' % (self.logspath, self.filepath)
-        if dryrun is True:
-            if not (os.access(full_recipe_logpath,os.R_OK)): #See if it exists
-                return None
-            elif not (os.access(full_recipe_logpath,os.W_OK)): #See if we can write it
-                raise BX(_(u'Incorrect perms to delete %s:' % full_recipe_logpath))
-            else:
-                return full_recipe_logpath #success
-        else:
-            try:
-                shutil.rmtree(full_recipe_logpath)
-                return_val = full_recipe_logpath
-            except OSError, e:
-                if e.errno == errno.ENOENT: #File/Dir does not exist
-                    pass #Maybe the logs don't exist?? Carry on...
-                    return_val = None
-                elif e.errno == errno.EACCES: #Incorrect perms
-                    raise BX(_(u'Incorrect perms to delete %s:' % full_recipe_logpath))
-                else:
-                    raise BX(_(u'Received unexpected error: %s' % e.errstr))
-
-            self.logs = []
-
-            for task in self.tasks:
-                task_to_delete = RecipeTask.by_id(task.id)
-                task_to_delete.delete()
-            return return_val
+        self.logs = []
+        for task in self.tasks:
+            task.delete()
 
     def task_repo(self):
         return ("beaker-tasks","http://%s/repos/%s" % (self.servername, self.id))
@@ -5543,7 +5547,7 @@ class RecipeTaskResult(TaskBase):
     def delete(self, *args, **kw):
         self.logs = []
 
-    def to_xml(self):
+    def to_xml(self, *args, **kw):
         """
         Return result in xml
         """
@@ -6216,7 +6220,7 @@ mapper(Recipe, recipe_table,
                                       backref='recipes'),
                       'repos':relation(RecipeRepo),
                       'rpms':relation(RecipeRpm, backref='recipe'),
-                      'logs':relation(LogRecipe, backref='parent'),
+                      'logs':relation(LogRecipe, backref='parent', cascade='delete, delete-orphan'),
                       '_roles':relation(RecipeRole),
                       'custom_packages':relation(TaskPackage,
                                         secondary=task_packages_custom_map),
@@ -6246,7 +6250,7 @@ mapper(RecipeTask, recipe_task_table,
                                            backref='recipetask'),
                       'task':relation(Task, uselist=False, backref='runs'),
                       '_roles':relation(RecipeTaskRole),
-                      'logs':relation(LogRecipeTask, backref='parent'),
+                      'logs':relation(LogRecipeTask, backref='parent', cascade='delete, delete-orphan'),
                       'watchdog':relation(Watchdog, uselist=False),
                      }
       )
@@ -6265,7 +6269,8 @@ mapper(RecipeTaskComment, recipe_task_comment_table,
 mapper(RecipeTaskBugzilla, recipe_task_bugzilla_table)
 mapper(RecipeTaskRpm, recipe_task_rpm_table)
 mapper(RecipeTaskResult, recipe_task_result_table,
-        properties = {'logs':relation(LogRecipeTaskResult, backref='parent'),
+        properties = {'logs':relation(LogRecipeTaskResult, backref='parent',
+                           cascade='delete, delete-orphan'),
                      }
       )
 mapper(RenderedKickstart, rendered_kickstart_table)

@@ -1,5 +1,9 @@
 zerombr
+{% if ondisk %}
+clearpart --drives {{ ondisk }} --all --initlabel
+{% else %}
 clearpart --all --initlabel
+{% endif %}
 
 {% if partitions or ondisk %}
 

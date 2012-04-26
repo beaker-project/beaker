@@ -8,6 +8,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar
 from bkr.server.admin_page import AdminPage
+from bkr.server import validators as beaker_validators
 
 import cherrypy
 
@@ -18,6 +19,19 @@ import cherrypy
 from model import *
 import string
 
+
+class UserFormSchema(validators.Schema):
+    user_id = validators.Int()
+    user_name = validators.String(not_empty=True)
+    display_name = validators.String(not_empty=True)
+    disabled = validators.StringBool(if_empty=False)
+    email_address = validators.Email(not_empty=True)
+    chained_validators = [beaker_validators.UniqueEmail('user_id',
+                            'email_address'),
+                          beaker_validators.UniqueUserName('user_id',
+                            'user_name')]
+
+
 class Users(AdminPage):
     # For XMLRPC methods in this class.
     exposed = False
@@ -27,12 +41,10 @@ class Users(AdminPage):
     display_name = widgets.TextField(name='display_name', label=_(u'Display Name'))
     email_address = widgets.TextField(name='email_address', label=_(u'Email Address'))
     password     = widgets.PasswordField(name='password', label=_(u'Password'))
-    disabled = widgets.CheckBox(name='disabled', label=_(u'Disabled'),
-                                validator=validators.StringBool(if_empty=False))
-
+    disabled = widgets.CheckBox(name='disabled', label=_(u'Disabled'))
     user_form = widgets.TableForm(
         'User',
-        fields = [user_id, user_name, display_name, 
+        fields = [user_id, user_name, display_name,
                   email_address, password, disabled
                  ],
         action = 'save_data',
@@ -46,7 +58,7 @@ class Users(AdminPage):
 
         self.search_col = User.user_name
         self.search_mapper = User
-      
+
     @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.form')
     def new(self, **kw):
@@ -59,18 +71,21 @@ class Users(AdminPage):
 
     @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.form')
-    def edit(self, id, **kw):
-        user = User.by_id(id)
+    def edit(self, id=None, **kw):
+        if id:
+            value = User.by_id(id)
+        else:
+            value = kw
         return dict(
             form = self.user_form,
             action = './save',
             options = {},
-            value = user,
+            value = value,
         )
 
     @identity.require(identity.in_group("admin"))
     @expose()
-    @validate(user_form)
+    @validate(user_form, validators=UserFormSchema())
     @error_handler(edit)
     def save(self, **kw):
         if kw.get('user_id'):

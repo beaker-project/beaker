@@ -57,6 +57,7 @@ except NameError:
 
 import sys
 from bkr.client import BeakerWorkflow, BeakerJob, BeakerRecipeSet, BeakerRecipe
+from bkr.client.task_watcher import watch_tasks
 
 class Harness_Test(BeakerWorkflow):
     """Workflow for testing harness installation"""
@@ -144,6 +145,6 @@ class Harness_Test(BeakerWorkflow):
         if not dryrun:
             print "Submitted: %s" % submitted_jobs
             if wait:
-                TaskWatcher.watch_tasks(self.hub, submitted_jobs)
+                watch_tasks(self.hub, submitted_jobs)
             if failed:
                 sys.exit(1)

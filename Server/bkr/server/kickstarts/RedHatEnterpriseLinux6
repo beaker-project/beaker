@@ -8,6 +8,9 @@
 
 key --skip
 
+{% if manual %}
+ignoredisk --interactive
+{% endif %}
 {% if not manual %}
 # System bootloader configuration
 bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}

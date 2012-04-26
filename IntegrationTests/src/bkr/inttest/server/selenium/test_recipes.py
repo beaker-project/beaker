@@ -139,16 +139,6 @@ class TestRecipeView(WebDriverTestCase):
         b.get(get_server_base() + 'recipes/mine')
         b.find_element_by_link_text(recipe.t_id).click()
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=623603
-    # see also TestSystemView.test_can_report_problem
-    def test_can_report_problem(self):
-        b = self.browser
-        recipe = list(self.job.all_recipes)[0]
-        self.go_to_recipe_view(recipe)
-        b.find_element_by_link_text('Report problem with system').click()
-        self.assertEqual(b.title,
-                'Report a problem with %s' % self.system.fqdn)
-
     def test_log_url_looks_right(self):
         b = self.browser
         some_job = self.job

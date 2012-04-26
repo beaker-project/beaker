@@ -105,17 +105,6 @@ class SystemViewTest(SeleniumTestCase):
         self.go_to_system_view()
         self.assertEquals(self.selenium.get_title(), self.system.fqdn)
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=623603
-    # see also TestRecipeView.test_can_report_problem
-    def test_can_report_problem(self):
-        self.login()
-        sel = self.selenium
-        self.go_to_system_view()
-        sel.click('link=(Report problem)')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(self.selenium.get_title(),
-                'Report a problem with %s' % self.system.fqdn)
-
     def test_links_to_cc_change(self):
         self.login()
         sel = self.selenium

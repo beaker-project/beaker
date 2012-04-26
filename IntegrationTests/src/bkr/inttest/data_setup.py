@@ -32,7 +32,7 @@ from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arc
         LabControllerDistroTree, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
         LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
-        SystemGroup, DistroTreeRepo, TaskPackage
+        SystemGroup, DeviceClass, DistroTreeRepo, TaskPackage
 
 log = logging.getLogger(__name__)
 
@@ -131,6 +131,11 @@ def create_group(permissions=None):
     if permissions:
         group.permissions.extend(Permission.by_name(name) for name in permissions)
     return group
+
+def create_permission(name=None):
+    if not name:
+        name = unique_name('permission%s')
+    return Permission(name)
 
 def add_user_to_group(user,group):
     user.groups.append(group)
@@ -449,5 +454,10 @@ def create_test_env(type):#FIXME not yet using different types
             system = create_system(owner=user, arch=arch.arch, type=system_type, status=u'Automated', shared=True)
             system.lab_controller = lc
 
-def create_device(**kw):
-    device = Device(**kw)
+def create_device_class(device_class):
+    return DeviceClass.lazy_create(device_class=device_class)
+
+def create_device(device_class=None, **kwargs):
+    if device_class is not None:
+        kwargs['device_class_id'] = create_device_class(device_class).id
+    return Device.lazy_create(**kwargs)

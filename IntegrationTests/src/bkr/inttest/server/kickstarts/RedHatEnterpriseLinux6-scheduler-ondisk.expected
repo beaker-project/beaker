@@ -41,7 +41,7 @@ repo --name=beaker-Server --cost=100 --baseurl=http://lab.test-kickstart.invalid
 
 
 zerombr
-clearpart --all --initlabel
+clearpart --drives /dev/sda --all --initlabel
 
 
 part /boot --fstype ext3 --size 200 --recommended --ondisk=/dev/sda
@@ -134,7 +134,11 @@ EOF
 
 /sbin/chkconfig ntpdate on
 /sbin/chkconfig ntpd on
-echo 'OPTIONS="$OPTIONS -x"' >>/etc/sysconfig/ntpd
+GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
+
+if [ -z "$GOT_G" ]; then
+    /bin/sed -i -r 's/(^OPTIONS\s*=\s*)(['\''|"])(.+)$/\1\2\-x \3 /' /etc/sysconfig/ntpd
+fi
 
 
 # If efibootmgr exists then re-order boot options

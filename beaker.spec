@@ -15,8 +15,8 @@
 %endif
 
 Name:           beaker
-Version:        0.8.1
-Release:        9%{?dist}
+Version:        0.8.2
+Release:        5%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -351,11 +351,89 @@ fi
 %endif
 
 %changelog
-* Wed Apr 04 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-9
-- service queue msgs' fixed to also be sent on direct exchange
-  (rmancy@redhat.com)
+* Thu Apr 19 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-5
+- Change Group's permissions table header to 'Permissions', and moved 'Contact
+  Owner' link to be beside owner field. (rmancy@redhat.com)
+- fix register and upload file methods to use lazy_create (bpeck@redhat.com)
+- 585153 report an error if T: or TR: is passed to bkr job-logs
+  (dcallagh@redhat.com)
+* Wed Apr 18 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-4
+- 813642 Check each named beakerd thread instead of relying on active thread count
+  (stl@redhat.com)
+- 731615 fix <device/> to not add an empty query. (bpeck@redhat.com)
 
-* Wed Apr 04 2012 Raymond Mancy <rmancy@redhat.com>
+* Tue Apr 17 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-3
+- test: Fix job.id to be id of recipe (rmancy@redhat.com)
+- 731615 fix mistake in RELAX NG schema for <device/> (dcallagh@redhat.com)
+- 812722 Remove pidfile if it exists before starting beakerd (stl@redhat.com)
+* Fri Apr 13 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-2
+- more %%d issues in command_queue. (bpeck@redhat.com)
+- Merge remote branch 'origin/release-0.8.1-5.1' into release-0.8.2
+  (rmancy@redhat.com)
+* Fri Apr 13 2012 Steven Lawrance <stl@redhat.com> 0.8.1-5.2
+- more %%d issues in command_queue. (bpeck@redhat.com)
+
+* Thu Apr 12 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-1
+- 740321 Do not show power control buttons when system has no lab controller
+  (stl@redhat.com)
+- 745254 Store the default root password in the database (stl@redhat.com)
+- 743663 Reject job submission if user's root password has expired
+  (stl@redhat.com)
+- 782075 Permit whitespace in ssh public key descriptions (stl@redhat.com)
+- 784875 add support for RedHatStorageSoftwareAppliance3 (bpeck@redhat.com)
+- 743819 add bkr watchdogs-extend command. (bpeck@redhat.com)
+- 773702 dead recipes routine processes the same recipe mutliple times
+  (bpeck@redhat.com)
+- 572836 Collect crash dump information useful for analysis when test
+  panics/stalls (bpeck@redhat.com)
+- 742569 delete system should be available over command line.
+  (bpeck@redhat.com)
+- 794543 also look for 'pxe' in EFI boot options (dcallagh@redhat.com)
+- 740957 only show systems of type Machine in reserve workflow
+  (dcallagh@redhat.com)
+- 797584 merge system_admin_map table into system_group (dcallagh@redhat.com)
+- 773124 use a nested transaction to avoid races in MappedObject.lazy_create
+  (dcallagh@redhat.com)
+- 585153 new bkr job-logs command to print URLs of recipe logs
+  (dcallagh@redhat.com)
+- 784237 prevent and handle invalid addresses in <cc/> (dcallagh@redhat.com)
+- 731615 support for selecting systems by device in recipes
+  (dcallagh@redhat.com)
+- 797162 Only update /etc/sysconfig/nptd with '-x' if it does not contain '-g'
+  (rmancy@redhat.com)
+- 750623 Ability to add permissions to group via the Groups page.
+  (rmancy@redhat.com)
+- 746093 Create ajax widgets for users wanting to report system problems and
+  request loans (rmancy@redhat.com)
+- 743319 add 'ignoredisk --interactive' if people select manual in ks_meta.
+  (ryang@redhat.com)
+- 751949 Remove log entries for already deleted jobs (rmancy@redhat.com)
+- 781369 Fix error when using '--wait' option on beaker client commands.
+  (rmancy@redhat.com)
+- 784863 Fix 500 when entering duplicate emails (rmancy@redhat.com)
+- 785048 Replace None with an empty string in csv export. (rmancy@redhat.com)
+- 772882 Clean duplicate required package list when uploading new tasks.
+  (ryang@redhat.com)
+- 747974 Only clear specially partitions if ondisk option is given. 
+  (ryang@redhat.com)
+
+- /distribution/beaker/custom_kickstart: initial version of test
+  (dcallagh@redhat.com)
+- tests: disable "slowness" test for large results (dcallagh@redhat.com)
+- Remove bkr.inttest.server.test_max_whiteboard, not relevant.
+  (rmancy@redhat.com)
+- avoid multiple concurrent get_distros AJAX requests (dcallagh@redhat.com)
+- avoid extraneous joins and DISTINCT on system grid pages
+  (dcallagh@redhat.com)
+- more resilient logging in command queue thread (dcallagh@redhat.com)
+- Use python-daemon in beakerd (stl@redhat.com)
+- qpid: Remove use of headers exchange, add direct (rmancy@redhat.com)
+- New option --suppress-install-task (mganisin@redhat.com)
+
+* Tue Apr 10 2012 Bill Peck <bpeck@redhat.com> 0.8.1-5.1
+- more resilient logging in command queue thread (dcallagh@redhat.com)
+
+* Wed Apr 04 2012 Raymond Mancy <rmancy@redhat.com> 0.8.1-9
 - service queue msgs' fixed to also be sent on direct exchange
   (rmancy@redhat.com)
 

@@ -761,7 +761,7 @@ class Workflow_XSLT(BeakerCommand):
 
             print '** Submitted: %s' % submitted_jobs
             if wait:
-                TaskWatcher.watch_tasks(self.hub, submitted_jobs)
+                watch_tasks(self.hub, submitted_jobs)
             if failed:
                 sys.exit(1)
         else:

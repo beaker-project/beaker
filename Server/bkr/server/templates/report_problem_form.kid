@@ -1,13 +1,5 @@
 <div xmlns:py="http://purl.org/kid/ns#">
-
-<form xmlns:py="http://purl.org/kid/ns#"
-    name="${use_name and name or None}"
-    id="${not use_name and name or None}"
-    action="${action}"
-    method="${method}"
-    class="tableform"
-    py:attrs="form_attrs"
->
+<script type='text/javascript' src="${tg.url('/static/javascript/util.js')}"/>
     <div py:if="hidden_fields" style="display:none">
         <div py:for="field in hidden_fields"
             py:replace="field.display(value_for(field), **params_for(field))"
@@ -16,13 +8,13 @@
     <table border="0" cellspacing="0" cellpadding="2">
         <tr>
             <th>Problematic system</th>
-            <td>${system.link}</td>
+            <td>${system.fqdn}</td>
         </tr>
         <tr py:if="recipe">
             <th>Related recipe</th>
-            <td>${recipe.link}</td>
+            <td>${recipe.t_id}</td>
         </tr>
-        <tr py:for="i, field in enumerate(fields)" class="${i%2 and 'odd' or 'even'}">
+        <tr py:for="i, field in enumerate(fields)">
             <th>
                 <label class="fieldlabel" for="${field.field_id}" py:content="field.label" />
             </th>
@@ -37,6 +29,4 @@
             <td py:content="submit.display(submit_text)" />
         </tr>
     </table>
-</form>
-
 </div>

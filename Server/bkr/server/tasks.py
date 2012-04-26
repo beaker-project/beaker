@@ -473,6 +473,9 @@ class Tasks(RPCRoot):
             task.runfor.append(TaskPackage.lazy_create(package=runfor))
         task.priority = tinfo.priority
         task.destructive = tinfo.destructive
+        # Bug 772882. Remove duplicate required package here
+        # Avoid ORM insert in task_packages_required_map twice.
+        tinfo.requires = list(set(tinfo.requires))
         for require in tinfo.requires:
             task.required.append(TaskPackage.lazy_create(package=require))
         for need in tinfo.needs:

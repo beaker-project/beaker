@@ -24,7 +24,7 @@ class Cancel(SeleniumTestCase):
         sel.click("//div[@id='fedora-content']/div[3]/div[1]/div/table/tbody/tr/td[7]/div/a[2]")
         sel.wait_for_page_to_load("30000")
         sel.click("//input[@value='Yes']")
-        sel.wait_for_page_to_load("30000")
+        sel.wait_for_page_to_load("60000")
         
         self.assertTrue(sel.is_text_present("Successfully cancelled recipeset %s" % self.job.recipesets[0].id))
 

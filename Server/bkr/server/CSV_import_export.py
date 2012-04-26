@@ -206,8 +206,8 @@ class CSV(RPCRoot):
     def to_datastruct(self):
         datastruct = dict()
         for csv_key in self.csv_keys:
-            val = unicode(getattr(self, csv_key, None))
-            datastruct[csv_key] = getattr(self, csv_key, None) 
+            val = getattr(self, csv_key, None) or ''
+            datastruct[csv_key] = unicode(val)
         yield datastruct
 
 class CSV_System(CSV):

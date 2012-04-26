@@ -519,6 +519,9 @@ def schedule():
        bb = ServerBeakerBus()
        bb.run()
 
+    beakerd_threads = set(["new_recipes", "processed_recipesets",\
+                           "main_recipes"])
+
     log.debug("starting new recipes thread")
     new_recipes_thread = threading.Thread(target=new_recipes_loop,
                                           name="new_recipes")
@@ -540,7 +543,8 @@ def schedule():
     try:
         while True:
             time.sleep(20)
-            if threading.active_count() != 4:
+            running_threads = set([t.name for t in threading.enumerate()])
+            if not running_threads.issuperset(beakerd_threads):
                 log.critical("a thread has died, shutting down")
                 rc = 1
                 running = False

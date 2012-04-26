@@ -435,6 +435,35 @@ class XmlNumaNodeCount(ElementWrapper):
             query = getattr(Numa.nodes, op)(value)
         return (joins, query)
 
+class XmlDevice(ElementWrapper):
+    """
+    Pick a system with a matching device.
+    """
+
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 '!=' : '__ne__'}
+
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        query = None
+        filter_clauses = []
+        for attr in ['bus', 'driver', 'vendor_id', 'device_id',
+                     'subsys_vendor_id', 'subsys_device_id']:
+            value = self.get_xml_attr(attr, unicode, None)
+            if value:
+                filter_clauses.append(getattr(Device, attr) == value)
+        if self.get_xml_attr('type', unicode, None):
+            filter_clauses.append(Device.device_class.has(
+                    DeviceClass.device_class ==
+                    self.get_xml_attr('type', unicode, None)))
+        if filter_clauses:
+            if op == '__eq__':
+                query = System.devices.any(and_(*filter_clauses))
+            else:
+                query = not_(System.devices.any(and_(*filter_clauses)))
+        return (joins, query)
+
 subclassDict = {
     'host'                : XmlHost,
     'distro'              : XmlDistro,
@@ -459,6 +488,7 @@ subclassDict = {
     'numa_node_count'     : XmlNumaNodeCount,
     'group'               : XmlGroup,
     'hypervisor'          : XmlHypervisor,
+    'device'              : XmlDevice,
     }
 
 def apply_filter(filter, query):

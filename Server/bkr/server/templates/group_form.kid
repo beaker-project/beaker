@@ -4,10 +4,8 @@
 
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
-
     <title>Group Edit</title>
 </head>
-
 
 <body class="flora">
     <div py:if="form">
@@ -22,6 +20,10 @@
     <div>
        ${systemgrid.display(value.systems)}
        <p py:content="system_form(method='GET', action=system_action, value=value)">System Form goes here</p>
+    </div>
+    <div>
+       <br/>
+       ${group_permissions.display(value, form=group_form, grid=group_permissions_grid)}
     </div>
 </body>
 </html>

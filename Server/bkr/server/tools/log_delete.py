@@ -1,6 +1,8 @@
 
 import sys
-import errno, shutil, datetime
+import errno
+import shutil
+import datetime
 from bkr import __version__ as bkr_version
 from optparse import OptionParser
 from bkr.server.model import Job
@@ -47,9 +49,8 @@ def log_delete(verb=False, dry=False):
 
     for job, logs in Job.expired_logs():
         try:
-            job.deleted = datetime.datetime.utcnow()
+            session.begin()
             for log in logs:
-                session.begin()
                 if not dry:
                     if 'http' in log:
                         url = log
@@ -61,15 +62,18 @@ def log_delete(verb=False, dry=False):
                         except OSError, e:
                             if e.errno == errno.ENOENT:
                                 pass
-                    session.commit()
-                    session.close()
 
                 else:
-                    session.close()
+                    pass
 
                 if verb:
                     print log
-
+            if not dry:
+                job.delete()
+                session.commit()
+                session.close()
+            else:
+                session.close()
         except Exception, e:
             session.close()
             logger.error(str(e))

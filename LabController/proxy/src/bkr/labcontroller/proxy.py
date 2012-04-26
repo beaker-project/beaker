@@ -25,6 +25,10 @@ from bkr.labcontroller.config import get_conf
 from kobo.process import kill_process_group
 from bkr.upload import Uploader
 import utils
+try:
+    from subprocess import check_output
+except ImportError:
+    from utils import check_output
 
 try:
     from hashlib import md5 as md5_constructor
@@ -415,8 +419,32 @@ class Watchdog(ProxyHelper):
         """ Abort expired watchdog entry
         """
         logger.info("External Watchdog Expired for %s", watchdog['system'])
+        if self.conf.get("WATCHDOG_SCRIPT"):
+            recipexml = self.get_my_recipe(dict(recipe_id=watchdog['recipe_id']))
+            recipeset = xmltramp.parse(recipexml).recipeSet
+            try:
+                recipe = recipeset.recipe
+            except AttributeError:
+                recipe = recipeset.guestrecipe
+            for task in recipe['task':]:
+                if task()['status'] == 'Running':
+                    break
+            task_id = task()['id']
+            try:
+                args = [self.conf.get('WATCHDOG_SCRIPT'),
+                        str(watchdog['system']),
+                        str(watchdog['recipe_id']), str(task_id),
+                       ]
+                output = check_output(args)
+                logger.debug("Extending T:%s watchdog %d" % (task_id,
+                                                             int(output)))
+                self.extend_watchdog(task_id, int(output))
+                return
+            except Exception:
+                logger.exception('Error in watchdog script: %r', args)
+
         self.recipe_stop(watchdog['recipe_id'],
-                         'abort', 
+                         'abort',
                          'External Watchdog Expired')
 
 class Monitor(ProxyHelper):
@@ -432,6 +460,7 @@ class Monitor(ProxyHelper):
         self.hub = obj.hub
         self.upload = obj.upload
         self.basepath = obj.basepath
+        self.log_base_url = obj.log_base_url
         logger.info("Initialize monitor for system: %s", self.watchdog['system'])
         self.watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),self.watchdog,self, self.conf["PANIC_REGEX"])]
 

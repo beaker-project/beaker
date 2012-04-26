@@ -47,7 +47,7 @@ See also
 :manpage:`bkr(1)`
 """
 
-
+import sys
 from bkr.client import BeakerCommand
 from optparse import OptionValueError
 from bkr.client.task_watcher import *
@@ -67,7 +67,12 @@ class Job_Logs(BeakerCommand):
 
         self.set_hub(username, password)
         for task in args:
-            for recipe in libxml2.parseDoc(self.hub.taskactions.to_xml(task)).xpathNewContext().xpathEval("//recipe"):
+            recipes = libxml2.parseDoc(self.hub.taskactions.to_xml(task))\
+                    .xpathNewContext().xpathEval("//recipe")
+            if not recipes:
+                sys.stderr.write('No recipes found for %s. Specify J, RS, or R.\n' % task)
+                sys.exit(1)
+            for recipe in recipes:
                logfiles = self.hub.recipes.files(recipe.prop('id'))
                for log in logfiles:
                    print log['url']

@@ -652,6 +652,60 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         self.assert_(baremetal in systems)
         self.assert_(kvm in systems)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=731615
+    def test_filtering_by_device(self):
+        network_class = data_setup.create_device_class(u'NETWORK')
+        with_e1000 = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        with_e1000.devices.append(data_setup.create_device(
+                device_class_id=network_class.id,
+                vendor_id=u'8086', device_id=u'107c',
+                subsys_vendor_id=u'8086', subsys_device_id=u'1376',
+                bus=u'pci', driver=u'e1000',
+                description=u'82541PI Gigabit Ethernet Controller'))
+        with_tg3 = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        with_tg3.devices.append(data_setup.create_device(
+                device_class_id=network_class.id,
+                vendor_id=u'14e4', device_id=u'1645',
+                subsys_vendor_id=u'10a9', subsys_device_id=u'8010',
+                bus=u'pci', driver=u'tg3',
+                description=u'NetXtreme BCM5701 Gigabit Ethernet'))
+        session.flush()
+
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <device op="=" driver="e1000" />
+            </hostRequires>
+            """))
+        self.assert_(with_e1000 in systems)
+        self.assert_(with_tg3 not in systems)
+
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <device op="=" type="network" vendor_id="8086" />
+            </hostRequires>
+            """))
+        self.assert_(with_e1000 in systems)
+        self.assert_(with_tg3 not in systems)
+
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <device op="=" vendor_id="14E4" device_id="1645" />
+            </hostRequires>
+            """))
+        self.assert_(with_e1000 not in systems)
+        self.assert_(with_tg3 in systems)
+
+        # this filter does nothing, but at least it shouldn't explode
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <device op="=" />
+            </hostRequires>
+            """))
+        self.assert_(with_e1000 in systems)
+        self.assert_(with_tg3 in systems)
+
 class UserTest(unittest.TestCase):
 
     def setUp(self):

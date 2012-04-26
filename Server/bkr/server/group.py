@@ -2,15 +2,14 @@ from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from turbogears.widgets import AutoCompleteField
 from turbogears import identity, redirect
+from sqlalchemy.orm.exc import NoResultFound
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid
+from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, GroupPermissions
 from bkr.server.admin_page import AdminPage
-
-
 import cherrypy
 
 # from bkr.server import json
@@ -20,11 +19,11 @@ import cherrypy
 from model import *
 import string
 
-# Validation Schemas
 
 class GroupFormSchema(validators.Schema):
     display_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
     group_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
+
 
 class Groups(AdminPage):
     # For XMLRPC methods in this class.
@@ -47,12 +46,28 @@ class Groups(AdminPage):
                                      search_param = "name",
                                      result_name = "groups")
 
+    search_permissions = AutoCompleteField(name='permissions', 
+                                     search_controller = url("/groups/get_permissions"),
+                                     search_param = "input",
+                                     result_name = "matches")
+
     group_form = widgets.TableForm(
         'Group',
         fields = [group_id, display_name, group_name],
         action = 'save_data',
         submit_text = _(u'Save'),
         validator = GroupFormSchema()
+    )
+
+    permissions_form = widgets.RemoteForm(
+        'Permissions',
+        fields = [search_permissions, group_id],
+        submit_text = _(u'Add'),
+        validator = GroupFormSchema(),
+        on_success = 'add_group_permission_success(http_request.responseText)',
+        on_failure = 'add_group_permission_failure(http_request.responseText)',
+        before = 'before_group_permission_submit()',
+        after = 'after_group_permission_submit()',
     )
 
     group_user_form = widgets.TableForm(
@@ -89,7 +104,29 @@ class Groups(AdminPage):
 
         groups =  [match.group_name for match in search]
         return dict(matches=groups)
-    
+
+    @expose(format='json')
+    @identity.require(identity.in_group('admin'))
+    def remove_group_permission(self, group_id, permission_id):
+        try:
+            group = Group.by_id(group_id)
+        except NoResultFound:
+            log.exception('Group id %s is not a valid Group to remove' % group_id)
+            return ['0']
+        try:
+            permission = Permission.by_id(permission_id)
+        except NoResultFound:
+            log.exception('Permission id %s is not a valid Permission to remove' % permission_id)
+            return ['0']
+        group.permissions.remove(permission)
+        return ['1']
+
+    @expose(format='json')
+    def get_permissions(self, input):
+        results = Permission.by_name(input, anywhere=True)
+        permission_names = [result.permission_name for result in results]
+        return dict(matches=permission_names)
+
     @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.form')
     def new(self, **kw):
@@ -134,11 +171,13 @@ class Groups(AdminPage):
     @expose(template='bkr.server.templates.group_form')
     def edit(self, id, **kw):
         group = Group.by_id(id)
-        usergrid = self.show_members(id) 
+        usergrid = self.show_members(id)
         systemgrid = widgets.DataGrid(fields=[
                                   ('System Members', lambda x: x.fqdn),
                                   (' ', lambda x: make_link('removeSystem?group_id=%s&id=%s' % (id, x.id), u'Remove (-)')),
                               ])
+        group_permissions_grid = self.show_permissions()
+        group_permissions = GroupPermissions()
         return dict(
             form = self.group_form,
             system_form = self.group_system_form,
@@ -150,7 +189,10 @@ class Groups(AdminPage):
             value = group,
             usergrid = usergrid,
             systemgrid = systemgrid,
-            disabled_fields = ['System Members']
+            disabled_fields = ['System Members'],
+            group_permissions = group_permissions,
+            group_form = self.permissions_form,
+            group_permissions_grid = group_permissions_grid,
         )
     
     @identity.require(identity.in_group("admin"))
@@ -181,6 +223,43 @@ class Groups(AdminPage):
         system.activity.append(sactivity)
         flash( _(u"OK") )
         redirect("./edit?id=%s" % kw['group_id'])
+
+    @identity.require(identity.in_group("admin"))
+    @expose(format='json')
+    def save_group_permissions(self, **kw):
+        try:
+            permission_name = kw['permissions']['text']
+        except KeyError, e:
+            log.exception('Permission not submitted correctly')
+            response.status = 403
+            return ['Permission not submitted correctly']
+        try:
+            permission = Permission.by_name(permission_name)
+        except NoResultFound:
+            log.exception('Invalid permission: %s' % permission_name)
+            response.status = 403
+            return ['Invalid permission value']
+        try:
+            group_id = kw['group_id']
+        except KeyError:
+            log.exception('Group id not submitted')
+            response.status = 403
+            return ['No group id given']
+        try:
+            group = Group.by_id(group_id)
+        except NoResultFound:
+            log.exception('Group id %s is not a valid group id' % group_id)
+            response.status = 403
+            return ['Invalid group id %s' % group_id ]
+        group = Group.by_id(group_id)
+        if permission not in group.permissions:
+            group.permissions.append(permission)
+        else:
+            response.status = 403
+            return ['%s already exists in group %s' % 
+                (permission.permission_name, group.group_name)]
+
+        return {'name':permission_name, 'id':permission.permission_id}
 
     @identity.require(identity.in_group("admin"))
     @expose()
@@ -226,6 +305,12 @@ class Groups(AdminPage):
         template_data = self.groups(my_groups,current_user,*args,**kw)
         template_data['title'] = 'My Groups'
         return template_data
+
+    def show_permissions(self):
+        grid = widgets.DataGrid(fields=[('Permissions', lambda x: x.permission_name),
+            (' ', lambda x: make_fake_link('','remove_permission_%s' % x.permission_id, 'Remove (-)'))])
+        grid.name = 'group_permission_grid'
+        return grid
 
     def groups(self, groups=None, user=None, *args,**kw):
         if groups is None:
