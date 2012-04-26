@@ -11,6 +11,7 @@ except ImportError, e:
 class ClientBeakerBus(BeakerBus):
 
     topic_exchange = conf.get('QPID_TOPIC_EXCHANGE')
+    direct_exchange = conf.get('QPID_DIRECT_EXCHANGE')
     service_queue_name = conf.get('QPID_SERVICE_QUEUE')
 
     _broker = conf.get('QPID_BROKER')
@@ -51,15 +52,17 @@ class ClientBeakerBus(BeakerBus):
                 queue_name = 'tmp.beaker-events-client' + str(datatypes.uuid4())
                 addr_string = queue_name + '; { create: receiver,  \
                         node: { type: queue, durable: False,  \
-                    x-declare: { exclusive: True, auto-delete: True },  \
+                    x-declare: { exclusive: True, auto-delete: True, \
+                                 arguments: { \'qpid.policy_type\': ring, \
+                                              \'qpid.max_size\': 50000000 } },  \
                     x-bindings: [ {  exchange: "' + self.topic_exchange + '", queue: "' + queue_name + '", \
-                                    key: "TaskUpdate.#.' + t_id + depth_string+'" } ] } }'
+                                    key: "beaker.TaskUpdate.#.' + t_id + depth_string+'" } ] } }'
                 new_receiver = session.receiver(addr_string)
                 new_receiver.capacity = 10
             depth_string += '.*'
         try:
             while True:
-                message = session.next_receiver().fetch() 
+                message = session.next_receiver().fetch()
                 error = message.properties.get('error')
                 content = message.content
                 session.acknowledge()
@@ -69,8 +72,8 @@ class ClientBeakerBus(BeakerBus):
                 except ValueError, e: #Perhaps we got a sub task
                     subject_with_ancestors = message.subject
                     #Trim the fat from our subject and reverse to get ancestors
-                    #So it goes from 'TaskUpdate.J:1.RS:2.R:3' to [RS:2,J:1]
-                    ancestors = subject_with_ancestors.split('.')[1:-1]
+                    #So it goes from 'beaker.TaskUpdate.J:1.RS:2.R:3' to [RS:2,J:1]
+                    ancestors = subject_with_ancestors.split('.')[2:-1]
                     ancestors.reverse()
                     task = self.task_watcher.add_watch_task_from_wire(t_id,ancestors)
                 if error:

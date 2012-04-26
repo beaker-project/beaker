@@ -8,7 +8,8 @@ import socket
 import xmlrpclib
 from optparse import OptionParser
 
-from bkr.labcontroller.proxy import Watchdog, RepeatTimer
+from bkr.common.helpers import RepeatTimer
+from bkr.labcontroller.proxy import Watchdog
 from bkr.labcontroller.config import get_conf
 
 from kobo.exceptions import ShutdownException
