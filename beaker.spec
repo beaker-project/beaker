@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.2
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -348,6 +348,9 @@ fi
 %endif
 
 %changelog
+* Fri Apr 27 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.2-6
+- 816553 add missing unique constraints (dcallagh@redhat.com)
+
 * Thu Apr 19 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-5
 - Change Group's permissions table header to 'Permissions', and moved 'Contact
   Owner' link to be beside owner field. (rmancy@redhat.com)
