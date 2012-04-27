@@ -334,3 +334,129 @@ Fix existing logs that should have been deleted
 To roll back:
 
     There is no roll back
+
+
+Add missing unique constraints (bug 816553)
+-------------------------------------------
+
+Run the following SQL:
+
+    DELETE FROM task_type
+        USING task_type
+        INNER JOIN (
+            SELECT MIN(id) AS id, type
+            FROM task_type
+            GROUP BY type) AS x
+        ON x.type = task_type.type AND x.id != task_type.id;
+    ALTER TABLE task_type
+        MODIFY type VARCHAR(255) NOT NULL UNIQUE;
+
+    DELETE FROM task_package
+        USING task_package
+        INNER JOIN (
+            SELECT MIN(id) AS id, package
+            FROM task_package
+            GROUP BY package) AS x
+        ON x.package = task_package.package AND x.id != task_package.id;
+    ALTER TABLE task_package
+        MODIFY package VARCHAR(255) NOT NULL COLLATE utf8_bin UNIQUE;
+
+    UPDATE device
+        INNER JOIN device_class ON device.device_class_id = device_class.id
+        INNER JOIN (
+            SELECT MIN(id) AS id, device_class
+            FROM device_class
+            GROUP BY device_class) AS x
+        ON x.device_class = device_class.device_class AND x.id != device_class.id
+        SET device.device_class_id = x.id;
+    DELETE FROM device_class
+        USING device_class
+        INNER JOIN (
+            SELECT MIN(id) AS id, device_class
+            FROM device_class
+            GROUP BY device_class) AS x
+        ON x.device_class = device_class.device_class AND x.id != device_class.id;
+    ALTER TABLE device_class
+        MODIFY device_class VARCHAR(24) NOT NULL UNIQUE;
+
+    DELETE FROM system_device_map
+        USING system_device_map
+        INNER JOIN device ON system_device_map.device_id = device.id
+        INNER JOIN (
+            SELECT system_id, MIN(device.id) AS id, vendor_id, device.device_id, subsys_device_id,
+                subsys_vendor_id, bus, driver, description
+            FROM system_device_map
+            INNER JOIN device ON system_device_map.device_id = device.id
+            GROUP BY system_id, vendor_id, device.device_id, subsys_device_id, subsys_vendor_id,
+                bus, driver, description) AS x
+        ON x.system_id = system_device_map.system_id
+            AND x.vendor_id = device.vendor_id
+            AND x.device_id = device.device_id
+            AND x.subsys_device_id = device.subsys_device_id
+            AND x.subsys_vendor_id = device.subsys_vendor_id
+            AND x.bus = device.bus
+            AND x.driver = device.driver
+            AND x.description = device.description
+            AND x.id != device.id;
+    UPDATE system_device_map
+        INNER JOIN device ON system_device_map.device_id = device.id
+        INNER JOIN (
+            SELECT MIN(id) AS id, vendor_id, device_id, subsys_device_id,
+                subsys_vendor_id, bus, driver, description
+            FROM device
+            GROUP BY vendor_id, device_id, subsys_device_id, subsys_vendor_id,
+                bus, driver, description) AS x
+        ON x.vendor_id = device.vendor_id
+            AND x.device_id = device.device_id
+            AND x.subsys_device_id = device.subsys_device_id
+            AND x.subsys_vendor_id = device.subsys_vendor_id
+            AND x.bus = device.bus
+            AND x.driver = device.driver
+            AND x.description = device.description
+            AND x.id != device.id
+        SET system_device_map.device_id = x.id;
+    DELETE FROM device
+        USING device
+        INNER JOIN (
+            SELECT MIN(id) AS id, vendor_id, device_id, subsys_device_id,
+                subsys_vendor_id, bus, driver, description
+            FROM device
+            GROUP BY vendor_id, device_id, subsys_device_id, subsys_vendor_id,
+                bus, driver, description) AS x
+        ON x.vendor_id = device.vendor_id
+            AND x.device_id = device.device_id
+            AND x.subsys_device_id = device.subsys_device_id
+            AND x.subsys_vendor_id = device.subsys_vendor_id
+            AND x.bus = device.bus
+            AND x.driver = device.driver
+            AND x.description = device.description
+            AND x.id != device.id;
+    ALTER TABLE device
+        MODIFY vendor_id VARCHAR(4),
+        MODIFY device_id VARCHAR(4),
+        MODIFY subsys_device_id VARCHAR(4),
+        MODIFY subsys_vendor_id VARCHAR(4),
+        ADD UNIQUE device_uix_1 (
+            vendor_id, device_id, subsys_device_id, subsys_vendor_id,
+            bus, driver, description, device_class_id);
+
+To roll back:
+
+    ALTER TABLE task_type
+        DROP INDEX type,
+        MODIFY type VARCHAR(256);
+
+    ALTER TABLE task_package
+        DROP INDEX package,
+        MODIFY package VARCHAR(2048) COLLATE utf8_bin;
+
+    ALTER TABLE device_class
+        DROP INDEX device_class,
+        MODIFY device_class VARCHAR(24);
+
+    ALTER TABLE device
+        DROP INDEX device_uix_1,
+        MODIFY vendor_id VARCHAR(255),
+        MODIFY device_id VARCHAR(255),
+        MODIFY subsys_device_id VARCHAR(255),
+        MODIFY subsys_vendor_id VARCHAR(255);
