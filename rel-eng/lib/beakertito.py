@@ -17,8 +17,8 @@ class BeakerVersionTagger(VersionTagger):
 
         changelog = []
         for sha in reversed(commits.split('\n')):
-            subject = run_command('git show -s --pretty="format:%%s%s" %s'
-                    % (self._changelog_email(), sha))
+            subject = run_command('git show -s --pretty="format:%s" %s'
+                    % (self._changelog_format(), sha))
 
             # Skip Gerrit merges
             if re.match(r'Merge ".*" into develop', subject):
