@@ -404,10 +404,10 @@ def read_inventory():
                         deviceID = "%04x" % (DeviceID and DeviceID or 0),
                         subsysVendorID = "%04x" % (SubsysVendorID and SubsysVendorID or 0),
                         subsysDeviceID = "%04x" % (SubsysDeviceID and SubsysDeviceID or 0),
-                        bus = Bus,
-                        driver = Driver,
-                        type = Type,
-                        description = Description)
+                        bus = str(Bus),
+                        driver = str(Driver),
+                        type = str(Type),
+                        description = str(Description))
         data['Devices'].append(device)
     return data
 
