@@ -463,19 +463,25 @@ class Tasks(RPCRoot):
                     task.excluded_arch.append(TaskExcludeArch(arch=Arch.by_name(arch)))
         task.avg_time = tinfo.avg_test_time
         for type in tinfo.types:
-            task.types.append(TaskType.lazy_create(type=type))
+            ttype = TaskType.lazy_create(type=type)
+            task.types.append(ttype)
         for bug in tinfo.bugs:
             task.bugzillas.append(TaskBugzilla(bugzilla_id=bug))
         task.path = tinfo.test_path
+        # Bug 772882. Remove duplicate required package here
+        # Avoid ORM insert in task_packages_required_map twice.
+        tinfo.runfor = list(set(tinfo.runfor))
         for runfor in tinfo.runfor:
-            task.runfor.append(TaskPackage.lazy_create(package=runfor))
+            package = TaskPackage.lazy_create(package=runfor)
+            task.runfor.append(package)
         task.priority = tinfo.priority
         task.destructive = tinfo.destructive
         # Bug 772882. Remove duplicate required package here
         # Avoid ORM insert in task_packages_required_map twice.
         tinfo.requires = list(set(tinfo.requires))
         for require in tinfo.requires:
-            task.required.append(TaskPackage.lazy_create(package=require))
+            package = TaskPackage.lazy_create(package=require)
+            task.required.append(package)
         for need in tinfo.needs:
             task.needs.append(TaskPropertyNeeded(property=need))
         task.license = tinfo.license
