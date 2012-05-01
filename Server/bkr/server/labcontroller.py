@@ -476,7 +476,7 @@ class LabControllers(RPCRoot):
     @expose('json')
     def has_active_recipes(self, id):
         labcontroller = LabController.by_id(id)
-        count = labcontroller.dyn_systems.filter(System.watchdog != None).count()
+        count = Watchdog.by_status(labcontroller=labcontroller, status='active').count()
         if count:
             return {'has_active_recipes' : True}
         else:

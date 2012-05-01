@@ -1,0 +1,20 @@
+Remove system_id from watchdog table
+------------------------------------
+
+Run the following SQL:
+
+    ALTER TABLE watchdog
+        DROP FOREIGN KEY watchdog_ibfk_4, -- system_id FK
+        DROP COLUMN system_id;
+
+To roll back, run the following SQL:
+
+    ALTER TABLE watchdog
+        ADD COLUMN system_id INT AFTER id;
+    UPDATE watchdog
+        INNER JOIN recipe ON watchdog.recipe_id = recipe.id
+        SET watchdog.system_id = recipe.system_id;
+    ALTER TABLE watchdog
+        MODIFY system_id INT NOT NULL,
+        ADD CONSTRAINT watchdog_system_id_fk
+            FOREIGN KEY (system_id) REFERENCES system (id);

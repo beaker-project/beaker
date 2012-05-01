@@ -417,7 +417,7 @@ def mark_recipe_waiting(recipe):
     recipe.system.reserve(service=u'testdata',
             user=recipe.recipeset.job.owner,
             reservation_type=u'recipe', recipe=recipe)
-    recipe.watchdog = Watchdog(system=recipe.system)
+    recipe.watchdog = Watchdog()
     recipe.waiting()
     log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.system)
 
