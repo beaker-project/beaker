@@ -156,6 +156,7 @@ function LabController()
     rlServiceStart httpd xinetd cobblerd
     # Using cobbler to get the netboot loaders..
     rlRun "cobbler get-loaders" 0 "get network boot loaders"
+    rlRun "cobbler sync" 0 "sync boot loaders to tftpboot"
     rlServiceStop iptables
     rlRun "rhts-sync-set -s READY" 0 "Lab Controller ready"
     rlRun "rhts-sync-block -s SERVERREADY -s ABORT $SERVER" 0 "Wait for Server to become ready"
