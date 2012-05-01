@@ -149,25 +149,18 @@ function LabController()
     rlRun "chkconfig httpd on"
     rlRun "chkconfig xinetd on"
     rlRun "chkconfig tftp on"
-    rlRun "chkconfig cobblerd on"
-    #FIXME edit /etc/cobbler/settings
-     perl -pi -e "s|^server: 127.0.0.1|server: $HOSTNAME|g" /etc/cobbler/settings
-     perl -pi -e "s|^next_server: 127.0.0.1|next_server: $ipaddress|g" /etc/cobbler/settings
-     perl -pi -e "s|^pxe_just_once: 0|pxe_just_once: 1|g" /etc/cobbler/settings
-     perl -pi -e "s|^anamon_enabled: 0|anamon_enabled: 1|g" /etc/cobbler/settings
-    #FIXME edit /etc/cobbler/modules.conf
-    # enable testing auth module
-    perl -pi -e "s|^module = authn_denyall|module = authn_testing|g" /etc/cobbler/modules.conf
     # Configure beaker-proxy config
     generate_proxy_cfg
     # Turn on wsgi
     perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
-    rlServiceStart httpd xinetd cobblerd autofs
+    rlServiceStart httpd xinetd cobblerd
+    # Using cobbler to get the netboot loaders..
     rlRun "cobbler get-loaders" 0 "get network boot loaders"
     rlServiceStop iptables
     rlRun "rhts-sync-set -s READY" 0 "Lab Controller ready"
     rlRun "rhts-sync-block -s SERVERREADY -s ABORT $SERVER" 0 "Wait for Server to become ready"
-    rlServiceStart beaker-proxy beaker-watchdog beaker-transfer
+    rlServiceStart beaker-proxy beaker-watchdog beaker-provision
+    # There is beaker-transfer as well but its disabled by default
     rlRun "rhts-sync-set -s DONE" 0 "Lab Controller done"
    rlPhaseEnd
  rlJournalEnd
