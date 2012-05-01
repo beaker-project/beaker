@@ -42,6 +42,9 @@ class CommandQueuePoller(ProxyHelper):
         del self.greenlets[id]
         self.hub.labcontrollers.mark_command_failed(id, message)
 
+    def clear_running_commands(self, message):
+        self.hub.labcontrollers.clear_running_commands(message)
+
     def poll(self):
         logger.debug('Polling for queued commands')
         for command in self.get_queued_commands():
@@ -166,6 +169,9 @@ def main_loop(poller=None, conf=None, foreground=False):
         log_file = conf["PROVISION_LOG_FILE"]
         add_rotating_file_logger(logging.getLogger(), log_file,
                 log_level=log_level, format=conf["VERBOSE_LOG_FORMAT"])
+
+    logger.debug('Clearing old running commands')
+    poller.clear_running_commands(u'Stale command cleared on startup')
 
     logger.debug('Entering main provision loop')
     while True:
