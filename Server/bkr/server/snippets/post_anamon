@@ -1,0 +1,17 @@
+{% if recipe %}
+
+wget -O /usr/local/sbin/anamon "http://{{ system.lab_controller.fqdn }}/beaker/anamon"
+wget -O /etc/rc.d/init.d/anamon "http://{{ system.lab_controller.fqdn }}/beaker/anamon.init"
+
+chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+test -d /selinux && restorecon /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+
+chkconfig --add anamon
+
+cat << __EOT__ > /etc/sysconfig/anamon
+XMLRPC_URL="http://{{ system.lab_controller.fqdn }}:8000/RPC2"
+RECIPE_ID="{{ recipe.id }}"
+LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
+__EOT__
+
+{% endif %}

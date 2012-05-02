@@ -1,0 +1,3 @@
+#!/bin/sh
+set -e
+fence_bladecenter -x -a "$power_address" -l "$power_user" -p "$power_pass" -n "$power_id" -o "$power_mode"

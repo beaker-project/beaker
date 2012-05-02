@@ -1,0 +1,8 @@
+{% if system.user and system.user.sshpubkeys %}
+mkdir -p /root/.ssh
+{% for ssh_key in system.user.sshpubkeys %}
+echo {{ ssh_key }} >> /root/.ssh/authorized_keys
+{% endfor %}
+restorecon -R /root/.ssh
+chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
+{% endif %}

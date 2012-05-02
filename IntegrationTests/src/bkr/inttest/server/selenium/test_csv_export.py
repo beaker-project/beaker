@@ -35,20 +35,20 @@ class CSVExportTest(WebDriverTestCase):
     def test_export_install_options(self):
         with session.begin():
             system = data_setup.create_system(arch=u'i386')
-            distro = data_setup.create_distro(arch=u'i386')
-            system.provisions[distro.arch] = Provision(
-                    arch=distro.arch, ks_meta=u'some_ks_meta_var=1',
+            distro_tree = data_setup.create_distro_tree(arch=u'i386')
+            system.provisions[distro_tree.arch] = Provision(
+                    arch=distro_tree.arch, ks_meta=u'some_ks_meta_var=1',
                     kernel_options=u'some_kernel_option=1',
                     kernel_options_post=u'some_kernel_option=2')
-            system.provisions[distro.arch]\
-                .provision_families[distro.osversion.osmajor] = \
-                    ProvisionFamily(osmajor=distro.osversion.osmajor,
+            system.provisions[distro_tree.arch]\
+                .provision_families[distro_tree.distro.osversion.osmajor] = \
+                    ProvisionFamily(osmajor=distro_tree.distro.osversion.osmajor,
                         ks_meta=u'some_ks_meta_var=2', kernel_options=u'some_kernel_option=3',
                         kernel_options_post=u'some_kernel_option=4')
-            system.provisions[distro.arch]\
-                .provision_families[distro.osversion.osmajor]\
-                .provision_family_updates[distro.osversion] = \
-                    ProvisionFamilyUpdate(osversion=distro.osversion,
+            system.provisions[distro_tree.arch]\
+                .provision_families[distro_tree.distro.osversion.osmajor]\
+                .provision_family_updates[distro_tree.distro.osversion] = \
+                    ProvisionFamilyUpdate(osversion=distro_tree.distro.osversion,
                         ks_meta=u'some_ks_meta_var=3', kernel_options=u'some_kernel_option=5',
                         kernel_options_post=u'some_kernel_option=6')
 
@@ -62,14 +62,14 @@ class CSVExportTest(WebDriverTestCase):
         self.assertEquals(csv_rows[0]['kernel_options'], 'some_kernel_option=1')
         self.assertEquals(csv_rows[0]['kernel_options_post'], 'some_kernel_option=2')
         self.assertEquals(csv_rows[1]['arch'], 'i386')
-        self.assertEquals(csv_rows[1]['family'], unicode(distro.osversion.osmajor))
+        self.assertEquals(csv_rows[1]['family'], unicode(distro_tree.distro.osversion.osmajor))
         self.assertEquals(csv_rows[1]['update'], '')
         self.assertEquals(csv_rows[1]['ks_meta'], 'some_ks_meta_var=2')
         self.assertEquals(csv_rows[1]['kernel_options'], 'some_kernel_option=3')
         self.assertEquals(csv_rows[1]['kernel_options_post'], 'some_kernel_option=4')
         self.assertEquals(csv_rows[2]['arch'], 'i386')
-        self.assertEquals(csv_rows[2]['family'], unicode(distro.osversion.osmajor))
-        self.assertEquals(csv_rows[2]['update'], unicode(distro.osversion.osminor))
+        self.assertEquals(csv_rows[2]['family'], unicode(distro_tree.distro.osversion.osmajor))
+        self.assertEquals(csv_rows[2]['update'], unicode(distro_tree.distro.osversion.osminor))
         self.assertEquals(csv_rows[2]['ks_meta'], 'some_ks_meta_var=3')
         self.assertEquals(csv_rows[2]['kernel_options'], 'some_kernel_option=5')
         self.assertEquals(csv_rows[2]['kernel_options_post'], 'some_kernel_option=6')
@@ -77,19 +77,19 @@ class CSVExportTest(WebDriverTestCase):
     def test_export_install_options_with_null_options(self):
         with session.begin():
             system = data_setup.create_system(arch=u'i386')
-            distro = data_setup.create_distro(arch=u'i386')
-            system.provisions[distro.arch] = Provision(
-                    arch=distro.arch, ks_meta=u'some_ks_meta_var=3',
+            distro_tree = data_setup.create_distro_tree(arch=u'i386')
+            system.provisions[distro_tree.arch] = Provision(
+                    arch=distro_tree.arch, ks_meta=u'some_ks_meta_var=3',
                     kernel_options=None, kernel_options_post=None)
-            system.provisions[distro.arch]\
-                .provision_families[distro.osversion.osmajor] = \
-                    ProvisionFamily(osmajor=distro.osversion.osmajor,
+            system.provisions[distro_tree.arch]\
+                .provision_families[distro_tree.distro.osversion.osmajor] = \
+                    ProvisionFamily(osmajor=distro_tree.distro.osversion.osmajor,
                         ks_meta=None, kernel_options=u'some_kernel_option=7',
                         kernel_options_post=None)
-            system.provisions[distro.arch]\
-                .provision_families[distro.osversion.osmajor]\
-                .provision_family_updates[distro.osversion] = \
-                    ProvisionFamilyUpdate(osversion=distro.osversion,
+            system.provisions[distro_tree.arch]\
+                .provision_families[distro_tree.distro.osversion.osmajor]\
+                .provision_family_updates[distro_tree.distro.osversion] = \
+                    ProvisionFamilyUpdate(osversion=distro_tree.distro.osversion,
                         ks_meta=None, kernel_options=None,
                         kernel_options_post=u'some_kernel_option=8')
 
@@ -103,14 +103,14 @@ class CSVExportTest(WebDriverTestCase):
         self.assertEquals(csv_rows[0]['kernel_options'], '')
         self.assertEquals(csv_rows[0]['kernel_options_post'], '')
         self.assertEquals(csv_rows[1]['arch'], 'i386')
-        self.assertEquals(csv_rows[1]['family'], unicode(distro.osversion.osmajor))
+        self.assertEquals(csv_rows[1]['family'], unicode(distro_tree.distro.osversion.osmajor))
         self.assertEquals(csv_rows[1]['update'], '')
         self.assertEquals(csv_rows[1]['ks_meta'], '')
         self.assertEquals(csv_rows[1]['kernel_options'], 'some_kernel_option=7')
         self.assertEquals(csv_rows[1]['kernel_options_post'], '')
         self.assertEquals(csv_rows[2]['arch'], 'i386')
-        self.assertEquals(csv_rows[2]['family'], unicode(distro.osversion.osmajor))
-        self.assertEquals(csv_rows[2]['update'], unicode(distro.osversion.osminor))
+        self.assertEquals(csv_rows[2]['family'], unicode(distro_tree.distro.osversion.osmajor))
+        self.assertEquals(csv_rows[2]['update'], unicode(distro_tree.distro.osversion.osminor))
         self.assertEquals(csv_rows[2]['ks_meta'], '')
         self.assertEquals(csv_rows[2]['kernel_options'], '')
         self.assertEquals(csv_rows[2]['kernel_options_post'], 'some_kernel_option=8')
@@ -137,9 +137,9 @@ class CSVExportTest(WebDriverTestCase):
     def test_export_exclude_options(self):
         with session.begin():
             system = data_setup.create_system(arch=u'i386')
-            distro = data_setup.create_distro(arch=u'i386')
+            distro_tree = data_setup.create_distro_tree(arch=u'i386')
             system.excluded_osmajor.append(
-                ExcludeOSMajor(osmajor=distro.osversion.osmajor, arch=distro.arch))
+                ExcludeOSMajor(osmajor=distro_tree.distro.osversion.osmajor, arch=distro_tree.arch))
         login(self.browser)
         csv_request = self.get_csv('exclude')
         csv_rows = [row for row in csv.DictReader(csv_request) if row['fqdn'] == system.fqdn]

@@ -56,15 +56,21 @@ Beaker's inventory.
 .. automethod:: systems.history
 
 
-Distros
--------
+Distros and distro trees
+------------------------
 
 The following XML-RPC methods allow the caller to fetch and manipulate distros 
-recorded in Beaker.
+and distro trees recorded in Beaker.
+
+.. currentmodule:: bkr.server.distrotrees
+
+.. automethod:: distrotrees.filter
 
 .. currentmodule:: bkr.server.distro
 
 .. automethod:: distros.filter
+
+.. automethod:: distros.get_osmajors
 
 .. automethod:: distros.edit_version
 

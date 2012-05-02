@@ -86,30 +86,24 @@ def new_recipes(*args):
         session.begin()
         try:
             recipe = Recipe.by_id(recipe_id)
-            if recipe.distro:
+            if recipe.distro_tree:
                 recipe.systems = []
 
                 # Do the query twice. 
 
-                # First query verifies that the distro
+                # First query verifies that the distro tree
                 # exists in at least one lab that has a macthing system.
-                systems = recipe.distro.systems_filter(
+                systems = recipe.distro_tree.systems_filter(
                                             recipe.recipeset.job.owner,
                                             recipe.host_requires,
-                                            join=['lab_controller',
-                                                  '_distros',
-                                                  'distro'],
-                                                      )\
-                                       .filter(Distro.install_name==
-                                               recipe.distro.install_name)
+                                            only_in_lab=True)
                 # Second query picksup all possible systems so that as 
-                # distros appear in other labs those systems will be 
+                # trees appear in other labs those systems will be
                 # available.
-                all_systems = recipe.distro.systems_filter(
+                all_systems = recipe.distro_tree.systems_filter(
                                             recipe.recipeset.job.owner,
                                             recipe.host_requires,
-                                            join=['lab_controller'],
-                                                      )
+                                            only_in_lab=False)
                 # based on above queries, condition on systems but add
                 # all_systems.
                 if systems.count():
@@ -133,7 +127,7 @@ def new_recipes(*args):
                     log.info("recipe ID %s moved from New to Aborted" % recipe.id)
                     recipe.recipeset.abort(u'Recipe ID %s does not match any systems' % recipe.id)
             else:
-                recipe.recipeset.abort(u'Recipe ID %s does not have a distro' % recipe.id)
+                recipe.recipeset.abort(u'Recipe ID %s does not have a distro tree' % recipe.id)
             session.commit()
         except exceptions.Exception:
             session.rollback()
@@ -258,15 +252,15 @@ def processed_recipesets(*args):
 
 def dead_recipes(*args):
     recipes = Recipe.query\
-                    .outerjoin(Recipe.distro)\
+                    .outerjoin(Recipe.distro_tree)\
                     .filter(
                          or_(
-                          and_(Recipe.status==TaskStatus.queued,
-                               not_(Recipe.systems.any()),
-                              ),
-                          and_(Recipe.status==TaskStatus.queued,
-                               not_(Distro.lab_controller_assocs.any()),
-                              )
+                         and_(Recipe.status==TaskStatus.queued,
+                              not_(Recipe.systems.any()),
+                             ),
+                         and_(Recipe.status==TaskStatus.queued,
+                              not_(DistroTree.lab_controller_assocs.any()),
+                             ),
                             )
                            )
 
@@ -281,8 +275,8 @@ def dead_recipes(*args):
                 msg = u"R:%s does not match any systems, aborting." % recipe.id
                 log.info(msg)
                 recipe.recipeset.abort(msg)
-            if len(recipe.distro.lab_controller_assocs) == 0:
-                msg = u"R:%s does not have a valid distro, aborting." % recipe.id
+            if len(recipe.distro_tree.lab_controller_assocs) == 0:
+                msg = u"R:%s does not have a valid distro tree, aborting." % recipe.id
                 log.info(msg)
                 recipe.recipeset.abort(msg)
             session.commit()
@@ -297,10 +291,10 @@ def queued_recipes(*args):
     recipes = Recipe.query\
                     .join(Recipe.recipeset, RecipeSet.job)\
                     .join(Recipe.systems)\
-                    .join(Recipe.distro)\
-                    .join(Distro.lab_controller_assocs,
+                    .join(Recipe.distro_tree)\
+                    .join(DistroTree.lab_controller_assocs,
                         (LabController, and_(
-                            LabControllerDistro.lab_controller_id == LabController.id,
+                            LabControllerDistroTree.lab_controller_id == LabController.id,
                             System.lab_controller_id == LabController.id)))\
                     .filter(
                          and_(Recipe.status==TaskStatus.queued,
@@ -330,11 +324,10 @@ def queued_recipes(*args):
         try:
             recipe = Recipe.by_id(recipe_id)
             systems = recipe.dyn_systems\
-                       .join(System.lab_controller,
-                             LabController._distros,
-                             LabControllerDistro.distro)\
+                       .join(System.lab_controller)\
                        .filter(and_(System.user==None,
-                                  Distro.id==recipe.distro_id,
+                                  LabController._distro_trees.any(
+                                    LabControllerDistroTree.distro_tree == recipe.distro_tree),
                                   LabController.disabled==False,
                                   System.status==SystemStatus.automated,
                                   or_(
@@ -443,13 +436,11 @@ def scheduled_recipes(*args):
                             except IndexError:
                                 # We have uneven tasks
                                 pass
-      
-                harness_repo_details = recipe.harness_repo()
-                task_repo_details = recipe.task_repo()
+
                 repo_fail = []
-                if not harness_repo_details:
+                if not recipe.harness_repo():
                     repo_fail.append(u'harness')
-                if not task_repo_details:
+                if not recipe.task_repo():
                     repo_fail.append(u'task')
 
                 if repo_fail:
@@ -457,63 +448,29 @@ def scheduled_recipes(*args):
                     log.error(repo_fail_msg)
                     recipe.recipeset.abort(repo_fail_msg)
                     break
-                else:
-                    harnessrepo = '%s,%s' % harness_repo_details
-                    taskrepo = '%s,%s' % task_repo_details
 
                 # Start the first task in the recipe
                 try:
                     recipe.tasks[0].start()
                 except exceptions.Exception, e:
-                    log.error("Failed to Start recipe %s, due to %s" % (recipe.id,e))
+                    log.exception("Failed to Start recipe %s", recipe.id)
                     recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" %
                                                                              (
                                                                          recipe.id,
                                                                             e))
                     break
 
-                ks_meta = "recipeid=%s packages=%s" % (recipe.id,
-                                                       ":".join([p.package for p in recipe.packages]))
-                customrepos= "|".join(["%s,%s" % (r.name, r.url) for r in recipe.repos])
-                ks_meta = "%s customrepos=%s harnessrepo=%s taskrepo=%s" % (ks_meta, customrepos, harnessrepo, taskrepo)
-                user = recipe.recipeset.job.owner
-                if user.root_password:
-                    ks_meta = "password=%s %s" % (user.root_password, ks_meta)
-                # If ks_meta is defined from recipe pass it along.
-                # add it last to allow for overriding previous settings.
-                if recipe.ks_meta:
-                    ks_meta = "%s %s" % (ks_meta, recipe.ks_meta)
-                if recipe.partitionsKSMeta:
-                    ks_meta = "%s partitions=%s" % (ks_meta, recipe.partitionsKSMeta)
-                if user.sshpubkeys:
-                    end = recipe.distro and (recipe.distro.osversion.osmajor.osmajor.startswith("Fedora") or \
-                                             recipe.distro.osversion.osmajor.osmajor.startswith("RedHatEnterpriseLinux7"))
-                    key_ks = [user.ssh_keys_ks(end)]
-                else:
-                    key_ks = []
                 try:
-                    recipe.system.action_auto_provision(recipe.distro,
-                                                     ks_meta,
-                                                     recipe.kernel_options,
-                                                     recipe.kernel_options_post,
-                                                     recipe.kickstart,
-                                                     recipe.ks_appends + key_ks)
+                    recipe.provision()
                     recipe.system.activity.append(
                          SystemActivity(recipe.recipeset.job.owner, 
                                         u'Scheduler',
                                         u'Provision',
-                                        u'Distro',
+                                        u'Distro Tree',
                                         u'',
-                                        unicode(recipe.distro)))
-                except CobblerTaskFailedException, e:
-                    log.error('Cobbler task failed for recipe %s: %s' % (recipe.id, e))
-                    recipe.system.mark_broken(reason=str(e), recipe=recipe)
-                    recipe.recipeset.abort(_(u'Cobbler task failed for recipe %s: %s')
-                            % (recipe.id, e))
+                                        unicode(recipe.distro_tree)))
                 except Exception, e:
-                    log.error(u"Failed to provision recipeid %s, %s" % (
-                                                                         recipe.id,
-                                                                            e))
+                    log.exception("Failed to provision recipeid %s", recipe.id)
                     recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" % 
                                                                              (
                                                                              recipe.id,
@@ -526,124 +483,6 @@ def scheduled_recipes(*args):
         session.close()
     log.debug("Exiting scheduled_recipes routine")
     return True
-
-
-COMMAND_TIMEOUT = 600
-def running_commands(*args):
-    commands = CommandActivity.query\
-                              .filter(CommandActivity.status==CommandStatus.running)\
-                              .order_by(CommandActivity.updated.asc())
-    if not commands.count():
-        return False
-    log.debug('Entering running_commands routine')
-    for cmd_id, in commands.values(CommandActivity.id):
-        session.begin()
-        cmd = CommandActivity.query.get(cmd_id)
-        if not cmd:
-            log.error('Command %s get() failed. Deleted?', cmd_id)
-        else:
-            try:
-                for line in cmd.system.remote.get_event_log(cmd.task_id).split('\n'):
-                    if line.find("### TASK COMPLETE ###") != -1:
-                        log.info('Power %s command (%s) completed on machine: %s', cmd.action, cmd.id, cmd.system)
-                        cmd.status = CommandStatus.completed
-                        cmd.log_to_system_history()
-                        break
-                    if line.find("### TASK FAILED ###") != -1:
-                        log.error('Cobbler power task %s (command %s) failed for machine: %s', cmd.task_id, cmd.id, cmd.system)
-                        cmd.status = CommandStatus.failed
-                        cmd.new_value = u'Cobbler task failed'
-                        if cmd.system.status == SystemStatus.automated:
-                            cmd.system.mark_broken(reason='Cobbler power task failed')
-                        cmd.log_to_system_history()
-                        break
-                if (cmd.status == CommandStatus.running) and \
-                   (datetime.utcnow() >= cmd.updated + timedelta(seconds=COMMAND_TIMEOUT)):
-                        log.error('Cobbler power task %s (command %s) timed out on machine: %s', cmd.task_id, cmd.id, cmd.system)
-                        cmd.status = CommandStatus.aborted
-                        cmd.new_value = u'Timeout of %s seconds exceeded' % COMMAND_TIMEOUT
-                        cmd.log_to_system_history()
-            except ProtocolError, err:
-                log.warning('Error (%s) querying power command (%s) for %s, will retry: %s', err.errcode, cmd.id, cmd.system, err.errmsg)
-            except socket.error, err:
-                log.warning('Socket error (%s) querying power command (%s) for %s, will retry: %s', err.errno, cmd.id, cmd.system, err.strerror)
-            except Exception, msg:
-                log.error('Cobbler power exception processing command %s for machine %s: %s', cmd.id, cmd.system, msg)
-                cmd.status = CommandStatus.failed
-                cmd.new_value = unicode(msg)
-                cmd.log_to_system_history()
-        session.commit()
-        session.close()
-    log.debug('Exiting running_commands routine')
-    return True
-
-def queued_commands(*args):
-    # The following throttle code was put in place in an attempt to
-    # keep cobblerd from falling over.
-    #
-    # Integer value stating max number of commands running
-    MAX_RUNNING_COMMANDS = config.get("beaker.MAX_RUNNING_COMMANDS", 0)
-    commands = CommandActivity.query\
-                              .filter(CommandActivity.status==CommandStatus.queued)\
-                              .order_by(CommandActivity.created.asc())
-    if not commands.count():
-        return
-    # Throttle total number of Running commands if set.
-    if MAX_RUNNING_COMMANDS != 0:
-        running_commands = CommandActivity.query\
-                         .filter(CommandActivity.status==CommandStatus.running)
-        if running_commands.count() >= MAX_RUNNING_COMMANDS:
-            log.debug('Throttling Commands: %s >= %s', running_commands.count(),
-                                                       MAX_RUNNING_COMMANDS)
-            return
-        # limit is an int between 1 and MAX_RUNNING_COMMANDS
-        limit = MAX_RUNNING_COMMANDS - running_commands.count()
-        commands = commands.limit(limit > 0 and limit or 1)
-    log.debug('Entering queued_commands routine')
-    for cmd_id, in commands.values(CommandActivity.id):
-        with session.begin():
-            cmd = CommandActivity.query.get(cmd_id)
-            log.debug("cmd=%s" % cmd)
-            # if get() is given an invalid id it will return None.
-            # I'm not sure how this would happen since id came from the above
-            # query, maybe a race condition?
-            if not cmd:
-                log.error('Command %s get() failed. Deleted?', cmd_id)
-                continue
-            # Skip queued commands if something is already running on that system
-            if CommandActivity.query.filter(and_(CommandActivity.status==CommandStatus.running,
-                                                   CommandActivity.system==cmd.system))\
-                                    .count():
-                log.info('Skipping power %s (command %s), command already running on machine: %s',
-                         cmd.action, cmd.id, cmd.system)
-                continue
-            if not cmd.system.lab_controller or not cmd.system.power:
-                log.error('Command %s aborted, power control not available for machine: %s',
-                          cmd.id, cmd.system)
-                cmd.status = CommandStatus.aborted
-                cmd.new_value = u'Power control unavailable'
-                cmd.log_to_system_history()
-            else:
-                try:
-                    log.info('Executing power %s command (%s) on machine: %s',
-                             cmd.action, cmd.id, cmd.system)
-                    cmd.task_id = cmd.system.remote.power(cmd.action)
-                    cmd.updated = datetime.utcnow()
-                    cmd.status = CommandStatus.running
-                except ProtocolError, err:
-                    log.warning('Error (%s) submitting power command (%s) for %s, will retry: %s',
-                                err.errcode, cmd.id, cmd.system, err.errmsg)
-                except socket.error, err:
-                    log.warning('Socket error (%s) submitting power command (%s) for %s, will retry: %s',
-                                err.errno, cmd.id, cmd.system, err.strerror)
-                except Exception, msg:
-                    log.error('Cobbler power exception submitting \'%s\' command (%s) for machine %s: %s',
-                              cmd.action, cmd.id, cmd.system, msg)
-                    cmd.new_value = unicode(msg)
-                    cmd.status = CommandStatus.failed
-                    cmd.log_to_system_history()
-    log.debug('Exiting queued_commands routine')
-    return
 
 # These functions are run in separate threads, so we want to log any uncaught 
 # exceptions instead of letting them be written to stderr and lost to the ether
@@ -661,14 +500,6 @@ def processed_recipesets_loop(*args, **kwargs):
         if not processed_recipesets():
             event.wait()
     log.debug("processed recipesets thread exiting")
-
-@log_traceback(log)
-def command_queue_loop(*args, **kwargs):
-    while running:
-        running_commands()
-        queued_commands()
-        event.wait()
-    log.debug("command queue thread exiting")
 
 @log_traceback(log)
 def main_recipes_loop(*args, **kwargs):
@@ -689,7 +520,7 @@ def schedule():
        bb.run()
 
     beakerd_threads = set(["new_recipes", "processed_recipesets",\
-                           "command_queue", "main_recipes"])
+                           "main_recipes"])
 
     log.debug("starting new recipes thread")
     new_recipes_thread = threading.Thread(target=new_recipes_loop,
@@ -702,12 +533,6 @@ def schedule():
                                                    name="processed_recipesets")
     processed_recipesets_thread.daemon = True
     processed_recipesets_thread.start()
-
-    log.debug("starting power commands thread")
-    command_queue_thread = threading.Thread(target=command_queue_loop,
-                                            name="command_queue")
-    command_queue_thread.daemon = True
-    command_queue_thread.start()
 
     log.debug("starting main recipes thread")
     main_recipes_thread = threading.Thread(target=main_recipes_loop,

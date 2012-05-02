@@ -25,14 +25,14 @@ import itertools
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session
-from bkr.server.model import LabController, User, Group, Distro, Breed, Arch, \
+from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
-        LabControllerDistro, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
+        LabControllerDistroTree, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
         LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
-        SystemGroup, DeviceClass
+        SystemGroup, DeviceClass, DistroTreeRepo, TaskPackage
 
 log = logging.getLogger(__name__)
 
@@ -143,34 +143,48 @@ def add_user_to_group(user,group):
 def add_group_to_system(system, group, admin=False):
     system.group_assocs.append(SystemGroup(group=group, admin=admin))
 
-def create_distro(name=None, breed=u'Dan',
-        osmajor=u'DansAwesomeLinux6', osminor=u'9',
-        arch=u'i386', variant=u'Server', method=u'http', virt=False, tags=None):
+def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
+        arches=None, tags=None):
+    osmajor = OSMajor.lazy_create(osmajor=osmajor)
+    osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=osminor)
+    if arches:
+        osversion.arches = arches
     if not name:
         name = unique_name(u'DAN6.9-%s')
-    install_name = u'%s_%s-%s-%s' % (name, method, variant, arch)
-    distro = Distro(install_name=install_name)
-    distro.name = name
-    distro.method = method
-    distro.breed = Breed.lazy_create(breed=breed)
-    distro.variant = variant
-    distro.virt = virt
+    distro = Distro.lazy_create(name=name, osversion=osversion)
     if tags:
         distro.tags.extend(tags)
-    distro.arch = Arch.by_name(arch)
-    osmajor = OSMajor.lazy_create(osmajor=osmajor)
-    try:
-        distro.osversion = OSVersion.by_name(osmajor, osminor)
-    except NoResultFound:
-        distro.osversion = OSVersion(osmajor, osminor, arches=[distro.arch])
-    # make it available in all lab controllers
-    for lc in LabController.query:
-        distro.lab_controller_assocs.append(LabControllerDistro(lab_controller=lc))
     log.debug('Created distro %r', distro)
     harness_dir = os.path.join(turbogears.config.get('basepath.harness'), distro.osversion.osmajor.osmajor)
     if not os.path.exists(harness_dir):
         os.makedirs(harness_dir)
     return distro
+
+def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux6',
+        distro_tags=None, arch=u'i386', variant=u'Server', lab_controllers=None,
+        urls=None):
+    if distro is None:
+        if distro_name is None:
+            distro = create_distro(osmajor=osmajor, tags=distro_tags)
+        else:
+            distro = Distro.by_name(distro_name)
+            if not distro:
+                distro = create_distro(name=distro_name)
+    distro_tree = DistroTree(distro=distro,
+            arch=Arch.by_name(arch), variant=variant)
+    if distro_tree.arch not in distro.osversion.arches:
+        distro.osversion.arches.append(distro_tree.arch)
+    # make it available in all lab controllers
+    for lc in (lab_controllers or LabController.query):
+        default_urls = [u'%s://%s%s/distros/%s/%s/%s/os/' % (scheme, lc.fqdn,
+                scheme == 'nfs' and ':' or '',
+                distro_tree.distro.name, distro_tree.variant,
+                distro_tree.arch.arch) for scheme in ['nfs', 'http', 'ftp']]
+        for url in (urls or default_urls):
+            distro_tree.lab_controller_assocs.append(LabControllerDistroTree(
+                    lab_controller=lc, url=url))
+    log.debug('Created distro tree %r', distro_tree)
+    return distro_tree
 
 def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
         owner=None, fqdn=None, shared=False, exclude_osmajor=[],
@@ -218,7 +232,7 @@ def create_system_activity(user=None, **kw):
     return activity
 
 def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
-        uploader=None, owner=None, priority=u'Manual', valid=None):
+        uploader=None, owner=None, priority=u'Manual', valid=None, requires=None):
     if name is None:
         name = unique_name(u'/distribution/test_task_%s')
     if uploader is None:
@@ -242,9 +256,10 @@ def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
        [TaskExcludeArch(arch_id=Arch.by_name(arch).id, task_id=task.id) for arch in exclude_arch]
     if exclude_osmajor:
         for osmajor in exclude_osmajor:
-            distro = create_distro(osmajor=osmajor) 
-            TaskExcludeOSMajor(task_id=task.id, osmajor_id=distro.osversion.osmajor.id)
-        
+            TaskExcludeOSMajor(task_id=task.id, osmajor=OSMajor.lazy_create(osmajor=osmajor))
+    if requires:
+        for require in requires:
+            task.required.append(TaskPackage.lazy_create(package=require))
     return task
 
 def create_tasks(xmljob):
@@ -257,11 +272,13 @@ def create_tasks(xmljob):
     for name in names:
         create_task(name=name)
 
-def create_recipe(system=None, distro=None, task_list=None, 
+def create_recipe(system=None, distro_tree=None, task_list=None,
     task_name=u'/distribution/reservesys', whiteboard=None, server_log=False):
+    if not distro_tree:
+        distro_tree = create_distro_tree()
     recipe = MachineRecipe(ttasks=1, system=system, whiteboard=whiteboard,
-            distro=distro or Distro.query.first())
-    recipe.distro_requires = recipe.distro.to_xml().toxml()
+            distro_tree=distro_tree)
+    recipe.distro_requires = recipe.distro_tree.to_xml().toxml()
 
     if not server_log:
         recipe.logs = [LogRecipe(path=u'/recipe_path',filename=u'dummy.txt', basepath=u'/beaker')]
@@ -312,10 +329,10 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
     session.flush()
     return job
 
-def create_job(owner=None, cc=None, distro=None,product=None, 
+def create_job(owner=None, cc=None, distro_tree=None, product=None,
         retention_tag=None, task_name=u'/distribution/reservesys', whiteboard=None,
         recipe_whiteboard=None, server_log=False, **kwargs):
-    recipe = create_recipe(distro=distro, task_name=task_name,
+    recipe = create_recipe(distro_tree=distro_tree, task_name=task_name,
             whiteboard=recipe_whiteboard, server_log=server_log)
     return create_job_for_recipes([recipe], owner=owner,
             whiteboard=whiteboard, cc=cc, product=product,retention_tag=retention_tag)
@@ -432,7 +449,7 @@ def create_test_env(type):#FIXME not yet using different types
     users = [create_user() for i in range(10)]
     lc = create_labcontroller()
     for arch in arches:
-        create_distro(arch=arch)
+        create_distro_tree(arch=arch)
         for user in users:
             system = create_system(owner=user, arch=arch.arch, type=system_type, status=u'Automated', shared=True)
             system.lab_controller = lc

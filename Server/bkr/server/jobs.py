@@ -434,13 +434,13 @@ class Jobs(RPCRoot):
         recipe.distro_requires = xmlrecipe.distroRequires()
         recipe.partitions = xmlrecipe.partitions()
         try:
-            recipe.distro = Distro.by_filter("%s" % 
+            recipe.distro_tree = DistroTree.by_filter("%s" %
                                            recipe.distro_requires)[0]
         except IndexError:
-            raise BX(_('No Distro matches Recipe: %s' % recipe.distro_requires))
+            raise BX(_('No distro tree matches Recipe: %s') % recipe.distro_requires)
         try:
             # try evaluating the host_requires, to make sure it's valid
-            recipe.distro.systems_filter(user, recipe.host_requires)
+            recipe.distro_tree.systems_filter(user, recipe.host_requires)
         except StandardError, e:
             raise BX(_('Error in hostRequires: %s' % e))
         recipe.whiteboard = xmlrecipe.whiteboard or None #'' -> NULL for DB
@@ -493,15 +493,13 @@ class Jobs(RPCRoot):
     @expose('json')
     def update_recipe_set_response(self,recipe_set_id,response_id):
         rs = RecipeSet.by_id(recipe_set_id)
-        try:
-            if rs.nacked is None:
-                rs.nacked = RecipeSetResponse(response_id=response_id)
-            else:
-                rs.nacked.response = Response.by_id(response_id)
-            
-            return {'success' : 1, 'rs_id' : recipe_set_id }
-        except: raise
-           
+        if rs.nacked is None:
+            rs.nacked = RecipeSetResponse(response_id=response_id)
+        else:
+            rs.nacked.response = Response.by_id(response_id)
+
+        return {'success' : 1, 'rs_id' : recipe_set_id }
+
     @expose(format='json')
     def save_response_comment(self,rs_id,comment):
         try:

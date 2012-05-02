@@ -61,7 +61,7 @@ class ProxyHelper(object):
         else:
             TransportClass = retry_request_decorator(CookieTransport)
         self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
-                transport=TransportClass(timeout=120), **kwargs)
+                transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
         self.log_base_url = "http://%s/beaker/logs" % self.conf.get("SERVER", gethostname())
         self.basepath = None
         self.upload = None
@@ -539,6 +539,7 @@ class Proxy(ProxyHelper):
         kickstart
         """
         logger.debug("install_start")
+        self.hub.systems.clear_netboot(system_name)
         # extend watchdog by 3 hours 60 * 60 * 3
         kill_time = 10800
         # look up system recipe based on hostname...
@@ -642,17 +643,14 @@ class Proxy(ProxyHelper):
         """
         return self.hub.tags.updateDistro(distro, arch)
 
-    def register_distro(self, name):
-        return self.hub.labcontrollers.register_distro(name)
-
-    def add_distro(self, distro):
+    def add_distro_tree(self, distro):
         """ This proxy method allows the lab controller to add new
             distros to the Scheduler/Inventory server.
         """
-        return self.hub.labcontrollers.add_distro(distro)
+        return self.hub.labcontrollers.add_distro_tree(distro)
 
-    def removeDistro(self, distro):
+    def remove_distro_trees(self, distro_tree_ids):
         """ This proxy method allows the lab controller to remove
-            distros from the Scheduler/Inventory server.
+            distro_tree_ids from the Scheduler/Inventory server.
         """
-        return self.hub.labcontrollers.removeDistro(distro)
+        return self.hub.labcontrollers.remove_distro_trees(distro_tree_ids)

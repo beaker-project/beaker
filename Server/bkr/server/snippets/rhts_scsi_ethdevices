@@ -1,0 +1,15 @@
+{#
+## Only load the following devices if $devices is set
+## scsidevices=qla2xxx,megaraid_mbox
+## ethdevices=tg3,e1000
+#}
+{% if scsidevices %}
+{% for device in scsidevices|split(',') %}
+device scsi {{ device }}
+{% endfor %}
+{% endif %}
+{% if ethdevices %}
+{% for device in ethdevices|split(',') %}
+device eth {{ device }}
+{% endfor %}
+{% endif %}

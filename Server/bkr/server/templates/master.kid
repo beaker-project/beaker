@@ -78,6 +78,7 @@ from bkr.server.reports import Reports
                         <a href="${tg.url('/distros')}">All</a> 
                         <img class="corner_inset_right" alt="" src="${tg.url('/static/images/corner_inset_right.png')}"/>
                     </li> 
+                    <li><a href="${tg.url('/distrotrees/')}">Trees</a></li>
                     <li>   
                         <a href="${tg.url('/distrofamily')}">Family</a>
                     </li>

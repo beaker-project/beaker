@@ -188,5 +188,377 @@
         You may mix and match any of these controllers on the target hosts, but you must include at least one of per machine. Beaker supports the cman package's fence component. Beaker supports any device that you control from the Red Hat Enterprise Linux 5 command line. 
         </para>
     </section>
-    
+
+<section id="Administration-Customizing_Kickstarts">
+
+<title>Customizing Kickstarts</title>
+
+<para>When Beaker provisions a system, the Beaker server generates an Anaconda
+kickstart from a template file. Beaker’s kickstart templates are written in the
+Jinja2 templating language. Refer to the <ulink
+url="http://jinja.pocoo.org/docs/">Jinja2 documentation</ulink> for details of
+the template syntax and builtin constructs which are available to all
+templates.</para>
+
+<para>Beaker selects a base kickstart template according to the major version 
+of the distro being provisioned, for example <literal>Fedora16</literal> or 
+<literal>RedHatEnterpriseLinux6</literal>. If no template is found under this 
+name, Beaker will also try the major version with trailing digits stripped 
+(<literal>Fedora</literal>, <literal>RedHatEnterpriseLinux</literal>).</para>
+
+<para>The Beaker server searches the following directories for kickstart
+templates, in order:
+<itemizedlist>
+  <listitem>
+    <para><filename>/etc/beaker/kickstarts</filename></para>
+    <para>Custom templates may be placed here.</para>
+  </listitem>
+  <listitem>
+    <para><filename>/usr/lib/python2.6/site-packages/bkr/server/kickstarts</filename></para>
+    <para>These templates are packaged with Beaker and should not be 
+    modified.</para>
+  </listitem>
+</itemizedlist>
+</para>
+
+<para>Beaker ships with kickstart templates for all current Fedora and Red Hat 
+Enterprise Linux distros. The shipped templates include all the necessary parts 
+to run Beaker scheduled jobs. They also provide a mechanism for customizing the 
+generated kickstarts with template "snippets". Administrators are recommended 
+to use custom snippets where necessary, rather than customizing the base 
+templates.</para>
+
+<section id="Administration-Kickstart_Snippets">
+
+<title>Kickstart Snippets</title>
+
+<para>Each snippet provides a small unit of functionality within the kickstart. 
+The name and purpose of all defined snippets are given below.</para>
+
+<para>For the following snippets Beaker ships a default template, which should 
+be sufficient in most cases. However, administrators may choose to override 
+these if necessary.</para>
+
+<variablelist>
+  <varlistentry>
+    <term><filename>anaconda_repos</filename></term>
+    <term><filename>print_anaconda_repos</filename></term>
+    <listitem>
+      <para>Provides the <command>repo</command> kickstart commands which 
+      tell Anaconda where to find the distro tree’s Yum repositories for 
+      installation.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>install_method</filename></term>
+    <listitem>
+      <para>Provides the <command>url</command> or <command>nfs</command> 
+      kickstart command which tells Anaconda where to find the distro 
+      tree for installation.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>lab_env</filename></term>
+    <listitem>
+      <para>Sets environment variables on the installed system, giving 
+      the address of various services within the lab. The exact name and 
+      meaning of the environment variables are left up to the 
+      administrator, but may include for example build servers, download 
+      servers, or temporary storage servers.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>post_s390_reboot</filename></term>
+    <listitem>
+      <para>Reportedly this does not work and should probably be 
+      deleted.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>pre_anamon</filename></term>
+    <term><filename>post_anamon</filename></term>
+    <listitem>
+      <para>Configures <application>anamon</application>, a small daemon 
+      which runs during the Anaconda install process and uploads log 
+      files to the Beaker scheduler.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>print_repos</filename></term>
+    <listitem>
+      <para>Sets up the system’s Yum repo configuration after 
+      install.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>readahead_packages</filename></term>
+    <term><filename>readahead_sysconfig</filename></term>
+    <listitem>
+      <para>Disables readahead, which is known to conflict with 
+      auditd.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>rhts_devices</filename></term>
+    <term><filename>rhts_scsi_ethdevices</filename></term>
+    <listitem>
+      <para>Provides <command>device</command> commands (if 
+      necessary) which tell Anaconda to load additional device 
+      modules.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>rhts_packages</filename></term>
+    <listitem>
+      <para>Provides a list of packages to be installed by Anaconda, 
+      based on the packages required by and requested in the 
+      recipe.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>rhts_pre</filename></term>
+    <term><filename>rhts_post</filename></term>
+    <listitem>
+      <para>Scripts necessary for running a Beaker recipe on the system 
+      after it is provisioned. These should never be overriden by the 
+      administrator.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>ssh_keys</filename></term>
+    <listitem>
+      <para>Adds the Beaker user’s SSH public keys to 
+      <filename>/root/.ssh/authorized_keys</filename> after installation, 
+      so that they can log in using SSH key authentication.</para>
+    </listitem>
+  </varlistentry>
+</variablelist>
+
+<para>The following snippets have no default template, and will be empty unless 
+customized by the administrator:</para>
+
+<variablelist>
+  <varlistentry>
+    <term><filename>network</filename></term>
+    <listitem>
+      <para>Provides extra network configuration parameters for 
+      Anaconda.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>system</filename></term>
+    <term><filename><replaceable>distro_major_version</replaceable></filename></term>
+    <listitem>
+      <para>Can be used to insert extra Anaconda commands into the main 
+      section of the kickstart.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>system_pre</filename></term>
+    <term><filename><replaceable>distro_major_version</replaceable>_pre</filename></term>
+    <listitem>
+      <para>Can be used to insert extra shell commands into the %pre 
+      section of the kickstart.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><filename>system_post</filename></term>
+    <term><filename><replaceable>distro_major_version</replaceable>_post</filename></term>
+    <listitem>
+      <para>Can be used to insert extra shell commands into the %post 
+      section of the kickstart.</para>
+    </listitem>
+  </varlistentry>
+</variablelist>
+
+<para>When a snippet is included in a kickstart template, Beaker tries to load 
+the snippet from the following locations on the server’s filesystem, in order:
+<itemizedlist>
+  <listitem>
+    <para><filename>/etc/beaker/snippets/per_system/<replaceable>snippet_name</replaceable>/<replaceable>system_fqdn</replaceable></filename></para>
+  </listitem>
+  <listitem>
+    <para><filename>/etc/beaker/snippets/per_lab/<replaceable>snippet_name</replaceable>/<replaceable>labcontroller_fqdn</replaceable></filename></para>
+  </listitem>
+  <listitem>
+    <para><filename>/etc/beaker/snippets/per_osversion/<replaceable>snippet_name</replaceable>/<replaceable>distro_version</replaceable></filename></para>
+  </listitem>
+  <listitem>
+    <para><filename>/etc/beaker/snippets/per_osmajor/<replaceable>snippet_name</replaceable>/<replaceable>distro_major_version</replaceable></filename></para>
+  </listitem>
+  <listitem>
+    <para><filename>/etc/beaker/snippets/<replaceable>snippet_name</replaceable></filename></para>
+  </listitem>
+  <listitem>
+    <para><filename>/usr/lib/python2.6/site-packages/bkr/server/snippets/<replaceable>snippet_name</replaceable></filename></para>
+  </listitem>
+</itemizedlist>
+This allows administrators to customize Beaker kickstarts at whatever level is 
+necessary.</para>
+
+<para>For example, if the system <systemitem 
+class="fqdomainname">host01.example.com</systemitem> needs to use a network 
+interface other than the default, the following snippet could be placed in 
+<filename>/etc/beaker/snippets/per_system/network/host01.example.com</filename>:
+
+<programlisting>
+network --device eth1 --bootproto dhcp --onboot yes
+</programlisting>
+</para>
+
+</section>
+
+<section id="Administration-Writing_Kickstart_Templates">
+
+<title>Writing Kickstart Templates</title>
+
+<para>All kickstart metadata variables are exposed as template variables. 
+The <varname>system</varname>, <varname>distro</varname>, 
+<varname>distro_tree</varname>, <varname>user</varname>, and 
+<varname>recipe</varname> variables are the corresponding Beaker model objects 
+loaded from the database. (User templates do not have access to these model 
+objects.)</para>
+
+<para>In addition to the built-in template constructs provided by Jinja, the 
+following utilities are available in templates:</para>
+
+<variablelist>
+  <varlistentry>
+    <term><varname>end</varname></term>
+    <listitem>
+      <para>A variable which contains the string <literal>%end</literal> 
+      if the version of Anaconda requires it, otherwise undefined. For 
+      compatibility across all Anaconda versions, templates should always 
+      terminate sections with this variable. For example:
+      <programlisting>
+%post
+echo "All done."
+{{ end }}
+      </programlisting>
+      </para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><varname>parsed_url</varname></term>
+    <listitem>
+      <para>A Jinja filter which parses a URL using <ulink 
+      url="http://docs.python.org/library/urlparse.html#urlparse.urlparse"><function>urlparse.urlparse</function></ulink>.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><varname>re</varname></term>
+    <listitem>
+      <para>The Python <ulink 
+      url="http://docs.python.org/library/re.html">re</ulink> module, for 
+      evaluating regular expressions.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><varname>snippet</varname></term>
+    <listitem>
+      <para>A function which evaluates the named snippet and returns the 
+      result. If no template is found for the snippet, returns a comment 
+      to that effect.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><varname>split</varname></term>
+    <listitem>
+      <para>A Jinja filter which splits on whitespace, or any other 
+      delimiter. See <ulink 
+      url="http://docs.python.org/library/string.html#string.split"><function>string.split</function></ulink>.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><varname>arch</varname></term>
+    <term><varname>osmajor</varname></term>
+    <term><varname>osversion</varname></term>
+    <listitem>
+      <para>These are Jinja tests which can be applied to 
+      <varname>distro_tree</varname>. Each takes multiple arguments, and 
+      evaluates to true if the distro tree matches one of the arguments. 
+      For example:</para>
+      <programlisting>
+{% if distro_tree is arch('s390', 's390x') %}
+<replaceable>...</replaceable>
+      </programlisting>
+      <programlisting>
+{% if distro_tree is osversion('RedHatEnterpriseLinux6.0') %}
+<replaceable>...</replaceable>
+      </programlisting>
+      <programlisting>
+{% if distro_tree is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4') %}
+<replaceable>...</replaceable>
+      </programlisting>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><varname>urljoin</varname></term>
+    <listitem>
+      <para>A Jinja filter which resolves a relative URL against a base 
+      URL. For example:
+      <programlisting>
+{{ 'http://example.com/distros/'|urljoin('RHEL-6.2/') }}
+      </programlisting>
+      will evaluate to 
+      <literal>http://example.com/distros/RHEL-6.2/</literal> in the 
+      kickstart.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><varname>var</varname></term>
+    <listitem>
+      <para>A function which looks up a variable by name.</para>
+    </listitem>
+  </varlistentry>
+</variablelist>
+
+</section>
+
+</section>
+
+<section id="Administration-Customizing_Power_Commands">
+
+<title>Customizing Power Commands</title>
+
+<para>When executing a power command (for example, rebooting a system) the
+Beaker lab controller looks for an executable script named after the system’s
+power type (for example, <literal>ipmitool</literal>). The following
+directories are searched on the lab controller, in order:
+<itemizedlist>
+  <listitem>
+    <para><filename>/etc/beaker/power-scripts</filename></para>
+    <para>Custom power scripts may be placed here.</para>
+  </listitem>
+  <listitem>
+    <para><filename>/usr/lib/python2.6/site-packages/bkr/labcontroller/power-scripts</filename></para>
+    <para>These templates are packaged with Beaker and should not be 
+    modified.</para>
+  </listitem>
+</itemizedlist>
+</para>
+
+<para>When a script is found it is executed with the following environment
+variables set according to the system’s power settings in Beaker:
+<itemizedlist>
+  <listitem>
+    <para><envar>power_address</envar></para>
+  </listitem>
+  <listitem>
+    <para><envar>power_id</envar></para>
+  </listitem>
+  <listitem>
+    <para><envar>power_user</envar></para>
+  </listitem>
+  <listitem>
+    <para><envar>power_pass</envar></para>
+  </listitem>
+</itemizedlist>
+Additionally, the <envar>power_mode</envar> environment variable will be set to
+either <literal>on</literal> or <literal>off</literal>, depending on the power
+action.</para>
+
+</section>
+
     </chapter>
+<!-- vim: set sw=2 : -->

@@ -106,11 +106,11 @@ $(document).ready(function() {
   </tr>
   <tr>
    <td class="title"><b>Distro</b></td>
-   <td class="value">${recipe.distro.link}</td>
+   <td class="value">${recipe.distro_tree.link}</td>
    <td class="title"><b>Arch</b></td>
    <td class="value">${recipe.arch}</td>
    <td class="title"><b>Family</b></td>
-   <td class="value">${recipe.distro.osversion}</td>
+   <td class="value">${recipe.distro_tree.distro.osversion}</td>
     <?py action_ = action_widget(task=recipe)?>
    <td py:if="action_" class="title"><b>Action(s)</b></td>
    <td py:if="action_" class="value">${action_}</td>
@@ -125,9 +125,15 @@ $(document).ready(function() {
    <td class="title"><b>Duration</b></td>
    <td class="value">${recipe.duration}</td>
   </tr>
-  <tr py:if="recipe.system">
+  <tr>
    <td class="title"><b>System</b></td>
-   <td class="value" colspan="8">${recipe.system.link}</td>
+   <td class="value"><span py:if="recipe.system" py:strip="True">${recipe.system.link}</span></td>
+   <td class="title"><b>Kickstart</b></td>
+   <td class="value">
+    <span py:if="recipe.rendered_kickstart" py:strip="True">
+      <a href="${tg.url('/kickstart/%s' % recipe.rendered_kickstart.id)}">(view)</a>
+    </span>
+   </td>
   </tr>
   <tr>
    <td class="title"><b>Whiteboard</b></td>

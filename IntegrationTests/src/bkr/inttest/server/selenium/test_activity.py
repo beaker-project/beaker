@@ -47,7 +47,7 @@ class ActivityTest(SeleniumTestCase):
         sel = self.selenium
         sel.open('activity/')
         self.assert_(is_activity_row_present(sel,
-                object_='Distro: %s' % self.distro.install_name))
+                object_='Distro: %s' % self.distro.name))
         self.assert_(is_activity_row_present(sel,
                 object_='System: %s' % self.system.fqdn))
 
@@ -61,7 +61,7 @@ class ActivityTest(SeleniumTestCase):
         sel.click('Search')
         sel.wait_for_page_to_load('30000')
         self.assert_(not is_activity_row_present(sel,
-                object_='Distro: %s' % self.distro.install_name))
+                object_='Distro: %s' % self.distro.name))
         self.assert_(is_activity_row_present(sel,
                 object_='System: %s' % self.system.fqdn))
 
@@ -75,6 +75,6 @@ class ActivityTest(SeleniumTestCase):
         sel.click('Search')
         sel.wait_for_page_to_load('30000')
         self.assert_(is_activity_row_present(sel,
-                object_='Distro: %s' % self.distro.install_name))
+                object_='Distro: %s' % self.distro.name))
         self.assert_(not is_activity_row_present(sel,
                 object_='System: %s' % self.system.fqdn))

@@ -9,7 +9,7 @@ Tag Beaker distros
 Synopsis
 --------
 
-:program:`bkr distros-tag` [*options*] [--name=<name>] [--arch=<arch>] <tag>
+:program:`bkr distros-tag` [*options*] --name=<name> <tag>
 
 Description
 -----------
@@ -24,10 +24,6 @@ Options
 
    Limit to distros with the given name. <name> is interpreted as a SQL LIKE 
    pattern (the % character matches any substring).
-
-.. option:: --arch <arch>
-
-   Limit to distros for the given arch.
 
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
@@ -72,11 +68,6 @@ class Distros_Tag(BeakerCommand):
             default=None,
             help="tag by name, use % for wildcard",
         )
-        self.parser.add_option(
-            "--arch",
-            default=None,
-            help="tag by arch",
-        )
 
 
     def run(self, *args, **kwargs):
@@ -86,11 +77,12 @@ class Distros_Tag(BeakerCommand):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         name = kwargs.pop("name", None)
-        arch = kwargs.pop("arch", None)
         tag = args[0]
+        if not name:
+            self.parser.error('If you really want to tag every distro in Beaker, use --name=%')
 
         self.set_hub(username, password)
-        distros = self.hub.distros.tag(name, arch, tag)
+        distros = self.hub.distros.tag(name, tag)
         print "Tagged the following distros with tag: %s" % tag
         print "------------------------------------------------------"
         for distro in distros:

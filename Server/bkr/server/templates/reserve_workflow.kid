@@ -1,61 +1,41 @@
 <div xmlns:py="http://purl.org/kid/ns#">
 <script type='text/javascript'>
-var rw = new ReserveWorkflow("${arch.field_id}","${distro_family.field_id}",
-                                "${tag.field_id}","${distro.field_id}","${submit.field_id}","${auto_pick.field_id}",
-                                "${arch_value}","${distro_family_value}","${tag_value}",
-                                [${to_json(all_arches)}],[${to_json(all_distro_familys)}],[${to_json(all_tags)}])
-rw.set_remotes("${tg.url(distro_rpc)}","${tg.url(system_rpc)}","${tg.url(system_many_rpc)}","${tg.url(reserve_href)}")
-addLoadEvent(rw.initialize)
-$(document).ready(function() {
-    //$("select[id!=${distro.field_id}]").change(function() { 
-    //    rw.get_distros()
-    //});
-
-    $("#${auto_pick.field_id}").click(function() { 
-        rw.system_available()
-        })
-
-    $("#${arch.field_id}").change(function() {
-        rw.get_distros()
-    })
-
-    $("#${distro_family.field_id}").change(function() {
-        var arch_value = jQuery('#'+rw.arch_id).val() 
-        if (arch_value) 
-            rw.get_distros()
-    })
-
-    $("#${tag.field_id}").change(function() {
-        rw.get_distros()
-    })
-
-})
+jQuery(function () {
+    rw = new ReserveWorkflow(jQuery("#${name}"),
+            "${tg.url(get_distros_rpc)}",
+            "${tg.url(get_distro_trees_rpc)}");
+});
 </script>
-<form action="${tg.url(action)}" name="${name}">
-    <div id="reserve_wizard" style='margin-left:3em'>
-    <h3>Reserve Criteria</h3>
-    <div id="arch_input">
-        <label style="display:block;">${arch.label}</label>${arch.display(attrs=dict(size=5,multiple=1,style= "margin-left:7.2em;"))}
-    </div>
+<div class="reserveworkflow" id="${name}">
+    <form action="">
+        <h3>Distro</h3>
+        <div>
+            <label for="${field_for('osmajor').field_id}">${field_for('osmajor').label}</label>
+            ${display_field_for('osmajor')}
+        </div>
+        <div>
+            <label for="${field_for('tag').field_id}">${field_for('tag').label}</label>
+            ${display_field_for('tag')}
+        </div>
+        <div>
+            <label for="${field_for('distro').field_id}">${field_for('distro').label}</label>
+            ${display_field_for('distro')}
+        </div>
+    </form>
 
-    <div id="distro_family_input">
-        <label>${distro_family.label}</label>${distro_family.display(attrs=dict(style="margin-left:1.2em"))}
-    </div>
-
-    <div id="tag_input">
-        <label>${tag.label}</label>${tag.display(attrs=dict(style="margin-left:5.2em"))}
-    </div>
-    </div>
-
-    <div style="margin-left:3em">
-    <h3>Select Distro</h3>
-        <label>${distro.label}</label> ${distro.display(attrs=dict(style="margin-left:4em"))}
-    </div>
-    <br /><br />
-    ${submit.display()}
-
-    ${auto_pick.display()}&nbsp;<warn id="reserve_error_system" class="rounded-side-pad" style='display:none'>No Systems compatible for that distro</warn>
-    <warn id="reserve_error" class="rounded-side-pad" style='display:none'></warn>
-
-</form>
+    <form action="${tg.url(action)}">
+        <h3>Distro Tree</h3>
+        <div>
+            ${display_field_for('distro_tree_id')}
+        </div>
+        <div>
+            <button class="search" type="submit" name="system_id" value="search">
+                Show systems
+            </button>
+            <button class="auto_pick" type="submit">
+                Auto pick system
+            </button>
+        </div>
+    </form>
+</div>
 </div>

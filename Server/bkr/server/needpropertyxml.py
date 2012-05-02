@@ -112,33 +112,33 @@ class XmlDistro(ElementWrapper):
 
 class XmlDistroArch(ElementWrapper):
     """
-    Filer Distro based on Arch
+    Filter distro tree based on Aarch
     """
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if op and value:
-            joins = joins.join(Distro.arch)
+            joins = joins.join(DistroTree.arch)
             query = getattr(Arch.arch, op)(value)
         return (joins, query)
 
 class XmlDistroFamily(ElementWrapper):
     """
-    Filter Distro based on Family
+    Filter distro tree based on Family
     """
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if op and value:
-            joins = joins.join([Distro.osversion, OSVersion.osmajor])
+            joins = joins.join(DistroTree.distro, Distro.osversion, OSVersion.osmajor)
             query = getattr(OSMajor.osmajor, op)(value)
         return (joins, query)
 
 class XmlDistroTag(ElementWrapper):
     """
-    Filter Distro based on Tag
+    Filter distro tree based on Tag
     """
 
     op_table = { '=' : '__eq__',
@@ -150,6 +150,7 @@ class XmlDistroTag(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
+            joins = joins.join(DistroTree.distro)
             if op == '__ne__':
                 query = not_(Distro._tags.any(DistroTag.tag == value))
             else:
@@ -158,39 +159,35 @@ class XmlDistroTag(ElementWrapper):
 
 class XmlDistroVariant(ElementWrapper):
     """
-    Filter Distro based on variant
+    Filter distro tree based on variant
     """
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if op and value:
-            query = getattr(Distro.variant, op)(value)
+            query = getattr(DistroTree.variant, op)(value)
         return (joins, query)
 
 class XmlDistroName(ElementWrapper):
     """
-    Filter Distro based on name
+    Filter distro tree based on distro name
     """
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if op and value:
+            joins = joins.join(DistroTree.distro)
             query = getattr(Distro.name, op)(value)
         return (joins, query)
 
 class XmlDistroVirt(ElementWrapper):
     """
-    Filter Distro based on Virt
+    This is a noop, since we don't have virt distros anymore.
     """
     def filter(self, joins):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', bool, False)
-        query = None
-        if op:
-            query = getattr(Distro.virt, op)(value)
-        return (joins, query)
+        return (joins, None)
 
 class XmlSystem(ElementWrapper):
     """
@@ -325,15 +322,15 @@ class XmlHostLabController(ElementWrapper):
 
 class XmlDistroLabController(ElementWrapper):
     """
-    Pick a distro available on this lab controller
+    Pick a distro tree available on this lab controller
     """
     def filter(self, joins):
         value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
             query = exists([1],
-                    from_obj=[lab_controller_distro_map.join(lab_controller_table)])\
-                    .where(LabControllerDistro.distro_id == Distro.id)\
+                    from_obj=[distro_tree_lab_controller_map.join(lab_controller_table)])\
+                    .where(LabControllerDistroTree.distro_tree_id == DistroTree.id)\
                     .where(LabController.fqdn == value)
         return (joins, query)
 

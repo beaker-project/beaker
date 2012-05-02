@@ -3,10 +3,12 @@ import time
 import unittest
 import email
 from turbogears.database import session
+from bkr.server.installopts import InstallOptions
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
-        Cpu, Numa, Provision, job_cc_table, Arch, Distro, LabControllerDistro, \
-        TaskType, TaskPackage, Device, DeviceClass
+        Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
+        LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
+        GuestRecipe
 from bkr.inttest import data_setup
 from nose.plugins.skip import SkipTest
 
@@ -63,14 +65,23 @@ class TestSystem(unittest.TestCase):
         self.assert_(system.user is None)
 
     def test_install_options_override(self):
-        distro = data_setup.create_distro(arch=u'i386')
-        system = data_setup.create_system(arch=u'i386')
-        system.provisions[distro.arch] = Provision(arch=Arch.by_name(u'i386'),
+        distro_tree = data_setup.create_distro_tree()
+        system = data_setup.create_system()
+        system.provisions[distro_tree.arch] = Provision(arch=distro_tree.arch,
                 kernel_options='console=ttyS0 ksdevice=eth0')
-        opts = system.install_options(distro, kernel_options='ksdevice=eth1')
+        opts = system.install_options(distro_tree).combined_with(
+                InstallOptions.from_strings('', u'ksdevice=eth1', ''))
         # ksdevice should be overriden but console should be inherited
-        self.assertEqual(opts['kernel_options'],
+        self.assertEqual(opts.kernel_options,
                 dict(console='ttyS0', ksdevice='eth1'))
+
+    def test_mark_broken_updates_history(self):
+        system = data_setup.create_system(status = SystemStatus.automated)
+        system.mark_broken(reason = "Attacked by cyborgs")
+        session.flush()
+        system_activity = system.dyn_activity.filter(SystemActivity.field_name == u'Status').first()
+        self.assertEqual(system_activity.old_value, u'Automated')
+        self.assertEqual(system_activity.new_value, u'Broken')
 
 class TestSystemKeyValue(unittest.TestCase):
 
@@ -116,11 +127,10 @@ class TestBrokenSystemDetection(unittest.TestCase):
     def tearDown(self):
         session.commit()
 
-    def abort_recipe(self, distro=None):
-        if distro is None:
-            distro = data_setup.create_distro()
-            distro.tags.append(u'RELEASED')
-        recipe = data_setup.create_recipe(distro=distro)
+    def abort_recipe(self, distro_tree=None):
+        if distro_tree is None:
+            distro_tree = data_setup.create_distro_tree(distro_tags=[u'RELEASED'])
+        recipe = data_setup.create_recipe(distro_tree=distro_tree)
         data_setup.create_job_for_recipes([recipe])
         recipe.system = self.system
         recipe.tasks[0].status = TaskStatus.running
@@ -156,11 +166,10 @@ class TestBrokenSystemDetection(unittest.TestCase):
         self.assertEqual(self.system.status, SystemStatus.broken) # now it is
 
     def test_counts_distinct_stable_distros(self):
-        first_distro = data_setup.create_distro()
-        first_distro.tags.append(u'RELEASED')
+        first_distro_tree = data_setup.create_distro_tree(distro_tags=[u'RELEASED'])
         # two aborted recipes for the same distro shouldn't trigger it
-        self.abort_recipe(distro=first_distro)
-        self.abort_recipe(distro=first_distro)
+        self.abort_recipe(distro_tree=first_distro_tree)
+        self.abort_recipe(distro_tree=first_distro_tree)
         self.assertNotEqual(self.system.status, SystemStatus.broken)
         # .. but a different distro should
         self.abort_recipe()
@@ -200,7 +209,7 @@ class TestJob(unittest.TestCase):
         data_setup.mark_job_running(job)
         data_setup.mark_job_complete(job)
 
-class DistroByFilterTest(unittest.TestCase):
+class DistroTreeByFilterTest(unittest.TestCase):
 
     def setUp(self):
         session.begin()
@@ -209,109 +218,102 @@ class DistroByFilterTest(unittest.TestCase):
         session.commit()
 
     def test_arch(self):
-        excluded = data_setup.create_distro(arch=u'x86_64')
-        included = data_setup.create_distro(arch=u'i386')
+        excluded = data_setup.create_distro_tree(arch=u'x86_64')
+        included = data_setup.create_distro_tree(arch=u'i386')
         session.flush()
-        distros = Distro.by_filter("""
+        distro_trees = DistroTree.by_filter("""
             <distroRequires>
                 <distro_arch op="==" value="i386" />
             </distroRequires>
             """).all()
-        self.assert_(excluded not in distros)
-        self.assert_(included in distros)
+        self.assert_(excluded not in distro_trees)
+        self.assert_(included in distro_trees)
 
     def test_distro_family(self):
-        excluded = data_setup.create_distro(osmajor=u'PinkFootLinux4')
-        included = data_setup.create_distro(osmajor=u'OrangeArmLinux6')
+        excluded = data_setup.create_distro_tree(osmajor=u'PinkFootLinux4')
+        included = data_setup.create_distro_tree(osmajor=u'OrangeArmLinux6')
         session.flush()
-        distros = Distro.by_filter("""
+        distro_trees = DistroTree.by_filter("""
             <distroRequires>
                 <distro_family op="==" value="OrangeArmLinux6" />
             </distroRequires>
             """).all()
-        self.assert_(excluded not in distros)
-        self.assert_(included in distros)
+        self.assert_(excluded not in distro_trees)
+        self.assert_(included in distro_trees)
 
     def test_distro_tag_equal(self):
-        excluded = data_setup.create_distro(tags=[u'INSTALLS', u'STABLE'])
-        included = data_setup.create_distro(tags=[u'INSTALLS', u'STABLE', u'RELEASED'])
+        excluded = data_setup.create_distro_tree(
+                distro_tags=[u'INSTALLS', u'STABLE'])
+        included = data_setup.create_distro_tree(
+                distro_tags=[u'INSTALLS', u'STABLE', u'RELEASED'])
         session.flush()
-        distros = Distro.by_filter("""
+        distro_trees = DistroTree.by_filter("""
             <distroRequires>
                 <distro_tag op="==" value="RELEASED" />
             </distroRequires>
             """).all()
-        self.assert_(excluded not in distros)
-        self.assert_(included in distros)
+        self.assert_(excluded not in distro_trees)
+        self.assert_(included in distro_trees)
 
     def test_distro_tag_notequal(self):
-        excluded = data_setup.create_distro(tags=[u'INSTALLS', u'STABLE', u'RELEASED'])
-        included = data_setup.create_distro(tags=[u'INSTALLS', u'STABLE'])
+        excluded = data_setup.create_distro_tree(
+                distro_tags=[u'INSTALLS', u'STABLE', u'RELEASED'])
+        included = data_setup.create_distro_tree(
+                distro_tags=[u'INSTALLS', u'STABLE'])
         session.flush()
-        distros = Distro.by_filter("""
+        distro_trees = DistroTree.by_filter("""
             <distroRequires>
                 <distro_tag op="!=" value="RELEASED" />
             </distroRequires>
             """).all()
-        self.assert_(excluded not in distros)
-        self.assert_(included in distros)
+        self.assert_(excluded not in distro_trees)
+        self.assert_(included in distro_trees)
 
     def test_distro_variant(self):
-        excluded = data_setup.create_distro(variant=u'Server')
-        included = data_setup.create_distro(variant=u'ComputeNode')
+        excluded = data_setup.create_distro_tree(variant=u'Server')
+        included = data_setup.create_distro_tree(variant=u'ComputeNode')
         session.flush()
-        distros = Distro.by_filter("""
+        distro_trees = DistroTree.by_filter("""
             <distroRequires>
                 <distro_variant op="==" value="ComputeNode" />
             </distroRequires>
             """).all()
-        self.assert_(excluded not in distros)
-        self.assert_(included in distros)
+        self.assert_(excluded not in distro_trees)
+        self.assert_(included in distro_trees)
 
     def test_distro_name(self):
-        excluded = data_setup.create_distro()
-        included = data_setup.create_distro()
+        excluded = data_setup.create_distro_tree()
+        included = data_setup.create_distro_tree()
         session.flush()
-        distros = Distro.by_filter("""
+        distro_trees = DistroTree.by_filter("""
             <distroRequires>
                 <distro_name op="==" value="%s" />
             </distroRequires>
-            """ % included.name).all()
-        self.assert_(excluded not in distros)
-        self.assert_(included in distros)
-
-    def test_distro_virt(self):
-        excluded = data_setup.create_distro(virt=True)
-        included = data_setup.create_distro(virt=False)
-        session.flush()
-        distros = Distro.by_filter("""
-            <distroRequires>
-                <distro_virt op="==" value="" />
-            </distroRequires>
-            """).all()
-        self.assert_(excluded not in distros)
-        self.assert_(included in distros)
+            """ % included.distro.name).all()
+        self.assert_(excluded not in distro_trees)
+        self.assert_(included in distro_trees)
 
     def test_distrolabcontroller(self):
-        excluded = data_setup.create_distro()
-        included = data_setup.create_distro()
+        excluded = data_setup.create_distro_tree()
+        included = data_setup.create_distro_tree()
         lc = data_setup.create_labcontroller(
-                fqdn=u'DistroByFilterTest.test_distrolabcontroller')
-        included.lab_controller_assocs.append(LabControllerDistro(lab_controller=lc))
+                fqdn=u'DistroTreeByFilterTest.test_distrolabcontroller')
+        included.lab_controller_assocs.append(LabControllerDistroTree(
+                lab_controller=lc, url=u'http://notimportant'))
         session.flush()
-        distros = Distro.by_filter("""
+        distro_trees = DistroTree.by_filter("""
             <distroRequires>
                 <distrolabcontroller op="==" value="%s" />
             </distroRequires>
             """ % lc.fqdn).all()
-        self.assert_(excluded not in distros)
-        self.assert_(included in distros)
+        self.assert_(excluded not in distro_trees)
+        self.assert_(included in distro_trees)
 
-class DistroTest(unittest.TestCase):
+class DistroTreeTest(unittest.TestCase):
 
     def setUp(self):
         session.begin()
-        self.distro = data_setup.create_distro(arch=u'i386')
+        self.distro_tree = data_setup.create_distro_tree(arch=u'i386')
         self.lc = data_setup.create_labcontroller()
         session.flush()
 
@@ -323,10 +325,10 @@ class DistroTest(unittest.TestCase):
                 lab_controller=self.lc)
         excluded_system = data_setup.create_system(arch=u'i386',
                 lab_controller=self.lc,
-                exclude_osmajor=[self.distro.osversion.osmajor])
+                exclude_osmajor=[self.distro_tree.distro.osversion.osmajor])
         excluded_system.arch.append(Arch.by_name(u'x86_64'))
         session.flush()
-        systems = self.distro.all_systems().all()
+        systems = self.distro_tree.all_systems().all()
         self.assert_(included_system in systems and
                 excluded_system not in systems, systems)
 
@@ -335,10 +337,10 @@ class DistroTest(unittest.TestCase):
                 lab_controller=self.lc)
         excluded_system = data_setup.create_system(arch=u'i386',
                 lab_controller=self.lc,
-                exclude_osversion=[self.distro.osversion])
+                exclude_osversion=[self.distro_tree.distro.osversion])
         excluded_system.arch.append(Arch.by_name(u'x86_64'))
         session.flush()
-        systems = self.distro.all_systems().all()
+        systems = self.distro_tree.all_systems().all()
         self.assert_(included_system in systems and
                 excluded_system not in systems, systems)
 
@@ -348,16 +350,16 @@ class DistroTest(unittest.TestCase):
         excluded_system = data_setup.create_system(arch=u'ppc64',
                 lab_controller=self.lc)
         session.flush()
-        systems = self.distro.all_systems().all()
+        systems = self.distro_tree.all_systems().all()
         self.assert_(included_system in systems and
                 excluded_system not in systems, systems)
 
-class DistroSystemsFilterTest(unittest.TestCase):
+class DistroTreeSystemsFilterTest(unittest.TestCase):
 
     def setUp(self):
         session.begin()
         self.lc = data_setup.create_labcontroller()
-        self.distro = data_setup.create_distro(arch=u'i386')
+        self.distro_tree = data_setup.create_distro_tree(arch=u'i386')
         self.user = data_setup.create_user()
         session.flush()
 
@@ -370,7 +372,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         included = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc, vendor=u'Intel')
         session.flush()
-        systems = self.distro.systems_filter(self.user, """
+        systems = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <system key="vendor" op="=" value="Intel" />
             </hostRequires>
@@ -389,7 +391,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         included = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc)
         session.flush()
-        systems = self.distro.systems_filter(self.user, """
+        systems = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <auto_prov value="True" />
             </hostRequires>
@@ -404,7 +406,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         included = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc)
         session.flush()
-        systems = self.distro.systems_filter(self.user, """
+        systems = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <system_type op="==" value="Machine" />
             </hostRequires>
@@ -418,7 +420,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         included = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc)
         session.flush()
-        systems = self.distro.systems_filter(self.user, """
+        systems = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <hostname op="==" value="%s" />
             </hostRequires>
@@ -432,7 +434,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         included = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc, memory=1024)
         session.flush()
-        systems = self.distro.systems_filter(self.user, """
+        systems = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <memory op="&gt;=" value="256" />
             </hostRequires>
@@ -446,7 +448,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         included = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc, memory=1024)
         session.flush()
-        systems = self.distro.systems_filter(self.user, """
+        systems = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <memory op="&gt;=" value="256" />
             </hostRequires>
@@ -462,7 +464,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         included.cpu = Cpu(processors=4)
         included.lab_controller = self.lc
         session.flush()
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <and>
                     <cpu_count op="=" value="4" />
@@ -471,7 +473,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(excluded not in systems)
         self.assert_(included in systems)
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <and>
                     <cpu_count op="&gt;" value="2" />
@@ -486,13 +488,13 @@ class DistroSystemsFilterTest(unittest.TestCase):
         lc1 = data_setup.create_labcontroller(fqdn=u'lab1')
         lc2 = data_setup.create_labcontroller(fqdn=u'lab2')
         lc3 = data_setup.create_labcontroller(fqdn=u'lab3')
-        distro = data_setup.create_distro()
+        distro_tree = data_setup.create_distro_tree()
         included = data_setup.create_system(arch=u'i386', shared=True)
         included.lab_controller = lc1
         excluded = data_setup.create_system(arch=u'i386', shared=True)
         excluded.lab_controller = lc3
         session.flush()
-        systems = list(distro.systems_filter(self.user, """
+        systems = list(distro_tree.systems_filter(self.user, """
                <hostRequires>
                 <or>
                  <hostlabcontroller op="=" value="lab1"/>
@@ -510,7 +512,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
                 lab_controller=self.lc)
         included.arch.append(Arch.by_name(u'x86_64'))
         session.flush()
-        systems = self.distro.systems_filter(self.user, """
+        systems = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <arch op="=" value="x86_64" />
             </hostRequires>
@@ -525,7 +527,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         included = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc)
         session.flush()
-        systems = self.distro.systems_filter(self.user, """
+        systems = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <arch op="!=" value="x86_64" />
             </hostRequires>
@@ -541,7 +543,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         included.numa = Numa(nodes=64)
         included.lab_controller = self.lc
         session.flush()
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <and>
                     <numa_node_count op=">=" value="32" />
@@ -564,7 +566,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
                 Key_Value_String(module_key, u'ida'),
                 Key_Value_String(module_key, u'kvm')])
         session.flush()
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <key_value key="MODULE" op="==" value="cciss"/>
             </hostRequires>
@@ -586,7 +588,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
                 Key_Value_String(module_key, u'ida'),
                 Key_Value_String(module_key, u'kvm')])
         session.flush()
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <and>
                     <key_value key="MODULE" op="!=" value="cciss"/>
@@ -606,7 +608,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
                 Key_Value_Int(disk_key, 140011),
                 Key_Value_Int(disk_key, 1048570)])
         session.flush()
-        query = self.distro.systems_filter(self.user, """
+        query = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <and>
                     <hostname op="=" value="%s" />
@@ -627,7 +629,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         kvm = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc, hypervisor=u'KVM')
         session.flush()
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <and>
                     <hypervisor op="=" value="KVM" />
@@ -636,7 +638,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(baremetal not in systems)
         self.assert_(kvm in systems)
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <and>
                     <hypervisor op="=" value="" />
@@ -645,7 +647,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(baremetal in systems)
         self.assert_(kvm not in systems)
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires/>
             """))
         self.assert_(baremetal in systems)
@@ -672,7 +674,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
                 description=u'NetXtreme BCM5701 Gigabit Ethernet'))
         session.flush()
 
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <device op="=" driver="e1000" />
             </hostRequires>
@@ -680,7 +682,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         self.assert_(with_e1000 in systems)
         self.assert_(with_tg3 not in systems)
 
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <device op="=" type="network" vendor_id="8086" />
             </hostRequires>
@@ -688,7 +690,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         self.assert_(with_e1000 in systems)
         self.assert_(with_tg3 not in systems)
 
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <device op="=" vendor_id="14E4" device_id="1645" />
             </hostRequires>
@@ -697,7 +699,7 @@ class DistroSystemsFilterTest(unittest.TestCase):
         self.assert_(with_tg3 in systems)
 
         # this filter does nothing, but at least it shouldn't explode
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <device op="=" />
             </hostRequires>
@@ -723,6 +725,7 @@ class UserTest(unittest.TestCase):
         except ValueError:
             pass
 
+
 class TaskTypeTest(unittest.TestCase):
 
     def setUp(self):
@@ -737,6 +740,34 @@ class TaskTypeTest(unittest.TestCase):
         second = TaskType.lazy_create(type=u'CookieMonster')
         self.assert_(first is second)
         self.assertEquals(TaskType.query.filter_by(type=u'CookieMonster').count(), 1)
+
+
+class GuestRecipeTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    def test_locations(self):
+        lc = data_setup.create_labcontroller()
+        distro_tree = data_setup.create_distro_tree(lab_controllers=[lc],
+                urls=[u'nfs://something:/somewhere',
+                      u'http://something/somewhere'])
+        guest_system = data_setup.create_system(lab_controller=lc,
+                type=SystemType.virtual)
+        job = data_setup.create_completed_job(distro_tree=distro_tree)
+        guest_recipe = GuestRecipe(guestname=u'asdf', guestargs=u'--kvm',
+                distro_tree=distro_tree, system=guest_system)
+        job.recipesets[0].recipes[0].guests.append(guest_recipe)
+        job.recipesets[0].recipes.append(guest_recipe)
+
+        guestxml = guest_recipe.to_xml().toxml()
+        self.assert_('location="nfs://something:/somewhere"' in guestxml, guestxml)
+        self.assert_('nfs_location="nfs://something:/somewhere"' in guestxml, guestxml)
+        self.assert_('http_location="http://something/somewhere"' in guestxml, guestxml)
+
 
 class TaskPackageTest(unittest.TestCase):
 

@@ -10,7 +10,7 @@ Synopsis
 --------
 
 | :program:`bkr task-list` [*options*]
-|       [--type=<type> ...] [--package=<package> ...] [--install_name=<name>]
+|       [--type=<type> ...] [--package=<package> ...] [--distro=<name>]
 |       [--xml [--params=<name>=<value> ...]]
 
 Description
@@ -48,12 +48,9 @@ Options
 
    Limit to tasks which are non-destructive.
 
-.. option:: --install_name <name>
+.. option:: --distro <name>
 
-   Limit to tasks which apply to distro with install name <name>.
-
-   Note that this must be the distro's *install name*. This is the first field 
-   in the output of :program:`bkr distros-list`.
+   Limit to tasks which apply to distro <name>.
 
 .. option:: --xml
 
@@ -81,6 +78,12 @@ List all regression tests which apply to the ``apache`` or ``tomcat6``
 packages::
 
     bkr task-list --type=Regression --package=apache --package=tomcat6
+
+History
+-------
+
+Prior to version 0.9, this command accepted :option:`--install_name` instead of
+:option:`--distro`.
 
 See also
 --------
@@ -114,7 +117,7 @@ class Task_List(BeakerCommand):
             help="Only return tasks that apply to these packages (kernel, apache, postgresql)",
         )
         self.parser.add_option(
-            "--install_name",
+            "--distro",
             default="",
             help="Only return tasks that apply to this distro",
         )
@@ -148,7 +151,7 @@ class Task_List(BeakerCommand):
         password = kwargs.pop("password", None)
         filter['types'] = kwargs.pop("type", None)
         filter['packages'] = kwargs.pop("package", None)
-        filter['install_name'] = kwargs.pop("install_name", None)
+        filter['distro_name'] = kwargs.pop("distro", None)
         filter['valid'] = True
         # Make sure they didn't specify both destructive and non_destructive.
         if not kwargs.get("destructive") or not kwargs.get("non_destructive"):

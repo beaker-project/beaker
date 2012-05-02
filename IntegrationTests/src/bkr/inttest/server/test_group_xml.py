@@ -13,7 +13,7 @@ class TestGroupXml(unittest.TestCase):
     @with_transaction
     def setUp(self):
         self.lc = data_setup.create_labcontroller()
-        self.distro = data_setup.create_distro(arch=u'i386')
+        self.distro_tree = data_setup.create_distro_tree(arch=u'i386')
         self.user = data_setup.create_user()
 
     @with_transaction
@@ -48,7 +48,7 @@ class TestGroupXml(unittest.TestCase):
         system_b.groups.append(group_b)
         all_systems = dict(a=system_a, ab=system_ab, b=system_b, _=system_0)
         session.flush()
-        systems = list(self.distro.systems_filter(self.user, """
+        systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <and>
                     <group op="%s" value="%s" />
