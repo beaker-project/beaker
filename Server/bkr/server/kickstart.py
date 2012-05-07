@@ -120,6 +120,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
         'kernel_options_post': install_options.kernel_options_post_str,
     }
     restricted_context.update(install_options.ks_meta)
+    # XXX find a better place to set this, perhaps from the kickstart templates
     if distro_tree.distro.osversion.osmajor.osmajor == 'RedHatEnterpriseLinux7' \
             or distro_tree.distro.osversion.osmajor.osmajor.startswith('Fedora'):
         restricted_context['end'] = '%end'

@@ -1,38 +1,41 @@
-nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-6.2/Server/s390x/os/
-#url --url=nfs://lab.test-kickstart.invalid:/distros/RHEL-6.2/Server/s390x/os/
+url --url=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/
 
 
-key --skip
-
+auth --useshadow --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
-cmdline
-
+# Use text mode install
+text
 # Error: no snippet data for network
 
+repo --name=repos_Server-optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/os
+repo --name=repos_debug_Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/debuginfo
+repo --name=repos_debug_Server_optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/debuginfo
+repo --name=repos_Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/
+
+
 firewall --disabled
+# Run the Setup Agent on first boot
+firstboot --disable
 # System keyboard
 keyboard us
 # System language
 lang en_US.UTF-8
 
-reboot
+
+#Disable reboot on s390 arch for now. Please re-enable for alpha2
+#reboot
+
 #Root password
 rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
 # SELinux configuration
 selinux --enforcing
 
-# Configure the X Window System
 
 # System timezone
 timezone America/New_York
 # Install OS instead of upgrade
 install
-
-repo --name=beaker-optional-s390x-os --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/s390x/os
-repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/s390x/debug
-repo --name=beaker-optional-s390x-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/s390x/debug
-repo --name=beaker-Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/s390x/os/Server
 
 
 zerombr
@@ -40,7 +43,7 @@ clearpart --all --initlabel
 
 autopart
 
-# Error: no snippet data for RedHatEnterpriseLinux6
+# Error: no snippet data for RedHatEnterpriseLinux7
 
 # Error: no snippet data for system
 
@@ -70,6 +73,7 @@ sendmail
 unifdef
 vim-enhanced
 
+%end
 
 
 
@@ -84,9 +88,11 @@ _EOF_
 wget -O /tmp/anamon 'http://lab.test-kickstart.invalid/beaker/anamon'
 python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
 
-# Error: no snippet data for RedHatEnterpriseLinux6_pre
+# Error: no snippet data for RedHatEnterpriseLinux7_pre
 
 # Error: no snippet data for system_pre
+
+%end
 
 
 %post --log=/dev/console
@@ -160,38 +166,33 @@ fi
 
 
 # Add Repos
-cat << EOF >/etc/yum.repos.d/beaker-optional-s390x-os.repo
-[beaker-optional-s390x-os]
-name=beaker-optional-s390x-os
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/s390x/os
+cat >> /etc/yum.repos.d/beaker-additional.repo <<EOF
+[repos_Server-optional]
+name=repos_Server-optional
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/os
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+[repos_debug_Server]
+name=repos_debug_Server
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/debuginfo
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+[repos_debug_Server_optional]
+name=repos_debug_Server_optional
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/debuginfo
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+[repos_Server]
+name=repos_Server
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/
 enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-debug.repo
-[beaker-debug]
-name=beaker-debug
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/s390x/debug
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-cat << EOF >/etc/yum.repos.d/beaker-optional-s390x-debug.repo
-[beaker-optional-s390x-debug]
-name=beaker-optional-s390x-debug
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/s390x/debug
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-cat << EOF >/etc/yum.repos.d/beaker-Server.repo
-[beaker-Server]
-name=beaker-Server
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/s390x/os/Server
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
+
 
 #Add Task Repo
 cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
@@ -207,7 +208,7 @@ EOF
 cat << EOF >/etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=beaker-harness
-baseurl=http://localhost:9090/harness/RedHatEnterpriseLinux6/
+baseurl=http://localhost:9090/harness/RedHatEnterpriseLinux7/
 enabled=1
 gpgcheck=0
 EOF
@@ -286,7 +287,7 @@ setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
 
-
+%end
 %post --nochroot
 
 # Does the kickstart file request a reboot?
@@ -346,9 +347,18 @@ EOF
    fi
 fi
 
-# Error: no snippet data for RedHatEnterpriseLinux6_post
+# Error: no snippet data for RedHatEnterpriseLinux7_post
 
 # Error: no snippet data for system_post
 
 
+%end
+
+# Disable rhts-compat for Fedora15 and newer.
+%post --log=/dev/console
+cat >> /etc/profile.d/task-overrides-rhts.sh <<END
+export RHTS_OPTION_COMPATIBLE=
+export RHTS_OPTION_COMPAT_SERVICE=
+END
+%end
 

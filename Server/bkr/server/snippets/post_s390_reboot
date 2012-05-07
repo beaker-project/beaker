@@ -8,6 +8,7 @@
 #}
 
 {% if distro_tree is arch('s390', 's390x') %}
+{{ end }}
 %post --nochroot
 
 # Does the kickstart file request a reboot?

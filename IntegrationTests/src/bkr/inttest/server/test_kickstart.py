@@ -172,6 +172,20 @@ EOF
             DistroTreeRepo(repo_id=u'repos_addons_ScalableFileSystem',
                     repo_type=u'addon', path=u'addons/ScalableFileSystem'),
         ]
+        cls.rhel70nightly_server_s390x = data_setup.create_distro_tree(
+                distro=cls.rhel70nightly, variant=u'Server', arch=u's390x',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/'])
+        cls.rhel70nightly_server_s390x.repos[:] = [
+            DistroTreeRepo(repo_id=u'repos_debug_Server_optional',
+                    repo_type=u'debug',
+                    path=u'../../../Server-optional/s390x/debuginfo'),
+            DistroTreeRepo(repo_id=u'repos_debug_Server', repo_type=u'debug',
+                    path=u'../debuginfo'),
+            DistroTreeRepo(repo_id=u'repos_Server-optional', repo_type=u'addon',
+                    path=u'../../../Server-optional/s390x/os'),
+            DistroTreeRepo(repo_id=u'repos_Server', repo_type=u'os', path=u'.'),
+        ]
 
         cls.f16 = data_setup.create_distro(name=u'Fedora-16',
                 osmajor=u'Fedora16', osminor=u'0')
@@ -415,6 +429,27 @@ EOF
             </job>
             ''', self.system)
         compare_expected('RedHatEnterpriseLinux7-scheduler-defaults', recipe.id,
+                recipe.rendered_kickstart.kickstart)
+
+    def test_rhel7_s390x(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="s390x" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system_s390x)
+        compare_expected('RedHatEnterpriseLinux7-scheduler-s390x', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
     def test_fedora16_defaults(self):
