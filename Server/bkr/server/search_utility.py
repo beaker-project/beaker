@@ -422,6 +422,7 @@ class DistroSearch(Search):
 
 class DistroTreeSearch(Search): pass
 
+
 class KeySearch(Search):
     search_table = []
 
@@ -435,6 +436,22 @@ class KeySearch(Search):
 
 class SystemReserveSearch(Search):
     search_table = []
+
+class GroupActivitySearch(Search):
+    search_table = []
+    def __init__(self, activity):
+        self.queri = activity
+
+
+class SystemActivitySearch(Search):
+    search_table = []
+    def __init__(self, activity):
+        self.queri = activity
+
+
+class DistroActivitySearch(Search):
+    search_table = []
+
 
 class ActivitySearch(Search):
     search_table = [] 
@@ -1031,36 +1048,58 @@ class SystemReserve(System):
 
     search_values_dict = dict(System.search_values_dict.items() +
                              [('Shared', lambda: ['True', 'False'])])
-    
 
-       
+
 class Activity(SystemObject):
     search = ActivitySearch    
     searchable_columns = { 
                            'User' : MyColumn(col_type='string', column=model.User.user_name, relations='user'),
                            'Via' : MyColumn(col_type='string', column=model.Activity.service),
-                           'System/Name' : MyColumn(col_type='string', column=model.System.fqdn, relations='object'), 
-                           'Distro/Name': MyColumn(col_type='string', column=model.Distro.name, relations='object'),
                            'Property': MyColumn(col_type='string', column=model.Activity.field_name),
                            'Action' : MyColumn(col_type='string', column=model.Activity.action),
                            'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),
                            'New Value' : MyColumn(col_type='string', column=model.Activity.new_value),
                          }  
 
-    @classmethod
-    def SystemArch_is_not_filter(cls,col,val):
-        """
-        SystemArch_is_not_filter provides a custom filter for the System/Arch search.
-        """
-        if not val: 
-           return or_(col != None, col != val) 
-        else: 
-            query = model.SystemActivity.query.join(['object','arch']).filter(model.Arch.arch == val)
-        ids = [r.id for r in query]  
-        return not_(model.activity_table.c.id.in_(ids)) 
-        
 
-class History(SystemObject): 
+class SystemActivity(SystemObject):
+    search = SystemActivitySearch
+    searchable_columns = {
+                           'System/Name' : MyColumn(col_type='string', column=model.System.fqdn, relations='object'),
+                           'User' : MyColumn(col_type='string', column=model.User.user_name, relations='user'),
+                           'Via' : MyColumn(col_type='string', column=model.Activity.service),
+                           'Property': MyColumn(col_type='string', column=model.Activity.field_name),
+                           'Action' : MyColumn(col_type='string', column=model.Activity.action),
+                           'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),
+                           'New Value' : MyColumn(col_type='string', column=model.Activity.new_value),
+                         }
+
+
+class GroupActivity(SystemObject):
+    search = GroupActivitySearch
+    searchable_columns = {
+                           'Group/Name' : MyColumn(col_type='string', column=model.Group.display_name, relations='object'),
+                           'Via' : MyColumn(col_type='string', column=model.Activity.service),
+                           'Property': MyColumn(col_type='string', column=model.Activity.field_name),
+                           'Action' : MyColumn(col_type='string', column=model.Activity.action),
+                           'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),
+                           'New Value' : MyColumn(col_type='string', column=model.Activity.new_value),
+                         }
+
+
+class DistroActivity(SystemObject):
+    search = DistroActivitySearch
+    searchable_columns = {
+                           'Distro/Name' : MyColumn(col_type='string', column=model.Distro.name, relations='object'),
+                           'Via' : MyColumn(col_type='string', column=model.Activity.service),
+                           'Property': MyColumn(col_type='string', column=model.Activity.field_name),
+                           'Action' : MyColumn(col_type='string', column=model.Activity.action),
+                           'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),
+                           'New Value' : MyColumn(col_type='string', column=model.Activity.new_value),
+                         }
+
+
+class History(SystemObject):
     search = HistorySearch
     searchable_columns = {
                           'User' : MyColumn(col_type='string', column=model.User.user_name,relations='user'),

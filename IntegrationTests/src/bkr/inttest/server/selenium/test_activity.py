@@ -1,29 +1,31 @@
-
 from turbogears.database import session
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
-from bkr.server.model import User, DistroActivity, SystemActivity
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest import data_setup, get_server_base, with_transaction
+from bkr.server.model import User, DistroActivity, SystemActivity, \
+    GroupActivity
 
-def is_activity_row_present(sel, via=u'testdata', object_=None, property_=None,
+def is_activity_row_present(b, via=u'testdata', object_=None, property_=None,
         action=None, old_value=None, new_value=None):
-    row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
+    row_count = len(b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr'))
     for row in range(1, row_count + 1):
-        if via and via != sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[2]' % row):
+        if via and via != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[2]' % row).text:
             continue
-        if object_ and object_ != sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[4]' % row):
+        if object_ and object_ != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[4]' % row).text:
             continue
-        if property_ and property_ != sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[5]' % row):
+        if property_ and property_ != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[5]' % row).text:
             continue
-        if action and action != sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[6]' % row):
+        if action and action != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[6]' % row).text:
             continue
-        if old_value and old_value != sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[7]' % row):
+        if old_value and old_value != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[7]' % row).text:
             continue
-        if new_value and new_value != sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[8]' % row):
+        if new_value and new_value != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[8]' % row).text:
             continue
         return True
     return False
 
-class ActivityTest(SeleniumTestCase):
+
+class ActivityTestWD(WebDriverTestCase):
 
     @with_transaction
     def setUp(self):
@@ -37,44 +39,76 @@ class ActivityTest(SeleniumTestCase):
                 user=User.by_user_name(data_setup.ADMIN_USER), service=u'testdata',
                 action=u'Nothing', field_name=u'Nonsense',
                 old_value=u'asdf', new_value=u'omgwtfbbq'))
-        self.selenium = self.get_selenium()
-        self.selenium.start()
+        self.group2 = data_setup.create_group()
+        self.group = data_setup.create_group()
+        self.group.activity.append(GroupActivity(
+                user=User.by_user_name(data_setup.ADMIN_USER), service=u'testdata',
+                action=u'Nothing', field_name=u'Nonsense',
+                old_value=u'asdf', new_value=u'omgwtfbbq'))
+        self.browser = self.get_browser()
 
     def tearDown(self):
-        self.selenium.stop()
-
-    def test_shows_all_activity(self):
-        sel = self.selenium
-        sel.open('activity/')
-        self.assert_(is_activity_row_present(sel,
-                object_='Distro: %s' % self.distro.name))
-        self.assert_(is_activity_row_present(sel,
-                object_='System: %s' % self.system.fqdn))
+        self.browser.quit()
 
     def test_can_search_by_system_name(self):
-        sel = self.selenium
-        sel.open('activity/')
-        sel.click('link=Toggle Search')
-        sel.select('activitysearch_0_table', 'System/Name')
-        sel.select('activitysearch_0_operation', 'is')
-        sel.type('activitysearch_0_value', self.system.fqdn)
-        sel.click('Search')
-        sel.wait_for_page_to_load('30000')
-        self.assert_(not is_activity_row_present(sel,
-                object_='Distro: %s' % self.distro.name))
-        self.assert_(is_activity_row_present(sel,
+        b = self.browser
+        b.get(get_server_base() + 'activity/system')
+        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='System/Name']").click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.system.fqdn)
+        b.find_element_by_xpath("//input[@name='Search']").click()
+        self.assert_(is_activity_row_present(b,
                 object_='System: %s' % self.system.fqdn))
 
     def test_can_search_by_distro_name(self):
-        sel = self.selenium
-        sel.open('activity/')
-        sel.click('link=Toggle Search')
-        sel.select('activitysearch_0_table', 'Distro/Name')
-        sel.select('activitysearch_0_operation', 'is')
-        sel.type('activitysearch_0_value', self.distro.name)
-        sel.click('Search')
-        sel.wait_for_page_to_load('30000')
-        self.assert_(is_activity_row_present(sel,
+        b = self.browser
+        b.get(get_server_base() + 'activity/distro')
+        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_xpath('//select[@id="activitysearch_0_table"]/option[@value="Distro/Name"]').click()
+        b.find_element_by_xpath('//select[@id="activitysearch_0_operation"]/option[@value="is"]').click()
+        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.distro.name)
+        b.find_element_by_xpath('//input[@name="Search"]').click()
+        self.assert_(is_activity_row_present(b,
                 object_='Distro: %s' % self.distro.name))
-        self.assert_(not is_activity_row_present(sel,
-                object_='System: %s' % self.system.fqdn))
+
+    def test_can_search_by_group_name(self):
+        b = self.browser
+        b.get(get_server_base() + 'activity/group')
+        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Group/Name']").click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.group.display_name)
+        b.find_element_by_xpath("//input[@name='Search']").click()
+        self.assert_(is_activity_row_present(b,
+                object_='Group: %s' % self.group.display_name))
+
+    def test_group_removal_is_noticed(self):
+        self.group.systems.append(self.system)
+        session.flush()
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'groups/admin')
+
+        b.find_element_by_xpath("//input[@name='group.text']").clear()
+        b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
+        b.find_element_by_xpath("//input[@value='Search']").submit()
+        b.find_element_by_link_text("Remove (-)").click()
+        should_have_deleted_msg = b.find_element_by_xpath('//body').text
+        self.assert_('%s Deleted' % self.group.display_name in should_have_deleted_msg)
+
+        # Check it's recorded in System Activity
+        b.get(get_server_base() + 'activity/system')
+        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Action']").click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys('Removed')
+        b.find_element_by_link_text('Add ( + )').click()
+
+        b.find_element_by_xpath("//select[@id='activitysearch_1_table']/option[@value='Old Value']").click()
+        b.find_element_by_xpath("//select[@id='activitysearch_1_operation']/option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='activitysearch_1_value']").send_keys(self.group.display_name)
+        b.find_element_by_xpath("//input[@name='Search']").submit()
+        self.assert_(is_activity_row_present(b,via='WEBUI', action='Removed',
+             old_value=self.group.display_name, new_value='',
+             object_='System: %s' % self.system.fqdn))

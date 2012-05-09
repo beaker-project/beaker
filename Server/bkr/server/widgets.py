@@ -554,9 +554,9 @@ class SearchBar(RepeatingFormField):
     form_attrs = {}
     simplesearch = None
 
-    def __init__(self, table,search_controller,extra_selects=None, 
-        extra_inputs=None,extra_hiddens=None, enable_custom_columns=False, 
-        complete_data=None, *args, **kw): 
+    def __init__(self, table, search_controller=None, extra_selects=None,
+        extra_inputs=None, extra_hiddens=None, enable_custom_columns=False,
+        complete_data=None, *args, **kw):
 
         super(SearchBar,self).__init__(*args, **kw)
         self.enable_custom_columns = enable_custom_columns

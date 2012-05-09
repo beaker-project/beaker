@@ -18,61 +18,98 @@ import cherrypy
 from model import *
 import string
 
-# Validation Schemas
 
 class Activities(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = False
 
-    def activities(self,activity,**kw): 
-        return_dict = {}                    
+    def activities(self, activity_search, **kw):
+        return_dict = {}
         if 'simplesearch' in kw:
             simplesearch = kw['simplesearch']
-            kw['activitysearch'] = [{'table' : 'Property',   
-                                     'operation' : 'contains', 
-                                     'value' : kw['simplesearch']}]                    
+            kw['activitysearch'] = [{'table' : 'Property',
+                                     'operation' : 'contains',
+                                     'value' : kw['simplesearch']}]
         else:
             simplesearch = None
 
         return_dict.update({'simplesearch':simplesearch})
 
         if kw.get("activitysearch"):
-            searchvalue = kw['activitysearch']  
-            activities_found = self._activity_search(activity,**kw)
-            return_dict.update({'activities_found':activities_found})               
+            searchvalue = kw['activitysearch']
+            activities_found = self._activity_search(activity_search, **kw)
+            return_dict.update({'activities_found':activities_found})
             return_dict.update({'searchvalue':searchvalue})
         return return_dict
 
-    def _activity_search(self,activity,**kw):
-        activity_search = search_utility.Activity.search(activity)
+    def _activity_search(self, activity_search, **kw):
         for search in kw['activitysearch']:
-            col = search['table'] 
-            activity_search.append_results(search['value'],col,search['operation'],**kw)
+            col = search['table']
+            activity_search.append_results(search['value'], col, search['operation'], **kw)
         return activity_search.return_results()
 
-    @expose(template="bkr.server.templates.grid")
-    @paginate('list',default_order='-created', limit=50)
-    def index(self,**kw):
-        # This seems kind of dodgy...
-        if any(search['table'].startswith('System/')
-                for search in kw.get('activitysearch', [])):
-            activity = SystemActivity.all()
-        elif any(search['table'].startswith('Distro/')
-                for search in kw.get('activitysearch', [])):
-            activity = DistroActivity.all()
-        else:
-            activity = Activity.all()
-        activities_return = self.activities(activity,**kw)
+    @expose(template='bkr.server.templates.grid')
+    @paginate('list', default_order='-created', limit=50)
+    def group(self, **kw):
+        activities = GroupActivity.all()
+        activity_search = search_utility.GroupActivity.search
+        search_bar = SearchBar(activity_search.create_search_table(),
+                               name='activitysearch',
+                               complete_data = activity_search. \
+                                               create_complete_search_table(),)
+        return self._activities_grid(activities, search_bar, 'group',
+            search_utility.GroupActivity, title='Group Activity', **kw)
+
+    @expose(template='bkr.server.templates.grid')
+    @paginate('list', default_order='-created', limit=50)
+    def system(self, **kw):
+        activities = SystemActivity.all()
+        activity_search = search_utility.SystemActivity.search
+        search_bar = SearchBar(activity_search.create_search_table(),
+                               name='activitysearch',
+                               complete_data = activity_search. \
+                                               create_complete_search_table(),)
+        return self._activities_grid(activities, search_bar, 'system',
+            search_utility.SystemActivity, title='System Activity', **kw)
+
+    @expose(template='bkr.server.templates.grid')
+    @paginate('list', default_order='-created', limit=50)
+    def distro(self, **kw):
+        activities = DistroActivity.all()
+        activity_search = search_utility.DistroActivity.search
+        search_bar = SearchBar(activity_search.create_search_table(),
+                               name='activitysearch',
+                               complete_data = activity_search. \
+                                               create_complete_search_table(),)
+        return self._activities_grid(activities, search_bar, 'distro',
+            search_utility.DistroActivity, title='Distro Activity', **kw)
+
+    @expose(template='bkr.server.templates.grid')
+    @paginate('list', default_order='-created', limit=50)
+    def index(self, **kw):
+        activities = Activity.all()
+        activity_search = search_utility.Activity.search
+        search_bar = SearchBar(activity_search.create_search_table(),
+                               name='activitysearch',
+                               complete_data = activity_search. \
+                                               create_complete_search_table(),)
+        return self._activities_grid(activities, search_bar, '.',
+            search_utility.Activity, **kw)
+
+    def _activities_grid(self, activities, search_bar, action, searcher, \
+        title='Activity', **kw):
+        activity_search = searcher.search(activities)
+        activities_return = self.activities(activity_search, **kw)
         searchvalue = None
         search_options = {}
         if activities_return:
             if 'activities_found' in activities_return:
-                activity = activities_return['activities_found']
+                activities = activities_return['activities_found']
             if 'searchvalue' in activities_return:
                 searchvalue = activities_return['searchvalue']
             if 'simplesearch' in activities_return:
                 search_options['simplesearch'] = activities_return['simplesearch']
-          
+
         activity_grid = myPaginateDataGrid(fields=[
                                   widgets.PaginateDataGrid.Column(name='user.user_name', getter=lambda x: x.user, title='User', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='service', getter=lambda x: x.service, title='Via', options=dict(sortable=True)),
@@ -85,20 +122,13 @@ class Activities(RPCRoot):
                                   widgets.PaginateDataGrid.Column(name='old_value', getter=lambda x: x.old_value, title='Old Value', options=dict(sortable=True)),
                                   widgets.PaginateDataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New Value', options=dict(sortable=True)),
                               ])
-        
-        self.search_bar = SearchBar(name='activitysearch',
-                           label=_(u'Activity Search'),
-                           table = search_utility.Activity.search.create_search_table(),
-                           complete_data = search_utility.Activity.search.create_complete_search_table(),
-                           search_controller=url("/get_search_options_activity"), 
-                           )
-       
-        return dict(title="Activity", 
+
+        return dict(title=title,
                     grid = activity_grid,
-                    object_count = activity.count(),
-                    search_bar = self.search_bar,
+                    object_count = activities.count(),
+                    search_bar = search_bar,
                     searchvalue = searchvalue,
-                    action = '.',
+                    action = action,
                     options = search_options,
-                    list = activity)
+                    list = activities)
     default = index
