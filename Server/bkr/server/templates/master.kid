@@ -194,6 +194,8 @@ from bkr.server.reports import Reports
                     </li>
                 </ul>
             </li>
+            <li py:if="not tg.identity.anonymous"><a href="${tg.url('/jobs/mine')}">My Jobs</a>
+            </li>
             <li py:if="tg.identity.anonymous"><a href="${tg.url('/login')}">Login</a>
             </li>
             <li py:if="not tg.identity.anonymous"><a href="${tg.url('/logout')}">Logout</a>
