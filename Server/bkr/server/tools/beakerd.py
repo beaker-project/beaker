@@ -314,8 +314,9 @@ def queued_recipes(*args):
     # Order recipes by priority.
     # FIXME Add secondary order by number of matched systems.
     if True:
-        recipes = recipes.join(Recipe.recipeset)\
-                .order_by(RecipeSet.priority.desc())
+        recipes = recipes.order_by(RecipeSet.priority.desc())
+    # order recipes by id
+    recipes = recipes.order_by(Recipe.id)
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
