@@ -9,9 +9,9 @@ class TestAddUserToGroup(SeleniumTestCase):
         self.verificationErrors = []
         self.selenium = self.get_selenium()
         self.selenium.start()
-        self.BEAKER_TEST_USER_1 = data_setup.create_user(password='password').user_name
-        self.BEAKER_TEST_USER_2 = data_setup.create_user(password='password').user_name
-        self.GROUP = data_setup.create_group().group_name
+        self.BEAKER_TEST_USER_1 = data_setup.create_user(password='password')
+        self.BEAKER_TEST_USER_2 = data_setup.create_user(password='password')
+        self.GROUP = data_setup.create_group()
         session.flush()
 
     
@@ -29,15 +29,13 @@ class TestAddUserToGroup(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         sel.click("link=admin")
         sel.wait_for_page_to_load("30000")
-        sel.type("GroupUser_user_text", "%s" % self.BEAKER_TEST_USER_1)
+        sel.type("GroupUser_user_text", "%s" % self.BEAKER_TEST_USER_1.user_name)
         sel.click("//input[@value='Add']")
         sel.wait_for_page_to_load("30000")
         #Test user 1 is in group admin
-        try: self.failUnless(sel.is_text_present("%s" % self.BEAKER_TEST_USER_1))
-        except AssertionError, e: self.verificationErrors.append('Could  not find user %s in users in %s' % (self.BEAKER_TEST_USER_1, self.test_add_user_to_admin_group.__name__))
+        self.failUnless(sel.is_text_present("%s" % self.BEAKER_TEST_USER_1.user_name))
         #Test that user 2 is NOT in admin group
-        try: self.failUnless(not sel.is_text_present("%s" % self.BEAKER_TEST_USER_2))
-        except AssertionError, e: self.verificationErrors.append('User %s was found in group that they were not added to in %s' % (self.BEAKER_TEST_USER_2, self.test_add_user_to_admin_group.__name__))
+        self.failUnless(not sel.is_text_present("%s" % self.BEAKER_TEST_USER_2.user_name))
 
     def test_add_user_to_nonadmin_group(self):
         sel = self.selenium
@@ -51,17 +49,31 @@ class TestAddUserToGroup(SeleniumTestCase):
         sel.open("users/")
         sel.click("link=Groups")
         sel.wait_for_page_to_load("30000")
-        sel.click("link=%s" % self.GROUP)
+        sel.click("link=%s" % self.GROUP.group_name)
         sel.wait_for_page_to_load("30000")
-        sel.type("GroupUser_user_text", "%s" % self.BEAKER_TEST_USER_2)
+        sel.type("GroupUser_user_text", "%s" % self.BEAKER_TEST_USER_2.user_name)
         sel.click("//input[@value='Add']")
         sel.wait_for_page_to_load("30000")
-        #Test user 2 is in group 
-        try: self.failUnless(sel.is_text_present("%s" % self.BEAKER_TEST_USER_2))
-        except AssertionError, e: self.verificationErrors.append('Could  not find user %s in users in %s' % (self.BEAKER_TEST_USER_2, self.test_add_user_to_nonadmin_group.__name__))
+        #Test user 2 is in group
+        self.failUnless(sel.is_text_present("%s" % self.BEAKER_TEST_USER_2.user_name))
         #Test that user 1 is NOT in group
-        try: self.failUnless(not sel.is_text_present("%s" % self.BEAKER_TEST_USER_1))
-        except AssertionError, e: self.verificationErrors.append('User %s was found in group that they were not added to' % (self.BEAKER_TEST_USER_1, self.test_add_user_to_nonadmin_group.__name__))
+        self.failUnless(not sel.is_text_present("%s" % self.BEAKER_TEST_USER_1.user_name))
+
+    def test_user_group_is_updated(self):
+        group = data_setup.create_group()
+        session.flush()
+        sel = self.selenium
+        self.login()
+        sel.click("link=Groups")
+        sel.wait_for_page_to_load("30000")
+        sel.click("link=%s" % group.group_name)
+        sel.wait_for_page_to_load("30000")
+        sel.type("GroupUser_user_text", "%s" % self.BEAKER_TEST_USER_2.user_name)
+        sel.click("//input[@value='Add']")
+        sel.wait_for_page_to_load("30000")
+        sel.open('users/edit?id=%d' % self.BEAKER_TEST_USER_2.user_id)
+        sel.wait_for_page_to_load("30000")
+        self.assert_(group.display_name in sel.get_text('//table[@id="groups_grid"]'))
 
     def tearDown(self):
 	self.selenium.stop()

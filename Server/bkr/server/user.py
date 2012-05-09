@@ -6,7 +6,7 @@ from cherrypy import request, response
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar
+from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, BeakerDataGrid
 from bkr.server.admin_page import AdminPage
 from bkr.server import validators as beaker_validators
 
@@ -70,7 +70,7 @@ class Users(AdminPage):
         )
 
     @identity.require(identity.in_group("admin"))
-    @expose(template='bkr.server.templates.form')
+    @expose(template='bkr.server.templates.user_edit_form')
     def edit(self, id=None, **kw):
         if id:
             value = User.by_id(id)
@@ -81,6 +81,7 @@ class Users(AdminPage):
             action = './save',
             options = {},
             value = value,
+            groupsgrid = self.show_groups(),
         )
 
     @identity.require(identity.in_group("admin"))
@@ -225,3 +226,7 @@ class Users(AdminPage):
     def by_name(self, input,anywhere=False,ldap=True):
         input = input.lower()
         return dict(matches=User.list_by_name(input,anywhere,ldap))
+
+    def show_groups(self):
+        group = ('Group', lambda x: x.display_name)
+        return BeakerDataGrid(fields=[group])
