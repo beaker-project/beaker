@@ -448,9 +448,9 @@ class SystemSearch(Search):
     column_table = [] 
     def __init__(self,systems=None):
         if systems:
-            self.queri = systems
+            self.queri = systems.distinct()
         else:
-            self.queri = session.query(model.System)
+            self.queri = session.query(model.System).distinct()
        
         self.system_columns_desc = []
         self.extra_columns_desc = []

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from bkr.server.model import Numa, User, Key, Key_Value_String
+from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int
 from bkr.inttest.server.selenium import SeleniumTestCase
 from bkr.inttest import data_setup, with_transaction
 import unittest, time, re, os, datetime
@@ -90,6 +90,11 @@ class Search(SeleniumTestCase):
             Key.by_name(u'CPUMODEL'), 'foocodename'))
         cls.system_one.key_values_string.append(Key_Value_String(
             Key.by_name(u'HVM'), '1'))
+
+        cls.system_one.key_values_int.append(Key_Value_Int(
+            Key.by_name(u'DISKSPACE'), '1024'))
+        cls.system_one.key_values_int.append(Key_Value_Int(
+            Key.by_name(u'MEMORY'), '4096'))
 
         cls.system_two_details = { 'fqdn' : u'a2',
                                     'type' : u'Virtual',
@@ -255,6 +260,7 @@ class Search(SeleniumTestCase):
         self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
         self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
         self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
+        self.failUnless(sel.is_text_present("Items found: 1"))
 
         sel.open('')
         sel.select("systemsearch_0_table", "label=Key/Value")
@@ -272,6 +278,7 @@ class Search(SeleniumTestCase):
         self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
         self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
         self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
+        self.failUnless(sel.is_text_present("Items found: 1"))
 
     def test_can_search_by_numa_node_count(self):
         sel = self.selenium
