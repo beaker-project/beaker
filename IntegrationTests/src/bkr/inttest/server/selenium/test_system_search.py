@@ -1,5 +1,6 @@
 #!/usr/bin/python
-from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int
+from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
+    Device, DeviceClass
 from bkr.inttest.server.selenium import SeleniumTestCase
 from bkr.inttest import data_setup, with_transaction
 import unittest, time, re, os, datetime
@@ -103,6 +104,16 @@ class Search(SeleniumTestCase):
                                     'owner' : data_setup.create_user(),}
         cls.system_two = data_setup.create_system(**cls.system_two_details)
 
+        device_class = DeviceClass.lazy_create(device_class='class_type')
+        device1 = Device.lazy_create(vendor_id = '0000',
+                                      device_id = '0000',
+                                      subsys_vendor_id = '2223',
+                                      subsys_device_id = '2224',
+                                      bus = '0000',
+                                      driver = '0000',
+                                      device_class_id = device_class.id,
+                                      description = 'blah')
+        cls.system_two.devices.append(device1)
         cls.system_three_details = { 'fqdn' : u'a3',
                                     'type' : u'Laptop',
                                     'arch' : u'ia64',
@@ -110,6 +121,15 @@ class Search(SeleniumTestCase):
                                     'owner' : data_setup.create_user(),}
         cls.system_three = data_setup.create_system(**cls.system_three_details)
         cls.system_three.numa = Numa(nodes=1)
+        device2 = Device.lazy_create(vendor_id = '0000',
+                                      device_id = '0000',
+                                      subsys_vendor_id = '1111',
+                                      subsys_device_id = '1112',
+                                      bus = '0000',
+                                      driver = '0000',
+                                      device_class_id = device_class.id,
+                                      description = 'blah')
+        cls.system_three.devices.append(device2)
         cls.selenium.start()
 
     @classmethod
@@ -139,6 +159,33 @@ class Search(SeleniumTestCase):
         sel = self.selenium
         sel.open('')
         sel.wait_for_page_to_load("30000")
+        sel.select("systemsearch_0_table", "label=Devices/Subsys_device_id")
+        sel.select("systemsearch_0_operation", "label=is")
+        sel.type("systemsearch_0_value", "1112")
+        sel.click("Search")
+        sel.wait_for_page_to_load("30000")
+        self.assertEqual(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
+        self.failUnless(not sel.is_text_present("%s" % self.system_two.fqdn))
+        self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
+
+
+        sel.select("systemsearch_0_table", "label=Devices/Subsys_vendor_id")
+        sel.select("systemsearch_0_operation", "label=is not")
+        sel.type("systemsearch_0_value", "1111")
+        sel.click("doclink")
+
+        sel.select("systemsearch_1_table", "label=Devices/Subsys_device_id")
+        sel.select("systemsearch_1_operation", "label=is")
+        sel.type("systemsearch_1_value", "2224")
+        sel.click("Search")
+        sel.wait_for_page_to_load("30000")
+        self.assertEqual(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present("%s" % self.system_two.fqdn))
+        self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
+        self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
+
+        sel.open('')
         sel.select("systemsearch_0_table", "label=System/Name")
         sel.select("systemsearch_0_operation", "label=is")
         sel.type("systemsearch_0_value", "%s" % self.system_one.fqdn)

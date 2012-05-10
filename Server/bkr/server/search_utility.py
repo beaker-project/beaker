@@ -1220,7 +1220,9 @@ class Device(SystemObject):
     searchable_columns = {'Description' : DeviceColumn(col_type='string', column=model.Device.description),
                           'Vendor_id' : DeviceColumn(col_type='string', column=model.Device.vendor_id),
                           'Device_id' : DeviceColumn(col_type='string', column=model.Device.device_id),
-                          'Driver' : DeviceColumn(col_type='string', column=model.Device.driver)  } 
+                          'Driver' : DeviceColumn(col_type='string', column=model.Device.driver),
+                          'Subsys_device_id' : DeviceColumn(col_type='string', column=model.Device.subsys_device_id),
+                          'Subsys_vendor_id' : DeviceColumn(col_type='string', column=model.Device.subsys_vendor_id),}
       
     @classmethod
     def driver_is_not_filter(cls,col,val):
