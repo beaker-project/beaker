@@ -304,6 +304,8 @@ def legacy_inventory(inv):
             if re.match('Virtual machine features.*: On', line):
                 data['HVM'] = True
 
+    if os.path.exists("/root/NETBOOT_METHOD.TXT"):
+        data['NETBOOT_METHOD'] = open('/root/NETBOOT_METHOD.TXT', 'r').readline()[:-1]
     return data
 
 def read_inventory():
