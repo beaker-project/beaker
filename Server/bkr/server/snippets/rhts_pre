@@ -5,6 +5,9 @@ server = xmlrpclib.Server("http://{{ system.lab_controller.fqdn }}:8000")
 server.install_start("{{ system.fqdn }}")
 _EOF_
 
+{% if distro_tree is arch('ppc', 'ppc64') %}
+nvram --print-config=boot-device > /tmp/boot-device.bak
+{% endif %}
 {#
 ## Enable installation monitoring
 #}
