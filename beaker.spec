@@ -332,7 +332,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/%{name}-provision
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
-%{_sysconfdir}/cron.hourly/cobbler_expire_distros
+%{_sysconfdir}/cron.hourly/beaker_expire_distros
 %attr(-,apache,root) %{_var}/www/beaker/*
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
