@@ -123,8 +123,19 @@ def handle_configure_netboot(command):
         netboot.configure_elilo(fqdn, ko)
 
 def handle_clear_netboot(command):
+    fqdn = command['fqdn']
+    arch = set(command['arch'])
     netboot.clear_images(command['fqdn'])
-    netboot.clear_pxelinux(command['fqdn'])
+    if 'i386' in arch or 'x86_64' in arch:
+        netboot.clear_pxelinux(fqdn)
+        netboot.clear_efigrub(fqdn)
+    if 's390' in arch or 's390x' in arch:
+        netboot.clear_zpxe(fqdn)
+    if 'ppc' in arch or 'ppc64' in arch:
+        netboot.clear_yaboot(fqdn)
+        netboot.clear_efigrub(fqdn)
+    if 'ia64' in arch:
+        netboot.clear_elilo(fqdn)
 
 def handle_power(command):
     script = find_power_script(command['power']['type'])
