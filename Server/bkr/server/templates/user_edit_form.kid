@@ -9,7 +9,7 @@
     <div py:if="form">
 <p py:content="form(method='GET', action=tg.url(action), value=value, options=options)">Form goes here</p>
     </div>
-    <div>
+    <div py:if="groupsgrid is not None">
         ${groupsgrid.display(value.groups, name='groups_grid')}
     </div>
 </body>

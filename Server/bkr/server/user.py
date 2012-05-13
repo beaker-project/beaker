@@ -72,17 +72,15 @@ class Users(AdminPage):
     @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.user_edit_form')
     def edit(self, id=None, **kw):
+        return_vals = dict(form=self.user_form,
+                           action='./save',
+                           options={},
+                           value=id and User.by_id(id) or kw,)
         if id:
-            value = User.by_id(id)
+            return_vals['groupsgrid'] = self.show_groups()
         else:
-            value = kw
-        return dict(
-            form = self.user_form,
-            action = './save',
-            options = {},
-            value = value,
-            groupsgrid = self.show_groups(),
-        )
+            return_vals['groupsgrid'] = None
+        return return_vals
 
     @identity.require(identity.in_group("admin"))
     @expose()
