@@ -1930,6 +1930,10 @@ class Root(RPCRoot):
         filename = join(os.path.normpath(static_dir), 'images', 'favicon.ico')
         return serve_file(filename)
 
+    @cherrypy.expose
+    def get_job_types(self):
+        return TaskBase.t_id_types
+
 #    @expose(template='bkr.server.templates.activity')
 #    def activity(self, *args, **kw):
 # TODO This is mainly for testing

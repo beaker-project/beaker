@@ -3257,9 +3257,10 @@ class LogRecipeTaskResult(Log):
 
 class TaskBase(MappedObject):
     t_id_types = dict(T = 'RecipeTask',
-                    R = 'Recipe',
-                    RS = 'RecipeSet',
-                    J = 'Job')
+                      TR = 'RecipeTaskResult',
+                      R = 'Recipe',
+                      RS = 'RecipeSet',
+                      J = 'Job')
 
     @property
     def logspath(self):
@@ -3363,6 +3364,12 @@ class TaskBase(MappedObject):
                 return True
         except Exception:
             return
+
+    def t_id(self):
+        for t, class_ in self.t_id_types.iteritems():
+            if self.__class__.__name__ == class_:
+                return '%s:%s' % (t, self.id)
+    t_id = property(t_id)
 
 class Job(TaskBase):
     """
@@ -3694,6 +3701,10 @@ class Job(TaskBase):
         """
         return ()
 
+    def set_response(self, response):
+        for rs in self.recipesets:
+            rs.set_response(response)
+
     def requires_product(self):
         return self.retention_tag.requires_product()
 
@@ -3865,9 +3876,9 @@ class Job(TaskBase):
             # Send email notification
             mail.job_notify(self)
 
-    def t_id(self):
-        return "J:%s" % self.id
-    t_id = property(t_id)
+    #def t_id(self):
+    #    return "J:%s" % self.id
+    #t_id = property(t_id)
 
     @property
     def link(self):
@@ -3996,6 +4007,9 @@ class Response(MappedObject):
     def __repr__(self):
         return self.response
 
+    def __str__(self):
+        return self.response
+
 class RecipeSetResponse(MappedObject):
     """
     An acknowledgment of a RecipeSet's results. Can be used for filtering reports
@@ -4047,6 +4061,12 @@ class RecipeSet(TaskBase):
             if r_logs:
                 logs.extend(r_logs)
         return logs
+
+    def set_response(self, response):
+        if self.nacked is None:
+            self.nacked = RecipeSetResponse(type=response)
+        else:
+            self.nacked.response = Response.by_type(response)
 
     def is_owner(self,user):
         if self.job.owner == user:
@@ -4241,10 +4261,6 @@ class RecipeSet(TaskBase):
                     is_failed       = self.is_failed(),
                     #subtask_id_list = ["R:%s" % r.id for r in self.recipes]
                    )
-
-    def t_id(self):
-        return "RS:%s" % self.id
-    t_id = property(t_id)
  
     def allowed_priorities(self,user):
         if not user:
@@ -4837,10 +4853,6 @@ class Recipe(TaskBase):
 #                    subtask_id_list = ["T:%s" % t.id for t in self.tasks],
                    )
 
-    def t_id(self):
-        return "R:%s" % self.id
-    t_id = property(t_id)
-
     @property
     def all_tasks(self):
         """
@@ -5368,10 +5380,6 @@ class RecipeTask(TaskBase):
                     is_failed       = self.is_failed(),
                     #subtask_id_list = ["TR:%s" % tr.id for tr in self.results]
                    )
-
-    def t_id(self):
-        return "T:%s" % self.id
-    t_id = property(t_id)
 
     def no_value(self):
         return None
