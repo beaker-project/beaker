@@ -119,6 +119,7 @@ def handle_configure_netboot(command):
         netboot.configure_zpxe(fqdn, ko)
     if 'ppc' in arch or 'ppc64' in arch:
         netboot.configure_yaboot(fqdn, ko)
+        netboot.configure_efigrub(fqdn, ko)
     if 'ia64' in arch:
         netboot.configure_elilo(fqdn, ko)
 
