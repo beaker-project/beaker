@@ -148,7 +148,7 @@ def setup_package():
                 '-screen', '0', '1024x768x24']),
         Process('selenium-server', args=['java',
                 '-Djava.io.tmpdir=/tmp/selenium',
-                '-jar', '/usr/local/share/selenium/selenium-server-standalone-2.12.0.jar',
+                '-jar', '/usr/local/share/selenium/selenium-server-standalone-2.21.0.jar',
                 '-log', 'selenium.log'], env={'DISPLAY': ':4'},
                 listen_port=4444),
     ])
