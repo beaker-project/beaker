@@ -92,12 +92,12 @@ Ensure that you have an up-to-date database backup before proceeding.
     ALTER TABLE recipe
         DROP FOREIGN KEY recipe_ibfk_3, -- distro_id fk
         DROP distro_id;
+
+    -- system.reprovision_distro_id becomes system.reprovision_distro_tree_id
     ALTER TABLE system
         ADD reprovision_distro_tree_id INT DEFAULT NULL AFTER reprovision_distro_id,
         ADD CONSTRAINT system_reprovision_distro_tree_id_fk
             FOREIGN KEY (reprovision_distro_tree_id) REFERENCES distro_tree (id);
-
-    -- system.reprovision_distro_id becomes system.reprovision_distro_tree_id
     UPDATE system
         INNER JOIN distro_tree ON system.reprovision_distro_id = distro_tree.id
         INNER JOIN (
@@ -114,23 +114,6 @@ Ensure that you have an up-to-date database backup before proceeding.
 
     -- this table is replaced by distro_tree_lab_controller_map
     DROP TABLE distro_lab_controller_map;
-
-    -- remove the duplicate distro_trees
-    DELETE FROM distro_tree
-        USING distro_tree
-        INNER JOIN (
-            SELECT MIN(id) AS id, distro_id, arch_id, variant
-            FROM distro_tree
-            GROUP BY distro_id, arch_id, variant) AS x
-            ON x.distro_id = distro_tree.distro_id
-                AND x.arch_id = distro_tree.arch_id
-                AND x.variant <=> distro_tree.variant
-        WHERE distro_tree.id != x.id;
-    ALTER TABLE distro_tree
-        ADD UNIQUE (distro_id, arch_id, variant);
-
-    -- we don't store breed anymore
-    DROP TABLE breed;
 
     -- move tags from distro_tree to distro
     CREATE TABLE distro_tag_map_new
@@ -150,6 +133,23 @@ Ensure that you have an up-to-date database backup before proceeding.
             INNER JOIN distro ON distro_tree.distro_id = distro.id;
     DROP TABLE distro_tag_map;
     RENAME TABLE distro_tag_map_new TO distro_tag_map;
+
+    -- remove the duplicate distro_trees
+    DELETE FROM distro_tree
+        USING distro_tree
+        INNER JOIN (
+            SELECT MIN(id) AS id, distro_id, arch_id, variant
+            FROM distro_tree
+            GROUP BY distro_id, arch_id, variant) AS x
+            ON x.distro_id = distro_tree.distro_id
+                AND x.arch_id = distro_tree.arch_id
+                AND x.variant <=> distro_tree.variant
+        WHERE distro_tree.id != x.id;
+    ALTER TABLE distro_tree
+        ADD UNIQUE (distro_id, arch_id, variant);
+
+    -- we don't store breed anymore
+    DROP TABLE breed;
 
     -- these are unused
     ALTER TABLE lab_controller
