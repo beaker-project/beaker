@@ -469,10 +469,6 @@ class Monitor(ProxyHelper):
         """
         # watch the console log
         updated = False
-        logs = filter(os.path.isfile, glob.glob('%s/%s/*' % ( self.conf["ANAMON_LOGS"], self.watchdog["system"])))
-        for log in logs:
-            if log not in self.watchedFiles:
-                self.watchedFiles.append(WatchFile(log, self.watchdog,self, self.conf["PANIC_REGEX"]))
         for watchedFile in self.watchedFiles:
             if watchedFile.update():
                 updated = True
