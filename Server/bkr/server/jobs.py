@@ -306,7 +306,7 @@ class Jobs(RPCRoot):
                 my_priority = TaskPriority.from_string(recipeset_priority)
             except InvalidRequestError, (e):
                 raise BX(_('You have specified an invalid recipeSet priority:%s' % recipeset_priority))
-            allowed_priorities = RecipeSet.allowed_priorities_initial(identity.current.user)
+            allowed_priorities = RecipeSet.allowed_priorities_initial(user)
             if my_priority in allowed_priorities:
                 recipeSet.priority = my_priority
             else:

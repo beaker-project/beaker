@@ -3,10 +3,13 @@ from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, LabController
 import sqlalchemy.orm
 from turbogears.database import session
+import xmltramp
+from bkr.server.jobxml import XmlJob
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 from bkr.server.tools import beakerd
+from bkr.server.jobs import Jobs
 
 class TestBeakerd(unittest.TestCase):
 
@@ -359,3 +362,239 @@ class TestBeakerd(unittest.TestCase):
             system = System.query.get(system.id)
             self.assertEqual(system.command_queue[0].action, 'reboot')
             self.assertEqual(system.command_queue[1].action, 'configure_netboot')
+
+    def test_order_by(self):
+        controller = Jobs()
+        with session.begin():
+            lab_controller = data_setup.create_labcontroller()
+
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree()
+            user = data_setup.create_admin()
+            for x in range(0,3):
+                data_setup.create_system(shared=True,
+                        owner=user,
+                        lab_controller=lab_controller)
+
+        xmljob = XmlJob(xmltramp.parse("""
+<job retention_tag="scratch">
+	<whiteboard>
+		
+	</whiteboard>
+	<recipeSet priority="Normal">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Normal">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Normal">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Normal">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Urgent">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Urgent">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Urgent">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Urgent">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Urgent">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Urgent">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Urgent">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Urgent">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Normal">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Normal">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Normal">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Normal">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+</job>
+                 """ % dict(labcontroller = lab_controller.fqdn,
+                            family        = distro_tree.distro.osversion.osmajor,
+                            variant       = distro_tree.variant,
+                            name          = distro_tree.distro.name,
+                            arch          = distro_tree.arch)))
+
+        with session.begin():
+            job = controller.process_xmljob(xmljob, user)
+
+        beakerd.new_recipes()
+        beakerd.processed_recipesets()
+        beakerd.queued_recipes()
+
+        with session.begin():
+            job = Job.query.get(job.id)
+            for x in range(0,2):
+                self.assertEqual(job.recipesets[x].recipes[0].status,
+                                 TaskStatus.queued)
+            for x in range(2,3):
+                self.assertEqual(job.recipesets[x].recipes[0].status,
+                                 TaskStatus.scheduled)
+            for x in range(5,3):
+                self.assertEqual(job.recipesets[x].recipes[0].status,
+                                 TaskStatus.queued)
