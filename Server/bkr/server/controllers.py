@@ -56,6 +56,7 @@ from bkr.server.task_actions import TaskActions
 from bkr.server.kickstart import KickstartController
 from bkr.server.controller_utilities import Utility, SystemSaveForm, SearchOptions, SystemTab
 from bkr.server.bexceptions import *
+import bkr.server.validators as beaker_validators
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -183,7 +184,8 @@ class Root(RPCRoot):
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
 
-    email      = widgets.TextField(name='email_address', label='Email Address')
+    email      = widgets.TextField(name='email_address', label='Email Address',
+                                   validator=beaker_validators.CheckUniqueEmail())
     root_password = widgets.TextField(name='_root_password', label='Root Password')
     rootpw_expiry = widgets.TextField(name='rootpw_expiry',
                                       label='Root Password Expiry',
@@ -424,6 +426,8 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
+    @error_handler(prefs)
+    @validate(form=prefs_form)
     def save_prefs(self, *args, **kw):
         email = kw.get('email_address', None) 
         root_password = kw.get('_root_password', None)
