@@ -2970,14 +2970,14 @@ class Admin(MappedObject):
 # Activity model
 class Activity(MappedObject):
     def __init__(self, user=None, service=None, action=None,
-                 field_name=None, old_value=None, new_value=None):
+                 field_name=None, old_value=None, new_value=None, **kw):
         """
         The *service* argument should be a string such as 'Scheduler' or 
         'XMLRPC', describing the means by which the change has been made. This 
         constructor will override it with something more specific (such as the 
         name of an external service) if appropriate.
         """
-        super(Activity, self).__init__()
+        super(Activity, self).__init__(**kw)
         self.user = user
         self.service = service
         try:
@@ -6106,7 +6106,7 @@ mapper(RecipeSetActivity, recipeset_activity_table, inherits=Activity,
 mapper(GroupActivity, group_activity_table, inherits=Activity,
         polymorphic_identity=u'group_activity',
         properties=dict(object=relation(Group, uselist=False,
-                         backref='activity')))
+                        backref=backref('activity', cascade='all, delete-orphan'))))
 
 mapper(DistroActivity, distro_activity_table, inherits=Activity,
        polymorphic_identity=u'distro_activity')

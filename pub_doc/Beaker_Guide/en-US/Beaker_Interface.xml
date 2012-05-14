@@ -307,7 +307,7 @@
                         </section>
                         <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Systems-System_Activity">
                         <title>System Activity</title>
-                        <para>To search through the historical activity of all Systems, navigate to <application>Activity>All</application> at the top of the page. The default search is <application>contains</application> on the <application>Property</application> attribute. </para>
+                        <para>To search through the historical activity of all Systems, navigate to <application>Activity>&gt;Systems</application> at the top of the page. The default search is <application>contains</application> on the <application>Property</application> attribute. </para>
                         <note>
                           <title>Individual System history
                           </title>
@@ -321,6 +321,11 @@
                                 <title>Distro Searching</title>
                                 <para>The find a particular Distro, click <application>Distros&gt;All</application>. The default search is on the Distro's <application>Name</application>, with a <application>contains</application> clause </para>
                               </section>
+
+                            <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Distros-Distro_Activity">
+                              <title>Distro Activity</title>
+                              <para>To search through the historical activity of all Distros, navigate to <application>Activity&gt;Distros</application> at the top of the page. The default search is <application>contains</application> on the <application>Property</application> attribute. </para>
+                            </section>
                          </section>
                          <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Jobs">
                          <title>Jobs</title>
@@ -957,6 +962,12 @@ drwxr-x--- 24 root root 12288 Jun  2 14:57 ..
                     <para>To edit Group go to <application>Admin->Groups</application> and click on the name of the Group you wish to edit. From here you can add Users, Systems, Permisions as well as the
                       Display Name and Group Name of the Group</para>
                     </section>
+
+                      <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Groups-Group_Activity">
+                        <title>Group Activity</title>
+                          <para>To search through the historical activity of all Groups, navigate to <application>Activity&gt;Groups</application> at the top of the page. The default search is <application>contains</application> on the <application>Property</application> attribute. 
+                          </para>
+                      </section>
                     </section>
                     <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Preferences">
                         <title>User Preferences</title>

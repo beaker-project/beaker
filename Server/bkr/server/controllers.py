@@ -271,9 +271,6 @@ class Root(RPCRoot):
     def get_search_options_task(self,table_field, *args, **kw):
         return su.Task.search.get_search_options(table_field, *args, **kw)
 
-    @expose(format='json')
-    def get_search_options_activity(self,table_field,**kw):
-        return su.Activity.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
     def get_search_options_history(self,table_field, *args, **kw):
