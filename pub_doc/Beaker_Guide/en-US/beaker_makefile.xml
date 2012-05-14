@@ -288,11 +288,11 @@ TestTime: 2h   # 2 hours</screen>
                               </para>
                          </section>
                          <section id="User_Guide-Getting_Started-Process-Beaker_Makefile-RHTSRequires">
-                          <title>RHTSRequires</title>
-                            <para><application>RHTSRequires</application> one or more. This field indicates the other beaker tests that are required to be installed on the test machine for the test to work.</para>
-                            <para>This field can occur multiple times within the metadata. Each value should be a space-separated list of Beaker Test RPM name without the version or .rpm. Each Test must exist on the Beaker Scheduler.</para>
+                          <title>RhtsRequires</title>
+                            <para><application>RhtsRequires</application> one or more. This field indicates the other beaker tests that are required to be installed on the test machine for the test to work.</para>
+                            <para>This field can occur multiple times within the metadata. Each value should be a space-separated list of its task name enclosed in test(). Each task must exist on the Beaker Scheduler.</para>
                             <para>For example: </para>
-                            <screen>@echo "RHTSRequires:     rh-tests-distribution-hts-common" >> $(METADATA)</screen>
+                            <screen>@echo "RhtsRequires:     test(/distribution/rhts/common)" >> $(METADATA)</screen>
                          </section>
                          <section id="User_Guide-Getting_Started-Process-Beaker_Makefile-RunFor">
                           <title>RunFor</title>
