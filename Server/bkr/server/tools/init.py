@@ -130,6 +130,7 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         USBID		= Key('USBID')
         VENDOR		= Key('VENDOR')
         XENCERT		= Key('XENCERT')
+        NETBOOT		= Key('NETBOOT_METHOD')
 
     #Setup ack/nak reposnses
     if Response.query.count() == 0:

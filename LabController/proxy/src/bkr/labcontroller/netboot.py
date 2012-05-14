@@ -177,7 +177,7 @@ timeout 100
 label linux
     kernel /images/%s/kernel
     ipappend 2
-    append initrd=%s %s
+    append initrd=%s %s netboot_method=pxe
 ''' % (fqdn, initrd, kernel_options)
     logger.debug('Writing pxelinux config for %s as %s', fqdn, basename)
     with atomically_replaced_file(os.path.join(pxe_dir, basename)) as f:
@@ -205,7 +205,7 @@ def configure_efigrub(fqdn, kernel_options):
 timeout 10
 title Beaker scheduled job for %s
     root (nd)
-    kernel /images/%s/kernel %s
+    kernel /images/%s/kernel %s netboot_method=efigrub
     initrd %s
 ''' % (fqdn, fqdn, kernel_options, initrd)
     logger.debug('Writing grub config for %s as %s', fqdn, basename)
@@ -223,6 +223,7 @@ def configure_zpxe(fqdn, kernel_options):
     if not os.path.exists(zpxe_dir):
         os.makedirs(zpxe_dir, mode=0755)
 
+    kernel_options = "%s netboot_method=zpxe" % kernel_options
     # The structure of these files is dictated by zpxe.rexx,
     # Cobbler's "pseudo-PXE" for zVM on s390(x).
     # XXX I don't think multiple initrds are supported?
@@ -257,7 +258,7 @@ def configure_elilo(fqdn, kernel_options):
 
 image=/images/%s/kernel
     label=netinstall
-    append="%s"
+    append="%s netboot_method=elilo"
     initrd=/images/%s/initrd
     read-only
     root=/dev/ram
@@ -288,7 +289,7 @@ default=linux
 image=/images/%s/kernel
     label=linux
     initrd=/images/%s/initrd
-    append="%s"
+    append="%s netboot_method=yaboot"
 ''' % (fqdn, fqdn, fqdn, kernel_options)
     logger.debug('Writing yaboot config for %s as %s', fqdn, basename)
     with atomically_replaced_file(os.path.join(yaboot_conf_dir, basename)) as f:
