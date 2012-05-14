@@ -500,6 +500,21 @@ class Jobs(RPCRoot):
 
         return {'success' : 1, 'rs_id' : recipe_set_id }
 
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def set_response(self, job_t_id, response):
+        job = TaskBase.get_by_t_id(job_t_id)
+        try: # See if we are a 'RecipeSet'
+            owner_groups = ([g.group_name for g in job.job.owner.groups])
+        except AttributeError: #We are a 'Job'
+            owner_groups = ([g.group_name for g in job.owner.groups])
+        if job.is_owner(identity.current.user) or \
+            'admin' in identity.current.groups or \
+            identity.current.user.in_group(owner_groups):
+            job.set_response(response)
+        else:
+            raise BeakerException('No permission to modify %s' % job)
+
     @expose(format='json')
     def save_response_comment(self,rs_id,comment):
         try:
