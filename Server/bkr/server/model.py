@@ -1725,7 +1725,7 @@ class System(SystemObject):
 
     @classmethod
     def by_group(cls,group_id,*args,**kw):
-        return System.query.join(['groups']).filter(Group.group_id == group_id)
+        return System.query.join(SystemGroup,Group).filter(Group.group_id == group_id)
     
     @classmethod
     def by_type(cls,type,user=None,systems=None):
