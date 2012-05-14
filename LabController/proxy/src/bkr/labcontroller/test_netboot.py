@@ -61,7 +61,7 @@ timeout 100
 label linux
     kernel /images/fqdn.example.invalid/kernel
     ipappend 2
-    append initrd=/images/fqdn.example.invalid/initrd console=ttyS0,115200 ks=http://lol/
+    append initrd=/images/fqdn.example.invalid/initrd console=ttyS0,115200 ks=http://lol/ netboot_method=pxe
 ''')
 
         netboot.clear_pxelinux('fqdn.example.invalid')
@@ -78,7 +78,7 @@ timeout 100
 label linux
     kernel /images/fqdn.example.invalid/kernel
     ipappend 2
-    append initrd=/images/fqdn.example.invalid/initrd,/mydriverdisk.img ks=http://lol/
+    append initrd=/images/fqdn.example.invalid/initrd,/mydriverdisk.img ks=http://lol/ netboot_method=pxe
 ''')
 
 class EfigrubTest(unittest.TestCase):
@@ -92,7 +92,7 @@ class EfigrubTest(unittest.TestCase):
 timeout 10
 title Beaker scheduled job for fqdn.example.invalid
     root (nd)
-    kernel /images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/
+    kernel /images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=efigrub
     initrd /images/fqdn.example.invalid/initrd
 ''')
 
@@ -108,7 +108,7 @@ title Beaker scheduled job for fqdn.example.invalid
 timeout 10
 title Beaker scheduled job for fqdn.example.invalid
     root (nd)
-    kernel /images/fqdn.example.invalid/kernel ks=http://lol/
+    kernel /images/fqdn.example.invalid/kernel ks=http://lol/ netboot_method=efigrub
     initrd /images/fqdn.example.invalid/initrd /mydriverdisk.img
 ''')
 
@@ -134,7 +134,7 @@ class ZpxeTest(unittest.TestCase):
                 '''LAYER2=1 NETTYPE=qeth PORTNO=0 IPADDR=10.16.66.192 SUBCHANNELS=0.0.8000,0.0.8001
 ,0.0.8002 MTU=1500 BROADCAST=10.16.71.255 SEARCHDNS= NETMASK=255.255.248.0 DNS=1
 0.16.255.2 PORTNAME=z10-01 DASD=208C,218C,228C,238C GATEWAY=10.16.71.254 NETWORK
-=10.16.64.0 MACADDR=02:DE:AD:BE:EF:01 ks=http://lol/
+=10.16.64.0 MACADDR=02:DE:AD:BE:EF:01 ks=http://lol/ netboot_method=zpxe
 ''')
         self.assertEquals(open(os.path.join(tftp_root, 's390x',
                 's_fqdn.example.invalid_conf')).read(),
@@ -160,7 +160,7 @@ class EliloTest(unittest.TestCase):
 
 image=/images/fqdn.example.invalid/kernel
     label=netinstall
-    append="console=ttyS0,115200 ks=http://lol/"
+    append="console=ttyS0,115200 ks=http://lol/ netboot_method=elilo"
     initrd=/images/fqdn.example.invalid/initrd
     read-only
     root=/dev/ram
@@ -184,7 +184,7 @@ default=linux
 image=/images/fqdn.example.invalid/kernel
     label=linux
     initrd=/images/fqdn.example.invalid/initrd
-    append="console=ttyS0,115200 ks=http://lol/"
+    append="console=ttyS0,115200 ks=http://lol/ netboot_method=yaboot"
 ''')
         yaboot_symlink_path = os.path.join(tftp_root, 'ppc', '7f0000ff')
         self.assertEquals(os.readlink(yaboot_symlink_path), '../yaboot')

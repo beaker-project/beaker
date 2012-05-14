@@ -96,6 +96,13 @@ python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstar
 
 %post --log=/dev/console
 echo @RECIPEID@ > /root/RECIPE.TXT
+
+# If netboot_method= is found in /proc/cmdline record it to /root
+netboot_method=$(perl -n -e'/netboot_method=([^\s]+)/ && print $1' /proc/cmdline)
+if [ -n "$netboot_method" ]; then
+echo $netboot_method >/root/NETBOOT_METHOD.TXT
+fi
+
 # Enable post-install boot notification
 
 wget -O /usr/local/sbin/anamon "http://lab.test-kickstart.invalid/beaker/anamon"
