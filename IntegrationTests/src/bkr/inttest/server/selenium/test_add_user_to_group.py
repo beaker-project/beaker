@@ -62,7 +62,7 @@ class TestAddUserToGroup(SeleniumTestCase):
         session.flush()
         sel = self.selenium
         self.login()
-        sel.click("link=Groups")
+        sel.click("//..[@id='admin']/li/a[text()='Groups']")
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % group.group_name)
         sel.wait_for_page_to_load("30000")
