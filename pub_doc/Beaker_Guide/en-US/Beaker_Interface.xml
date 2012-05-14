@@ -77,7 +77,6 @@
 							</section>
 							<section id="User_Guide-Getting_Started-Process-Beaker_Interface-Systems-Adding_a_System">
                         <title>Adding a System</title>
-                        <para>You need to be logged in as administrator to be able to perform this step.</para>
                         <para>To add a System, go to any System search page, and click on the <application>Add(+)</application> link on the bottom left. You must be logged in to do this. After filling in the details, press the<application>Save Changes</application> button on the bottom left hand corner. </para>
                         <mediaobject>
                                  <imageobject>
@@ -133,6 +132,57 @@
         &lt;/recipeSet&gt;
 &lt;/job&gt;
                         </screen>
+                        </section>
+			<section id="User_Guide-Adding_Driver_Disk">
+			<title>Adding a Driver Disk</title>
+			<para>Some systems may need a driver disk to be able to install certain releases.  In order to use a driver disk you need to host the driver disk under the tftp server so that it's available during netboot.  You also need to tell Beaker which families the driver disk is needed for.</para>
+			<itemizedlist>
+			 <listitem>
+			  <para>First step is to install the driver disk on your lab controller(s).</para>
+			   <itemizedlist>
+			    <listitem>
+			     <para>The following example assumes tftpboot is under /var/lib/tftpboot; this is true for RHEL6 and newer distros.</para>
+			    </listitem>
+			    <listitem>
+			     <para>Make a directory to host the driver disk.
+			      <screen>
+# mkdir -p /var/lib/tftpboot/dd/rhel6
+			      </screen>
+			     </para>
+			    </listitem>
+			    <listitem>
+			     <para>Copy the driver disk to this directory.
+			      <screen>
+# cp dd.img /var/lib/tftpboot/dd/rhel6
+			      </screen>
+			     </para>
+			    </listitem>
+			   </itemizedlist>
+			 </listitem>
+			 <listitem>
+			  <para>Second step is to set the family install options for the system that needs the driver disk.</para>
+			   <itemizedlist>
+			    <listitem>
+                             <para>If you don't have any arch specific install options you need to create one first. Install options are inherited in the order of Arch, Family, and Update.</para>
+                              <mediaobject>
+                               <imageobject>
+                                <imagedata fileref="./images/initrd-driverdisk1.png" format="PNG" scalefit="1" width="444" />
+                               </imageobject>
+                               <caption><para>Adding a blank install option for arch.</para></caption>
+                              </mediaobject>
+			    </listitem>
+			    <listitem>
+                             <para>Once you have an arch specific entry you can create a family specific entry.  The image below shows adding the driver disk we created for RHEL6. Notice that the path is from the chroot of the tftpserver, not /var/lib/tftpboot/.</para>
+                              <mediaobject>
+                               <imageobject>
+                                <imagedata fileref="./images/initrd-driverdisk2.png" format="PNG" scalefit="1" width="444" />
+                               </imageobject>
+                               <caption><para>Adding a driver disk entry for RHEL6.</para></caption>
+                              </mediaobject>
+			    </listitem>
+			   </itemizedlist>
+			 </listitem>
+			</itemizedlist>
                         </section>
 
                         <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Systems-System_Details_Tabs">
