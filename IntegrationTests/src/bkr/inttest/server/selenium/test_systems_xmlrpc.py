@@ -33,7 +33,7 @@ from bkr.inttest.assertions import assert_datetime_within, \
 from bkr.inttest import data_setup, with_transaction
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
         System, SystemActivity, Provision, Hypervisor, SSHPubKey, ConfigItem, \
-        RenderedKickstart
+        RenderedKickstart, SystemStatus, ReleaseAction
 from bkr.server.tools import beakerd
 
 class ReserveSystemXmlRpcTest(XmlRpcTestCase):
@@ -143,6 +143,10 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
 
 class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
 
+    @with_transaction
+    def setUp(self):
+        self.lab_controller = data_setup.create_labcontroller()
+
     def test_cannot_release_when_not_logged_in(self):
         with session.begin():
             system = data_setup.create_system()
@@ -213,6 +217,39 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('System is not reserved' in e.faultString)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=820779
+    def test_release_action_leaveon(self):
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    shared=True, lab_controller=self.lab_controller)
+            system.release_action = ReleaseAction.leave_on
+            user = data_setup.create_user(password=u'password')
+            system.reserve(service=u'testdata', user=user)
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        server.systems.release(system.fqdn)
+        with session.begin():
+            session.expire(system)
+            self.assertEquals(system.command_queue[0].action, 'on')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=820779
+    def test_release_action_reprovision(self):
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    shared=True, lab_controller=self.lab_controller)
+            system.release_action = ReleaseAction.reprovision
+            system.reprovision_distro_tree = data_setup.create_distro_tree(
+                    osmajor=u'Fedora')
+            user = data_setup.create_user(password=u'password')
+            system.reserve(service=u'testdata', user=user)
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        server.systems.release(system.fqdn)
+        with session.begin():
+            session.expire(system)
+            self.assertEquals(system.command_queue[0].action, 'reboot')
+            self.assertEquals(system.command_queue[1].action, 'configure_netboot')
 
 class SystemPowerXmlRpcTest(XmlRpcTestCase):
 

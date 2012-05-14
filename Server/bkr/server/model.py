@@ -2168,12 +2168,12 @@ class System(SystemObject):
         if self.release_action:
             if self.release_action == ReleaseAction.power_off:
                 self.action_power(action=u'off', service=service)
-            elif action == ReleaseAction.leave_on:
+            elif self.release_action == ReleaseAction.leave_on:
                 self.action_power(action=u'on', service=service)
-            elif action == ReleaseAction.reprovision:
+            elif self.release_action == ReleaseAction.reprovision:
                 if self.reprovision_distro_tree:
                     from bkr.server.kickstart import generate_kickstart
-                    install_options = self.system.install_options(self.distro_tree)
+                    install_options = self.install_options(self.reprovision_distro_tree)
                     if 'ks' not in install_options.kernel_options:
                         rendered_kickstart = generate_kickstart(install_options,
                                 distro_tree=self.reprovision_distro_tree,
@@ -2352,11 +2352,12 @@ class System(SystemObject):
                      reservation_table.c.finish_time == None)),
                 finish_time=datetime.utcnow()).rowcount != 1:
             raise BX(_(u'System does not have an open reservation'))
-        activity = SystemActivity(user=user,
-                service=service, action=u'Returned', field_name=u'User',
-                old_value=self.user.user_name, new_value=u'')
+        old_user = self.user
         self.user = None
         self.action_release(service=service)
+        activity = SystemActivity(user=user,
+                service=service, action=u'Returned', field_name=u'User',
+                old_value=old_user.user_name, new_value=u'')
         self.activity.append(activity)
 
     cc = association_proxy('_system_ccs', 'email_address')
