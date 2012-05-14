@@ -1173,8 +1173,9 @@ class Job(SystemObject):
     search = JobSearch
     display_name='Job'
     searchable_columns = {
-                           'Id' : MyColumn(col_type='numeric',column=model.Job.id), 
-                           'Owner' : MyColumn(col_type='string',column=model.User.email_address, relations='owner'),
+                           'Id' : MyColumn(col_type='numeric',column=model.Job.id),
+                           'Owner/Username' : MyColumn(col_type='string',column=model.User.user_name, relations='owner'),
+                           'Owner/Email' : MyColumn(col_type='string',column=model.User.email_address, relations='owner'),
                            'Status' : MyColumn(col_type='string', column=model.Job.status),
                            'Result' : MyColumn(col_type='string', column=model.Job.result),
                            'Whiteboard' : MyColumn(col_type='string', column=model.Job.whiteboard)
