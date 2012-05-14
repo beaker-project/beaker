@@ -5016,6 +5016,10 @@ class GuestRecipe(Recipe):
     def _set_distro_requires(self, value):
         self._distro_requires = value
 
+    def t_id(self):
+        return 'R:%s' % self.id
+    t_id = property(t_id)
+
     distro_requires = property(_get_distro_requires, _set_distro_requires)
 
 class MachineRecipe(Recipe):
@@ -5035,6 +5039,10 @@ class MachineRecipe(Recipe):
 
     def _set_distro_requires(self, value):
         self._distro_requires = value
+
+    def t_id(self):
+        return 'R:%s' % self.id
+    t_id = property(t_id)
 
     distro_requires = property(_get_distro_requires, _set_distro_requires)
 
