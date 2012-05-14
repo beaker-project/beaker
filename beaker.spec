@@ -15,8 +15,8 @@
 %endif
 
 Name:           beaker
-Version:        0.8.2
-Release:        7%{?dist}
+Version:        0.8.99
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -351,6 +351,31 @@ fi
 %endif
 
 %changelog
+* Mon May 14 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.99-1
+- Cobbler removal, a.k.a. "native provisioning"
+- 815325 Needed to update the prefs form to handle correct email validation
+  (rmancy@redhat.com)
+- 817122 Fails to upload device data (bpeck@redhat.com)
+- 809076 Searching by owner in job page now searches by user name, not email.
+  New option for searching by email (rmancy@redhat.com)
+- 732021 'My Jobs' link on front page (rmancy@redhat.com)
+- 813118 Activity tweaks (rmancy@redhat.com)
+- 820111 Fix Pagination and row count issues by ensuring duplicate rows are not
+  returned in system search (rmancy@redhat.com)
+- 772904 Execute older tasks first (bpeck@redhat.com)
+- 750406 User groups listing (rmancy@redhat.com)
+- 760691 RFE: Add netboot method detection to kickstart post and inventory
+  scripts (bpeck@redhat.com)
+- 812831 Ack/Nak a job or recipe set from the cmd line (rmancy@redhat.com)
+- 817568 Fix join to not give error on groups' system page.
+  (rmancy@localhost.localdomain)
+- 602741 Expand system searching to include Devices/Subsys_device_id and
+  Devices/Subsys_vendor_id (rmancy@redhat.com)
+- 820719 add support for RHS2 (bpeck@redhat.com)
+- 820328 RHEL7 ppc changes boot order (bpeck@redhat.com)
+- 818628 add %%end to RHEL7 post_s390_reboot snippet (bpeck@redhat.com)
+- fix -c option to beaker-proxy (dcallagh@redhat.com)
+
 * Fri Apr 27 2012 Bill Peck <bpeck@redhat.com> 0.8.2-7
 - 816879 Missing task metadata: Types, RunFor, Requires (bpeck@redhat.com)
 
