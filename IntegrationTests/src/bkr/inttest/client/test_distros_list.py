@@ -14,7 +14,7 @@ class DistrosListTest(unittest.TestCase):
         data_setup.create_distro_tree(distro=self.distro)
 
     def test_list_distro(self):
-        output = run_client(['bkr', 'distros-list', '--name', self.distro.name])
+        output = run_client(['bkr', 'distros-list', '--format=json', '--name', self.distro.name])
         distros = json.loads(output)
         self.assertEquals(len(distros), 1)
         self.assertEquals(distros[0]['distro_id'], self.distro.id)

@@ -11,7 +11,7 @@ Synopsis
 
 | :program:`bkr distro-trees-list` [*options*]
 |       [--tag=<tag>] [--name=<name>] [--treepath=<url>] [--family=<family>] [--arch=<arch>]
-|       [--limit=<number>]
+|       [--limit=<number>] [--format=<format>]
 
 Description
 -----------
@@ -53,6 +53,11 @@ Options
 .. option:: --limit <number>
 
    Return at most <number> distro trees.
+
+.. option:: --format tabular, --format json
+
+   Display results in the given format. ``tabular`` is verbose and intended 
+   for human consumption, whereas ``json`` is machine-readable.
 
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
@@ -101,6 +106,13 @@ class Distro_Trees_List(BeakerCommand):
             help="Limit results to this many (default 10)",
         )
         self.parser.add_option(
+            '--format',
+            type='choice',
+            choices=['tabular', 'json'],
+            default='tabular',
+            help='Display results in this format: tabular, json [default: %default]',
+        )
+        self.parser.add_option(
             "--tag",
             action="append",
             help="filter by tag",
@@ -143,11 +155,26 @@ class Distro_Trees_List(BeakerCommand):
                        arch     = kwargs.pop("arch", None),
                        tags     = kwargs.pop("tag", []),
                      )
+        format = kwargs['format']
 
         self.set_hub(username, password)
-        distros = self.hub.distrotrees.filter(filter)
-        if distros:
-            print json.dumps(distros, indent=4)
-        else:
-            sys.stderr.write("Nothing Matches\n")
+        distro_trees = self.hub.distrotrees.filter(filter)
+        if format == 'json':
+            print json.dumps(distro_trees, indent=4)
+        elif format == 'tabular':
+            if distro_trees:
+                print "-"*70
+                for dt in distro_trees:
+                    print "       ID: %s" % dt['distro_tree_id']
+                    print "     Name: %-34.34s Arch: %s" % (dt['distro_name'], dt['arch'])
+                    print "OSVersion: %-34.34s Variant: %s" % (dt['distro_version'], dt['variant'])
+                    print "     Tags: %s" % ", ".join(dt['distro_tags'])
+                    print
+                    print "  Lab controller/URLs:"
+                    for labc, url in dt['available']:
+                        print "     %-32s: %s" % (labc, url)
+                    print "-"*70
+            else:
+                sys.stderr.write("Nothing Matches\n")
+        if not distro_trees:
             sys.exit(1)

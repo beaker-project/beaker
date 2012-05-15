@@ -11,7 +11,7 @@ Synopsis
 
 | :program:`bkr distros-list` [*options*]
 |       [--tag=<tag>] [--name=<name>] [--treepath=<url>] [--family=<family>] [--arch=<arch>]
-|       [--limit=<number>]
+|       [--limit=<number>] [--format=<format>]
 
 Description
 -----------
@@ -38,6 +38,11 @@ Options
 .. option:: --limit <number>
 
    Return at most <number> distros.
+
+.. option:: --format tabular, --format json
+
+   Display results in the given format. ``tabular`` is verbose and intended 
+   for human consumption, whereas ``json`` is machine-readable.
 
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
@@ -93,6 +98,13 @@ class Distros_List(BeakerCommand):
             help="Limit results to this many (default 10)",
         )
         self.parser.add_option(
+            '--format',
+            type='choice',
+            choices=['tabular', 'json'],
+            default='tabular',
+            help='Display results in this format: tabular, json [default: %default]',
+        )
+        self.parser.add_option(
             "--tag",
             action="append",
             help="filter by tag",
@@ -117,11 +129,22 @@ class Distros_List(BeakerCommand):
                        family   = kwargs.pop("family", None),
                        tags     = kwargs.pop("tag", []),
                      )
+        format = kwargs['format']
 
         self.set_hub(username, password)
         distros = self.hub.distros.filter(filter)
-        if distros:
+        if format == 'json':
             print json.dumps(distros, indent=4)
-        else:
-            sys.stderr.write("Nothing Matches\n")
+        elif format == 'tabular':
+            if distros:
+                print "-"*70
+                for distro in distros:
+                    print "       ID: %s" % distro['distro_id']
+                    print "     Name: %s" % distro['distro_name']
+                    print "OSVersion: %s" % distro['distro_version']
+                    print "     Tags: %s" % ", ".join(distro['distro_tags'])
+                    print "-"*70
+            else:
+                sys.stderr.write("Nothing Matches\n")
+        if not distros:
             sys.exit(1)

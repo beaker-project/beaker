@@ -13,7 +13,7 @@ class DistroTreesListTest(unittest.TestCase):
         self.distro_tree = data_setup.create_distro_tree()
 
     def test_list_by_distro_name(self):
-        output = run_client(['bkr', 'distro-trees-list', '--name', self.distro_tree.distro.name])
+        output = run_client(['bkr', 'distro-trees-list', '--format=json', '--name', self.distro_tree.distro.name])
         trees = json.loads(output)
         self.assertEquals(len(trees), 1)
         self.assertEquals(trees[0]['distro_tree_id'], self.distro_tree.id)
@@ -38,7 +38,7 @@ class DistroTreesListTest(unittest.TestCase):
                     lab_controller=good_lc, url=u'http://notimportant'))
             distro_tree_out.lab_controller_assocs.append(LabControllerDistroTree(
                     lab_controller=bad_lc, url=u'http://notimportant'))
-        output = run_client(['bkr', 'distro-trees-list', '--labcontroller', good_lc.fqdn])
+        output = run_client(['bkr', 'distro-trees-list', '--format=json', '--labcontroller', good_lc.fqdn])
         trees = json.loads(output)
         self.assert_(any(distro_tree_in.id == tree['distro_tree_id'] for tree in trees))
         self.assert_(not any(distro_tree_out.id == tree['distro_tree_id'] for tree in trees))
@@ -53,7 +53,7 @@ class DistroTreesListTest(unittest.TestCase):
                     lab_controller=lc, url='nfs://example.com/somewhere/'))
             distro_tree_out.lab_controller_assocs.append(LabControllerDistroTree(
                     lab_controller=lc, url='nfs://example.com/nowhere/'))
-        output = run_client(['bkr', 'distro-trees-list', '--treepath', '%somewhere%'])
+        output = run_client(['bkr', 'distro-trees-list', '--format=json', '--treepath', '%somewhere%'])
         trees = json.loads(output)
         self.assert_(any(distro_tree_in.id == tree['distro_tree_id'] for tree in trees))
         self.assert_(not any(distro_tree_out.id == tree['distro_tree_id'] for tree in trees))
