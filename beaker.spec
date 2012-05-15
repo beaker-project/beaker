@@ -257,6 +257,7 @@ if [ "$1" -eq "0" ]; then
         /sbin/chkconfig --del beaker-transfer || :
         /sbin/chkconfig --del beaker-provision || :
 fi
+rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %files
@@ -327,14 +328,11 @@ fi
 %{_bindir}/%{name}-proxy
 %{_bindir}/%{name}-watchdog
 %{_bindir}/%{name}-transfer
-%{_bindir}/%{name}-osversion
 %{_bindir}/%{name}-import
 %{_bindir}/%{name}-provision
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.hourly/cobbler_expire_distros
-%{_sysconfdir}/cron.daily/beaker_expire_osversion
-%{_var}/lib/cobbler/triggers/sync/post/osversion.trigger
 %attr(-,apache,root) %{_var}/www/beaker/*
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
@@ -342,7 +340,6 @@ fi
 %{_sysconfdir}/init.d/%{name}-transfer
 %{_sysconfdir}/init.d/%{name}-provision
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
-%{_var}/lib/beaker/osversion_data
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)
