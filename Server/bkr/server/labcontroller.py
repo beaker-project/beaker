@@ -65,10 +65,6 @@ class LabControllers(RPCRoot):
         else:
             labcontroller =  LabController()
         labcontroller.fqdn = kw['fqdn']
-        # labcontroller.username and password is used to login to 
-        # the lab controller
-        labcontroller.username = kw['username']
-        labcontroller.password = kw['password']
 
         # labcontroller.user is used by the lab controller to login here
         try:

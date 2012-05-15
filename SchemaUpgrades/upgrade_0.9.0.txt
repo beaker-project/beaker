@@ -177,3 +177,13 @@ Run the following SQL:
         ADD CONSTRAINT recipe_rendered_kickstart_id_fk
             FOREIGN KEY (rendered_kickstart_id)
             REFERENCES rendered_kickstart (id);
+
+
+Cobbler credentials are not needed
+----------------------------------
+
+Run the following SQL:
+
+    ALTER TABLE lab_controller
+        DROP username,
+        DROP password;
