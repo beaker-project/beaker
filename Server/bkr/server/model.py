@@ -2190,6 +2190,9 @@ class System(SystemObject):
         except Exception:
             user = None
         if self.lab_controller:
+            self.command_queue.append(CommandActivity(user=user,
+                    service=service, action=u'clear_logs',
+                    status=CommandStatus.queued))
             command = CommandActivity(user=user,
                     service=service, action=u'configure_netboot',
                     status=CommandStatus.queued)
