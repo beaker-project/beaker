@@ -722,11 +722,14 @@ firewall --service=ssh
 bootloader --location=mbr
 '''
                 in k, k)
-        self.assert_('\nmysillypackage\n' in k, k)
+        klines = k.splitlines()
+        self.assert_('mysillypackage' in klines, k)
         # should also contain the various Beaker bits
-        self.assert_('\n# Check in with Beaker Server\n' in k, k)
-        self.assert_('\n# Add Harness Repo\n' in k, k)
-        self.assert_('\nyum -y install beah\n' in k, k)
+        self.assert_('%pre --log=/dev/console' in klines, k)
+        self.assert_('# Check in with Beaker Server' in klines, k)
+        self.assert_('%post --log=/dev/console' in klines, k)
+        self.assert_('# Add Harness Repo' in klines, k)
+        self.assert_('yum -y install beah' in klines, k)
 
     def test_no_debug_repos(self):
         recipe = self.provision_recipe('''
