@@ -706,7 +706,21 @@ rm -rf %{_var}/lib/beaker/osversion_data
 - 743852 Filter buttons in Recipe view not working (Queued, Running recipes)
   (bpeck@redhat.com)
 
-* Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-5
+* Fri Oct 07 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-5
+- Altered upgrade_0.7.2.txt notes to not include the 0.7.2 schema
+  changes other than the rollback, which is pointed to by the
+  upgrade_0.7.03.txt (rmancy@redhat.com)
+
+* Wed Oct 05 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-4
+- Merge the two upgrade notes for 0.7.03 (rmancy@redhat.com)
+- unreserve() will now catch all exceptions, including if cobbler is
+  down (rmancy@redhat.com)
+
+* Mon Oct 03 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-2
+- Fix for ks_appends broken by ssh keys patch (stl@redhat.com)
+- temporary hack for building in dist-f14 (dcallagh@redhat.com)
+
+* Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-1
 - 739893 - Client option to print xml of existing job
   (j-nomura@ce.jp.nec.com)
 - 729654 - Requires from Makefile are not installed during kickstart
@@ -732,7 +746,18 @@ rm -rf %{_var}/lib/beaker/osversion_data
 - test for qpid bug https://bugzilla.redhat.com/show_bug.cgi?id=733543
   (rmancy@redhat.com)
 
-* Fri Sep 16 2011 Raymond Mancy <rmancy@redhat.com> 0.7.2-3
+* Wed Sep 21 2011 Raymond Mancy <rmancy@redhat.com> 0.7.2-3
+- Moved content from bz734535.sql into update_0.7.2.txt and added
+  rollback SQL
+
+* Mon Sep 19 2011 Raymond Mancy <rmancy@redhat.com> 0.7.2-2
+- Fix for bug introduced by 713578 that caused the submission kw args
+  from the job page to change. (rmancy@redhat.com)
+- 739178 remove_distro can throw an exception if the distro doesn't
+  exist in beaker (bpeck@redhat.com)
+- 734535 urlparse already imported (bpeck@redhat.com)
+
+* Fri Sep 16 2011 Raymond Mancy <rmancy@redhat.com> 0.7.2-1
 - 640395  -  make bkradd does not work (bpeck@redhat.com)
 - 617274 - Owner field should be mandatory (dcallagh@redhat.com)
 - 736989 - fix bkr distros-list --treepath (dcallagh@redhat.com)
@@ -753,6 +778,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 - fix for beaker labcontroller task (bpeck@redhat.com)
 - Enhanced ausearch. (mcsontos@redhat.com)
 - Added: CompatService to RhtsOptions (mcsontos@redhat.com)
+
 * Wed Sep 14 2011 Bill Peck <bpeck@redhat.com> 0.7.1-2
 - 738319 when importing distros osminor doesn't enforce a string
   (bpeck@redhat.com)
