@@ -507,7 +507,7 @@ sources = Workstation/source/SRPMS
         """ Find all variant repos
         """
         repos = []
-        variants = self.parser.get('variant-%s' % (variant), 'variants')
+        variants = self.parser.get('variant-%s' % variant, 'variants', '')
         if variants:
             for sub_variant in variants.split(','):
                 repos.extend(self.find_repos(repo_base, rpath, sub_variant,
@@ -1105,8 +1105,6 @@ kernel = images/pxeboot/vmlinuz
         if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
             return False
         if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
-            return False
-        if not parser.parser.has_option('general', 'addons'):
             return False
         return parser
 
