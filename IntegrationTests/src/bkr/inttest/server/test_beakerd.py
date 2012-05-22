@@ -362,6 +362,7 @@ class TestBeakerd(unittest.TestCase):
             system = System.query.get(system.id)
             self.assertEqual(system.command_queue[0].action, 'reboot')
             self.assertEqual(system.command_queue[1].action, 'configure_netboot')
+            self.assertEqual(system.command_queue[2].action, 'clear_logs')
 
     def test_order_by(self):
         controller = Jobs()
