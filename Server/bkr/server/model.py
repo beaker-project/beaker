@@ -5626,7 +5626,12 @@ class RenderedKickstart(MappedObject):
         if self.url:
             return self.url
         assert self.id is not None, 'not flushed?'
-        return absolute_url('/kickstart/%s' % self.id)
+        url = absolute_url('/kickstart/%s' % self.id)
+        # Beaker might be configured to use SSL but with a cert signed by
+        # a custom CA. But there's no nice way to educate Anaconda about
+        # custom CAs, so let's just stick with http:// for serving kickstarts.
+        url = url.replace('https://', 'http://')
+        return url
 
 class Task(MappedObject):
     """
