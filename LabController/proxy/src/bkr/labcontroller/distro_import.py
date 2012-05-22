@@ -145,8 +145,6 @@ class Tparser(Parser):
     infofile = '.treeinfo'
 
 class Importer(object):
-    _desc = "Importer"
-
     def __init__(self, parser):
         self.parser = parser
 
@@ -172,7 +170,6 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
     arches = i386,x86_64,ia64,ppc64,s390,s390x
     name = RHEL4-U8
     """
-    _desc = "ComposeInfoLegacy"
     required = [dict(section='tree', key='name'),
                ]
     excluded = [dict(section='product', key='variants'),
@@ -496,7 +493,6 @@ source_isos = Workstation/source/iso
 sources = Workstation/source/SRPMS
 
     """
-    _desc = "ComposeInfo"
     required = [dict(section='product', key='variants'),
                ]
     excluded = []
@@ -515,7 +511,7 @@ sources = Workstation/source/SRPMS
     def find_repos(self, repo_base, variant, arch, ks_meta):
         """ Find all variant repos
         """
-        variants = self.parser.get('variant-%s' % (variant), 'variants')
+        variants = self.parser.get('variant-%s' % (variant), 'variants', '')
         if variants:
             for sub_variant in variants.split(','):
                 ks_meta = self.find_repos(repo_base, sub_variant,
@@ -527,7 +523,7 @@ sources = Workstation/source/SRPMS
             return ks_meta
 
         repo = self.parser.get('variant-%s.%s' % (variant, arch), 
-                               'repository', None)
+                               'repository', '')
         if repo:
             ks_meta['repos'].append(variant)
             ks_meta['repos_%s' % variant] = os.path.join(repo_base, repo)
@@ -537,7 +533,7 @@ sources = Workstation/source/SRPMS
     def find_debug(self, repo_base, variant, arch, ks_meta):
         """ Find all debug repos, including ones belonging to optional
         """
-        variants = self.parser.get('variant-%s' % (variant), 'variants')
+        variants = self.parser.get('variant-%s' % (variant), 'variants', '')
         if variants:
             for sub_variant in variants.split(','):
                 ks_meta = self.find_debug(repo_base, sub_variant,
@@ -556,7 +552,7 @@ sources = Workstation/source/SRPMS
             ks_meta['repos_debug'] = []
         
         repo = self.parser.get('variant-%s.%s' % (variant, arch), 
-                               'debuginfo', None)
+                               'debuginfo', '')
         if repo:
             variant = variant.replace('-','_')
             ks_meta['repos_debug'].append(variant)
@@ -789,7 +785,6 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
     This version of .treeinfo importer has a workaround for missing
     images-$arch sections.
     """
-    _desc = "TreeInfoLegacy"
     kernels = ['images/pxeboot/vmlinuz',
                'images/kernel.img',
                'ppc/ppc64/vmlinuz',
@@ -807,16 +802,14 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
         if not parser.parse(url):
             return False
         for r in cls.required:
-            if parser.get(r['section'], r['key'], None) == None:
+            if parser.get(r['section'], r['key'], '') == '':
                 return False
         for e in cls.excluded:
-            if parser.get(e['section'], e['key'], None) != None:
+            if parser.get(e['section'], e['key'], '') != '':
                 return False
-        if parser.get('images-%s' % parser.get('general','arch'), 'kernel', '') != '':
+        if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
             return False
-        if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') != '':
-            return False
-        if parser.parser.has_option('general', 'addons'):
+        if int(parser.get('general', 'version').split('.')[0]) > 6:
             return False
         return parser
 
@@ -835,94 +828,58 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
             raise BX('%s no kernel found: %s' % (self.parser.url, e))
 
 
-
-class TreeInfo(TreeInfoBase, Importer):
+class TreeInfoFedora(TreeInfoBase, Importer):
     """
-[addon-ScalableFileSystem]
-identity = ScalableFileSystem/ScalableFileSystem.cert
-name = Scalable Filesystem Support
-repository = ScalableFileSystem
 
-[addon-ResilientStorage]
-identity = ResilientStorage/ResilientStorage.cert
-name = Resilient Storage
-repository = ResilientStorage
-
-[images-x86_64]
-kernel = images/pxeboot/vmlinuz
-initrd = images/pxeboot/initrd.img
-boot.iso = images/boot.iso
-
-[general]
-family = Red Hat Enterprise Linux
-timestamp = 1328166952.001091
-variant = Server
-totaldiscs = 1
-version = 6.3
-discnum = 1
-packagedir = Packages
-variants = Server
-arch = x86_64
-
-[images-xen]
-initrd = images/pxeboot/initrd.img
-kernel = images/pxeboot/vmlinuz
-
-[variant-Server]
-addons = ResilientStorage,HighAvailability,ScalableFileSystem,LoadBalancer
-identity = Server/Server.cert
-repository = Server/repodata
-
-[addon-HighAvailability]
-identity = HighAvailability/HighAvailability.cert
-name = High Availability
-repository = HighAvailability
-
-[checksums]
-images/pxeboot/initrd.img = sha256:4ffa63cd7780ec0715bd1c50b9eda177ecf28c58094ca519cfb6bb6aca5c225a
-images/efiboot.img = sha256:d9ba2cc6fd3286ed7081ce0846e9df7093f5d524461580854b7ac42259c574b1
-images/boot.iso = sha256:5e10d6d4e6e22a62cae1475da1599a8dac91ff7c3783fda7684cf780e067604b
-images/pxeboot/vmlinuz = sha256:7180f7f46682555cb1e86a9f1fbbfcc193ee0a52501de9a9002c34528c3ef9ab
-images/install.img = sha256:85aaf9f90efa4f43475e4828168a3f7755ecc62f6643d92d23361957160dbc69
-images/efidisk.img = sha256:e9bf66f54f85527e595c4f3b5afe03cdcd0bf279b861c7a20898ce980e2ce4ff
-
-[stage2]
-mainimage = images/install.img
-
-[addon-LoadBalancer]
-identity = LoadBalancer/LoadBalancer.cert
-name = Load Balancer
-repository = LoadBalancer
     """
-    _desc = "TreeInfo"
-
     @classmethod
     def is_importer_for(cls, url):
         parser = Tparser()
         if not parser.parse(url):
             return False
         for r in cls.required:
-            if parser.get(r['section'], r['key'], None) == None:
+            if parser.get(r['section'], r['key'], '') == '':
                 return False
         for e in cls.excluded:
-            if parser.get(e['section'], e['key'], None) != None:
+            if parser.get(e['section'], e['key'], '') != '':
                 return False
-        if parser.get('images-%s' % parser.get('general','arch'), 'kernel', '') == '':
-            False
-        if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
-            False
-        if parser.parser.has_option('general', 'addons'):
+        if not parser.get('general', 'family').startswith("Fedora"):
             return False
         return parser
 
     def get_kernel_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'],'kernel')
+        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'kernel')
 
     def get_initrd_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'],'initrd')
+        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'initrd')
 
+    def find_addon_repos(self, ks_meta):
+        """
+        using info from known locations
 
-class TreeInfoRhel7(TreeInfoBase, Importer):
+        """
+
+        # ppc64 arch uses ppc for the repos
+        arch = self.tree['arch'].replace('ppc64','ppc')
+
+        repo_paths = [('Fedora',
+                       'variant',
+                       '.'),
+                     ]
+        # Initialize ks_meta['repos'] if needed
+        if 'repos' not in ks_meta:
+            ks_meta['repos'] = []
+        ks_meta['repos'].append('addons')
+        ks_meta['repos_addons'] = []
+        for repo in repo_paths:
+            if url_exists(os.path.join(self.parser.url,repo[2],'repodata')):
+                ks_meta['repos_addons'].append(repo[0])
+                ks_meta['repos_addons_%s' % repo[0]] = os.path.join(
+                                          self.options.repo_available_as,
+                                                            repo[2])
+        return ks_meta
+
+class TreeInfoRhel(TreeInfoBase, Importer):
     """
 [addon-HighAvailability]
 id = HighAvailability
@@ -968,24 +925,22 @@ initrd = images/pxeboot/initrd.img
 kernel = images/pxeboot/vmlinuz
 
     """
-    _desc = "TreeInfoRhel7"
-
     @classmethod
     def is_importer_for(cls, url):
         parser = Tparser()
         if not parser.parse(url):
             return False
         for r in cls.required:
-            if parser.get(r['section'], r['key'], None) == None:
+            if parser.get(r['section'], r['key'], '') == '':
                 return False
         for e in cls.excluded:
-            if parser.get(e['section'], e['key'], None) != None:
+            if parser.get(e['section'], e['key'], '') != '':
                 return False
         if parser.get('images-%s' % parser.get('general','arch'), 'kernel', '') == '':
             False
         if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
             False
-        if not parser.parser.has_option('general', 'addons'):
+        if int(parser.get('general', 'version').split('.')[0]) < 7:
             return False
         return parser
 
@@ -994,6 +949,9 @@ kernel = images/pxeboot/vmlinuz
         using info from .treeinfo find addon repos
         """
         try:
+            # Initialize ks_meta['repos'] if needed
+            if 'repos' not in ks_meta:
+                ks_meta['repos'] = []
             ks_meta['repos'].append('addons')
             addons = self.parser.get('general', 'addons')
             if addons:
@@ -1019,7 +977,7 @@ def Build(url):
     for cls in Importer.__subclasses__():
         parser = cls.is_importer_for(url)
         if parser != False:
-            logging.info("Importing: %s, using %s" % (url, cls._desc))
+            logging.info("Importing: %s, using %s" % (url, cls.__name__))
             return cls(parser)
     raise BX('No valid importer found for %s' % url)
 
