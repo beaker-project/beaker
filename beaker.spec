@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.2
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -348,6 +348,10 @@ fi
 %endif
 
 %changelog
+* Tue May 22 2012 Bill Peck <bpeck@redhat.com> 0.8.2-8
+- HOTFIX - update distro_import to handle .composeinfo changes.
+  (bpeck@redhat.com)
+
 * Fri Apr 27 2012 Bill Peck <bpeck@redhat.com> 0.8.2-7
 - 816879 Missing task metadata: Types, RunFor, Requires (bpeck@redhat.com)
 
