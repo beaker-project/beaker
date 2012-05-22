@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.99
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -351,6 +351,14 @@ fi
 %endif
 
 %changelog
+* Tue May 22 2012 Bill Peck <bpeck@redhat.com> 0.8.99-2
+- remove Cobbler credentials from lab controllers (dcallagh@redhat.com)
+- 821948 clear console logs when provisioning (dcallagh@redhat.com)
+- 823700 [BUG] fails to import latest rhel7 (bpeck@redhat.com)
+- 821949 serve kickstarts over http:// instead of https://
+  (dcallagh@redhat.com)
+- allow global install options to be set in server.cfg (dcallagh@redhat.com)
+
 * Mon May 14 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.99-1
 - Cobbler removal, a.k.a. "native provisioning"
 - 815325 Needed to update the prefs form to handle correct email validation
