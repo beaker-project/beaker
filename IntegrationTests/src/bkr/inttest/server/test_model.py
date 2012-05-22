@@ -72,8 +72,9 @@ class TestSystem(unittest.TestCase):
         opts = system.install_options(distro_tree).combined_with(
                 InstallOptions.from_strings('', u'ksdevice=eth1', ''))
         # ksdevice should be overriden but console should be inherited
+        # noverifyssl comes from server-test.cfg
         self.assertEqual(opts.kernel_options,
-                dict(console='ttyS0', ksdevice='eth1'))
+                dict(console='ttyS0', ksdevice='eth1', noverifyssl=None))
 
     def test_mark_broken_updates_history(self):
         system = data_setup.create_system(status = SystemStatus.automated)

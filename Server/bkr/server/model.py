@@ -18,7 +18,7 @@ from sqlalchemy.sql.expression import join
 from sqlalchemy.exceptions import InvalidRequestError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from identity import LdapSqlAlchemyIdentityProvider
-from bkr.server.installopts import InstallOptions
+from bkr.server.installopts import InstallOptions, global_install_options
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
 from sqlalchemy.util import OrderedDict
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -1761,7 +1761,8 @@ class System(SystemObject):
         Return install options based on distro selected.
         Inherit options from Arch -> Family -> Update
         """
-        result = distro_tree.install_options()
+        result = global_install_options()
+        result = result.combined_with(distro_tree.install_options())
         if distro_tree.arch in self.provisions:
             pa = self.provisions[distro_tree.arch]
             pa_opts = InstallOptions.from_strings(pa.ks_meta, pa.kernel_options,

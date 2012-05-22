@@ -412,7 +412,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             self.assertEquals(system.command_queue[1].action, 'configure_netboot')
             self.assertEquals(system.command_queue[1].distro_tree, self.distro_tree)
             self.assertEquals(system.command_queue[1].kernel_options,
-                    'console=ttyS0 ks=%s ksdevice=eth0 noapic' % rendered_kickstart.link)
+                    'console=ttyS0 ks=%s ksdevice=eth0 noapic noverifyssl' % rendered_kickstart.link)
             self.assertEquals(system.command_queue[2].action, 'clear_logs')
 
     def test_provision_without_reboot(self):

@@ -1,4 +1,5 @@
 
+from turbogears import config
 import shlex
 # pipes.quote has been moved to the more reasonable shlex.quote in Python 3.3:
 # http://bugs.python.org/issue9723
@@ -83,3 +84,9 @@ class InstallOptions(object):
         return InstallOptions(_consolidate(self.ks_meta, other.ks_meta),
                 _consolidate(self.kernel_options, other.kernel_options),
                 _consolidate(self.kernel_options_post, other.kernel_options_post))
+
+def global_install_options():
+    return InstallOptions.from_strings(
+            config.get('beaker.ks_meta', ''),
+            config.get('beaker.kernel_options', 'ksdevice=bootif'),
+            config.get('beaker.kernel_options_post', ''))

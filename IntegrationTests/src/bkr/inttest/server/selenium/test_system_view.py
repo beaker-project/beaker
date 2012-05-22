@@ -506,7 +506,8 @@ class SystemViewTest(SeleniumTestCase):
     def check_install_options(self):
         sel = self.selenium
         self.assertEqual(sel.get_value('ks_meta'), 'some_ks_meta_var=3')
-        self.assertEqual(sel.get_value('koptions'), 'some_kernel_option=5')
+        # noverifyssl comes from server-test.cfg
+        self.assertEqual(sel.get_value('koptions'), 'noverifyssl some_kernel_option=5')
         self.assertEqual(sel.get_value('koptions_post'), 'some_kernel_option=6')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=703548
