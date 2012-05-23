@@ -1,9 +1,0 @@
-[product]
-version = 6.1
-name = Red Hat Enterprise Linux
-family = RHEL
-
-[tree]
-arches = i386,x86_64
-name = RHEL6.1-20110510.1
-
