@@ -552,7 +552,7 @@ sources = Workstation/source/SRPMS
                     options.name = self.parser.get('product', 'name')
 
                 # our current path relative to the os_dir "../.."
-                rpath = os.path.join(*['..' for i in range(1,
+                rpath = os.path.join(*['..' for i in range(0,
                                                 len(os_dir.split('/')))])
 
                 # find our repos, but relative from os_dir
