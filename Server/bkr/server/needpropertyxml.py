@@ -276,7 +276,8 @@ class XmlAnd(ElementWrapper):
         for child in self:
             if callable(getattr(child, 'filter', None)):
                 (joins, query) = child.filter(joins)
-                queries.append(query)
+                if query is not None:
+                    queries.append(query)
         if not queries:
             return (joins, None)
         return (joins, and_(*queries))
@@ -290,7 +291,8 @@ class XmlOr(ElementWrapper):
         for child in self:
             if callable(getattr(child, 'filter', None)):
                 (joins, query) = child.filter(joins)
-                queries.append(query)
+                if query is not None:
+                    queries.append(query)
         if not queries:
             return (joins, None)
         return (joins, or_(*queries))
