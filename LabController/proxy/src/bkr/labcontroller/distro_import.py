@@ -686,7 +686,7 @@ class TreeInfoBase(object):
             return ks_meta
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
             logging.debug('no addon repos for %s, %s' % (self.parser.url,e))
-            return dict()
+            return ks_meta
 
     def sync_images(self):
         """
@@ -964,7 +964,7 @@ kernel = images/pxeboot/vmlinuz
             return ks_meta
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
             logging.debug('no addon repos for %s, %s' % (self.parser.url,e))
-            return dict()
+            return ks_meta
 
     def get_kernel_path(self):
         return self.parser.get('images-%s' % self.tree['arch'],'kernel')
