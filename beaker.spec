@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.2
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -348,6 +348,11 @@ fi
 %endif
 
 %changelog
+* Wed May 23 2012 Bill Peck <bpeck@redhat.com> 0.8.2-9
+- fix beakertito tagging (bpeck@redhat.com)
+- [BUG] If a tree didn't have any addon repos it wouldn't get the composeinfo
+  repos either (bpeck@redhat.com)
+
 * Tue May 22 2012 Bill Peck <bpeck@redhat.com> 0.8.2-8
 - HOTFIX - update distro_import to handle .composeinfo changes.
   (bpeck@redhat.com)
