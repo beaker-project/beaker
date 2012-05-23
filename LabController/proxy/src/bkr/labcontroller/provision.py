@@ -1,6 +1,7 @@
 
 import sys
 import os, os.path
+import errno
 import logging
 import time
 import signal
