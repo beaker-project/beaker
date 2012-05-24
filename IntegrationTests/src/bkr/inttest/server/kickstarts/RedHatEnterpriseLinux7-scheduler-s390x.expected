@@ -287,65 +287,11 @@ setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
 
-%end
-%post --nochroot
-
-# Does the kickstart file request a reboot?
-grep -q "^reboot" /tmp/ks.cfg /ks.cfg 2>/dev/null
-if [ $? -ne 0 ]; then
-    exit 0
-fi
-
-# find out the location of /boot and use it to re-ipl
-boot_dev=""
-for mountpt in /mnt/sysimage/boot /mnt/sysimage;
-do
-  set -- $(grep " $mountpt " /proc/mounts)
-  if [ -b "$1" ]; then
-    boot_dev=$1
-    break
-  fi
-done
-
-# lookup dasd disk
-if [[ $boot_dev == *dasd* ]]; then
-   # remove the '/dev/' (aka basename)
-   boot_dev=${boot_dev##/[^/]*/}
-   # strip partition number from dasd device
-   boot_dev=${boot_dev%%[0-9]}
-   type="ccw"
-   id=`basename $(readlink /sys/block/$boot_dev/device)`
-
-   # HACK - In RHEL4 and RHEL3 ... we do it the hard way
-   grep -q "^[34]$" /.buildstamp 2>/dev/null
-   if [ $? -eq 0 ]; then
-      cat <<EOF> /mnt/sysimage/tmp/zeboot.sh
-#!/bin/bash
-/sbin/modprobe -r vmcp
-rm -f "/dev/vmcp"
-sleep 2
-[ -b "/dev/vmcp" ] || /bin/mknod /dev/vmcp c 10 61
-/sbin/modprobe -a vmcp
-sync
-# Force a boot (e.g. IPL 0100)
-/sbin/vmcp ipl ${id##*.}
-EOF
-      /bin/chmod +x /mnt/sysimage/tmp/zeboot.sh
-      /bin/chroot /mnt/sysimage /tmp/zeboot.sh
-   # In RHEL5 ... lets cleanly shutdown (Update 3 and newer)
-   else
-      echo $type > /sys/firmware/reipl/reipl_type
-      echo $id > /sys/firmware/reipl/$type/device
-
-      # Force a reboot
-      pid=$(cat /var/run/init.pid)
-      [ -z "$pid" ] && pid=$(pidof init)
-      kill -12 $pid
-      pid=$(cat /var/run/loader.run)
-      [ -z "$pid" ] && pid=$(pidof loader)
-      kill $pid
-   fi
-fi
+python << _EOF_
+import xmlrpclib
+server = xmlrpclib.Server("http://lab.test-kickstart.invalid:8000")
+server.reboot("test02.test-kickstart.invalid")
+_EOF_
 
 # Error: no snippet data for RedHatEnterpriseLinux7_post
 

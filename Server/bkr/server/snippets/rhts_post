@@ -198,3 +198,7 @@ chkconfig --level 345 rhts-compat on
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
 {{ snippet('lab_env') }}
 {{ snippet('post_s390_reboot') }}
+
+{%- if postreboot is defined %}
+{{ snippet('postreboot') }}
+{% endif %}

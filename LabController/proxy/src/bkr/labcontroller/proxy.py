@@ -558,6 +558,14 @@ class Proxy(ProxyHelper):
             return True
         return False
 
+    def reboot(self, hostname):
+        # XXX would be nice if we could limit this so that systems could only
+        # reboot themselves, instead of accepting any arbitrary hostname
+        logger.debug('reboot %s', hostname)
+        return self.hub.systems.power('reboot', hostname, False,
+                # force=True because we are not the system's user
+                True)
+
     def status_watchdog(self, task_id):
         """ Ask the scheduler how many seconds are left on a watchdog for this task
         """
