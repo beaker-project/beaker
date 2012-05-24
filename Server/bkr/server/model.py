@@ -2185,7 +2185,8 @@ class System(SystemObject):
             else:
                 raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
 
-    def configure_netboot(self, distro_tree, kernel_options, service=u'Scheduler'):
+    def configure_netboot(self, distro_tree, kernel_options, service=u'Scheduler',
+            callback=None):
         try:
             user = identity.current.user
         except Exception:
@@ -2193,10 +2194,10 @@ class System(SystemObject):
         if self.lab_controller:
             self.command_queue.append(CommandActivity(user=user,
                     service=service, action=u'clear_logs',
-                    status=CommandStatus.queued))
+                    status=CommandStatus.queued, callback=callback))
             command = CommandActivity(user=user,
                     service=service, action=u'configure_netboot',
-                    status=CommandStatus.queued)
+                    status=CommandStatus.queued, callback=callback)
             command.distro_tree = distro_tree
             command.kernel_options = kernel_options
             self.command_queue.append(command)
@@ -4823,9 +4824,10 @@ class Recipe(TaskBase):
 
         self.system.configure_netboot(self.distro_tree,
                 install_options.kernel_options_str,
-                service=u'Scheduler')
+                service=u'Scheduler',
+                callback=u'bkr.server.model.auto_cmd_handler')
         self.system.action_power(action=u'reboot',
-                                 callback='bkr.server.model.auto_power_cmd_handler')
+                                 callback='bkr.server.model.auto_cmd_handler')
 
     def release_system(self):
         """ Release the system and remove the watchdog
@@ -6332,7 +6334,7 @@ def import_module(modname):
      __import__(modname)
      return sys.modules[modname]
 
-def auto_power_cmd_handler(command, new_status):
+def auto_cmd_handler(command, new_status):
     if new_status in (CommandStatus.failed, CommandStatus.aborted) \
        and command.system.open_reservation:
-        command.system.open_reservation.recipe.abort("Power command failed")
+        command.system.open_reservation.recipe.abort("Command %s failed" % command.id)

@@ -210,3 +210,67 @@ class TestPowerFailures(XmlRpcTestCase):
             job = Job.query.get(job.id)
             self.assertEqual(job.recipesets[0].recipes[0].status,
                              TaskStatus.aborted)
+
+    def test_failure_in_configure_netboot_aborts_recipe(self):
+        with session.begin():
+            system = data_setup.create_system(
+                    lab_controller=self.lab_controller,
+                    status=SystemStatus.automated, shared=True)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            job = data_setup.create_job(distro_tree=distro_tree)
+            job.recipesets[0].recipes[0]._host_requires = (u"""
+                <hostRequires>
+                    <hostname op="=" value="%s" />
+                </hostRequires>
+                """ % system.fqdn)
+
+        beakerd.new_recipes()
+        beakerd.processed_recipesets()
+        beakerd.queued_recipes()
+        beakerd.scheduled_recipes()
+
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.status, TaskStatus.running)
+            system = System.query.get(system.id)
+            command = system.command_queue[1]
+            self.assertEquals(command.action, 'configure_netboot')
+
+        self.server.labcontrollers.mark_command_failed(command.id,
+                u'oops it borked')
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.aborted)
+
+    def test_failure_in_clear_logs_aborts_recipe(self):
+        with session.begin():
+            system = data_setup.create_system(
+                    lab_controller=self.lab_controller,
+                    status=SystemStatus.automated, shared=True)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            job = data_setup.create_job(distro_tree=distro_tree)
+            job.recipesets[0].recipes[0]._host_requires = (u"""
+                <hostRequires>
+                    <hostname op="=" value="%s" />
+                </hostRequires>
+                """ % system.fqdn)
+
+        beakerd.new_recipes()
+        beakerd.processed_recipesets()
+        beakerd.queued_recipes()
+        beakerd.scheduled_recipes()
+
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.status, TaskStatus.running)
+            system = System.query.get(system.id)
+            command = system.command_queue[2]
+            self.assertEquals(command.action, 'clear_logs')
+
+        self.server.labcontrollers.mark_command_failed(command.id,
+                u'oops it borked')
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.aborted)
