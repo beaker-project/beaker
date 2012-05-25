@@ -2500,6 +2500,8 @@ $SNIPPET("rhts_packages")
 %(afterpackages)s
 #end raw
 
+#set global end='%(end)s'
+
 %%pre
 $SNIPPET("rhts_pre")
 %(end)s
