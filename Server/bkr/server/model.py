@@ -2184,6 +2184,9 @@ class System(SystemObject):
                     self.action_power(action=u'reboot', service=service)
             else:
                 raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
+        # Default is to power off, if we can
+        elif self.power:
+            self.action_power(action=u'off', service=service)
 
     def configure_netboot(self, distro_tree, kernel_options, service=u'Scheduler'):
         try:
