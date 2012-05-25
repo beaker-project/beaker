@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.99
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -348,6 +348,19 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Fri May 25 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.99-3
+- remove beaker-osversion and related bits (dcallagh@redhat.com)
+- 821602 Improved bkr distros-list display (dcallagh@redhat.com)
+- 809704 send Anaconda scriptlet output to /dev/console in custom kickstarts
+  (dcallagh@redhat.com)
+- off by one error. (bpeck@redhat.com)
+- 817789 create pxelinux.cfg/default if it doesn't exist (dcallagh@redhat.com)
+- 824257 power off if release action is not set (dcallagh@redhat.com)
+- 824050 don't create empty WHERE clauses (dcallagh@redhat.com)
+- 817706 'postreboot' in ksmeta should trigger a reboot (dcallagh@redhat.com)
+- abort recipe if clear_logs or configure_netboot commands fail
+  (dcallagh@redhat.com)
+
 * Tue May 22 2012 Bill Peck <bpeck@redhat.com> 0.8.99-2
 - remove Cobbler credentials from lab controllers (dcallagh@redhat.com)
 - 821948 clear console logs when provisioning (dcallagh@redhat.com)
