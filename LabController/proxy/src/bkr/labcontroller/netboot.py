@@ -45,6 +45,9 @@ def siphon(src, dest):
         dest.write(chunk)
 
 def unlink_ignore(path):
+    """
+    Unlinks the given path, but succeeds if it doesn't exist.
+    """
     try:
         os.unlink(path)
     except OSError, e:
@@ -52,11 +55,29 @@ def unlink_ignore(path):
             raise
 
 def makedirs_ignore(path, mode):
+    """
+    Creates the given directory (and any parents), but succeeds if it already
+    exists.
+    """
     try:
         os.makedirs(path, mode)
     except OSError, e:
         if e.errno != errno.EEXIST:
             raise
+
+def write_ignore(path, content):
+    """
+    Creates and populates the given file, but leaves it untouched (and
+    succeeds) if the file already exists.
+    """
+    try:
+        f = open(path, 'wx') # not sure this is portable to Python 3!
+    except IOError, e:
+        if e.errno != errno.EEXIST:
+            raise
+    else:
+        logger.debug("%s didn't exist, writing it", path)
+        f.write(content)
 
 def cached_filename(url):
     return urllib.quote(url, '') # ugly, but safe
@@ -188,6 +209,12 @@ def clear_pxelinux(fqdn):
     basename = pxe_basename(fqdn)
     logger.debug('Removing pxelinux config for %s as %s', fqdn, basename)
     unlink_ignore(os.path.join(pxe_dir, basename))
+    write_ignore(os.path.join(pxe_dir, 'default'), '''default local
+prompt 0
+timeout 0
+label local
+    localboot 0
+''')
 
 def configure_efigrub(fqdn, kernel_options):
     grub_dir = os.path.join(get_tftp_root(), 'grub')
