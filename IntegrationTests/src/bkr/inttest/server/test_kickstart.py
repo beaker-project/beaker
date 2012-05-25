@@ -6,7 +6,7 @@ import pkg_resources
 import jinja2
 import xmltramp
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
-        CommandActivity, Provision, SSHPubKey
+        CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch
 from bkr.server.kickstart import template_env
 from bkr.server.jobs import Jobs
 from bkr.server.jobxml import XmlJob
@@ -66,6 +66,12 @@ EOF
                 lab_controller=cls.lab_controller)
         cls.system_s390x.loaned = cls.user
         cls.system_s390x.user = cls.user
+        # set postreboot ksmeta for RHEL7
+        s390x = Arch.by_name(u's390x')
+        rhel7 = OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinux7')
+        cls.system_s390x.provisions[s390x] = Provision(arch=s390x)
+        cls.system_s390x.provisions[s390x].provision_families[rhel7] = \
+                ProvisionFamily(osmajor=rhel7, ks_meta=u'postreboot')
 
         cls.rhel39 = data_setup.create_distro(name=u'RHEL3-U9',
                 osmajor=u'RedHatEnterpriseLinux3', osminor=u'9')
