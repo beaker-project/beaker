@@ -9,5 +9,10 @@ server = xmlrpclib.Server("http://$server:8000")
 server.install_start("$name")
 _EOF_
 
+#if $arch.startswith("ppc"):
+if [ -x "/usr/sbin/nvram" ]; then
+    /usr/sbin/nvram --print-config=boot-device > /tmp/boot-device.bak
+fi
+#end if
 ## Enable installation monitoring
 $SNIPPET('pre_anamon')
