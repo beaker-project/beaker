@@ -6,7 +6,7 @@ master_doc = 'index'
 exclude_patterns = ['_build']
 
 project = u'Beaker client'
-copyright = u'2011, Red Hat, Inc.'
+copyright = u'2012, Red Hat, Inc'
 import bkr
 version = bkr.__version__
 release = version

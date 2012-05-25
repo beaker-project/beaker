@@ -49,7 +49,7 @@ Non-zero on error, otherwise zero.
 Examples
 --------
 
-List all scratch jobs which finished 30 or more days ago:
+List all scratch jobs which finished 30 or more days ago::
 
     bkr job-list --tag scratch --completeDays 30
 

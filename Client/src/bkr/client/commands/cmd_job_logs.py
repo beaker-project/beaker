@@ -24,8 +24,6 @@ in :manpage:`bkr(1)`. Doesn't work for  T:$TASKID and TR:$RESULTID.
 Options
 -------
 
-.. option:: 
-
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
 

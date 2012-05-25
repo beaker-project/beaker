@@ -1,7 +1,7 @@
 
 """
 Modify Beaker jobs
-================
+==================
 
 .. program:: bkr job-modify
 

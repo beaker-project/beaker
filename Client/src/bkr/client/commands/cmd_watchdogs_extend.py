@@ -2,7 +2,7 @@
 
 """
 Extend Beaker watchdogs time
-===========================
+============================
 
 .. program:: bkr watchdogs-extend
 

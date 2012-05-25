@@ -102,12 +102,12 @@ class Tasks(RPCRoot):
             'valid'
                 bool 0 or 1. Include only tasks which are valid or not.
             'destructive'
-                bool 0 or 1. set to 0 for only non-destructive tasks
-                             set to 1 for only destructive tasks
+                bool 0 or 1. Set to 0 for only non-destructive tasks. Set to 
+                1 for only destructive tasks.
 
         The return value is an array of dicts, which are name and arches. 
-          name is the name of the matching tasks.
-          arches is an array of arches which this task does not apply for.
+        name is the name of the matching tasks.
+        arches is an array of arches which this task does not apply for.
         Call :meth:`tasks.to_dict` to fetch metadata for a particular task.
 
         .. versionchanged:: 0.9
