@@ -623,6 +623,18 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         # but when it's 926127 instead of 278, that's bad
         self.assertEquals(query.count(), 1)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=824050
+    def test_multiple_nonexistent_keys(self):
+        query = self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <and>
+                    <key_value key="NOTEXIST1" op="=" value="asdf"/>
+                    <key_value key="NOTEXIST2" op="=" value="asdf"/>
+                </and>
+            </hostRequires>
+            """)
+        query.all() # don't care about the results, just that it doesn't break
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=714974
     def test_hypervisor(self):
         baremetal = data_setup.create_system(arch=u'i386', shared=True,
