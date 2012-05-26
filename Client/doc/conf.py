@@ -42,9 +42,11 @@ def generate_subcommand_docs(app):
                     docname = 'bkr-%s' % BeakerCommandContainer.normalize_name(item.__name__)
                     doc = module.__doc__
                     doctitle = doc.splitlines()[1] # XXX dodgy, parse doc instead
-                    f = open(os.path.join(app.srcdir, '%s.rst' % docname), 'w')
-                    f.write(module.__doc__)
-                    f.close()
+                    outpath = os.path.join(app.srcdir, '%s.rst' % docname)
+                    # only write it if the contents have changed, this helps conditional builds
+                    if open(outpath, 'r').read() != module.__doc__:
+                        with open(outpath, 'w') as f:
+                            f.write(module.__doc__)
                     description = doctitle.partition(': ')[2]
                     app.config.man_pages.append((docname, docname, description,
                             [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1))
