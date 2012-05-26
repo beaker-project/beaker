@@ -1,7 +1,7 @@
 
 """
-List Beaker systems
-===================
+bkr list-systems: List Beaker systems
+=====================================
 
 .. program:: bkr list-systems
 

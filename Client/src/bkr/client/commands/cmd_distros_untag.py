@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Untag Beaker distros
-====================
+bkr distros-untag: Untag Beaker distros
+=======================================
 
 .. program:: bkr distros-untag
 

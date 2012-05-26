@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Export Beaker job results as XML
-================================
+bkr job-logs: Print URLs of Beaker recipe log files
+===================================================
 
 .. program:: bkr job-logs
 

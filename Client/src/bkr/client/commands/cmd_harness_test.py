@@ -1,7 +1,7 @@
 
 """
-Generate Beaker job to test harness installation
-================================================
+bkr harness-test: Generate Beaker job to test harness installation
+==================================================================
 
 .. program:: bkr harness-test
 

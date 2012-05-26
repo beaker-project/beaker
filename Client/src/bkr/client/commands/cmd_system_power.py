@@ -1,7 +1,7 @@
 
 """
-Control power for a Beaker system
-=================================
+bkr system-power: Control power for a Beaker system
+===================================================
 
 .. program:: bkr system-power
 

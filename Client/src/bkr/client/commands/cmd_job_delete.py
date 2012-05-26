@@ -1,7 +1,7 @@
 
 """
-Delete Beaker jobs
-==================
+bkr job-delete: Delete Beaker jobs
+==================================
 
 .. program:: bkr job-delete
 

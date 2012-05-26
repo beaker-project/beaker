@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-List Beaker distro trees
-========================
+bkr distro-trees-list: List Beaker distro trees
+===============================================
 
 .. program:: bkr distro-trees-list
 

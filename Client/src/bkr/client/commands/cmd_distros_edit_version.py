@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Edit the version of Beaker distros
-==================================
+bkr distros-edit-version: Edit the version of Beaker distros
+============================================================
 
 .. program:: bkr distros-edit-version
 

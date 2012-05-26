@@ -1,7 +1,7 @@
 
 """
-List Beaker jobs
-================
+bkr job-list: List Beaker jobs
+==============================
 
 .. program:: bkr job-list
 

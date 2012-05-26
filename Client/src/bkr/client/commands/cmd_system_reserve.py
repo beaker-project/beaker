@@ -1,7 +1,7 @@
 
 """
-Manually reserve a Beaker system
-================================
+bkr system-reserve: Manually reserve a Beaker system
+====================================================
 
 .. program:: bkr system-reserve
 

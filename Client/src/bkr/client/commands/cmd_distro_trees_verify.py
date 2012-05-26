@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Check Beaker distro trees for problems
-======================================
+bkr distro-trees-verify: Check Beaker distro trees for problems
+===============================================================
 
 .. program:: bkr distro-trees-verify
 

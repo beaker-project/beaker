@@ -1,7 +1,7 @@
 
 """
-Export RDF/XML description of a Beaker system
-=============================================
+bkr system-details: Export RDF/XML description of a Beaker system
+=================================================================
 
 .. program:: bkr system-details
 

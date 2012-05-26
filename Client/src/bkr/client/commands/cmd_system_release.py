@@ -1,7 +1,7 @@
 
 """
-Release a reserved Beaker system
-================================
+bkr system-release: Release a reserved Beaker system
+====================================================
 
 .. program:: bkr system-release
 

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Extend Beaker watchdogs time
-============================
+bkr watchdogs-extend: Extend Beaker watchdogs time
+==================================================
 
 .. program:: bkr watchdogs-extend
 

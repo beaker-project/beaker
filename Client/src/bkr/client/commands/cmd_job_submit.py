@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Submit job XML to Beaker
-========================
+bkr job-submit: Submit job XML to Beaker
+========================================
 
 .. program:: bkr job-submit
 

@@ -45,7 +45,8 @@ def generate_subcommand_docs(app):
                     f = open(os.path.join(app.srcdir, '%s.rst' % docname), 'w')
                     f.write(module.__doc__)
                     f.close()
-                    app.config.man_pages.append((docname, docname, doctitle,
+                    description = doctitle.partition(': ')[2]
+                    app.config.man_pages.append((docname, docname, description,
                             [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1))
 
 def setup(app):
