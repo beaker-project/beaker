@@ -1,3 +1,16 @@
+#if $arch.startswith("ppc") and $os_version != 'rhel3'
+$getVar('end', '')
+%post --nochroot --log=/dev/console
+if [ -e "/tmp/boot-device.bak" ]; then
+   nvsetenv boot-device "$(cat /tmp/boot-device.bak)"
+   echo "Read boot-device.bak from /tmp"
+else
+   echo "Error: /tmp/boot-device.bak does not exist!"
+fi
+$getVar('end', '')
+%post --log=/dev/console
+#end if
+
 #if $getVar('recipeid','') != ''
 echo $recipeid > /root/RECIPE.TXT
 #end if
