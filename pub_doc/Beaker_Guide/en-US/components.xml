@@ -625,8 +625,8 @@
                         <para>Tasks are the lowest unit in the Job hierarchy, and running a Task is the primary purpose of running a Job. There purpose is to run one or more commands, and then collect the results of those commands in a way that other entities can access them. You can run as many or as few Tasks in a Job as you like. </para>
                         <section id="User_Guide-Getting_Started-Process-Beaker_Interface_Description-Tasks-Creating_a_Task">
                           <title>Creating a Task</title>
-                            <para>To create Tasks the <application>beaker-devel</application> package will need to be installed. From your terminal, type: </para>
-                            <screen>$ yum install beaker-devel</screen>
+                            <para>To create Tasks the <application>rhts-devel</application> package will need to be installed. From your terminal, type: </para>
+                            <screen>$ yum install rhts-devel</screen>
                             <para>Now make a new directory from where you will create the test. Then <application>cd</application> into the newly created folder and run the following: </para>
                             <screen>
                               $ rhts-create-new-test
@@ -657,7 +657,7 @@
                                 
                                 # Author: Your Name &lt;Your Email&gt;
                                 
-                                beaker-run-simple-test $TEST ./do-my-test.sh
+                                rhts-run-simple-test $TEST ./do-my-test.sh
                               </screen>
                               <para>
                                 The do-my-test.sh is a rather simple test, seen below, just enough to illustrate the required components of a task. 
@@ -669,7 +669,7 @@
                               ls -al /root/.ssh
                               </screen>
                               <para>
-                                The exit code from listing the contents of<application> /root/.ssh</application>  will be saved to the <application>$?</application> system variable and based on this,<application> beaker-run-simple-test </application>will report the failure or success of the Task. So the most basic Beaker coding requirements are that a shell script must be sourced <application>(beaker-environment.sh)</application> and the report_result API must be called (this is called in <application>beaker-run-simple-text</application>).The output was sent to <application>$OUTPUTFILE </application>(in <application>beaker-environment.sh</application>). The Beaker API provides the <application>$OUTPUTFILE</application> variable so each test can create a log file to record its activities. When run from the command line, <application>$OUTPUTFILE</application> points to a temporary file in<application> /tmp</application>. When run in a test lab environment, the logs are stored in a central location. The report_result method is always called to inform the Beaker API of the success or failure of the test. 
+                                The exit code from listing the contents of<application> /root/.ssh</application>  will be saved to the <application>$?</application> system variable and based on this,<application> rhts-run-simple-test </application>will report the failure or success of the Task. So the most basic Beaker coding requirements are that a shell script must be sourced <application>(rhts-environment.sh)</application> and the report_result API must be called (this is called in <application>beaker-run-simple-text</application>).The output was sent to <application>$OUTPUTFILE </application>(in <application>rhts-environment.sh</application>). The Beaker API provides the <application>$OUTPUTFILE</application> variable so each test can create a log file to record its activities. When run from the command line, <application>$OUTPUTFILE</application> points to a temporary file in<application> /tmp</application>. When run in a test lab environment, the logs are stored in a central location. The report_result method is always called to inform the Beaker API of the success or failure of the test. 
                               </para>
                             </section>
                             <section id="User_Guide-Getting_Started-Process-Beaker_Interface_Description-Tasks-Creating_a_Task-Makefile">
@@ -699,7 +699,7 @@
                                 </itemizedlist>
                               </para>
                               <para>
-                              A sample Makefile is copied into the local directory when rhts-create-new-test tool is invoked (or can be found a<application>t /usr/share/doc/beaker-devel-2.6/Makefile.template</application>). The Makefile sets up certain targets and defines variables necessary for test execution and reporting. It is best to use this example when writing a new test, copying and modifying it as necessary. So for example, in order to have an executable compiled by the Makefile, the following two lines were changed. 
+                              A sample Makefile is copied into the local directory when rhts-create-new-test tool is invoked (or can be found a<application>t /usr/share/doc/rhts-devel-<replaceable>version</replaceable>/Makefile.template</application>). The Makefile sets up certain targets and defines variables necessary for test execution and reporting. It is best to use this example when writing a new test, copying and modifying it as necessary. So for example, in order to have an executable compiled by the Makefile, the following two lines were changed. 
                               </para>
                               <screen>
                               BUILT_FILES=do-my-test
@@ -732,7 +732,7 @@
                                 $ cat PURPOSE
                                 This trivial test compiles a .c file, runs the resulting code, and checks that the output is as expected.
                                 
-                                It is intended as a simple example of how to write a test that compiles source code to a binary and reports a single result using beaker-run-simple-test
+                                It is intended as a simple example of how to write a test that compiles source code to a binary and reports a single result using rhts-run-simple-test
                                 
                                 It can also be used as a primitive smoketest for the compiler.
                                 </screen>
