@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.2
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -348,6 +348,10 @@ fi
 %endif
 
 %changelog
+* Mon May 28 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.2-10
+- Rhel7 set end=%%end for custom kickstarts (bpeck@redhat.com)
+- Backport rhel7/ppc boot order (bpeck@redhat.com)
+
 * Wed May 23 2012 Bill Peck <bpeck@redhat.com> 0.8.2-9
 - fix beakertito tagging (bpeck@redhat.com)
 - [BUG] If a tree didn't have any addon repos it wouldn't get the composeinfo
