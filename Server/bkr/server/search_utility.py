@@ -1,13 +1,18 @@
 import model
 import re
 import sqlalchemy
+from copy import copy
 from turbogears import flash, identity
 from sqlalchemy import or_, and_, not_
 from sqlalchemy.sql import visitors, select
+from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm import aliased
 from turbogears.database import session
 from bkr.server.model import Key as KeyModel
 import logging
 log = logging.getLogger(__name__)
+
 
 class MyColumn(object):
     """
@@ -15,37 +20,50 @@ class MyColumn(object):
     such as the actual mapped column, the type, and a relation it may
     have to another mapped object
 
-    It should be overridden by classes that will consistently use a 
+    It should be overridden by classes that will consistently use a
     relation to another mapped object.
     """
-    def __init__(self,relations=None,col_type=None,column = None,has_alias=False):        
-        if type(col_type) != type(''):
-            raise TypeError('col_type var passed to %s must be string' % self.__class__.__name__)
-        
-        if relations is not None:
-            if type(relations) != type([]) and type(relations) != type(''):
-                raise TypeError('relation var passed to %s must be of type list of string' % self.__class__.__name__)
-        self._has_alias = has_alias
-        self._column = column
-        self._type = col_type
-        self._relations = relations
-        
-    @property    
+    def __init__(self,relations=None, col_type=None,
+            column_name=None, column=None, **kw):
+            if type(col_type) != type(''):
+                raise TypeError('col_type var passed to %s must be string' % self.__class__.__name__)
+
+            self._column = column
+            self._type = col_type
+            self._relations = relations
+            self._column_name = column_name
+
+    def column_join(self, query):
+        return_query = None
+        onclause = getattr(self, 'onclause', None)
+        if onclause and self.relations:
+            return_query = query.outerjoin((self.relations.pop(), onclause))
+        elif self.relations:
+            if isinstance(self.relations, list):
+                return_query = query.outerjoin(*self.relations)
+            else:
+                return_query = query.outerjoin(self.relations)
+        else:
+            raise ValueError('Cannot join with nothing to join on')
+        return return_query
+
+    @property
+    def column_name(self):
+        return self._column_name
+
+    @property
     def type(self):
-        return self._type   
-    
+        return self._type
+
     @property
     def relations(self):
         return self._relations
-    
+
     @property
     def column(self):
         return self._column
 
-    @property
-    def has_alias(self):
-        return self._has_alias
-    
+
 class CpuColumn(MyColumn):
     """
     CpuColumn defines a relationship to system
@@ -63,48 +81,124 @@ class DeviceColumn(MyColumn):
         if not kw.has_key('relations'):
             kw['relations'] = 'devices'
         super(DeviceColumn,self).__init__(**kw)        
-    
-class KeyColumn(MyColumn):
-    """
-    KeyColumn defines a relationship to system for either a string or int 
-    type key
-    """
-    def __init__(self,**kw):
-        try:
-            if type(kw['relations']) != type([]):
-                raise TypeError('relations var passed to MyColumn must be a list')
-        except KeyError, (error):
-            log.error('No relations passed to KeyColumn')
-        else:  
-            self._column = None 
-            if not kw.get('int_column'):      
-                self._int_column = model.key_value_int_table.c.key_value
-            if not kw.get('string_column'):
-                self._string_column = model.key_value_string_table.c.key_value
-                
-            self._type = None
-            self._relations = kw['relations']
-            super(KeyColumn,self).__init__(col_type = '',**kw) #Fudging col_type as we've already got our int/string col  
-            
+
+
+class AliasedColumn(MyColumn):
+
+    def __init__(self, **kw):
+        if 'column_name' not in kw:
+            raise ValueError('an AliasedColumn must have a column_name')
+        relations = kw['relations']
+        target_table = kw.get('target_table')
+        if not callable(relations): # We can check it's contents
+            if len(relations) > 1 and not target_table:
+                raise ValueError('Multiple relations specified, '
+                   + 'which one to filter on has not been specified')
+            if len(set(relations)) != len(relations):
+                raise ValueError('There can be no duplicates in table')
+        self.target_table = target_table
+        onclause = kw.get('onclause')
+        if onclause and len(relations) > 1:
+            raise ValueError('You can only pass one relation if using an onclause')
+        self.onclause = onclause
+        super(AliasedColumn, self).__init__(**kw)
+
     @property
-    def int_column(self):
-        return self._int_column
-    
+    def relations(self):
+        return self._relations
+
     @property
-    def string_column(self):
-        return self._string_column
-    
-    def set_column(self,val):
+    def column(self):
+        return self._column
+
+    @relations.setter
+    def relations(self, val):
+        self._relations = val
+
+    @column.setter
+    def column(self, val):
         self._column = val
-        
-    def set_type(self,val):
-        self._type = val
-        
+
+
+class KeyColumn(AliasedColumn):
+
+    def __init__(self, **kw):
+        kw['relations'].append(model.Key)
+        kw['column_name'] = 'key_value'
+        super(KeyColumn, self).__init__(**kw)
+
+
+class KeyStringColumn(KeyColumn):
+
+    def __init__(self, **kw):
+        kw['target_table'] = model.Key_Value_String
+        kw['relations'] = [model.Key_Value_String]
+        kw['col_type'] = 'string'
+        super(KeyStringColumn, self).__init__(**kw)
+
+    def column_join(self, query):
+        """
+        column_join is used here to specify the oncaluse for the
+        KeyValueString to Key join.
+        """
+        relations = self.relations
+        for relation in relations:
+            if relation._AliasedClass__target == model.Key:
+                key_ = relation
+            if relation._AliasedClass__target == model.Key_Value_String:
+                key_string = relation
+        return query.outerjoin((key_string, key_string.system_id==model.System.id),
+            (key_, key_.id==key_string.key_id))
+
+
+class KeyIntColumn(KeyColumn):
+
+    def __init__(self, **kw):
+        kw['target_table'] = model.Key_Value_Int
+        kw['relations'] = [model.Key_Value_Int]
+        kw['col_type'] = 'int'
+        super(KeyIntColumn, self).__init__(**kw)
+
+    def column_join(self, query):
+        """
+        column_join is used here to specify the oncaluse for the
+        KeyValueString to Key join.
+        """
+        relations = self.relations
+        for relation in relations:
+            if relation._AliasedClass__target == model.Key:
+                key_ = relation
+            if relation._AliasedClass__target == model.Key_Value_Int:
+                key_int = relation
+        return query.outerjoin((key_int, key_int.system_id==model.System.id),
+            (key_, key_.id==key_int.key_id))
+
+
+class KeyCreator(object):
+    """
+    KeyCreator takes care of determining what key column needs
+    to be created.
+    """
+
+    INT = 0
+    STRING = 1
+
+    @classmethod
+    def create(cls, type, **kw):
+        if type is cls.STRING:
+            obj = KeyStringColumn(**kw)
+        elif type is cls.INT:
+            obj = KeyIntColumn(**kw)
+        else:
+            raise ValueError('Key type needs to be either INT or STRING')
+        return obj
+
+
 class Modeller(object):
     """ 
     Modeller class provides methods relating to different datatypes and 
     operations available to those datatypes
-    """ 
+    """
     def __init__(self):
         self.structure = {'string' : {'is' : lambda x,y: self.equals(x,y),
                                        'is not' : lambda x,y: self.not_equal(x,y),
@@ -252,7 +346,6 @@ class Search:
         except KeyError,e:
             flash(_(u'%s is not a valid search criteria' % column)) 
             raise
-   
         self.do_joins(mycolumn)
              
         try: 
@@ -267,15 +360,14 @@ class Search:
         except AttributeError,e:
             log.error(e)
             return self.queri
-
         self.queri = self.queri.filter(filter_final())
 
-    def return_results(self): 
-        return self.queri        
+    def return_results(self):
+        return self.queri
 
     def do_joins(self,mycolumn):
-        if mycolumn.relations:
-            try:    
+        if mycolumn.relations: 
+            try:
                 #This column has specified it needs a join, so let's add it to the all the joins
                 #that are pertinent to this class. We do this so there is only one point where we add joins 
                 #to the query
@@ -491,72 +583,75 @@ class SystemSearch(Search):
             results_from_pre = col_op_pre(value,col=column,op = operation, **kw)
         else:
             results_from_pre = None
-        
-        mycolumn = cls_ref.searchable_columns.get(column)  
-        if mycolumn:
-            try: 
-                self.__do_join(cls_ref,mycolumn=mycolumn,results_from_pre = results_from_pre)             
-            except TypeError, (error):
-                log.error(error)
-        else:       
-            log.error('Error accessing attribute within append_results')
-        
-        modeller = Modeller()          
+        mycolumn = cls_ref.create_column(column, results_from_pre)
+        self.__do_join(cls_ref, mycolumn)
+        modeller = Modeller()
         if col_op_filter:
-            filter_func = col_op_filter   
+            filter_func = col_op_filter
             filter_final = lambda: filter_func(mycolumn.column,value)
             #If you want to pass custom args to your custom filter, here is where you do it
-            if kw.get('keyvalue'): 
-                filter_final = lambda: filter_func(mycolumn.column,value,key_name = kw['keyvalue'])   
+            if kw.get('keyvalue'):
+                filter_final = lambda: filter_func(mycolumn, value, key_name = kw['keyvalue'])
         else:
             #using just the regular filter operations from Modeller
-            try: 
+            try:
                 col_type = mycolumn.type
-            except AttributeError, (error):     
+            except AttributeError, (error):
                 log.error('Error accessing attribute type within append_results: %s' % (error))
-                   
-            modeller = Modeller()  
-            filter_func = modeller.return_function(col_type,operation,loose_match=True)   
+            modeller = Modeller()
+            filter_func = modeller.return_function(col_type,operation,loose_match=True)
             filter_final = lambda: filter_func(mycolumn.column,value)
-
         self.queri = self.queri.filter(filter_final())
 
+    def _get_mapped_objects(self, tables):
+        mapped_objects = []
+        for table in tables:
+            try:
+                am_mapped_object = issubclass(table, model.MappedObject)
+                if am_mapped_object:
+                    mapped_objects.append(table)
+            except TypeError: #We are possible a relation, which is an object
+                pass
+        return mapped_objects
 
-    def __do_join(self,cls_ref,col_name=None,mycolumn=None,results_from_pre=None):
-            if not mycolumn and not col_name:
-                raise ValueError('Need to specify either a myColumn type or column name') 
-            if not mycolumn:
-                 mycolumn = cls_ref.searchable_columns.get(col_name)   
-                 if not mycolumn:
-                     log.error('Error accessing column %s in class %s' % (col_name,cls_ref.__name__))  
-             
-            if cls_ref is Key:    
-                if results_from_pre == 'string':
-                    mycolumn.set_column(mycolumn.string_column)
-                    mycolumn.set_type('string')
-                elif results_from_pre == 'int':
-                    mycolumn.set_column(mycolumn.int_column)
-                    mycolumn.set_type('int')
+
+    def __do_join(self, cls_ref, mycolumn):
+        if mycolumn.relations:
+            # This column has specified it needs a join, so let's add it to the all the joins
+            # that are pertinent to this class. We do this so there is only one point where we add joins
+            # to the query.
+
+            # Sometimes the relations/table are backrefs which are not
+            # populated until the sqla model initialisation code
+            if callable(mycolumn.relations):
+                mycolumn.relations = mycolumn.relations()
+            onclause = getattr(mycolumn, 'onclause', None)
+            if onclause is not None and callable(mycolumn.onclause):
+                mycolumn.onclause = mycolumn.onclause()
+            if isinstance(mycolumn, AliasedColumn):
+                relations = mycolumn.relations
+                # Make sure not to deal with Collections as we can't alias those
+                tables_to_alias = self._get_mapped_objects(relations)
+                aliased_table = map(lambda x: aliased(x), tables_to_alias)
+                if len(aliased_table) > 1:
+                    for at in aliased_table:
+                        if at._AliasedClass__target == mycolumn.target_table:
+                            aliased_table_target = at
                 else:
-                    log.error('Expecting the string value \'string\' or \'int\' to be returned from col_op_pre function when searching on Key/Value');       
-            if mycolumn.relations: 
-                #This column has specified it needs a join, so let's add it to the all the joins
-                #that are pertinent to this class. We do this so there is only one point where we add joins 
-                #to the query
-                #cls_ref.joins.add_join(col_string = str(column),join=mycolumn.join)
-                system_relations = mycolumn.relations
-                is_alias = mycolumn.has_alias
-                if not isinstance(system_relations, list):
-                    self.queri = self.queri.outerjoin(system_relations,aliased=is_alias)    
-                else:    
-                    for relations in system_relations:
-                        if isinstance(relations, list):
-                            self.queri = self.queri.outerjoin(relations,aliased=is_alias)
-                        else:
-                            self.queri = self.queri.outerjoin(system_relations,aliased=is_alias)
-                            break     
-                         
-    def add_columns_desc(self,result_columns): 
+                    aliased_table_target = aliased_table[0]
+                mycolumn.column = getattr(aliased_table_target, mycolumn.column_name)
+                relations = set(tables_to_alias) ^ set(relations) # Get the difference
+                # Recombine what was aliased and not
+                if relations:
+                    relations = list(relations) + aliased_table
+                else:
+                    relations = aliased_table
+                mycolumn.relations = relations
+            else:
+                pass
+            self.queri = mycolumn.column_join(self.queri)
+
+    def add_columns_desc(self,result_columns):
         if result_columns is not None:
             for elem in result_columns: 
                 (display_name,col) = self.split_class_field(elem) 
@@ -567,8 +662,9 @@ class SystemSearch(Search):
                     self.system_columns_desc.append(elem)
                 elif col_ref is not None: 
                     self.extra_columns_desc.append(elem)
-                    self.adding_columns = True 
-                    self.__do_join(cls_ref,col_name=col)
+                    self.adding_columns = True
+                    mycolumn = cls_ref.create_column(col)
+                    self.__do_join(cls_ref, mycolumn)
                     self.queri = self.queri.add_column(col_ref)
  
     def return_results(self): 
@@ -707,13 +803,23 @@ class SystemSearch(Search):
             try:
                 vals = class_ref.search_values(field)
             except AttributeError:
-                log.debug('Not using predefined search values for %s->%s' % (class_ref.__name__,field))  
+                log.debug('Not using predefined search values for %s->%s' % (class_ref.__name__,field))
         except AttributeError, (error):
             log.error('Error accessing attribute within search_on: %s' % (error))
         else:
             return dict(operators = class_ref.search_operators(field_type), values = vals)
 
 class SystemObject:
+
+    @classmethod
+    def create_column(cls, column, *args, **kw):
+        column = cls.searchable_columns.get(column)
+        # AliasedColumn will be modified, so make sure
+        # we do not pass the same object around.
+        if isinstance(column, AliasedColumn):
+            column = copy(column)
+        return column
+
     @classmethod
     def get_field_type(cls,field):
         mycolumn = cls.searchable_columns.get(field)
@@ -764,7 +870,8 @@ class SystemObject:
             return m.return_operators(field)
         except KeyError, (e): 
             log.error('Failed to find search_type by index %s, got error: %s' % (index_type,e))
-            
+
+
 class System(SystemObject): 
     search = SystemSearch
     search_table = []
@@ -778,15 +885,28 @@ class System(SystemObject):
                           'Memory'    : MyColumn(column=model.System.memory,col_type='numeric'),
                           'Hypervisor': MyColumn(column=model.Hypervisor.hypervisor, col_type='string', relations='hypervisor'),
                           'NumaNodes' : MyColumn(column=model.Numa.nodes, col_type='numeric', relations='numa'),
-                          'User'      : MyColumn(column=model.User.user_name, col_type='string',has_alias=True, relations='user'),
-                          'Owner'     : MyColumn(column=model.User.user_name, col_type='string',has_alias=True, relations='owner'),
+                          'User'      : AliasedColumn(column_name='user_name',
+                                            relations=[model.User],
+                                            col_type='string',
+                                            onclause=model.System.user),
+                          'Owner'     : AliasedColumn(column_name='user_name',
+                                            col_type='string', relations=[model.User],
+                                            onclause=model.System.owner),
                           'Status'    : MyColumn(column=model.System.status, col_type='string'),
                           'Arch'      : MyColumn(column=model.Arch.arch, col_type='string', relations='arch'),
                           'Type'      : MyColumn(column=model.System.type, col_type='string'),
-                          'PowerType' : MyColumn(column=model.PowerType.name, col_type='string', relations=['power','power_type']),
-                          'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string',has_alias=True, relations='loaned'),
-                          'Group'     : MyColumn(column=model.Group.group_name, col_type='string',has_alias=True, relations=['group_assocs', 'group'])
-                         }  
+                          'PowerType' : MyColumn(column=model.PowerType.name, col_type='string',
+                                            relations=[model.System.power, model.Power.power_type]),
+                          'LoanedTo'  : AliasedColumn(column_name='user_name',
+                                            col_type='string',
+                                            onclause=model.System.loaned,
+                                            relations=[model.User]),
+                          'Group'     : AliasedColumn(col_type='string',
+                                            target_table = model.Group,
+                                            relations = lambda: [model.System.group_assocs, \
+                                                             model.Group],
+                                            column_name='group_name'),
+                         }
     search_values_dict = {'Status'    : lambda: model.SystemStatus.values(),
                           'Type'      : lambda: model.SystemType.values(),
                           'Hypervisor': lambda: [''] + model.Hypervisor.get_all_names(),
@@ -1066,17 +1186,25 @@ class History(SystemObject):
                           'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),
                           'New Value' : MyColumn(col_type='string', column=model.Activity.new_value) 
                          }  
-       
+
+
 class Key(SystemObject):
-    searchable_columns = {'Value': KeyColumn(relations=[['key_values_int'],['key_values_string']], has_alias=True)}
+    searchable_columns = {'Value': None}
     search = KeySearch
-    
+
+    @classmethod
+    def create_column(cls, column, type):
+        if column == 'Value':
+            return KeyCreator.create(type=type)
+        else:
+            raise ValueError('%s is an unrecognised column', column)
+
     @classmethod
     def search_operators(cls,type,loose_match=None):
-        m = Modeller() 
-        operators = m.return_operators(type,loose_match)    
+        m = Modeller()
+        operators = m.return_operators(type,loose_match)
         return operators
-     
+
     @classmethod
     def value_pre(cls,value,**kw): 
         if not kw.get('keyvalue'):
@@ -1085,12 +1213,12 @@ class Key(SystemObject):
         int_table = result.numeric
         key_id = result.id
         if int_table == 1:
-            return 'int'    
+            return KeyCreator.INT
         elif int_table == 0:
-            return 'string'
+            return KeyCreator.STRING
         else:
             log.error('Unexpected result %s from value_pre in class %s' % (int_table,cls.__name__))
-             
+
     @classmethod
     def value_is_pre(cls,value,**kw): 
        return cls.value_pre(value,**kw)
@@ -1112,58 +1240,62 @@ class Key(SystemObject):
         return cls.value_pre(value,**kw)
 
     @classmethod
-    def value_less_than_filter(cls,col,val,key_name):
+    def value_less_than_filter(cls, col, val, key_name):
         result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
-        return and_(model.Key_Value_Int.key_value < val, model.Key_Value_Int.key_id == key_id)
+        return and_(col.column < val, col.column.parententity.key_id == key_id)
 
     @classmethod
     def value_greater_than_filter(cls,col,val,key_name):
-        result = model.Key.by_name(key_name) 
+        result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
-        return and_(model.Key_Value_Int.key_value > val, model.Key_Value_Int.key_id == key_id)
+        return and_(col.column > val, col.column.parententity.key_id == key_id)
 
     @classmethod
     def value_contains_filter(cls, col, val, key_name):
         result = model.Key.by_name(key_name) 
         key_id = result.id
-        return and_(model.Key_Value_String.key_value.like('%%%s%%' % val),model.Key_Value_String.key_id == key_id) 
+        return and_(col.column.like('%%%s%%' % val), col.column.parententity.key_id == key_id)
         
     @classmethod
     def value_is_filter(cls,col,val,key_name):
-        result = model.Key.by_name(key_name) 
+        result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
-       
-        if int_table == 1:
-            if not val:
-                return and_(or_(model.Key_Value_Int.key_value == val,model.Key_Value_Int.key_value == None),or_(model.Key_Value_Int.key_id == key_id,model.Key_Value_Int.key_id == None))    
-            else:
-                return and_(model.Key_Value_Int.key_value == val,model.Key_Value_Int.key_id == key_id)
-        elif int_table == 0:
-            if not val:
-                return and_(or_(model.Key_Value_String.key_value == val,model.Key_Value_String.key_value == None),or_(model.Key_Value_String.key_id == key_id,model.Key_Value_String.key_id == None))
-            else:
-                 return and_(model.Key_Value_String.key_value == val,model.Key_Value_String.key_id == key_id) 
+        column_parent = col.column.parententity
+        if not val:
+            return and_(or_(col.column == val, col.column == None),
+                or_(column_parent.key_id == key_id,
+                column_parent.key_id == None))
+        else:
+            return and_(col.column == val, column_parent.key_id == key_id)
 
     @classmethod
     def value_is_not_filter(cls,col,val,key_name):
         result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
-       
+        column_parent = col.column.parententity
         if int_table == 1:
-            if val:
-                return and_(or_(model.Key_Value_Int.key_value != val,model.Key_Value_Int.key_value == None), or_(model.Key_Value_Int.key_id == key_id,model.Key_Value_Int.key_id == None))
+            if not val:
+                return and_(or_(col.column != val, col.column == None),
+                    or_(column_parent.key_id == key_id, column_parent.key_id == None))
             else:
-                return and_(model.Key_Value_Int.key_value != val, model.Key_Value_Int.key_id == key_id)
+                return not_(model.System.key_values_int.any(
+                    and_(model.Key_Value_Int.key_value==val,
+                    model.Key_Value_Int.key_id==key_id)))
         elif int_table == 0:
-            if val:
-                return and_(or_(model.Key_Value_String.key_value != val,model.Key_Value_String.key_value == None), or_(model.Key_Value_String.key_id == key_id, model.Key_Value_String.key_id == None))         
+            if not val:
+                return and_(or_(col.column != val, column_parent.key_value == None),
+                    or_(column_parent.key_id == key_id,
+                    column_parent.key_id == None))
             else:
-                return and_(model.Key_Value_String.key_value != val, model.Key_Value_String.key_id == key_id)
+                return not_(model.System.key_values_string.any(
+                    and_(model.Key_Value_String.key_value==val,
+                    model.Key_Value_String.key_id==key_id)))
+
 
 class Job(SystemObject):
     search = JobSearch
