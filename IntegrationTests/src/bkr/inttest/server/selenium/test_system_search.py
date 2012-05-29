@@ -77,7 +77,7 @@ class Search(SeleniumTestCase):
 
     @classmethod
     @with_transaction
-    def setUpClass(cls):
+    def setupClass(cls):
         cls.selenium = cls.get_selenium()
         cls.system_one_details = { 'fqdn' : u'a1',
                                     'type' : u'Machine',
@@ -103,6 +103,10 @@ class Search(SeleniumTestCase):
                                     'status' : u'Manual',
                                     'owner' : data_setup.create_user(),}
         cls.system_two = data_setup.create_system(**cls.system_two_details)
+        cls.system_two.key_values_int.append(Key_Value_Int(
+            Key.by_name(u'DISKSPACE'), '900'))
+        cls.system_two.key_values_string.append(Key_Value_String(
+            Key.by_name(u'HVM'), '1'))
 
         device_class = DeviceClass.lazy_create(device_class='class_type')
         device1 = Device.lazy_create(vendor_id = '0000',
@@ -311,6 +315,18 @@ class Search(SeleniumTestCase):
 
         sel.open('')
         sel.select("systemsearch_0_table", "label=Key/Value")
+        sel.select("systemsearch_0_keyvalue", "label=CPUMODEL")
+        sel.select("systemsearch_0_operation", "label=is not")
+        sel.type("systemsearch_0_value", "foocodename")
+        sel.click("Search")
+        sel.wait_for_page_to_load("30000")
+        self.assertEqual(sel.get_title(), 'Systems')
+        self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
+        self.failUnless(sel.is_text_present("%s" % self.system_two.fqdn))
+        self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
+
+        sel.open('')
+        sel.select("systemsearch_0_table", "label=Key/Value")
         sel.select("systemsearch_0_keyvalue", "label=HVM")
         sel.select("systemsearch_0_operation", "label=is")
         sel.type("systemsearch_0_value", "1")
@@ -323,9 +339,32 @@ class Search(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         self.assertEqual(sel.get_title(), 'Systems')
         self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
-        self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
+        self.failUnless(not sel.is_text_present("%s" % self.system_two.fqdn))
         self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
         self.failUnless(sel.is_text_present("Items found: 1"))
+
+        # Search by Key_Value_Int and Key_Value_String and make
+        # sure the right results are returned
+        sel.open('')
+        sel.select("systemsearch_0_table", "label=Key/Value")
+        sel.select("systemsearch_0_keyvalue", "label=HVM")
+        sel.select("systemsearch_0_operation", "label=is")
+        sel.type("systemsearch_0_value", "1")
+        sel.click("doclink")
+        sel.select("systemsearch_1_table", "label=Key/Value")
+        sel.select("systemsearch_1_keyvalue", "label=DISKSPACE")
+        sel.select("systemsearch_1_operation", "label=greater than")
+        sel.type("systemsearch_1_value", "1000")
+        sel.click("Search")
+        sel.wait_for_page_to_load("30000")
+        self.assertEqual(sel.get_title(), 'Systems')
+        self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
+        self.failUnless(not sel.is_text_present("%s" % self.system_two.fqdn))
+        self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
+        self.failUnless(sel.is_text_present("Items found: 1"))
+
+        
+        
 
     def test_can_search_by_numa_node_count(self):
         sel = self.selenium
