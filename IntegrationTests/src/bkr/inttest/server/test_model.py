@@ -5,7 +5,8 @@ import email
 from turbogears.database import session
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
-        Cpu, Numa, Provision, job_cc_table, Arch, Distro, LabControllerDistro
+        Cpu, Numa, Provision, job_cc_table, Arch, Distro, LabControllerDistro, \
+        TaskType, TaskPackage, Device, DeviceClass
 from bkr.inttest import data_setup
 from nose.plugins.skip import SkipTest
 
@@ -721,6 +722,72 @@ class UserTest(unittest.TestCase):
             self.fail('should raise')
         except ValueError:
             pass
+
+class TaskTypeTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=816553
+    def test_lazy_create_does_not_cause_duplicates(self):
+        first = TaskType.lazy_create(type=u'CookieMonster')
+        second = TaskType.lazy_create(type=u'CookieMonster')
+        self.assert_(first is second)
+        self.assertEquals(TaskType.query.filter_by(type=u'CookieMonster').count(), 1)
+
+class TaskPackageTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=816553
+    def test_lazy_create_does_not_cause_duplicates(self):
+        first = TaskPackage.lazy_create(package=u'beaker')
+        second = TaskPackage.lazy_create(package=u'beaker')
+        self.assert_(first is second)
+        self.assertEquals(TaskPackage.query.filter_by(package=u'beaker').count(), 1)
+
+class DeviceClassTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=816553
+    def test_lazy_create_does_not_cause_duplicates(self):
+        first = DeviceClass.lazy_create(device_class=u'washing_machine')
+        second = DeviceClass.lazy_create(device_class=u'washing_machine')
+        self.assert_(first is second)
+        self.assertEquals(DeviceClass.query.filter_by(device_class=u'washing_machine').count(), 1)
+
+class DeviceTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=816553
+    def test_lazy_create_does_not_cause_duplicates(self):
+        device_class = DeviceClass.lazy_create(device_class=u'NETWORK')
+        params = dict(device_class_id=device_class.id,
+                vendor_id=u'8086', device_id=u'1111',
+                subsys_vendor_id=u'8086', subsys_device_id=u'1111',
+                bus=u'pci', driver=u'e1000',
+                description=u'lol')
+        first = Device.lazy_create(**params)
+        second = Device.lazy_create(**params)
+        self.assert_(first is second)
+        self.assertEquals(Device.query.filter_by(**params).count(), 1)
 
 if __name__ == '__main__':
     unittest.main()

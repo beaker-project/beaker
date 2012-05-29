@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.2
-Release:        5%{?dist}
+Release:        10%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -348,6 +348,25 @@ fi
 %endif
 
 %changelog
+* Mon May 28 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.2-10
+- Rhel7 set end=%%end for custom kickstarts (bpeck@redhat.com)
+- Backport rhel7/ppc boot order (bpeck@redhat.com)
+
+* Wed May 23 2012 Bill Peck <bpeck@redhat.com> 0.8.2-9
+- fix beakertito tagging (bpeck@redhat.com)
+- [BUG] If a tree didn't have any addon repos it wouldn't get the composeinfo
+  repos either (bpeck@redhat.com)
+
+* Tue May 22 2012 Bill Peck <bpeck@redhat.com> 0.8.2-8
+- HOTFIX - update distro_import to handle .composeinfo changes.
+  (bpeck@redhat.com)
+
+* Fri Apr 27 2012 Bill Peck <bpeck@redhat.com> 0.8.2-7
+- 816879 Missing task metadata: Types, RunFor, Requires (bpeck@redhat.com)
+
+* Fri Apr 27 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.2-6
+- 816553 add missing unique constraints (dcallagh@redhat.com)
+
 * Thu Apr 19 2012 Raymond Mancy <rmancy@redhat.com> 0.8.2-5
 - Change Group's permissions table header to 'Permissions', and moved 'Contact
   Owner' link to be beside owner field. (rmancy@redhat.com)

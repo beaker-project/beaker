@@ -379,7 +379,7 @@ numa_table = Table('numa', metadata,
 device_class_table = Table('device_class', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column("device_class", VARCHAR(24)),
+    Column("device_class", VARCHAR(24), nullable=False, unique=True),
     Column("description", TEXT),
     mysql_engine='InnoDB',
 )
@@ -387,10 +387,10 @@ device_class_table = Table('device_class', metadata,
 device_table = Table('device', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('vendor_id',String(255)),
-    Column('device_id',String(255)),
-    Column('subsys_device_id',String(255)),
-    Column('subsys_vendor_id',String(255)),
+    Column('vendor_id',String(4)),
+    Column('device_id',String(4)),
+    Column('subsys_device_id',String(4)),
+    Column('subsys_vendor_id',String(4)),
     Column('bus',String(255)),
     Column('driver', String(255), index=True),
     Column('description',String(255)),
@@ -398,6 +398,8 @@ device_table = Table('device', metadata,
            ForeignKey('device_class.id'), nullable=False),
     Column('date_added', DateTime, 
            default=datetime.utcnow, nullable=False),
+    UniqueConstraint('vendor_id', 'device_id', 'subsys_device_id',
+           'subsys_vendor_id', 'bus', 'driver', 'description', name='device_uix_1'),
     mysql_engine='InnoDB',
 )
 Index('ix_device_pciid', device_table.c.vendor_id, device_table.c.device_id)
@@ -1145,14 +1147,14 @@ task_property_needed_table = Table('task_property_needed', metadata,
 
 task_package_table = Table('task_package',metadata,
         Column('id', Integer, primary_key=True),
-        Column('package', Unicode(2048)),
+        Column('package', Unicode(255), nullable=False, unique=True),
         mysql_engine='InnoDB',
         mysql_collate='utf8_bin',
 )
 
 task_type_table = Table('task_type',metadata,
         Column('id', Integer, primary_key=True),
-        Column('type', Unicode(256)),
+        Column('type', Unicode(255), nullable=False, unique=True),
         mysql_engine='InnoDB',
 )
 
@@ -2497,6 +2499,8 @@ $SNIPPET("rhts_packages")
 #raw
 %(afterpackages)s
 #end raw
+
+#set global end='%(end)s'
 
 %%pre
 $SNIPPET("rhts_pre")
