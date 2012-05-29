@@ -30,9 +30,9 @@ fi
 /bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)$/\1--port={{ grubport }}\2/' /boot/grub/grub.conf
 {% endif %}
 
-{% if distro_tree is arch('ppc', 'ppc64') %}
+{% if distro_tree is arch('ppc', 'ppc64') and distro is osmajor('RedHatEnterpriseLinux7') %}
 {{ end }}
-%post --nochroot
+%post --nochroot --log=/dev/console
 if [ -e "/tmp/boot-device.bak" ]; then
    nvsetenv boot-device "$(cat /tmp/boot-device.bak)"
    logger "Read boot-device.bak from /tmp"
@@ -40,7 +40,7 @@ else
    logger "Error: /tmp/boot-device.bak does not exist!"
 fi
 {{ end }}
-%post
+%post --log=/dev/console
 {% endif -%}
 
 # If efibootmgr exists then re-order boot options

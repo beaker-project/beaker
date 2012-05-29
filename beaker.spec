@@ -348,6 +348,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Mon May 28 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.2-10
+- Rhel7 set end=%%end for custom kickstarts (bpeck@redhat.com)
+- Backport rhel7/ppc boot order (bpeck@redhat.com)
+
 * Fri May 25 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.99-3
 - remove beaker-osversion and related bits (dcallagh@redhat.com)
 - 821602 Improved bkr distros-list display (dcallagh@redhat.com)
@@ -360,6 +364,15 @@ rm -rf %{_var}/lib/beaker/osversion_data
 - 817706 'postreboot' in ksmeta should trigger a reboot (dcallagh@redhat.com)
 - abort recipe if clear_logs or configure_netboot commands fail
   (dcallagh@redhat.com)
+
+* Wed May 23 2012 Bill Peck <bpeck@redhat.com> 0.8.2-9
+- fix beakertito tagging (bpeck@redhat.com)
+- [BUG] If a tree didn't have any addon repos it wouldn't get the composeinfo
+  repos either (bpeck@redhat.com)
+
+* Tue May 22 2012 Bill Peck <bpeck@redhat.com> 0.8.2-8
+- HOTFIX - update distro_import to handle .composeinfo changes.
+  (bpeck@redhat.com)
 
 * Tue May 22 2012 Bill Peck <bpeck@redhat.com> 0.8.99-2
 - remove Cobbler credentials from lab controllers (dcallagh@redhat.com)
