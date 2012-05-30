@@ -2776,6 +2776,23 @@ def _create_tag(tag):
 class Distro(MappedObject):
 
     @classmethod
+    def lazy_create(cls, name, osversion):
+        """
+        Distro is unique on name only, but osversion_id also needs to be
+        supplied on insertion because it is not NULLable. So this is
+        a specialisation of the usual lazy_create method.
+        """
+        session.begin_nested()
+        try:
+            item = cls(name=name, osversion=osversion)
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            item = cls.query.filter_by(name=name).one()
+            item.osversion = osversion
+        return item
+
+    @classmethod
     def by_name(cls, name):
         return cls.query.filter_by(name=name).first()
 

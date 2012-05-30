@@ -104,6 +104,29 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
                     'http://moved/')
             del distro, distro_tree
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=825913
+    def test_existing_distro_row_with_incorrect_osversion(self):
+        # We want to add 'RHEL6-bz825913' with osversion
+        # 'RedHatEnterpriseLinux6.1'. But that distro already exists
+        # with osversion 'RedHatEnterpriseLinux6.0'.
+        name = 'RHEL6-bz825913'
+        with session.begin():
+            data_setup.create_distro(name=name,
+                    osmajor=u'RedHatEnterpriseLinux6', osminor=u'0')
+        distro_data = dict(self.distro_data)
+        distro_data.update({
+            'name': name,
+            'osmajor': 'RedHatEnterpriseLinux6',
+            'osminor': '1',
+        })
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        self.server.labcontrollers.add_distro_tree(distro_data)
+        with session.begin():
+            distro = Distro.by_name(name)
+            self.assertEquals(distro.osversion.osmajor.osmajor,
+                    u'RedHatEnterpriseLinux6')
+            self.assertEquals(distro.osversion.osminor, u'1')
+
 class CommandQueueXmlRpcTest(XmlRpcTestCase):
 
     def setUp(self):
