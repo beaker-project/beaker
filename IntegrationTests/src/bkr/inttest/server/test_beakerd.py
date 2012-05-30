@@ -1,6 +1,7 @@
 import unittest, datetime, os, threading
 from bkr.server.model import TaskStatus, Job, System, User, \
-        Group, SystemStatus, SystemActivity, Recipe, LabController
+        Group, SystemStatus, SystemActivity, Recipe, LabController, \
+        Provision
 import sqlalchemy.orm
 from turbogears.database import session
 import xmltramp
@@ -363,6 +364,34 @@ class TestBeakerd(unittest.TestCase):
             self.assertEqual(system.command_queue[0].action, 'reboot')
             self.assertEqual(system.command_queue[1].action, 'configure_netboot')
             self.assertEqual(system.command_queue[2].action, 'clear_logs')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=826379
+    def test_recipe_install_options_can_remove_system_options(self):
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            system = data_setup.create_system(shared=True,
+                    lab_controller=self.lab_controller)
+            system.provisions[distro_tree.arch] = Provision(arch=distro_tree.arch,
+                    kernel_options='console=ttyS0 vnc')
+            job = data_setup.create_job(distro_tree=distro_tree)
+            job.recipesets[0].recipes[0].kernel_options = u'!vnc'
+            job.recipesets[0].recipes[0]._host_requires = (u"""
+                <hostRequires>
+                    <hostname op="=" value="%s" />
+                </hostRequires>
+                """ % system.fqdn)
+
+        beakerd.new_recipes()
+        beakerd.processed_recipesets()
+        beakerd.queued_recipes()
+        beakerd.scheduled_recipes()
+
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.status, TaskStatus.running)
+            system = System.query.get(system.id)
+            self.assertEqual(system.command_queue[1].action, 'configure_netboot')
+            self.assert_('vnc' not in system.command_queue[1].kernel_options)
 
     def test_order_by(self):
         controller = Jobs()

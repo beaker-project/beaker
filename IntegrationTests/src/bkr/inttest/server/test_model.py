@@ -68,11 +68,12 @@ class TestSystem(unittest.TestCase):
         distro_tree = data_setup.create_distro_tree()
         system = data_setup.create_system()
         system.provisions[distro_tree.arch] = Provision(arch=distro_tree.arch,
-                kernel_options='console=ttyS0 ksdevice=eth0')
+                kernel_options='console=ttyS0 ksdevice=eth0 vnc')
         opts = system.install_options(distro_tree).combined_with(
-                InstallOptions.from_strings('', u'ksdevice=eth1', ''))
+                InstallOptions.from_strings('', u'ksdevice=eth1 !vnc', ''))
         # ksdevice should be overriden but console should be inherited
         # noverifyssl comes from server-test.cfg
+        # vnc should be removed
         self.assertEqual(opts.kernel_options,
                 dict(console='ttyS0', ksdevice='eth1', noverifyssl=None))
 
