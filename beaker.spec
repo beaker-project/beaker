@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.99
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -348,6 +348,15 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Wed May 30 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.99-4
+- 825913 don't die importing a distro which already exists with the wrong
+  osversion (dcallagh@redhat.com)
+- 822426 Fixing up some problems that Key/Value search encountered after sqla
+  upgrade. (rmancy@redhat.com)
+- 826379 fix recipe install option handling so as not to discard ! options
+  (dcallagh@redhat.com)
+- Merge hotfixes from release-0.8.2 (dcallagh@redhat.com)
+
 * Mon May 28 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.2-10
 - Rhel7 set end=%%end for custom kickstarts (bpeck@redhat.com)
 - Backport rhel7/ppc boot order (bpeck@redhat.com)
