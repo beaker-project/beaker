@@ -4377,7 +4377,7 @@ class Recipe(TaskBase):
                 return ("beaker-harness", "http://%s/harness/%s/"
                         % (self.servername, self.distro_tree.distro.osversion.osmajor))
 
-    def install_options(self):
+    def generated_install_options(self):
         ks_meta = {
             'packages': ':'.join(p.package for p in self.packages),
             'customrepos': '|'.join('%s,%s' % (r.name, r.url) for r in self.repos),
@@ -4385,9 +4385,7 @@ class Recipe(TaskBase):
             'taskrepo': '%s,%s' % self.task_repo(),
             'partitions': self.partitionsKSMeta,
         }
-        return InstallOptions(ks_meta, {}, {})\
-                .combined_with(InstallOptions.from_strings(self.ks_meta,
-                    self.kernel_options, self.kernel_options_post))
+        return InstallOptions(ks_meta, {}, {})
 
     def to_xml(self, recipe, clone=False, from_recipeset=False, from_machine=False):
         if not clone:
@@ -4775,7 +4773,9 @@ class Recipe(TaskBase):
     def provision(self):
         from bkr.server.kickstart import generate_kickstart
         install_options = self.system.install_options(self.distro_tree)\
-                .combined_with(self.install_options())
+                .combined_with(self.generated_install_options())\
+                .combined_with(InstallOptions.from_strings(self.ks_meta,
+                    self.kernel_options, self.kernel_options_post))
         if 'ks' in install_options.kernel_options:
             # Use it as is
             pass
