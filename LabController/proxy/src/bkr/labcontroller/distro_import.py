@@ -202,6 +202,8 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
             options = copy.deepcopy(self.options)
             if not options.name:
                 options.name = self.parser.get('tree', 'name')
+            if options.repo_available_as:
+                options.repo_available_as = os.path.join(options.repo_available_as, os_dir)
             if options.available_as:
                 options.available_as = os.path.join(options.available_as,
                                                     os_dir)
@@ -826,6 +828,94 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
                           and x, [initrd for initrd in self.initrds])[0]
         except IndexError, e:
             raise BX('%s no kernel found: %s' % (self.parser.url, e))
+
+
+class TreeInfoRHS(TreeInfoBase, Importer):
+    """
+    Importer for Red Hat Storage
+
+[variant-RHS]
+addons = 
+identity = RHS/RHS.cert
+repository = RHS/repodata
+
+[images-x86_64]
+kernel = images/pxeboot/vmlinuz
+initrd = images/pxeboot/initrd.img
+boot.iso = images/boot.iso
+
+[general]
+family = Red Hat Storage
+timestamp = 1336067116.493109
+variant = RHS
+totaldiscs = 1
+version = 2.0
+discnum = 1
+packagedir = Packages
+variants = RHS
+arch = x86_64
+
+[images-xen]
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+
+[checksums]
+images/pxeboot/initrd.img = sha256:30525b91282dff3555b0e7203e10ac46e94dd6e925df95bc0b5442b91f592020
+images/efiboot.img = sha256:a89e750492dd419189eb82f513d3c18442d9b159fc237cbe1e9323e511f95186
+images/boot.iso = sha256:80a79342c790c58783e41323cfdae6118a1785693773cffe01e2594783da1f61
+images/pxeboot/vmlinuz = sha256:0d04f45518d65fd85e2c5884dc9c0254b399ed9623794738986c7dfd1ec27dd2
+images/install.img = sha256:d795444e92e27893aec8edf8f45fe39e7306b1ce8379dc9f1c3fb6c126c57e6b
+images/efidisk.img = sha256:4d74866a0fb0368cee92e6c0e7a52522eb9cded1d03e1427a4aa2c3a21c4d54f
+
+[stage2]
+mainimage = images/install.img
+
+    """
+    @classmethod
+    def is_importer_for(cls, url):
+        parser = Tparser()
+        if not parser.parse(url):
+            return False
+        for r in cls.required:
+            if parser.get(r['section'], r['key'], '') == '':
+                return False
+        for e in cls.excluded:
+            if parser.get(e['section'], e['key'], '') != '':
+                return False
+        if not parser.get('general', 'family').startswith("Red Hat Storage"):
+            return False
+        return parser
+
+    def get_kernel_path(self):
+        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'kernel')
+
+    def get_initrd_path(self):
+        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'initrd')
+
+    def find_addon_repos(self, ks_meta):
+        """
+        using info from .treeinfo
+        """
+
+        # Initialize ks_meta['repos'] if needed
+        if 'repos' not in ks_meta:
+            ks_meta['repos'] = []
+        ks_meta['repos'].append('addons')
+        ks_meta['repos_addons'] = []
+
+        try:
+            repopath = self.parser.get('variant-%s' % self.tree['variant'],
+                                       'repository')
+            # remove the /repodata from the entry, this should not be there
+            repopath = repopath.replace('/repodata','')
+            ks_meta['repos_addons'].append(repopath)
+            ks_meta['repos_addons_%s' % repopath] = os.path.join(
+                                          self.options.repo_available_as,
+                                           repopath)
+
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
+            logging.debug('.treeinfo has no repository for variant %s, %s' % (self.parser.url,e))
+        return ks_meta
 
 
 class TreeInfoFedora(TreeInfoBase, Importer):
