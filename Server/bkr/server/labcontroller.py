@@ -9,7 +9,7 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import LabControllerDataGrid, LabControllerForm
 from xmlrpclib import ProtocolError
-from sqlalchemy.orm import contains_eager
+from sqlalchemy.orm import contains_eager, joinedload
 import itertools
 import cherrypy
 import time
@@ -322,6 +322,26 @@ class LabControllers(RPCRoot):
             cmd.new_value = message
             cmd.log_to_system_history()
         return True
+
+    @cherrypy.expose
+    @identity.require(identity.in_group('lab_controller'))
+    def get_distro_trees(self):
+        """
+        Called by beaker-proxy. returns all active distro_trees
+        for the lab controller that made the call.
+        We have the lab controller do this because it may have access to 
+        distros that the scheduler can't reach.
+        """
+        lab_controller = identity.current.user.lab_controller
+        query = DistroTree.query.filter(
+                    DistroTree.lab_controller_assocs.any(
+                    LabControllerDistroTree.lab_controller == lab_controller)
+                                       ).options(joinedload(DistroTree.distro))
+        return [{'distro_tree_id': dt.id,
+                 'distro_name': dt.distro.name,
+                 'methods': [lca.url for lca in dt.lab_controller_assocs
+                             if lca.lab_controller == lab_controller],
+                } for dt in query]
 
     def make_lc_remove_link(self, lc):
         if lc.removed is not None:

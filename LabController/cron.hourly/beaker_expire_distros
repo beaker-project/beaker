@@ -2,9 +2,6 @@
 
 import sys, os
 import xmlrpclib
-from datetime import datetime
-from datetime import timedelta
-from cobbler import utils
 import urllib2
 import urlparse
 
@@ -48,31 +45,35 @@ def check_nfs(tree):
     return False
 
 if __name__ == '__main__':
-    cobbler = xmlrpclib.ServerProxy('http://localhost/cobbler_api')
-    token = cobbler.login("", utils.get_shared_secret())
     proxy = xmlrpclib.ServerProxy('http://localhost:8000', allow_none=True)
-    distros = cobbler.get_distros()
-    rdistros = []
-    for distro in distros:
-        if 'tree' in distro['ks_meta']:
-            tree = distro['ks_meta']['tree']
-            if tree.startswith('nfs://'):
+    rdistro_trees = []
+    distro_trees = proxy.get_distro_trees()
+    for distro_tree in distro_trees:
+        accessable = False
+        for method in distro_tree['methods']:
+            if method.startswith('nfs://'):
                 # Check nfs
-                if check_nfs(tree):
-                   rdistros.append(distro['name'])
+                if check_nfs(method):
+                    sys.stderr.write("%s is missing\n" % method)
+                else:
+                    accessable = True
             else:
                 # use urllib
-                if check_uri(tree):
-                   rdistros.append(distro['name'])
+                if check_uri(method):
+                    sys.stderr.write("%s is missing\n" % method)
+                else:
+                    accessable = True
+        else:
+            if not accessable:
+                # All methods were unaccessable!
+                rdistro_trees.append(distro_tree)
 
-        if len(sys.argv) > 1 and distro['name'].find(sys.argv[1]) != -1:
-            rdistros.append(distro['name'])
-    # if all distros are expired then something is probably wrong.
-    if len(distros) != len(rdistros):
-        for distro in rdistros:
-            print "Removing distro %s" % distro
-            cobbler.remove_distro(distro, token, True)
-            proxy.removeDistro(distro)
+    # if all distro_trees are expired then something is probably wrong.
+    if len(distro_trees) != len(rdistro_trees):
+        for distro_tree in rdistro_trees:
+            print "Removing distro %s:%d" % (distro_tree['distro_name'],
+                                             distro_tree['distro_tree_id'])
+            proxy.remove_distro_trees([distro_tree['distro_tree_id']])
     else:
-        print "All distros are missing! Please check nfs mounts"
+        sys.etderr.write("All distros are missing! Please check your server!!\n")
         sys.exit(1)
