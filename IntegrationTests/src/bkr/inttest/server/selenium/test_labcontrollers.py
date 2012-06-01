@@ -132,6 +132,44 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
                     u'RedHatEnterpriseLinux6')
             self.assertEquals(distro.osversion.osminor, u'1')
 
+class GetDistroTreesXmlRpcTest(XmlRpcTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.lc = data_setup.create_labcontroller()
+            self.lc.user.password = u'logmein'
+            self.other_lc = data_setup.create_labcontroller()
+        self.server = self.get_server()
+
+    def test_get_all_distro_trees(self):
+        with session.begin():
+            # one distro which is in the lab
+            dt_in  = data_setup.create_distro_tree(
+                    lab_controllers=[self.other_lc, self.lc])
+            # ... and another which is not
+            dt_out = data_setup.create_distro_tree(
+                    lab_controllers=[self.other_lc])
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        result = self.server.labcontrollers.get_distro_trees()
+        self.assertEquals(len(result), 1)
+        self.assertEquals(result[0]['distro_tree_id'], dt_in.id)
+        for lc, url in result[0]['available']:
+            self.assertEquals(lc, self.lc.fqdn)
+
+    def test_filter_by_arch(self):
+        with session.begin():
+            # one distro which has the desired arch
+            dt_in  = data_setup.create_distro_tree(arch=u'i386',
+                    lab_controllers=[self.other_lc, self.lc])
+            # ... and another which does not
+            dt_out = data_setup.create_distro_tree(arch=u'ppc64',
+                    lab_controllers=[self.other_lc, self.lc])
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        result = self.server.labcontrollers.get_distro_trees(
+                {'arch': ['i386', 'x86_64']})
+        self.assertEquals(len(result), 1)
+        self.assertEquals(result[0]['distro_tree_id'], dt_in.id)
+
 class CommandQueueXmlRpcTest(XmlRpcTestCase):
 
     def setUp(self):

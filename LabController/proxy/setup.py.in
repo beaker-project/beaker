@@ -30,6 +30,7 @@ setup(
             'beaker-transfer = bkr.labcontroller.transfer:main',
             'beaker-import = bkr.labcontroller.distro_import:main',
             'beaker-provision = bkr.labcontroller.provision:main',
+            'beaker-pxemenu = bkr.labcontroller.pxemenu:main',
         ),
     }
 )

@@ -344,6 +344,63 @@ mgmt_parameters:
   </para>
 
   </section>
+
+<section id="Installation-Lab_PXE_Menu">
+
+<title>Configure Lab PXE Menu</title>
+
+<para>Beaker includes a command, <command>beaker-pxemenu</command>, which can
+optionally be used to generate a PXE boot menu containing the distros in
+Beaker. Users in the lab can then perform manual installations by selecting a
+distro from the menu. The menu is written to
+<filename>pxelinux.cfg/beaker_menu</filename> in the TFTP root
+directory.</para>
+
+<para>You can limit the menu to only contain distros tagged in Beaker with a
+certain tag, by passing the <option>--tag</option> option to
+<command>beaker-pxemenu</command>. By default, all distros which are available
+in the lab are included in the PXE menu.</para>
+
+<note><para>If you have configured a non-default TFTP root directory in
+<filename>/etc/beaker/labcontroller.conf</filename>, be sure to pass that same
+directory in the <option>--tftp-root</option> option to
+<command>beaker-pxemenu</command>.</para></note>
+
+<para>If using the PXE menu, you should configure
+<filename>pxelinux.cfg/default</filename> to boot from local disk by default,
+with an option to load the menu. For example:
+
+<programlisting>
+default local
+prompt 1
+timeout 200
+
+say ***********************************************
+say Press ENTER to boot from local disk
+say Type "menu" at boot prompt to view install menu
+say ***********************************************
+
+label local
+    localboot 0
+
+label menu
+    kernel menu.c32
+    append pxelinux.cfg/beaker_menu
+</programlisting>
+</para>
+
+<para>If your site imports distros into Beaker infrequently, you may prefer to
+run <command>beaker-pxemenu</command> after importing new distros.
+Otherwise, you can create a cron job to periodically update the PXE menu:
+
+<programlisting>
+#!/bin/sh
+exec beaker-pxemenu --quiet
+</programlisting>
+</para>
+
+</section>
+
   </section>
   <section id="Installation-Beaker_Client">
     <title>Beaker Client</title>

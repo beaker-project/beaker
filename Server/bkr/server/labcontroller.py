@@ -8,6 +8,7 @@ from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import LabControllerDataGrid, LabControllerForm
+from bkr.server.distrotrees import DistroTrees
 from xmlrpclib import ProtocolError
 from sqlalchemy.orm import contains_eager, joinedload
 import itertools
@@ -260,9 +261,10 @@ class LabControllers(RPCRoot):
                     cmd.abort(u'Initrd image not found for distro tree %s' % cmd.distro_tree.id)
                     continue
                 d['netboot'] = {
+                    'distro_tree_id': cmd.distro_tree.id,
                     'kernel_url': urlparse.urljoin(distro_tree_url, kernel.path),
                     'initrd_url': urlparse.urljoin(distro_tree_url, initrd.path),
-                    'kernel_options': cmd.kernel_options,
+                    'kernel_options': cmd.kernel_options or '',
                 }
             result.append(d)
         return result
@@ -325,7 +327,7 @@ class LabControllers(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.in_group('lab_controller'))
-    def get_distro_trees(self):
+    def get_distro_trees(self, filter=None):
         """
         Called by beaker-proxy. returns all active distro_trees
         for the lab controller that made the call.
@@ -333,15 +335,16 @@ class LabControllers(RPCRoot):
         distros that the scheduler can't reach.
         """
         lab_controller = identity.current.user.lab_controller
-        query = DistroTree.query.filter(
-                    DistroTree.lab_controller_assocs.any(
-                    LabControllerDistroTree.lab_controller == lab_controller)
-                                       ).options(joinedload(DistroTree.distro))
-        return [{'distro_tree_id': dt.id,
-                 'distro_name': dt.distro.name,
-                 'methods': [lca.url for lca in dt.lab_controller_assocs
-                             if lca.lab_controller == lab_controller],
-                } for dt in query]
+        if filter is None:
+            filter = {}
+        if 'labcontroller' in filter and filter['labcontroller'] != lab_controller.fqdn:
+            raise ValueError('Cannot filter on lab controller other than the currnet one')
+        filter['labcontroller'] = lab_controller.fqdn
+        distro_trees = DistroTrees().filter(filter)
+        for dt in distro_trees:
+            dt['available'] = [(lc, url) for lc, url in dt['available']
+                    if lc == lab_controller.fqdn]
+        return distro_trees
 
     def make_lc_remove_link(self, lc):
         if lc.removed is not None:

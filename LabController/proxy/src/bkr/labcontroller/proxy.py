@@ -659,8 +659,8 @@ class Proxy(ProxyHelper):
         """
         return self.hub.labcontrollers.remove_distro_trees(distro_tree_ids)
 
-    def get_distro_trees(self):
+    def get_distro_trees(self, filter=None):
         """ This proxy method allows the lab controller to query
             for all distro_trees that are associated to it.
         """
-        return self.hub.labcontrollers.get_distro_trees()
+        return self.hub.labcontrollers.get_distro_trees(filter)

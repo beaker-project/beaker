@@ -3,11 +3,12 @@ import urlparse
 import cherrypy
 from kid import Element
 from sqlalchemy.sql import exists
+from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 from turbogears import expose, flash, redirect, paginate, identity, widgets
 from bkr.server.model import session, DistroTree, Distro, OSVersion, OSMajor, \
         LabController, LabControllerDistroTree, DistroTreeActivity, \
-        distro_tree_lab_controller_map, lab_controller_table
+        distro_tree_lab_controller_map, lab_controller_table, Arch, DistroTag
 from bkr.server.widgets import TaskSearchForm, myPaginateDataGrid, SearchBar, \
         DistroTreeInstallOptionsWidget
 from bkr.server.helpers import make_link
@@ -220,7 +221,11 @@ class DistroTrees(RPCRoot):
 
         .. versionadded:: 0.9
         """
-        query = DistroTree.query.join(DistroTree.distro)
+        query = DistroTree.query\
+                .join(DistroTree.distro, Distro.osversion, OSVersion.osmajor)\
+                .join(DistroTree.arch)\
+                .options(contains_eager(DistroTree.distro),
+                    contains_eager(DistroTree.arch))
         name = filter.get('name', None)
         family = filter.get('family', None)
         tags = filter.get('tags', None) or []
@@ -233,31 +238,36 @@ class DistroTrees(RPCRoot):
         if name:
             query = query.filter(Distro.name.like('%s' % name))
         if family:
-            query = query.join(DistroTree.distro, Distro.osversion, OSVersion.osmajor)
             query = query.filter(OSMajor.osmajor == '%s' % family)
         if arch:
-            query = query.join(DistroTree.arch)
-            query = query.filter(Arch.arch == '%s' % arch)
+            if isinstance(arch, list):
+                query = query.filter(Arch.arch.in_(arch))
+            else:
+                query = query.filter(Arch.arch == '%s' % arch)
         if treepath:
             query = query.filter(DistroTree.lab_controller_assocs.any(
                     LabControllerDistroTree.url.like('%s' % treepath)))
-        if labcontroller:
+        elif labcontroller:
             query = query.filter(exists([1],
                     from_obj=[distro_tree_lab_controller_map.join(lab_controller_table)])
                     .where(LabControllerDistroTree.distro_tree_id == DistroTree.id)
                     .where(LabController.fqdn.like(labcontroller)))
-        # we only want distro trees that are active in at least one lab controller
-        query = query.filter(DistroTree.lab_controller_assocs.any())
+        else:
+            # we only want distro trees that are active in at least one lab controller
+            query = query.filter(DistroTree.lab_controller_assocs.any())
         query = query.order_by(DistroTree.date_created.desc())
         if limit:
             query = query[:limit]
         return [{'distro_tree_id': dt.id,
                  'distro_id': dt.distro.id,
                  'distro_name': dt.distro.name,
-                 'distro_version': unicode(dt.distro.osversion),
+                 'distro_osversion': unicode(dt.distro.osversion),
+                 'distro_osmajor' : unicode(dt.distro.osversion.osmajor),
                  'distro_tags': [unicode(tag) for tag in dt.distro.tags],
                  'arch': unicode(dt.arch),
                  'variant': dt.variant,
+                 'images' : [(unicode(image.image_type), image.path) for image in dt.images],
+                 'kernel_options': dt.kernel_options or u'',
                  'available': [(lca.lab_controller.fqdn, lca.url) for lca in dt.lab_controller_assocs],
                 } for dt in query]
 
