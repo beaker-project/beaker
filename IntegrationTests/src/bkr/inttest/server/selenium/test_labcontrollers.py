@@ -1,4 +1,5 @@
 
+import datetime
 from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase
 from bkr.inttest import data_setup
@@ -43,8 +44,12 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
             self.assertEquals(distro.osversion.osminor, u'1')
             self.assertEquals(distro.osversion.arches,
                     [Arch.by_name(u'i386'), Arch.by_name(u'x86_64')])
+            self.assertEquals(distro.date_created,
+                    datetime.datetime(2011, 5, 10, 22, 53, 18))
             distro_tree = DistroTree.query.filter_by(distro=distro,
                     variant=u'Workstation', arch=Arch.by_name('x86_64')).one()
+            self.assertEquals(distro_tree.date_created,
+                    datetime.datetime(2011, 5, 10, 22, 53, 18))
             self.assertEquals(distro_tree.url_in_lab(self.lc, scheme='nfs'),
                     'nfs://example.invalid:/RHEL-6-Workstation/U1/x86_64/os/')
             self.assertEquals(distro_tree.repo_by_id('Workstation').path,
