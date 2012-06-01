@@ -6,6 +6,8 @@ import ConfigParser
 import getopt
 from optparse import OptionParser
 import urllib2
+import calendar
+from email.utils import parsedate
 import logging
 import socket
 import copy
@@ -74,11 +76,14 @@ class Parser(object):
     """
     url = None
     parser = None
+    last_modified = None
 
     def parse(self, url):
         self.url = url
         try:
             f = urllib2.urlopen('%s/%s' % (self.url, self.infofile))
+            if 'last-modified' in f.headers:
+                self.last_modified = calendar.timegm(parsedate(f.headers['last-modified']))
             self.parser = ConfigParser.ConfigParser()
             self.parser.readfp(f)
             f.close()
@@ -613,7 +618,8 @@ class TreeInfoBase(object):
                                                     )
         self.tree['variant'] = self.parser.get('general','variant','')
         self.tree['arch'] = self.parser.get('general','arch')
-        self.tree['tree_build_time'] = self.parser.get('general','timestamp',0.0)
+        self.tree['tree_build_time'] = self.parser.get('general','timestamp',
+                                                       self.parser.last_modified)
         labels = self.parser.get('general', 'label','')
         self.tree['tags'] = list(set(self.options.tags).union(
                                     set(map(string.strip,
