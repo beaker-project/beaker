@@ -111,10 +111,25 @@ def clean_image_cache():
         logger.debug('Cleaning %s from image cache', entry)
         unlink_ignore(os.path.join(cached_images_dir, entry))
 
-def fetch_images(kernel_url, initrd_url, fqdn):
+def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
     images_dir = os.path.join(get_tftp_root(), 'images', fqdn)
     makedirs_ignore(images_dir, 0755)
+    distrotree_dir = os.path.join(get_tftp_root(), 'distrotrees', str(distro_tree_id))
     cached_images_dir = os.path.join(get_tftp_root(), 'cached-images')
+
+    # beaker-pxemenu might have already fetched the images, so let's try there
+    # before anywhere else.
+    try:
+        os.link(os.path.join(distrotree_dir, 'kernel'),
+                os.path.join(images_dir, 'kernel'))
+        os.link(os.path.join(distrotree_dir, 'initrd'),
+                os.path.join(images_dir, 'initrd'))
+        logger.debug('Using images from distro tree %s for %s', distro_tree_id, fqdn)
+        return
+    except OSError, e:
+        if e.errno != errno.ENOENT:
+            raise
+    # No luck there, so try something else...
 
     if get_conf().get('IMAGE_CACHE', False):
         # Try the cache first.

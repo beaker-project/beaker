@@ -50,17 +50,17 @@ if __name__ == '__main__':
     distro_trees = proxy.get_distro_trees()
     for distro_tree in distro_trees:
         accessable = False
-        for method in distro_tree['methods']:
-            if method.startswith('nfs://'):
+        for lc, url in distro_tree['available']:
+            if url.startswith('nfs://'):
                 # Check nfs
-                if check_nfs(method):
-                    sys.stderr.write("%s is missing\n" % method)
+                if check_nfs(url):
+                    sys.stderr.write("%s is missing\n" % url)
                 else:
                     accessable = True
             else:
                 # use urllib
-                if check_uri(method):
-                    sys.stderr.write("%s is missing\n" % method)
+                if check_uri(url):
+                    sys.stderr.write("%s is missing\n" % url)
                 else:
                     accessable = True
         else:

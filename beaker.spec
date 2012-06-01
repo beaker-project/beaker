@@ -330,6 +330,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/%{name}-transfer
 %{_bindir}/%{name}-import
 %{_bindir}/%{name}-provision
+%{_bindir}/%{name}-pxemenu
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %{_sysconfdir}/cron.hourly/beaker_expire_distros
