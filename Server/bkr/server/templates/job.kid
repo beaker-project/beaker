@@ -136,7 +136,7 @@
   </tr>
   <tr>
    <td class="title"><b>Whiteboard</b></td>
-   <td class="value" colspan="3" style="vertical-align: top;">${whiteboard_widget(value=job.whiteboard, job_id=job.id, readonly=not job.can_admin(tg.identity.user))}</td>
+   <td class="value" colspan="3" style="vertical-align: top; white-space: normal;">${whiteboard_widget(value=job.whiteboard, job_id=job.id, readonly=not job.can_admin(tg.identity.user))}</td>
   </tr> 
   <tr>
   <td class="title"><b>Retention Tag</b></td>
