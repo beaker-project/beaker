@@ -1713,8 +1713,21 @@ class Reproducers(MultipleChoice):
                     and attachment['isobsolete'] == 0:
                 print "Attachment", attachment['filename'],
                 try:
+                    dirfiles = os.listdir(path)
                     filename = path + "/" + attachment['filename']
-                    remote = self.options.bugzilla.openattachment(attachment['id'])
+                    remote = self.options.bugzilla.openattachment(
+                            attachment['id'])
+                    # rename the attachment if it has the same name as one
+                    # of the files in the current directory
+                    if attachment['filename'] in dirfiles:
+                        print "- file already exists in {0}/".format(path)
+                        new_name = ""
+                        while new_name == "":
+                            print "Choose a new filename for the attachment: ",
+                            new_name = unicode(
+                                    sys.stdin.readline().strip(), "utf-8")
+                        filename = path + "/" + new_name
+
                     local = open(filename, 'w')
                     local.write(remote.read())
                     remote.close()
