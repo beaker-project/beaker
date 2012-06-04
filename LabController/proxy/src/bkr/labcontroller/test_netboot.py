@@ -36,7 +36,7 @@ class ImagesTest(NetBootTestCase):
         self.initrd.flush()
 
     def test_fetch_then_clear(self):
-        netboot.fetch_images('file://%s' % self.kernel.name,
+        netboot.fetch_images(1234, 'file://%s' % self.kernel.name,
                 'file://%s' % self.initrd.name,
                 'fqdn.example.invalid')
         kernel_path = os.path.join(self.tftp_root, 'images', 'fqdn.example.invalid', 'kernel')
