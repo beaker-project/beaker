@@ -358,7 +358,7 @@ class LabControllers(RPCRoot):
 
     @identity.require(identity.in_group("admin"))
     @expose(template="bkr.server.templates.grid_add")
-    @paginate('list', limit=50)
+    @paginate('list', limit=None)
     def index(self):
         labcontrollers = session.query(LabController)
 
