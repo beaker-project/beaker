@@ -1362,8 +1362,10 @@ class Releases(MultipleChoice):
         self.description = """One or more values separated with space or comma
             or "all" for no limitaion. You can also use minus sign for excluding
             a specific release (-RHEL4)"""
-        self.list = """RHEL2.1 RHEL3 RHEL4 RHELServer5 RHELClient5 RHEL6
-            FC4 FC5 FC6 F7 F8 F9 F10 F11 F12 rawhide""".split()
+        self.list = "RHEL2.1 RHEL3 RHEL4 RHELServer5 RHELClient5".split()
+        self.list += ["RHEL{0}".format(id) for id in range(6, 9)]
+        self.list += "FC4 FC5 FC6".split()
+        self.list += ["F{0}".format(release) for release in range(7, 28)]
         self.sort = True
         self.common = False
         self.emptyListMeaning = "All"
