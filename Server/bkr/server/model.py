@@ -1754,12 +1754,7 @@ class System(SystemObject):
                     # #end raw and #raw lines in the appropriate place in their 
                     # kickstart.
                     kickstart = """
-#if $varExists('method') and $mgmt_parameters.has_key("method_%%s" %% $method) and \
- $tree.find("nfs://") != -1
 $SNIPPET("install_method")
-#else
-url --url=$tree
-#end if
 #raw
 %s
 #end raw""" % kickstart

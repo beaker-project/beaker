@@ -1,3 +1,5 @@
+#if $varExists('method') and $mgmt_parameters.has_key("method_%s" % $method) \
+ and $tree.find("nfs://") != -1
 ## The following code supports method=http|ftp from ks_meta to change the install method
 ## Only perform this on nfs imports.
 ## Remove nfs://SERVER: from $tree
@@ -7,5 +9,14 @@
 #set $tree = '%s' % ($tree.split($mgmt_parameters["method_dir_to_split"])[1:][0])
 #end if
 #set $tree = "%s/%s" % ($mgmt_parameters["method_%s" % $method], $tree)
-url #slurp
---url=$tree
+url --url=$tree
+#else
+#set $rest = $tree[6:] ## strip off "nfs://" part
+#set ($server, $dir) = $rest.split(':',2)
+nfs --server $server --dir $dir #slurp
+#if $getVar('nfsopts', '') != '' and $tree.find('nfs://') != -1
+--opts $getVar('nfsopts')
+#end if
+
+#url --url=$tree
+#end if

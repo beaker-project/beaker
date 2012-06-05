@@ -5,13 +5,7 @@
 $SNIPPET($snippet_profile)
 #end for
 #else
-#if $varExists('method') and $mgmt_parameters.has_key("method_%s" % $method) and \
- $tree.find("nfs://") != -1
 $SNIPPET("install_method")
-#else
-## Do it the way the tree was imported
-url --url=$tree
-#end if
 
 #if $getVar('system_name', '') != '' and $getVar('manual', 'False') == 'False'
 authconfig  --enableshadow  --enablemd5
