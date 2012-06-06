@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.8.2
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -348,6 +348,13 @@ fi
 %endif
 
 %changelog
+* Wed Jun 06 2012 Bill Peck <bpeck@redhat.com> 0.8.2-11
+- Add RHS import support into beaker-import (bpeck@redhat.com)
+- 828947 add ability to provide options to nfs installs, also --ks-meta for
+  workflows (bpeck@redhat.com)
+- 822426 Fixing up some problems that Key/Value search encountered after sqla
+  upgrade. (rmancy@redhat.com)
+
 * Mon May 28 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.2-10
 - Rhel7 set end=%%end for custom kickstarts (bpeck@redhat.com)
 - Backport rhel7/ppc boot order (bpeck@redhat.com)
