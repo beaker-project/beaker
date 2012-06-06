@@ -14,6 +14,11 @@ class JobModifyTest(unittest.TestCase):
         self.client_config = create_client_config(username=user.user_name,
                                                   password='password')
 
+    def test_ack_already_acked_job(self):
+        # Is this lazy?
+        self.test_ack_job()
+        self.test_ack_job()
+
     def test_ack_job(self):
         out = run_client(['bkr', 'job-modify', self.job.t_id,  '--response', 'ack'])
         self.assert_(out == 'Successfully modified jobs %s\n' % self.job.t_id)
