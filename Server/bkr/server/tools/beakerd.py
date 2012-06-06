@@ -320,7 +320,7 @@ def queued_recipes(*args):
     if not recipes.count():
         return False
     log.debug("Entering queued_recipes routine")
-    for recipe_id, in recipes.values(Recipe.id):
+    for recipe_id, in recipes.values(Recipe.id.distinct()):
         session.begin()
         try:
             recipe = Recipe.by_id(recipe_id)
