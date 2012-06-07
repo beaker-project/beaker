@@ -37,6 +37,21 @@ def atomically_replaced_file(dest_path, mode=0644):
         # Now re-raise the original exception
         raise
 
+def atomic_symlink(source, dest):
+    temp_path = tempfile.mktemp(prefix=os.path.basename(dest),
+            dir=os.path.dirname(dest))
+    os.symlink(source, temp_path)
+    try:
+        os.rename(temp_path, dest)
+    except:
+        # Clean up the temp file, but suppress any exception if the cleaning fails
+        try:
+            os.unlink(temp_path)
+        finally:
+            pass
+        # Now re-raise the original exception
+        raise
+
 def siphon(src, dest):
     while True:
         chunk = src.read(4096)
@@ -198,8 +213,7 @@ def extract_initrd_arg(kernel_options):
 
 def configure_pxelinux(fqdn, kernel_options):
     pxe_dir = os.path.join(get_tftp_root(), 'pxelinux.cfg')
-    if not os.path.exists(pxe_dir):
-        os.makedirs(pxe_dir, mode=0755)
+    makedirs_ignore(pxe_dir, mode=0755)
 
     basename = pxe_basename(fqdn)
     initrd, kernel_options = extract_initrd_arg(kernel_options)
@@ -233,9 +247,8 @@ label local
 
 def configure_efigrub(fqdn, kernel_options):
     grub_dir = os.path.join(get_tftp_root(), 'grub')
-    if not os.path.exists(grub_dir):
-        os.makedirs(grub_dir, mode=0755)
-        os.symlink('../images', os.path.join(grub_dir, 'images'))
+    makedirs_ignore(grub_dir, mode=0755)
+    atomic_symlink('../images', os.path.join(grub_dir, 'images'))
 
     basename = pxe_basename(fqdn)
     initrd, kernel_options = extract_initrd_arg(kernel_options)
@@ -262,8 +275,7 @@ def clear_efigrub(fqdn):
 
 def configure_zpxe(fqdn, kernel_options):
     zpxe_dir = os.path.join(get_tftp_root(), 's390x')
-    if not os.path.exists(zpxe_dir):
-        os.makedirs(zpxe_dir, mode=0755)
+    makedirs_ignore(zpxe_dir, mode=0755)
 
     kernel_options = "%s netboot_method=zpxe" % kernel_options
     # The structure of these files is dictated by zpxe.rexx,
@@ -315,11 +327,9 @@ def clear_elilo(fqdn):
 
 def configure_yaboot(fqdn, kernel_options):
     yaboot_conf_dir = os.path.join(get_tftp_root(), 'etc')
-    if not os.path.exists(yaboot_conf_dir):
-        os.makedirs(yaboot_conf_dir, mode=0755)
+    makedirs_ignore(yaboot_conf_dir, mode=0755)
     ppc_dir = os.path.join(get_tftp_root(), 'ppc')
-    if not os.path.exists(ppc_dir):
-        os.makedirs(ppc_dir, mode=0755)
+    makedirs_ignore(ppc_dir, mode=0755)
 
     basename = pxe_basename(fqdn).lower()
     # XXX I don't think multiple initrds are supported?
@@ -337,7 +347,7 @@ image=/images/%s/kernel
     with atomically_replaced_file(os.path.join(yaboot_conf_dir, basename)) as f:
         f.write(config)
     logger.debug('Creating yaboot symlink for %s as %s', fqdn, basename)
-    os.symlink('../yaboot', os.path.join(ppc_dir, basename))
+    atomic_symlink('../yaboot', os.path.join(ppc_dir, basename))
 
 def clear_yaboot(fqdn):
     basename = pxe_basename(fqdn).lower()
