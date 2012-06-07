@@ -10,7 +10,7 @@
 #end if
 #set $tree = "%s/%s" % ($mgmt_parameters["method_%s" % $method], $tree)
 url --url=$tree
-#else
+#else if $tree.find("nfs://") == 0
 #set $rest = $tree[6:] ## strip off "nfs://" part
 #set ($server, $dir) = $rest.split(':',2)
 nfs --server $server --dir $dir #slurp
@@ -19,4 +19,6 @@ nfs --server $server --dir $dir #slurp
 #end if
 
 #url --url=$tree
+#else
+url --url=$tree
 #end if
