@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Tag Beaker distros
-==================
+bkr distros-tag: Tag Beaker distros
+===================================
 
 .. program:: bkr distros-tag
 

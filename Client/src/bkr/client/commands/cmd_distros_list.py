@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-List Beaker distros
-===================
+bkr distros-list: List Beaker distros
+=====================================
 
 .. program:: bkr distros-list
 

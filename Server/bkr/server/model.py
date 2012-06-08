@@ -15,7 +15,7 @@ from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
-from sqlalchemy.exceptions import InvalidRequestError, IntegrityError
+from sqlalchemy.exc import InvalidRequestError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from identity import LdapSqlAlchemyIdentityProvider
 from bkr.server.installopts import InstallOptions, global_install_options

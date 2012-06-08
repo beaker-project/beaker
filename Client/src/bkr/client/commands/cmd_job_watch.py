@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Watch the progress of a Beaker job
-==================================
+bkr job-watch: Watch the progress of a Beaker job
+=================================================
 
 .. program:: bkr job-watch
 

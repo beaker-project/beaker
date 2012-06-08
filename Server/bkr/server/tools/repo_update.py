@@ -4,7 +4,7 @@ from bkr.server.util import load_config, log_to_stream
 from optparse import OptionParser
 from turbogears.database import session
 from turbogears.config import get
-from sqlalchemy.exceptions import InvalidRequestError, IntegrityError
+from sqlalchemy.exc import InvalidRequestError, IntegrityError
 import os
 import sys
 import traceback

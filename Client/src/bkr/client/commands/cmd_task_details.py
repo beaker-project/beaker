@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Export details of a Beaker task
-===============================
+bkr task-details: Export details of a Beaker task
+=================================================
 
 .. program:: bkr task-details
 

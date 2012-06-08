@@ -17,7 +17,7 @@
 
 from bkr.server.model import Job, RetentionTag, Product
 from bkr.server.widgets import ProductWidget
-from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 
 import logging

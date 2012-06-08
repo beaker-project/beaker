@@ -1,5 +1,5 @@
-XSLT-based Beaker job generator
-===============================
+bkr workflow-xslt: XSLT-based Beaker job generator
+==================================================
 
 .. program:: bkr workflow-xslt
 

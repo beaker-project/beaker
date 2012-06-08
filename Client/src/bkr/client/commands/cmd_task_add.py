@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Upload tasks to Beaker's task library
-=====================================
+bkr task-add: Upload tasks to Beaker's task library
+===================================================
 
 .. program:: bkr task-add
 

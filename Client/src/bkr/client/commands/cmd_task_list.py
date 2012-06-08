@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-List tasks in Beaker's task library
-===================================
+bkr task-list: List tasks in Beaker's task library
+==================================================
 
 .. program:: bkr task-list
 

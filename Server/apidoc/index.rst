@@ -1,5 +1,5 @@
-Beaker API documentation
-========================
+Beaker server API documentation
+===============================
 
 Contents
 --------

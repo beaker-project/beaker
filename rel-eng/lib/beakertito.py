@@ -1,6 +1,8 @@
 import re
-from tito.common import run_command
+import shutil
+from tito.common import debug, run_command
 from tito.tagger import VersionTagger
+from tito.builder import UpstreamBuilder
 
 class BeakerVersionTagger(VersionTagger):
     """
@@ -43,3 +45,46 @@ class BeakerVersionTagger(VersionTagger):
 
             changelog.append(subject)
         return '\n'.join(changelog)
+
+BAD_TAGS = [
+    'beaker-0.8.0-24.1', # divergent
+]
+
+class BeakerBuilder(UpstreamBuilder):
+
+    def tgz(self):
+        super(BeakerBuilder, self).tgz()
+        shutil.copy('%s/%s' % (self.rpmbuild_sourcedir, self.tgz_filename),
+                self.rpmbuild_basedir)
+        print 'Wrote: %s/%s' % (self.rpmbuild_basedir, self.tgz_filename)
+
+    def patch_upstream(self):
+        commits = run_command('git rev-list --reverse %s..%s -- .'
+                % (self.upstream_tag, self.build_tag))
+        patch_filenames = []
+        previous_tag = self.upstream_tag
+        for commit in commits.splitlines():
+            tag = run_command('git describe --tags --match %s-%s\\* --exact-match %s 2>/dev/null || :'
+                    % (self.project_name, self.upstream_version, commit))
+            if tag and tag not in BAD_TAGS:
+                debug('Building patch for %s based on %s' % (tag, previous_tag))
+                run_command('git log -p --reverse --pretty=email '
+                        '-m --first-parent '
+                        '--no-renames ' # patch can't handle these :-(
+                        '--relative %s..%s -- . >%s/%s.patch'
+                        % (previous_tag, tag, self.rpmbuild_gitcopy, tag))
+                shutil.copy('%s/%s.patch' % (self.rpmbuild_gitcopy, tag), self.rpmbuild_sourcedir)
+                shutil.copy('%s/%s.patch' % (self.rpmbuild_gitcopy, tag), self.rpmbuild_basedir)
+                print 'Wrote: %s/%s.patch' % (self.rpmbuild_basedir, tag)
+                patch_filenames.append('%s.patch' % tag)
+                previous_tag = tag
+        assert previous_tag == self.build_tag or not commits
+
+        (patch_number, patch_insert_index, patch_apply_index, lines) = self._patch_upstream()
+        for patch in patch_filenames:
+            lines.insert(patch_insert_index, "Patch%s: %s\n" % (patch_number, patch))
+            lines.insert(patch_apply_index, "%%patch%s -p1\n" % (patch_number))
+            patch_number += 1
+            patch_insert_index += 1
+            patch_apply_index += 2
+        self._write_spec(lines)

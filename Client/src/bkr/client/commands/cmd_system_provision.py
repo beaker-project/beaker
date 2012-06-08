@@ -1,7 +1,7 @@
 
 """
-Provision a Beaker system
-=========================
+bkr system-provision: Provision a Beaker system
+===============================================
 
 .. program:: bkr system-provision
 

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Show time remaining on Beaker watchdogs
-=======================================
+bkr watchdog-show: Show time remaining on Beaker watchdogs
+==========================================================
 
 .. program:: bkr watchdog-show
 
