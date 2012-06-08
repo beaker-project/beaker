@@ -41,25 +41,27 @@ class SchedulerProxy(object):
     def add_distro(self, profile):
         return self.proxy.add_distro_tree(profile)
 
-    def run_distro_test_job(self, profile):
+    def run_distro_test_job(self, name=None, tags=[], osversion=None,
+                            arches=[], variants=[]):
         if self.is_add_distro_cmd:
-            cmd = self._make_add_distro_cmd(profile)
+            cmd = self._make_add_distro_cmd(name=name,tags=tags,
+                                            osversion=osversion,
+                                            arches=arches, variants=variants)
             logging.debug(cmd)
             os.system(cmd)
         else:
             raise BX('%s is missing' % self.add_distro_cmd)
 
-    def _make_add_distro_cmd(self, profile):
-        #addDistro.sh "rel-eng" RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 "Default"
-        cmd = '%s "%s" %s %s %s "%s"' % (
+    def _make_add_distro_cmd(self, name=None, tags=[],
+                             osversion=None, arches=[], variants=[]):
+        #addDistro.sh "rel-eng" RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64,i386 "Server,Workstation,Client"
+        cmd = '%s "%s" "%s" "%s" "%s" "%s"' % (
             self.add_distro_cmd,
-            ','.join(profile.get('tags',[])),
-            profile.get('treename'),
-            '%s.%s' % (
-            profile.get('osmajor'),
-            profile.get('osminor')),
-            profile.get('arch'),
-            profile.get('variant', ''))
+            ','.join(tags),
+            name,
+            osversion,
+            ','.join(arches),
+            ','.join(variants))
         return cmd
 
     @property
@@ -135,6 +137,25 @@ class ComposeInfoBase(object):
                 return False
         return parser
 
+    def run_jobs(self):
+        """
+        Run a job with the newly imported distro_trees
+        """
+        arches = []
+        variants = []
+        for distro_tree in self.distro_trees:
+            arches.append(distro_tree['arch'])
+            variants.append(distro_tree['variant'])
+            name = distro_tree['name']
+            tags = distro_tree.get('tags', [])
+            osversion = '%s.%s' % (distro_tree['osmajor'],
+                                   distro_tree['osminor'])
+        self.scheduler.run_distro_test_job(name=name,
+                                           tags=tags,
+                                           osversion=osversion,
+                                           arches=list(set(arches)),
+                                           variants=list(set(variants)))
+
 
 class ComposeInfoLegacy(ComposeInfoBase, Importer):
     """
@@ -168,6 +189,8 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
 
     def process(self, urls, options):
         self.options = options
+        self.scheduler = SchedulerProxy(self.options)
+        self.distro_trees = []
         for arch in self.get_arches():
             os_dir = self.get_os_dir(arch)
             full_os_dir = os.path.join(self.parser.url, os_dir)
@@ -182,6 +205,7 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
                 build.process(urls_arch, options, repos)
             except BX, err:
                 logging.warn(err)
+            self.distro_trees.append(build.tree)
 
     def find_repos(self, repo_base, arch):
         """
@@ -547,6 +571,8 @@ sources = Workstation/source/SRPMS
 
     def process(self, urls, options):
         self.options = options
+        self.scheduler = SchedulerProxy(self.options)
+        self.distro_trees = []
 
         for variant in self.get_variants():
             for arch in self.get_arches(variant):
@@ -569,6 +595,7 @@ sources = Workstation/source/SRPMS
                     build.process(urls_variant_arch, options, repos)
                 except BX, err:
                     logging.warn(err)
+                self.distro_trees.append(build.tree)
 
 
 class TreeInfoBase(object):
@@ -655,15 +682,22 @@ class TreeInfoBase(object):
             logging.info('%s added to beaker.' % self.tree['name'])
         except (xmlrpclib.Fault, socket.error), e:
             raise BX('failed to add %s to beaker: %s' % (self.tree['name'],e))
-        if self.options.run_jobs:
-            logging.info('running jobs.')
-            self.run_jobs()
 
     def add_to_beaker(self):
         self.scheduler.add_distro(self.tree)
 
     def run_jobs(self):
-        self.scheduler.run_distro_test_job(self.tree)
+        arches = [self.tree['arch']]
+        variants = [self.tree['variant']]
+        name = self.tree['name']
+        tags = self.tree.get('tags', [])
+        osversion = '%s.%s' % (self.tree['osmajor'],
+                               self.tree['osminor'])
+        self.scheduler.run_distro_test_job(name=name,
+                                           tags=tags,
+                                           osversion=osversion,
+                                           arches=arches,
+                                           variants=variants)
 
 
 class TreeInfoLegacy(TreeInfoBase, Importer):
@@ -1311,6 +1345,9 @@ def main():
     except BX, err:
         logging.critical(err)
         sys.exit(30)
+    if opts.run_jobs:
+        logging.info('running jobs.')
+        build.run_jobs()
 
 if __name__ == '__main__':
     main()

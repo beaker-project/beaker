@@ -141,19 +141,17 @@ class Workflow_Simple(BeakerWorkflow):
             print jobxml
 
         submitted_jobs = []
-        failed = False
+        is_failed = False
 
         if not dryrun:
             try:
                 submitted_jobs.append(self.hub.jobs.upload(jobxml))
+                print "Submitted: %s" % submitted_jobs
             except (KeyboardInterrupt, SystemExit):
                 raise
             except Exception, ex:
-                failed = True
+                is_failed = True
                 sys.stderr.write('Exception: %s\n' % ex)
-        if not dryrun:
-            print "Submitted: %s" % submitted_jobs
             if wait:
-                watch_tasks(self.hub, submitted_jobs)
-            if failed:
-                sys.exit(1)
+                is_failed |= watch_tasks(self.hub, submitted_jobs)
+        sys.exit(is_failed)

@@ -1,14 +1,28 @@
 #!/bin/sh
 
-ARCH=$1
+ARCHES=$1
 FAMILY=$2
 DISTRO=$3
-VARIANT=$4
+VARIANTS=$4
 DISTPATH=$5
 
-if [ "$VARIANT" = "AS" -o \
-     "$VARIANT" = "Server" -o \
-     "$FAMILY" != "RedHatEnterpriseLinux4" -a \
-     "$FAMILY" != "RedHatEnterpriseLinux6" ]; then
-    bkr workflow-simple --task /distribution/updateDistro --distro $DISTRO --arch $ARCH --variant "$VARIANT" --whiteboard "Add Distro Test $DISTRO $ARCH"
+# If passed in variants limit it to just server
+if [ -n "$VARIANTS" ]; then
+    if ( $(echo $VARIANTS | grep -q "Server") ); then
+        VARIANT_ARG="--variant Server"
+    fi
+    if ( $(echo $VARIANTS | grep -q "AS") ); then
+        VARIANT_ARG="--variant AS"
+    fi
 fi
+
+# Run one job with a recipeSet for each arch passed in.
+IFS=,
+for arch in $ARCHES; do
+   ARCH_ARG="--arch $arch $ARCH_ARG"
+done
+IFS=" "
+
+# Run Add Distro Test in the background and tag the distro with STABLE 
+# if it succeeds
+(bkr workflow-simple --suppress-install-task --task /distribution/install --distro $DISTRO $ARCH_ARG $VARIANT_ARG --whiteboard "Add Distro Test $DISTRO $ARCHES" --wait && bkr distros-tag --name $DISTRO STABLE) >/dev/null 2>&1 &
