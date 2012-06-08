@@ -9,6 +9,8 @@
 {% set server = parsed_url.netloc.rstrip(':') %}
 {% set dir = parsed_url.path %}
 nfs --server {{ server }} --dir {{ dir }}
+{%- if nfsopts %} --opts {{ nfsopts }}{% endif %}
+
 #url --url={{ url }}
 {% else %}
 url --url={{ url }}
