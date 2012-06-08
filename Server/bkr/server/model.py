@@ -4090,7 +4090,7 @@ class RecipeSet(TaskBase):
         if self.nacked is None:
             self.nacked = RecipeSetResponse(type=response)
         else:
-            self.nacked.response = Response.by_type(response)
+            self.nacked.response = Response.by_response(response)
 
     def is_owner(self,user):
         if self.job.owner == user:
