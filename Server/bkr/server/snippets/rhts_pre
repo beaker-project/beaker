@@ -5,8 +5,12 @@ server = xmlrpclib.Server("http://{{ system.lab_controller.fqdn }}:8000")
 server.install_start("{{ system.fqdn }}")
 _EOF_
 
-{% if distro_tree is arch('ppc', 'ppc64') %}
-nvram --print-config=boot-device > /tmp/boot-device.bak
+{% if distro_tree is arch('ppc', 'ppc64') and (distro is osmajor('RedHatEnterpriseLinux7') or distro is osmajor('Fedora17')) %}
+if command -v nvram >/dev/null ; then
+    nvram --print-config=boot-device > /tmp/boot-device.bak
+else
+    logger "Error: nvram command not found!"
+fi
 {% endif %}
 {#
 ## Enable installation monitoring
