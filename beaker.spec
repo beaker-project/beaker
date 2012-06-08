@@ -349,6 +349,16 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Thu Jun 07 2012 Bill Peck <bpeck@redhat.com> 0.8.2-12
+- HOTFIX - don't try and process non nfs url's as nfs. (bpeck@redhat.com)
+
+* Wed Jun 06 2012 Bill Peck <bpeck@redhat.com> 0.8.2-11
+- Add RHS import support into beaker-import (bpeck@redhat.com)
+- 828947 add ability to provide options to nfs installs, also --ks-meta for
+  workflows (bpeck@redhat.com)
+- 822426 Fixing up some problems that Key/Value search encountered after sqla
+  upgrade. (rmancy@redhat.com)
+
 * Fri Jun 01 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-1
 - Cobbler removal, a.k.a. "native provisioning"
 - 815325 Needed to update the prefs form to handle correct email validation
