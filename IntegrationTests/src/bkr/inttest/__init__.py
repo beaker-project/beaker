@@ -109,7 +109,7 @@ class Process(object):
         on the given TCP port.
         """
         # XXX is there a better way to do this?
-        for i in range(20):
+        for i in range(40):
             log.info('Waiting for %s to listen on port %d', self.name, port)
             if check_listen(self.listen_port):
                 return

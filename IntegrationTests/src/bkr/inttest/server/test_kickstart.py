@@ -1,5 +1,6 @@
 
 import unittest
+import urlparse
 import tempfile
 import re
 import pkg_resources
@@ -10,18 +11,22 @@ from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
 from bkr.server.kickstart import template_env
 from bkr.server.jobs import Jobs
 from bkr.server.jobxml import XmlJob
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, get_server_base
 
 def compare_expected(name, recipe_id, actual):
     expected = pkg_resources.resource_string('bkr.inttest',
             'server/kickstarts/%s.expected' % name)
     expected = expected.replace('@RECIPEID@', str(recipe_id))
+    server_base = urlparse.urljoin(get_server_base(), '/')
+    expected = expected.replace('@SERVERBASE@', server_base)
     if expected != actual:
         expected_path = pkg_resources.resource_filename('bkr.inttest',
                 'server/kickstarts/%s.expected' % name)
+        actual = re.sub(r'\b%s\b' % recipe_id, '@RECIPEID@', actual)
+        actual = actual.replace(server_base, '@SERVERBASE@')
         actual_temp = tempfile.NamedTemporaryFile(prefix='beaker-kickstart-test-',
                 suffix='-actual', delete=False)
-        actual_temp.write(re.sub(r'\b%s\b' % recipe_id, '@RECIPEID@', actual))
+        actual_temp.write(actual)
         raise AssertionError('diff -u %s %s' % (expected_path, actual_temp.name))
 
 class KickstartTest(unittest.TestCase):

@@ -38,9 +38,8 @@ class WorkflowSimpleTest(unittest.TestCase):
         out = proc.stdout.readline().rstrip()
         self.assert_('Watching tasks (this may be safely interrupted)...' == out)
 
-        job = Job.by_id(job_id)
-        job.cancel()
-        session.flush()
+        run_client(['bkr', 'job-cancel', 'J:%s' % job_id])
+
         returncode = proc.wait()
         self.assert_(returncode == 0)
 

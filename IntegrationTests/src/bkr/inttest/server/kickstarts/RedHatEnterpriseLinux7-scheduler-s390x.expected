@@ -198,7 +198,7 @@ EOF
 cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
 name=beaker-tasks
-baseurl=http://localhost:9090/repos/@RECIPEID@
+baseurl=@SERVERBASE@repos/@RECIPEID@
 enabled=1
 gpgcheck=0
 EOF
@@ -208,7 +208,7 @@ EOF
 cat << EOF >/etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=beaker-harness
-baseurl=http://localhost:9090/harness/RedHatEnterpriseLinux7/
+baseurl=@SERVERBASE@harness/RedHatEnterpriseLinux7/
 enabled=1
 gpgcheck=0
 EOF
