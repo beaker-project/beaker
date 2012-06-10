@@ -60,25 +60,23 @@ class BeakerBuilder(UpstreamBuilder):
 
     def patch_upstream(self):
         commits = run_command('git rev-list --reverse %s..%s -- .'
-                % (self.upstream_tag, self.build_tag))
+                % (self.upstream_tag, self.git_commit_id))
         patch_filenames = []
         previous_tag = self.upstream_tag
         for commit in commits.splitlines():
             tag = run_command('git describe --tags --match %s-%s\\* --exact-match %s 2>/dev/null || :'
                     % (self.project_name, self.upstream_version, commit))
             if tag and tag not in BAD_TAGS:
-                debug('Building patch for %s based on %s' % (tag, previous_tag))
-                run_command('git log -p --reverse --pretty=email '
-                        '-m --first-parent '
-                        '--no-renames ' # patch can't handle these :-(
-                        '--relative %s..%s -- . >%s/%s.patch'
-                        % (previous_tag, tag, self.rpmbuild_gitcopy, tag))
-                shutil.copy('%s/%s.patch' % (self.rpmbuild_gitcopy, tag), self.rpmbuild_sourcedir)
-                shutil.copy('%s/%s.patch' % (self.rpmbuild_gitcopy, tag), self.rpmbuild_basedir)
-                print 'Wrote: %s/%s.patch' % (self.rpmbuild_basedir, tag)
+                self._generate_patch(previous_tag, tag, '%s.patch' % tag)
                 patch_filenames.append('%s.patch' % tag)
                 previous_tag = tag
-        assert previous_tag == self.build_tag or not commits
+        if self.test:
+            # If this is a --test build, there will be some untagged commits at
+            # the end which we also need to include.
+            self._generate_patch(previous_tag, self.git_commit_id, '%s.patch' % self.display_version)
+            patch_filenames.append('%s.patch' % self.display_version)
+        else:
+            assert previous_tag == self.build_tag or not commits
 
         (patch_number, patch_insert_index, patch_apply_index, lines) = self._patch_upstream()
         for patch in patch_filenames:
@@ -88,3 +86,14 @@ class BeakerBuilder(UpstreamBuilder):
             patch_insert_index += 1
             patch_apply_index += 2
         self._write_spec(lines)
+
+    def _generate_patch(self, left, right, out):
+        print 'Generating patch %s..%s' % (left, right)
+        run_command('git log -p --reverse --pretty=email '
+                '-m --first-parent '
+                '--no-renames ' # patch can't handle these :-(
+                '--relative %s..%s -- . >%s/%s'
+                % (left, right, self.rpmbuild_gitcopy, out))
+        shutil.copy('%s/%s' % (self.rpmbuild_gitcopy, out), self.rpmbuild_sourcedir)
+        shutil.copy('%s/%s' % (self.rpmbuild_gitcopy, out), self.rpmbuild_basedir)
+        print 'Wrote: %s/%s' % (self.rpmbuild_basedir, out)
