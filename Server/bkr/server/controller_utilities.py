@@ -148,13 +148,46 @@ class Utility:
           default[elem] = 1;
 
       return {'options' : send, 'default':default}; 
-      
+
     @classmethod
-    def get_correct_system_column(cls,x):
-        if isinstance(x, tuple):
-            return x[0] 
-        else:
-            return x
+    def cpu_vendor_getter_name(cls):
+        return 'cpu.vendor'
+
+    @classmethod
+    def cpu_stepping_getter_name(cls):
+        return 'cpu.stepping'
+
+    @classmethod
+    def cpu_speed_getter_name(cls):
+        return 'cpu.speed'
+
+    @classmethod
+    def cpu_sockets_getter_name(cls):
+        return 'cpu.sockets'
+
+    @classmethod
+    def cpu_modelname_getter_name(cls):
+        return 'cpu.model_name'
+
+    @classmethod
+    def cpu_model_getter_name(cls):
+        return 'cpu.model'
+
+    @classmethod
+    def cpu_hyper_getter_name(cls):
+        return 'cpu.hyper'
+
+    @classmethod
+    def cpu_family_getter_name(cls):
+        return 'cpu.family'
+
+    @classmethod
+    def cpu_processors_getter_name(cls):
+        return 'cpu.processors'
+
+    @classmethod
+    def cpu_cores_getter_name(cls):
+        return 'cpu.cores'
 
     @classmethod
     def system_name_name(cls):
@@ -177,92 +210,98 @@ class Utility:
         return 'serial'
 
     @classmethod
-    def get_attr(cls,c):        
-        return lambda x:getattr(cls.get_correct_system_column(x),c.lower()) 
+    def get_attr(cls,c):
+        return lambda x:getattr(x,c.lower())
 
     @classmethod
     def system_group_getter(cls):
-        return lambda x: ' '.join([group.group_name for group in cls.get_correct_system_column(x).groups])
+        return lambda x: ' '.join([group.group_name for group in x.groups])
 
     @classmethod
     def system_numanodes_getter(cls):
-        return lambda x: getattr(cls.get_correct_system_column(x).numa, 'nodes', 0)
+        return lambda x: getattr(x.numa, 'nodes', 0)
 
     @classmethod
     def system_added_getter(cls):
-        return lambda x: cls.get_correct_system_column(x).date_added
+        return lambda x: x.date_added
 
     @classmethod
     def system_loanedto_getter(cls):
-        return lambda x: cls.get_correct_system_column(x).loaned
+        return lambda x: x.loaned
           
     @classmethod
     def system_powertype_getter(cls):
         def my_f(x):
             try:
-                return cls.get_correct_system_column(x).power.power_type.name  
-            except Exception,(e): 
-                return ''   
+                return x.power.power_type.name
+            except Exception,(e):
+                return ''
         return my_f
 
     @classmethod
     def system_arch_getter(cls):
-        return lambda x: ', '.join([arch.arch for arch in cls.get_correct_system_column(x).arch])  
+        return lambda x: ', '.join([arch.arch for arch in x.arch])  
 
     @classmethod
     def system_name_getter(cls):
-        return lambda x: make_link("/view/%s" % cls.get_correct_system_column(x).fqdn, cls.get_correct_system_column(x).fqdn)
+        return lambda x: make_link("/view/%s" % x.fqdn, x.fqdn)
 
     @classmethod
     def system_serialnumber_getter(cls):
-        return lambda x: cls.get_correct_system_column(x).serial
-
-    @classmethod
-    def get_attr_other(cls,index):
-        return lambda x: x[index]
+        return lambda x: x.serial
 
     @classmethod
     def system_added_options(cls):
         return dict(datetime=True)
 
+    @classmethod
+    def _get_nested_attr(cls, attrs):
+        def f(obj):
+            for attr in attrs.split('.'):
+                if obj:
+                    obj = getattr(obj, attr)
+            return obj
+        return f
+
     @classmethod 
-    def custom_systems_grid(cls,systems,others=None):
+    def custom_systems_grid(cls, systems, others=False):
    
-        def get_widget_attrs(table,column,with_desc=True,sortable=False,index=None): 
+        def get_widget_attrs(table,column,with_desc=True,sortable=False,index=None):
             options = {}
-            lower_column = column.lower()
+            name_string = lower_column = column.lower()
             lower_table = table.lower()
-            name_function_name = '%s_%s_name' % (lower_table, lower_column)
-            custom_name = getattr(Utility,name_function_name,None)
-
-            getter_function_name = '%s_%s_getter' % (table.lower(), column.lower())
-            custom_getter = getattr(Utility, getter_function_name,None)
-
-            options_function_name = '%s_%s_options' % (table.lower(), column.lower())
-            custom_options = getattr(Utility, options_function_name, None)
-
-            if custom_name:
-                lower_column = custom_name()
-
-            if custom_getter: 
-                my_getter = custom_getter()
-            elif index is not None:         
-                my_getter = Utility.get_attr_other(index_in_queri)
+            name_getter_function_name = '%s_%s_getter_name' % (lower_table, lower_column)
+            custom_name_getter = getattr(Utility, name_getter_function_name, None)
+            if custom_name_getter:
+                name = getter = custom_name_getter()
+                my_getter =  cls._get_nested_attr(getter)
+                name_string = name.lower()
             else:
-                my_getter = Utility.get_attr(column)
+                name_function_name = '%s_%s_name' % (lower_table, lower_column)
+                custom_name = getattr(Utility, name_function_name, None)
+                if custom_name:
+                    name_string = custom_name()
 
-            if with_desc: 
+                getter_function_name = '%s_%s_getter' % (lower_table, lower_column)
+                custom_getter = getattr(Utility, getter_function_name, None)
+                if custom_getter:
+                    my_getter = custom_getter()
+                else:
+                    my_getter = Utility.get_attr(column)
+
+            if with_desc:
                 title_string = '%s-%s' % (table,column)
-            else: 
+            else:
                 title_string = '%s' % column
              
             if sortable:
                 options['sortable'] = True
-                name_string = '%s' % lower_column  #sortable columns need a real name
             else:
-                options['sortable'] = False 
-                name_string = '%s.%s' % (lower_table,lower_column)
+                options['sortable'] = False
+                name_string = '%s.%s' % (lower_table, lower_column)
 
+            options_function_name = '%s_%s_options' % (lower_table, lower_column)
+            custom_options = getattr(Utility, options_function_name, None)
             if custom_options:
                 options.update(custom_options())
 
@@ -270,10 +309,9 @@ class Utility:
 
         fields = []
         if systems:
-            options = {} 
-            for column_desc in systems: 
+            for column_desc in systems:
                 table,column = column_desc.split('/')
-                if column.lower() in ('name', 'vendor', 'lender', 'location', 
+                if column.lower() in ('name', 'vendor', 'lender', 'location',
                         'memory', 'model', 'location', 'status', 'user',
                         'type', 'powertype'):
                     sort_me = True
@@ -285,23 +323,12 @@ class Utility:
                 else:
                     (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=False, sortable=sort_me)
 
-                new_widget = widgets.PaginateDataGrid.Column(name=name_string, getter=my_getter, title=title_string, options=options) 
+                new_widget = widgets.PaginateDataGrid.Column(name=name_string, getter=my_getter, title=title_string, options=options)
                 if column == 'Name':
-                    fields.insert(0,new_widget)
+                    fields.insert(0, new_widget)
                 else:
                     fields.append(new_widget)
 
-        if others:
-            for index,column_desc in enumerate(others):  
-                table,column = column_desc.split('/') 
-                index_in_queri = index + 1
-                (name_string, title_string, options, my_getter) = get_widget_attrs(table, column, with_desc=True, 
-                                                                                   sortable=False, index=index_in_queri)
-                new_widget = widgets.PaginateDataGrid.Column(name=name_string , 
-                                                             getter = my_getter, 
-                                                             title=title_string, 
-                                                             options=options) 
-                fields.append(new_widget)
         return fields
 
 def restrict_http_method(method):

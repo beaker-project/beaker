@@ -7,7 +7,7 @@ from sqlalchemy import or_, and_, not_
 from sqlalchemy.sql import visitors, select
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, joinedload
 from turbogears.database import session
 from bkr.server.model import Key as KeyModel
 import logging
@@ -24,7 +24,7 @@ class MyColumn(object):
     relation to another mapped object.
     """
     def __init__(self,relations=None, col_type=None,
-            column_name=None, column=None, **kw):
+            column_name=None, column=None, eagerload=True, **kw):
             if type(col_type) != type(''):
                 raise TypeError('col_type var passed to %s must be string' % self.__class__.__name__)
 
@@ -32,16 +32,24 @@ class MyColumn(object):
             self._type = col_type
             self._relations = relations
             self._column_name = column_name
+            self._eagerload = eagerload
 
     def column_join(self, query):
         return_query = None
         onclause = getattr(self, 'onclause', None)
         if onclause and self.relations:
-            return_query = query.outerjoin((self.relations.pop(), onclause))
+            relation = self.relations.pop()
+            if self.eagerload:
+                query = query.options(joinedload(onclause))
+            return_query = query.outerjoin((relation, onclause))
         elif self.relations:
             if isinstance(self.relations, list):
+                if self.eagerload:
+                    query = query.options(joinedload(*self.relations))
                 return_query = query.outerjoin(*self.relations)
             else:
+                if self.eagerload:
+                    query = query.options(joinedload(self.relations))
                 return_query = query.outerjoin(self.relations)
         else:
             raise ValueError('Cannot join with nothing to join on')
@@ -50,6 +58,10 @@ class MyColumn(object):
     @property
     def column_name(self):
         return self._column_name
+
+    @property
+    def eagerload(self):
+        return self._eagerload
 
     @property
     def type(self):
@@ -572,7 +584,7 @@ class SystemSearch(Search):
         pass
  
     def get_column_descriptions(self):
-        return [self.system_columns_desc,self.extra_columns_desc]
+        return self.system_columns_desc
 
     def append_results(self,cls_ref,value,column,operation,**kw):  
         """ 
@@ -666,19 +678,15 @@ class SystemSearch(Search):
 
     def add_columns_desc(self,result_columns):
         if result_columns is not None:
-            for elem in result_columns: 
-                (display_name,col) = self.split_class_field(elem) 
-                cls_ref = self.translate_name(display_name)  
-                col_ref = cls_ref.searchable_columns[col].column
-                #If they are System columns we won't need to explicitly add them to the query, as they are already returned in the System query  
-                if cls_ref is System:     
-                    self.system_columns_desc.append(elem)
-                elif col_ref is not None: 
-                    self.extra_columns_desc.append(elem)
-                    self.adding_columns = True
-                    mycolumn = cls_ref.create_column(col)
-                    self.__do_join(cls_ref, mycolumn)
-                    self.queri = self.queri.add_column(col_ref)
+            for elem in result_columns:
+                (display_name,col) = self.split_class_field(elem)
+                cls_ref = self.translate_name(display_name)
+                mycolumn = cls_ref.create_column(col)
+                # If they are System columns we won't need to explicitly add
+                # them to the query, as they are already returned in
+                # the System query.
+                self.system_columns_desc.append(elem)
+                self.__do_join(cls_ref, mycolumn)
  
     def return_results(self): 
         return self.queri        
@@ -906,7 +914,10 @@ class System(SystemObject):
                                             col_type='string', relations=[model.User],
                                             onclause=model.System.owner),
                           'Status'    : MyColumn(column=model.System.status, col_type='string'),
-                          'Arch'      : MyColumn(column=model.Arch.arch, col_type='string', relations='arch'),
+                          'Arch'      : MyColumn(column=model.Arch.arch,
+                                            col_type='string',
+                                            relations=[model.System.arch],
+                                            eagerload=False,),
                           'Type'      : MyColumn(column=model.System.type, col_type='string'),
                           'PowerType' : MyColumn(column=model.PowerType.name, col_type='string',
                                             relations=[model.System.power, model.Power.power_type]),
@@ -915,10 +926,10 @@ class System(SystemObject):
                                             onclause=model.System.loaned,
                                             relations=[model.User]),
                           'Group'     : AliasedColumn(col_type='string',
-                                            target_table = model.Group,
-                                            relations = lambda: [model.System.group_assocs, \
-                                                             model.Group],
-                                            column_name='group_name'),
+                                            target_table=[model.Group],
+                                            relations = lambda: [model.System.group_assocs, model.Group],
+                                            column_name='group_name',
+                                            eagerload=False,)
                          }
     search_values_dict = {'Status'    : lambda: model.SystemStatus.values(),
                           'Type'      : lambda: model.SystemType.values(),
