@@ -384,6 +384,11 @@ table.list {
     width: 100%;
 }
 
+table.list tr:hover {
+    background: #FFFF99;
+
+}
+
 th.list {
     padding-left: 25px;
     padding-top: 5px;
@@ -733,3 +738,9 @@ warn {
     color: red;
     font-weight: bold;
 }
+
+.statusCompleted, .resultPassed { color: green; }
+.statusAborted, .resultFail { color: red; }
+.statusCancelled, .resultWarn { color: goldenrod; }
+.statusRunning { color: blue; }
+

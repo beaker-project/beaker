@@ -29,6 +29,7 @@ from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server import search_utility
+from bkr.server.controller_utilities import _custom_status, _custom_result
 import datetime
 import pkg_resources
 import lxml.etree
@@ -572,7 +573,7 @@ class Jobs(RPCRoot):
  
     def jobs(self,jobs,action='.', title=u'Jobs', *args, **kw):
         jobs = jobs.filter(and_(Job.deleted == None, Job.to_delete == None))
-        jobs_return = self._jobs(jobs,**kw) 
+        jobs_return = self._jobs(jobs, **kw)
         searchvalue = None
         search_options = {}
         if jobs_return:
@@ -582,32 +583,33 @@ class Jobs(RPCRoot):
                 searchvalue = jobs_return['searchvalue']
             if 'simplesearch' in jobs_return:
                 search_options['simplesearch'] = jobs_return['simplesearch']
-         
-        jobs_grid = myPaginateDataGrid(fields=[
-            widgets.PaginateDataGrid.Column(name='id',
-                getter=lambda x:make_link(url = './%s' % x.id, text = x.t_id),
-                title='ID', options=dict(sortable=True)),
-		    widgets.PaginateDataGrid.Column(name='whiteboard',
-                getter=lambda x:x.whiteboard, title='Whiteboard',
-                options=dict(sortable=True)),
-		    widgets.PaginateDataGrid.Column(name='owner',
-                getter=lambda x:x.owner.email_link, title='Owner',
-                options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='progress',
-                getter=lambda x: x.progress_bar, title='Progress',
-                options=dict(sortable=False)),
-                    widgets.PaginateDataGrid.Column(name='status',
-                getter=lambda x:x.status, title='Status',
-                options=dict(sortable=True)),
-		    widgets.PaginateDataGrid.Column(name='result',
-                getter=lambda x:x.result, title='Result',
-                options=dict(sortable=True)),
-		    widgets.PaginateDataGrid.Column(name='action',
-                getter=lambda x: self.job_list_action_widget.display(task=x, type_='joblist',
-                export=url('/to_xml?taskid=%s' % x.t_id) ,
-                title='Action', options=dict(sortable=False)))])
-
-        
+        PDC = widgets.PaginateDataGrid.Column
+        jobs_grid = myPaginateDataGrid(
+            fields=[
+                PDC(name='id',
+                    getter=lambda x:make_link(url = './%s' % x.id, text = x.t_id),
+                    title='ID', options=dict(sortable=True)),
+                PDC(name='whiteboard',
+                    getter=lambda x:x.whiteboard, title='Whiteboard',
+                    options=dict(sortable=True)),
+                PDC(name='owner',
+                    getter=lambda x:x.owner.email_link, title='Owner',
+                    options=dict(sortable=True)),
+                PDC(name='progress',
+                    getter=lambda x: x.progress_bar, title='Progress',
+                    options=dict(sortable=False)),
+                PDC(name='status',
+                    getter= _custom_status, title='Status',
+                    options=dict(sortable=True)),
+                PDC(name='result',
+                    getter=_custom_result, title='Result',
+                    options=dict(sortable=True)),
+                PDC(name='action',
+                    getter=lambda x: \
+                        self.job_list_action_widget.display(
+                        task=x, type_='joblist',
+                        export=url('/to_xml?taskid=%s' % x.t_id),
+                        title='Action', options=dict(sortable=False)))])
 
         search_bar = SearchBar(name='jobsearch',
                            label=_(u'Job Search'),    

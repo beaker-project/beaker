@@ -29,6 +29,7 @@ from bkr.server import search_utility
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.recipetasks import RecipeTasks
+from bkr.server.controller_utilities import _custom_status, _custom_result
 from socket import gethostname
 from bkr.upload import Uploader
 import exceptions
@@ -299,18 +300,35 @@ class Recipes(RPCRoot):
                 searchvalue = recipes_return['searchvalue']
             if 'simplesearch' in recipes_return:
                 search_options['simplesearch'] = recipes_return['simplesearch']
-
-        recipes_grid = myPaginateDataGrid(fields=[
-		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url='./%s' % x.id, text=x.t_id), title='ID', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
-                     widgets.PaginateDataGrid.Column(name='distro_tree.arch.arch', getter=lambda x:x.arch, title='Arch', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='system.fqdn', getter=lambda x: x.system and x.system.link, title='System', options=dict(sortable=True)),
-                     widgets.PaginateDataGrid.Column(name='distro_tree.distro.name', getter=lambda x: x.distro_tree and x.distro_tree.link, title='Distro Tree', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
-                     widgets.PaginateDataGrid.Column(name='status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),
-                     widgets.PaginateDataGrid.Column(name='action', getter=lambda x:self.action_widget(task=x), title='Action', options=dict(sortable=False)),
-                    ])
+        PDC = widgets.PaginateDataGrid.Column
+        recipes_grid = myPaginateDataGrid(
+            fields=[
+                PDC(name='id',
+                    getter=lambda x:make_link(url='./%s' % x.id, text=x.t_id),
+                    title='ID', options=dict(sortable=True)),
+                PDC(name='whiteboard',
+                    getter=lambda x:x.whiteboard, title='Whiteboard',
+                    options=dict(sortable=True)),
+                PDC(name='distro_tree.arch.arch',
+                    getter=lambda x:x.arch, title='Arch',
+                    options=dict(sortable=True)),
+                PDC(name='system.fqdn',
+                    getter=lambda x: x.system and x.system.link,
+                    title='System', options=dict(sortable=True)),
+                PDC(name='distro_tree.distro.name',
+                    getter=lambda x: x.distro_tree and x.distro_tree.link,
+                    title='Distro Tree', options=dict(sortable=True)),
+                PDC(name='progress',
+                    getter=lambda x: x.progress_bar,
+                    title='Progress', options=dict(sortable=False)),
+                PDC(name='status',
+                    getter=_custom_status, title='Status',
+                    options=dict(sortable=True)),
+                PDC(name='result',
+                    getter=_custom_result, title='Result',
+                    options=dict(sortable=True)),
+                PDC(name='action', getter=lambda x:self.action_widget(task=x),
+                    title='Action', options=dict(sortable=False)),])
 
         search_bar = SearchBar(name='recipesearch',
                            label=_(u'Recipe Search'),    
