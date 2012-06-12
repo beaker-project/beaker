@@ -48,6 +48,7 @@ function InstallLabController_git()
 function InstallLabController_repo()
 {
     rlRun "yum install -y beaker-lab-controller$VERSION"
+    rlRun "yum install -y beaker-lab-controller-addDistro$VERSION"
 }
 
 function generate_rsync_cfg()
@@ -151,6 +152,10 @@ function LabController()
     rlRun "chkconfig tftp on"
     # Configure beaker-proxy config
     generate_proxy_cfg
+    # configure beaker client
+    perl -pi -e 's|^#USERNAME.*|USERNAME = "admin"|' /etc/beaker/client.conf
+    perl -pi -e 's|^#PASSWORD.*|PASSWORD = "testing"|' /etc/beaker/client.conf
+    echo "add_distro=1" > /etc/sysconfig/beaker_lab_import
     # Turn on wsgi
     perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
     rlServiceStart httpd xinetd cobblerd
