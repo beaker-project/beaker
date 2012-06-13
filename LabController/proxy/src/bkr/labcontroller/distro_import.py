@@ -116,6 +116,14 @@ class Cparser(Parser):
 class Tparser(Parser):
     infofile = '.treeinfo'
 
+class TparserRhel5(Tparser):
+    def get(self, section, key, default=None):
+        value = super(TparserRhel5, self).get(section, key, default=default)
+        # .treeinfo for RHEL5 incorrectly reports ppc when it should report ppc64
+        if section == 'general' and key == 'arch' and value == 'ppc':
+            value = 'ppc64'
+        return value
+
 class Importer(object):
     def __init__(self, parser):
         self.parser = parser
@@ -808,7 +816,7 @@ mainimage = images/stage2.img
     """
     @classmethod
     def is_importer_for(cls, url):
-        parser = Tparser()
+        parser = TparserRhel5()
         if not parser.parse(url):
             return False
         for r in cls.required:
@@ -824,10 +832,10 @@ mainimage = images/stage2.img
         return parser
 
     def get_kernel_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'kernel')
+        return self.parser.get('images-%s' % self.tree['arch'],'kernel')
 
     def get_initrd_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'initrd')
+        return self.parser.get('images-%s' % self.tree['arch'],'initrd')
 
     def find_repos(self):
         """
@@ -897,19 +905,16 @@ class TreeInfoFedora(TreeInfoBase, Importer):
         return parser
 
     def get_kernel_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'kernel')
+        return self.parser.get('images-%s' % self.tree['arch'],'kernel')
 
     def get_initrd_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'initrd')
+        return self.parser.get('images-%s' % self.tree['arch'],'initrd')
 
     def find_repos(self):
         """
         using info from known locations
 
         """
-
-        # ppc64 arch uses ppc for the repos
-        arch = self.tree['arch'].replace('ppc64','ppc')
 
         repo_paths = [('Fedora',
                        'variant',
@@ -1106,10 +1111,10 @@ mainimage = images/install.img
         return parser
 
     def get_kernel_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'kernel')
+        return self.parser.get('images-%s' % self.tree['arch'],'kernel')
 
     def get_initrd_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'initrd')
+        return self.parser.get('images-%s' % self.tree['arch'],'initrd')
 
     def find_repos(self):
         """
