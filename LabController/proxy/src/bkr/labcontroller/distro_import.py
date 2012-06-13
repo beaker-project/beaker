@@ -6,8 +6,6 @@ import ConfigParser
 import getopt
 from optparse import OptionParser
 import urllib2
-import calendar
-from email.utils import parsedate
 import logging
 import socket
 import copy
@@ -76,14 +74,12 @@ class Parser(object):
     """
     url = None
     parser = None
-    last_modified = None
+    last_modified = 0.0
 
     def parse(self, url):
         self.url = url
         try:
             f = urllib2.urlopen('%s/%s' % (self.url, self.infofile))
-            if 'last-modified' in f.headers:
-                self.last_modified = calendar.timegm(parsedate(f.headers['last-modified']))
             self.parser = ConfigParser.ConfigParser()
             self.parser.readfp(f)
             f.close()
@@ -95,6 +91,16 @@ class Parser(object):
             raise BX('%s/%s is not parsable: %s' % (self.url,
                                                       self.infofile,
                                                       e))
+
+        if self.discinfo:
+            try:
+                f = urllib2.urlopen('%s/%s' % (self.url, self.discinfo))
+                self.last_modified = f.read().split("\n")[0]
+                f.close()
+            except urllib2.URLError:
+                pass
+            except urllib2.HTTPError:
+                pass
         return True
 
     def get(self, section, key, default=None):
@@ -112,9 +118,11 @@ class Parser(object):
 
 class Cparser(Parser):
     infofile = '.composeinfo'
+    discinfo = None
 
 class Tparser(Parser):
     infofile = '.treeinfo'
+    discinfo = '.discinfo'
 
 class TparserRhel5(Tparser):
     def get(self, section, key, default=None):
