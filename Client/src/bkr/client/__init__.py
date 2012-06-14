@@ -27,6 +27,12 @@ if config_file:
 class BeakerCommand(ClientCommand):
     enabled = False
 
+    t_id_types = dict(T = 'RecipeTask',
+                      TR = 'RecipeTaskResult',
+                      R = 'Recipe',
+                      RS = 'RecipeSet',
+                      J = 'Job')
+
 def prettyxml(option, opt_str, value, parser):
     # prettyxml implies debug as well.
     parser.values.prettyxml = True
