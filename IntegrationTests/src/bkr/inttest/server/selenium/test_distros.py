@@ -109,6 +109,27 @@ class DistroViewTest(SeleniumTestCase):
             self.assertEquals(activity.old_value, u'SAD')
             self.assertEquals(activity.new_value, None)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=830940
+    def test_provision_links_arent_shown_for_expired_trees(self):
+        with session.begin():
+            not_expired_tree = data_setup.create_distro_tree(
+                    distro=self.distro, variant=u'Client')
+            expired_tree = data_setup.create_distro_tree(
+                    distro=self.distro, variant=u'Server')
+            session.flush()
+            expired_tree.lab_controller_assocs[:] = []
+        self.login(data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
+        sel = self.selenium
+        go_to_distro_view(sel, self.distro)
+        self.assertEquals(
+                sel.get_text('//table[@class="list"]/tbody/tr[td[1]/a/text()="%s"]/td[4]'
+                % not_expired_tree.id),
+                'Pick System Pick Any System')
+        self.assertEquals(
+                sel.get_text('//table[@class="list"]/tbody/tr[td[1]/a/text()="%s"]/td[4]'
+                % expired_tree.id),
+                '')
+
 class DistroTaggingXmlRpcTest(XmlRpcTestCase):
 
     @with_transaction

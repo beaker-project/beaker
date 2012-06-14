@@ -60,9 +60,11 @@
           <td class="list">${tree.variant}</td>
           <td class="list">${tree.arch}</td>
           <td class="list">
-            <a class="list" href="${tg.url('/reserve_system', distro_tree_id=tree.id)}">Pick System</a>
-            <span style="padding-left: 1em;" />
-            <a class="list" href="${tg.url('/reserveworkflow/reserve', distro_tree_id=tree.id)}">Pick Any System</a>
+            <span py:if="tree.lab_controller_assocs" py:strip="True">
+              <a class="list" href="${tg.url('/reserve_system', distro_tree_id=tree.id)}">Pick System</a>
+              <span style="padding-left: 1em;" />
+              <a class="list" href="${tg.url('/reserveworkflow/reserve', distro_tree_id=tree.id)}">Pick Any System</a>
+            </span>
           </td>
         </tr>
       </tbody>
