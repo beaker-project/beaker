@@ -162,10 +162,19 @@ function LabController()
     # Using cobbler to get the netboot loaders..
     rlRun "cobbler get-loaders" 0 "get network boot loaders"
     rlRun "cobbler sync" 0 "sync boot loaders to tftpboot"
+    rlServiceStop cobblerd
     rlServiceStop iptables
     rlRun "rhts-sync-set -s READY" 0 "Lab Controller ready"
     rlRun "rhts-sync-block -s SERVERREADY -s ABORT $SERVER" 0 "Wait for Server to become ready"
     rlServiceStart beaker-proxy beaker-watchdog beaker-provision
+    if [ -n "$ENABLE_BEAKER_PXEMENU" ] ; then
+        rlLog "Creating beaker_pxemenu cron job"
+        cat >/etc/cron.hourly/beaker_pxemenu <<"EOF"
+#!/bin/bash
+exec beaker-pxemenu -q
+EOF
+        chmod 755 /etc/cron.hourly/beaker_pxemenu
+    fi
     # There is beaker-transfer as well but its disabled by default
     rlRun "rhts-sync-set -s DONE" 0 "Lab Controller done"
    rlPhaseEnd
