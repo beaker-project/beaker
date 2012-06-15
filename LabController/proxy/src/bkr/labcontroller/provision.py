@@ -8,7 +8,7 @@ import signal
 from optparse import OptionParser
 import pkg_resources
 import subprocess
-import gevent, gevent.hub, gevent.socket
+import gevent, gevent.hub, gevent.socket, gevent.event
 from kobo.process import daemonize
 from kobo.exceptions import ShutdownException
 from bkr.log import add_stderr_logger
@@ -19,6 +19,8 @@ from bkr.labcontroller.proxy import ProxyHelper
 from bkr.labcontroller import netboot
 
 logger = logging.getLogger(__name__)
+
+shutting_down = gevent.event.Event()
 
 class CommandQueuePoller(ProxyHelper):
 
@@ -62,7 +64,7 @@ class CommandQueuePoller(ProxyHelper):
 
     def handle(self, command, predecessors):
         gevent.joinall(predecessors)
-        if shutting_down:
+        if shutting_down.is_set():
             return
         logger.debug('Handling command %r', command)
         self.mark_command_running(command['id'])
@@ -106,8 +108,6 @@ def build_power_env(command):
     env['power_pass'] = (command['power'].get('passwd') or u'').encode('utf8')
     env['power_mode'] = command['action'].encode('utf8')
     return env
-
-shutting_down = False
 
 def handle_clear_logs(conf, command):
     console_log = os.path.join(conf['CONSOLE_LOGS'], command['fqdn'])
@@ -170,7 +170,7 @@ def handle_power(command):
         p.dead.wait()
         out = p.stdout_reader.get()
         err = p.stderr_reader.get()
-        if p.returncode == 0 or shutting_down:
+        if p.returncode == 0 or shutting_down.is_set():
             break
     if p.returncode != 0:
         raise ValueError('Power script %s failed after %s attempts with exit status %s:\n%s'
@@ -179,7 +179,7 @@ def handle_power(command):
 
 def shutdown_handler(signum, frame):
     logger.info('Received signal %s, shutting down', signum)
-    raise ShutdownException() # gevent prints this to stderr, just ignore it
+    shutting_down.set()
 
 def main_loop(poller=None, conf=None, foreground=False):
     # define custom signal handlers
@@ -204,15 +204,11 @@ def main_loop(poller=None, conf=None, foreground=False):
     while True:
         try:
             poller.poll()
-            time.sleep(conf.get('SLEEP_TIME', 20))
-        except ShutdownException:
-            global shutting_down
-            shutting_down = True
-            gevent.hub.get_hub().join() # let running greenlets terminate
-            break
         except:
             logger.exception('Failed to poll for queued commands')
-            time.sleep(conf.get('SLEEP_TIME', 20))
+        if shutting_down.wait(timeout=conf.get('SLEEP_TIME', 20)):
+            gevent.hub.get_hub().join() # let running greenlets terminate
+            break
     logger.debug('Exited main provision loop')
 
 def main():
