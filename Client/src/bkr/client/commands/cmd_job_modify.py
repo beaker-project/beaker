@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 """
 bkr job-modify: Modify Beaker jobs
@@ -50,8 +51,10 @@ See also
 """
 from bkr.client import BeakerCommand
 from xmlrpclib import Fault
+from sys import exit
 
 class Job_Modify(BeakerCommand):
+    """Modify certain job properties """
 
     enabled = True
     def options(self):
@@ -68,7 +71,7 @@ class Job_Modify(BeakerCommand):
         response = kw.pop('response', None)
         valid_jobs = []
         self.set_hub(username, password)
-        types = self.hub.get_job_types()
+        types = self.t_id_types
         valid_codes = []
         for code, type in types.iteritems():
             if type == 'Job':
@@ -76,22 +79,29 @@ class Job_Modify(BeakerCommand):
             if type == 'RecipeSet':
                 valid_codes.append(code)
 
+        error = False
         for job in args:
-            type,number = job.split(':')
             try:
+                type,number = job.split(':')
                 valid_codes.index(type)
             except ValueError:
-                self.parser.error('Arguments must be in a valid job format')
+                self.parser.error('Arguments must be a valid job spec format')
             valid_jobs.append(job)
         modded = []
-        if response:
+        if response and not error:
             try:
                 for job in valid_jobs:
                     self.hub.jobs.set_response(job, response)
                     modded.append(job)
             except Fault, e:
                 print str(e)
+                error = True
         if modded:
             print 'Successfully modified jobs %s' % ' '.join(modded)
         else:
             print 'No jobs modified'
+
+        if error:
+            exit(1)
+        else:
+            exit(0)
