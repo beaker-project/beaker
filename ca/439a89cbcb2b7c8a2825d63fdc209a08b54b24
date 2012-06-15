@@ -1,0 +1,9 @@
+Verified+1: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+2: Bill Peck <bpeck@redhat.com>
+Code-Review+2: Raymond Mancy <rmancy@redhat.com>
+Code-Review+1: Steven Lawrance <stl@redhat.com>
+Submitted-by: Bill Peck <bpeck@redhat.com>
+Submitted-at: Fri, 15 Jun 2012 10:01:00 -0400
+Reviewed-on: http://gerrit.beaker-project.org/1138
+Project: beaker
+Branch: refs/heads/release-0.9.0
