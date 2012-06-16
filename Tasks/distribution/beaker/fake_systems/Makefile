@@ -24,7 +24,7 @@ BUILT_FILES=
 
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
 FILES=$(METADATA) runtest.sh Makefile PURPOSE hosts.sh system-csv.sh power-csv.sh \
-    dummy_fast dummy_medium dummy_slow dummy_flakey
+    beah_dummy.py dummy_fast dummy_medium dummy_slow dummy_flakey
 
 .PHONY: run
 run: $(FILES) build
