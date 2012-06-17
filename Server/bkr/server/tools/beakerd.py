@@ -474,6 +474,13 @@ def scheduled_recipes(*args):
     log.debug("Exiting scheduled_recipes routine")
     return True
 
+def recipe_count_metrics():
+    query = Recipe.query.group_by(Recipe.status)\
+            .having(Recipe.status.in_([s for s in TaskStatus if not s.finished]))\
+            .values(Recipe.status, func.count(Recipe.id))
+    for status, count in query:
+        metrics.measure('gauges.recipes_%s' % status.name, count)
+
 # These functions are run in separate threads, so we want to log any uncaught 
 # exceptions instead of letting them be written to stderr and lost to the ether
 
@@ -492,6 +499,17 @@ def processed_recipesets_loop(*args, **kwargs):
     log.debug("processed recipesets thread exiting")
 
 @log_traceback(log)
+def metrics_loop(*args, **kwargs):
+    while running:
+        try:
+            start = time.time()
+            log.debug('Sending recipe count metrics')
+            recipe_count_metrics()
+        except Exception:
+            log.exception('Exception in metrics loop')
+        time.sleep(max(10.0 + start - time.time(), 5.0))
+
+@log_traceback(log)
 def main_recipes_loop(*args, **kwargs):
     while running:
         dead_recipes()
@@ -508,6 +526,12 @@ def schedule():
     if config.get('beaker.qpid_enabled') is True: 
        bb = ServerBeakerBus()
        bb.run()
+
+    if config.get('carbon.address'):
+        log.debug('starting metrics thread')
+        metrics_thread = threading.Thread(target=metrics_loop, name='metrics')
+        metrics_thread.daemon = True
+        metrics_thread.start()
 
     beakerd_threads = set(["new_recipes", "processed_recipesets",\
                            "main_recipes"])

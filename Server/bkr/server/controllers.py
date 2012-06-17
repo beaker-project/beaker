@@ -64,7 +64,7 @@ from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from bkr.server.helpers import *
 from bkr.server.tools.init import dummy
-from bkr.server import mail, needpropertyxml
+from bkr.server import mail, needpropertyxml, metrics
 from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
@@ -1850,3 +1850,15 @@ class Root(RPCRoot):
 # if it hangs around it should check for admin access
 #        return dict(title="Activity", search_bar=None, activity = Activity.all())
 #
+
+_startup_time = None
+def startup_time_start():
+    global _startup_time
+    _startup_time = time.time()
+def startup_time_end():
+    duration = time.time() - _startup_time
+    log.info('Server startup in %s seconds' % duration)
+    metrics.measure('durations.cherrypy_startup', duration)
+    metrics.increment('counters.cherrypy_startup')
+cherrypy.server.on_start_server_list.insert(0, startup_time_start)
+cherrypy.server.on_start_server_list.append(startup_time_end)
