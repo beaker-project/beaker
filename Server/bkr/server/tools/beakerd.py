@@ -561,7 +561,6 @@ def schedule():
 
     new_recipes_thread.join(10)
     processed_recipesets_thread.join(10)
-    command_queue_thread.join(10)
     main_recipes_thread.join(10)
 
     sys.exit(rc)
