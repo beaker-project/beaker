@@ -136,7 +136,7 @@ class CSV(RPCRoot):
                     else:
                         log.append('%s is not a valid user' % data['user'])
                 else:
-                    log.append("Invalid csv_type %s or missing required fields" % csv_type)
+                    log.append("Invalid csv_type %s or missing required fields" % data['csv_type'])
             else:
                 log.append("Missing csv_type from record")
 
