@@ -144,7 +144,7 @@ class Reports(RPCRoot):
 
     @expose(template='bkr.server.templates.utilisation_graph')
     def utilisation_graph(self):
-        groups = Group.query.join('systems').order_by(Group.group_name)
+        groups = Group.query.filter(Group.system_assocs.any()).order_by(Group.group_name)
         return {
             'all_arches': [(a.id, a.arch) for a in Arch.query],
             'all_groups': [(g.group_id, g.group_name) for g in groups],

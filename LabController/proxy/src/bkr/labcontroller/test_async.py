@@ -18,3 +18,10 @@ class SubprocessTest(unittest.TestCase):
         p = MonitoredSubprocess(['sleep', '10'], timeout=1)
         p.dead.wait()
         self.assertEquals(p.returncode, -signal.SIGTERM)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=832250
+    def test_reaper_race(self):
+        procs = [MonitoredSubprocess(['true'], timeout=10)
+                for _ in xrange(800)]
+        for p in procs:
+            p.dead.wait()

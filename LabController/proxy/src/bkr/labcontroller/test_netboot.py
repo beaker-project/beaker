@@ -219,3 +219,12 @@ image=/images/fqdn.example.invalid/kernel
         netboot.clear_yaboot('fqdn.example.invalid')
         self.assert_(not os.path.exists(yaboot_config_path))
         self.assert_(not os.path.exists(yaboot_symlink_path))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=829984
+    def test_configure_twice(self):
+        netboot.configure_yaboot('fqdn.example.invalid',
+                'console=ttyS0,115200 ks=http://lol/')
+        netboot.configure_yaboot('fqdn.example.invalid',
+                'console=ttyS0,115200 ks=http://lol/')
+        yaboot_symlink_path = os.path.join(self.tftp_root, 'ppc', '7f0000ff')
+        self.assertEquals(os.readlink(yaboot_symlink_path), '../yaboot')

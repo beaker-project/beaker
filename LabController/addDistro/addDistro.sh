@@ -6,8 +6,8 @@ export LANG=en_US.UTF-8
 DISTPATH=$1
 DIST=$2
 FAMILYUPDATE=$3
-ARCH=$4
-VARIANT=$5
+ARCHES=$4
+VARIANTS=$5
 TPATH=$6
 
 # Override the above settings in this file.
@@ -22,8 +22,8 @@ if [ -n "$add_distro" ]; then
  pushd /var/lib/beaker/addDistro.d
  for PLUGIN in *
  do
-    echo ./$PLUGIN "$ARCH" "$FAMILY" "$DIST" "$VARIANT" "$DISTPATH"
-    ./$PLUGIN "$ARCH" "$FAMILY" "$DIST" "$VARIANT" "$DISTPATH"
+    echo ./$PLUGIN "$ARCHES" "$FAMILY" "$DIST" "$VARIANTS" "$DISTPATH"
+    ./$PLUGIN "$ARCHES" "$FAMILY" "$DIST" "$VARIANTS" "$DISTPATH"
  done
  popd
 fi

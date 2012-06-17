@@ -40,9 +40,13 @@ def watch_bus_tasks(listenuntil, task_id_list, indentation_level=0, *args):
 
         if watcher.task_list and finished is False:
             bb.run(task_id_list)
+
+        is_failed = watcher.is_failed()
     except KeyboardInterrupt:
         if watcher.listening_root_tasks:
-                print 'Tasks still running %s' % watcher.listening_root_tasks
+            print 'Tasks still running %s' % watcher.listening_root_tasks
+            is_failed = True
+    return is_failed
 
 def display_tasklist_status(task_list):
     state_dict = {}
@@ -65,22 +69,26 @@ def watch_tasks(hub, task_id_list, indentation_level=0, sleep_time=30, task_url=
             task_url = task_url or hub._conf.get("TASK_URL", None)
             if task_url is not None:
                 print "Task url: %s" % (task_url % task_id)
+        is_failed = False
         while True:
             all_done = True
             changed = False
             for task in watcher.task_list:
                 changed |= watcher.update(task)
+                is_failed |= watcher.is_failed(task)
                 all_done &= watcher.is_finished(task)
             if changed:
                 display_tasklist_status(watcher.task_list)
             if all_done:
                 break
             time.sleep(sleep_time)
-        return True
     except KeyboardInterrupt:
         running_task_list = [ t.task_id for t in watcher.task_list if not watcher.is_finished(t) ]
         if running_task_list:
             print "Tasks still running: %s" % running_task_list
+            # Don't report pass on jobs still running.
+            is_failed = True
+    return is_failed
 
 class TaskWatcher(object):
 
@@ -98,6 +106,16 @@ class TaskWatcher(object):
         result = task.task_info.get("is_finished", False)
         for subtask in self.subtask_dict.itervalues():
             result &= subtask.is_finished()
+        return result
+
+    def is_failed(self, task):
+        """Did the task Fail?"""
+        if task.task_info is None:
+            return False
+
+        result = task.task_info.get("is_failed", False)
+        for subtask in self.subtask_dict.itervalues():
+            result |= subtask.is_failed()
         return result
 
     def update(self, task):
@@ -237,6 +255,13 @@ class TaskWatcherBus(TaskWatcher):
                 if not lrt: #nothing left to listen for
                     return True
         return False
+
+    def is_failed(self):
+        is_failed = False
+        for task in self.task_list:
+           is_failed |= task.task_info['is_failed']
+        return is_failed   
+
 
 class TaskBus(Task):
 

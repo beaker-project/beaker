@@ -6,8 +6,6 @@ import ConfigParser
 import getopt
 from optparse import OptionParser
 import urllib2
-import calendar
-from email.utils import parsedate
 import logging
 import socket
 import copy
@@ -41,25 +39,27 @@ class SchedulerProxy(object):
     def add_distro(self, profile):
         return self.proxy.add_distro_tree(profile)
 
-    def run_distro_test_job(self, profile):
+    def run_distro_test_job(self, name=None, tags=[], osversion=None,
+                            arches=[], variants=[]):
         if self.is_add_distro_cmd:
-            cmd = self._make_add_distro_cmd(profile)
+            cmd = self._make_add_distro_cmd(name=name,tags=tags,
+                                            osversion=osversion,
+                                            arches=arches, variants=variants)
             logging.debug(cmd)
             os.system(cmd)
         else:
             raise BX('%s is missing' % self.add_distro_cmd)
 
-    def _make_add_distro_cmd(self, profile):
-        #addDistro.sh "rel-eng" RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64 "Default"
-        cmd = '%s "%s" %s %s %s "%s"' % (
+    def _make_add_distro_cmd(self, name=None, tags=[],
+                             osversion=None, arches=[], variants=[]):
+        #addDistro.sh "rel-eng" RHEL6.0-20090626.2 RedHatEnterpriseLinux6.0 x86_64,i386 "Server,Workstation,Client"
+        cmd = '%s "%s" "%s" "%s" "%s" "%s"' % (
             self.add_distro_cmd,
-            ','.join(profile.get('tags',[])),
-            profile.get('treename'),
-            '%s.%s' % (
-            profile.get('osmajor'),
-            profile.get('osminor')),
-            profile.get('arch'),
-            profile.get('variant', ''))
+            ','.join(tags),
+            name,
+            osversion,
+            ','.join(arches),
+            ','.join(variants))
         return cmd
 
     @property
@@ -76,14 +76,12 @@ class Parser(object):
     """
     url = None
     parser = None
-    last_modified = None
+    last_modified = 0.0
 
     def parse(self, url):
         self.url = url
         try:
             f = urllib2.urlopen('%s/%s' % (self.url, self.infofile))
-            if 'last-modified' in f.headers:
-                self.last_modified = calendar.timegm(parsedate(f.headers['last-modified']))
             self.parser = ConfigParser.ConfigParser()
             self.parser.readfp(f)
             f.close()
@@ -95,6 +93,16 @@ class Parser(object):
             raise BX('%s/%s is not parsable: %s' % (self.url,
                                                       self.infofile,
                                                       e))
+
+        if self.discinfo:
+            try:
+                f = urllib2.urlopen('%s/%s' % (self.url, self.discinfo))
+                self.last_modified = f.read().split("\n")[0]
+                f.close()
+            except urllib2.URLError:
+                pass
+            except urllib2.HTTPError:
+                pass
         return True
 
     def get(self, section, key, default=None):
@@ -112,9 +120,19 @@ class Parser(object):
 
 class Cparser(Parser):
     infofile = '.composeinfo'
+    discinfo = None
 
 class Tparser(Parser):
     infofile = '.treeinfo'
+    discinfo = '.discinfo'
+
+class TparserRhel5(Tparser):
+    def get(self, section, key, default=None):
+        value = super(TparserRhel5, self).get(section, key, default=default)
+        # .treeinfo for RHEL5 incorrectly reports ppc when it should report ppc64
+        if section == 'general' and key == 'arch' and value == 'ppc':
+            value = 'ppc64'
+        return value
 
 class Importer(object):
     def __init__(self, parser):
@@ -134,6 +152,25 @@ class ComposeInfoBase(object):
             if parser.get(e['section'], e['key'], '') != '':
                 return False
         return parser
+
+    def run_jobs(self):
+        """
+        Run a job with the newly imported distro_trees
+        """
+        arches = []
+        variants = []
+        for distro_tree in self.distro_trees:
+            arches.append(distro_tree['arch'])
+            variants.append(distro_tree['variant'])
+            name = distro_tree['name']
+            tags = distro_tree.get('tags', [])
+            osversion = '%s.%s' % (distro_tree['osmajor'],
+                                   distro_tree['osminor'])
+        self.scheduler.run_distro_test_job(name=name,
+                                           tags=tags,
+                                           osversion=osversion,
+                                           arches=list(set(arches)),
+                                           variants=list(set(variants)))
 
 
 class ComposeInfoLegacy(ComposeInfoBase, Importer):
@@ -168,6 +205,8 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
 
     def process(self, urls, options):
         self.options = options
+        self.scheduler = SchedulerProxy(self.options)
+        self.distro_trees = []
         for arch in self.get_arches():
             os_dir = self.get_os_dir(arch)
             full_os_dir = os.path.join(self.parser.url, os_dir)
@@ -182,6 +221,7 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
                 build.process(urls_arch, options, repos)
             except BX, err:
                 logging.warn(err)
+            self.distro_trees.append(build.tree)
 
     def find_repos(self, repo_base, arch):
         """
@@ -547,6 +587,8 @@ sources = Workstation/source/SRPMS
 
     def process(self, urls, options):
         self.options = options
+        self.scheduler = SchedulerProxy(self.options)
+        self.distro_trees = []
 
         for variant in self.get_variants():
             for arch in self.get_arches(variant):
@@ -569,6 +611,7 @@ sources = Workstation/source/SRPMS
                     build.process(urls_variant_arch, options, repos)
                 except BX, err:
                     logging.warn(err)
+                self.distro_trees.append(build.tree)
 
 
 class TreeInfoBase(object):
@@ -655,15 +698,22 @@ class TreeInfoBase(object):
             logging.info('%s added to beaker.' % self.tree['name'])
         except (xmlrpclib.Fault, socket.error), e:
             raise BX('failed to add %s to beaker: %s' % (self.tree['name'],e))
-        if self.options.run_jobs:
-            logging.info('running jobs.')
-            self.run_jobs()
 
     def add_to_beaker(self):
         self.scheduler.add_distro(self.tree)
 
     def run_jobs(self):
-        self.scheduler.run_distro_test_job(self.tree)
+        arches = [self.tree['arch']]
+        variants = [self.tree['variant']]
+        name = self.tree['name']
+        tags = self.tree.get('tags', [])
+        osversion = '%s.%s' % (self.tree['osmajor'],
+                               self.tree['osminor'])
+        self.scheduler.run_distro_test_job(name=name,
+                                           tags=tags,
+                                           osversion=osversion,
+                                           arches=arches,
+                                           variants=variants)
 
 
 class TreeInfoLegacy(TreeInfoBase, Importer):
@@ -808,7 +858,7 @@ mainimage = images/stage2.img
     """
     @classmethod
     def is_importer_for(cls, url):
-        parser = Tparser()
+        parser = TparserRhel5()
         if not parser.parse(url):
             return False
         for r in cls.required:
@@ -824,10 +874,10 @@ mainimage = images/stage2.img
         return parser
 
     def get_kernel_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'kernel')
+        return self.parser.get('images-%s' % self.tree['arch'],'kernel')
 
     def get_initrd_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'initrd')
+        return self.parser.get('images-%s' % self.tree['arch'],'initrd')
 
     def find_repos(self):
         """
@@ -897,19 +947,16 @@ class TreeInfoFedora(TreeInfoBase, Importer):
         return parser
 
     def get_kernel_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'kernel')
+        return self.parser.get('images-%s' % self.tree['arch'],'kernel')
 
     def get_initrd_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'initrd')
+        return self.parser.get('images-%s' % self.tree['arch'],'initrd')
 
     def find_repos(self):
         """
         using info from known locations
 
         """
-
-        # ppc64 arch uses ppc for the repos
-        arch = self.tree['arch'].replace('ppc64','ppc')
 
         repo_paths = [('Fedora',
                        'variant',
@@ -1106,10 +1153,10 @@ mainimage = images/install.img
         return parser
 
     def get_kernel_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'kernel')
+        return self.parser.get('images-%s' % self.tree['arch'],'kernel')
 
     def get_initrd_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'].replace('ppc','ppc64'),'initrd')
+        return self.parser.get('images-%s' % self.tree['arch'],'initrd')
 
     def find_repos(self):
         """
@@ -1311,6 +1358,9 @@ def main():
     except BX, err:
         logging.critical(err)
         sys.exit(30)
+    if opts.run_jobs:
+        logging.info('running jobs.')
+        build.run_jobs()
 
 if __name__ == '__main__':
     main()

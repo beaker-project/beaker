@@ -41,7 +41,7 @@ class WorkflowSimpleTest(unittest.TestCase):
         run_client(['bkr', 'job-cancel', 'J:%s' % job_id])
 
         returncode = proc.wait()
-        self.assert_(returncode == 0)
+        self.assert_(returncode == 1)
 
     def test_hostrequire(self):
         out = run_client(['bkr', 'workflow-simple',

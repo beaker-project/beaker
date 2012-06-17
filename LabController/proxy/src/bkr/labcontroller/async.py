@@ -41,18 +41,13 @@ def _read_from_pipe(f):
         gevent.socket.wait_read(f.fileno())
     return ''.join(chunks)
 
-class Cancel(Exception): pass
-
 def _timeout_kill(p, timeout):
-    try:
-        gevent.sleep(timeout)
-        if p.poll() is None:
-            os.kill(p.pid, signal.SIGTERM)
-        gevent.sleep(1)
-        if p.poll() is None:
-            os.kill(p.pid, signal.SIGKILL)
-    except Cancel:
-        pass
+    gevent.sleep(timeout)
+    if p.poll() is None:
+        os.kill(p.pid, signal.SIGTERM)
+    gevent.sleep(1)
+    if p.poll() is None:
+        os.kill(p.pid, signal.SIGKILL)
 
 class MonitoredSubprocess(subprocess.Popen):
 
@@ -86,12 +81,20 @@ class MonitoredSubprocess(subprocess.Popen):
     @classmethod
     def _sigchld_handler(cls, signum, frame):
         assert signum == signal.SIGCHLD
+        # It's important that we do no real work in this signal handler, 
+        # because we could be invoked at any time (from any stack frame, in the 
+        # middle of anything) and we don't want to raise, or interfere with 
+        # anything else. So we just schedule the real work in a greenlet.
+        gevent.spawn(cls._reap_children)
+
+    @classmethod
+    def _reap_children(cls):
         for child in list(cls._running):
             if child.poll() is not None:
                 cls._running.remove(child)
                 child.dead.set()
                 if hasattr(child, 'timeout_killer'):
-                    child.timeout_killer.kill(Cancel(), block=False)
+                    child.timeout_killer.kill(block=False)
 
 gevent.hub.get_hub()
 # XXX dodgy: this signal handler has to be registered *after* the libev 
