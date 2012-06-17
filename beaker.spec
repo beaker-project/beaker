@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -349,6 +349,35 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Mon Jun 18 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-2
+- 828451 Update lpar command to include the hmc. (bpeck@redhat.com)
+- 823329 avoid processing the same recipe many times in queued_recipes
+  (dcallagh@redhat.com)
+- Fix for job-modify --response for ack/nak'ing already ack/nak'ed jobs
+  (rmancy@redhat.com)
+- 829984 replace yaboot symlink if it already exists, instead of dying
+  (dcallagh@redhat.com)
+- 829423 no more distro_tree tag means we need to change how we tag STABLE
+  (bpeck@redhat.com)
+- 830937 [BUG] beaker-import imports RHEL5 ppc64 as ppc. (bpeck@redhat.com)
+- 830945 [BUG] beaker-import should fall back to .discinfo if timestamp is not
+  defined in .treeinfo. (bpeck@redhat.com)
+- 831864 can't join on Group.systems (dcallagh@redhat.com)
+- 830940 don't offer to provision distro-trees which have been expired
+  (dcallagh@redhat.com)
+- A few more enhancements for 812831 (rmancy@redhat.com)
+- 832250 fix race between spawning and reaping MonitoredSubprocesses
+  (dcallagh@redhat.com)
+- 832328 use an event instead of an exception to trigger shutdown in beaker-
+  provision (dcallagh@redhat.com)
+- 829981 nvram command doesn't exist in all distros (dcallagh@redhat.com)
+- custom tito builder which generates nice patches for hotfix releases
+  (dcallagh@redhat.com)
+- fix some warnings/mistakes in sphinx docs (dcallagh@redhat.com)
+- adjust client man page titles (dcallagh@redhat.com)
+- sqlalchemy.exceptions has been removed in SQLAlchemy 0.7
+  (dcallagh@redhat.com)
+
 * Thu Jun 07 2012 Bill Peck <bpeck@redhat.com> 0.8.2-12
 - HOTFIX - don't try and process non nfs url's as nfs. (bpeck@redhat.com)
 
