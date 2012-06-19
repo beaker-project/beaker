@@ -251,7 +251,6 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             session.expire(system)
             self.assertEquals(system.command_queue[0].action, 'reboot')
             self.assertEquals(system.command_queue[1].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[2].action, 'clear_logs')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=824257
     def test_release_action_unset(self):
@@ -430,7 +429,6 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             self.assertEquals(system.command_queue[1].distro_tree, self.distro_tree)
             self.assertEquals(system.command_queue[1].kernel_options,
                     'console=ttyS0 ks=%s ksdevice=eth0 noapic noverifyssl' % rendered_kickstart.link)
-            self.assertEquals(system.command_queue[2].action, 'clear_logs')
 
     def test_provision_without_reboot(self):
         system = self.usable_system
@@ -441,8 +439,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 False) # this last one is reboot=False
         with session.begin():
             self.assertEquals(system.command_queue[0].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[1].action, 'clear_logs')
-            self.assertEquals(len(system.command_queue), 2, system.command_queue)
+            self.assertEquals(len(system.command_queue), 1, system.command_queue)
 
     def test_refuses_to_provision_distro_with_mismatched_arch(self):
         with session.begin():
