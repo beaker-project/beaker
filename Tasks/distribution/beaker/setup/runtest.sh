@@ -152,6 +152,8 @@ LoadPlugin write_graphite
   Process "httpd"
 </Plugin>
 EOF
+        rlRun "chkconfig collectd on"
+        rlServiceStart collectd
      fi
      rlRun "rhts-sync-set -s SERVERREADY" 0 "Inventory ready"
      rlRun "rhts-sync-block -s DONE -s ABORT $CLIENTS" 0 "Lab Controllers ready"
@@ -215,6 +217,8 @@ LoadPlugin write_graphite
   Process "beah_dummy.py"
 </Plugin>
 EOF
+        rlRun "chkconfig collectd on"
+        rlServiceStart collectd
     fi
     rlRun "rhts-sync-set -s DONE" 0 "Lab Controller done"
    rlPhaseEnd
