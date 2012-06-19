@@ -22,10 +22,7 @@ keyboard us
 # System language
 lang en_US.UTF-8
 
-
-#Disable reboot on s390 arch for now. Please re-enable for alpha2
-#reboot
-
+reboot
 #Root password
 rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
 # SELinux configuration
