@@ -124,6 +124,9 @@ __EOF__
      rlServiceStop iptables
      # Turn on wsgi
      perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
+     if [ -n "$GRAPHITE_SERVER" ] ; then
+        sed -i -e "/^#carbon.address /c carbon.address = ('$GRAPHITE_SERVER', ${GRAPHITE_PORT:-2023})" Server/server.cfg
+     fi
      rlServiceStart httpd
      rlServiceStart beakerd
      # Add the lab controller(s)
@@ -132,6 +135,24 @@ __EOF__
      done
      generate_rsync_cfg
      rlRun "chkconfig rsync on" 0 "Turn rsync on"
+     if [ -n "$ENABLE_COLLECTD" ] ; then
+        rlRun "yum install -y collectd"
+        cat >/etc/collectd.d/beaker-server.conf <<EOF
+LoadPlugin processes
+LoadPlugin write_graphite
+<Plugin write_graphite>
+  <Carbon>
+    Host "$GRAPHITE_SERVER"
+    Port "${GRAPHITE_PORT:-2023}"
+    Prefix "host/"
+  </Carbon>
+</Plugin>
+<Plugin processes>
+  Process "beakerd"
+  Process "httpd"
+</Plugin>
+EOF
+     fi
      rlRun "rhts-sync-set -s SERVERREADY" 0 "Inventory ready"
      rlRun "rhts-sync-block -s DONE -s ABORT $CLIENTS" 0 "Lab Controllers ready"
    rlPhaseEnd
@@ -167,6 +188,7 @@ function LabController()
     rlRun "rhts-sync-set -s READY" 0 "Lab Controller ready"
     rlRun "rhts-sync-block -s SERVERREADY -s ABORT $SERVER" 0 "Wait for Server to become ready"
     rlServiceStart beaker-proxy beaker-watchdog beaker-provision
+    # There is beaker-transfer as well but its disabled by default
     if [ -n "$ENABLE_BEAKER_PXEMENU" ] ; then
         rlLog "Creating beaker_pxemenu cron job"
         cat >/etc/cron.hourly/beaker_pxemenu <<"EOF"
@@ -175,7 +197,25 @@ exec beaker-pxemenu -q
 EOF
         chmod 755 /etc/cron.hourly/beaker_pxemenu
     fi
-    # There is beaker-transfer as well but its disabled by default
+    if [ -n "$ENABLE_COLLECTD" ] ; then
+        rlRun "yum install -y collectd"
+        cat >/etc/collectd.d/beaker-lab-controller.conf <<EOF
+LoadPlugin processes
+LoadPlugin write_graphite
+<Plugin write_graphite>
+  <Carbon>
+    Host "$GRAPHITE_SERVER"
+    Port "${GRAPHITE_PORT:-2023}"
+    Prefix "host/"
+  </Carbon>
+</Plugin>
+<Plugin processes>
+  Process "beaker-proxy"
+  Process "beaker-provisio"
+  Process "beah_dummy.py"
+</Plugin>
+EOF
+    fi
     rlRun "rhts-sync-set -s DONE" 0 "Lab Controller done"
    rlPhaseEnd
  rlJournalEnd
