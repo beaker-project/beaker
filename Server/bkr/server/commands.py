@@ -22,6 +22,7 @@
 import sys
 from os import getcwd
 from os.path import dirname, exists, join
+import resource
 
 import cherrypy
 import turbogears
@@ -40,6 +41,11 @@ def start():
         load_config(sys.argv[1])
     else:
         load_config()
+
+    # If rlimit_as is defined in the config file then set the limit here.
+    if turbogears.config.get('rlimit_as'):
+        resource.setrlimit(resource.RLIMIT_AS, (turbogears.config.get('rlimit_as'),
+                                                turbogears.config.get('rlimit_as')))
 
     from bkr.server.controllers import Root
     turbogears.start_server(Root())
