@@ -99,3 +99,5 @@ END
 %end
 
 {{ ks_appends|join('\n') }}
+{{ snippet('post_s390_reboot') }}
+{{ snippet('postreboot') }}

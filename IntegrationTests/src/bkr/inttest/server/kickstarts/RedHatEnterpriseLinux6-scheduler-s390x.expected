@@ -285,6 +285,12 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
+# Error: no snippet data for RedHatEnterpriseLinux6_post
+
+# Error: no snippet data for system_post
+
+
+
 
 
 %post --nochroot
@@ -345,10 +351,5 @@ EOF
       kill $pid
    fi
 fi
-
-# Error: no snippet data for RedHatEnterpriseLinux6_post
-
-# Error: no snippet data for system_post
-
 
 

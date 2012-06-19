@@ -118,3 +118,5 @@ sed -i -e '/^Red Hat Enterprise Linux/c Red Hat Storage release 2.0' /mnt/sysima
 %end
 
 {{ ks_appends|join('\n') }}
+{{ snippet('post_s390_reboot') }}
+{{ snippet('postreboot') }}
