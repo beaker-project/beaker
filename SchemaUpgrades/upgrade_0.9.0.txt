@@ -167,6 +167,7 @@ Provision via the command queue
 Run the following SQL:
 
     ALTER TABLE command_queue
+        ADD delay_until DATETIME AFTER task_id,
         ADD distro_tree_id INT NULL,
         ADD kernel_options TEXT NULL,
         ADD CONSTRAINT command_queue_distro_tree_id_fk
