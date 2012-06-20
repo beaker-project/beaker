@@ -322,6 +322,11 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
+python << _EOF_
+import xmlrpclib
+server = xmlrpclib.Server("http://lab.test-kickstart.invalid:8000")
+server.clear_netboot("test01.test-kickstart.invalid")
+_EOF_
 # Error: no snippet data for RedHatEnterpriseLinux6_post
 
 # Error: no snippet data for system_post
