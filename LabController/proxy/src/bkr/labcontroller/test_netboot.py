@@ -11,13 +11,17 @@ class NetBootTestCase(unittest.TestCase):
 
     def setUp(self):
         self.tftp_root = tempfile.mkdtemp(prefix='test_netboot', suffix='tftproot')
-        self._orig_get_tftp_root = netboot.get_tftp_root
-        netboot.get_tftp_root = lambda: self.tftp_root
+        self.fake_conf = {
+            'TFTP_ROOT': self.tftp_root,
+            'IMAGE_CACHE': True,
+        }
+        self._orig_get_conf = netboot.get_conf
+        netboot.get_conf = lambda: self.fake_conf
         self._orig_gethostbyname = socket.gethostbyname
         socket.gethostbyname = lambda hostname: '127.0.0.255'
 
     def tearDown(self):
-        netboot.get_tftp_root = self._orig_get_tftp_root
+        netboot.get_conf = self._orig_get_conf
         socket.gethostbyname = self._orig_gethostbyname
         shutil.rmtree(self.tftp_root, ignore_errors=True)
 
@@ -49,6 +53,21 @@ class ImagesTest(NetBootTestCase):
         netboot.clear_images('fqdn.example.invalid')
         self.assert_(not os.path.exists(kernel_path))
         self.assert_(not os.path.exists(initrd_path))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=833662
+    def test_fetch_twice(self):
+        netboot.fetch_images(1234, 'file://%s' % self.kernel.name,
+                'file://%s' % self.initrd.name,
+                'fqdn.example.invalid')
+        netboot.fetch_images(1234, 'file://%s' % self.kernel.name,
+                'file://%s' % self.initrd.name,
+                'fqdn.example.invalid')
+        kernel_path = os.path.join(self.tftp_root, 'images', 'fqdn.example.invalid', 'kernel')
+        initrd_path = os.path.join(self.tftp_root, 'images', 'fqdn.example.invalid', 'initrd')
+        self.assert_(os.path.exists(kernel_path))
+        self.assertEquals(os.path.getsize(kernel_path), 4 * 1024 * 1024)
+        self.assert_(os.path.exists(initrd_path))
+        self.assertEquals(os.path.getsize(initrd_path), 8 * 1024 * 1024)
 
 class PxelinuxTest(NetBootTestCase):
 
