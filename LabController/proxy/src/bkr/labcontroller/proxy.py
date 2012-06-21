@@ -535,7 +535,6 @@ class Proxy(ProxyHelper):
         kickstart
         """
         logger.debug("install_start")
-        self.hub.systems.clear_netboot(system_name)
         # extend watchdog by 3 hours 60 * 60 * 3
         kill_time = 10800
         # look up system recipe based on hostname...
@@ -557,6 +556,10 @@ class Proxy(ProxyHelper):
                                           'Install Started')
             return True
         return False
+
+    def clear_netboot(self, system_name):
+        ''' Called from %post section to remove netboot entry '''
+        return self.hub.systems.clear_netboot(system_name)
 
     def postreboot(self, hostname):
         # XXX would be nice if we could limit this so that systems could only
