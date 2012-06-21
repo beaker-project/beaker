@@ -78,7 +78,7 @@ class SystemsController(controllers.Controller):
 
     @expose()
     @identity.require(identity.not_anonymous())
-    def power(self, action, fqdn, clear_netboot=False, force=False):
+    def power(self, action, fqdn, clear_netboot=False, force=False, delay=0):
         """
         Controls power for the system with the given fully-qualified domain 
         name.
@@ -102,6 +102,8 @@ class SystemsController(controllers.Controller):
         :type clear_netboot: boolean
         :param force: whether to power the system even if it is in use
         :type force: boolean
+        :param delay: number of seconds to delay before performing the action (default none)
+        :type delay: int or float
 
         .. versionadded:: 0.6
         .. versionchanged:: 0.6.14
@@ -113,7 +115,7 @@ class SystemsController(controllers.Controller):
             raise BX(_(u'System is in use'))
         if clear_netboot:
             system.clear_netboot(service=u'XMLRPC')
-        system.action_power(action, service=u'XMLRPC')
+        system.action_power(action, service=u'XMLRPC', delay=delay)
         return system.fqdn # because turbogears makes us return something
 
     @expose()

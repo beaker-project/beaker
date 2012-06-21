@@ -7,6 +7,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
+from bkr.server.util import total_seconds
 from bkr.server.widgets import LabControllerDataGrid, LabControllerForm
 from bkr.server.distrotrees import DistroTrees
 from xmlrpclib import ProtocolError
@@ -14,7 +15,7 @@ from sqlalchemy.orm import contains_eager, joinedload
 import itertools
 import cherrypy
 import time
-import datetime
+from datetime import datetime
 import re
 import urlparse
 
@@ -233,7 +234,10 @@ class LabControllers(RPCRoot):
                 'action': cmd.action,
                 'fqdn': cmd.system.fqdn,
                 'arch': [arch.arch for arch in cmd.system.arch],
+                'delay': 0,
             }
+            if cmd.delay_until:
+                d['delay'] = max(0, total_seconds(cmd.delay_until - datetime.utcnow()))
             # Fill in details specific to the type of command
             if cmd.action in (u'on', u'off', u'reboot'):
                 if not cmd.system.power:

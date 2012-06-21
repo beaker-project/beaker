@@ -63,6 +63,14 @@ class CommandQueuePoller(ProxyHelper):
             self.greenlets[command['id']] = gevent.spawn(self.handle, command, predecessors)
 
     def handle(self, command, predecessors):
+        if command.get('delay'):
+            # Before anything else, we need to wait for our delay period.
+            # Instead of just doing time.sleep we do a timed wait on
+            # shutting_down, so that our delay doesn't hold up the shutdown.
+            logger.debug('Delaying %s seconds for command %s',
+                    command['delay'], command['id'])
+            if shutting_down.wait(timeout=command['delay']):
+                return
         gevent.joinall(predecessors)
         if shutting_down.is_set():
             return
