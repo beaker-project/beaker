@@ -270,6 +270,41 @@ class LabControllers(RPCRoot):
         return result
 
     @cherrypy.expose
+    def get_last_netboot_for_system(self, fqdn):
+        """
+        This is only a temporary API for bz828927 until installation tracking 
+        is properly fleshed out. At that point beaker-proxy should be updated 
+        to use the new API.
+        """
+        cmd = CommandActivity.query\
+                .join(CommandActivity.system)\
+                .options(contains_eager(CommandActivity.system))\
+                .filter(System.fqdn == fqdn)\
+                .filter(CommandActivity.action == u'configure_netboot')\
+                .filter(CommandActivity.status == CommandStatus.completed)\
+                .order_by(CommandActivity.id.desc())\
+                .first()
+        if not cmd:
+            raise ValueError('System %s has never been provisioned' % fqdn)
+        distro_tree_url = cmd.distro_tree.url_in_lab(cmd.system.lab_controller, 'http')
+        if not distro_tree_url:
+            raise ValueError('No usable URL found for distro tree %s in lab %s'
+                    % (cmd.distro_tree.id, lab_controller.fqdn))
+        kernel = cmd.distro_tree.image_by_type(ImageType.kernel)
+        if not kernel:
+            raise ValueError('Kernel image not found for distro tree %s' % cmd.distro_tree.id)
+        initrd = cmd.distro_tree.image_by_type(ImageType.initrd)
+        if not initrd:
+            raise ValueError('Initrd image not found for distro tree %s' % cmd.distro_tree.id)
+        return {
+            'kernel_url': urlparse.urljoin(distro_tree_url, kernel.path),
+            'initrd_url': urlparse.urljoin(distro_tree_url, initrd.path),
+            'kernel_options': cmd.kernel_options or '',
+            'distro_tree_urls': [lca.url for lca in cmd.distro_tree.lab_controller_assocs
+                    if lca.lab_controller == cmd.system.lab_controller],
+        }
+
+    @cherrypy.expose
     @identity.require(identity.in_group('lab_controller'))
     def mark_command_running(self, command_id):
         lab_controller = identity.current.user.lab_controller
