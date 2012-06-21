@@ -37,6 +37,21 @@ def atomically_replaced_file(dest_path, mode=0644):
         # Now re-raise the original exception
         raise
 
+def atomic_link(source, dest):
+    temp_path = tempfile.mktemp(prefix=os.path.basename(dest),
+            dir=os.path.dirname(dest))
+    os.link(source, temp_path)
+    try:
+        os.rename(temp_path, dest)
+    except:
+        # Clean up the temp file, but suppress any exception if the cleaning fails
+        try:
+            os.unlink(temp_path)
+        finally:
+            pass
+        # Now re-raise the original exception
+        raise
+
 def atomic_symlink(source, dest):
     temp_path = tempfile.mktemp(prefix=os.path.basename(dest),
             dir=os.path.dirname(dest))
@@ -135,9 +150,9 @@ def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
     # beaker-pxemenu might have already fetched the images, so let's try there
     # before anywhere else.
     try:
-        os.link(os.path.join(distrotree_dir, 'kernel'),
+        atomic_link(os.path.join(distrotree_dir, 'kernel'),
                 os.path.join(images_dir, 'kernel'))
-        os.link(os.path.join(distrotree_dir, 'initrd'),
+        atomic_link(os.path.join(distrotree_dir, 'initrd'),
                 os.path.join(images_dir, 'initrd'))
         logger.debug('Using images from distro tree %s for %s', distro_tree_id, fqdn)
         return
@@ -149,9 +164,9 @@ def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
     if get_conf().get('IMAGE_CACHE', False):
         # Try the cache first.
         try:
-            os.link(os.path.join(cached_images_dir, cached_filename(kernel_url)),
+            atomic_link(os.path.join(cached_images_dir, cached_filename(kernel_url)),
                     os.path.join(images_dir, 'kernel'))
-            os.link(os.path.join(cached_images_dir, cached_filename(initrd_url)),
+            atomic_link(os.path.join(cached_images_dir, cached_filename(initrd_url)),
                     os.path.join(images_dir, 'initrd'))
             logger.debug('Using cached images for %s', fqdn)
             return
@@ -172,9 +187,9 @@ def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
         makedirs_ignore(cached_images_dir, 0755)
         try:
             # Do them in the opposite order to above
-            os.link(os.path.join(images_dir, 'initrd'),
+            atomic_link(os.path.join(images_dir, 'initrd'),
                     os.path.join(cached_images_dir, cached_filename(initrd_url)))
-            os.link(os.path.join(images_dir, 'kernel'),
+            atomic_link(os.path.join(images_dir, 'kernel'),
                     os.path.join(cached_images_dir, cached_filename(kernel_url)))
         except OSError, e:
             if e.errno != errno.EEXIST:
