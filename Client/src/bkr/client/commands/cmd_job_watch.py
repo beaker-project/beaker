@@ -57,7 +57,7 @@ See also
 :manpage:`bkr(1)`
 """
 
-
+import sys
 from bkr.client import BeakerCommand
 from bkr.client.message_bus import ClientBeakerBus
 from optparse import OptionValueError
