@@ -363,7 +363,6 @@ class TestBeakerd(unittest.TestCase):
             system = System.query.get(system.id)
             self.assertEqual(system.command_queue[0].action, 'reboot')
             self.assertEqual(system.command_queue[1].action, 'configure_netboot')
-            self.assertEqual(system.command_queue[2].action, 'clear_logs')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=826379
     def test_recipe_install_options_can_remove_system_options(self):
