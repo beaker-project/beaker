@@ -288,6 +288,16 @@ class WatchFile(object):
                                              data)
                 return True
 
+    def truncate(self):
+        try:
+            f = open(self.log, 'r+')
+        except IOError, e:
+            if e.errno != errno.ENOENT:
+                raise
+        else:
+            f.truncate()
+        self.where = 0
+
 
 class Watchdog(ProxyHelper):
 
@@ -370,7 +380,7 @@ class Watchdog(ProxyHelper):
 
     def purge_old_watchdog(self, watchdog_systems):
         try:
-            del self.watchdogs[watchdog_systems]
+            self.watchdogs.pop(watchdog_systems).clear_console()
         except KeyError, e:
             logger.error('Trying to remove a watchdog that is already removed')
 
@@ -462,19 +472,19 @@ class Monitor(ProxyHelper):
         self.basepath = obj.basepath
         self.log_base_url = obj.log_base_url
         logger.info("Initialize monitor for system: %s", self.watchdog['system'])
-        self.watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),self.watchdog,self, self.conf["PANIC_REGEX"])]
+        self.console_watch = WatchFile(
+                "%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),
+                self.watchdog,self, self.conf["PANIC_REGEX"])
 
     def run(self):
         """ check the logs for new data to upload/or cp
         """
-        # watch the console log
-        updated = False
-        for watchedFile in self.watchedFiles:
-            if watchedFile.update():
-                updated = True
-        return updated
+        return self.console_watch.update()
 
-        
+    def clear_console(self):
+        logger.debug('Truncating console log %s', self.console_watch.log)
+        self.console_watch.truncate()
+
 class Proxy(ProxyHelper):
     def task_upload_file(self, 
                          task_id, 
