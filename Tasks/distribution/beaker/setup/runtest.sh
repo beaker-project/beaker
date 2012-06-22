@@ -125,7 +125,10 @@ __EOF__
      # Turn on wsgi
      perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
      if [ -n "$GRAPHITE_SERVER" ] ; then
-        sed -i -e "/^#carbon.address /c carbon.address = ('$GRAPHITE_SERVER', ${GRAPHITE_PORT:-2023})" Server/server.cfg
+        sed -i \
+            -e "/^#carbon.address /c carbon.address = ('$GRAPHITE_SERVER', ${GRAPHITE_PORT:-2023})" \
+            -e "/^#carbon.prefix /c carbon.prefix = '${GRAPHITE_PREFIX:+$GRAPHITE_PREFIX.}beaker.'" \
+            /etc/beaker/server.cfg
      fi
      rlServiceStart httpd
      rlServiceStart beakerd
@@ -144,7 +147,7 @@ LoadPlugin write_graphite
   <Carbon>
     Host "$GRAPHITE_SERVER"
     Port "${GRAPHITE_PORT:-2023}"
-    Prefix "host/"
+    Prefix "${GRAPHITE_PREFIX:+$GRAPHITE_PREFIX/}host/"
   </Carbon>
 </Plugin>
 <Plugin processes>
@@ -208,7 +211,7 @@ LoadPlugin write_graphite
   <Carbon>
     Host "$GRAPHITE_SERVER"
     Port "${GRAPHITE_PORT:-2023}"
-    Prefix "host/"
+    Prefix "${GRAPHITE_PREFIX:+$GRAPHITE_PREFIX/}host/"
   </Carbon>
 </Plugin>
 <Plugin processes>
