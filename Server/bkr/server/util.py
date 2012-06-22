@@ -141,3 +141,11 @@ def log_traceback(logger):
         decorated.__dict__.update(func.__dict__)
         return decorated
     return decorator
+
+# This is a method on timedelta in Python 2.7+
+def total_seconds(td):
+    """
+    Returns the total number of seconds (float)
+    represented by the given timedelta.
+    """
+    return (float(td.microseconds) + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6

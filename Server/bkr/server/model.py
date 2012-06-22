@@ -733,6 +733,7 @@ command_queue_table = Table('command_queue', metadata,
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
     Column('status', CommandStatus.db_type(), nullable=False),
     Column('task_id', String(255)),
+    Column('delay_until', DateTime, default=None),
     Column('updated', DateTime, default=datetime.utcnow),
     Column('callback', String(255)),
     Column('distro_tree_id', Integer, ForeignKey('distro_tree.id')),
@@ -2195,9 +2196,6 @@ class System(SystemObject):
         except Exception:
             user = None
         if self.lab_controller:
-            self.command_queue.append(CommandActivity(user=user,
-                    service=service, action=u'clear_logs',
-                    status=CommandStatus.queued, callback=callback))
             command = CommandActivity(user=user,
                     service=service, action=u'configure_netboot',
                     status=CommandStatus.queued, callback=callback)
@@ -2207,7 +2205,8 @@ class System(SystemObject):
         else:
             return False
 
-    def action_power(self, action=u'reboot', service=u'Scheduler', callback=None):
+    def action_power(self, action=u'reboot', service=u'Scheduler',
+            callback=None, delay=0):
         try:
             user = identity.current.user
         except Exception:
@@ -2216,6 +2215,8 @@ class System(SystemObject):
         if self.lab_controller and self.power:
             status = CommandStatus.queued
             activity = CommandActivity(user, service, action, status, callback)
+            if delay:
+                activity.delay_until = datetime.utcnow() + timedelta(seconds=delay)
             self.command_queue.append(activity)
             return activity
         else:

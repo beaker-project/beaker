@@ -34,14 +34,7 @@ keyboard {{ keyboard|default('us') }}
 # System language
 lang {{ lang|default('en_US.UTF-8') }}
 
-{% if distro_tree is arch('s390', 's390x') %}
-
-#Disable reboot on s390 arch for now. Please re-enable for alpha2
-#reboot
-
-{% else %}
 reboot
-{% endif %}
 #Root password
 rootpw --iscrypted {{ password|default(user.root_password, True) }}
 # SELinux configuration
@@ -99,3 +92,5 @@ END
 %end
 
 {{ ks_appends|join('\n') }}
+{{ snippet('post_s390_reboot') }}
+{{ snippet('postreboot') }}

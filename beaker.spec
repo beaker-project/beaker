@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -349,6 +349,21 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Thu Jun 21 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-3
+- 833582 [BUG] missing apc_snmp_then_etherwake power command (bpeck@redhat.com)
+- 832975 S390 kickstarts should have reboot command (RHEL7) (bpeck@redhat.com)
+- 832226 Reboot snippets must be the last thing in a kickstart (stl@redhat.com)
+- 833662 atomically replace link targets in netboot image cache code
+  (dcallagh@redhat.com)
+- delay for 30 seconds before rebooting in postreboot snippet
+  (dcallagh@redhat.com)
+- 828927 API for getting the last installed distro tree for a system
+  (dcallagh@redhat.com)
+- Revert "clear console logs when provisioning" (dcallagh@redhat.com)
+- 821948 clear console log when watchdog is removed (dcallagh@redhat.com)
+- 833842 [BUG] Manual provisioning fails on most families/arches
+  (bpeck@redhat.com)
+
 * Mon Jun 18 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-2
 - 828451 Update lpar command to include the hmc. (bpeck@redhat.com)
 - 823329 avoid processing the same recipe many times in queued_recipes

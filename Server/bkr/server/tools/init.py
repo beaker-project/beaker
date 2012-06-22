@@ -89,6 +89,7 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
     #Setup base power types
     if PowerType.query.count() == 0:
         apc_snmp    = PowerType(u'apc_snmp')
+        PowerType(u'apc_snmp_then_etherwake')
         bladecenter = PowerType(u'bladecenter')
         bullpap     = PowerType(u'bladepap')
         drac        = PowerType(u'drac')

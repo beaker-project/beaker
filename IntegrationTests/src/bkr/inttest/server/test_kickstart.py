@@ -659,6 +659,36 @@ chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
                 in recipe.rendered_kickstart.kickstart,
                 recipe.rendered_kickstart.kickstart)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=832226
+    def test_sshkeys_s390x(self):
+        user = data_setup.create_user(password=u'password')
+        user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'AAAAhhh', u'help'))
+        system = data_setup.create_system(arch=u's390x', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.loaned = user
+        system.user = user
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_family op="=" value="RedHatEnterpriseLinux7" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="s390x" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        # check the reboot snippet is after the ssh key
+        self.assert_('Force a reboot'
+                     in recipe.rendered_kickstart.kickstart.split('echo ssh-rsa')[1],
+                     recipe.rendered_kickstart.kickstart)
+
     def test_ksappends(self):
         recipe = self.provision_recipe('''
             <job>
@@ -683,10 +713,11 @@ echo Hello World
                 </recipeSet>
             </job>
             ''', self.system)
-        self.assert_(recipe.rendered_kickstart.kickstart.endswith('''
+        self.assert_('''
 %post
 echo Hello World
-%end'''),
+%end'''
+                in recipe.rendered_kickstart.kickstart,
                 recipe.rendered_kickstart.kickstart)
 
     def test_custom_kickstart(self):

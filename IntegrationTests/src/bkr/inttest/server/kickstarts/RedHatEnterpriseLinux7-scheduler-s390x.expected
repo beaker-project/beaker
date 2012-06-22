@@ -22,10 +22,7 @@ keyboard us
 # System language
 lang en_US.UTF-8
 
-
-#Disable reboot on s390 arch for now. Please re-enable for alpha2
-#reboot
-
+reboot
 #Root password
 rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
 # SELinux configuration
@@ -286,14 +283,11 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
-
-sync
 python << _EOF_
 import xmlrpclib
 server = xmlrpclib.Server("http://lab.test-kickstart.invalid:8000")
-server.reboot("test02.test-kickstart.invalid")
+server.clear_netboot("test02.test-kickstart.invalid")
 _EOF_
-
 # Error: no snippet data for RedHatEnterpriseLinux7_post
 
 # Error: no snippet data for system_post
@@ -309,3 +303,14 @@ export RHTS_OPTION_COMPAT_SERVICE=
 END
 %end
 
+
+
+
+%post --nochroot
+sync
+python << _EOF_
+import xmlrpclib
+server = xmlrpclib.Server("http://lab.test-kickstart.invalid:8000")
+server.reboot("test02.test-kickstart.invalid")
+_EOF_
+%end

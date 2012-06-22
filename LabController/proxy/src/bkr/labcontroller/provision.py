@@ -63,6 +63,14 @@ class CommandQueuePoller(ProxyHelper):
             self.greenlets[command['id']] = gevent.spawn(self.handle, command, predecessors)
 
     def handle(self, command, predecessors):
+        if command.get('delay'):
+            # Before anything else, we need to wait for our delay period.
+            # Instead of just doing time.sleep we do a timed wait on
+            # shutting_down, so that our delay doesn't hold up the shutdown.
+            logger.debug('Delaying %s seconds for command %s',
+                    command['delay'], command['id'])
+            if shutting_down.wait(timeout=command['delay']):
+                return
         gevent.joinall(predecessors)
         if shutting_down.is_set():
             return
@@ -74,8 +82,6 @@ class CommandQueuePoller(ProxyHelper):
             elif command['action'] == u'reboot':
                 handle_power(dict(command.items() + [('action', u'off')]))
                 handle_power(dict(command.items() + [('action', u'on')]))
-            elif command['action'] == u'clear_logs':
-                handle_clear_logs(self.conf, command)
             elif command['action'] == u'configure_netboot':
                 handle_configure_netboot(command)
             elif command['action'] == u'clear_netboot':
@@ -108,17 +114,6 @@ def build_power_env(command):
     env['power_pass'] = (command['power'].get('passwd') or u'').encode('utf8')
     env['power_mode'] = command['action'].encode('utf8')
     return env
-
-def handle_clear_logs(conf, command):
-    console_log = os.path.join(conf['CONSOLE_LOGS'], command['fqdn'])
-    logger.debug('Truncating console log %s', console_log)
-    try:
-        f = open(console_log, 'r+')
-    except IOError, e:
-        if e.errno != errno.ENOENT:
-            raise
-    else:
-        f.truncate()
 
 def handle_configure_netboot(command):
     netboot.fetch_images(command['netboot']['distro_tree_id'],

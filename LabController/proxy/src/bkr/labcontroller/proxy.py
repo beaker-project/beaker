@@ -288,6 +288,16 @@ class WatchFile(object):
                                              data)
                 return True
 
+    def truncate(self):
+        try:
+            f = open(self.log, 'r+')
+        except IOError, e:
+            if e.errno != errno.ENOENT:
+                raise
+        else:
+            f.truncate()
+        self.where = 0
+
 
 class Watchdog(ProxyHelper):
 
@@ -370,7 +380,7 @@ class Watchdog(ProxyHelper):
 
     def purge_old_watchdog(self, watchdog_systems):
         try:
-            del self.watchdogs[watchdog_systems]
+            self.watchdogs.pop(watchdog_systems).clear_console()
         except KeyError, e:
             logger.error('Trying to remove a watchdog that is already removed')
 
@@ -462,19 +472,19 @@ class Monitor(ProxyHelper):
         self.basepath = obj.basepath
         self.log_base_url = obj.log_base_url
         logger.info("Initialize monitor for system: %s", self.watchdog['system'])
-        self.watchedFiles = [WatchFile("%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),self.watchdog,self, self.conf["PANIC_REGEX"])]
+        self.console_watch = WatchFile(
+                "%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),
+                self.watchdog,self, self.conf["PANIC_REGEX"])
 
     def run(self):
         """ check the logs for new data to upload/or cp
         """
-        # watch the console log
-        updated = False
-        for watchedFile in self.watchedFiles:
-            if watchedFile.update():
-                updated = True
-        return updated
+        return self.console_watch.update()
 
-        
+    def clear_console(self):
+        logger.debug('Truncating console log %s', self.console_watch.log)
+        self.console_watch.truncate()
+
 class Proxy(ProxyHelper):
     def task_upload_file(self, 
                          task_id, 
@@ -535,7 +545,6 @@ class Proxy(ProxyHelper):
         kickstart
         """
         logger.debug("install_start")
-        self.hub.systems.clear_netboot(system_name)
         # extend watchdog by 3 hours 60 * 60 * 3
         kill_time = 10800
         # look up system recipe based on hostname...
@@ -558,13 +567,19 @@ class Proxy(ProxyHelper):
             return True
         return False
 
-    def reboot(self, hostname):
+    def clear_netboot(self, system_name):
+        ''' Called from %post section to remove netboot entry '''
+        return self.hub.systems.clear_netboot(system_name)
+
+    def postreboot(self, hostname):
         # XXX would be nice if we could limit this so that systems could only
         # reboot themselves, instead of accepting any arbitrary hostname
-        logger.debug('reboot %s', hostname)
+        logger.debug('postreboot %s', hostname)
         return self.hub.systems.power('reboot', hostname, False,
                 # force=True because we are not the system's user
-                True)
+                True,
+                # delay 30 seconds so that Anaconda can unmount filesystems
+                30)
 
     def status_watchdog(self, task_id):
         """ Ask the scheduler how many seconds are left on a watchdog for this task
@@ -664,3 +679,11 @@ class Proxy(ProxyHelper):
             for all distro_trees that are associated to it.
         """
         return self.hub.labcontrollers.get_distro_trees(filter)
+
+    def get_installation_for_system(self, fqdn):
+        """
+        A system can call this to get the details of the distro tree which was
+        most recently installed on it.
+        """
+        # TODO tie this in to installation tracking when that is implemented
+        return self.hub.labcontrollers.get_last_netboot_for_system(fqdn)

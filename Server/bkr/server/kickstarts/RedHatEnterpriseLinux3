@@ -86,3 +86,5 @@ PATH=/usr/bin:$PATH
 ) 2>&1 | /usr/bin/tee /dev/console
 
 {{ ks_appends|join('\n') }}
+{{ snippet('post_s390_reboot') }}
+{{ snippet('postreboot') }}
