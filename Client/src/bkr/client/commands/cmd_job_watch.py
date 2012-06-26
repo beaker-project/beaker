@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Watch the progress of a Beaker job
-==================================
+bkr job-watch: Watch the progress of a Beaker job
+=================================================
 
 .. program:: bkr job-watch
 
@@ -57,7 +57,7 @@ See also
 :manpage:`bkr(1)`
 """
 
-
+import sys
 from bkr.client import BeakerCommand
 from bkr.client.message_bus import ClientBeakerBus
 from optparse import OptionValueError
@@ -92,7 +92,7 @@ class Job_Watch(BeakerCommand):
             failed = [t for t in task_type if t not in TaskBus.task_depth_order]
             if len(failed) > 0:
                 self.parser.error('%s are not valid task types' % ','.join(failed))
-            watch_bus_tasks(int(listendepth), task_args)
+            sys.exit(watch_bus_tasks(int(listendepth), task_args))
         else:
             self.set_hub(username, password)
-            watch_tasks(self.hub, args)
+            sys.exit(watch_tasks(self.hub, args))

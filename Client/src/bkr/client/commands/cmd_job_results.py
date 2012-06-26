@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Export Beaker job results as XML
-================================
+bkr job-results: Export Beaker job results as XML
+=================================================
 
 .. program:: bkr job-results
 

@@ -3,7 +3,7 @@ import xmltramp
 
 from time import sleep
 import time
-from bkr.server.model import TaskStatus, Job, LabControllerDistro, Distro
+from bkr.server.model import TaskStatus, Job, LabControllerDistroTree, Distro
 import sqlalchemy.orm
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
@@ -25,17 +25,13 @@ class TestBeakerd(unittest.TestCase):
                                                int(time.time() * 1000))
 
         # Create two distros and only put one in each lab.
-        cls.distro1 = data_setup.create_distro()
-        cls.distro2 = data_setup.create_distro()
+        cls.distro_tree1 = data_setup.create_distro_tree()
+        cls.distro_tree2 = data_setup.create_distro_tree()
         session.flush()
-        cls.distro1.lab_controller_assocs = [LabControllerDistro(
-                                                           lab_controller=lab2
-                                                                 )
-                                             ]
-        cls.distro2.lab_controller_assocs = [LabControllerDistro(
-                                                           lab_controller=lab1
-                                                                 )
-                                             ]
+        cls.distro_tree1.lab_controller_assocs = [LabControllerDistroTree(
+                lab_controller=lab2, url=u'http://notimportant')]
+        cls.distro_tree2.lab_controller_assocs = [LabControllerDistroTree(
+                lab_controller=lab1, url=u'http://notimportant')]
 
         # Create a user
         user = data_setup.create_user()
@@ -46,10 +42,9 @@ class TestBeakerd(unittest.TestCase):
         system1.lab_controller = lab1
         system2.lab_controller = lab1
 
-        data_setup.create_task(name=u'/distribution/install')
         session.flush()
 
-        # Create two jobs, one requiring distro1 and one requiring distro2
+        # Create two jobs, one requiring distro_tree1 and one requiring distro_tree2
         job = '''
             <job>
                 <whiteboard>%s</whiteboard>
@@ -66,8 +61,10 @@ class TestBeakerd(unittest.TestCase):
                 </recipeSet>
             </job>
                  ''' 
-        xmljob1 = XmlJob(xmltramp.parse(job % (cls.distro1.name, cls.distro1.name)))
-        xmljob2 = XmlJob(xmltramp.parse(job % (cls.distro2.name, cls.distro2.name)))
+        xmljob1 = XmlJob(xmltramp.parse(job % (cls.distro_tree1.distro.name,
+                cls.distro_tree1.distro.name)))
+        xmljob2 = XmlJob(xmltramp.parse(job % (cls.distro_tree2.distro.name,
+                cls.distro_tree2.distro.name)))
 
         cls.job1 = Jobs().process_xmljob(xmljob1, user)
         cls.job2 = Jobs().process_xmljob(xmljob2, user)
@@ -84,10 +81,9 @@ class TestBeakerd(unittest.TestCase):
         beakerd.processed_recipesets()
         with session.begin():
             self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.queued)
-            # Remove distro2 from lab1, should cause remaining recipe to abort.
-            distro = Distro.by_id(self.distro2.id)
-            for lab in distro.lab_controllers[:]:
-                distro.lab_controllers.remove(lab)
+            # Remove distro_tree2 from lab1, should cause remaining recipe to abort.
+            for lca in self.distro_tree2.lab_controller_assocs[:]:
+                session.delete(lca)
         beakerd.dead_recipes()
         with session.begin():
             self.assertEqual(Job.by_id(self.job2.id).status, TaskStatus.aborted)

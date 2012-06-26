@@ -109,7 +109,7 @@ class Process(object):
         on the given TCP port.
         """
         # XXX is there a better way to do this?
-        for i in range(20):
+        for i in range(40):
             log.info('Waiting for %s to listen on port %d', self.name, port)
             if check_listen(self.listen_port):
                 return
@@ -161,6 +161,13 @@ def setup_package():
         data_setup.setup_model()
     with session.begin():
         data_setup.create_labcontroller() #always need a labcontroller
+        data_setup.create_task(name=u'/distribution/install', requires=
+                u'make gcc nfs-utils wget procmail redhat-lsb ntp '
+                u'@development-tools @development-libs @development '
+                u'@desktop-platform-devel @server-platform-devel '
+                u'libxml2-python expect pyOpenSSL'.split())
+        data_setup.create_task(name=u'/distribution/reservesys',
+                requires=u'emacs vim-enhanced unifdef sendmail'.split())
         data_setup.create_distro()
 
     if not os.path.exists(turbogears.config.get('basepath.rpms')):

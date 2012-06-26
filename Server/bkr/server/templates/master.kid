@@ -78,6 +78,7 @@ from bkr.server.reports import Reports
                         <a href="${tg.url('/distros')}">All</a> 
                         <img class="corner_inset_right" alt="" src="${tg.url('/static/images/corner_inset_right.png')}"/>
                     </li> 
+                    <li><a href="${tg.url('/distrotrees/')}">Trees</a></li>
                     <li>   
                         <a href="${tg.url('/distrofamily')}">Family</a>
                     </li>
@@ -131,11 +132,12 @@ from bkr.server.reports import Reports
                 <ul id="Activity">
                     <li>
                         <img class="corner_inset_left" alt="" src="${tg.url('/static/images/corner_inset_left.png')}"/>
-                        <a href="${tg.url('/activity')}">All</a>
+                        <a href="${tg.url('/activity/')}">All</a>
                         <img class="corner_inset_right" alt="" src="${tg.url('/static/images/corner_inset_right.png')}"/>
                     </li>
-                    <li><a href="${tg.url('/activity')}">Systems</a></li>
-                    <li><a href="${tg.url('/activity')}">Distros</a></li>
+                    <li><a href="${tg.url('/activity/system')}">Systems</a></li>
+                    <li><a href="${tg.url('/activity/group')}">Groups</a></li>
+                    <li><a href="${tg.url('/activity/distro')}">Distros</a></li>
                     <li class="last">
                         <img class="corner_left" alt="" src="${tg.url('/static/images/corner_left.png')}"/>
                         <img class="middle" alt="" src="${tg.url('/static/images/dot.gif')}"/>
@@ -192,6 +194,8 @@ from bkr.server.reports import Reports
                         <img class="corner_right" alt="" src="${tg.url('/static/images/corner_right.png')}"/>
                     </li>
                 </ul>
+            </li>
+            <li py:if="not tg.identity.anonymous"><a href="${tg.url('/jobs/mine')}">My Jobs</a>
             </li>
             <li py:if="tg.identity.anonymous"><a href="${tg.url('/login')}">Login</a>
             </li>

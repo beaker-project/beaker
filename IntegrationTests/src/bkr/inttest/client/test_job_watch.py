@@ -9,7 +9,6 @@ from nose.plugins.skip import SkipTest
 class JobWatchTest(unittest.TestCase):
 
     def test_watch_job(self):
-        raise SkipTest('too slow (>30 sec)')
         with session.begin():
             job = data_setup.create_job()
         p = start_client(['bkr', 'job-watch', job.t_id])
@@ -17,7 +16,7 @@ class JobWatchTest(unittest.TestCase):
         with session.begin():
             data_setup.mark_job_complete(job)
         out, err = p.communicate()
-        self.assertEquals(p.returncode, 0)
+        self.assertEquals(p.returncode, 0, err)
         self.assert_(out.startswith('Watching tasks'), out)
         self.assert_('New: 1 [total: 1]' in out, out)
         self.assert_('Completed: 1 [total: 1]' in out, out)

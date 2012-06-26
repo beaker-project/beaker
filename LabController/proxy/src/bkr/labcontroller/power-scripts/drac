@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+if [ -n "$power_id" ] ; then
+    fence_drac -a "$power_address" -l "$power_user" -p "$power_pass" -m "$power_id" -o "$power_mode"
+else
+    fence_drac -a "$power_address" -l "$power_user" -p "$power_pass" -o "$power_mode"
+fi

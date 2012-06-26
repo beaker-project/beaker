@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e
+
+# Set proper virsh operation
+if [ "$power_mode" = "on" ] ; then
+    operation="start"
+else
+    operation="destroy"
+fi
+
+# Build connection URI
+# driver[+transport]://[username@][hostname][:port]/[path][?extraparameters]
+
+# Determine requested driver to use (defaults to 'qemu')
+if [[ "$power_address" == *:* ]] ; then
+    IFS=":/" read -r driver power_address <<<"$power_address"
+else
+    driver="qemu"
+fi
+
+# Was a username requested (defaults to '')?
+if [ -n "$power_user" ] ; then
+    username="${power_user}@"
+fi
+
+# Default to localhost
+if [ -n "$username" -a -z "$power_address" ] ; then
+    power_address="localhost"
+fi
+
+# Perform requested action
+# NOTE - may require additional setup by sys-admin to enable passwd-less operation
+domstate=$(virsh --connect "$driver://$username$power_address/system" domstate "$power_id")
+if [ "$operation" = "destroy" -a "$domstate" = "running" -o "$operation" = "start" -a "$domstate" = "shut off" ]; then
+    virsh --connect "$driver://$username$power_address/system" "$operation" "$power_id"
+fi

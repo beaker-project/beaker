@@ -32,8 +32,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         self.recipe_whiteboard = data_setup.unique_name(u'sdfjkljk%s')
         self.passed_job = data_setup.create_completed_job(
                 whiteboard=self.job_whiteboard, result=TaskResult.pass_,
-                recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(arch=u'i386'))
+                recipe_whiteboard=self.recipe_whiteboard)
 
         self.browser = self.get_browser()
 
@@ -81,12 +80,10 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         with session.begin():
             data_setup.create_completed_job(
                     whiteboard=self.job_whiteboard, result=TaskResult.fail,
-                    recipe_whiteboard=self.recipe_whiteboard,
-                    distro=data_setup.create_distro(arch=u'i386'))
+                    recipe_whiteboard=self.recipe_whiteboard)
             data_setup.create_completed_job(
                     whiteboard=self.job_whiteboard, result=TaskResult.warn,
-                    recipe_whiteboard=self.recipe_whiteboard,
-                    distro=data_setup.create_distro(arch=u'i386'))
+                    recipe_whiteboard=self.recipe_whiteboard)
             owner = data_setup.create_user(password='password')
             self.passed_job.owner = owner
         b = self.browser
@@ -113,12 +110,10 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         with session.begin():
             data_setup.create_completed_job(
                     whiteboard=self.job_whiteboard, result=TaskResult.fail,
-                    recipe_whiteboard=self.recipe_whiteboard,
-                    distro=data_setup.create_distro(arch=u'i386'))
+                    recipe_whiteboard=self.recipe_whiteboard)
             data_setup.create_completed_job(
                     whiteboard=self.job_whiteboard, result=TaskResult.warn,
-                    recipe_whiteboard=self.recipe_whiteboard,
-                    distro=data_setup.create_distro(arch=u'i386'))
+                    recipe_whiteboard=self.recipe_whiteboard)
             owner = data_setup.create_user(password='password')
             self.passed_job.owner = owner
         b = self.browser
@@ -148,17 +143,17 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
             unique_whiteboard = data_setup.unique_name('whiteboard%s')
             non_unique_whiteboard = data_setup.unique_name('whiteboard%s')
             non_unique_rwhiteboard = data_setup.unique_name('rwhiteboard%s')
-            distro = data_setup.create_distro(arch=u'i386')
+            distro_tree = data_setup.create_distro_tree(arch=u'i386')
             for i in range(0,9):
                 data_setup.create_completed_job(
                         whiteboard=non_unique_whiteboard, result=TaskResult.pass_,
                         recipe_whiteboard=non_unique_rwhiteboard,
-                        distro=distro)
+                        distro_tree=distro_tree)
 
             single_job = data_setup.create_completed_job(
                     whiteboard=unique_whiteboard, result=TaskResult.pass_,
                     recipe_whiteboard=data_setup.unique_name('rwhiteboard%s'),
-                    distro=distro)
+                    distro_tree=distro_tree)
 
         b = self.browser
         b.get(get_server_base() + 'matrix')
@@ -183,7 +178,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
             single_job_2 = data_setup.create_completed_job(
                     whiteboard=non_unique_whiteboard, result=TaskResult.pass_,
                     recipe_whiteboard=non_unique_rwhiteboard,
-                    distro=distro)
+                    distro_tree=distro_tree)
         b = self.browser
         b.get(get_server_base() + 'matrix')
         b.find_element_by_id('remote_form_job_ids').send_keys(str(single_job_2.id))
@@ -207,15 +202,15 @@ class TestJobMatrix(SeleniumTestCase):
         self.passed_job = data_setup.create_completed_job(
                 whiteboard=self.job_whiteboard, result=TaskResult.pass_,
                 recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(arch=u'i386'))
+                distro_tree=data_setup.create_distro_tree(arch=u'i386'))
         self.warned_job = data_setup.create_completed_job(
                 whiteboard=self.job_whiteboard, result=TaskResult.warn,
                 recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(arch=u'ia64'))
+                distro_tree=data_setup.create_distro_tree(arch=u'ia64'))
         self.failed_job = data_setup.create_completed_job(
                 whiteboard=self.job_whiteboard, result=TaskResult.fail,
                 recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(arch=u'x86_64'))
+                distro_tree=data_setup.create_distro_tree(arch=u'x86_64'))
         self.selenium = self.get_selenium()
         self.selenium.start()
 
@@ -244,8 +239,7 @@ class TestJobMatrix(SeleniumTestCase):
         with session.begin():
             new_job = data_setup.create_completed_job(
                 whiteboard=self.job_whiteboard, result=TaskResult.pass_,
-                recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(arch=u'i386'))
+                recipe_whiteboard=self.recipe_whiteboard)
         sel.click('//input[@value="Generate"]')
         sel.wait_for_page_to_load('30000')
         body_2 = sel.get_text('//body')
@@ -255,8 +249,7 @@ class TestJobMatrix(SeleniumTestCase):
         with session.begin():
             another_new_job = data_setup.create_completed_job(
                 whiteboard=self.job_whiteboard_2, result=TaskResult.pass_,
-                recipe_whiteboard=self.recipe_whiteboard,
-                distro=data_setup.create_distro(arch=u'i386'))
+                recipe_whiteboard=self.recipe_whiteboard)
         sel.open('matrix')
         sel.wait_for_page_to_load('30000')
         sel.add_selection("whiteboard", "label=%s" % self.job_whiteboard)

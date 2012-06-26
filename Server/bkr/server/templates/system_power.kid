@@ -108,19 +108,19 @@
    </tr>
    <tr>
     <td><label class="fieldlabel"
-               for="${reprovision_distro_id.field_id}"
-               py:content="reprovision_distro_id.label"/>
+               for="${reprovision_distro_tree_id.field_id}"
+               py:content="reprovision_distro_tree_id.label"/>
     </td>
     <td>
      <font color="red">
-      <span py:if="error_for(reprovision_distro_id)"
+      <span py:if="error_for(reprovision_distro_tree_id)"
             class="fielderror"
-            py:content="error_for(reprovision_distro_id)" />
+            py:content="error_for(reprovision_distro_tree_id)" />
      </font>
-     ${reprovision_distro_id.display(value_for(reprovision_distro_id), **params_for(reprovision_distro_id))}
-     <span py:if="reprovision_distro_id.help_text"
+     ${reprovision_distro_tree_id.display(value_for(reprovision_distro_tree_id), **params_for(reprovision_distro_tree_id))}
+     <span py:if="reprovision_distro_tree_id.help_text"
            class="fieldhelp"
-           py:content="reprovision_distro_id.help_text" />
+           py:content="reprovision_distro_tree_id.help_text" />
     </td>
    </tr>
    <tr>

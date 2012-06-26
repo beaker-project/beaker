@@ -304,6 +304,8 @@ def legacy_inventory(inv):
             if re.match('Virtual machine features.*: On', line):
                 data['HVM'] = True
 
+    if os.path.exists("/root/NETBOOT_METHOD.TXT"):
+        data['NETBOOT_METHOD'] = open('/root/NETBOOT_METHOD.TXT', 'r').readline()[:-1]
     return data
 
 def read_inventory():
@@ -404,10 +406,10 @@ def read_inventory():
                         deviceID = "%04x" % (DeviceID and DeviceID or 0),
                         subsysVendorID = "%04x" % (SubsysVendorID and SubsysVendorID or 0),
                         subsysDeviceID = "%04x" % (SubsysDeviceID and SubsysDeviceID or 0),
-                        bus = Bus,
-                        driver = Driver,
-                        type = Type,
-                        description = Description)
+                        bus = str(Bus),
+                        driver = str(Driver),
+                        type = str(Type),
+                        description = str(Description))
         data['Devices'].append(device)
     return data
 

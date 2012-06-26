@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-List Beaker lab controllers
-===========================
+bkr list-labcontrollers: List Beaker lab controllers
+====================================================
 
 .. program:: bkr list-labcontrollers
 

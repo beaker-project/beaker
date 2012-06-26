@@ -28,7 +28,7 @@ import rdflib.graph
 from turbogears.database import session
 
 from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, get_server_base, stub_cobbler, \
+from bkr.inttest import data_setup, get_server_base, \
         assertions, with_transaction
 from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
@@ -39,29 +39,26 @@ class SystemViewTest(SeleniumTestCase):
 
     @with_transaction
     def setUp(self):
-        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
-        self.stub_cobbler_thread.start()
-        self.lab_controller = data_setup.create_labcontroller(
-                fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+        self.lab_controller = data_setup.create_labcontroller()
         self.system_owner = data_setup.create_user()
         self.unprivileged_user = data_setup.create_user(password=u'password')
-        self.distro = data_setup.create_distro()
+        self.distro_tree = data_setup.create_distro_tree()
         self.system = data_setup.create_system(owner=self.system_owner,
                 status=u'Automated', arch=u'i386')
         self.system.shared = True
-        self.system.provisions[self.distro.arch] = Provision(
-                arch=self.distro.arch, ks_meta=u'some_ks_meta_var=1',
+        self.system.provisions[self.distro_tree.arch] = Provision(
+                arch=self.distro_tree.arch, ks_meta=u'some_ks_meta_var=1',
                 kernel_options=u'some_kernel_option=1',
                 kernel_options_post=u'some_kernel_option=2')
-        self.system.provisions[self.distro.arch]\
-            .provision_families[self.distro.osversion.osmajor] = \
-                ProvisionFamily(osmajor=self.distro.osversion.osmajor,
+        self.system.provisions[self.distro_tree.arch]\
+            .provision_families[self.distro_tree.distro.osversion.osmajor] = \
+                ProvisionFamily(osmajor=self.distro_tree.distro.osversion.osmajor,
                     ks_meta=u'some_ks_meta_var=2', kernel_options=u'some_kernel_option=3',
                     kernel_options_post=u'some_kernel_option=4')
-        self.system.provisions[self.distro.arch]\
-            .provision_families[self.distro.osversion.osmajor]\
-            .provision_family_updates[self.distro.osversion] = \
-                ProvisionFamilyUpdate(osversion=self.distro.osversion,
+        self.system.provisions[self.distro_tree.arch]\
+            .provision_families[self.distro_tree.distro.osversion.osmajor]\
+            .provision_family_updates[self.distro_tree.distro.osversion] = \
+                ProvisionFamilyUpdate(osversion=self.distro_tree.distro.osversion,
                     ks_meta=u'some_ks_meta_var=3', kernel_options=u'some_kernel_option=5',
                     kernel_options_post=u'some_kernel_option=6')
         self.system.lab_controller = self.lab_controller
@@ -70,7 +67,6 @@ class SystemViewTest(SeleniumTestCase):
 
     def tearDown(self):
         self.selenium.stop()
-        self.stub_cobbler_thread.stop()
 
     def go_to_system_view(self, system=None):
         if system is None:
@@ -90,7 +86,8 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.login()
         with session.begin():
-            job = data_setup.create_job(owner=self.system.owner, distro=self.distro)
+            job = data_setup.create_job(owner=self.system.owner,
+                    distro_tree=self.distro_tree)
             job.recipesets[0].recipes[0]._host_requires = (
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % self.system.fqdn)
@@ -237,19 +234,6 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_value('fqdn'), 'looooool')
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=670912
-    def test_renaming_system_removes_from_cobbler(self):
-        self.login()
-        sel = self.selenium
-        self.go_to_system_view()
-        old_fqdn = self.system.fqdn
-        new_fqdn = 'commodore64.example.com'
-        sel.type('fqdn', new_fqdn)
-        sel.click('link=Save Changes')
-        sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_value('fqdn'), new_fqdn)
-        self.assert_(old_fqdn in self.stub_cobbler_thread.cobbler.removed_systems)
 
     def test_add_arch(self):
         orig_date_modified = self.system.date_modified
@@ -443,7 +427,7 @@ class SystemViewTest(SeleniumTestCase):
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
-            self.assert_(self.distro.arch not in self.system.provisions)
+            self.assert_(self.distro_tree.arch not in self.system.provisions)
 
     def test_update_labinfo(self):
         orig_date_modified = self.system.date_modified
@@ -516,13 +500,14 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         sel.click('//ul[@class="tabbernav"]//a[text()="Provision"]')
-        sel.select('prov_install', self.distro.install_name)
+        sel.select('prov_install', unicode(self.distro_tree))
         self.wait_and_try(self.check_install_options)
 
     def check_install_options(self):
         sel = self.selenium
         self.assertEqual(sel.get_value('ks_meta'), 'some_ks_meta_var=3')
-        self.assertEqual(sel.get_value('koptions'), 'some_kernel_option=5')
+        # noverifyssl comes from server-test.cfg
+        self.assertEqual(sel.get_value('koptions'), 'noverifyssl some_kernel_option=5')
         self.assertEqual(sel.get_value('koptions_post'), 'some_kernel_option=6')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=703548

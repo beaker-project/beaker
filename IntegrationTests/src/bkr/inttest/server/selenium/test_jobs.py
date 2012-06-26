@@ -130,8 +130,7 @@ class NewJobTest(SeleniumTestCase):
     @with_transaction
     def setUp(self):
         if not Distro.by_name(u'BlueShoeLinux5-5'):
-            data_setup.create_distro(name=u'BlueShoeLinux5-5')
-        data_setup.create_task(name=u'/distribution/install')
+            data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
         data_setup.create_product(product_name=u'the_product')
         self.selenium = self.get_selenium()
         self.selenium.start()
@@ -215,7 +214,7 @@ class NewJobTest(SeleniumTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=661652
     def test_job_with_excluded_task(self):
         with session.begin():
-            distro = data_setup.create_distro(arch=u'ia64')
+            distro_tree = data_setup.create_distro_tree(arch=u'ia64')
             excluded_task = data_setup.create_task(exclude_arch=[u'ia64'])
         self.login()
         sel = self.selenium
@@ -242,7 +241,7 @@ class NewJobTest(SeleniumTestCase):
                     </recipe>
                 </recipeSet>
             </job>
-            ''' % (distro.name, excluded_task.name))
+            ''' % (distro_tree.distro.name, excluded_task.name))
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
         sel.click('//input[@value="Submit Data"]')

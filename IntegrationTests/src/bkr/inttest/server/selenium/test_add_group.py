@@ -1,8 +1,10 @@
 #!/usr/bin/python
-from bkr.inttest.server.selenium import SeleniumTestCase
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup
 import unittest, time, re, os
 from turbogears.database import session
+
+
 
 class AddGroup(SeleniumTestCase):
     def setUp(self):
@@ -16,7 +18,7 @@ class AddGroup(SeleniumTestCase):
         sel = self.selenium
         sel.open("")
         self.login()
-        sel.click("link=Groups")
+        sel.click("//..[@id='admin']/li/a[text()='Groups']")
         sel.wait_for_page_to_load('30000')
         sel.click("link=Add ( + )")
         sel.wait_for_page_to_load('30000')
@@ -29,7 +31,6 @@ class AddGroup(SeleniumTestCase):
                                                                             
     def tearDown(self):
         self.selenium.stop()
-        self.assertEqual([], self.verificationErrors)
 
 if __name__ == "__main__":
     unittest.main()

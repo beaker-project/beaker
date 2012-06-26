@@ -47,7 +47,8 @@ def start_client(args, config=None):
     return subprocess.Popen(args, executable=client_command,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             env=dict(os.environ.items() +
-                [('BEAKER_CLIENT_CONF', config.name)]))
+                [('PYTHONUNBUFFERED', '1'),
+                 ('BEAKER_CLIENT_CONF', config.name)]))
 
 def run_client(args, config=None):
     p = start_client(args, config)

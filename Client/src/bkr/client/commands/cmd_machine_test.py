@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Generate Beaker job to test a system
-====================================
+bkr machine-test: Generate Beaker job to test a system
+======================================================
 
 .. program:: bkr machine-test
 

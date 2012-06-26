@@ -1,7 +1,7 @@
 
 """
-Delete a Beaker system permanently
-==================================
+bkr system-delete: Delete a Beaker system permanently
+=====================================================
 
 .. program:: bkr system-delete
 

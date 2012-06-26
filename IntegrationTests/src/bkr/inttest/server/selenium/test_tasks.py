@@ -119,9 +119,8 @@ class TestSubmitTask(SeleniumTestCase):
         self.assertEqual(self.get_task_info_field('Run For'), 'beaker')
         self.assertEqual(self.get_task_info_field('Priority'), 'Low')
         self.assertEqual(self.get_task_info_field('Destructive'), 'False')
-        requires = dict(
-            [(r,1) for r in  self.get_task_info_field('Requires').split('\n')])
-        self.assertEqual(requires, dict(beaker=1,rpm=1,coreutils=1))
+        self.assertEqual(self.get_task_info_field('Requires'),
+                '\n'.join(['beaker', 'coreutils', 'rpm']))
 
     def get_task_info_field(self, field_label):
         """Returns the value of a field in the task info table."""

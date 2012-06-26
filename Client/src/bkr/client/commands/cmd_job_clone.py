@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Clone existing Beaker jobs
-==========================
+bkr job-clone: Clone existing Beaker jobs
+=========================================
 
 .. program:: bkr job-clone
 

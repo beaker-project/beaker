@@ -1,4 +1,6 @@
 from setuptools import setup, find_packages
+from glob import glob
+
 setup(
     name = "bkr.labcontroller",
     version = "@VERSION@",
@@ -9,17 +11,16 @@ setup(
     namespace_packages = ['bkr'],
 
     data_files = [('/etc/beaker/', ['labcontroller.conf']),
+                  ('/etc/beaker/power-scripts/', []),
                   ('/etc/init.d', ['init.d/beaker-proxy',
                                    'init.d/beaker-transfer',
+                                   'init.d/beaker-provision',
                                    'init.d/beaker-watchdog'])],
     package_data = {
         'bkr.labcontroller': [
             'default.conf',
+            'power-scripts/*',
         ],
-        '/etc/beaker': ['labcontroller.conf'],
-        '/etc/init.d': ['init.d/beaker-proxy',
-                        'init.d/beaker-transfer',
-                        'init.d/beaker-watchdog'],
     },
 
     entry_points = {
@@ -27,8 +28,9 @@ setup(
             'beaker-proxy    = bkr.labcontroller.main:main',
             'beaker-watchdog = bkr.labcontroller.watchdog:main',
             'beaker-transfer = bkr.labcontroller.transfer:main',
-            'beaker-osversion = bkr.labcontroller.osversion:main',
             'beaker-import = bkr.labcontroller.distro_import:main',
+            'beaker-provision = bkr.labcontroller.provision:main',
+            'beaker-pxemenu = bkr.labcontroller.pxemenu:main',
         ),
     }
 )

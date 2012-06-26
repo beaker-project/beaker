@@ -1,0 +1,122 @@
+{% if sysprofile %}
+{% for snippet_profile in sysprofile|split(';') %}
+# Snippet Profile: {{ snippet_profile }}
+{{ snippet(snippet_profile) }}
+{% endfor  %}
+{% else %}
+{{ snippet('install_method') }}
+
+key --skip
+
+{% if manual %}
+ignoredisk --interactive
+{% endif %}
+{% if not manual %}
+# System bootloader configuration
+bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
+
+{{ mode|default('cmdline') }}
+
+{{ snippet('network') }}
+{#
+## Firewall configuration
+## firewall in kickstart metadata will enable the firewall
+## firewall=22:tcp,80:tcp will enable the firewall with ports 22 and 80 open.
+## always allow port 12432 so that beah harness will support multihost
+#}
+firewall
+{%- if firewall|default('disabled') == 'disabled' %} --disabled
+{%- else %} --enabled --port=12432:tcp{% if firewall is defined %},{{ firewall }}{% endif %}
+{% endif %}
+
+# System keyboard
+keyboard {{ keyboard|default('us') }}
+# System language
+lang {{ lang|default('en_US.UTF-8') }}
+logging --level=info
+reboot
+#Root password
+rootpw --iscrypted {{ password|default(user.root_password, True) }}
+# SELinux configuration
+selinux {{ selinux|default('--disabled') }}
+
+# Configure the X Window System
+{% if skipx %}
+skipx
+{% else %}
+{% if not (distro_tree is arch('s390', 's390x')) %}
+xconfig --startxonboot
+{% endif %}
+{% endif %}
+
+# System timezone
+timezone {{ timezone|default('America/New_York') }}
+# Install OS instead of upgrade
+install
+
+{{ snippet('anaconda_repos') }}
+{{ snippet('rhts_devices') }}
+{{ snippet('rhts_partitions') }}
+{{ snippet('RedHatStorage2') }}
+{{ snippet('system') }}
+
+%packages --nobase --ignoremissing
+@core
+@rhs-tools
+glusterfs
+glusterfs-server
+glusterfs-fuse
+glusterfs-rdma
+glusterfs-geo-replication
+@glusterfs-swift
+@scalable-file-systems
+xfsprogs
+xfsdump
+# bz 798027
+mdadm
+# bz 798304
+tuned
+tuned-utils
+redhat-lsb
+{{ snippet('rhts_packages') }}
+
+{% endif %}{# manual #}
+
+{% endif %}{# sysprofile #}
+
+%pre --log=/dev/console
+{{ snippet('rhts_pre') }}
+{{ snippet('RedHatStorage2_pre') }}
+{{ snippet('system_pre') }}
+%end
+
+%post --log=/dev/console
+{{ snippet('rhts_post') }}
+{{ snippet('RedHatStorage2_post') }}
+{{ snippet('system_post') }}
+{{ snippet('ssh_keys') }}
+%end
+
+%post --nochroot
+## bz 796193
+for f in /mnt/sysimage/etc/sysconfig/network-scripts/ifcfg-*; do
+    if echo $f | grep -q 'ifcfg-lo$'; then
+        continue
+    fi
+    if ! grep -q '^BOOTPROTO' $f; then
+        echo 'BOOTPROTO="dhcp"' >> $f
+    fi
+    if grep -q '^ONBOOT' $f; then
+        sed -i -e '/^ONBOOT/c ONBOOT="yes"' $f
+    else
+        echo 'ONBOOT="yes"' >> $f
+    fi
+done
+
+# bz 798597
+sed -i -e '/^Red Hat Enterprise Linux/c Red Hat Storage release 2.0' /mnt/sysimage/etc/issue /mnt/sysimage/etc/issue.net
+%end
+
+{{ ks_appends|join('\n') }}
+{{ snippet('post_s390_reboot') }}
+{{ snippet('postreboot') }}

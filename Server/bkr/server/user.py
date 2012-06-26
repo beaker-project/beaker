@@ -6,7 +6,7 @@ from cherrypy import request, response
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar
+from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, BeakerDataGrid
 from bkr.server.admin_page import AdminPage
 from bkr.server import validators as beaker_validators
 
@@ -26,7 +26,7 @@ class UserFormSchema(validators.Schema):
     display_name = validators.String(not_empty=True)
     disabled = validators.StringBool(if_empty=False)
     email_address = validators.Email(not_empty=True)
-    chained_validators = [beaker_validators.UniqueEmail('user_id',
+    chained_validators = [beaker_validators.UniqueFormEmail('user_id',
                             'email_address'),
                           beaker_validators.UniqueUserName('user_id',
                             'user_name')]
@@ -70,18 +70,17 @@ class Users(AdminPage):
         )
 
     @identity.require(identity.in_group("admin"))
-    @expose(template='bkr.server.templates.form')
+    @expose(template='bkr.server.templates.user_edit_form')
     def edit(self, id=None, **kw):
+        return_vals = dict(form=self.user_form,
+                           action='./save',
+                           options={},
+                           value=id and User.by_id(id) or kw,)
         if id:
-            value = User.by_id(id)
+            return_vals['groupsgrid'] = self.show_groups()
         else:
-            value = kw
-        return dict(
-            form = self.user_form,
-            action = './save',
-            options = {},
-            value = value,
-        )
+            return_vals['groupsgrid'] = None
+        return return_vals
 
     @identity.require(identity.in_group("admin"))
     @expose()
@@ -225,3 +224,7 @@ class Users(AdminPage):
     def by_name(self, input,anywhere=False,ldap=True):
         input = input.lower()
         return dict(matches=User.list_by_name(input,anywhere,ldap))
+
+    def show_groups(self):
+        group = ('Group', lambda x: x.display_name)
+        return BeakerDataGrid(fields=[group])

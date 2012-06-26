@@ -1,7 +1,7 @@
 
 """
-Generate Beaker job to test harness installation
-================================================
+bkr harness-test: Generate Beaker job to test harness installation
+==================================================================
 
 .. program:: bkr harness-test
 
@@ -102,11 +102,9 @@ class Harness_Test(BeakerWorkflow):
 
         fva = set() # all family-variant-arch combinations
         for family in families:
-            distros = self.hub.distros.filter({'family': family})
-            for distro in distros:
-                arch = distro[2]
-                variant = distro[4] or ''
-                fva.add((family, variant, arch))
+            dts = self.hub.distrotrees.filter({'family': family})
+            for dt in dts:
+                fva.add((family, dt['variant'] or '', dt['arch']))
             # if this family has any variants, discard combinations which have blank variant
             if any(f == family and v for f, v, a in fva):
                 fva.difference_update([(f, v, a) for f, v, a in fva

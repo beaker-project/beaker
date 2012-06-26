@@ -1,0 +1,133 @@
+from datetime import datetime
+from turbogears import widgets, expose, identity, validators, \
+	error_handler, validate, flash, redirect
+from turbogears.database import session
+from bkr.server.model import ConfigItem, SSHPubKey
+from bkr.server import validators as beaker_validators
+from bkr.server.widgets import BeakerDataGrid
+from bkr.server.xmlrpccontroller import RPCRoot
+
+class Preferences(RPCRoot):
+
+    exposed = True
+
+
+    class SSHKeyAddFormValidatorSchema(validators.Schema):
+        pubkey = validators.NotEmpty()
+
+
+    root_password = widgets.TextField(name='_root_password', label='Root Password')
+    rootpw_expiry = widgets.TextField(name='rootpw_expiry',
+                                      label='Root Password Expiry',
+                                      attrs={'disabled': True})
+    email = widgets.TextField(name='email_address', label='Email Address',
+                                   validator=beaker_validators.CheckUniqueEmail())
+    prefs_form   = widgets.TableForm(
+        'UserPrefs',
+        fields = [email, root_password, rootpw_expiry],
+        action = 'save',
+        submit_text = _(u'Change'),
+    )
+
+    sshkey     = widgets.TextArea(name='ssh_pub_key', label='Public SSH Key')
+    ssh_key_add_form = widgets.TableForm(
+        'SSH Public Key',
+        fields = [sshkey],
+        action = 'ssh_key_add',
+        submit_text = _(u'Add'),
+        validator=SSHKeyAddFormValidatorSchema(),
+    )
+
+    rootpw_grid = BeakerDataGrid(fields=[
+                    ('Root Password', lambda x: x.value),
+                    ('Effective from', lambda x: x.valid_from)
+                 ])
+
+    @expose(template='bkr.server.templates.prefs')
+    @identity.require(identity.not_anonymous())
+    def index(self, *args, **kw):
+        user = identity.current.user
+
+        # Show all future root passwords, and the previous five
+        rootpw = ConfigItem.by_name('root_password')
+        rootpw_values = rootpw.values().filter(rootpw.value_class.valid_from > datetime.utcnow())\
+                       .order_by(rootpw.value_class.valid_from.desc()).all()\
+                      + rootpw.values().filter(rootpw.value_class.valid_from <= datetime.utcnow())\
+                       .order_by(rootpw.value_class.valid_from.desc())[:5]
+
+        return dict(
+            title        = 'User Prefs',
+            prefs_form   = self.prefs_form,
+            ssh_key_form = self.ssh_key_add_form,
+            widgets      = {},
+            ssh_keys     = user.sshpubkeys,
+            value        = user,
+            rootpw       = rootpw.current_value(),
+            rootpw_grid  = self.rootpw_grid,
+            rootpw_values = rootpw_values,
+            options      = None)
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    @error_handler(index)
+    @validate(form=prefs_form)
+    def save(self, *args, **kw):
+        email = kw.get('email_address', None)
+        root_password = kw.get('_root_password', None)
+        changes = []
+ 
+        if email and email != identity.current.user.email_address:
+            changes.append("Email address changed")
+            identity.current.user.email_address = email
+
+        if identity.current.user.root_password and not root_password:
+            identity.current.user.root_password = None
+            changes.append("Test host root password cleared")
+        elif root_password and root_password != \
+            identity.current.user.root_password:
+            try:
+                identity.current.user.root_password = root_password
+                changes.append("Test host root password hash changed")
+            except ValueError, msg:
+                changes.append("Root password not changed: %s" % msg)
+
+        if changes:
+            flash(_(u', '.join(changes)))
+        redirect('.')
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def ssh_key_remove(self, *args, **kw):
+        user = identity.current.user
+        keyid = kw.get('id', None)
+
+        try:
+            key = SSHPubKey.by_id(keyid)
+        except InvalidRequestError:
+            flash(_(u"SSH key not found"))
+            redirect('.')
+
+        if user != key.user:
+            flash(_(u"May not remove another user's keys"))
+            redirect('.')
+
+        session.delete(key)
+        flash(_(u"SSH public key removed"))
+        redirect('.')
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def ssh_key_add(self, *args, **kw):
+        user = identity.current.user
+        pubkey = kw.get('ssh_pub_key', None)
+
+        try:
+            keytype, keyval, keyident = pubkey.split(None, 2)
+        except ValueError:
+            flash(_(u"Invalid SSH key"))
+            redirect('.')
+
+        k = SSHPubKey(keytype, keyval, keyident)
+        user.sshpubkeys.append(k)
+        flash(_(u"SSH public key added"))
+        redirect('.')

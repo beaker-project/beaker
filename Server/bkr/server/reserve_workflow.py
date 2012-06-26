@@ -1,33 +1,35 @@
 from turbogears import controllers, identity, expose, url, database, validate, flash, redirect
 from turbogears.database import session
 from sqlalchemy.sql.expression import and_, func, not_
-from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.exc import InvalidRequestError
 from bkr.server.widgets import ReserveWorkflow as ReserveWorkflowWidget
 from bkr.server.widgets import ReserveSystem
 from bkr.server.model import (osversion_table, distro_table, osmajor_table, arch_table, distro_tag_table,
                               Distro, Job, RecipeSet, MachineRecipe, System, RecipeTask, RecipeTaskParam,
-                              Task, Arch, OSMajor, DistroTag, SystemType)
+                              Task, Arch, OSMajor, DistroTag, SystemType, OSVersion, DistroTree)
 from bkr.server.model import Job
 from bkr.server.jobs import Jobs as JobController
-from bkr.server.cobbler_utils import hash_to_string
 from bexceptions import *
 import re
 import logging
 log = logging.getLogger(__name__)
 
 class ReserveWorkflow:
-    widget = ReserveWorkflowWidget()
+    widget = ReserveWorkflowWidget(
+            action='reserve',
+            get_distros_rpc='get_distro_options',
+            get_distro_trees_rpc='get_distro_tree_options')
     reserveform = ReserveSystem()
   
     @expose()
     @identity.require(identity.not_anonymous())
-    def doit(self, distro_id, **kw):
+    def doit(self, distro_tree_id, **kw):
         """ Create a new reserve job, if system_id is defined schedule it too """
         if 'system_id' in kw:
             kw['id'] = kw['system_id']
          
         try:
-            provision_system_job = Job.provision_system_job(distro_id, **kw)
+            provision_system_job = Job.provision_system_job(distro_tree_id, **kw)
         except BX, msg:
             flash(_(u"%s" % msg))
             redirect(u".")
@@ -35,9 +37,11 @@ class ReserveWorkflow:
 
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
-    def reserve(self, distro_id, system_id=None):
+    def reserve(self, distro_tree_id, system_id=None):
         """ Either queue or provision the system now """
-        if system_id:
+        if system_id == 'search':
+            redirect('/reserve_system', distro_tree_id=distro_tree_id)
+        elif system_id:
             try:
                 system = System.by_id(system_id, identity.current.user)
             except InvalidRequestError:
@@ -51,17 +55,22 @@ class ReserveWorkflow:
                             system_id = system_id, 
                             system = system_name,
                             distro = '',
-                            distro_ids = [],
+                            distro_tree_ids = [],
+                            warn='',
                             )
-        if not isinstance(distro_id,list):
-            distro_id = [distro_id]
-        for id in distro_id:
+        if not isinstance(distro_tree_id, list):
+            distro_tree_id = [distro_tree_id]
+        for id in distro_tree_id:
             try:
-                distro = Distro.by_id(id)
-                distro_names.append(distro.install_name)
-                return_value['distro_ids'].append(id)
-            except InvalidRequestError:
-                flash(_(u'Invalid Distro ID %s' % id)) 
+                distro_tree = DistroTree.by_id(id)
+                if System.by_type(type=SystemType.machine,
+                        systems=distro_tree.systems(user=identity.current.user))\
+                        .count() < 1:
+                    flash(_(u'No systems compatible with %s') % distro_tree)
+                distro_names.append(unicode(distro_tree))
+                return_value['distro_tree_ids'].append(id)
+            except NoResultFound:
+                flash(_(u'Invalid distro tree ID %s') % id)
         distro = ", ".join(distro_names)
         return_value['distro'] = distro
         
@@ -73,73 +82,65 @@ class ReserveWorkflow:
 
     @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.generic') 
-    def index(self,*args,**kw):
-        values = {}
-        if 'arch' in kw:
-            values['arch'] = kw['arch']
-        if 'distro_family' in kw:
-            values['distro_family'] = kw['distro_family']
-        if 'tag' in kw:
-            values['tag'] = kw['tag']
- 
-        return dict(widget=self.widget,widget_options={'values' : values},title='Reserve Workflow')
+    def index(self, **kwargs):
+        kwargs.setdefault('tag', 'STABLE')
+        value = dict((k, v) for k, v in kwargs.iteritems()
+                if k in ['osmajor', 'tag', 'distro'])
 
+        options = {}
+        tags = DistroTag.used()
+        options['tag'] = [('', 'None selected')] + \
+                [(tag.tag, tag.tag) for tag in tags]
+        osmajors = sorted(OSMajor.in_any_lab(), key=lambda osmajor:
+                re.match(r'(.*?)(\d*)$', osmajor.osmajor).groups())
+        options['osmajor'] = [('', 'None selected')] + \
+                [(osmajor.osmajor, osmajor.osmajor) for osmajor in osmajors]
+        options['distro'] = self._get_distro_options(**kwargs)
+        options['distro_tree_id'] = self._get_distro_tree_options(**kwargs)
+
+        attrs = {}
+        if not options['distro']:
+            attrs['distro'] = dict(disabled=True)
+
+        return dict(title=_(u'Reserve Workflow'),
+                    widget=self.widget,
+                    value=value,
+                    widget_options=options,
+                    widget_attrs=attrs)
 
     @expose(allow_json=True)
-    def get_distro_options(self,arch=None,distro_family=None,tag=None):
+    def get_distro_options(self, **kwargs):
+        return {'options': self._get_distro_options(**kwargs)}
+
+    def _get_distro_options(self, osmajor=None, tag=None, **kwargs):
         """
-        get_distro_options() will return all the distros for a given arch,
-        distro_family and tag. If there are multiple archs supplied, it will
-        return a list of distro names, otherwise distro install names
+        Returns a list of distro names for the given osmajor and tag.
         """
-        if arch is None or distro_family is None:
-            return {'options' : [] }
-        distros = Distro.distros_for_provision(arch=arch, osmajor=distro_family, tag=tag)
-        if not distros:
-            return {'options' : [] }
-        if isinstance(arch, list) and len(arch) > 1: #Multiple arch search
-            #Get a mangled version of the install_name (i.e without the arch on the end)
-            names = [re.sub(r'^(.+)\-(?:.+?)$',r'\1',d.install_name) for d in distros]
-        else:
-            #Only get install names
-            names = [d.install_name for d in distros]
-        return {'options' : names }
+        if not osmajor:
+            return []
+        distros = Distro.query.join(Distro.osversion, OSVersion.osmajor)\
+                .filter(Distro.trees.any(DistroTree.lab_controller_assocs.any()))\
+                .filter(OSMajor.osmajor == osmajor)\
+                .order_by(Distro.date_created.desc())
+        if tag:
+            distros = distros.filter(Distro._tags.any(DistroTag.tag == tag))
+        return [name for name, in distros.values(Distro.name)]
 
     @expose(allow_json=True)
-    def find_systems_for_multiple_distros(self, distro_name, arches=None,*args,**kw):
-        if arches is None:
-            arches = []
-        distro_ids = []
-        for arch in arches:
-            distro_install_name = '%s-%s' % (distro_name,arch)
-            try:
-                distro = Distro.query.join(Distro.arch).filter(Distro.install_name == distro_install_name).one()
-                distro_ids.append(distro.id)
-            except InvalidRequestError:
-                log.error('Could not find distro %s' % distro_install_name)
-                return {'enough_systems' : 0, 'error' : 'There was an error retrieving distro %s, \
-                    please see your administrator.' % distro_install_name}
-            systems_distro_query = distro.systems()
-            systems_available = System.available_for_schedule(identity.current.user,
-                System.by_type(type=SystemType.machine, systems=systems_distro_query))
-            if systems_available.count() < 1:
-                # Not enough systems
-                return {'enough_systems' : 0, 'distro_id':None}
+    def get_distro_tree_options(self, **kwargs):
+        return {'options': self._get_distro_tree_options(**kwargs)}
 
-        return {'enough_systems':1, 'distro_id' : distro_ids}
-
-    @expose(allow_json=True)
-    def find_systems_for_distro(self, distro_install_name, *args,**kw):
+    def _get_distro_tree_options(self, distro=None, **kwargs):
+        """
+        Returns a list of distro trees for the given distro.
+        """
+        if not distro:
+            return []
         try:
-            distro = Distro.query.filter(Distro.install_name == distro_install_name).one()
-        except InvalidRequestError,(e):
-            return { 'enough_systems' : 0, 'error' : 'There was an error retrieving distro %s, \
-                please see your administrator' % distro_install_name}
-
-        systems_distro_query = distro.systems()
-        avail_systems_distro_query = System.available_for_schedule(identity.current.user,
-                System.by_type(type=SystemType.machine, systems=systems_distro_query))
-        enough_systems = 0
-        if avail_systems_distro_query.count() > 0:
-            enough_systems = 1
-        return {'enough_systems' : enough_systems, 'distro_id' : distro.id }
+            distro = Distro.by_name(distro)
+        except NoResultFound:
+            return []
+        trees = distro.dyn_trees.join(DistroTree.arch)\
+                .filter(DistroTree.lab_controller_assocs.any())\
+                .order_by(DistroTree.variant, Arch.arch)
+        return [(tree.id, unicode(tree)) for tree in trees]

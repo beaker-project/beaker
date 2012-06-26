@@ -37,47 +37,38 @@
    </tr>
    <tr class="list">
     <th class="list">
-      <b>Arch</b>
-    </th>
-    <td class="list" colspan="3">
-     ${value.arch}
-    </td>
-   </tr>
-   <tr class="list">
-    <th class="list">
-      <b>Breed</b>
-    </th>
-    <td class="list" colspan="3">
-     ${value.breed}
-    </td>
-   </tr>
-   <tr class="list">
-    <th class="list">
       <b>OS Version</b>
     </th>
     <td class="list" colspan="3">
      ${value.osversion}
     </td>
    </tr>
-   <tr class="list">
-    <th class="list">
-      <b>Variant</b>
-    </th>
-    <td class="list" colspan="3">
-     ${value.variant}
-    </td>
-   </tr>
-   <tr class="list">
-    <th class="list">
-      <b>Virt</b>
-    </th>
-    <td class="list" colspan="3">
-     ${value.virt}
-    </td>
-   </tr>
   </table>
-  <div><h2>Lab Controllers</h2>
-   ${form_lc.display(method='get', action=action, value=value, options=options)}
+  <div><h2>Distro Trees</h2>
+    <table class="list">
+      <thead>
+        <tr class="list">
+          <th class="list">ID</th>
+          <th class="list">Variant</th>
+          <th class="list">Arch</th>
+          <th class="list">Provision</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr py:for="i, tree in enumerate(value.trees)" class="${i%2 and 'odd' or 'even'}">
+          <td class="list"><a class="list" href="${tg.url('/distrotrees/%s' % tree.id)}">${tree.id}</a></td>
+          <td class="list">${tree.variant}</td>
+          <td class="list">${tree.arch}</td>
+          <td class="list">
+            <span py:if="tree.lab_controller_assocs" py:strip="True">
+              <a class="list" href="${tg.url('/reserve_system', distro_tree_id=tree.id)}">Pick System</a>
+              <span style="padding-left: 1em;" />
+              <a class="list" href="${tg.url('/reserveworkflow/reserve', distro_tree_id=tree.id)}">Pick Any System</a>
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
   <div><h2>Tags</h2>
    ${form.display(method='get', action=action, value=value, options=options)}
@@ -86,7 +77,6 @@
     ${form_task.display(
     value=value_task,
     options=options,
-    hidden=options['hidden'],
     action=action_task,
     target_dom='task_items',
     update='task_items',

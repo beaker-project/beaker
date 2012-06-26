@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# power_address is combined address of the apc pdu and the mac address of the
+#  host but using dashes instead of :.
+#power_address: pdu-l2f3.mgmt.lab.example.com:00-14-5e-0C-06-DE
+# power_id is the plug on the apc device
+#power_id: 15
+
+set -e
+
+IFS=":" read -r apc_address ether_address <<< "$power_address"
+
+ether_address=$(echo $ether_address| sed -e 's/-/:/g')
+
+for plug in $power_id; do
+    fence_apc_snmp -a "$apc_address" -n "$plug" -o "$power_mode"
+done
+
+if [ "$power_mode" = "on" ]; then
+sleep 30
+ether-wake -i eth0 "$ether_address"
+fi

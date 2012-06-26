@@ -1,0 +1,115 @@
+{% if sysprofile %}
+{% for snippet_profile in sysprofile|split(';') %}
+# Snippet Profile: {{ snippet_profile }}
+{{ snippet(snippet_profile) }}
+{% endfor  %}
+{% else %}
+{{ snippet('install_method') }}
+
+{% if not manual %}
+auth --enableshadow --enablemd5
+# System bootloader configuration
+bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
+
+{#
+## For normal provisioning use Workstation key
+#}
+key {{ key|default('da3122afdb7edd23') }}
+
+{{ mode }}
+
+{{ snippet('network') }}
+{#
+## Firewall configuration
+## firewall in kickstart metadata will enable the firewall
+## firewall=22:tcp,80:tcp will enable the firewall with ports 22 and 80 open.
+## always allow port 12432 so that beah harness will support multihost
+#}
+firewall
+{%- if firewall|default('disabled') == 'disabled' %} --disabled
+{%- else %} --enabled --port=12432:tcp{% if firewall is defined %},{{ firewall }}{% endif %}
+{% endif %}
+
+# System keyboard
+keyboard {{ keyboard|default('us') }}
+# System language
+lang {{ lang|default('en_US.UTF-8') }}
+
+reboot
+#Root password
+rootpw --iscrypted {{ password|default(user.root_password, True) }}
+# SELinux configuration
+selinux {{ selinux|default('--enforcing') }}
+
+# Configure the X Window System
+{% if skipx %}
+skipx
+{% else %}
+xconfig --startxonboot
+{% endif %}
+
+# System timezone
+timezone {{ timezone|default('America/New_York') }}
+# Install OS instead of upgrade
+install
+
+{{ snippet('rhts_scsi_ethdevices') }}
+{{ snippet('rhts_partitions') }}
+{{ snippet('RedHatEnterpriseLinuxClient5') }}
+{{ snippet('system') }}
+
+%packages --resolvedeps --ignoremissing
+{#
+## If packages variable is set add additional packages to this install
+## packages=httpd:selinux:kernel
+#}
+{% if packages %}
+{{ snippet('rhts_packages') }}
+{% else %}
+@development-tools
+@development-libs
+@admin-tools
+@base
+@base-x
+@core
+@dialup
+@editors
+@games
+@gnome-desktop
+@graphical-internet
+@graphics
+@java
+@office
+@printing
+@sound-and-video
+@text-internet
+busybox
+comps-extras
+cracklib-dicts
+gnome-mime-data
+iso-codes
+kernel-headers
+nash
+rmt
+tzdata
+xkeyboard-config
+{% endif %}
+
+{% endif %}{# manual #}
+
+{% endif %}{# sysprofile #}
+
+%pre --log=/dev/console
+{{ snippet('rhts_pre') }}
+{{ snippet('RedHatEnterpriseLinuxClient5_pre') }}
+{{ snippet('system_pre') }}
+
+%post --log=/dev/console
+{{ snippet('rhts_post') }}
+{{ snippet('RedHatEnterpriseLinuxClient5_post') }}
+{{ snippet('system_post') }}
+{{ snippet('ssh_keys') }}
+
+{{ ks_appends|join('\n') }}
+{{ snippet('post_s390_reboot') }}
+{{ snippet('postreboot') }}

@@ -1,38 +1,34 @@
 import unittest, datetime, os, threading
-from time import sleep
 from bkr.server.model import TaskStatus, Job, System, User, \
-        Group, SystemStatus, SystemActivity, Recipe, LabController
+        Group, SystemStatus, SystemActivity, Recipe, LabController, \
+        Provision
 import sqlalchemy.orm
 from turbogears.database import session
-from bkr.inttest import data_setup, stub_cobbler
+import xmltramp
+from bkr.server.jobxml import XmlJob
+from bkr.inttest import data_setup
 from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 from bkr.server.tools import beakerd
+from bkr.server.jobs import Jobs
 
 class TestBeakerd(unittest.TestCase):
 
     def setUp(self):
-        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
-        self.stub_cobbler_thread.start()
         with session.begin():
-            self.lab_controller = data_setup.create_labcontroller(
-                    fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+            self.lab_controller = data_setup.create_labcontroller()
             data_setup.create_system(lab_controller=self.lab_controller,
                     shared=True)
-
-    def tearDown(self):
-        self.stub_cobbler_thread.stop()
 
     def test_loaned_machine_can_be_scheduled(self):
         with session.begin():
             user = data_setup.create_user()
-            distro = data_setup.create_distro()
             system = data_setup.create_system(status=u'Automated', shared=True,
                     lab_controller=self.lab_controller)
             # System has groups, which the user is not a member of, but is loaned to the user
             system.loaned = user
             data_setup.add_group_to_system(system, data_setup.create_group())
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % system.fqdn)
@@ -43,12 +39,10 @@ class TestBeakerd(unittest.TestCase):
 
     def test_reservations_are_created(self):
         with session.begin():
-            data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
-            distro = data_setup.create_distro()
             system = data_setup.create_system(owner=user, status=u'Automated',
                     shared=True, lab_controller=self.lab_controller)
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     '<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
                     % system.fqdn)
@@ -72,10 +66,8 @@ class TestBeakerd(unittest.TestCase):
 
     def test_empty_and_element(self):
         with session.begin():
-            data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
-            distro = data_setup.create_distro()
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     u'<hostRequires><and></and></hostRequires>')
 
@@ -87,19 +79,17 @@ class TestBeakerd(unittest.TestCase):
 
     def test_or_lab_controller(self):
         with session.begin():
-            data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
             lc1 = data_setup.create_labcontroller(u'lab1')
             lc2 = data_setup.create_labcontroller(u'lab2')
             lc3 = data_setup.create_labcontroller(u'lab3')
-            distro = data_setup.create_distro()
             system1 = data_setup.create_system(arch=u'i386', shared=True)
             system1.lab_controller = lc1
             system2 = data_setup.create_system(arch=u'i386', shared=True)
             system2.lab_controller = lc2
             system3 = data_setup.create_system(arch=u'i386', shared=True)
             system3.lab_controller = lc3
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (u"""
                    <hostRequires>
                     <or>
@@ -108,14 +98,19 @@ class TestBeakerd(unittest.TestCase):
                     </or>
                    </hostRequires>
                    """)
+            session.flush()
+            job_id = job.id
+            system1_id = system1.id
+            system2_id = system2.id
+            system3_id = system3.id
 
         beakerd.new_recipes()
 
         with session.begin():
-            job = Job.query.get(job.id)
-            system1 = System.query.get(system1.id)
-            system2 = System.query.get(system2.id)
-            system3 = System.query.get(system3.id)
+            job = Job.query.get(job_id)
+            system1 = System.query.get(system1_id)
+            system2 = System.query.get(system2_id)
+            system3 = System.query.get(system3_id)
             self.assertEqual(job.status, TaskStatus.processed)
             candidate_systems = job.recipesets[0].recipes[0].systems
             self.assertEqual(len(candidate_systems), 2)
@@ -129,8 +124,7 @@ class TestBeakerd(unittest.TestCase):
         given system, i.e. that it aborts due to no matching systems.
         """
         with session.begin():
-            distro = data_setup.create_distro()
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % system.fqdn)
@@ -147,8 +141,7 @@ class TestBeakerd(unittest.TestCase):
         of the method above.
         """
         with session.begin():
-            distro = data_setup.create_distro()
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % system.fqdn)
@@ -288,19 +281,17 @@ class TestBeakerd(unittest.TestCase):
     
     def test_fail_harness_repo(self):
         with session.begin():
-            data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
-            distro = data_setup.create_distro()
             system = data_setup.create_system(owner=user, status=u'Automated', shared=True,
                     lab_controller=self.lab_controller)
-            job = data_setup.create_job(owner=user, distro=distro)
+            job = data_setup.create_job(owner=user)
             recipe = job.recipesets[0].recipes[0]
             recipe._host_requires = (
                     u'<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
                     % system.fqdn)
 
         harness_dir = '%s/%s' % (recipe.harnesspath, \
-            recipe.distro.osversion.osmajor)
+            recipe.distro_tree.distro.osversion.osmajor)
         try:
             if os.path.exists(harness_dir):
                 os.rmdir(harness_dir)
@@ -322,19 +313,18 @@ class TestBeakerd(unittest.TestCase):
     
     def test_success_harness_repo(self):
         with session.begin():
-            data_setup.create_task(name=u'/distribution/install')
             user = data_setup.create_user()
-            distro = data_setup.create_distro()
             system = data_setup.create_system(owner=user, status=u'Automated',
                     shared=True, lab_controller=self.lab_controller)
-            job = data_setup.create_job(owner=user, distro=distro)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            job = data_setup.create_job(owner=user, distro_tree=distro_tree)
             recipe = job.recipesets[0].recipes[0]
             recipe._host_requires = (
                     '<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
                     % system.fqdn)
 
         harness_dir = '%s/%s' % (recipe.harnesspath, \
-            recipe.distro.osversion.osmajor)
+            recipe.distro_tree.distro.osversion.osmajor)
 
         if not os.path.exists(harness_dir):
             os.mkdir(harness_dir)
@@ -352,10 +342,10 @@ class TestBeakerd(unittest.TestCase):
 
     def test_successful_recipe_start(self):
         with session.begin():
-            distro = data_setup.create_distro()
             system = data_setup.create_system(shared=True,
                     lab_controller=self.lab_controller)
-            job = data_setup.create_job(distro=distro)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            job = data_setup.create_job(distro_tree=distro_tree)
             job.recipesets[0].recipes[0]._host_requires = (u"""
                 <hostRequires>
                     <hostname op="=" value="%s" />
@@ -366,94 +356,24 @@ class TestBeakerd(unittest.TestCase):
         beakerd.processed_recipesets()
         beakerd.queued_recipes()
         beakerd.scheduled_recipes()
-        beakerd.queued_commands()
 
         with session.begin():
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.running)
-            self.assertEqual(self.stub_cobbler_thread.cobbler\
-                    .system_actions[system.fqdn], 'reboot')
-
-class TestPowerFailures(unittest.TestCase):
-
-    def setUp(self):
-        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
-        self.stub_cobbler_thread.start()
-        with session.begin():
-            self.lab_controller = data_setup.create_labcontroller(
-                    fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
-
-    def tearDown(self):
-        self.stub_cobbler_thread.stop()
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=738423
-    def test_unreserve(self):
-        with session.begin():
-            user = data_setup.create_user()
-            automated_system = data_setup.create_system(fqdn=u'raise1.example.org',
-                                                        lab_controller=self.lab_controller,owner = user,
-                                                        status = SystemStatus.automated)
-            automated_system.reserve(u'Scheduler', user)
-            session.flush()
-            automated_system.unreserve(u'Scheduler', user)
-        beakerd.queued_commands()
-        beakerd.running_commands()
-        with session.begin():
-            automated_system = System.query.get(automated_system.id)
-            system_activity = automated_system.dyn_activity\
-                    .filter(SystemActivity.field_name == u'Power').first()
-            self.assertEqual(system_activity.action, 'off')
-            self.assertTrue(system_activity.new_value.startswith('Failed'))
-
-    def test_automated_system_marked_broken(self):
-        with session.begin():
-            automated_system = data_setup.create_system(fqdn=u'broken1.example.org',
-                                                        lab_controller=self.lab_controller,
-                                                        status = SystemStatus.automated)
-            automated_system.action_power(u'on')
-        beakerd.queued_commands()
-        beakerd.running_commands()
-        with session.begin():
-            automated_system = System.query.get(automated_system.id)
-            self.assertEqual(automated_system.status, SystemStatus.broken)
-            system_activity = automated_system.activity[0]
-            self.assertEqual(system_activity.action, 'on')
-            self.assertTrue(system_activity.new_value.startswith('Failed'))
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=720672
-    def test_manual_system_status_not_changed(self):
-        with session.begin():
-            manual_system = data_setup.create_system(fqdn = u'broken2.example.org',
-                                                     lab_controller = self.lab_controller,
-                                                     status = SystemStatus.manual)
-            manual_system.action_power(u'on')
-        beakerd.queued_commands()
-        beakerd.running_commands()
-        with session.begin():
-            manual_system = System.query.get(manual_system.id)
-            self.assertEqual(manual_system.status, SystemStatus.manual)
-            system_activity = manual_system.activity[0]
-            self.assertEqual(system_activity.action, 'on')
-            self.assertTrue(system_activity.new_value.startswith('Failed'))
-
-    def test_mark_broken_updates_history(self):
-        with session.begin():
-            system = data_setup.create_system(status = SystemStatus.automated)
-            system.mark_broken(reason = "Attacked by cyborgs")
-        with session.begin():
             system = System.query.get(system.id)
-            system_activity = system.dyn_activity.filter(SystemActivity.field_name == u'Status').first()
-            self.assertEqual(system_activity.old_value, u'Automated')
-            self.assertEqual(system_activity.new_value, u'Broken')
+            self.assertEqual(system.command_queue[0].action, 'reboot')
+            self.assertEqual(system.command_queue[1].action, 'configure_netboot')
 
-    def test_broken_power_aborts_recipe(self):
+    # https://bugzilla.redhat.com/show_bug.cgi?id=826379
+    def test_recipe_install_options_can_remove_system_options(self):
         with session.begin():
-            system = data_setup.create_system(fqdn = u'broken.dreams.example.org',
-                                              lab_controller = self.lab_controller,
-                                              status = SystemStatus.automated,
-                                              shared = True)
-            distro = data_setup.create_distro()
-            job = data_setup.create_job(distro=distro)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            system = data_setup.create_system(shared=True,
+                    lab_controller=self.lab_controller)
+            system.provisions[distro_tree.arch] = Provision(arch=distro_tree.arch,
+                    kernel_options='console=ttyS0 vnc')
+            job = data_setup.create_job(distro_tree=distro_tree)
+            job.recipesets[0].recipes[0].kernel_options = u'!vnc'
             job.recipesets[0].recipes[0]._host_requires = (u"""
                 <hostRequires>
                     <hostname op="=" value="%s" />
@@ -464,14 +384,246 @@ class TestPowerFailures(unittest.TestCase):
         beakerd.processed_recipesets()
         beakerd.queued_recipes()
         beakerd.scheduled_recipes()
-        beakerd.queued_commands()
 
         with session.begin():
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.running)
+            system = System.query.get(system.id)
+            self.assertEqual(system.command_queue[1].action, 'configure_netboot')
+            self.assert_('vnc' not in system.command_queue[1].kernel_options)
 
-        beakerd.running_commands()
+    def test_order_by(self):
+        controller = Jobs()
+        with session.begin():
+            lab_controller = data_setup.create_labcontroller()
+
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree()
+            user = data_setup.create_admin()
+            for x in range(0,3):
+                data_setup.create_system(shared=True,
+                        owner=user,
+                        lab_controller=lab_controller)
+
+        xmljob = XmlJob(xmltramp.parse("""
+<job retention_tag="scratch">
+	<whiteboard>
+		
+	</whiteboard>
+	<recipeSet priority="Normal">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Normal">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Normal">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Normal">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Urgent">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Urgent">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Urgent">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Urgent">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Urgent">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Urgent">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Urgent">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Urgent">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Normal">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Normal">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Normal">
+		<recipe kernel_options="" kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="Normal">
+			<autopick random="false"/>
+			<watchdog/>
+			<packages/>
+			<ks_appends/>
+			<repos/>
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="%(family)s"/>
+					<distro_variant op="=" value="%(variant)s"/>
+					<distro_name op="=" value="%(name)s"/>
+					<distro_arch op="=" value="%(arch)s"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<hostlabcontroller op="=" value="%(labcontroller)s"/>
+			</hostRequires>
+			<partitions/>
+			<task name="/distribution/reservesys" role="STANDALONE">
+				<params/>
+			</task>
+		</recipe>
+	</recipeSet>
+</job>
+                 """ % dict(labcontroller = lab_controller.fqdn,
+                            family        = distro_tree.distro.osversion.osmajor,
+                            variant       = distro_tree.variant,
+                            name          = distro_tree.distro.name,
+                            arch          = distro_tree.arch)))
+
+        with session.begin():
+            job = controller.process_xmljob(xmljob, user)
+
+        beakerd.new_recipes()
+        beakerd.processed_recipesets()
+        beakerd.queued_recipes()
+
         with session.begin():
             job = Job.query.get(job.id)
-            self.assertEqual(job.recipesets[0].recipes[0].status,
-                             TaskStatus.aborted)
+            for x in range(0,2):
+                self.assertEqual(job.recipesets[x].recipes[0].status,
+                                 TaskStatus.queued)
+            for x in range(2,3):
+                self.assertEqual(job.recipesets[x].recipes[0].status,
+                                 TaskStatus.scheduled)
+            for x in range(5,3):
+                self.assertEqual(job.recipesets[x].recipes[0].status,
+                                 TaskStatus.queued)

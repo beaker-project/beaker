@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Cancel running Beaker jobs
-==========================
+bkr job-cancel: Cancel running Beaker jobs
+==========================================
 
 .. program:: bkr job-cancel
 

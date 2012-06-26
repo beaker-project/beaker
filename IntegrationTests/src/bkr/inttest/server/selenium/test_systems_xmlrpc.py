@@ -30,9 +30,10 @@ from turbogears.database import session
 from bkr.inttest.server.selenium import XmlRpcTestCase
 from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
-from bkr.inttest import data_setup, stub_cobbler, with_transaction
+from bkr.inttest import data_setup, with_transaction
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
-        System, SystemActivity, Provision, Hypervisor, SSHPubKey, ConfigItem
+        System, SystemActivity, Provision, Hypervisor, SSHPubKey, ConfigItem, \
+        RenderedKickstart, SystemStatus, ReleaseAction
 from bkr.server.tools import beakerd
 
 class ReserveSystemXmlRpcTest(XmlRpcTestCase):
@@ -142,6 +143,10 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
 
 class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
 
+    @with_transaction
+    def setUp(self):
+        self.lab_controller = data_setup.create_labcontroller()
+
     def test_cannot_release_when_not_logged_in(self):
         with session.begin():
             system = data_setup.create_system()
@@ -213,18 +218,62 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         except xmlrpclib.Fault, e:
             self.assert_('System is not reserved' in e.faultString)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=820779
+    def test_release_action_leaveon(self):
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    shared=True, lab_controller=self.lab_controller)
+            system.release_action = ReleaseAction.leave_on
+            user = data_setup.create_user(password=u'password')
+            system.reserve(service=u'testdata', user=user)
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        server.systems.release(system.fqdn)
+        with session.begin():
+            session.expire(system)
+            self.assertEquals(system.command_queue[0].action, 'on')
+            self.assertEquals(system.command_queue[1].action, 'clear_netboot')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=820779
+    def test_release_action_reprovision(self):
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    shared=True, lab_controller=self.lab_controller)
+            system.release_action = ReleaseAction.reprovision
+            system.reprovision_distro_tree = data_setup.create_distro_tree(
+                    osmajor=u'Fedora')
+            user = data_setup.create_user(password=u'password')
+            system.reserve(service=u'testdata', user=user)
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        server.systems.release(system.fqdn)
+        with session.begin():
+            session.expire(system)
+            self.assertEquals(system.command_queue[0].action, 'reboot')
+            self.assertEquals(system.command_queue[1].action, 'configure_netboot')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=824257
+    def test_release_action_unset(self):
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    shared=True, lab_controller=self.lab_controller)
+            system.release_action = None
+            user = data_setup.create_user(password=u'password')
+            system.reserve(service=u'testdata', user=user)
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        server.systems.release(system.fqdn)
+        with session.begin():
+            session.expire(system)
+            self.assertEquals(system.command_queue[0].action, 'off')
+            self.assertEquals(system.command_queue[1].action, 'clear_netboot')
+
 class SystemPowerXmlRpcTest(XmlRpcTestCase):
 
     @with_transaction
     def setUp(self):
-        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
-        self.stub_cobbler_thread.start()
-        self.lab_controller = data_setup.create_labcontroller(
-                fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
+        self.lab_controller = data_setup.create_labcontroller()
         self.server = self.get_server()
-
-    def tearDown(self):
-        self.stub_cobbler_thread.stop()
 
     def test_cannot_power_when_not_logged_in(self):
         try:
@@ -233,7 +282,6 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         except xmlrpclib.Fault, e:
             self.assert_('turbogears.identity.exceptions.IdentityFailure'
                     in e.faultString, e.faultString)
-        self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
 
     def test_cannot_power_system_in_use(self):
         with session.begin():
@@ -247,15 +295,14 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('System is in use' in e.faultString)
-        self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+        with session.begin():
+            self.assertEquals(system.command_queue, [])
 
     def check_power_action(self, action):
         with session.begin():
             user = data_setup.create_user(password=u'password')
             system = data_setup.create_system()
-            data_setup.configure_system_power(system, power_type=u'drac',
-                    address=u'nowhere.example.com', user=u'teh_powz0r',
-                    password=u'onoffonoff', power_id=u'asdf')
+            data_setup.configure_system_power(system)
             system.lab_controller = self.lab_controller
             system.user = None
         self.server.auth.login_password(user.user_name, 'password')
@@ -263,13 +310,6 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         self.assertEqual(
                 System.by_fqdn(system.fqdn, user).command_queue[0].action,
                 action)
-        beakerd.queued_commands()
-        self.assertEqual(self.stub_cobbler_thread.cobbler.systems[system.fqdn],
-                {'power_type': 'drac',
-                 'power_address': 'nowhere.example.com',
-                 'power_user': 'teh_powz0r',
-                 'power_pass': 'onoffonoff',
-                 'power_id': 'asdf'})
 
     def test_power_on(self):
         self.check_power_action('on')
@@ -285,17 +325,13 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
             user = data_setup.create_user(password=u'password')
             other_user = data_setup.create_user()
             system = data_setup.create_system()
-            data_setup.configure_system_power(system, power_type=u'drac',
-                    address=u'nowhere.example.com', user=u'teh_powz0r',
-                    password=u'onoffonoff', power_id=u'asdf')
+            data_setup.configure_system_power(system)
             system.lab_controller = self.lab_controller
             system.user = other_user
         self.server.auth.login_password(user.user_name, 'password')
         self.server.systems.power('on', system.fqdn, False, True)
-        self.assertEqual(
-                System.by_fqdn(system.fqdn, user).command_queue[0].action,
-                'on')
-        beakerd.queued_commands()
+        with session.begin():
+            self.assertEqual(system.command_queue[0].action, 'on')
 
     def test_clear_netboot(self):
         with session.begin():
@@ -306,22 +342,17 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
             system.user = None
         self.server.auth.login_password(user.user_name, 'password')
         self.server.systems.power('reboot', system.fqdn, True)
-        self.assertEqual(
-                System.by_fqdn(system.fqdn, user).command_queue[0].action,
-                'reboot')
-        beakerd.queued_commands()
-        self.assertEqual(
-                self.stub_cobbler_thread.cobbler.systems[system.fqdn]['netboot-enabled'],
-                False)
+        with session.begin():
+            self.assertEqual(system.command_queue[0].action, 'reboot')
+            self.assertEqual(system.command_queue[1].action, 'clear_netboot')
 
 class SystemProvisionXmlRpcTest(XmlRpcTestCase):
 
     @with_transaction
     def setUp(self):
-        self.stub_cobbler_thread = stub_cobbler.StubCobblerThread()
-        self.lab_controller = data_setup.create_labcontroller(
-                fqdn=u'localhost:%d' % self.stub_cobbler_thread.port)
-        self.distro = data_setup.create_distro(arch=u'i386')
+        self.lab_controller = data_setup.create_labcontroller()
+        self.distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora',
+                arch=u'i386')
         self.usable_system = data_setup.create_system(arch=u'i386',
                 owner=User.by_user_name(data_setup.ADMIN_USER),
                 status=u'Manual', shared=True)
@@ -330,14 +361,10 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 password=u'onoffonoff', power_id=u'asdf')
         self.usable_system.lab_controller = self.lab_controller
         self.usable_system.user = data_setup.create_user(password=u'password')
-        self.usable_system.provisions[self.distro.arch] = Provision(
-                arch=self.distro.arch,
+        self.usable_system.provisions[self.distro_tree.arch] = Provision(
+                arch=self.distro_tree.arch,
                 kernel_options='ksdevice=eth0 console=ttyS0')
-        self.stub_cobbler_thread.start()
         self.server = self.get_server()
-
-    def tearDown(self):
-        self.stub_cobbler_thread.stop()
 
     def test_cannot_provision_when_not_logged_in(self):
         try:
@@ -346,7 +373,6 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         except xmlrpclib.Fault, e:
             self.assert_('turbogears.identity.exceptions.IdentityFailure'
                     in e.faultString, e.faultString)
-        self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
 
     def test_cannot_provision_automated_system(self):
         with session.begin():
@@ -361,7 +387,8 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             # It's not really a permissions issue, but oh well
             self.assert_('has insufficient permissions to provision'
                     in e.faultString)
-        self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+        with session.begin():
+            self.assertEquals(system.command_queue, [])
 
     def test_cannot_provision_system_in_use(self):
         with session.begin():
@@ -377,133 +404,80 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         except xmlrpclib.Fault, e:
             self.assert_('Reserve a system before provisioning'
                     in e.faultString)
-        self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+        with session.begin():
+            self.assertEquals(system.command_queue, [])
 
     def test_provision(self):
         kickstart = '''
-            %%pre
+            %pre
             kickstart lol!
             do some stuff etc
             '''
         system = self.usable_system
         self.server.auth.login_password(system.user.user_name, 'password')
-        self.server.systems.provision(system.fqdn, self.distro.install_name,
+        self.server.systems.provision(system.fqdn, self.distro_tree.id,
                 'method=nfs',
                 'noapic',
                 'noapic runlevel=3',
                 kickstart)
-        beakerd.queued_commands()
-        kickstart_filename = '/var/lib/cobbler/kickstarts/%s.ks' % system.fqdn
-        self.assertEqual(self.stub_cobbler_thread.cobbler.systems[system.fqdn],
-                {'power_type': 'drac',
-                 'power_address': 'nowhere.example.com',
-                 'power_user': 'teh_powz0r',
-                 'power_pass': 'onoffonoff',
-                 'power_id': 'asdf',
-                 'ksmeta': {'method': 'nfs'},
-                 'kopts': {'ksdevice': 'eth0', 'noapic': None, 'console': 'ttyS0'},
-                 'kopts_post': {'noapic': None, 'runlevel': '3'},
-                 'profile': self.distro.install_name,
-                 'kickstart': kickstart_filename,
-                 'netboot-enabled': True})
-        self.assert_(kickstart in
-                self.stub_cobbler_thread.cobbler.kickstarts[kickstart_filename])
-        self.assertEqual(
-                self.stub_cobbler_thread.cobbler.system_actions[system.fqdn],
-                'reboot')
+        with session.begin():
+            rendered_kickstart = RenderedKickstart.query\
+                    .order_by(RenderedKickstart.id.desc()).first()
+            self.assert_(kickstart in rendered_kickstart.kickstart)
+            self.assertEquals(system.command_queue[0].action, 'reboot')
+            self.assertEquals(system.command_queue[1].action, 'configure_netboot')
+            self.assertEquals(system.command_queue[1].distro_tree, self.distro_tree)
+            self.assertEquals(system.command_queue[1].kernel_options,
+                    'console=ttyS0 ks=%s ksdevice=eth0 noapic noverifyssl' % rendered_kickstart.link)
 
     def test_provision_without_reboot(self):
-        self.server.auth.login_password(self.usable_system.user.user_name,
+        system = self.usable_system
+        self.server.auth.login_password(system.user.user_name,
                 'password')
-        self.server.systems.provision(self.usable_system.fqdn,
-                self.distro.install_name, None, None, None, None,
+        self.server.systems.provision(system.fqdn,
+                self.distro_tree.id, None, None, None, None,
                 False) # this last one is reboot=False
-        self.assert_(not self.stub_cobbler_thread.cobbler.system_actions)
+        with session.begin():
+            self.assertEquals(system.command_queue[0].action, 'configure_netboot')
+            self.assertEquals(len(system.command_queue), 1, system.command_queue)
 
     def test_refuses_to_provision_distro_with_mismatched_arch(self):
         with session.begin():
-            distro = data_setup.create_distro(arch=u'x86_64')
+            distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
         self.server.auth.login_password(self.usable_system.user.user_name,
                 'password')
         try:
-            self.server.systems.provision(self.usable_system.fqdn, distro.install_name)
+            self.server.systems.provision(self.usable_system.fqdn, distro_tree.id)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('cannot be provisioned on system' in e.faultString)
+        with session.begin():
+            self.assertEquals(self.usable_system.command_queue, [])
 
     def test_refuses_to_provision_distro_not_in_lc(self):
         with session.begin():
-            for lca in self.distro.lab_controller_assocs:
-                session.delete(lca)
+            self.distro_tree.lab_controller_assocs[:] = []
         self.server.auth.login_password(self.usable_system.user.user_name,
                 'password')
         try:
-            self.server.systems.provision(self.usable_system.fqdn, self.distro.install_name)
+            self.server.systems.provision(self.usable_system.fqdn, self.distro_tree.id)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('cannot be provisioned on system' in e.faultString)
+        with session.begin():
+            self.assertEquals(self.usable_system.command_queue, [])
 
     def test_kernel_options_inherited_from_defaults(self):
         system = self.usable_system
         self.server.auth.login_password(system.user.user_name, 'password')
-        self.server.systems.provision(system.fqdn, self.distro.install_name,
+        self.server.systems.provision(system.fqdn, self.distro_tree.id,
                 None, 'ksdevice=eth1')
-        # console=ttyS0 comes from arch default, created in setUp()
-        kopts = self.stub_cobbler_thread.cobbler.systems[system.fqdn]['kopts']
-        self.assertEqual(kopts, {'ksdevice': 'eth1', 'console': 'ttyS0'})
-
-    def test_provision_user_ssh_keys(self):
         with session.begin():
-            system = self.usable_system
-            user = system.user
-            k = SSHPubKey(u'ssh-rsa',
-                          u'AAAAB3NzaC1yc2EAAAADAQABAAAAgQDX92WltLUTlGgRngO4k68cE8fH88cpJPpXRE'\
-                          'hXthaIoooFds7MeAOu3+UU5wYmmpz/q4FykmBc1PFP2M7aS2i4X/sGZmP57il5yfUK'\
-                          'SJtlhJamBPwgoeg/PBvERbIdRtbAq8NMO7mAt+zuU9fWCs/fYEJDva3D0UZsY/Qpt+'\
-                          '4mBw==', u'man@moon')
-            user.sshpubkeys.append(k)
-        self.server.auth.login_password(user.user_name, 'password')
-        self.server.systems.provision(system.fqdn, self.distro.install_name,
-                'method=nfs', 'noapic', 'noapic runlevel=3', '')
-        snippet_filename = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % system.fqdn
-        self.assert_('man@moon' in
-                self.stub_cobbler_thread.cobbler.snippets[snippet_filename])
-
-    def test_provision_systemwide_root_password(self):
-        with session.begin():
-            system = self.usable_system
-            user = system.user
-            ConfigItem.by_name('root_password').set('terces', user=User.by_user_name(data_setup.ADMIN_USER))
-        self.server.auth.login_password(user.user_name, 'password')
-        self.server.systems.provision(system.fqdn, self.distro.install_name,
-                'method=nfs', 'noapic', 'noapic runlevel=3', '')
-        hashed_password = self.stub_cobbler_thread.cobbler.systems[system.fqdn]['ksmeta']['password']
-        self.assert_(crypt.crypt('terces', hashed_password) == hashed_password)
-
-    def test_provision_user_root_password(self):
-        with session.begin():
-            system = self.usable_system
-            user = system.user
-            user.root_password = 'gyfrinachol'
-        self.server.auth.login_password(user.user_name, 'password')
-        self.server.systems.provision(system.fqdn, self.distro.install_name,
-                'method=nfs', 'noapic', 'noapic runlevel=3', '')
-        self.assert_(crypt.crypt('gyfrinachol', user.root_password) ==
-                     self.stub_cobbler_thread.cobbler.systems[system.fqdn]['ksmeta']['password'])
-
-    def test_ssh_key_ksappend_has_end(self):
-        system = self.usable_system
-        user = system.user
-        with session.begin():
-            user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'AAAAxyz', u'abc@def'))
-            distro = data_setup.create_distro(name='RedHatEnterpriseLinux7.8.9', arch=u'i386',
-                                              osmajor=u'RedHatEnterpriseLinux7')
-        self.server.auth.login_password(user.user_name, 'password')
-        self.server.systems.provision(system.fqdn, distro.install_name)
-        beakerd.queued_commands()
-        snippet_filename = '/var/lib/cobbler/snippets/per_system/ks_appends/%s' % system.fqdn
-        print self.stub_cobbler_thread.cobbler.snippets[snippet_filename]
-        self.assert_('%end' in self.stub_cobbler_thread.cobbler.snippets[snippet_filename])
+            # console=ttyS0 comes from arch default, created in setUp()
+            self.assertEquals(system.command_queue[0].action, 'reboot')
+            self.assert_('console=ttyS0' in system.command_queue[1].kernel_options)
+            self.assert_('ksdevice=eth1' in system.command_queue[1].kernel_options)
+            self.assert_('ksdevice=eth0' not in system.command_queue[1].kernel_options)
 
     def test_provision_expired_user_root_password(self):
         system = self.usable_system
@@ -515,11 +489,12 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                       .set(90, user=User.by_user_name(data_setup.ADMIN_USER))
         self.server.auth.login_password(user.user_name, 'password')
         try:
-            self.server.systems.provision(system.fqdn, self.distro.install_name,
-                                          'method=nfs', 'noapic', 'noapic runlevel=3', '')
+            self.server.systems.provision(system.fqdn, self.distro_tree.id)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('root password has expired' in e.faultString, e.faultString)
+        with session.begin():
+            self.assertEquals(system.command_queue, [])
 
 
 class LegacyPushXmlRpcTest(XmlRpcTestCase):

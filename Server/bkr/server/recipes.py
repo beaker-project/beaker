@@ -273,7 +273,7 @@ class Recipes(RPCRoot):
         return self.recipes(recipes=session.query(MachineRecipe)
                 # need to join in case the user sorts by these related properties
                 .outerjoin(Recipe.system)
-                .outerjoin(Recipe.distro, Distro.arch),
+                .outerjoin(Recipe.distro_tree, DistroTree.arch),
                 *args, **kw)
 
     @identity.require(identity.not_anonymous())
@@ -283,7 +283,7 @@ class Recipes(RPCRoot):
         return self.recipes(recipes=MachineRecipe.mine(identity.current.user)
                 # need to join in case the user sorts by these related properties
                 .outerjoin(Recipe.system)
-                .outerjoin(Recipe.distro, Distro.arch),
+                .outerjoin(Recipe.distro_tree, DistroTree.arch),
                 action='./mine', *args, **kw)
 
     def recipes(self,recipes,action='.',*args, **kw): 
@@ -303,9 +303,9 @@ class Recipes(RPCRoot):
         recipes_grid = myPaginateDataGrid(fields=[
 		     widgets.PaginateDataGrid.Column(name='id', getter=lambda x:make_link(url='./%s' % x.id, text=x.t_id), title='ID', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='whiteboard', getter=lambda x:x.whiteboard, title='Whiteboard', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='distro.arch.arch', getter=lambda x:x.arch, title='Arch', options=dict(sortable=True)),
+                     widgets.PaginateDataGrid.Column(name='distro_tree.arch.arch', getter=lambda x:x.arch, title='Arch', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='system.fqdn', getter=lambda x: x.system and x.system.link, title='System', options=dict(sortable=True)),
-		     widgets.PaginateDataGrid.Column(name='distro.install_name', getter=lambda x: x.distro and x.distro.link, title='Distro', options=dict(sortable=True)),
+                     widgets.PaginateDataGrid.Column(name='distro_tree.distro.name', getter=lambda x: x.distro_tree and x.distro_tree.link, title='Distro Tree', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='progress', getter=lambda x: x.progress_bar, title='Progress', options=dict(sortable=False)),
                      widgets.PaginateDataGrid.Column(name='status', getter=lambda x:x.status, title='Status', options=dict(sortable=True)),
 		     widgets.PaginateDataGrid.Column(name='result', getter=lambda x:x.result, title='Result', options=dict(sortable=True)),

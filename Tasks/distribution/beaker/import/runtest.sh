@@ -105,72 +105,29 @@ function Inventory()
 function LabController()
 {
     # Add some distros
-    if [ -n "$NFSPATHS" ]; then
-        for NFSPATH in $NFSPATHS; do
-            NFSSERVER=$(echo $NFSPATH| awk -F/ '{print $3}')
-            NFSSERVERPATH=$(echo $NFSPATH | sed -e "s/.*$NFSSERVER//")
-            pushd $NFSPATH || exit 1
-            for distro in $(find . -maxdepth 4 -name .composeinfo | sed -e 's/.composeinfo//'); do
-                DISTRONAME=$(echo $distro |sed -e 's/^\.\///; s/\/$//; s/\//-/g')
-                echo cobbler import --path=${PWD}/$distro \
-                               --name=${DISTRONAME} \
-                               --available-as=nfs://${NFSSERVER}:${NFSSERVERPATH}/$distro
-                cobbler import --path=${PWD}/$distro \
-                               --name=${DISTRONAME} \
-                               --available-as=nfs://${NFSSERVER}:${NFSSERVERPATH}/$distro
+    if [ -n "$locations" ]; then
+        for location in $locations; do
+            nfs=$(eval echo \$${location}_nfs)
+            http=$(eval echo \$${location}_http)
+            ftp=$(eval echo \$${location}_ftp)
+            server=$(echo $nfs| sed -e 's/nfs:\/\/\(.*\):.*/\1/')
+            server_path=$(echo $nfs| sed -e 's/nfs:\/\/.*:\/\(.*\)/\1/')
+            pushd /net/$server/$server_path
+            composeinfos=$(find . -maxdepth 4 -name .composeinfo 2>/dev/null | sed -e 's/^\.\/\(.*\)\/\.composeinfo/\1/')
+            for composeinfo in $composeinfos; do
+                result="Fail"
+                beaker-import ${nfs}/$composeinfo \
+                              ${http}/$composeinfo \
+                              ${ftp}/$composeinfo --debug
+                if [ $? -eq 0 ]; then
+                    result="Pass"
+                fi
+                report_result $TEST/ADD_DISTRO/${composeinfo} $result
             done
-            popd
         done
-    # NFS format HOSTNAME:DISTRONAME:NFSPATH
-    elif [ -z "$NFSDISTROS" ]; then
-        echo "Missing NFS Distros to test with" | tee -a $OUTPUTFILE
-        report_result $TEST Warn
-        exit 1
+    else
+        report_result $TEST/ADD_DISTRO Fail 0
     fi
-    ln -s /net /var/www/html/net
-    for distro in $NFSDISTROS; do
-        NFSSERVER=$(echo $distro| awk -F: '{print $1}')
-        DISTRONAME=$(echo $distro| awk -F: '{print $2}')
-        NFSPATH=$(echo $distro| awk -F: '{print $3}')
-        NFSDIR=$(dirname $NFSPATH)
-        result="FAIL"
-        echo cobbler import --path=/net/${NFSSERVER}${NFSPATH} \
-                       --name=${DISTRONAME} \
-                       --available-as=nfs://${NFSSERVER}:${NFSPATH}
-        cobbler import --path=/net/${NFSSERVER}${NFSPATH} \
-                       --name=${DISTRONAME} \
-                       --available-as=nfs://${NFSSERVER}:${NFSPATH}
-        score=$?
-        if [ "$score" -eq "0" ]; then
-            result="PASS"
-        fi
-        report_result $TEST/ADD_DISTRO/${DISTRONAME} $result $score
-    done
-    # Import Rawhide
-    if [ -n "$RAWHIDE_NFS" ]; then
-        NFSSERVER=$(echo $RAWHIDE_NFS| awk -F: '{print $1}')
-        NFSDIR=$(echo $RAWHIDE_NFS| awk -F: '{print $2}')
-        for distro in $(find /net/${NFSSERVER}${NFSDIR} -maxdepth 1 -name rawhide\* -type d); do 
-            DISTRO=$(basename $distro)
-            DISTRONAME=Fedora-$(basename $distro)
-            result="FAIL"
-            echo cobbler import \
-                           --path=/net/${NFSSERVER}${NFSDIR}/${DISTRO} \
-                           --name=${DISTRONAME} \
-                           --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
-            cobbler import --path=/net/${NFSSERVER}${NFSDIR}/${DISTRO} \
-                           --name=${DISTRONAME} \
-                           --available-as=nfs://${NFSSERVER}:${NFSDIR}/${DISTRO}
-            score=$?
-            if [ "$score" -eq "0" ]; then
-                result="PASS"
-            fi
-            report_result $TEST/ADD_DISTRO/${DISTRONAME} $result $score
-        done
-    fi
-    cobbler distro report
-    /var/lib/cobbler/triggers/sync/post/osversion.trigger | tee -a $OUTPUTFILE
-    estatus_fail "**** Failed to run osversion.trigger ****"
     rhts-sync-set -s DONE
     result_pass 
 }

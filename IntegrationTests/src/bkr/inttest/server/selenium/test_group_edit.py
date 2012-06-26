@@ -19,7 +19,7 @@ class EditGroup(SeleniumTestCase):
         sel = self.selenium
         self.login()
         sel.open('')
-        sel.click("link=Groups")
+        sel.click("//..[@id='admin']/li/a[text()='Groups']")
         sel.wait_for_page_to_load(30000)
         sel.click("link=%s" % self.group.group_name)
         sel.wait_for_page_to_load(30000)
@@ -34,7 +34,7 @@ class EditGroup(SeleniumTestCase):
 
         #Triple check it was not persisted to the DB
         sel.open('')
-        sel.click("link=Groups")
+        sel.click("//..[@id='admin']/li/a[text()='Groups']")
         sel.wait_for_page_to_load(30000)
         sel.click("link=%s" % self.group.group_name)
         sel.wait_for_page_to_load(30000)
@@ -44,7 +44,8 @@ class EditGroup(SeleniumTestCase):
         sel = self.selenium
         self.login()
         sel.open('')
-        sel.click("link=Groups")
+
+        sel.click("//..[@id='admin']/li/a[text()='Groups']")
         sel.wait_for_page_to_load(30000)
         sel.click("link=%s" % self.group.group_name)
         sel.wait_for_page_to_load(30000)
@@ -55,7 +56,8 @@ class EditGroup(SeleniumTestCase):
 
         #Test that the permission was persisted by reopening the current page
         sel.open('')
-        sel.click("link=Groups")
+
+        sel.click("//..[@id='admin']/li/a[text()='Groups']")
         sel.wait_for_page_to_load(30000)
         sel.click("link=%s" % self.group.group_name)
         sel.wait_for_page_to_load(30000)
@@ -71,7 +73,7 @@ class EditGroup(SeleniumTestCase):
 
         #Reload to make sure it has been removed from the DB
         sel.open('')
-        sel.click("link=Groups")
+        sel.click("//..[@id='admin']/li/a[text()='Groups']")
         sel.wait_for_page_to_load(30000)
         sel.click("link=%s" % self.group.group_name)
         sel.wait_for_page_to_load(30000)

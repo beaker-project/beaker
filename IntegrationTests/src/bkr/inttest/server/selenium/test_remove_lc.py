@@ -9,7 +9,7 @@ class RemoveLabController(SeleniumTestCase):
         self.system = data_setup.create_system()
         self.lc = data_setup.create_labcontroller(fqdn=u'1111')
         self.system.lab_controller = self.lc
-        self.distro = data_setup.create_distro()
+        self.distro_tree = data_setup.create_distro_tree()
         self.selenium = self.get_selenium()
         self.selenium.start()
         self.login()
@@ -20,7 +20,8 @@ class RemoveLabController(SeleniumTestCase):
     def test_remove_and_add(self):
         sel = self.selenium
 
-        self.assert_(self.lc in self.distro.lab_controllers)
+        self.assert_(any(lca.lab_controller == self.lc
+                for lca in self.distro_tree.lab_controller_assocs))
 
         #Remove
         sel.open("labcontrollers/")
@@ -32,8 +33,9 @@ class RemoveLabController(SeleniumTestCase):
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.lab_controller is None)
-            session.refresh(self.distro)
-            self.assert_(self.lc not in self.distro.lab_controllers)
+            session.refresh(self.distro_tree)
+            self.assert_(not any(lca.lab_controller == self.lc
+                    for lca in self.distro_tree.lab_controller_assocs))
 
         #Re add
         sel.open("labcontrollers/")

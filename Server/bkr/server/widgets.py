@@ -169,10 +169,9 @@ class PowerTypeForm(CompoundFormField):
 
 class ReserveSystem(TableForm):
     fields = [ 
-          #HiddenField(name='distro_id'),
 	      HiddenField(name='system_id'),
               Label(name='system', label=_(u'System to Provision')),
-              Label(name='distro', label=_(u'Distro to Provision')),
+              Label(name='distro', label=_(u'Distro Tree to Provision')),
               TextField(name='whiteboard', attrs=dict(size=50),
                         label=_(u'Job Whiteboard')),
               TextField(name='ks_meta', attrs=dict(size=50),
@@ -188,91 +187,29 @@ class ReserveSystem(TableForm):
     def update_params(self,d): 
         log.debug(d)
         if 'value' in d:
-            if 'distro_ids' in d['value']:
-                if(isinstance(d['value']['distro_ids'],list)):
-                    for distro_id in d['value']['distro_ids']:
-                        d['hidden_fields'] = [HiddenField(name='distro_id',attrs = {'value' : distro_id})] + d['hidden_fields'][0:]
+            if 'distro_tree_ids' in d['value']:
+                if(isinstance(d['value']['distro_tree_ids'],list)):
+                    for distro_tree_id in d['value']['distro_tree_ids']:
+                        d['hidden_fields'] = [HiddenField(name='distro_tree_id', attrs={'value' : distro_tree_id})] + d['hidden_fields'][0:]
                 
 
         super(ReserveSystem,self).update_params(d)
 
 
 class ReserveWorkflow(Form): 
-    javascript = [LocalJSLink('bkr', '/static/javascript/loader.js'),
-                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v6.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/loader_v2.js'),
+                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v7.js'),
                  ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
-    member_widgets = ['arch','distro','distro_family','tag', 'auto_pick']
-    params = ['arch_value','tag_value','distro_family_value','all_arches',
-              'all_tags','all_distro_familys', 'distro_rpc','system_rpc','system_many_rpc','reserve_href']
-
-    def __init__(self,*args,**kw):
-        super(ReserveWorkflow,self).__init__(*args, **kw)  
-        self.distro = SingleSelectField(name='distro', label='Distro', 
-                                        options=[('','None available')],validator=validators.NotEmpty())
-        self.distro_family = SingleSelectField(name='distro_family', label='Distro Family', 
-                                               options=[None],validator=validators.NotEmpty())
-        self.tag = SingleSelectField(name='tag', label='Tag', options=[None],validator=validators.NotEmpty())
-        self.arch = SingleSelectField(name='arch', label='Arch', options=[None],
-            validator=validators.NotEmpty())
-
-        self.system_rpc = './find_systems_for_distro'
-        self.system_many_rpc= './find_systems_for_multiple_distros'
-        self.distro_rpc = './get_distro_options'
-        self.reserve_href = './reserve'
-        self.auto_pick = Button(default="Auto pick system", name='auto_pick', attrs={'class':None})
-        self.name = 'reserveworkflow_form'
-        self.action = '/reserve_system'
-        self.submit = SubmitButton(name='search',attrs={'value':'Show Systems'})
-
-    @staticmethod
-    def my_cmp(x,y):
-        m1 = re.search('^(.+?)(\d{1,})?$',x)
-        m2 = re.search('^(.+?)(\d{1,})?$',y)
-        try:
-            distro_1 = m1.group(1).lower()
-        except AttributeError,e:
-            #x has no value, it goes first
-            return -1
-
-        try:
-            distro_2 = m2.group(1).lower()
-        except AttributeError,e:
-            #y has no value, it goes first
-            return 1
-
-        distro_1_ver = int(m1.group(2) or 0)
-        distro_2_ver = int(m2.group(2) or 0)
-
-        if not distro_1 or not distro_2:
-            return distro_1 and 1 or -1
-        if distro_1 == distro_2:
-            #Basically,if x has no version or is a lower version than y, it goes first
-            return distro_1_ver and (distro_2_ver and (distro_1_ver < distro_2_ver and -1 or 1)  or 1) or -1
-        else:
-            #Sort distro alphabetically,diregarding version
-            return distro_1 < distro_2 and -1 or 1
-
-    def display(self,value=None,**params):
-        if 'options' in params:
-            for k in params['options'].keys():
-                params[k] = params['options'][k]
-                del params['options'][k]
-        params['all_arches'] = [[elem.arch,elem.arch] for elem in model.Arch.query]
-        params['all_tags'] = [['','None Selected']] + [[elem.tag,elem.tag] for elem in model.DistroTag.query]
-        e = [elem.osmajor for elem in model.OSMajor.query]
-        params['all_distro_familys'] = [('','None Selected')] + [[osmajor,osmajor] for osmajor in sorted(e,cmp=self.my_cmp )]
-        return super(ReserveWorkflow,self).display(value,**params)
-
-    def update_params(self,d):
-        super(ReserveWorkflow,self).update_params(d)
-        d['to_json'] = UtilJSON.dynamic_json()
-        if 'values' in d:
-            if d['values']:
-                d['arch_value'] = d['values']['arch']
-                d['distro_family_value'] = d['values']['distro_family']
-                d['tag_value'] = d['values']['tag']
+    fields = [
+        SingleSelectField(name='osmajor', label=_(u'Family'), validator=validators.NotEmpty()),
+        SingleSelectField(name='tag', label=_(u'Tag'), validator=validators.NotEmpty()),
+        SingleSelectField(name='distro', label=_(u'Distro'), validator=validators.NotEmpty()),
+        MultipleSelectField(name='distro_tree_id', label=_(u'Distro Tree'),
+                size=7, validator=validators.NotEmpty()),
+    ]
+    params = ['get_distros_rpc', 'get_distro_trees_rpc']
 
 class MyButton(Button):
     template="bkr.server.templates.my_button"
@@ -436,10 +373,6 @@ class LabControllerForm(TableForm):
                             label=_(u'Password')),
               TextField(name='email', 
                         label=_(u'Lab Controller Email Address')),
-              TextField(name='username',
-                        label=_(u'Cobbler Username')),
-              PasswordField(name='password',
-                            label=_(u'Cobbler Password')),
               CheckBox(name='disabled',
                        label=_(u'Disabled'),
                        default=False),
@@ -472,7 +405,7 @@ class JobQuickSearch(CompoundWidget):
 class AckPanel(RadioButtonList): 
 
     javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'),
-                  LocalJSLink('bkr','/static/javascript/loader.js'),
+                  LocalJSLink('bkr','/static/javascript/loader_v2.js'),
                   LocalJSLink('bkr','/static/javascript/response_v3.js')]
 
     css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
@@ -594,7 +527,7 @@ class JobMatrixReport(Form):
             if 'toggle_nacks_on' in params['options']:
                 params['toggle_nacks_on'] = params['options']['toggle_nacks_on']
 
-        return super(JobMatrixReport,self).display(value=None,**params)
+        return super(JobMatrixReport,self).display(**params)
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 
@@ -617,9 +550,9 @@ class SearchBar(RepeatingFormField):
     form_attrs = {}
     simplesearch = None
 
-    def __init__(self, table,search_controller,extra_selects=None, 
-        extra_inputs=None,extra_hiddens=None, enable_custom_columns=False, 
-        complete_data=None, *args, **kw): 
+    def __init__(self, table, search_controller=None, extra_selects=None,
+        extra_inputs=None, extra_hiddens=None, enable_custom_columns=False,
+        complete_data=None, *args, **kw):
 
         super(SearchBar,self).__init__(*args, **kw)
         self.enable_custom_columns = enable_custom_columns
@@ -771,10 +704,10 @@ class PowerActionHistory(CompoundWidget):
 
 class TaskSearchForm(RemoteForm): 
     template = "bkr.server.templates.task_search_form"
-    member_widgets = ['system_id', 'system', 'task', 'distro', 'family', 'arch', 'start', 'finish', 'status', 'result']
     params = ['options','hidden']
     fields = [HiddenField(name='system_id', validator=validators.Int()),
               HiddenField(name='distro_id', validator=validators.Int()),
+              HiddenField(name='distro_tree_id', validator=validators.Int()),
               HiddenField(name='task_id', validator=validators.Int()),
               TextField(name='task', label=_(u'Task')),
               TextField(name='system', label=_(u'System')),
@@ -794,7 +727,7 @@ class TaskSearchForm(RemoteForm):
 
     def __init__(self, *args, **kw):
         super(TaskSearchForm,self).__init__(*args,**kw)
-        self.javascript.extend([LocalJSLink('bkr', '/static/javascript/loader.js')])
+        self.javascript.extend([LocalJSLink('bkr', '/static/javascript/loader_v2.js')])
 
     def update_params(self, d):
         super(TaskSearchForm, self).update_params(d)
@@ -839,7 +772,7 @@ class PowerForm(Form):
     template = "bkr.server.templates.system_power"
     member_widgets = ["id", "power", "power_type_id", "power_address", 
                       "power_user", "power_passwd", "power_id",
-                       "release_action", "reprovision_distro_id"]
+                       "release_action", "reprovision_distro_tree_id"]
     params = []
     params_doc = {}
 
@@ -860,16 +793,13 @@ class PowerForm(Form):
                 options=[(ra, unicode(ra)) for ra in model.ReleaseAction],
                 default=model.ReleaseAction.power_off,
                 validator=ValidEnumValue(model.ReleaseAction))
-        self.reprovision_distro_id = SingleSelectField(name='reprovision_distro_id',
+        self.reprovision_distro_tree_id = SingleSelectField(name='reprovision_distro_tree_id',
                                                 label=_(u'Reprovision Distro'),
                                                 options=[],
                                              validator=validators.NotEmpty())
 
     def update_params(self, d):
         super(PowerForm, self).update_params(d)
-        if 'reprovision_distro' in d['value']:
-            reprovision_distro = d['value']['reprovision_distro']
-            d['value']['reprovision_distro_id'] = reprovision_distro.id
         if 'power' in d['value']:
             if d['value']['power']:
                 power = d['value']['power']
@@ -1017,22 +947,6 @@ class SystemArches(Form):
             d['readonly'] = d['options']['readonly']
         if 'arches' in d['options']:
             d['arches'] = d['options']['arches']
-       
-class LabControllers(Form):
-    template = "bkr.server.templates.lab_controllers"
-    member_widgets = ["id", "lab_controller"]
-    params = ['options', 'readonly', 'lab_controllers']
- 
-    def __init__(self, *args, **kw):
-	super(LabControllers, self).__init__(*args, **kw)
-	self.id    = HiddenField(name="id")
-
-    def update_params(self, d):
-        super(LabControllers, self).update_params(d)
-        if 'readonly' in d['options']:
-            d['readonly'] = d['options']['readonly']
-        if 'lab_controllers' in d['options']:
-            d['lab_controllers'] = d['options']['lab_controllers']
 
 class DistroTags(Form):
     template = "bkr.server.templates.distro_tags"
@@ -1081,7 +995,7 @@ class SystemGroups(Form):
 
 
 class SystemProvision(Form):
-    javascript = [LocalJSLink('bkr', '/static/javascript/provision.js')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/provision_v2.js')]
     template = "bkr.server.templates.system_provision"
     member_widgets = ["id", "prov_install", "ks_meta", "power",
                       "koptions", "koptions_post", "reboot","schedule_reserve_days"]
@@ -1244,7 +1158,7 @@ class SystemHistory(CompoundWidget):
     
 
 class SystemForm(Form):
-    javascript = [LocalJSLink('bkr', '/static/javascript/provision.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/provision_v2.js'),
                   LocalJSLink('bkr', '/static/javascript/install_options.js'),
                   LocalJSLink('bkr','/static/javascript/system_admin.js'),
                   LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'),
@@ -1730,3 +1644,6 @@ class JobPageActionWidget(JobActionWidget):
     def __init__(self, *args, **kw):
         super(JobPageActionWidget, self).__init__(*args, **kw)
 
+class DistroTreeInstallOptionsWidget(Widget):
+    template = 'bkr.server.templates.distrotree_install_options'
+    params = ['readonly']

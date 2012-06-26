@@ -2,7 +2,7 @@ Beaker client
 =============
 
 This is the documentation for ``bkr``, a command-line client interface to the 
-`Beaker test system <https://fedorahosted.org/beaker/>`_.
+`Beaker test system <http://beaker-project.org/>`_.
 
 This documentation is also available locally in man format when Beaker client 
 is installed on your system. See :manpage:`bkr(1)`.
@@ -11,17 +11,19 @@ is installed on your system. See :manpage:`bkr(1)`.
    :maxdepth: 1
 
    bkr
+   bkr-distro-trees-list
+   bkr-distro-trees-verify
    bkr-distros-edit-version
    bkr-distros-list
    bkr-distros-tag
    bkr-distros-untag
-   bkr-distros-verify
    bkr-harness-test
    bkr-job-cancel
    bkr-job-clone
    bkr-job-delete
    bkr-job-list
    bkr-job-logs
+   bkr-job-modify
    bkr-job-results
    bkr-job-submit
    bkr-job-watch
@@ -39,5 +41,7 @@ is installed on your system. See :manpage:`bkr(1)`.
    bkr-task-list
    bkr-watchdog-extend
    bkr-watchdog-show
+   bkr-watchdogs-extend
+   bkr-whoami
    bkr-workflow-simple
    bkr-workflow-xslt

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Submit job XML to Beaker
-========================
+bkr job-submit: Submit job XML to Beaker
+========================================
 
 .. program:: bkr job-submit
 
@@ -64,7 +64,7 @@ Common :program:`bkr` options are described in the :ref:`Options
 Exit status
 -----------
 
-1 if any jobs failed submission, otherwise zero.
+1 if any jobs failed submission or execution, otherwise zero.
 
 Examples
 --------
@@ -165,7 +165,7 @@ class Job_Submit(BeakerCommand):
 
         self.set_hub(username, password)
         submitted_jobs = []
-        failed = False
+        is_failed = False
 
         # Read in all jobs.
         jobxmls = []
@@ -213,7 +213,7 @@ class Job_Submit(BeakerCommand):
                 except (KeyboardInterrupt, SystemExit):
                     raise
                 except Exception, ex:
-                    failed = True
+                    is_failed = True
                     sys.stderr.write('Exception: %s\n' % ex)
         if not dryrun:
             print "Submitted: %s" % submitted_jobs
@@ -222,6 +222,8 @@ class Job_Submit(BeakerCommand):
                     if self.conf.get('AUTH_METHOD' != 'krbv'):
                         print 'Cannot wait for task, Please set AUTH_METHOD to \'krbv\' when listening via message bus'
                     else:
-                        watch_bus_tasks(0, submitted_jobs)
+                        is_failed |= watch_bus_tasks(0, submitted_jobs)
                 else:
-                    watch_tasks(self.hub, submitted_jobs)
+                    is_failed |= watch_tasks(self.hub, submitted_jobs)
+        sys.exit(is_failed)
+

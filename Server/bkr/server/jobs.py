@@ -21,7 +21,7 @@ from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from formencode.api import Invalid
-from sqlalchemy.exceptions import InvalidRequestError
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
     RecipeWidget,RecipeTasksWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
@@ -306,7 +306,7 @@ class Jobs(RPCRoot):
                 my_priority = TaskPriority.from_string(recipeset_priority)
             except InvalidRequestError, (e):
                 raise BX(_('You have specified an invalid recipeSet priority:%s' % recipeset_priority))
-            allowed_priorities = RecipeSet.allowed_priorities_initial(identity.current.user)
+            allowed_priorities = RecipeSet.allowed_priorities_initial(user)
             if my_priority in allowed_priorities:
                 recipeSet.priority = my_priority
             else:
@@ -434,13 +434,13 @@ class Jobs(RPCRoot):
         recipe.distro_requires = xmlrecipe.distroRequires()
         recipe.partitions = xmlrecipe.partitions()
         try:
-            recipe.distro = Distro.by_filter("%s" % 
+            recipe.distro_tree = DistroTree.by_filter("%s" %
                                            recipe.distro_requires)[0]
         except IndexError:
-            raise BX(_('No Distro matches Recipe: %s' % recipe.distro_requires))
+            raise BX(_('No distro tree matches Recipe: %s') % recipe.distro_requires)
         try:
             # try evaluating the host_requires, to make sure it's valid
-            recipe.distro.systems_filter(user, recipe.host_requires)
+            recipe.distro_tree.systems_filter(user, recipe.host_requires)
         except StandardError, e:
             raise BX(_('Error in hostRequires: %s' % e))
         recipe.whiteboard = xmlrecipe.whiteboard or None #'' -> NULL for DB
@@ -493,15 +493,28 @@ class Jobs(RPCRoot):
     @expose('json')
     def update_recipe_set_response(self,recipe_set_id,response_id):
         rs = RecipeSet.by_id(recipe_set_id)
-        try:
-            if rs.nacked is None:
-                rs.nacked = RecipeSetResponse(response_id=response_id)
-            else:
-                rs.nacked.response = Response.by_id(response_id)
-            
-            return {'success' : 1, 'rs_id' : recipe_set_id }
-        except: raise
-           
+        if rs.nacked is None:
+            rs.nacked = RecipeSetResponse(response_id=response_id)
+        else:
+            rs.nacked.response = Response.by_id(response_id)
+
+        return {'success' : 1, 'rs_id' : recipe_set_id }
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def set_response(self, job_t_id, response):
+        job = TaskBase.get_by_t_id(job_t_id)
+        try: # See if we are a 'RecipeSet'
+            owner_groups = ([g.group_name for g in job.job.owner.groups])
+        except AttributeError: #We are a 'Job'
+            owner_groups = ([g.group_name for g in job.owner.groups])
+        if job.is_owner(identity.current.user) or \
+            'admin' in identity.current.groups or \
+            identity.current.user.in_group(owner_groups):
+            job.set_response(response)
+        else:
+            raise BeakerException('No permission to modify %s' % job)
+
     @expose(format='json')
     def save_response_comment(self,rs_id,comment):
         try:

@@ -385,6 +385,8 @@ class Groups(AdminPage):
         session.delete(group)
         activity = Activity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
         session.add(activity)
+        for system in group.systems:
+            SystemActivity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"", object=system)
         flash( _(u"%s Deleted") % group.display_name )
         raise redirect(".")
 

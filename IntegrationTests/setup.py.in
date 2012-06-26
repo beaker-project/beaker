@@ -16,6 +16,7 @@ setup(
     package_dir={'': 'src'},
     package_data={'': [
        	'*.xml',
+        'server/kickstarts/*',
         'server/motd.xml',
         'server/selenium/*.rpm',
         'server/selenium/invalid-task_file',] +

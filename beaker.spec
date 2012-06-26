@@ -15,8 +15,8 @@
 %endif
 
 Name:           beaker
-Version:        0.8.2
-Release:        10%{?dist}
+Version:        0.9.0
+Release:        4%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -68,6 +68,9 @@ Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
 Requires:       libxslt-python
+%if !(0%{?rhel} >= 6) || !(0%{?fedora} >= 14)
+Requires:       python-simplejson
+%endif
 Requires:       libxml2-python
 
 %if %{with server}
@@ -96,6 +99,7 @@ Requires:	yum-utils
 Requires:       python-concurrentloghandler
 Requires:       rhts-python
 Requires:       cracklib-python
+Requires:       python-jinja2
 %endif
 
 
@@ -139,6 +143,7 @@ Requires:	python-setuptools
 Requires:	python-xmltramp
 Requires:       python-krbV
 Requires:       python-concurrentloghandler
+Requires:       python-gevent >= 1.0
 
 %package lab-controller-addDistro
 Summary:        addDistro scripts for Lab Controller
@@ -198,13 +203,6 @@ DESTDIR=$RPM_BUILD_ROOT make \
     %{?with_labcontroller:WITH_LABCONTROLLER=1} \
     %{?with_inttests:WITH_INTTESTS=1} \
     install
-%if %{with labcontroller}
-ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/redhat6.ks
-ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/CentOS6.ks
-ln -s RedHatEnterpriseLinux6.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/RedHatStorageSoftwareAppliance3.ks
-ln -s RedHatEnterpriseLinuxServer5.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/CentOS5.ks
-ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment.ks
-%endif
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -219,6 +217,7 @@ ln -s Fedora.ks $RPM_BUILD_ROOT/%{_var}/lib/cobbler/kickstarts/Fedoradevelopment
 /sbin/chkconfig --add beaker-proxy
 /sbin/chkconfig --add beaker-watchdog
 /sbin/chkconfig --add beaker-transfer
+/sbin/chkconfig --add beaker-provision
 %endif
 
 %if %{with server}
@@ -234,6 +233,7 @@ if [ "$1" -ge "1" ]; then
         /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
         /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
         /sbin/service beaker-transfer condrestart >/dev/null 2>&1 || :
+        /sbin/service beaker-provision condrestart >/dev/null 2>&1 || :
 fi
 %endif
 
@@ -251,10 +251,13 @@ if [ "$1" -eq "0" ]; then
         /sbin/service beaker-proxy stop >/dev/null 2>&1 || :
         /sbin/service beaker-watchdog stop >/dev/null 2>&1 || :
         /sbin/service beaker-transfer stop >/dev/null 2>&1 || :
+        /sbin/service beaker-provision stop >/dev/null 2>&1 || :
         /sbin/chkconfig --del beaker-proxy || :
         /sbin/chkconfig --del beaker-watchdog || :
         /sbin/chkconfig --del beaker-transfer || :
+        /sbin/chkconfig --del beaker-provision || :
 fi
+rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %files
@@ -318,28 +321,26 @@ fi
 %files lab-controller
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
+%{_sysconfdir}/beaker/power-scripts/
 %{python_sitelib}/bkr/labcontroller/
 %{python_sitelib}/bkr.labcontroller-%{version}-*
 %{python_sitelib}/bkr.labcontroller-%{version}-py%{pyver}.egg-info/
 %{_bindir}/%{name}-proxy
 %{_bindir}/%{name}-watchdog
 %{_bindir}/%{name}-transfer
-%{_bindir}/%{name}-osversion
 %{_bindir}/%{name}-import
+%{_bindir}/%{name}-provision
+%{_bindir}/%{name}-pxemenu
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
-%{_sysconfdir}/cron.hourly/cobbler_expire_distros
-%{_sysconfdir}/cron.daily/beaker_expire_osversion
-%{_var}/lib/cobbler/triggers/sync/post/osversion.trigger
-%{_var}/lib/cobbler/snippets/*
-%{_var}/lib/cobbler/kickstarts/*
+%{_sysconfdir}/cron.hourly/beaker_expire_distros
 %attr(-,apache,root) %{_var}/www/beaker/*
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
+%{_sysconfdir}/init.d/%{name}-provision
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
-%{_var}/lib/beaker/osversion_data
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)
@@ -348,6 +349,100 @@ fi
 %endif
 
 %changelog
+* Tue Jun 26 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-4
+- bkr client: sys was not imported and was causing an error (rmancy@redhat.com)
+- fix watchdog death if console log does not exist (dcallagh@redhat.com)
+
+* Thu Jun 21 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-3
+- 833582 [BUG] missing apc_snmp_then_etherwake power command (bpeck@redhat.com)
+- 832975 S390 kickstarts should have reboot command (RHEL7) (bpeck@redhat.com)
+- 832226 Reboot snippets must be the last thing in a kickstart (stl@redhat.com)
+- 833662 atomically replace link targets in netboot image cache code
+  (dcallagh@redhat.com)
+- delay for 30 seconds before rebooting in postreboot snippet
+  (dcallagh@redhat.com)
+- 828927 API for getting the last installed distro tree for a system
+  (dcallagh@redhat.com)
+- Revert "clear console logs when provisioning" (dcallagh@redhat.com)
+- 821948 clear console log when watchdog is removed (dcallagh@redhat.com)
+- 833842 [BUG] Manual provisioning fails on most families/arches
+  (bpeck@redhat.com)
+
+* Mon Jun 18 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-2
+- 828451 Update lpar command to include the hmc. (bpeck@redhat.com)
+- 823329 avoid processing the same recipe many times in queued_recipes
+  (dcallagh@redhat.com)
+- Fix for job-modify --response for ack/nak'ing already ack/nak'ed jobs
+  (rmancy@redhat.com)
+- 829984 replace yaboot symlink if it already exists, instead of dying
+  (dcallagh@redhat.com)
+- 829423 no more distro_tree tag means we need to change how we tag STABLE
+  (bpeck@redhat.com)
+- 830937 [BUG] beaker-import imports RHEL5 ppc64 as ppc. (bpeck@redhat.com)
+- 830945 [BUG] beaker-import should fall back to .discinfo if timestamp is not
+  defined in .treeinfo. (bpeck@redhat.com)
+- 831864 can't join on Group.systems (dcallagh@redhat.com)
+- 830940 don't offer to provision distro-trees which have been expired
+  (dcallagh@redhat.com)
+- A few more enhancements for 812831 (rmancy@redhat.com)
+- 832250 fix race between spawning and reaping MonitoredSubprocesses
+  (dcallagh@redhat.com)
+- 832328 use an event instead of an exception to trigger shutdown in beaker-
+  provision (dcallagh@redhat.com)
+- 829981 nvram command doesn't exist in all distros (dcallagh@redhat.com)
+- custom tito builder which generates nice patches for hotfix releases
+  (dcallagh@redhat.com)
+- fix some warnings/mistakes in sphinx docs (dcallagh@redhat.com)
+- adjust client man page titles (dcallagh@redhat.com)
+- sqlalchemy.exceptions has been removed in SQLAlchemy 0.7
+  (dcallagh@redhat.com)
+
+* Thu Jun 07 2012 Bill Peck <bpeck@redhat.com> 0.8.2-12
+- HOTFIX - don't try and process non nfs url's as nfs. (bpeck@redhat.com)
+
+* Wed Jun 06 2012 Bill Peck <bpeck@redhat.com> 0.8.2-11
+- Add RHS import support into beaker-import (bpeck@redhat.com)
+- 828947 add ability to provide options to nfs installs, also --ks-meta for
+  workflows (bpeck@redhat.com)
+- 822426 Fixing up some problems that Key/Value search encountered after sqla
+  upgrade. (rmancy@redhat.com)
+
+* Fri Jun 01 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-1
+- Cobbler removal, a.k.a. "native provisioning"
+- 815325 Needed to update the prefs form to handle correct email validation
+  (rmancy@redhat.com)
+- 817122 Fails to upload device data (bpeck@redhat.com)
+- 809076 Searching by owner in job page now searches by user name, not email.
+  New option for searching by email (rmancy@redhat.com)
+- 732021 'My Jobs' link on front page (rmancy@redhat.com)
+- 813118 Activity tweaks (rmancy@redhat.com)
+- 820111 Fix Pagination and row count issues by ensuring duplicate rows are not
+  returned in system search (rmancy@redhat.com)
+- 772904 Execute older tasks first (bpeck@redhat.com)
+- 750406 User groups listing (rmancy@redhat.com)
+- 760691 RFE: Add netboot method detection to kickstart post and inventory
+  scripts (bpeck@redhat.com)
+- 812831 Ack/Nak a job or recipe set from the cmd line (rmancy@redhat.com)
+- 817568 Fix join to not give error on groups' system page.
+  (rmancy@localhost.localdomain)
+- 602741 Expand system searching to include Devices/Subsys_device_id and
+  Devices/Subsys_vendor_id (rmancy@redhat.com)
+- 820719 add support for RHS2 (bpeck@redhat.com)
+- 820328 RHEL7 ppc changes boot order (bpeck@redhat.com)
+- 818628 add %%end to RHEL7 post_s390_reboot snippet (bpeck@redhat.com)
+- fix -c option to beaker-proxy (dcallagh@redhat.com)
+- 821602 Improved bkr distros-list display (dcallagh@redhat.com)
+- 809704 send Anaconda scriptlet output to /dev/console in custom kickstarts
+  (dcallagh@redhat.com)
+- 824050 don't create empty WHERE clauses (dcallagh@redhat.com)
+- 822426 Fixing up some problems that Key/Value search encountered after sqla
+  upgrade. (rmancy@redhat.com)
+- 817120 add pci-device and arch searching to list-systems command
+  (bpeck@redhat.com)
+- add RHS support to beaker-import (bpeck@redhat.com)
+- beaker-import: fall back to Last-Modified header if tree has no timestamp
+  (dcallagh@redhat.com)
+
 * Mon May 28 2012 Dan Callaghan <dcallagh@redhat.com> 0.8.2-10
 - Rhel7 set end=%%end for custom kickstarts (bpeck@redhat.com)
 - Backport rhel7/ppc boot order (bpeck@redhat.com)
@@ -669,7 +764,21 @@ fi
 - 743852 Filter buttons in Recipe view not working (Queued, Running recipes)
   (bpeck@redhat.com)
 
-* Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-5
+* Fri Oct 07 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-5
+- Altered upgrade_0.7.2.txt notes to not include the 0.7.2 schema
+  changes other than the rollback, which is pointed to by the
+  upgrade_0.7.03.txt (rmancy@redhat.com)
+
+* Wed Oct 05 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-4
+- Merge the two upgrade notes for 0.7.03 (rmancy@redhat.com)
+- unreserve() will now catch all exceptions, including if cobbler is
+  down (rmancy@redhat.com)
+
+* Mon Oct 03 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-2
+- Fix for ks_appends broken by ssh keys patch (stl@redhat.com)
+- temporary hack for building in dist-f14 (dcallagh@redhat.com)
+
+* Fri Sep 30 2011 Raymond Mancy <rmancy@redhat.com> 0.7.3-1
 - 739893 - Client option to print xml of existing job
   (j-nomura@ce.jp.nec.com)
 - 729654 - Requires from Makefile are not installed during kickstart
@@ -695,7 +804,18 @@ fi
 - test for qpid bug https://bugzilla.redhat.com/show_bug.cgi?id=733543
   (rmancy@redhat.com)
 
-* Fri Sep 16 2011 Raymond Mancy <rmancy@redhat.com> 0.7.2-3
+* Wed Sep 21 2011 Raymond Mancy <rmancy@redhat.com> 0.7.2-3
+- Moved content from bz734535.sql into update_0.7.2.txt and added
+  rollback SQL
+
+* Mon Sep 19 2011 Raymond Mancy <rmancy@redhat.com> 0.7.2-2
+- Fix for bug introduced by 713578 that caused the submission kw args
+  from the job page to change. (rmancy@redhat.com)
+- 739178 remove_distro can throw an exception if the distro doesn't
+  exist in beaker (bpeck@redhat.com)
+- 734535 urlparse already imported (bpeck@redhat.com)
+
+* Fri Sep 16 2011 Raymond Mancy <rmancy@redhat.com> 0.7.2-1
 - 640395  -  make bkradd does not work (bpeck@redhat.com)
 - 617274 - Owner field should be mandatory (dcallagh@redhat.com)
 - 736989 - fix bkr distros-list --treepath (dcallagh@redhat.com)
@@ -716,6 +836,7 @@ fi
 - fix for beaker labcontroller task (bpeck@redhat.com)
 - Enhanced ausearch. (mcsontos@redhat.com)
 - Added: CompatService to RhtsOptions (mcsontos@redhat.com)
+
 * Wed Sep 14 2011 Bill Peck <bpeck@redhat.com> 0.7.1-2
 - 738319 when importing distros osminor doesn't enforce a string
   (bpeck@redhat.com)

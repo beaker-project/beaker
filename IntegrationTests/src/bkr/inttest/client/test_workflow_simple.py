@@ -13,20 +13,19 @@ class WorkflowSimpleTest(unittest.TestCase):
     @with_transaction
     def setUp(self):
         self.distro = data_setup.create_distro(tags=[u'STABLE'])
+        self.distro_tree = data_setup.create_distro_tree(distro=self.distro)
         self.task = data_setup.create_task()
-        data_setup.create_task(name=u'/distribution/install')
-        data_setup.create_task(name=u'/distribution/reservesys')
 
     def test_submit_job(self):
         out = run_client(['bkr', 'workflow-simple', '--random',
-                '--arch', self.distro.arch.arch,
+                '--arch', self.distro_tree.arch.arch,
                 '--family', self.distro.osversion.osmajor.osmajor,
                 '--task', self.task.name])
         self.assert_(out.startswith('Submitted:'), out)
 
     def test_submit_job_wait(self):
         args = ['bkr', 'workflow-simple', '--random',
-                '--arch', self.distro.arch.arch,
+                '--arch', self.distro_tree.arch.arch,
                 '--family', self.distro.osversion.osmajor.osmajor,
                 '--task', self.task.name,
                 '--wait']
@@ -39,17 +38,16 @@ class WorkflowSimpleTest(unittest.TestCase):
         out = proc.stdout.readline().rstrip()
         self.assert_('Watching tasks (this may be safely interrupted)...' == out)
 
-        job = Job.by_id(job_id)
-        job.cancel()
-        session.flush()
+        run_client(['bkr', 'job-cancel', 'J:%s' % job_id])
+
         returncode = proc.wait()
-        self.assert_(returncode == 0)
+        self.assert_(returncode == 1)
 
     def test_hostrequire(self):
         out = run_client(['bkr', 'workflow-simple',
                 '--dryrun', '--prettyxml',
                 '--hostrequire', 'hostlabcontroller=lab.example.com',
-                '--arch', self.distro.arch.arch,
+                '--arch', self.distro_tree.arch.arch,
                 '--family', self.distro.osversion.osmajor.osmajor,
                 '--task', self.task.name])
         self.assert_('<hostlabcontroller op="=" value="lab.example.com"/>' in out, out)

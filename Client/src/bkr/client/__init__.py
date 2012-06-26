@@ -27,6 +27,12 @@ if config_file:
 class BeakerCommand(ClientCommand):
     enabled = False
 
+    t_id_types = dict(T = 'RecipeTask',
+                      TR = 'RecipeTaskResult',
+                      R = 'Recipe',
+                      RS = 'RecipeSet',
+                      J = 'Job')
+
 def prettyxml(option, opt_str, value, parser):
     # prettyxml implies debug as well.
     parser.values.prettyxml = True
@@ -208,6 +214,11 @@ class BeakerWorkflow(BeakerCommand):
             "--priority",
             default="Normal",
             help="Set the priority to this (Low,Medium,Normal,High,Urgent) (optional)"
+        )
+        self.parser.add_option(
+            "--ks-meta",
+            default=None,
+            help="kickstart meta arguments to supply (optional)"
         )
         self.parser.add_option(
             "--kernel_options",
@@ -488,6 +499,8 @@ class BeakerRecipeBase(BeakerBase):
         family = kwargs.get("family", None)
         variant = kwargs.get("variant", None)
         method = kwargs.get("method", None)
+        ks_metas = []
+        ks_meta = kwargs.get("ks_meta", "")
         kernel_options = kwargs.get("kernel_options", '')
         kernel_options_post = kwargs.get("kernel_options_post", '')
         tags = kwargs.get("tag", [])
@@ -517,7 +530,10 @@ class BeakerRecipeBase(BeakerBase):
             distroMethod.setAttribute('op', '=')
             distroMethod.setAttribute('value', 'nfs')
             self.addDistroRequires(distroMethod)
-            self.ks_meta = "method=%s" % method
+            ks_metas.append("method=%s" % method)
+        if ks_meta:
+            ks_metas.append(ks_meta)
+        self.ks_meta = ' '.join(ks_metas)
         if kernel_options:
             self.kernel_options = kernel_options
         if kernel_options_post:

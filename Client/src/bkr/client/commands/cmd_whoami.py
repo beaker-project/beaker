@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Show who you are logged in as
-=============================
+bkr whoami: Show your Beaker username
+=====================================
 
 .. program:: bkr whoami
 
