@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.0
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -349,6 +349,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Tue Jun 26 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-4
+- bkr client: sys was not imported and was causing an error (rmancy@redhat.com)
+- fix watchdog death if console log does not exist (dcallagh@redhat.com)
+
 * Thu Jun 21 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-3
 - 833582 [BUG] missing apc_snmp_then_etherwake power command (bpeck@redhat.com)
 - 832975 S390 kickstarts should have reboot command (RHEL7) (bpeck@redhat.com)

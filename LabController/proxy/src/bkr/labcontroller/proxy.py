@@ -287,6 +287,7 @@ class WatchFile(object):
                                              where,
                                              data)
                 return True
+        return False
 
     def truncate(self):
         try:
