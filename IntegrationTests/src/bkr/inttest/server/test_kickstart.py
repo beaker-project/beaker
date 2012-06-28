@@ -508,7 +508,7 @@ EOF
             </job>
             ''', system)
         self.assert_(
-                r'''/bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)$/\1--port=0x02f8\2/' /boot/grub/grub.conf'''
+                r'''    /bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)$/\1--port=0x02f8\2/' /boot/grub/grub.conf'''
                 in recipe.rendered_kickstart.kickstart.splitlines(),
                 recipe.rendered_kickstart.kickstart)
 
