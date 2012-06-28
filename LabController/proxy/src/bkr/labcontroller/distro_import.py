@@ -653,7 +653,7 @@ class TreeInfoBase(object):
         urls = [os.path.join(url,'') for url in urls]
         self.tree['urls'] = urls
         self.tree['kernel_options'] = ''
-        family  = self.parser.get('general', 'family').replace(" ","")
+        family  = self.options.family or self.parser.get('general', 'family').replace(" ","")
         version = self.parser.get('general', 'version').replace("-",".")
         self.tree['name'] = self.options.name or \
                                    self.parser.get('general', 'name', 
@@ -1313,6 +1313,9 @@ def main():
                       action='store_true',
                       default=False,
                       help="less messages")
+    parser.add_option("-f", "--family",
+                      default=None,
+                      help="Override family in .treeinfo")
                       
     (opts, urls) = parser.parse_args()
 
