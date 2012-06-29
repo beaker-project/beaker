@@ -44,7 +44,7 @@ def generate_subcommand_docs(app):
                     doctitle = doc.splitlines()[1] # XXX dodgy, parse doc instead
                     outpath = os.path.join(app.srcdir, '%s.rst' % docname)
                     # only write it if the contents have changed, this helps conditional builds
-                    if open(outpath, 'r').read() != module.__doc__:
+                    if not os.path.exists(outpath) or open(outpath, 'r').read() != module.__doc__:
                         with open(outpath, 'w') as f:
                             f.write(module.__doc__)
                     description = doctitle.partition(': ')[2]
