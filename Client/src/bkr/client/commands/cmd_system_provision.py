@@ -26,12 +26,12 @@ workflow-simple`) instead.
 Options
 -------
 
-.. option:: --distro <name>
+.. option:: --distro-tree <id>
 
-   Provision distro with install name <name>.
+   Provision the distro tree identified by <id>.
 
-   Note that this must be the distro's *install name*. This is the first field 
-   in the output of :program:`bkr distros-list`.
+   The distro tree id can be found in Beaker's web UI or by using 
+   :program:`bkr distro-trees-list`.
 
 .. option:: --ks-meta <variables>
 
@@ -86,11 +86,17 @@ Reserve a particular system, provision it, do some work on it, and then release
 it::
 
     bkr system-reserve system1.example.invalid
-    bkr system-provision --kernel-opts "norhgb" \\
-                         --distro RHEL5.6-Server-20101110.n.0 \\
+    bkr system-provision --kernel-opts "nogpt" \\
+                         --distro-tree 12345 \\
                          system1.example.invalid
     # do some work on the system
     bkr system-release system1.example.invalid
+
+History
+-------
+
+Prior to version 0.9.1, this command accepted :option:`--distro` instead of
+:option:`--distro-tree`.
 
 See also
 --------
@@ -99,6 +105,7 @@ See also
 """
 
 import sys
+import optparse
 from bkr.client import BeakerCommand
 
 class System_Provision(BeakerCommand):
@@ -107,8 +114,9 @@ class System_Provision(BeakerCommand):
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <fqdn>" % self.normalized_name
-        self.parser.add_option('--distro', metavar='INSTALL_NAME',
-                help='Provision with distro named INSTALL_NAME')
+        self.parser.add_option('--distro-tree', metavar='ID',
+                help='Provision distro tree identified by ID')
+        self.parser.add_option('--distro', help=optparse.SUPPRESS_HELP)
         self.parser.add_option('--ks-meta', metavar='OPTS',
                 help='Pass OPTS as kickstart metadata')
         self.parser.add_option('--kernel-options', metavar='OPTS',
@@ -119,7 +127,7 @@ class System_Provision(BeakerCommand):
                 help='Read complete kickstart from FILENAME (- for stdin)')
         self.parser.add_option('--no-reboot',
                 action='store_false', dest='reboot',
-                help="Set Cobbler configuration for system but don't reboot")
+                help="Configure installation but don't reboot system")
         self.parser.set_defaults(reboot=True)
 
     def run(self, *args, **kwargs):
@@ -130,8 +138,12 @@ class System_Provision(BeakerCommand):
             self.parser.error('Exactly one system fqdn must be given')
         fqdn = args[0]
 
-        if not kwargs['distro']:
-            self.parser.error('Distro must be given with --distro')
+        # Accept --distro for backwards compat
+        if kwargs['distro'] and not kwargs['distro_tree']:
+            kwargs['distro_tree'] = kwargs['distro']
+
+        if not kwargs['distro_tree']:
+            self.parser.error('Distro tree must be specified with --distro-tree')
 
         if kwargs['kickstart'] == '-':
             kickstart = sys.stdin.read()
@@ -141,6 +153,6 @@ class System_Provision(BeakerCommand):
             kickstart = None
 
         self.set_hub(username, password)
-        self.hub.systems.provision(fqdn, kwargs['distro'],
+        self.hub.systems.provision(fqdn, kwargs['distro_tree'],
                 kwargs['ks_meta'], kwargs['kernel_options'],
                 kwargs['kernel_options_post'], kickstart, kwargs['reboot'])
