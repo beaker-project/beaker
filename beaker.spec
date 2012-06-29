@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.0
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -349,6 +349,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Fri Jun 29 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-6
+- fix build for RHEL5 and F16 (dcallagh@redhat.com)
+
 * Fri Jun 29 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-5
 - 835319 fix typo in bkr distro-trees-list (dcallagh@redhat.com)
 - RHEL7 build fixes (dcallagh@redhat.com)
