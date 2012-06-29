@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -349,6 +349,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Fri Jun 29 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-5
+- 835319 fix typo in bkr distro-trees-list (dcallagh@redhat.com)
+- RHEL7 build fixes (dcallagh@redhat.com)
+
 * Tue Jun 26 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-4
 - bkr client: sys was not imported and was causing an error (rmancy@redhat.com)
 - fix watchdog death if console log does not exist (dcallagh@redhat.com)
