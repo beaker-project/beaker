@@ -57,3 +57,12 @@ class DistroTreesListTest(unittest.TestCase):
         trees = json.loads(output)
         self.assert_(any(distro_tree_in.id == tree['distro_tree_id'] for tree in trees))
         self.assert_(not any(distro_tree_out.id == tree['distro_tree_id'] for tree in trees))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=835319
+    def test_tabular_format_works(self):
+        output = run_client(['bkr', 'distro-trees-list', '--format=tabular',
+                '--name', self.distro_tree.distro.name])
+        self.assert_('Name: %s' % self.distro_tree.distro.name in output, output)
+        self.assert_('Arch: %s' % self.distro_tree.arch in output, output)
+        self.assert_('Variant: %s' % self.distro_tree.variant in output, output)
+        self.assert_('OSVersion: %s' % self.distro_tree.distro.osversion in output, output)
