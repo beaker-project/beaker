@@ -2,9 +2,9 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 # The server, lab controller, and integration test subpackages can be conditionally built.
-# They are only enabled on RHEL 6 and Fedora >= 16.
+# They are only enabled on RHEL 6 (for now).
 # Use rpmbuild --with/--without to override.
-%if 0%{?rhel} == 6 || 0%{?fedora} >= 16
+%if 0%{?rhel} == 6
 %bcond_without server
 %bcond_without labcontroller
 %bcond_without inttests
@@ -29,7 +29,7 @@ BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
 BuildRequires:  python-docutils >= 0.6
-%if 0%{?rhel} == 6
+%if 0%{?rhel} == 5 || 0%{?rhel} == 6
 BuildRequires:  python-sphinx10
 %else
 BuildRequires:  python-sphinx >= 1.0
