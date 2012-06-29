@@ -8,10 +8,10 @@
 
 key --skip
 
-{% if manual %}
+{% if manual is defined %}
 ignoredisk --interactive
 {% endif %}
-{% if not manual %}
+{% if manual is undefined %}
 # System bootloader configuration
 bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
 
@@ -41,7 +41,7 @@ rootpw --iscrypted {{ password|default(user.root_password, True) }}
 selinux {{ selinux|default('--disabled') }}
 
 # Configure the X Window System
-{% if skipx %}
+{% if skipx is defined %}
 skipx
 {% else %}
 {% if not (distro_tree is arch('s390', 's390x')) %}

@@ -8,7 +8,7 @@
 
 key {{ key|default('49af89414d147589') }}
 
-{% if not manual %}
+{% if manual is undefined %}
 auth --useshadow --enablemd5
 # System bootloader configuration
 bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
@@ -39,7 +39,7 @@ rootpw --iscrypted {{ password|default(user.root_password, True) }}
 selinux {{ selinux|default('--enforcing') }}
 
 # Configure the X Window System
-{% if skipx %}
+{% if skipx is defined %}
 skipx
 {% else %}
 {% if not (distro_tree is arch('s390', 's390x')) %}
