@@ -2,9 +2,9 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 # The server, lab controller, and integration test subpackages can be conditionally built.
-# They are only enabled on RHEL >= 6 and Fedora >= 16.
+# They are only enabled on RHEL 6 (for now).
 # Use rpmbuild --with/--without to override.
-%if 0%{?rhel} >= 6 || 0%{?fedora} >= 16
+%if 0%{?rhel} == 6
 %bcond_without server
 %bcond_without labcontroller
 %bcond_without inttests
@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.0
-Release:        4%{?dist}
+Release:        6%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -29,10 +29,10 @@ BuildRequires:  python-setuptools
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
 BuildRequires:  python-docutils >= 0.6
-%if (0%{?fedora} >= 14)
-BuildRequires:  python-sphinx >= 1.0
-%else
+%if 0%{?rhel} == 5 || 0%{?rhel} == 6
 BuildRequires:  python-sphinx10
+%else
+BuildRequires:  python-sphinx >= 1.0
 %endif
 
 %if %{with server}
@@ -349,6 +349,13 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Fri Jun 29 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-6
+- fix build for RHEL5 and F16 (dcallagh@redhat.com)
+
+* Fri Jun 29 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-5
+- 835319 fix typo in bkr distro-trees-list (dcallagh@redhat.com)
+- RHEL7 build fixes (dcallagh@redhat.com)
+
 * Tue Jun 26 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-4
 - bkr client: sys was not imported and was causing an error (rmancy@redhat.com)
 - fix watchdog death if console log does not exist (dcallagh@redhat.com)

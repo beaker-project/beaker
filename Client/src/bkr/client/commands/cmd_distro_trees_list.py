@@ -167,7 +167,7 @@ class Distro_Trees_List(BeakerCommand):
                 for dt in distro_trees:
                     print "       ID: %s" % dt['distro_tree_id']
                     print "     Name: %-34.34s Arch: %s" % (dt['distro_name'], dt['arch'])
-                    print "OSVersion: %-34.34s Variant: %s" % (dt['distro_version'], dt['variant'])
+                    print "OSVersion: %-34.34s Variant: %s" % (dt['distro_osversion'], dt['variant'])
                     print "     Tags: %s" % ", ".join(dt['distro_tags'])
                     print
                     print "  Lab controller/URLs:"
