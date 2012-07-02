@@ -1,0 +1,8 @@
+Change-Id: I417ac6c36a97f68698332490dcce714326402251
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Bill Peck <bpeck@redhat.com>
+Submitted-by: Dan Callaghan <dcallagh@redhat.com>
+Submitted-at: Sun, 01 Jul 2012 21:22:16 -0400
+Reviewed-on: http://gerrit.beaker-project.org/1171
+Project: beaker
+Branch: refs/heads/release-0.9.0
