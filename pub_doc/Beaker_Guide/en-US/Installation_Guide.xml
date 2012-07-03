@@ -287,7 +287,20 @@ mgmt_parameters:
   $ /var/lib/cobbler/triggers/sync/post/osversion.trigger
   </screen>
   </para>
-  <para>Check that the Disto was added succesfully by going to <ulink url="https://BeakerServer.example.com/bkr/distros"></ulink>.You'll need to configure the /etc/beaker/proxy.conf file with the following settings. 
+  <para>Check that the distro was added successfully by going to <ulink url="https://BeakerServer.example.com/bkr/distros"></ulink>.
+    <note>
+      <para>
+        After successfully importing distros, you will need to create server
+        side repos to serve the distro specific rpms needed to install lab machines.
+        You will need to run the following on the beaker server:
+        <screen>
+$ beaker-repo-update
+        </screen>
+      </para>
+    </note>
+  </para>
+  <para>
+  You'll need to configure the /etc/beaker/proxy.conf file with the following settings.
   <screen>
   # Hub xml-rpc address.
   HUB_URL = "https://BeakerServer.example.com/bkr"
