@@ -6,7 +6,7 @@
 {% else %}
 {{ snippet('install_method') }}
 
-{% if not manual %}
+{% if manual is undefined %}
 authconfig --enableshadow --enablemd5
 # System bootloader configuration
 bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
@@ -37,7 +37,7 @@ rootpw --iscrypted {{ password|default(user.root_password, True) }}
 # SELinux configuration
 selinux --{{ selinux|default('enforcing') }}
 
-{% if skipx %}
+{% if skipx is defined %}
 skipx
 {% endif %}
 
