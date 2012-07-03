@@ -20,8 +20,8 @@ Release:        7%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
-URL:            http://fedorahosted.org/beaker
-Source0:        http://fedorahosted.org/releases/b/e/%{name}-%{version}.tar.gz
+URL:            http://beaker-project.org/
+Source0:        http://beaker-project.org/releases/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  make
