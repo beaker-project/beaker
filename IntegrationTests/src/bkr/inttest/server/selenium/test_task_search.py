@@ -1,8 +1,36 @@
 #!/usr/bin/python
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest import data_setup, with_transaction, get_server_base
 import unittest, time, re, os
 from turbogears.database import session
+
+
+class TaskSearchWD(WebDriverTestCase):
+
+    @classmethod
+    @with_transaction
+    def setupClass(cls):
+        with session.begin():
+            cls.task_one = data_setup.create_task(
+                name=data_setup.unique_name(u'/a/a/a%s'))
+
+    def setUp(self):
+        self.browser = self.get_browser()
+
+    @with_transaction
+    def test_executed_tasks(self):
+        with session.begin():
+            self.job = data_setup.create_completed_job(task_name=self.task_one.name)
+        b = self.browser
+        b.get(get_server_base() + 'tasks/%d' % self.task_one.id)
+        r = self.job.recipesets[0].recipes[0]
+        b.find_element_by_xpath("//select[@name='osmajor_id']/"
+            "option[normalize-space(text())='%s']" %
+             r.distro_tree.distro.osversion.osmajor).click()
+        b.find_element_by_xpath("//form[@id='form']").submit()
+        b.find_element_by_xpath("//div[@id='task_items']//"
+            "a[normalize-space(text())='%s']" % r.tasks[0].t_id)
+
 
 class Search(SeleniumTestCase):
 
