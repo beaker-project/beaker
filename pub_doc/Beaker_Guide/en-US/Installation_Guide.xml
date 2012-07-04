@@ -124,7 +124,7 @@ $ echo "grant all on <replaceable>db_name</replaceable>.* to <replaceable>user_n
        To make sure Beaker is running go to <ulink 
        url="http://BeakerServer.example.com/bkr/"/> in your browser.
        </para>
-       <formalpara>
+       <formalpara id="Installation-Add_Lab_Controller">
        <title>Add Lab Controller details</title>
        <para>
        One more step that we need to do is add the Lab Controller that we are 
@@ -156,18 +156,6 @@ $ echo "grant all on <replaceable>db_name</replaceable>.* to <replaceable>user_n
               <application>Lab Controller Email Address</application>: All user accounts require a unique email address, you can use root@FQDN of lab controller.
             </para>
           </listitem>
-
-          <listitem>
-            <para>
-              <application>Cobbler Username</application>:This is the login name we will use to communicate with the lab controller, for the purposes of this document will use the login name <literal>testing</literal>
-            </para>
-          </listitem>
-
-          <listitem>
-            <para>
-              <application>Cobbler Password</application>: This is the password that goes along with the cobbler username, again we will use : <literal>testing</literal>
-            </para>
-          </listitem>
         </itemizedlist>
        </para>
        </formalpara>
@@ -182,181 +170,120 @@ $ echo "grant all on <replaceable>db_name</replaceable>.* to <replaceable>user_n
   <section id="Installation-Setup_Lab_Controller-Install_Lab_Controller">
   <title>Install Lab Controller
   </title>
-  <para>If you have not installed the beaker repo on the Lab Controller, see <xref linkend="Installation-Install_Beaker"></xref>. Follow the instruction to install Beaker repo. Install the Lab Controller rpm. These dependencies are needed to make the rpm. 
+  <para>If you have not installed the beaker repo on the Lab Controller, see <xref linkend="Installation-Install_Beaker"></xref>. Follow the instruction to install Beaker repo. Then install the lab controller package: 
     <screen>
-       $ sudo yum -y install rpm-build python-devel TurboGears
-    </screen>
-  </para>
-  <para>To install the Lab Controller, enter the following. 
-    <screen>
-       $ sudo yum install beaker-lab-controller
+$ sudo yum install beaker-lab-controller
     </screen>
   </para>
   </section>
   <section id="Installation-Setup_Lab_Controller-Configure_Lab_Controller">
   <title>Configure Lab Controller</title>
-  <para>Cobbler is one of the dependencies that is installed with the Lab Controller. You'll need to edit the <filename>/etc/cobbler/settings</filename> file. 
-    <itemizedlist>
-     <listitem>
-      <para><option>server</option>: This needs to be set to the Lab Controller's fully qualified domain name. 
-      </para>
-      </listitem>
-      <listitem>
-      <para><option>next_server</option>:  If you use cobbler as your dhcp server this needs to be the IP address of the Lab Controller. 
-      </para>
-      </listitem>
-      <listitem>
-      <para><option>pxe_just_once</option>: 1
-      </para>
-      </listitem>
-      <listitem>
-      <para><option>anamon_enabled</option>: 1
-      </para>
-      </listitem>
-    </itemizedlist>
-  </para>
-  <para>
-    If you wish to support HTTP and FTP installations of distros stored on an 
-    NFS server, you will also need to set <option>method_http</option> and 
-    <option>method_ftp</option> under <option>mgmt_parameters</option>:
-    <programlisting>
-mgmt_parameters:
-    method_http: "http://download.example.com"
-    method_ftp: "ftp://download.example.com"
-    </programlisting>
-    The HTTP and FTP servers must serve the same directory tree that is 
-    available on your NFS server.
-  </para>
-  <para>You will need to enable an auth method in /etc/cobbler/modules.conf 
+  <para>Settings for the lab controller daemons are in 
+  <filename>/etc/beaker/labcontroller.conf</filename>. At a minimum you will 
+  need to change the following settings:
   <itemizedlist>
     <listitem>
-      <para>Change module = auth_denyall to module = authn_testing 
-      </para>
+      <para><option>HUB_URL</option>: The URL of your Beaker server 
+      <emphasis>without the trailing slash</emphasis>. If the lab controller and 
+      server are the same machine then the default value 
+      <literal>http://localhost/bkr</literal> is adequate.</para>
     </listitem>
-     <listitem>
-      <para>authn_testing gives a login of testing password testing 
-      </para>
-    </listitem>
-     <listitem>
-      <para>If you create proper accounts, make sure they match what you entered in <ulink url="http://BeakerServer/labcontrollers/new"></ulink>
+    <listitem>
+      <para><option>USERNAME</option>, <option>PASSWORD</option>: The username 
+      and password which the lab controller will use when logging in to Beaker. 
+      This is the username and password you picked when creating the lab 
+      controller in <xref linkend="Installation-Add_Lab_Controller"/>.
       </para>
     </listitem>
   </itemizedlist>
   </para>
-  <para>If you are using SELinux, do the following. 
+  <para>Turn on httpd:
     <screen>
-    $ sudo setsebool -P httpd_can_network_connect true
-    $ sudo semanage fcontext -a -t public_content_t "/var/lib/tftpboot/.*"
-    $ sudo semanage fcontext -a -t public_content_t "/var/www/cobbler/images/.*"
+$ sudo chkconfig httpd on
+$ sudo service httpd start
     </screen>
   </para>
-  <para>Turn on http 
+  <para>Turn on tftp:
     <screen>
-    $ sudo chkconfig httpd on
-    $ sudo service httpd start
+$ sudo chkconfig xinetd on
+$ sudo chkconfig tftp on
+$ sudo service xinetd start
+    </screen>
+    You can also use <package>dnsmasq</package> or any other TFTP server 
+    implementation. If your TFTP server is configured to use a root directory 
+    other than the default
+    <filename class="directory">/var/lib/tftpboot</filename>
+    you will need to set the <option>TFTP_ROOT</option> option in 
+    <filename>/etc/beaker/labcontroller.conf</filename>.
+  </para>
+  <para>The <systemitem class="daemon">beaker-proxy</systemitem> daemon handles 
+  XML-RPC requests from within the lab and proxies them to the server.
+    <screen>
+$ sudo chkconfig beaker-proxy on
+$ sudo service beaker-proxy start
     </screen>
   </para>
-  <para>Turn on tftp 
+  <para>The <systemitem class="daemon">beaker-watchdog</systemitem> daemon 
+  monitors systems and aborts their recipes if they panic or exceed the time 
+  limit.
     <screen>
-    $ sudo chkconfig xinetd on
-    $ sudo chkconfig tftp on
-    $ sudo service xinetd start
+$ sudo chkconfig beaker-watchdog on
+$ sudo service beaker-watchdog start
     </screen>
   </para>
-  <para>Turn on cobbler 
+  <para>The <systemitem class="daemon">beaker-provision</systemitem> daemon 
+  writes netboot configuration files in the TFTP root directory and runs fence 
+  commands to reboot systems.
     <screen>
-    $ sudo chkconfig cobblerd on
-    $ sudo service cobblerd start
+$ sudo chkconfig beaker-provision on
+$ sudo service beaker-provision start
     </screen>
   </para>
-  <para>Enable and turn on beaker watchdog proxy
+</section>
+<section id="Installation-Import_Distros">
+  <title>Import Distros</title>
+  <para>The next step is to import some distros using the 
+  <command>beaker-import</command> command on the lab controller. For each 
+  distro you would like to make available in Beaker, run 
+  <command>beaker-import</command> and pass all the URLs under which the distro 
+  is available. For example:
     <screen>
-    $ sudo chkconfig beaker-watchdog on
-    $ sudo chkconfig beaker-proxy on
-    $ sudo service beaker-watchdog start
-    $ sudo service beaker-proxy start
+$ beaker-import http://mymirror.example.com/pub/fedora/linux/releases/17/Fedora/ \
+        ftp://mymirror.example.com/pub/fedora/linux/releases/17/Fedora/ \
+        nfs://mymirror.example.com:/pub/fedora/linux/releases/17/Fedora/
     </screen>
-  </para>
-  <para>Cobbler should now be running. 
-  </para>
-  <para>You'll need to import some distros. You can use the following command (whilst replacing the variables). 
-  <screen>$ cobbler import --path=/net/${NFSSERVER}/${NFSPATH} \ --name=$DISTRONAME \ --available-as=nfs://${NFSSERVER}:/${NFSPATH}</screen>
-  </para>
-  <para>Beaker/Server needs a little more info than cobbler normally stores about a distro in order to use it. Thats why beaker-lab-controller provides a script in /var/lib/cobbler/triggers/sync/post/osversion.trigger which needs to be run after you import a new distro. It looks up the distros full family.update and looks for any yum repos that may be in the distro path. It also adds the cobbler distros into the Beaker server. 
-  <screen>
-  $ /var/lib/cobbler/triggers/sync/post/osversion.trigger
-  </screen>
-  </para>
-  <para>Check that the distro was added successfully by going to <ulink url="https://BeakerServer.example.com/bkr/distros"></ulink>.
-    <note>
-      <para>
-        After successfully importing distros, you will need to create server
-        side repos to serve the distro specific rpms needed to install lab machines.
-        You will need to run the following on the beaker server:
-        <screen>
+  Check that the distros were added successfully by going to <ulink 
+  url="https://BeakerServer.example.com/bkr/distros"></ulink>.</para>
+  <note>
+    <para>
+      After successfully importing distros, you will need to create server
+      side repos to serve the distro specific rpms needed to install lab machines.
+      You will need to run the following on the beaker server:
+      <screen>
 $ beaker-repo-update
-        </screen>
-      </para>
-    </note>
-  </para>
-  <para>
-  You'll need to configure the /etc/beaker/proxy.conf file with the following settings.
+      </screen>
+    </para>
+  </note>
+</section>  
+<section id="Installation-Setup_Lab_Controller-AddDistro_Jobs">
+  <title>Automate Jobs for New Distros</title>
+  <para>Whenever we run the <command>beaker-import</command> command (see <xref 
+  linkend="Installation-Import_Distros"></xref>), we have the ability to run 
+  automated jobs on these newly imported distros. To do this we need to install 
+  the <package>beaker-lab-controller-addDistro</package> package.
   <screen>
-  # Hub xml-rpc address.
-  HUB_URL = "https://BeakerServer.example.com/bkr"
-  #HUB_URL = "http://localhost:8080"
-  
-  # Hub authentication method. Example: krbv, password, worker_key
-  AUTH_METHOD = "password"
-  #AUTH_METHOD = "krbv"
-  
-  # Username and password
-  USERNAME = "host/lab.example.com"  # This needs to match the account your created on the Beaker Scheduler
-  PASSWORD = "testing"  # Again, only if you are not using kerberos does this need to be set.
-  
-  # Kerberos service prefix. Example: host, HTTP
-  KRB_SERVICE = "HTTP"
-  
-  # Kerberos realm. If commented, last two parts of domain name are used. Example: MYDOMAIN.COM.
-  KRB_REALM = "EXAMPLE.COM"
+$ sudo yum install beaker-lab-controller-addDistro
   </screen>
-  </para>
-  </section>  
- <section id="Installation-Setup_Lab_Controller-AddDistro_Jobs">
-  <title>Automate Jobs for new distros</title>
-  <para>
-  Whenever we run an the <emphasis>osversion.trigger</emphasis> script(See <xref linkend="Installation-Setup_Lab_Controller-Configure_Lab_Controller"></xref>), we
-  have the ability to run automated Jobs on these newly imported distros. To do this we need to install the
-  <emphasis>beaker-labcontroller-addDistro</emphasis> package.
-  <screen>
-    $ yum install beaker-lab-controller-addDistro
-  </screen>
-  You can now place a script into the <emphasis>/var/lib/beaker/addDistro.d</emphasis> directory, that will be run each time the osversion.trigger script is   called for newly imported distros.
-  </para>
-
-  <para>
-  By default, <emphasis>/var/lib/beaker/addDistro.d/udpateDistro</emphasis> is installed, which contains the following bash code:-
-  <screen>
-  #!/bin/sh
-
-  ARCH=$1
-  FAMILY=$2
-  DISTRO=$3
-  VARIANT=$4
-  DISTPATH=$5
-
-  if [ "$VARIANT" = "AS" -o \
-       "$VARIANT" = "Server" -o \
-        "$FAMILY" != "RedHatEnterpriseLinux4" -a \
-        "$FAMILY" != "RedHatEnterpriseLinux6" ]; then
-        bkr workflow-simple --task /distribution/updateDistro --distro $DISTRO --arch $ARCH --variant "$VARIANT" --whiteboard "Add Distro Test $DISTRO $ARCH"
-  fi
-  </screen>
-  For each newly imported distro this will run the <emphasis>/distribution/updateDistro</emphasis> task. Use this as a guide for creating more specific
-  jobs that you might find useful.
-  </para>
-
-  </section>
+  You can now place a script into the <filename 
+  class="directory">/var/lib/beaker/addDistro.d</filename> directory, that will 
+  be run each time a distro is imported.</para>
+  <para>By default, 
+  <filename>/var/lib/beaker/addDistro.d/updateDistro</filename> is installed, 
+  which schedules a Beaker job to test installation of the new distro and tags 
+  it with <literal>STABLE</literal> if the job completes without error. Use 
+  this as a guide for creating more specific jobs that you might find 
+  useful.</para>
+</section>
 
 <section id="Installation-Lab_PXE_Menu">
 
@@ -553,4 +480,4 @@ exec beaker-pxemenu --quiet
     </section>
   </chapter>
   
-    
+<!-- vim: set sw=2 : -->
