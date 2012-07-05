@@ -714,7 +714,9 @@ logvol /butter --fstype btrfs --name=butter --vgname=TestVolume001 --size=25600
             ''', system)
         self.assert_('''
 mkdir -p /root/.ssh
-echo ssh-rsa lolthisismykey description >> /root/.ssh/authorized_keys
+cat >>/root/.ssh/authorized_keys <<"__EOF__"
+ssh-rsa lolthisismykey description
+__EOF__
 restorecon -R /root/.ssh
 chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
 '''
@@ -748,7 +750,7 @@ chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
             ''', system)
         # check the reboot snippet is after the ssh key
         self.assert_('Force a reboot'
-                     in recipe.rendered_kickstart.kickstart.split('echo ssh-rsa')[1],
+                     in recipe.rendered_kickstart.kickstart.split('cat >>/root/.ssh/authorized_keys')[1],
                      recipe.rendered_kickstart.kickstart)
 
     def test_ksappends(self):

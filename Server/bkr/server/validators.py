@@ -108,3 +108,26 @@ def _check_user_email(email_address, user_id):
         user_by_id = User.by_id(user_id)
         if user_by_id != user_by_email: # An existing email that is not theirs
             raise ValueError
+
+class SSHPubKey(TgFancyValidator):
+
+    strip = True
+    messages = {
+        'invalid': 'The supplied value is not a valid SSH public key',
+        'newline': 'SSH public keys may not contain newlines',
+    }
+
+    def _to_python(self, value, state):
+        if not value:
+            return None
+        if '\n' in value:
+            raise Invalid(self.message('newline', state), value, state)
+        elements = value.split(None, 2)
+        if len(elements) != 3:
+            raise Invalid(self.message('invalid', state), value, state)
+        return elements
+
+    def _from_python(self, value, state):
+        if isinstance(value, tuple):
+            return ' '.join(value)
+        return value
