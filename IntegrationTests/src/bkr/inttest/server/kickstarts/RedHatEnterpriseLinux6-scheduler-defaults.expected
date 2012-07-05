@@ -135,12 +135,14 @@ READAHEAD_COLLECT_ON_RPM="no"
 EOF
 
 
-/sbin/chkconfig ntpdate on
-/sbin/chkconfig ntpd on
-GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
+/sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
+/sbin/chkconfig ntpd on >/dev/null 2>&1 || :
+if [ -e "/etc/sysconfig/ntpd" ]; then
+    GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
-if [ -z "$GOT_G" ]; then
-    /bin/sed -i -r 's/(^OPTIONS\s*=\s*)(['\''|"])(.+)$/\1\2\-x \3 /' /etc/sysconfig/ntpd
+    if [ -z "$GOT_G" ]; then
+        /bin/sed -i -r 's/(^OPTIONS\s*=\s*)(['\''|"])(.+)$/\1\2\-x \3 /' /etc/sysconfig/ntpd
+    fi
 fi
 
 

@@ -6,7 +6,7 @@
 {% else %}
 {{ snippet('install_method') }}
 
-{% if not manual %}
+{% if manual is undefined %}
 authconfig --enableshadow --enablemd5
 # System bootloader configuration
 bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
@@ -38,7 +38,7 @@ langsupport --default {{ lang|default('en_US.UTF-8') }} {{ lang|default('en_US.U
 reboot
 #Root password
 rootpw --iscrypted {{ password|default(user.root_password, True) }}
-{% if skipx %}
+{% if skipx is defined %}
 # Do not configure the X Window System
 skipx
 {% endif %}

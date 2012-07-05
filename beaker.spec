@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.0
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -349,6 +349,12 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Mon Jul 02 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-7
+- 836325 [BUG] don't try and modify /etc/sysconfig/ntpd if it doesn't exist.
+  (bpeck@redhat.com)
+- 836637 [BUG] skipx doesn't work as expected in the kickstarts
+  (bpeck@redhat.com)
+
 * Fri Jun 29 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-6
 - fix build for RHEL5 and F16 (dcallagh@redhat.com)
 
