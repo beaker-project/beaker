@@ -2,7 +2,7 @@
 import unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
-from bkr.inttest.client import run_client
+from bkr.inttest.client import run_client, ClientError
 
 class JobCloneTest(unittest.TestCase):
 
@@ -32,3 +32,11 @@ class JobCloneTest(unittest.TestCase):
     def test_can_dryrun(self):
         out = run_client(['bkr', 'job-clone','--dryrun', self.job.t_id])
         self.assert_('Submitted:' not in out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=595512
+    def test_invalid_taskspec(self):
+        try:
+            run_client(['bkr', 'job-clone', '12345'])
+            fail('should raise')
+        except ClientError, e:
+            self.assert_('Invalid taskspec' in e.stderr_output)

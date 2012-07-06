@@ -144,6 +144,7 @@ class Job_Delete(BeakerCommand):
         if len(args) > 0:
             if tag is not None or complete_days is not None or family is not None or product is not None:
                 self.parser.error('Please either delete by job or tag/complete/family/product, not by both')
+            self.check_taskspec_args(args, permitted_types=['J'])
 
         self.set_hub(username,password)
         jobs = []

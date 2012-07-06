@@ -43,9 +43,8 @@ class JobLogsTest(unittest.TestCase):
                     self.job.recipesets[0].recipes[0].tasks[0].t_id])
             self.fail('should raise')
         except ClientError, e:
-            self.assertEquals(e.status, 1)
-            self.assert_('No recipes found' in e.stderr_output, e.stderr_output)
-            self.assert_('Specify J, RS, or R' in e.stderr_output, e.stderr_output)
+            self.assert_('Taskspec type must be one of [J, RS, R]'
+                    in e.stderr_output, e.stderr_output)
 
     def test_by_taskresult_gives_error(self):
         try:
@@ -53,6 +52,13 @@ class JobLogsTest(unittest.TestCase):
                     self.job.recipesets[0].recipes[0].tasks[0].results[0].t_id])
             self.fail('should raise')
         except ClientError, e:
-            self.assertEquals(e.status, 1)
-            self.assert_('No recipes found' in e.stderr_output, e.stderr_output)
-            self.assert_('Specify J, RS, or R' in e.stderr_output, e.stderr_output)
+            self.assert_('Taskspec type must be one of [J, RS, R]'
+                    in e.stderr_output, e.stderr_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=595512
+    def test_invalid_taskspec(self):
+        try:
+            run_client(['bkr', 'job-logs', '12345'])
+            fail('should raise')
+        except ClientError, e:
+            self.assert_('Invalid taskspec' in e.stderr_output)

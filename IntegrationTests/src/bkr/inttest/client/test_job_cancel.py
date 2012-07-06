@@ -19,3 +19,11 @@ class JobCancelTest(unittest.TestCase):
             self.assertEquals(e.status, 1)
             self.assert_('Task type R is not stoppable'
                     in e.stderr_output, e.stderr_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=595512
+    def test_invalid_taskspec(self):
+        try:
+            run_client(['bkr', 'job-cancel', '12345'])
+            fail('should raise')
+        except ClientError, e:
+            self.assert_('Invalid taskspec' in e.stderr_output)
