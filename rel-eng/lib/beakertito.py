@@ -88,12 +88,27 @@ class BeakerBuilder(UpstreamBuilder):
         self._write_spec(lines)
 
     def _generate_patch(self, left, right, out):
-        print 'Generating patch %s..%s' % (left, right)
-        run_command('git log -p --reverse --pretty=email '
-                '-m --first-parent '
-                '--no-renames ' # patch can't handle these :-(
-                '--relative %s..%s -- . >%s/%s'
-                % (left, right, self.rpmbuild_gitcopy, out))
+        # It's nice to publish patches which show the actual commits making up
+        # the patch, with authorship, dates, log messages, etc.
+        # We can use git log for that. But it will only produce usable patches if
+        # left is an ancestor of every commit in left..right.
+        # That will normally be true for a series of hotfixes on top of a
+        # release. But if we are doing a --test build or if there are divergent
+        # tags then this might not be true. In that case the best we can do is
+        # git diff left..right.
+        if not run_command('git rev-list $(git rev-list --first-parent %s..%s | tail -n1)..%s'
+                % (left, right, left)):
+            print 'Generating patchset %s..%s' % (left, right)
+            run_command('git log -p --reverse --pretty=email '
+                    '-m --first-parent '
+                    '--no-renames ' # patch can't handle these :-(
+                    '--relative %s..%s -- . >%s/%s'
+                    % (left, right, self.rpmbuild_gitcopy, out))
+        else:
+            print 'Generating diff %s..%s' % (left, right)
+            run_command('git diff --no-renames '
+                    '--relative %s..%s -- . >%s/%s'
+                    % (left, right, self.rpmbuild_gitcopy, out))
         shutil.copy('%s/%s' % (self.rpmbuild_gitcopy, out), self.rpmbuild_sourcedir)
         shutil.copy('%s/%s' % (self.rpmbuild_gitcopy, out), self.rpmbuild_basedir)
         print 'Wrote: %s/%s' % (self.rpmbuild_basedir, out)
