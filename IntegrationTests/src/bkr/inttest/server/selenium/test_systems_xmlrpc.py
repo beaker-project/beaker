@@ -251,6 +251,25 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             session.expire(system)
             self.assertEquals(system.command_queue[0].action, 'reboot')
             self.assertEquals(system.command_queue[1].action, 'configure_netboot')
+            self.assertEquals(system.command_queue[2].action, 'clear_netboot')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=837710
+    def test_reprovision_failure(self):
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    shared=True, lab_controller=self.lab_controller)
+            system.release_action = ReleaseAction.reprovision
+            system.reprovision_distro_tree = data_setup.create_distro_tree(
+                    osmajor=u'BrokenDistro')
+            user = data_setup.create_user(password=u'password')
+            system.reserve(service=u'testdata', user=user)
+        server = self.get_server()
+        server.auth.login_password(user.user_name, 'password')
+        server.systems.release(system.fqdn)
+        with session.begin():
+            session.expire(system)
+            self.assertEquals(system.command_queue[0].action, 'clear_netboot')
+            self.assert_(system.user is None, system.user)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=824257
     def test_release_action_unset(self):
