@@ -23,7 +23,7 @@ class BeakerVersionTagger(VersionTagger):
                     % (self._changelog_format(), sha))
 
             # Skip Gerrit merges
-            if re.match(r'Merge ".*" into develop', subject):
+            if re.match(r'Merge ".*" into', subject):
                 continue
 
             # Skip Tito version bumps
