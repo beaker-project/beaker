@@ -19,7 +19,7 @@ import time
 import tempfile
 from turbogears.database import session
 from bkr.server.model import TaskResult
-from bkr.inttest.server.webdriver_utils import login, is_text_present
+from bkr.inttest.server.webdriver_utils import login, is_text_present, delete_and_confirm
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import Job, Response, RecipeSetResponse
@@ -68,8 +68,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
 
         #Now delete the only job with that whiteboard
         b.get(get_server_base() + 'jobs/%s' % self.passed_job.id)
-        b.find_element_by_id('delete_J:%s' % self.passed_job.id).click()
-        b.find_element_by_xpath("//button[@type='button']").click()
+        delete_and_confirm(b, "//form[@action='delete_job_page']")
 
         # Confirm it is no longer there
         b.get(get_server_base() + 'matrix')
@@ -96,8 +95,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
 
         # Delete Job
         b.get(get_server_base() + 'jobs/%s' % self.passed_job.id)
-        b.find_element_by_id('delete_J:%s' % self.passed_job.id).click()
-        b.find_element_by_xpath("//button[@type='button']").click()
+        delete_and_confirm(b, "//form[@action='delete_job_page']")
 
         # Assert it is no longer there
         b.get(get_server_base() + 'matrix')

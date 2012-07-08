@@ -29,8 +29,9 @@ class TestSystemGroups(WebDriverTestCase):
         b.get(get_server_base() + 'view/%s' % system.fqdn)
         b.find_element_by_link_text('Groups').click()
         b.find_element_by_name('group.text').send_keys(group.group_name)
-        b.find_element_by_link_text('Add ( + )').click()
-        group_just_added = b.find_element_by_xpath('//form[@name="groups"]//table//tr[position()=last()]/td').text
+        b.find_element_by_xpath("//form[@name='groups']/"
+            "a[normalize-space(text())='Add ( + )']").click()
+        group_just_added = b.find_element_by_xpath('//table[@id="systemgroups"]//tr[position()=last()]/td').text
         self.assert_(group_just_added == group.group_name)
 
     def delete_group_from_system(self, b, system=None, group=None):
@@ -41,6 +42,7 @@ class TestSystemGroups(WebDriverTestCase):
         b.get(get_server_base() + 'view/%s' % system.fqdn)
         b.find_element_by_link_text('Groups').click()
         b.find_element_by_link_text('Delete ( - )').click()
+        b.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
         self.assert_(is_text_present(b, '%s Removed' % group.display_name))
 
     def test_remove_system_group_admin_privs(self):
@@ -81,7 +83,7 @@ class TestSystemGroups(WebDriverTestCase):
         b = self.browser
         self.add_group_to_system(b)
         self.delete_group_from_system(b)
-        not_the_group = b.find_element_by_xpath('//form[@name="groups"]//table//tr[position()=last()]/td').text
+        not_the_group = b.find_element_by_xpath('//table[@id="systemgroups"]//tr[position()=last()]/td').text
         self.assert_(not_the_group is not self.group.group_name)
 
     def test_add_system_group(self):
@@ -90,7 +92,7 @@ class TestSystemGroups(WebDriverTestCase):
         # Make sure it has been persisted
         b.get(get_server_base() + 'view/%s' % self.system.fqdn)
         b.find_element_by_link_text('Groups').click()
-        group_just_added = b.find_element_by_xpath('//form[@name="groups"]//table//tr[position()=last()]/td').text
+        group_just_added = b.find_element_by_xpath('//table[@id="systemgroups"]//tr[position()=last()]/td').text
         self.assert_(group_just_added == self.group.group_name)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=797584

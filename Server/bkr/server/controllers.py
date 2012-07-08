@@ -55,7 +55,8 @@ from bkr.server.recipesets import RecipeSets
 from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
 from bkr.server.kickstart import KickstartController
-from bkr.server.controller_utilities import Utility, SystemSaveForm, SearchOptions, SystemTab
+from bkr.server.controller_utilities import Utility, \
+    SystemSaveForm, SearchOptions, SystemTab, restrict_http_method
 from bkr.server.bexceptions import *
 import bkr.server.validators as beaker_validators
 from cherrypy import request, response
@@ -596,6 +597,7 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
     def key_remove(self, system_id=None, key_type=None, key_value_id=None):
         removed = None
         if system_id and key_value_id and key_type:
@@ -632,6 +634,7 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
     def arch_remove(self, system_id=None, arch_id=None):
         removed = None
         if system_id and arch_id:
@@ -659,6 +662,7 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
     def group_remove(self, system_id=None, group_id=None):
         removed = None
         if system_id and group_id:
@@ -1388,6 +1392,7 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
     def save_arch(self, id, **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -1619,6 +1624,7 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
     def remove_install(self, system_id, arch_id, **kw):
         try:
             system = System.by_id(system_id, identity.current.user)

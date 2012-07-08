@@ -3730,12 +3730,7 @@ class Job(TaskBase):
         valid_jobs = []
         if jobs:
             for j in jobs:
-                try:
-                    user = identity.current.user
-                    is_owner = user == j.owner
-                except AttributeError, e: #not logged in
-                    is_owner = False
-                if j.is_finished() and not j.counts_as_deleted() and is_owner:
+                if j.is_finished() and not j.counts_as_deleted():
                     valid_jobs.append(j)
             return valid_jobs
         elif query:

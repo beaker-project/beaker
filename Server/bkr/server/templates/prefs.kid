@@ -49,7 +49,8 @@ ${rootpw_grid.display(rootpw_values)}
     ${key.ident}
    </td>
    <td class="list">
-    <a class="button" href="${tg.url('ssh_key_remove', id=key.id)}">Delete</a>
+    ${delete_link.display(dict(id=key.id), attrs=dict(class_='link'), 
+        action=tg.url('ssh_key_remove'))}
    </td>
    <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
   </tr>

@@ -1,8 +1,4 @@
-<form xmlns:py="http://purl.org/kid/ns#"
- name="${name}"
- action="${tg.url(action)}"
- method="${method}" width="100%">
- &nbsp;&nbsp;
+<span xmlns:py="http://purl.org/kid/ns#" py:strip='1'>
  <table class="list">
   <tr class="list">
    <th class="list">
@@ -23,8 +19,17 @@
     ${display_field_for("key_value")}
    </td>
    <td class="list">
-    ${display_field_for("id")}
-    <a class="button" href="javascript:document.${name}.submit();">Add ( + )</a>
+    <form name="${name}" action="${tg.url(action)}" method="POST">
+     <script src="${tg.url('/static/javascript/magic_forms.js')}"
+      type='text/javascript'/>
+     ${display_field_for("id")}
+     <input type='hidden' id='${name}_${key_name.name}_hidden'
+      name='${key_name.name}' />
+     <input type='hidden' id='${name}_${key_value.name}_hidden'
+      name='${key_value.name}' />
+     <a onclick='populate_form_elements(this.parentNode);return true;'
+      href="javascript:document.${name}.submit();">Add ( + )</a>
+   </form>
    </td>
   </tr>
   <?python
@@ -37,8 +42,16 @@
    <td class="list">
     ${key_value.key_value}
    </td>
-   <td class="list"><a py:if="not readonly" class="button" href="${tg.url('/key_remove', key_type=key_value.key_type, system_id=value_for('id'), key_value_id=key_value.id)}">Delete ( - )</a></td>
+   <td class="list">
+    <span py:strip='1' py:if='not readonly'>
+     ${delete_link(dict(key_type=key_value.key_type,
+         system_id=value_for('id'),
+         key_value_id=key_value.id),
+         attrs=dict(class_='link'),
+         action=tg.url('/key_remove'))}
+    </span>
+   </td>
    <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
   </tr> 
  </table>
-</form>
+</span>

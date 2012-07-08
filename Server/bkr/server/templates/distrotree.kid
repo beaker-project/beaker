@@ -4,6 +4,7 @@
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
     <title>${title} ${value.id}: ${value}</title>
+    <script src="${tg.url('/static/javascript/magic_forms.js')}" type='text/javascript'/>
     <style type="text/css">
         table.lab_controllers tbody tr {
             border: none;
@@ -68,32 +69,35 @@
                 </a>
             </td>
             <td class="list">
-                <form py:if="not readonly" action="lab_controller_remove" method="post">
-                    <input type="hidden" name="id" value="${lca.id}" />
-                    <a href="lab_controller_remove?id=${lca.id}" onclick="this.parentNode.submit(); return false;">Delete ( - )</a>
-                </form>
+             <span py:if='not readonly' py:strip='1'>
+              ${delete_link.display(dict(id=lca.id), attrs=dict(class_='link'),
+                  action=tg.url('./lab_controller_remove'))}
+             </span>
             </td>
         </tr>
         <?python i += 1 ?>
     </tbody>
     <tbody py:if="not readonly">
-    <form action="lab_controller_add" method="post" name="lab_controller_add_form">
         <tr class="list ${i%2 and 'odd' or 'even'}">
             <td class="list">
-                <select name="lab_controller_id">
+                <select id="lab_controller_id">
                     <option py:for="lab_controller in lab_controllers"
                             value="${lab_controller.id}">${lab_controller}</option>
                 </select>
             </td>
             <td class="list">
-                <input type="text" size="100" maxlength="255" name="url" />
+                <input id="url" type="text" size="100" maxlength="255"/>
             </td>
             <td class="list">
+
+            <form action="lab_controller_add" method="post" name="lab_controller_add_form">
                 <input type="hidden" name="distro_tree_id" value="${value.id}" />
-                <a href="#" onclick="document.lab_controller_add_form.submit(); return false;">Add ( + )</a>
+                <input type="hidden" id="url_hidden" name="url" />
+                <input type="hidden" id="lab_controller_id_hidden" name="lab_controller_id" />
+                <a onclick="populate_form_elements(this.parentNode);return true" href="javascript:document.lab_controller_add_form.submit()">Add ( + )</a>
+                </form>
             </td>
         </tr>
-    </form>
     </tbody>
 </table>
 </div>

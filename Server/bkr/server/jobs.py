@@ -29,7 +29,8 @@ from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server import search_utility
-from bkr.server.controller_utilities import _custom_status, _custom_result
+from bkr.server.controller_utilities import _custom_status, _custom_result, \
+    restrict_http_method
 import datetime
 import pkg_resources
 import lxml.etree
@@ -123,30 +124,41 @@ class Jobs(RPCRoot):
             value = kw,
         )
 
+    def _check_job_deletability(self, job):
+        if not isinstance(job, Job):
+            raise TypeError('%s is not of type %s' % (t_id, Job.__name__))
+        if not job.can_admin(identity.current.user):
+            raise BeakerException(_(u'You do not have permission to delete %s' % t_id))
+
+    def _delete_job(self, t_id):
+        job = TaskBase.get_by_t_id(t_id)
+        self._check_job_deletability(job)
+        Job.delete_jobs([job])
+        return [t_id]
+
     @expose()
-    def delete_job_from_ui(self, t_id, *args, **kw):
-        to_return = {'t_id' : t_id}
+    @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
+    def delete_job_page(self, t_id):
         try:
             self._delete_job(t_id)
-            to_return['success'] = True
-        except Exception, e:
-            log.exception('Unable to delete t_id:%s' % t_id)
-            to_return['success'] = False
-            to_return['err_msg'] = unicode(e)
-            session.rollback()
-        return to_return
+            flash(_(u'Succesfully deleted %s' % t_id))
+        except (BeakerException, TypeError), e:
+            flash(_(u'Unable to delete %s' % t_id))
+            redirect('.')
+        redirect('./mine')
 
-    def _delete_job(self, t_id, *args, **kw):
-        if not isinstance(t_id,list):
-            t_id = [t_id]
-        jobs_to_try_to_del = []
-        for j_id in t_id:
-            job = TaskBase.get_by_t_id(j_id)
-            if not isinstance(job,Job):
-                raise BeakerException('Incorrect task type passed %s' % t_id )
-            jobs_to_try_to_del.append(job)
-        return Job.delete_jobs(jobs=jobs_to_try_to_del, **kw)
-
+    @expose()
+    @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
+    def delete_job_row(self, t_id):
+        try:
+            self._delete_job(t_id)
+            return [t_id]
+        except (BeakerException, TypeError), e:
+            log.debug(str(e))
+            response.status = 400
+            return ['Unable to delete %s' % t_id]
 
     @cherrypy.expose
     def list(self, tags, days_complete_for, family, product, **kw):
@@ -652,6 +664,7 @@ class Jobs(RPCRoot):
                     getter=lambda x: \
                         self.job_list_action_widget.display(
                         task=x, type_='joblist',
+                        delete_action=url('/jobs/delete_job_row'),
                         export=url('/to_xml?taskid=%s' % x.t_id),
                         title='Action', options=dict(sortable=False)))])
 
@@ -783,7 +796,6 @@ class Jobs(RPCRoot):
                                widgets.DataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New value', options=dict(sortable=True)),])
 
         return_dict = dict(title = 'Job',
-                           redirect_job_delete = '/jobs/mine',
                            recipeset_widget = self.recipeset_widget,
                            recipe_widget = self.recipe_widget,
                            hidden_id = widgets.HiddenField(name='job_id',value=job.id),
@@ -791,12 +803,10 @@ class Jobs(RPCRoot):
                            job_history_grid = job_history_grid,
                            whiteboard_widget = self.whiteboard_widget,
                            action_widget = self.job_page_action_widget,
+                           delete_action = url('delete_job_page'),
                            job = job,
                            product_widget = self.product_widget,
                            retention_tag_widget = self.retention_tag_widget,
-                           #priorities = TaskPriority.query().all(), Don't think this is used?
-                           #retentiontags = RetentionTag.query().all(),  Don't think this is used?
-                           #priority_widget = self.priority_widget, Don't think this is used?
                           )
         return return_dict
 

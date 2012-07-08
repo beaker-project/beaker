@@ -322,7 +322,7 @@ class Recipes(RPCRoot):
                 PDC(name='result',
                     getter=_custom_result, title='Result',
                     options=dict(sortable=True)),
-                PDC(name='action', getter=lambda x:self.action_widget(task=x),
+                PDC(name='action', getter=lambda x:self.action_widget(x),
                     title='Action', options=dict(sortable=False)),])
 
         search_bar = SearchBar(name='recipesearch',

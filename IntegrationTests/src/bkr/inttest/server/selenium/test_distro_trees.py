@@ -3,7 +3,7 @@ import requests
 from datetime import datetime, timedelta
 from turbogears.database import session
 from bkr.inttest.server.selenium import XmlRpcTestCase, WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, delete_and_confirm
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import LabControllerDistroTree
 
@@ -39,6 +39,30 @@ class DistroTreeViewTest(WebDriverTestCase):
             b.find_element_by_xpath('//table[@id="install_options"]'
                 '//td[preceding-sibling::th[1]/text()="Kernel Options Post"]').text,
             'norhgb')
+
+    def test_labcontroller(self):
+        # Add
+        with session.begin():
+            lc = data_setup.create_labcontroller(fqdn=data_setup. \
+                                                 unique_name(u'lc%s'))
+            distro_tree = data_setup.create_distro_tree()
+        b = self.browser
+        login(b)
+        go_to_distro_tree_view(b, distro_tree)
+        b.find_element_by_xpath("//select[@id='lab_controller_id']/"
+            "option[normalize-space(text())='%s']" % lc.fqdn).click()
+        b.find_element_by_xpath("//input[@id='url']"). \
+            send_keys('http://blah.com')
+        b.find_element_by_link_text('Add ( + )').click()
+        self.assertEqual(
+            b.find_element_by_xpath('//div[@class="flash"]').text,
+            'Added %s http://blah.com' % lc.fqdn)
+
+        # Delete
+        delete_and_confirm(b, "//td[preceding-sibling::td/a[@href='http://blah.com']]/form", delete_text='Delete ( - )')
+        self.assertEqual(
+            b.find_element_by_xpath('//div[@class="flash"]').text,
+            'Deleted %s http://blah.com' % lc.fqdn)
 
     def test_update_install_options(self):
         b = self.browser

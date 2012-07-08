@@ -5,14 +5,14 @@ from kid import Element
 from sqlalchemy.sql import exists
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears import expose, flash, redirect, paginate, identity, widgets
+from turbogears import expose, flash, redirect, paginate, identity, widgets, url
 from bkr.server.model import session, DistroTree, Distro, OSVersion, OSMajor, \
         LabController, LabControllerDistroTree, DistroTreeActivity, \
         distro_tree_lab_controller_map, lab_controller_table, Arch, DistroTag
 from bkr.server.widgets import TaskSearchForm, myPaginateDataGrid, SearchBar, \
-        DistroTreeInstallOptionsWidget
+        DistroTreeInstallOptionsWidget, DeleteLinkWidgetForm
 from bkr.server.helpers import make_link
-from bkr.server.controller_utilities import Utility
+from bkr.server.controller_utilities import Utility, restrict_http_method
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server import search_utility
 
@@ -21,6 +21,7 @@ __all__ = ['DistroTrees']
 class DistroTrees(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
+    delete_link = DeleteLinkWidgetForm()
 
     @expose(template='bkr.server.templates.grid')
     @paginate('list', default_order='-date_created', limit=50)
@@ -109,6 +110,7 @@ class DistroTrees(RPCRoot):
                     tabber=widgets.Tabber(use_cookie=True),
                     install_options_widget=DistroTreeInstallOptionsWidget(),
                     form_task=form_task,
+                    delete_link=self.delete_link,
                     lab_controllers=lab_controllers,
                     lab_controller_assocs=lab_controller_assocs,
                     readonly=not is_admin)
@@ -170,14 +172,17 @@ gpgcheck=0
         flash(_(u'Added %s %s') % (lab_controller, url))
         redirect(str(distro_tree.id))
 
+
     @expose()
     @identity.require(identity.in_group('admin'))
+    @restrict_http_method('post')
     def lab_controller_remove(self, id):
         try:
             lca = LabControllerDistroTree.by_id(id)
         except NoResultFound:
             flash(_(u'Invalid lab_controller_assoc id %s') % id)
             redirect('.')
+
         session.delete(lca)
         lca.distro_tree.activity.append(DistroTreeActivity(
                 user=identity.current.user, service=u'WEBUI',

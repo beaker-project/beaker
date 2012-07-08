@@ -1,8 +1,4 @@
-<form xmlns:py="http://purl.org/kid/ns#"
- name="${name}"
- action="${tg.url(action)}"
- method="${method}" width="100%">
- <table class="list">
+ <table class="list" width="100%" xmlns:py='http://purl.org/kid/ns#'>
   <tr class="list">
    <th class="list">
     <b>Arch</b>
@@ -16,8 +12,14 @@
     ${display_field_for("arch")}
    </td>
    <td class="list">
-    ${display_field_for("id")}
-    <a class="button" href="javascript:document.${name}.submit();">Add ( + )</a>
+    <form  name="${name}" action="${tg.url(action)}" method="POST">
+     <script src="${tg.url('/static/javascript/magic_forms.js')}" type='text/javascript'/>
+     <input type='hidden'
+      id="${name}_${arch.name}_${arch.text_field.name}_hidden"
+      name="${arch.name}.text" />
+     ${display_field_for("id")}
+     <a onclick='populate_form_elements(this.parentNode);return true;' href="javascript:document.${name}.submit();">Add ( + )</a>
+    </form>
    </td>
   </tr>
   <?python row_color = "#f1f1f1" ?>
@@ -26,9 +28,11 @@
     ${arch.arch}
    </td>
    <td class="list">
-    <a py:if="not readonly" class="button" href="${tg.url('/arch_remove', system_id=value_for('id'), arch_id=arch.id)}">Delete ( - )</a>
+    <span py:if='not readonly' py:strip='1'>
+      ${delete_link.display(dict(system_id=value_for('id'), arch_id=arch.id),
+          attrs=dict(class_='link'), action=tg.url('/arch_remove'))}
+    </span>
    </td>
     <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
   </tr>
  </table>
-</form>

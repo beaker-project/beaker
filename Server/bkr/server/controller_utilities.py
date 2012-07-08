@@ -5,7 +5,7 @@ import search_utility
 import bkr
 import bkr.server.stdvars
 from bkr.server.widgets import myPaginateDataGrid
-from cherrypy import request, response
+from cherrypy import request, response, HTTPError
 from bkr.server.helpers import *
 from bexceptions import *
 import re
@@ -304,3 +304,20 @@ class Utility:
                 fields.append(new_widget)
         return fields
 
+def restrict_http_method(method):
+    def outer(fn):
+        def inner(*args, **kw):
+            accepted_method = method.lower()
+            request_method = request.method.lower()
+            if not request_method == accepted_method:
+                request_with = request.headers.get("X-Requested-With", None)
+                err_msg = "Unable to call %s with method %s" % (fn, request_method.upper())
+                if request_with == 'XMLHttpRequest':
+                    response.status = 405
+                    return [err_msg]
+                else:
+                    raise HTTPError(status=405, message=err_msg)
+            else:
+                return fn(*args, **kw)
+        return inner
+    return outer

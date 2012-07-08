@@ -244,7 +244,8 @@ class SystemViewTest(SeleniumTestCase):
         sel.type('arch.text', 's390')
         sel.click('//form[@name="arches"]//a[text()="Add ( + )"]')
         sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
+        self.assertEquals(sel.get_xpath_count(
+                '//div[normalize-space(@class)="tabbertab"]'
                 '//td[normalize-space(text())="s390"]'), 1)
         with session.begin():
             session.refresh(self.system)
@@ -267,15 +268,18 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         sel.click('//ul[@class="tabbernav"]//a[text()="Arch(s)"]')
-        self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
+        self.assertEquals(sel.get_xpath_count(
+                '//div[normalize-space(@class)="tabbertab"]'
                 '//td[normalize-space(text())="i386"]'), 1)
         sel.click( # delete link inside cell beside "i386" cell
                 '//table[@class="list"]//td'
                 '[normalize-space(preceding-sibling::td[1]/text())="i386"]'
-                '/a[text()="Delete ( - )"]')
+                '//a[text()="Delete ( - )"]')
+        sel.click("//button[@type='button' and text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'i386 Removed')
-        self.assertEquals(sel.get_xpath_count('//form[@name="arches"]'
+        self.assertEquals(sel.get_xpath_count(
+                '//div[normalize-space(@class)="tabbertab"]'
                 '//td[normalize-space(text())="i386"]'), 0)
         with session.begin():
             session.refresh(self.system)
@@ -291,8 +295,9 @@ class SystemViewTest(SeleniumTestCase):
         sel.type('key_value', '100')
         sel.click('//form[@name="keys"]//a[text()="Add ( + )"]')
         sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
-                '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
+        self.assertEquals(sel.get_xpath_count(
+                '//td[normalize-space(preceding-sibling::td[1]/text())'
+                '="NR_DISKS" and '
                 'normalize-space(text())="100"]'), 1)
         with session.begin():
             session.refresh(self.system)
@@ -307,18 +312,21 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         sel.click('//ul[@class="tabbernav"]//a[text()="Key/Values"]')
-        self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
-                '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
+        self.assertEquals(sel.get_xpath_count(
+                '//td[normalize-space(preceding-sibling::td[1]/text())'
+                '="NR_DISKS" and '
                 'normalize-space(text())="100"]'), 1)
         sel.click( # delete link inside cell in row with NR_DISKS 100
                 '//table[@class="list"]//td['
                 'normalize-space(preceding-sibling::td[2]/text())="NR_DISKS" and '
                 'normalize-space(preceding-sibling::td[1]/text())="100"'
-                ']/a[text()="Delete ( - )"]')
+                ']//a[text()="Delete ( - )"]')
+        sel.click("//button[@type='button' and text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'removed NR_DISKS/100')
-        self.assertEquals(sel.get_xpath_count('//form[@name="keys"]'
-                '//td[normalize-space(preceding-sibling::td[1]/text())="NR_DISKS" and '
+        self.assertEquals(sel.get_xpath_count(
+                '//td[normalize-space(preceding-sibling::td[1]/text())'
+                '="NR_DISKS" and '
                 'normalize-space(text())="100"]'), 0)
         with session.begin():
             session.refresh(self.system)
@@ -340,7 +348,8 @@ class SystemViewTest(SeleniumTestCase):
         sel.type("groups_group_text", group.group_name)
         sel.click('//form[@name="groups"]//a[text()="Add ( + )"]')
         sel.wait_for_page_to_load("30000")
-        self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
+        self.assertEquals(sel.get_xpath_count(
+                '//div[normalize-space(@class)="tabbertab"]'
                 '//td[normalize-space(text())="%s"]' % group.group_name), 1)
         with session.begin():
             session.refresh(self.system)
@@ -365,16 +374,17 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         sel.click('//ul[@class="tabbernav"]//a[text()="Groups"]')
-        self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
+        self.assertEquals(sel.get_xpath_count(
                 '//td[normalize-space(text())="%s"]' % group.group_name), 1)
         sel.click( # delete link inside cell in row with group name
                 '//table[@class="list"]'
                 '//td[normalize-space(preceding-sibling::td[3]/text())="%s"]'
-                '/a[text()="Delete ( - )"]' % group.group_name)
+                '//a[text()="Delete ( - )"]' % group.group_name)
+        sel.click("//button[@type='button' and text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'),
                 '%s Removed' % group.display_name)
-        self.assertEquals(sel.get_xpath_count('//form[@name="groups"]'
+        self.assertEquals(sel.get_xpath_count(
                 '//td[normalize-space(text())="%s"]' % group.group_name), 0)
         with session.begin():
             session.refresh(self.system)
@@ -420,8 +430,9 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         sel.click('//ul[@class="tabbernav"]//a[text()="Install Options"]')
-        sel.click('//form[@name="installoptions"]//tr[th/text()="Architecture"]'
+        sel.click('//tr[th/text()="Architecture"]'
                 '//a[text()="Delete ( - )"]')
+        sel.click("//button[@type='button' and text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), self.system.fqdn)
         with session.begin():

@@ -1,7 +1,4 @@
-<form xmlns:py="http://purl.org/kid/ns#"
- name="${name}"
- action="${tg.url(action)}"
- method="${method}" width="100%">
+<span xmlns:py='http://purl.org/kid/ns#' py:strip='1'>
  <script language="JavaScript" type="text/JavaScript" py:if="not readonly">
     ${name}_0 = new InstallOptions('${prov_osmajor.field_id}', '${prov_osversion.field_id}', '${tg.url('/get_osversions')}');
     addLoadEvent(${name}_0.initialize);
@@ -11,35 +8,41 @@
  <p>Kernel Options are passed at the command line for installations.  ksdevice=bootif is an example along with console=ttyS0.</p>
  <p>Kernel Options Post are also command line options but they are for after the installation has completed.</p>
  <p>Commands are inherited from least specific to most specific. ARCH->FAMILY->UPDATE</p>
- <table class="list" py:if="not readonly">
-  <tr>
-   <th>Arch</th><td>${display_field_for("prov_arch")}</td>
-   <th>Family</th><td>${display_field_for("prov_osmajor")}</td>
-   <th>Update</th><td>${display_field_for("prov_osversion")}</td>
-  </tr>
-  <tr>
-   <th>Kickstart Metadata</th>
-   <td colspan="5">${display_field_for("prov_ksmeta")}</td>
-  </tr>
-  <tr>
-   <th>Kernel Options</th>
-   <td colspan="5">${display_field_for("prov_koptions")}</td>
-  </tr>
-  <tr>
-   <th>Kernel Options Post</th>
-   <td colspan="4">${display_field_for("prov_koptionspost")}</td>
-   <td>
-    ${display_field_for("id")}
-    <a class="button" href="javascript:document.${name}.submit();">Add ( + )</a>
-   </td>
-  </tr>
- </table>
+ <form  name="${name}" action="${tg.url(action)}" method="POST">
+  <table class="list" py:if="not readonly">
+   <tr>
+    <th>Arch</th><td>${display_field_for("prov_arch")}</td>
+    <th>Family</th><td>${display_field_for("prov_osmajor")}</td>
+    <th>Update</th><td>${display_field_for("prov_osversion")}</td>
+   </tr>
+   <tr>
+    <th>Kickstart Metadata</th>
+     <td colspan="5">${display_field_for("prov_ksmeta")}</td>
+    </tr>
+    <tr>
+     <th>Kernel Options</th>
+     <td colspan="5">${display_field_for("prov_koptions")}</td>
+    </tr>
+    <tr>
+     <th>Kernel Options Post</th>
+      <td colspan="4">${display_field_for("prov_koptionspost")}</td>
+      <td>
+       ${display_field_for("id")}
+       <a class="button" href="javascript:document.${name}.submit();">Add ( + )</a>
+      </td>
+    </tr>
+  </table>
+ </form>
  <table class="list">
   <span py:for="arch in provisions.keys()">
    <tr class="list" bgcolor="#F1F1F1">
     <th colspan="3" class="list">Architecture</th><td class="list">${arch}</td>
     <td>
-     <a py:if="not readonly" class="button" href="${tg.url('/remove_install', system_id=value_for('id'), arch_id=arch.id)}">Delete ( - )</a>
+     <span py:if='not readonly' py:strip='1'>
+      ${delete_link(dict(system_id=value_for('id'), arch_id=arch.id), 
+          attrs=dict(class_='link'), 
+          action=tg.url('/remove_install'))}
+     </span>
     </td>
    </tr>
    <tr>
@@ -69,7 +72,11 @@
      <th colspan="2" class="list">Family</th>
      <td class="list">${family}</td>
      <td>
-      <a py:if="not readonly" class="button" href="${tg.url('/remove_install', system_id=value_for('id'), arch_id=arch.id, osmajor_id=family.id)}">Delete ( - )</a> 
+      <span py:if='not readonly' py:strip='1'>
+       ${delete_link(dict(system_id=value_for('id'), arch_id=arch.id, 
+           osmajor_id=family.id), attrs=dict(class_='link'), 
+           action=tg.url('/remove_install'))}
+      </span>
      </td>
     </tr>
     <tr>
@@ -103,7 +110,11 @@
       <th class="list">Update</th>
       <td class="list">${update}</td>
       <td>
-       <a py:if="not readonly" class="button" href="${tg.url('/remove_install', system_id=value_for('id'), arch_id=arch.id, osversion_id=update.id)}">Delete ( - )</a>
+       <span py:if='not readonly' py:strip='1'>
+        ${delete_link(dict(system_id=value_for('id'), arch_id=arch.id,
+            osversion_id=update.id), attrs=dict(class_='link'), 
+            action=tg.url('/remove_install'))}
+       </span>
       </td>
      </tr>
      <tr>
@@ -137,4 +148,4 @@
     </tr>
   </span>
  </table>
-</form>
+</span>

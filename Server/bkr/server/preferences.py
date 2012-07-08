@@ -4,12 +4,13 @@ from turbogears import widgets, expose, identity, validators, \
 from turbogears.database import session
 from bkr.server.model import ConfigItem, SSHPubKey
 from bkr.server import validators as beaker_validators
-from bkr.server.widgets import BeakerDataGrid
+from bkr.server.widgets import BeakerDataGrid, DeleteLinkWidgetForm
 from bkr.server.xmlrpccontroller import RPCRoot
 
 class Preferences(RPCRoot):
 
     exposed = True
+    delete_link = DeleteLinkWidgetForm()
 
     root_password = widgets.TextField(name='_root_password', label='Root Password')
     rootpw_expiry = widgets.TextField(name='rootpw_expiry',
@@ -52,6 +53,7 @@ class Preferences(RPCRoot):
 
         return dict(
             title        = 'User Prefs',
+            delete_link  = self.delete_link,
             prefs_form   = self.prefs_form,
             ssh_key_form = self.ssh_key_add_form,
             widgets      = {},
