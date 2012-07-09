@@ -59,6 +59,12 @@ class CommandQueuePoller(ProxyHelper):
             predecessors = [self.greenlets[c['id']]
                     for c in self.commands.itervalues()
                     if c['fqdn'] == command['fqdn']]
+            if 'power' in command and command['power'].get('address'):
+                # Also wait for other commands running against the same power address
+                predecessors.extend(self.greenlets[c['id']]
+                        for c in self.commands.itervalues()
+                        if 'power' in c and c['power'].get('address')
+                            == command['power']['address'])
             self.commands[command['id']] = command
             self.greenlets[command['id']] = gevent.spawn(self.handle, command, predecessors)
 
