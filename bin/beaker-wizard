@@ -1801,8 +1801,8 @@ class Skeleton(SingleChoice):
     <skeletons>
         <skeleton name="beakerlib">
             # Include Beaker environment
-            . /usr/bin/rhts-environment.sh
-            . /usr/share/beakerlib/beakerlib.sh
+            . /usr/bin/rhts-environment.sh || exit 1
+            . /usr/share/beakerlib/beakerlib.sh || exit 1
 
             PACKAGE="<package/>"
 
@@ -1828,7 +1828,7 @@ class Skeleton(SingleChoice):
         </skeleton>
         <skeleton name="beaker">
             # Include Beaker environment
-            . /usr/bin/rhts-environment.sh
+            . /usr/bin/rhts-environment.sh || exit 1
 
             PACKAGE="<package/>"
             set -x
@@ -1869,8 +1869,8 @@ class Skeleton(SingleChoice):
         </skeleton>
         <skeleton name="multihost">
             # Include Beaker environment
-            . /usr/bin/rhts-environment.sh
-            . /usr/share/beakerlib/beakerlib.sh
+            . /usr/bin/rhts-environment.sh || exit 1
+            . /usr/share/beakerlib/beakerlib.sh || exit 1
 
             PACKAGE="<package/>"
 
