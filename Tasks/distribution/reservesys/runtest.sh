@@ -33,22 +33,16 @@ MOTD()
 {
     FILE=/etc/motd
     local inventory="https://beaker.engineering.redhat.com"
-    local watchdog= system=
-    if [[ -z "$CALLED_BY_BEAH" ]]; then
-        watchdog="http://$RESULT_SERVER/cgi-bin/rhts/watchdog.cgi"
-        system="http://$LAB_SERVER/cgi-bin/rhts/systems.cgi?fqdn=$HOSTNAME"
-    else
-        watchdog="$inventory/recipes/$RECIPEID"
-        system="$inventory/view/$HOSTNAME"
-    fi
+    local watchdog="$inventory/recipes/$RECIPEID"
+    local system="$inventory/view/$HOSTNAME"
 
     mv $FILE $FILE.orig
     cat <<END > $FILE
 **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
                  This System is reserved by $SUBMITTER.
 
- To return this system early. You can run the command: $return2pool
-  Ensure you have your logs off the system before returning to $scheduler
+ To return this system early. You can run the command: return2beaker.sh
+  Ensure you have your logs off the system before returning to Beaker
 
  To extend your reservation time. You can run the command:
   extendtesttime.sh
@@ -63,7 +57,7 @@ MOTD()
  For ssh, kvm, serial and power control operations please look here:
   $system
 
-      $scheduler Test information:
+      Beaker Test information:
                          HOSTNAME=$HOSTNAME
                             JOBID=$JOBID
                          RECIPEID=$RECIPEID
@@ -76,24 +70,16 @@ END
 
 RETURNSCRIPT()
 {
-    SCRIPT=/usr/bin/$return2pool
+    SCRIPT=/usr/bin/return2beaker.sh
 
     echo "#!/bin/sh"                           > $SCRIPT
     echo "export RESULT_SERVER=$RESULT_SERVER" >> $SCRIPT
     echo "export TESTID=$TESTID" >> $SCRIPT
     echo "/usr/bin/rhts-test-update $RESULT_SERVER $TESTID finish" >> $SCRIPT
     echo "touch /var/cache/rhts/$TESTID/done" >> $SCRIPT
-    if [[ -z "$CALLED_BY_BEAH" ]]; then
-        echo "/bin/echo Hit Return to reboot the system and continue any" >> $SCRIPT
-        echo "/bin/echo remaining RHTS tests. Or hit CTRL-C now if this" >> $SCRIPT
-        echo "/bin/echo is not desired." >> $SCRIPT
-        echo "read dummy" >> $SCRIPT
-        echo "/usr/bin/rhts-reboot" >> $SCRIPT
-    else
-        echo "/bin/echo Going on..." >> $SCRIPT
-        rm -f /usr/bin/return2rhts.sh &> /dev/null || true
-        ln -s $SCRIPT /usr/bin/return2rhts.sh &> /dev/null || true
-    fi
+    echo "/bin/echo Going on..." >> $SCRIPT
+    rm -f /usr/bin/return2rhts.sh &> /dev/null || true
+    ln -s $SCRIPT /usr/bin/return2rhts.sh &> /dev/null || true
 
     chmod 777 $SCRIPT
 }
@@ -174,13 +160,11 @@ NOTIFY()
 {
     /sbin/service sendmail start
     local msg=$(mktemp)
-    local tag=
-    [[ -n "$CALLED_BY_BEAH" ]] && tag="[Beaker Machine Reserved] "
 
 cat > $msg <<-EOF
 To: $SUBMITTER
-Subject: $tag$HOSTNAME
-X-$scheduler-test: $TEST
+Subject: [Beaker Machine Reserved] $HOSTNAME
+X-Beaker-test: $TEST
 
 EOF
     cat /etc/motd >>$msg
@@ -212,15 +196,6 @@ echo "***** Start of reservesys test *****" > $OUTPUTFILE
 
 BUILD_()
 {
-    local scheduler= return2pool=
-    if [[ -z "$CALLED_BY_BEAH" ]]; then
-        scheduler=RHTS
-        return2pool=return2rhts.sh
-    else
-        scheduler=Beaker
-        return2pool=return2beaker.sh
-    fi
-
     # build the /etc/motd file
     echo "***** Building /etc/motd *****" >> $OUTPUTFILE
     MOTD
@@ -238,9 +213,9 @@ BUILD_()
     echo "***** Building /usr/bin/extendtesttime.sh *****" >> $OUTPUTFILE
     EXTENDTESTTIME
 
-    # build /usr/bin/$return2pool script to allow user
-    #  to return the system to $scheduler early.
-    echo "***** Building /usr/bin/$return2pool *****" >> $OUTPUTFILE
+    # build /usr/bin/return2beaker.sh script to allow user
+    #  to return the system to Beaker early.
+    echo "***** Building /usr/bin/return2beaker.sh *****" >> $OUTPUTFILE
     RETURNSCRIPT
 }
 
