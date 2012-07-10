@@ -34,19 +34,6 @@ if [ -e "/boot/grub/grub.conf" ]; then
 fi
 {% endif %}
 
-{% if distro_tree is arch('ppc', 'ppc64') and distro is osmajor('RedHatEnterpriseLinux7') %}
-{{ end }}
-%post --nochroot --log=/dev/console
-if [ -e "/tmp/boot-device.bak" ]; then
-   nvsetenv boot-device "$(cat /tmp/boot-device.bak)"
-   logger "Read boot-device.bak from /tmp"
-else
-   logger "Error: /tmp/boot-device.bak does not exist!"
-fi
-{{ end }}
-%post --log=/dev/console
-{% endif -%}
-
 # If efibootmgr exists then re-order boot options
 if [ -x '/usr/sbin/efibootmgr' ]; then
     BOOT=$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print $2}' | awk -F, '{print $1}')

@@ -197,6 +197,20 @@ EOF
                     path=u'../../../Server-optional/s390x/os'),
             DistroTreeRepo(repo_id=u'repos_Server', repo_type=u'os', path=u'.'),
         ]
+        cls.rhel70nightly_server_ppc64 = data_setup.create_distro_tree(
+                distro=cls.rhel70nightly, variant=u'Server', arch=u'ppc64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/ppc64/os/'])
+        cls.rhel70nightly_server_ppc64.repos[:] = [
+            DistroTreeRepo(repo_id=u'repos_debug_Server_optional',
+                    repo_type=u'debug',
+                    path=u'../../../Server-optional/ppc64/debuginfo'),
+            DistroTreeRepo(repo_id=u'repos_debug_Server', repo_type=u'debug',
+                    path=u'../debuginfo'),
+            DistroTreeRepo(repo_id=u'repos_Server-optional', repo_type=u'addon',
+                    path=u'../../../Server-optional/ppc64/os'),
+            DistroTreeRepo(repo_id=u'repos_Server', repo_type=u'os', path=u'.'),
+        ]
 
         cls.f16 = data_setup.create_distro(name=u'Fedora-16',
                 osmajor=u'Fedora16', osminor=u'0')
@@ -543,6 +557,34 @@ EOF
         self.assert_(
                 r'''%packages'''
                 not in recipe.rendered_kickstart.kickstart.splitlines(),
+                recipe.rendered_kickstart.kickstart)
+
+    def test_leavebootorder(self):
+        system = data_setup.create_system(arch=u'ppc64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.loaned = self.user
+        system.user = self.user
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0])
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="ppc64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assert_(
+                r'''bootloader --location=mbr --leavebootorder'''
+                in recipe.rendered_kickstart.kickstart.splitlines(),
                 recipe.rendered_kickstart.kickstart)
 
     def test_grubport(self):
