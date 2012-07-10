@@ -923,3 +923,32 @@ bootloader --location=mbr
             ''', self.system)
         k = recipe.rendered_kickstart.kickstart
         self.assert_('export BEAKER="%s"' % get_server_base() in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=834147
+    def test_ftp_no_http(self):
+        ftp_lc = data_setup.create_labcontroller()
+        system = data_setup.create_system(arch=u'x86_64', lab_controller=ftp_lc)
+        system.loaned = self.user
+        system.user = self.user
+        self.rhel62_server_x86_64.lab_controller_assocs.append(
+                LabControllerDistroTree(lab_controller=ftp_lc, url='ftp://something/'))
+        session.flush()
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('repo --name=beaker-Server --cost=100 --baseurl=ftp://something/Server' in k, k)
+        self.assert_('name=beaker-Server\nbaseurl=ftp://something/Server' in k, k)

@@ -242,7 +242,8 @@ class LabControllers(RPCRoot):
                     'passwd': cmd.system.power.power_passwd,
                 }
             elif cmd.action == u'configure_netboot':
-                distro_tree_url = cmd.distro_tree.url_in_lab(lab_controller, 'http')
+                distro_tree_url = cmd.distro_tree.url_in_lab(lab_controller,
+                        scheme=['http', 'ftp'])
                 if not distro_tree_url:
                     cmd.abort(u'No usable URL found for distro tree %s in lab %s'
                             % (cmd.distro_tree.id, lab_controller.fqdn))

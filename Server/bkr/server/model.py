@@ -2941,22 +2941,34 @@ class DistroTree(MappedObject):
         return '%s(distro=%r, variant=%r, arch=%r)' % (
                 self.__class__.__name__, self.distro, self.variant, self.arch)
 
-    def url_in_lab(self, lab_controller, scheme=None):
-        # If scheme isn't given, we can use our own judgment. NFS is good.
-        if scheme is None:
-            urls = [lca.url for lca in self.lab_controller_assocs
-                    if lca.lab_controller == lab_controller]
-            if not urls:
-                return None
-            schemes = ['nfs', 'http', 'ftp']
-            return sorted(urls, key=lambda url: schemes.index(urlparse.urlparse(url).scheme))[0]
+    def url_in_lab(self, lab_controller, scheme=None, required=False):
+        """
+        Returns an absolute URL for this distro tree in the given lab.
+
+        If *scheme* is a string, the URL returned will use that scheme. Callers 
+        can also pass a list of allowed schemes in order of preference; the URL 
+        returned will use one of them. If *scheme* is None or absent, any 
+        scheme will be used.
+
+        If the *required* argument is false or absent, then None will be 
+        returned if this distro tree is not in the given lab. If *required* is 
+        true, then an exception will be raised.
+        """
+        if isinstance(scheme, basestring):
+            scheme = [scheme]
+        urls = [lca.url for lca in self.lab_controller_assocs
+                if lca.lab_controller == lab_controller]
+        if scheme is not None:
+            urls = [url for url in urls if urlparse.urlparse(url).scheme in scheme]
+            scheme_order = scheme
         else:
-            urls = [lca.url for lca in self.lab_controller_assocs
-                    if lca.lab_controller == lab_controller
-                    and lca.url.startswith('%s:' % scheme)]
-            if not urls:
+            scheme_order = ['nfs', 'http', 'ftp']
+        if not urls:
+            if required:
+                raise ValueError('No usable URL found for %r in %r' % (self, lab_controller))
+            else:
                 return None
-            return urls[0]
+        return sorted(urls, key=lambda url: scheme_order.index(urlparse.urlparse(url).scheme))[0]
 
     def repo_by_id(self, repoid):
         for repo in self.repos:
