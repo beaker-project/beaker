@@ -1,0 +1,6 @@
+cat <<"EOF" >/etc/profile.d/beaker.sh
+export BEAKER="{{ absolute_url('/') }}"
+EOF
+cat <<"EOF" >/etc/profile.d/beaker.csh
+setenv BEAKER "{{ absolute_url('/') }}"
+EOF

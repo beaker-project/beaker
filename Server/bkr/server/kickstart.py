@@ -9,6 +9,7 @@ from turbogears.controllers import expose
 import cherrypy
 import jinja2.sandbox
 from bkr.server.model import session, RenderedKickstart
+from bkr.server.util import absolute_url
 
 log = logging.getLogger(__name__)
 
@@ -83,6 +84,7 @@ template_env.globals.update({
     'chr': chr,
     'ord': ord,
     'var': var,
+    'absolute_url': absolute_url,
 })
 
 def kickstart_template(distro_tree):

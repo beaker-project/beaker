@@ -314,6 +314,12 @@ chkconfig --level 345 rhts-compat on
 
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
+cat <<"EOF" >/etc/profile.d/beaker.sh
+export BEAKER="@SERVERBASE@"
+EOF
+cat <<"EOF" >/etc/profile.d/beaker.csh
+setenv BEAKER "@SERVERBASE@"
+EOF
 
 cat << EOF > /etc/profile.d/rh-env.sh
 export LAB_CONTROLLER=lab.test-kickstart.invalid

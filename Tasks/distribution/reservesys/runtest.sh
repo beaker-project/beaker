@@ -32,10 +32,6 @@ RprtRslt()
 MOTD()
 {
     FILE=/etc/motd
-    local inventory="https://beaker.engineering.redhat.com"
-    local watchdog="$inventory/recipes/$RECIPEID"
-    local system="$inventory/view/$HOSTNAME"
-
     mv $FILE $FILE.orig
     cat <<END > $FILE
 **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
@@ -52,10 +48,10 @@ MOTD()
 
  You should verify the watchdog was updated succesfully after
   you extend your reservation.
-  $watchdog
+  ${BEAKER}recipes/$RECIPEID
 
  For ssh, kvm, serial and power control operations please look here:
-  $system
+  ${BEAKER}view/$HOSTNAME
 
       Beaker Test information:
                          HOSTNAME=$HOSTNAME
