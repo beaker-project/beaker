@@ -33,6 +33,15 @@ MOTD()
 {
     FILE=/etc/motd
     mv $FILE $FILE.orig
+
+    local admonition=
+    if [ -n "$BEAKER_RESERVATION_POLICY_URL" ] ; then
+        admonition="
+ Please ensure that you adhere to the reservation policy
+  for Beaker systems:
+  ${BEAKER_RESERVATION_POLICY_URL}"
+    fi
+
     cat <<END > $FILE
 **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
                  This System is reserved by $SUBMITTER.
@@ -43,8 +52,7 @@ MOTD()
  To extend your reservation time. You can run the command:
   extendtesttime.sh
  This is an interactive script. You will be prompted for how many
-  hours you would like to extend the reservation.
-  Please use this command responsibly, Everyone uses these machines.
+  hours you would like to extend the reservation.${admonition}
 
  You should verify the watchdog was updated succesfully after
   you extend your reservation.
