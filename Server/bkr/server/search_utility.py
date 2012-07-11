@@ -1115,10 +1115,14 @@ class Task(SystemObject):
 
 class Distro(SystemObject):
     search = DistroSearch
-    searchable_columns = {
-                            'Name' : MyColumn(col_type='string',column=model.Distro.name),
-                            'OSMajor' : MyColumn(col_type='string',column=model.OSMajor.osmajor,relations=['osversion','osmajor']),
-                            'Tag' : MyColumn(col_type='string', column=model.DistroTag.tag, relations=['_tags'])
+    searchable_columns = {'Name' : MyColumn(col_type='string', column=model.Distro.name),
+        'OSMajor' : MyColumn(col_type='string', column=model.OSMajor.osmajor,
+            relations=[model.Distro.osversion, model.OSVersion.osmajor]),
+        'OSMinor' : MyColumn(col_type='string', column=model.OSVersion.osminor,
+            relations=[model.Distro.osversion]),
+        'Created' : MyColumn(col_type='date', column=model.Distro.date_created),
+        'Tag' : MyColumn(col_type='string', column=model.DistroTag.tag,
+            relations=[model.Distro._tags])
                          }
     search_values_dict = {'Tag' : lambda: [e.tag for e in model.DistroTag.list_by_tag(u'')]}
 
@@ -1144,6 +1148,9 @@ class DistroTree(SystemObject):
         'Arch':    MyColumn(col_type='string', column=model.Arch.arch, relations='arch'),
         'OSMajor': MyColumn(col_type='string', column=model.OSMajor.osmajor,
                             relations=['distro', 'osversion', 'osmajor']),
+        'OSMinor' : MyColumn(col_type='string', column=model.OSVersion.osminor,
+            relations=[model.Distro.osversion]),
+        'Created' : MyColumn(col_type='date', column=model.DistroTree.date_created),
         'Tag':     MyColumn(col_type='string', column=model.DistroTag.tag,
                             relations=['distro', '_tags']),
     }

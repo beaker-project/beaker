@@ -66,6 +66,7 @@ class DistroTrees(RPCRoot):
                 table=search_utility.DistroTree.search.create_search_table(),
                 search_controller=None,
                 complete_data=search_utility.DistroTree.search.create_complete_search_table(),
+                date_picker=['created'],
                 )
 
         return dict(title=u'Distro Trees',

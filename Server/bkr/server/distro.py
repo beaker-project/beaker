@@ -206,7 +206,8 @@ class Distros(RPCRoot):
                            table=search_utility.Distro.search.create_search_table(), 
                            complete_data = search_utility.Distro.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_distros"), 
-                           extra_hiddens=hidden_fields
+                           extra_hiddens=hidden_fields,
+                           date_picker=['created']
                            )
 
         return dict(title="Distros", 
