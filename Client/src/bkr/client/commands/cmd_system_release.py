@@ -34,8 +34,8 @@ Reserve a particular system, provision it, do some work on it, and then release
 it::
 
     bkr system-reserve system1.example.invalid
-    bkr system-provision --kernel-opts "norhgb" \\
-                         --distro RHEL5.6-Server-20101110.n.0 \\
+    bkr system-provision --kernel-opts "nogpt" \\
+                         --distro-tree 12345 \\
                          system1.example.invalid
     # do some work on the system
     bkr system-release system1.example.invalid
