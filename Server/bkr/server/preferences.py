@@ -11,11 +11,6 @@ class Preferences(RPCRoot):
 
     exposed = True
 
-
-    class SSHKeyAddFormValidatorSchema(validators.Schema):
-        pubkey = validators.NotEmpty()
-
-
     root_password = widgets.TextField(name='_root_password', label='Root Password')
     rootpw_expiry = widgets.TextField(name='rootpw_expiry',
                                       label='Root Password Expiry',
@@ -29,13 +24,13 @@ class Preferences(RPCRoot):
         submit_text = _(u'Change'),
     )
 
-    sshkey     = widgets.TextArea(name='ssh_pub_key', label='Public SSH Key')
+    sshkey = widgets.TextArea(name='ssh_pub_key', label='Public SSH Key',
+            validator=beaker_validators.SSHPubKey(not_empty=True))
     ssh_key_add_form = widgets.TableForm(
-        'SSH Public Key',
+        'ssh_key_add',
         fields = [sshkey],
         action = 'ssh_key_add',
         submit_text = _(u'Add'),
-        validator=SSHKeyAddFormValidatorSchema(),
     )
 
     rootpw_grid = BeakerDataGrid(fields=[
@@ -117,17 +112,11 @@ class Preferences(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
-    def ssh_key_add(self, *args, **kw):
+    @error_handler(index)
+    @validate(form=ssh_key_add_form)
+    def ssh_key_add(self, ssh_pub_key=None):
         user = identity.current.user
-        pubkey = kw.get('ssh_pub_key', None)
-
-        try:
-            keytype, keyval, keyident = pubkey.split(None, 2)
-        except ValueError:
-            flash(_(u"Invalid SSH key"))
-            redirect('.')
-
-        k = SSHPubKey(keytype, keyval, keyident)
+        k = SSHPubKey(*ssh_pub_key)
         user.sshpubkeys.append(k)
         flash(_(u"SSH public key added"))
         redirect('.')

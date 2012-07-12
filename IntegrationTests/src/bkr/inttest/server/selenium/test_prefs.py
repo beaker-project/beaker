@@ -83,8 +83,39 @@ class UserPrefs(WebDriverTestCase):
         b = self.browser
         key = 'ssh-rsa AAAAw00t this is my favourite key'
         b.find_element_by_name('ssh_pub_key').send_keys(key)
-        b.find_element_by_id('SSH Public Key').submit()
+        b.find_element_by_id('ssh_key_add').submit()
         self.assert_(is_text_present(b, 'SSH public key added'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=830475
+    def test_ssh_key_trailing_whitespace_is_stripped(self):
+        b = self.browser
+        key = 'ssh-rsa AAAAw00t me@example.com  \n\n'
+        b.find_element_by_name('ssh_pub_key').send_keys(key)
+        b.find_element_by_id('ssh_key_add').submit()
+        self.assert_(is_text_present(b, 'SSH public key added'))
+        with session.begin():
+            self.assertEquals(self.user.sshpubkeys[-1].ident, 'me@example.com')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=830475
+    def test_multiple_ssh_keys_not_accepted(self):
+        b = self.browser
+        key = 'ssh-rsa AAAAw00t me@example.com\nssh-rsa AAAAlol another key'
+        b.find_element_by_name('ssh_pub_key').send_keys(key)
+        b.find_element_by_id('ssh_key_add').submit()
+        error_msg = b.find_element_by_xpath(
+                '//form[@id="ssh_key_add"]//td[textarea[@name="ssh_pub_key"]]'
+                '/span[@class="fielderror"]').text
+        self.assertEquals(error_msg, 'SSH public keys may not contain newlines')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=830475
+    def test_invalid_ssh_key_not_accepted(self):
+        b = self.browser
+        b.find_element_by_name('ssh_pub_key').send_keys('gibberish')
+        b.find_element_by_id('ssh_key_add').submit()
+        error_msg = b.find_element_by_xpath(
+                '//form[@id="ssh_key_add"]//td[textarea[@name="ssh_pub_key"]]'
+                '/span[@class="fielderror"]').text
+        self.assert_('not a valid SSH public key' in error_msg)
 
 if __name__ == "__main__":
     unittest.main()
