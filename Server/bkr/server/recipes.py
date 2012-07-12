@@ -268,13 +268,10 @@ class Recipes(RPCRoot):
         return return_dict
 
     @expose(template='bkr.server.templates.grid')
-    @paginate('list',default_order='-id', limit=50)
-    def index(self,*args,**kw):
-        return self.recipes(recipes=session.query(MachineRecipe)
-                # need to join in case the user sorts by these related properties
-                .outerjoin(Recipe.system)
-                .outerjoin(Recipe.distro_tree, DistroTree.arch),
-                *args, **kw)
+    @paginate('list', default_order='-id', limit=50)
+    def index(self, *args,**kw):
+        return self.recipes(recipes=session.query(Recipe).filter_by(
+                type='machine_recipe'), *args, **kw)
 
     @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.grid')
@@ -286,9 +283,10 @@ class Recipes(RPCRoot):
                 .outerjoin(Recipe.distro_tree, DistroTree.arch),
                 action='./mine', *args, **kw)
 
-    def recipes(self,recipes,action='.',*args, **kw): 
-        recipes = recipes.join(Recipe.recipeset, RecipeSet.job)\
-                .filter(and_(Job.deleted == None, Job.to_delete == None))
+    def recipes(self,recipes,action='.',*args, **kw):
+        recipes = recipes.filter(Recipe.recipeset.has(
+            RecipeSet.job.has(and_(
+            Job.deleted == None, Job.to_delete == None))))
         recipes_return = self._recipes(recipes,**kw)
         searchvalue = None
         search_options = {}
