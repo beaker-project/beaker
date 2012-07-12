@@ -4960,8 +4960,8 @@ class Recipe(TaskBase):
         """
         A class method that can be used to search for Jobs that belong to a user
         """
-        return cls.query.join(Recipe.recipeset, RecipeSet.job, Job.owner)\
-                .filter(Job.owner == owner)
+        return cls.query.filter(Recipe.recipeset.has(
+                RecipeSet.job.has(Job.owner == owner)))
 
 
 class RecipeRoleListAdapter(object):

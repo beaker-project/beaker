@@ -278,10 +278,7 @@ class Recipes(RPCRoot):
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50)
     def mine(self,*args,**kw):
-        return self.recipes(recipes=MachineRecipe.mine(identity.current.user)
-                # need to join in case the user sorts by these related properties
-                .outerjoin(Recipe.system)
-                .outerjoin(Recipe.distro_tree, DistroTree.arch),
+        return self.recipes(recipes=MachineRecipe.mine(identity.current.user),
                 action='./mine', *args, **kw)
 
     def recipes(self,recipes,action='.',*args, **kw):
@@ -315,7 +312,7 @@ class Recipes(RPCRoot):
                     title='System', options=dict(sortable=True)),
                 PDC(name='distro_tree.distro.name',
                     getter=lambda x: x.distro_tree and x.distro_tree.link,
-                    title='Distro Tree', options=dict(sortable=True)),
+                    title='Distro Tree', options=dict(sortable=False)),
                 PDC(name='progress',
                     getter=lambda x: x.progress_bar,
                     title='Progress', options=dict(sortable=False)),
