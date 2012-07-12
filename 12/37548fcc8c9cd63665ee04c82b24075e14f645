@@ -1,0 +1,9 @@
+Change-Id: I1237548fcc8c9cd63665ee04c82b24075e14f645
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+2: Bill Peck <bpeck@redhat.com>
+Verified+1: Bill Peck <bpeck@redhat.com>
+Submitted-by: Bill Peck <bpeck@redhat.com>
+Submitted-at: Thu, 12 Jul 2012 11:48:38 -0400
+Reviewed-on: http://gerrit.beaker-project.org/1170
+Project: beaker
+Branch: refs/heads/develop
