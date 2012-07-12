@@ -137,7 +137,7 @@ $(document).ready(function() {
   </tr>
   <tr>
    <td class="title"><b>Whiteboard</b></td>
-   <td class="value" colspan="8">${recipe.whiteboard}</td>
+   <td class="value" colspan="8" style="white-space: normal;">${recipe.whiteboard}</td>
   </tr>
   <tr>
    <td class="title"><button id="logs_button_${recipe.id}">Logs</button></td>
