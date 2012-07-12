@@ -107,6 +107,8 @@ class Job_Clone(BeakerCommand):
         )
 
     def run(self, *args, **kwargs):
+        self.check_taskspec_args(args, permitted_types=['J', 'RS'])
+
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         wait = kwargs.pop("wait", None)

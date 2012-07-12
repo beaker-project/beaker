@@ -33,6 +33,22 @@ class BeakerCommand(ClientCommand):
                       RS = 'RecipeSet',
                       J = 'Job')
 
+    def check_taskspec_args(self, args, permitted_types=None):
+        # The server is the one that actually parses these, but we can check 
+        # a few things on the client side first to catch errors early and give 
+        # the user better error messages.
+        for task in args:
+            if ':' not in task:
+                self.parser.error('Invalid taskspec %r: '
+                        'see "Specifying tasks" in bkr(1)' % task)
+            type, id = task.split(':', 1)
+            if type not in self.t_id_types:
+                self.parser.error('Unrecognised type %s in taskspec %r: '
+                        'see "Specifying tasks" in bkr(1)' % (type, task))
+            if permitted_types is not None and type not in permitted_types:
+                self.parser.error('Taskspec type must be one of [%s]'
+                        % ', '.join(permitted_types))
+
 def prettyxml(option, opt_str, value, parser):
     # prettyxml implies debug as well.
     parser.values.prettyxml = True

@@ -84,6 +84,7 @@ class Job_Watch(BeakerCommand):
         password = kwargs.pop("password", None)
         if not args:
             self.parser.error('Please specify one or more tasks')
+        self.check_taskspec_args(args)
 
         if self.conf.get('QPID_BUS') is True:
             listendepth = kwargs.get('verbosity') or 0

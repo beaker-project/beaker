@@ -1,7 +1,7 @@
 import unittest
 from turbogears.database import session
 from bkr.inttest import with_transaction, data_setup
-from bkr.inttest.client import run_client, create_client_config
+from bkr.inttest.client import run_client, create_client_config, ClientError
 from bkr.server.model import TaskBase
 
 class JobModifyTest(unittest.TestCase):
@@ -65,3 +65,10 @@ class JobModifyTest(unittest.TestCase):
         rs = TaskBase.get_by_t_id(self.job_for_rs.recipesets[0].t_id)
         self.assert_('%s' % rs.nacked.response == 'ack')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=595512
+    def test_invalid_taskspec(self):
+        try:
+            run_client(['bkr', 'job-modify', '12345', '--response', 'ack'])
+            fail('should raise')
+        except ClientError, e:
+            self.assert_('Invalid taskspec' in e.stderr_output)

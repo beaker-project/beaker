@@ -9,12 +9,16 @@ bkr job-modify: Modify Beaker jobs
 Synopsis
 --------
 
-| :program:`bkr job-modify` [*options*] [--response=<response>]
+| :program:`bkr job-modify` [*options*] [--response=<response>] <taskspec>...
 
 Description
 -----------
 
 Allows ack/nak of a job.
+
+The <taskspec> arguments follow the same format as in other :program:`bkr` 
+subcommands (for example, ``J:1234``). See :ref:`Specifying tasks <taskspec>` 
+in :manpage:`bkr(1)`.
 
 .. _job-modify-options:
 
@@ -71,26 +75,13 @@ class Job_Modify(BeakerCommand):
         response = kw.pop('response', None)
         valid_jobs = []
         self.set_hub(username, password)
-        types = self.t_id_types
-        valid_codes = []
-        for code, type in types.iteritems():
-            if type == 'Job':
-                valid_codes.append(code)
-            if type == 'RecipeSet':
-                valid_codes.append(code)
 
-        error = False
-        for job in args:
-            try:
-                type,number = job.split(':')
-                valid_codes.index(type)
-            except ValueError:
-                self.parser.error('Arguments must be a valid job spec format')
-            valid_jobs.append(job)
+        self.check_taskspec_args(args, permitted_types=['J', 'RS'])
         modded = []
-        if response and not error:
+        error = False
+        if response:
             try:
-                for job in valid_jobs:
+                for job in args:
                     self.hub.jobs.set_response(job, response)
                     modded.append(job)
             except Fault, e:
