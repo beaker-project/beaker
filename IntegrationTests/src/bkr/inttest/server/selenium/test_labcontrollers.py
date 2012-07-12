@@ -265,7 +265,7 @@ class TestPowerFailures(XmlRpcTestCase):
 
         with session.begin():
             job = Job.query.get(job.id)
-            self.assertEqual(job.status, TaskStatus.running)
+            self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
             command = system.command_queue[0]
             self.assertEquals(command.action, 'reboot')
@@ -297,7 +297,7 @@ class TestPowerFailures(XmlRpcTestCase):
 
         with session.begin():
             job = Job.query.get(job.id)
-            self.assertEqual(job.status, TaskStatus.running)
+            self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
             command = system.command_queue[1]
             self.assertEquals(command.action, 'configure_netboot')

@@ -390,7 +390,7 @@ class Watchdog(ProxyHelper):
 
     def purge_old_watchdog(self, watchdog_systems):
         try:
-            self.watchdogs.pop(watchdog_systems).clear_console()
+            del self.watchdogs[watchdog_systems]
         except KeyError, e:
             logger.error('Trying to remove a watchdog that is already removed')
 
@@ -490,10 +490,6 @@ class Monitor(ProxyHelper):
         """ check the logs for new data to upload/or cp
         """
         return self.console_watch.update()
-
-    def clear_console(self):
-        logger.debug('Truncating console log %s', self.console_watch.log)
-        self.console_watch.truncate()
 
 class Proxy(ProxyHelper):
     def task_upload_file(self, 

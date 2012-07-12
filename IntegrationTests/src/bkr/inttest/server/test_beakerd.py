@@ -338,7 +338,7 @@ class TestBeakerd(unittest.TestCase):
         beakerd.scheduled_recipes()
         with session.begin():
             job = Job.by_id(job.id)
-            self.assertEqual(job.status, TaskStatus.running)
+            self.assertEqual(job.status, TaskStatus.waiting)
 
     def test_successful_recipe_start(self):
         with session.begin():
@@ -359,10 +359,11 @@ class TestBeakerd(unittest.TestCase):
 
         with session.begin():
             job = Job.query.get(job.id)
-            self.assertEqual(job.status, TaskStatus.running)
+            self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
             self.assertEqual(system.command_queue[0].action, 'reboot')
             self.assertEqual(system.command_queue[1].action, 'configure_netboot')
+            self.assertEqual(system.command_queue[2].action, 'clear_logs')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=826379
     def test_recipe_install_options_can_remove_system_options(self):
@@ -387,7 +388,7 @@ class TestBeakerd(unittest.TestCase):
 
         with session.begin():
             job = Job.query.get(job.id)
-            self.assertEqual(job.status, TaskStatus.running)
+            self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
             self.assertEqual(system.command_queue[1].action, 'configure_netboot')
             self.assert_('vnc' not in system.command_queue[1].kernel_options)

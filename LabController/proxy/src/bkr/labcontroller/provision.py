@@ -89,6 +89,8 @@ class CommandQueuePoller(ProxyHelper):
             elif command['action'] == u'reboot':
                 handle_power(dict(command.items() + [('action', u'off')]))
                 handle_power(dict(command.items() + [('action', u'on')]))
+            elif command['action'] == u'clear_logs':
+                handle_clear_logs(self.conf, command)
             elif command['action'] == u'configure_netboot':
                 handle_configure_netboot(command)
             elif command['action'] == u'clear_netboot':
@@ -121,6 +123,17 @@ def build_power_env(command):
     env['power_pass'] = (command['power'].get('passwd') or u'').encode('utf8')
     env['power_mode'] = command['action'].encode('utf8')
     return env
+
+def handle_clear_logs(conf, command):
+    console_log = os.path.join(conf['CONSOLE_LOGS'], command['fqdn'])
+    logger.debug('Truncating console log %s', console_log)
+    try:
+        f = open(console_log, 'r+')
+    except IOError, e:
+        if e.errno != errno.ENOENT:
+            raise
+    else:
+        f.truncate()
 
 def handle_configure_netboot(command):
     netboot.fetch_images(command['netboot']['distro_tree_id'],

@@ -2214,6 +2214,9 @@ class System(SystemObject):
         except Exception:
             user = None
         if self.lab_controller:
+            self.command_queue.append(CommandActivity(user=user,
+                    service=service, action=u'clear_logs',
+                    status=CommandStatus.queued, callback=callback))
             command = CommandActivity(user=user,
                     service=service, action=u'configure_netboot',
                     status=CommandStatus.queued, callback=callback)
@@ -6410,6 +6413,10 @@ def import_module(modname):
      return sys.modules[modname]
 
 def auto_cmd_handler(command, new_status):
-    if new_status in (CommandStatus.failed, CommandStatus.aborted) \
-       and command.system.open_reservation:
-        command.system.open_reservation.recipe.abort("Command %s failed" % command.id)
+    if not command.system.open_reservation:
+        return
+    recipe = command.system.open_reservation.recipe
+    if new_status in (CommandStatus.failed, CommandStatus.aborted):
+        recipe.abort("Command %s failed" % command.id)
+    elif command.action == u'reboot':
+        recipe.tasks[0].start()
