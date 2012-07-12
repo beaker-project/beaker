@@ -3377,8 +3377,15 @@ class TaskBase(MappedObject):
         div.append(Element('div', {'class': 'orange', 'style': 'width:%s%%' % wwidth}))
         div.append(Element('div', {'class': 'red', 'style': 'width:%s%%' % fwidth}))
         div.append(Element('div', {'class': 'blue', 'style': 'width:%s%%' % kwidth}))
-        div.tail = "%s%%" % percentCompleted
-        return div
+
+        percents = Element('div', {'class': 'progressPercentage'})
+        percents.text = "%s%%" % percentCompleted
+
+        span = Element('span')
+        span.append(percents)
+        span.append(div)
+
+        return span
     progress_bar = property(progress_bar)
     
     def access_rights(self,user):
