@@ -23,6 +23,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
 from bkr.server import model, search_utility
 from bkr.server.bexceptions import BeakerException
 from bkr.server.helpers import make_fake_link
+from bkr.server.validators import UniqueLabControllerEmail
 import logging
 log = logging.getLogger(__name__)
 
@@ -358,7 +359,8 @@ class TextFieldJSON(TextField):
 class LabControllerFormSchema(validators.Schema):
     fqdn = validators.UnicodeString(not_empty=True, max=256, strip=True)
     lusername = validators.UnicodeString(not_empty=True)
-    email = validators.UnicodeString(not_empty=True)
+    email = validators.Email(not_empty=True)
+    chained_validators = [UniqueLabControllerEmail('id', 'email', 'lusername')]
 
 
 class LabControllerForm(TableForm):

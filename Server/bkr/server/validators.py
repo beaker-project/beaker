@@ -1,7 +1,7 @@
 from turbogears import identity
 from turbogears.validators import FormValidator, Invalid, TgFancyValidator, Email
 from sqlalchemy.orm.exc import NoResultFound
-from bkr.server.model import System, Recipe, User
+from bkr.server.model import System, Recipe, User, LabController
 
 
 class UniqueUserName(FormValidator):
@@ -63,6 +63,49 @@ class UniqueFormEmail(FormValidator):
             raise Invalid('Email address is not unique', form_fields,
                 state, error_dict=error)
 
+class UniqueLabControllerEmail(FormValidator):
+
+
+    __unpackargs__ = ('*', 'field_names')
+    messages = {'not_unique' : 'Email address is not unique' }
+
+    def validate_python(self, form_fields, state):
+        lc_id = form_fields.get('id', None)
+        email_address = form_fields['email']
+        user_name = form_fields['lusername']
+
+        try:
+            User.by_email_address(email_address)
+        except NoResultFound:
+            email_is_used = False
+        else:
+            email_is_used = True
+
+        if User.by_user_name(user_name):
+            new_user = False
+        else:
+            new_user = True
+
+        if not lc_id:
+            labcontroller = None
+            luser = None
+        else:
+            labcontroller = LabController.by_id(lc_id)
+            luser = labcontroller.user
+
+        try:
+            if not labcontroller and email_is_used: # New LC using dupe email
+                raise ValueError
+            if new_user and email_is_used: #New user using dupe email
+                raise ValueError
+            if luser:
+                _check_user_email(email_address, luser.user_id)
+        except ValueError:
+            error = {'email' : self.message('not_unique', state)}
+            raise Invalid('Email address is not unique', form_fields,
+                state, error_dict=error)
+
+
 class CheckUniqueEmail(Email):
 
     """
@@ -105,6 +148,7 @@ def _check_user_email(email_address, user_id):
     except NoResultFound: # Email not being used
         pass
     else:
+        #raise ValueError
         user_by_id = User.by_id(user_id)
         if user_by_id != user_by_email: # An existing email that is not theirs
             raise ValueError
