@@ -31,7 +31,24 @@ class Utility:
     _needs_tag = 'NEEDS_TAG'
 
     @classmethod
-    def update_task_product(cls, job, retentiontag=None, product=None):
+    def update_task_product(cls, job, retentiontag_id=None, product_id=None):
+        if product_id is ProductWidget.product_deselected:
+            product = product_id
+        elif product_id is not None:
+            try:
+                product = Product.by_id(product_id)
+            except NoResultFound:
+                raise ValueError('%s is not a valid product' % product_id)
+        else:
+            product=None
+
+        if retentiontag_id:
+            try:
+                retentiontag = RetentionTag.by_id(retentiontag_id)
+            except NoResultFound:
+                raise ValueError('%s is not a valid retention tag' % retentiontag_id)
+        else:
+            retentiontag = None
         if retentiontag is None and product is None:
             return {'success': False}
         if retentiontag is not None and product is None: #trying to update retentiontag only
