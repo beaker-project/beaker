@@ -1,0 +1,13 @@
+
+Expand CPU flag column (bug 782284)
+-----------------------------------
+
+Run the following SQL:
+
+    ALTER TABLE cpu_flag
+        MODIFY flag VARCHAR(255) DEFAULT NULL;
+
+To roll back:
+
+    ALTER TABLE cpu_flag
+        MODIFY flag VARCHAR(10) DEFAULT NULL;

@@ -371,7 +371,7 @@ cpu_flag_table = Table('cpu_flag', metadata,
            nullable=False, primary_key=True),
     Column('cpu_id', Integer, ForeignKey('cpu.id',
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('flag', String(10)),
+    Column('flag', String(255)),
     mysql_engine='InnoDB',
 )
 
