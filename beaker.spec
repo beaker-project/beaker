@@ -117,7 +117,7 @@ Requires:       kobo
 Requires:       java-1.6.0-openjdk
 Requires:       Xvfb
 Requires:       firefox
-Requires:       python-requests
+Requires:       python-requests >= 0.11
 %endif
 
 

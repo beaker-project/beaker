@@ -26,10 +26,11 @@ class CSVExportTest(WebDriverTestCase):
         # show us a download dialog which WebDriver can't handle. So we just 
         # fetch it directly instead, re-using the browser's session cookies.
         url = get_server_base() + ('csv/action_export?csv_type=%s' % csv_type)
-        cookies = dict((cookie['name'], cookie['value']) for cookie in b.get_cookies())
+        cookies = dict((cookie['name'].encode('ascii', 'replace'), cookie['value'])
+                for cookie in b.get_cookies())
         request = requests.get(url, cookies=cookies)
         request.raise_for_status()
-        return request.raw
+        return request.iter_lines()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=747767
     def test_export_install_options(self):
