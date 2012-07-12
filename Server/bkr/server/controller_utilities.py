@@ -1,4 +1,5 @@
 from turbogears import widgets
+from kid.element import Element
 from model import *
 import search_utility
 import bkr
@@ -16,6 +17,17 @@ import sys
 # from bkr.server import json
 import logging
 log = logging.getLogger("bkr.server.controllers")
+
+
+def _custom_status(x):
+    e = Element('span', {'class' : 'status%s' % x.status})
+    e.text = x.status
+    return e
+
+def _custom_result(x):
+    e = Element('span', {'class' : 'result%s' % x.result})
+    e.text = x.result
+    return e
 
 class _FKLogEntry:
     def __init__(self,form_field,mapper_class,mapper_column_name,description=None):
