@@ -528,6 +528,11 @@ class KeySearch(Search):
 class SystemReserveSearch(Search):
     search_table = []
 
+
+class LabControllerActivitySearch(Search):
+    search_table = []
+
+
 class GroupActivitySearch(Search):
     search_table = []
     def __init__(self, activity):
@@ -1186,6 +1191,17 @@ class Activity(SystemObject):
                            'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),
                            'New Value' : MyColumn(col_type='string', column=model.Activity.new_value),
                          }  
+
+
+class LabControllerActivity(SystemObject):
+    search = LabControllerActivitySearch
+    searchable_columns = { 'LabController/Name' : MyColumn(col_type='string', column=model.LabController.fqdn, relations='object'),
+                           'User' : MyColumn(col_type='string', column=model.User.user_name, relations='user'),
+                           'Via' : MyColumn(col_type='string', column=model.Activity.service),
+                           'Property': MyColumn(col_type='string', column=model.Activity.field_name),
+                           'Action' : MyColumn(col_type='string', column=model.Activity.action),
+                           'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),
+                           'New Value' : MyColumn(col_type='string', column=model.Activity.new_value), }
 
 
 class SystemActivity(SystemObject):

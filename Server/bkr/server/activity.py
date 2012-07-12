@@ -50,6 +50,19 @@ class Activities(RPCRoot):
 
     @expose(template='bkr.server.templates.grid')
     @paginate('list', default_order='-created', limit=50)
+    def labcontroller(self, **kw):
+        activities = LabControllerActivity.all()
+        activity_search = search_utility.LabControllerActivity.search
+        search_bar = SearchBar(activity_search.create_search_table(),
+                               name='activitysearch',
+                               complete_data = activity_search. \
+                                               create_complete_search_table(),)
+        return self._activities_grid(activities, search_bar, 'labcontroller',
+            search_utility.LabControllerActivity,
+            title='Lab Controller Activity', **kw)
+
+    @expose(template='bkr.server.templates.grid')
+    @paginate('list', default_order='-created', limit=50)
     def group(self, **kw):
         activities = GroupActivity.all()
         activity_search = search_utility.GroupActivity.search

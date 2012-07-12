@@ -136,6 +136,7 @@ from bkr.server.reports import Reports
                         <img class="corner_inset_right" alt="" src="${tg.url('/static/images/corner_inset_right.png')}"/>
                     </li>
                     <li><a href="${tg.url('/activity/system')}">Systems</a></li>
+                    <li><a href="${tg.url('/activity/labcontroller')}">Lab Controllers</a></li>
                     <li><a href="${tg.url('/activity/group')}">Groups</a></li>
                     <li><a href="${tg.url('/activity/distro')}">Distros</a></li>
                     <li class="last">

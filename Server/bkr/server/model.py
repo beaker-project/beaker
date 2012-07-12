@@ -703,6 +703,13 @@ system_activity_table = Table('system_activity', metadata,
     mysql_engine='InnoDB',
 )
 
+lab_controller_activity_table = Table('lab_controller_activity', metadata,
+    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
+    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id'),
+        nullable=False),
+    mysql_engine='InnoDB',
+)
+
 recipeset_activity_table = Table('recipeset_activity', metadata,
     Column('id', Integer,ForeignKey('activity.id'), primary_key=True),
     Column('recipeset_id', Integer, ForeignKey('recipe_set.id')),
@@ -3062,6 +3069,11 @@ class Activity(MappedObject):
 
     def object_name(self):
         return None
+
+
+class LabControllerActivity(Activity):
+    def object_name(self):
+        return 'LabController: %s' % self.object.fqdn
 
 
 class SystemActivity(Activity):
@@ -6039,7 +6051,7 @@ System.mapper = mapper(System, system_table,
                                                 backref='system'),
                      'activity':relation(SystemActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
-                        backref='object', cascade='all, delete, delete-orphan'),
+                        backref='object', cascade='all, delete'),
                      'dyn_activity': dynamic_loader(SystemActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()]),
                      'command_queue':relation(CommandActivity,
@@ -6122,12 +6134,16 @@ mapper(SerialType, serial_type_table)
 mapper(Install, install_table)
 
 mapper(LabControllerDistroTree, distro_tree_lab_controller_map)
-
 mapper(LabController, lab_controller_table,
         properties = {'_distro_trees': relation(LabControllerDistroTree,
                         backref='lab_controller', cascade='all, delete-orphan'),
                       'dyn_systems' : dynamic_loader(System),
                       'user'        : relation(User, uselist=False),
+                      'write_activity': relation(LabControllerActivity, lazy='noload'),
+                      'activity' : relation(LabControllerActivity,
+                                            order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
+                                            cascade='all, delete',
+                                            backref='object'),
                      }
       )
 mapper(Distro, distro_table,
@@ -6227,6 +6243,9 @@ mapper(CommandActivity, command_queue_table, inherits=Activity,
                    'system':relation(System),
                    'distro_tree': relation(DistroTree),
                   })
+
+mapper(LabControllerActivity, lab_controller_activity_table, inherits=Activity,
+    polymorphic_identity=u'lab_controller_activity')
 
 mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,
