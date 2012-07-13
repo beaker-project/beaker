@@ -2182,17 +2182,25 @@ class System(SystemObject):
                 self.action_power(action=u'on', service=service)
             elif self.release_action == ReleaseAction.reprovision:
                 if self.reprovision_distro_tree:
-                    from bkr.server.kickstart import generate_kickstart
-                    install_options = self.install_options(self.reprovision_distro_tree)
-                    if 'ks' not in install_options.kernel_options:
-                        rendered_kickstart = generate_kickstart(install_options,
-                                distro_tree=self.reprovision_distro_tree,
-                                system=self, user=self.owner)
-                        install_options.kernel_options['ks'] = rendered_kickstart.link
-                    self.configure_netboot(self.reprovision_distro_tree,
-                            install_options.kernel_options_str,
-                            service=service)
-                    self.action_power(action=u'reboot', service=service)
+                    # There are plenty of things that can go wrong here if the 
+                    # system or distro tree is misconfigured. But we don't want 
+                    # that to prevent the recipe from being stopped, so we log 
+                    # and ignore any errors.
+                    try:
+                        from bkr.server.kickstart import generate_kickstart
+                        install_options = self.install_options(self.reprovision_distro_tree)
+                        if 'ks' not in install_options.kernel_options:
+                            rendered_kickstart = generate_kickstart(install_options,
+                                    distro_tree=self.reprovision_distro_tree,
+                                    system=self, user=self.owner)
+                            install_options.kernel_options['ks'] = rendered_kickstart.link
+                        self.configure_netboot(self.reprovision_distro_tree,
+                                install_options.kernel_options_str,
+                                service=service)
+                        self.action_power(action=u'reboot', service=service)
+                    except Exception:
+                        log.exception('Failed to re-provision %s on %s, ignoring',
+                                self.reprovision_distro_tree, self)
             else:
                 raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
         # Default is to power off, if we can
