@@ -128,7 +128,7 @@ def main_loop(conf=None, foreground=False):
         stop_on_exception=False)
     login.daemon = True
     login.start()
-    server = ForkingXMLRPCServer(("", 8000))
+    server = ForkingXMLRPCServer(("", 8000), allow_none=True)
     server.register_instance(proxy)
     try:
         server.serve_forever()
