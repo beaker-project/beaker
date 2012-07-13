@@ -85,10 +85,6 @@ class TestRecipesDataGrid(SeleniumTestCase):
     def test_can_sort_by_system(self):
         self.check_column_sort(4)
 
-    def test_can_sort_by_distro_tree(self):
-        raise SkipTest('too hard to get this right :-(')
-        self.check_column_sort(5)
-
     def test_can_sort_by_status(self):
         order = ['New', 'Processed', 'Queued', 'Scheduled', 'Waiting',
                 'Running', 'Completed', 'Cancelled', 'Aborted']
