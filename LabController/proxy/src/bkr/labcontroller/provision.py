@@ -4,6 +4,7 @@ import os, os.path
 import errno
 import logging
 import time
+import random
 import signal
 from optparse import OptionParser
 import pkg_resources
@@ -160,6 +161,16 @@ def handle_power(command):
     # We try the command up to 5 times, because some power commands
     # are flakey (apparently)...
     for attempt in range(1, 6):
+        if attempt > 1:
+            # After the first attempt fails we do a randomised exponential
+            # backoff in the style of Ethernet.
+            # Instead of just doing time.sleep we do a timed wait on
+            # shutting_down, so that our delay doesn't hold up the shutdown.
+            delay = random.uniform(attempt, 2**attempt)
+            logger.debug('Backing off %0.3f seconds for power command %s',
+                    delay, command['id'])
+            if shutting_down.wait(timeout=delay):
+                break
         logger.debug('Launching power script %s (attempt %s) with env %r',
                 script, attempt, env)
         # N.B. the timeout value used here affects daemon shutdown time,
