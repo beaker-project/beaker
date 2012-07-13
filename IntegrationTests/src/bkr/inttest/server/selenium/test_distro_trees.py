@@ -1,4 +1,6 @@
 
+import urlparse
+import requests
 from turbogears.database import session
 from bkr.inttest.server.selenium import XmlRpcTestCase, WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login
@@ -69,6 +71,20 @@ class DistroTreeViewTest(WebDriverTestCase):
             b.find_element_by_xpath('//table[@id="install_options"]'
                 '//td[preceding-sibling::th[1]/text()="Kernel Options Post"]').text,
             'rhgb')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=811404
+    def test_yum_repo_config(self):
+        b = self.browser
+        login(b)
+        go_to_distro_tree_view(b, self.distro_tree)
+        b.find_element_by_link_text('Repos').click()
+        repo_link = b.find_element_by_css_selector('table.yum_config a')
+        self.assert_(repo_link.text.endswith('.repo'))
+        response = requests.get(
+                urlparse.urljoin(b.current_url, repo_link.get_attribute('href')))
+        response.raise_for_status()
+        self.assertEqual(response.headers['Content-Type'], 'text/plain')
+        self.assert_('baseurl=' in response.text, response.text)
 
 class DistroTreesFilterXmlRpcTest(XmlRpcTestCase):
 

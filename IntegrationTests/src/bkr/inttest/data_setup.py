@@ -169,6 +169,8 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
             arch=Arch.by_name(arch), variant=variant)
     if distro_tree.arch not in distro.osversion.arches:
         distro.osversion.arches.append(distro_tree.arch)
+    distro_tree.repos.append(DistroTreeRepo(repo_id=variant,
+            repo_type=u'variant', path=u''))
     # make it available in all lab controllers
     for lc in (lab_controllers or LabController.query):
         default_urls = [u'%s://%s%s/distros/%s/%s/%s/os/' % (scheme, lc.fqdn,

@@ -112,6 +112,38 @@ class DistroTrees(RPCRoot):
                     lab_controller_assocs=lab_controller_assocs,
                     readonly=not is_admin)
 
+    @expose(content_type='text/plain')
+    def yum_config(self, distro_tree_id, *args, **kwargs):
+        # Ignore positional args, so that we can make nice URLs like
+        # /distrotrees/yum_config/12345/RHEL-6.2-Server-i386.repo
+        try:
+            distro_tree = DistroTree.by_id(int(distro_tree_id))
+        except (ValueError, NoResultFound):
+            raise cherrypy.NotFound(distro_tree_id)
+        if not kwargs.get('lab'):
+            lc = distro_tree.lab_controller_assocs[0].lab_controller
+        else:
+            try:
+                lc = LabController.by_name(kwargs['lab'])
+            except NoResultFound:
+                raise cherrypy.HTTPError(status=400,
+                        message='No such lab controller %r' % kwargs['lab'])
+        base = distro_tree.url_in_lab(lc, scheme='http')
+        if not base:
+            raise cherrypy.HTTPError(status=404,
+                    message='%s is not present in lab %s' % (distro_tree, lc))
+        if not distro_tree.repos:
+            return '# No repos for %s' % distro_tree
+        sections = []
+        for repo in distro_tree.repos:
+            sections.append('''[%s]
+name=%s
+baseurl=%s
+enabled=1
+gpgcheck=0
+''' % (repo.repo_id, repo.repo_id, urlparse.urljoin(base, repo.path)))
+        return '\n'.join(sections)
+
     @expose()
     @identity.require(identity.in_group('admin'))
     def lab_controller_add(self, distro_tree_id, lab_controller_id, url):

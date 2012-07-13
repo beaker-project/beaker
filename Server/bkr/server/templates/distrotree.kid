@@ -121,6 +121,29 @@ ${install_options_widget.display(value, readonly=readonly)}
         </tr>
     </tbody>
 </table>
+
+<h3 style="display: block;">Download Yum Config</h3>
+<table class="list yum_config">
+    <thead>
+        <tr class="list">
+            <th class="list">Lab Controller</th>
+            <th class="list" style="width: 70%;">Yum Config</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?python i = 0 ?>
+        <tr py:for="lab_controller in lab_controllers"
+            py:if="lab_controller_assocs[lab_controller]"
+            class="list ${i%2 and 'odd' or 'even'}">
+            <td class="list">${lab_controller}</td>
+            <td class="list">
+                <?python filename = '%s.repo' % unicode(value).replace(' ', '-') ?>
+                <a href="yum_config/${value.id}/${filename}?lab=${lab_controller.fqdn}">${filename}</a>
+            </td>
+            <?python i += 1 ?>
+        </tr>
+    </tbody>
+</table>
 </div>
 
 <div class="tabbertab">
