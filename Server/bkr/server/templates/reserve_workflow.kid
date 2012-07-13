@@ -7,6 +7,12 @@ jQuery(function () {
 });
 </script>
 <div class="reserveworkflow" id="${name}">
+    <p py:if="tg.config('beaker.reservation_policy_url')">
+        Please ensure that you adhere to the
+        <a href="${tg.config('beaker.reservation_policy_url')}">reservation
+        policy for Beaker systems</a>.
+    </p>
+
     <form action="">
         <h3>Distro</h3>
         <div>
