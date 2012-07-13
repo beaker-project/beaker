@@ -503,6 +503,46 @@ class Jobs(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
+    def set_retention_product(self, job_t_id, retention_tag_name, product_name):
+        job = TaskBase.get_by_t_id(job_t_id)
+        if job.can_admin(identity.current.user):
+            if retention_tag_name:
+                try:
+                    retention_tag = RetentionTag.by_name(retention_tag_name)
+                except NoResultFound:
+                    raise ValueError('%s is not a valid tag' % retention_tag_name)
+            else:
+                retention_tag = None
+            if product_name:
+                try:
+                    product = Product.by_name(product_name)
+                except NoResultFound:
+                    raise ValueError('%s is not a valid product' % product_name)
+            elif product_name == "":
+                product = ProductWidget.product_deselected
+            else:
+                product = None
+
+            result = Utility.update_task_product(job,
+                retentiontag=retention_tag, product=product)
+            if not result['success'] is True:
+                raise BeakerException('Job %s not updated: %s' % (job.id, result.get('msg', 'Unknown reason')))
+
+            if product == ProductWidget.product_deselected and \
+                job.product != None:
+                job.product = None
+            elif product is not None and product != job.product:
+                job.product = product
+
+            if retention_tag is not None and retention_tag != job.retention_tag:
+                job.retention_tag = retention_tag
+
+        else:
+            raise BeakerException('No permission to modify %s' % job)
+
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
     def set_response(self, job_t_id, response):
         job = TaskBase.get_by_t_id(job_t_id)
         try: # See if we are a 'RecipeSet'
@@ -676,6 +716,7 @@ class Jobs(RPCRoot):
     @identity.require(identity.not_anonymous())
     @expose(format='json')
     def update(self, id, **kw):
+        # XXX Thus function is awkward and needs to be cleaned up.
         try:
             job = Job.by_id(id)
         except InvalidRequestError:
@@ -695,7 +736,7 @@ class Jobs(RPCRoot):
             retention_tag_id = kw.get('retention_tag_id')
             product_id = kw.get('product_id')
             #update_task_product should also ensure that our id's are valid
-            returns.update(Utility.update_task_product(id,retention_tag_id,product_id))
+            returns.update(Utility.update_task_product(job,retention_tag_id,product_id))
             if returns['success'] is False:
                 return returns
         #kw should be santised and correct by the time it gets here

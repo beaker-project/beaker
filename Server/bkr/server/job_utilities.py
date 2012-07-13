@@ -31,113 +31,76 @@ class Utility:
     _needs_tag = 'NEEDS_TAG'
 
     @classmethod
-    def update_task_product(cls,job_id,retentiontag_id=None, product_id=None):
-        if retentiontag_id is None and product_id is None:
-            return {'success' : False }
-
-        try: 
-            job = Job.by_id(job_id)
-        except InvalidRequestError, e:
-            log.error('%s' % e)
-            return {'success':False}
-
-        if retentiontag_id is not None and product_id is None: #trying to update retentiontag only
-            return cls.check_retentiontag_job(job,retentiontag_id)
-        elif retentiontag_id is None and product_id is not None: #only product
-            return cls.check_product_job(job,product_id)
+    def update_task_product(cls, job, retentiontag=None, product=None):
+        if retentiontag is None and product is None:
+            return {'success': False}
+        if retentiontag is not None and product is None: #trying to update retentiontag only
+            return cls.check_retentiontag_job(job, retentiontag)
+        elif retentiontag is None and product is not None: #only product
+            return cls.check_product_job(job, product)
         else: #updating both
-           return cls._update_task_product(job,product_id,retentiontag_id)
-        
+           return cls._update_task_product(job, product, retentiontag)
 
     @classmethod
-    def _update_task_product(cls,job,product_id,retentiontag_id):
-        if product_id:
-            try:
-                the_product = Product.by_id(product_id) 
-            except InvalidRequestError, e:
-                log.error('%s' % e)
-                return {'success':False}
-        elif product_id == ProductWidget.product_deselected:
+    def _update_task_product(cls, job, product, retentiontag):
+        if product == ProductWidget.product_deselected:
             the_product = None
-        else:
+        elif product is None:
             the_product = job.product
-        
-        try: 
-            retentiontag = RetentionTag.by_id(retentiontag_id)  # will throw an error here if retentiontag id is invalid 
-        except InvalidRequestError, (e):
-            log.error('%s' % (e)) 
-            return {'success' : False} 
+        else:
+            the_product = product
 
         if retentiontag.requires_product() != bool(the_product):
             if retentiontag.requires_product():
                 vars = {cls._needs_product: 1}
             else:
-                vars = {cls._needs_no_product:1}
+                vars = {cls._needs_no_product: 1}
 
-            return {'success':False, 'msg':'Incompatible product and tags', 'vars' : vars} 
+            return {'success': False,
+                    'msg': 'Incompatible product and tags',
+                    'vars': vars}
 
         return {'success':True}
-        
+
     @classmethod
-    def check_retentiontag_job(cls, job, retentiontag_id):
+    def check_retentiontag_job(cls, job, retentiontag):
         """
         performs logic needed to determine if changing a retention_tag is valid, returns an
         error fit for displaying in widget
         """
         #This ensures that we take into account any proposed product change
-         
         the_product = job.product
-                   
-        try: 
-            old_retentiontag = job.retention_tag.tag
-        except AttributeError, e:
-            log.error('Trying to access a retention_tag on a job failed, every instantiated Job \
-                have a rentention_tag')
-            return {'success':False}
-
-        try: 
-            new_retentiontag = RetentionTag.by_id(retentiontag_id)  # will throw an error here if retentiontag id is invalid 
-        except InvalidRequestError, (e):
-            log.error('%s' % (e)) 
-            return {'success' : False, 'msg' : 'Could not find that retention tag' }
+        old_retentiontag = job.retention_tag.tag
+        new_retentiontag = retentiontag
 
         if new_retentiontag.requires_product() != bool(the_product):
-            if new_retentiontag.requires_product(): 
-                vars = {cls._needs_product: 1, 'INVALID_PRODUCTS': [ProductWidget.product_deselected]}
+            if new_retentiontag.requires_product():
+                vars = {cls._needs_product: 1,
+                        'INVALID_PRODUCTS': [ProductWidget.product_deselected]}
             else:
                 vars = {cls._needs_no_product:1}
-
-            return {'success':False, 'msg':'Incompatible product and tags', 'vars' : vars} 
-
-        return {'success' : True}
+            return {'success': False,
+                    'msg': 'Incompatible product and tags',
+                    'vars': vars}
+        return {'success': True}
 
     @classmethod
-    def check_product_job(cls, job, product_id):
+    def check_product_job(cls, job, product):
         """
         performs logic needed to determine if changing a retention_tag is valid, returns an
         error fit for displaying in widget
         """
         retentiontag = job.retention_tag
 
-        if not retentiontag.requires_product() and product_id != ProductWidget.product_deselected:
-            return{'success':False, 
-                    'vars': {cls._needs_tag:1,
-                             'VALID_TAGS': [[tag.id,tag.tag] for tag in RetentionTag.list_by_requires_product()]
-                             }
-                    }
-        
-        if retentiontag.requires_product and product_id == ProductWidget.product_deselected:
-            return{'success':False, 
-                    'vars': {cls._needs_tag:1,
-                             'VALID_TAGS': [[tag.id,tag.tag] for tag in RetentionTag.list_by_requires_product(False)]
-                             }
-                    }
-
-        try:
-            new_product = Product.by_id(product_id)  # will throw an error here if product id is invalid 
-        except NoResultFound, e:
-            if product_id != ProductWidget.product_deselected:
-                log.error('%s' % e) 
-                return {'success':False, 'msg':'Could not find that product'}
-          
-        return {'success':True}
+        if not retentiontag.requires_product() and product != ProductWidget.product_deselected:
+            return{'success': False,
+                    'vars': {cls._needs_tag: 1,
+                             'VALID_TAGS': [[tag.id,tag.tag] for tag in \
+                                             RetentionTag.list_by_requires_product()]}}
+        if retentiontag.requires_product and \
+            product == ProductWidget.product_deselected:
+            return{'success': False, 
+                    'vars': {cls._needs_tag: 1,
+                             'VALID_TAGS': [[tag.id,tag.tag] for tag in \
+                                             RetentionTag.list_by_requires_product(False)]}}
+        return {'success': True}
