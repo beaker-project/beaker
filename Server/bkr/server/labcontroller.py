@@ -82,19 +82,10 @@ class LabControllers(RPCRoot):
         group = Group.by_name(u'lab_controller')
         if group not in luser.groups:
             luser.groups.append(group)
-        # Verify email address is unique.
-        try:
-            ouser = User.by_email_address(kw['email'])
-        except InvalidRequestError:
-            ouser = None
-        if ouser and ouser != luser:
-            session.rollback()
-            flash( _(u"%s not saved, Duplicate email address" % labcontroller.fqdn) )
-            redirect(".")
-        
         luser.display_name = kw['fqdn']
         luser.email_address = kw['email']
         luser.user_name = kw['lusername']
+
         if kw['lpassword']:
             luser.password = kw['lpassword']
         labcontroller.disabled = kw['disabled']
