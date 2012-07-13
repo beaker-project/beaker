@@ -6146,10 +6146,12 @@ mapper(DistroTree, distro_tree_table, properties={
 })
 mapper(DistroTreeRepo, distro_tree_repo_table, properties={
     'distro_tree': relation(DistroTree, backref=backref('repos',
+        cascade='all, delete-orphan',
         order_by=[distro_tree_repo_table.c.repo_type, distro_tree_repo_table.c.repo_id])),
 })
 mapper(DistroTreeImage, distro_tree_image_table, properties={
-    'distro_tree': relation(DistroTree, backref='images'),
+    'distro_tree': relation(DistroTree, backref=backref('images',
+        cascade='all, delete-orphan')),
 })
 
 mapper(Visit, visits_table)
