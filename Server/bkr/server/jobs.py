@@ -516,15 +516,19 @@ class Jobs(RPCRoot):
             if product_name:
                 try:
                     product = Product.by_name(product_name)
+                    product_id = product.id
                 except NoResultFound:
                     raise ValueError('%s is not a valid product' % product_name)
             elif product_name == "":
                 product = ProductWidget.product_deselected
+                product_id = product
             else:
                 product = None
+                product_id = product
 
+            retentiontag_id = getattr(retention_tag, 'id', None)
             result = Utility.update_task_product(job,
-                retentiontag=retention_tag, product=product)
+                retentiontag_id=retentiontag_id, product_id=product_id)
             if not result['success'] is True:
                 raise BeakerException('Job %s not updated: %s' % (job.id, result.get('msg', 'Unknown reason')))
 
