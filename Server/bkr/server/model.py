@@ -1635,7 +1635,8 @@ class System(SystemObject):
                 user = None
 
         if user:
-            if not user.is_admin():
+            if not user.is_admin() and \
+               not user.has_permission(u'secret_visible'):
                 query = query.filter(
                             or_(System.private==False,
                                 System.groups.any(Group.users.contains(user)),
