@@ -1381,10 +1381,11 @@ class RecipeActionWidget(RecipeTaskActionWidget, CompoundWidget):
 
     def display(self, task, **params):
         if task.system:
-            params['report_link'] = make_fake_link(attrs={'onclick' : "show_field('report_problem_recipe','%s')" % self.problem_form.desc},
+            params['report_link'] = make_fake_link(
+                attrs={'onclick': "show_field('report_problem_recipe_%s','%s')" % (task.id, self.problem_form.desc)},
                 text='Report Problem with system')
             params['report_problem_options'] = {'system' : task.system,
-                'recipe' : task, 'name' : 'report_problem_recipe',
+                'recipe' : task, 'name' : 'report_problem_recipe_%s' % task.id,
                 'action' : '../system_action/report_system_problem'}
         else:
             params['report_link'] = None
