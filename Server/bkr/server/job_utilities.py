@@ -108,16 +108,18 @@ class Utility:
         error fit for displaying in widget
         """
         retentiontag = job.retention_tag
-
-        if not retentiontag.requires_product() and product != ProductWidget.product_deselected:
+        if not retentiontag.requires_product() and \
+            product != ProductWidget.product_deselected:
             return{'success': False,
-                    'vars': {cls._needs_tag: 1,
-                             'VALID_TAGS': [[tag.id,tag.tag] for tag in \
-                                             RetentionTag.list_by_requires_product()]}}
-        if retentiontag.requires_product and \
+                   'msg': 'Current retention tag does not support a product',
+                   'vars': {cls._needs_tag: 1,
+                       'VALID_TAGS': [[tag.id,tag.tag] for tag in \
+                                       RetentionTag.list_by_requires_product()]}}
+        if retentiontag.requires_product() and \
             product == ProductWidget.product_deselected:
             return{'success': False, 
-                    'vars': {cls._needs_tag: 1,
-                             'VALID_TAGS': [[tag.id,tag.tag] for tag in \
-                                             RetentionTag.list_by_requires_product(False)]}}
+                   'msg': 'Current retention tag requires a product',
+                   'vars': {cls._needs_tag: 1,
+                       'VALID_TAGS': [[tag.id,tag.tag] for tag in \
+                                       RetentionTag.list_by_requires_product(False)]}}
         return {'success': True}
