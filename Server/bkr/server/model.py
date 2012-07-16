@@ -718,7 +718,8 @@ recipeset_activity_table = Table('recipeset_activity', metadata,
 
 group_activity_table = Table('group_activity', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
-    Column('group_id', Integer, ForeignKey('tg_group.group_id')),
+    Column('group_id', Integer, ForeignKey('tg_group.group_id'),
+        nullable=False),
     mysql_engine='InnoDB',
 )
 
