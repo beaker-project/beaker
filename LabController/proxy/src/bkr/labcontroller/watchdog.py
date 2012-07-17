@@ -97,13 +97,6 @@ def main_loop(conf=None, foreground=False):
                 if now - time_of_last_check > 60:
                     time_of_last_check = now
                     watchdog.hub._login()
-                    try:
-                        active_watchdogs = watchdog.hub.recipes.tasks.watchdogs('active')
-                    except xmlrpclib.Fault:
-                        # catch any xmlrpc errors
-                        traceback = Traceback()
-                        logger.error(traceback.get_traceback())
-                        active_watchdogs = []
 
                     try:
                         expired_watchdogs = watchdog.hub.recipes.tasks.watchdogs('expired')
@@ -112,9 +105,21 @@ def main_loop(conf=None, foreground=False):
                         expired_watchdogs = []
                         traceback = Traceback()
                         logger.error(traceback.get_traceback())
-
                     watchdog.expire_watchdogs(expired_watchdogs)
+
+                    # Get active watchdogs *after* we finish running
+                    # expired_watchdogs, depending on the configuration
+                    # we may have extended the watchdog and its therefore
+                    # no longer expired!
+                    try:
+                        active_watchdogs = watchdog.hub.recipes.tasks.watchdogs('active')
+                    except xmlrpclib.Fault:
+                        # catch any xmlrpc errors
+                        traceback = Traceback()
+                        logger.error(traceback.get_traceback())
+                        active_watchdogs = []
                     watchdog.active_watchdogs(active_watchdogs)
+
                 if not watchdog.run():
                     logger.debug(80 * '-')
                     watchdog.sleep()
