@@ -384,10 +384,10 @@ table.list {
     width: 100%;
 }
 
-table.list tr:hover {
+table.highlight-row tr:hover {
     background: #FFFF99;
-
 }
+
 
 th.list {
     padding-left: 25px;
