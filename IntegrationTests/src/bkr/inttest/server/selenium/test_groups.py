@@ -1,10 +1,11 @@
 from bkr.server.model import session
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, is_text_present
+from bkr.inttest.server.webdriver_utils import login, is_text_present, \
+    delete_and_confirm
 
 
-class TestGroupSystems(WebDriverTestCase):
+class TestGroups(WebDriverTestCase):
 
     def setUp(self):
         with session.begin():
@@ -18,6 +19,16 @@ class TestGroupSystems(WebDriverTestCase):
 
     def teardown(self):
         self.browser.quit()
+
+    def test_group_remove(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'groups/admin')
+        delete_and_confirm(b, "//td[preceding-sibling::td/a[normalize-space(text())='%s']]/form" % \
+            self.group.group_name, delete_text='Remove (-)')
+        self.assertEqual(
+            b.find_element_by_xpath('//div[@class="flash"]').text,
+            '%s deleted' % self.group.display_name)
 
     def test_group(self):
         b = self.browser
