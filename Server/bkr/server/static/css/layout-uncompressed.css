@@ -709,7 +709,12 @@ body { font-family:Arial, Helvetica, Sans-Serif; font-size:12px; margin:0px 20px
 #menu .middle { position:absolute; left:18px; height: 20px; width: 115px; top:0px;}
 
 .job-action {
-    padding-left: 0.5em;
+  display: block;
+}
+
+td.list .job-action {
+  display: inline;
+  margin-left: 0.5em;
 }
 
 .ackpanel {
