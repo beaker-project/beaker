@@ -40,7 +40,7 @@ function group_permission_remove(permission_id) {
         group_permission_remove_result(result, permission_id)
     }
 
-    do_and_confirm('remove_group_permission',
+    do_and_confirm_ajax('remove_group_permission',
         {'group_id': group_id , 'permission_id': permission_id },f, undefined, 'remove')
 }
 

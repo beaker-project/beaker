@@ -181,7 +181,7 @@ class DeleteLinkWidgetAJAX(DeleteLinkWidget):
 
 class GroupPermissions(Widget):
 
-    javascript = [LocalJSLink('bkr', '/static/javascript/group_permission.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/group_permission_v2.js'),
         LocalJSLink('bkr', '/static/javascript/util.js'),
         LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
