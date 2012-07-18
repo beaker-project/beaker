@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -349,6 +349,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Thu Jul 19 2012 Raymond Mancy <rmancy@redhat.com> 0.9.1-3
+- Ensure job actions are not on newlines regardless of whiteboard length. See
+  732025 (rmancy@redhat.com)
+
 * Wed Jul 18 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.1-2
 - Improvement on error msg for invalid product/tag combos. See bug 821287
   (rmancy@redhat.com)
