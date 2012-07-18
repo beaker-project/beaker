@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -349,6 +349,20 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Wed Jul 18 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.1-2
+- Improvement on error msg for invalid product/tag combos. See bug 821287
+  (rmancy@redhat.com)
+- group_permission.js was still using the old do_and_confirm
+  (rmancy@redhat.com)
+- Add confirmation for groups remove. Also removed 'Remove' from regular groups
+  page. See bug 743025 (rmancy@redhat.com)
+- 840724 Add NOT NULL property to group_activity.group_id and add SQL
+  statements to accomodate (rmancy@redhat.com)
+- Fix for some weird formatting on job page introduced by 732025
+  (rmancy@redhat.com)
+- This fixes hover highlighting on the system page; introduced by 732024.
+  (rmancy@redhat.com)
+
 * Fri Jul 13 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.1-1
 - typo _all_ should be __all__ (rmancy@redhat.com)
 - 782284 expand CPU flag column (dcallagh@redhat.com)
