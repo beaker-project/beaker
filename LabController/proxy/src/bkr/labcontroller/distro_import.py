@@ -4,13 +4,14 @@ import xmlrpclib
 import string
 import ConfigParser
 import getopt
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 import urllib2
 import logging
 import socket
 import copy
 from bkr.common.bexceptions import BX
 import pprint
+import time
 
 def url_exists(url):
     try:
@@ -141,7 +142,7 @@ class Importer(object):
 
 class ComposeInfoBase(object):
     @classmethod
-    def is_importer_for(cls, url):
+    def is_importer_for(cls, url, options=None):
         parser = Cparser()
         if not parser.parse(url):
             return False
@@ -219,9 +220,9 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
             try:
                 build = Build(full_os_dir)
                 build.process(urls_arch, options, repos)
+                self.distro_trees.append(build.tree)
             except BX, err:
                 logging.warn(err)
-            self.distro_trees.append(build.tree)
 
     def find_repos(self, repo_base, arch):
         """
@@ -609,9 +610,9 @@ sources = Workstation/source/SRPMS
                 try:
                     build = Build(os.path.join(self.parser.url, os_dir))
                     build.process(urls_variant_arch, options, repos)
+                    self.distro_trees.append(build.tree)
                 except BX, err:
                     logging.warn(err)
-                self.distro_trees.append(build.tree)
 
 
 class TreeInfoBase(object):
@@ -652,16 +653,19 @@ class TreeInfoBase(object):
         # Make sure all url's end with /
         urls = [os.path.join(url,'') for url in urls]
         self.tree['urls'] = urls
-        self.tree['kernel_options'] = ''
-        family  = self.options.family or self.parser.get('general', 'family').replace(" ","")
-        version = self.parser.get('general', 'version').replace("-",".")
+        family  = self.options.family or \
+                  self.parser.get('general', 'family').replace(" ","")
+        version = self.options.version or \
+                  self.parser.get('general', 'version').replace("-",".")
         self.tree['name'] = self.options.name or \
                                    self.parser.get('general', 'name', 
                                    '%s-%s' % (family,version)
                                                     )
-        self.tree['variant'] = self.parser.get('general','variant','')
+        self.tree['variant'] = self.options.variant or \
+                               self.parser.get('general','variant','')
         self.tree['arch'] = self.parser.get('general','arch')
-        self.tree['tree_build_time'] = self.parser.get('general','timestamp',
+        self.tree['tree_build_time'] = self.options.buildtime or \
+                                       self.parser.get('general','timestamp',
                                                        self.parser.last_modified)
         labels = self.parser.get('general', 'label','')
         self.tree['tags'] = list(set(self.options.tags).union(
@@ -685,12 +689,9 @@ class TreeInfoBase(object):
         self.tree['images'].append(dict(type='initrd',
                                         path=self.get_initrd_path()))
 
-        # if root option is specified then look for stage2
-        if self.options.root:
-            self.tree['kernel_options'] = 'root=live:%s' % os.path.join(
-                                         self.parser.url,
-                                         self.parser.get('stage2', 'mainimage')
-                                                                       )
+        self.tree['kernel_options'] = self.options.kopts
+        self.tree['kernel_options_post'] = self.options.kopts_post
+        self.tree['ks_meta'] = self.options.ks_meta
 
         logging.debug('\n%s' % pprint.pformat(self.tree))
         try:
@@ -733,7 +734,7 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
               ]
 
     @classmethod
-    def is_importer_for(cls, url):
+    def is_importer_for(cls, url, options=None):
         parser = Tparser()
         if not parser.parse(url):
             return False
@@ -857,7 +858,7 @@ mainimage = images/stage2.img
 
     """
     @classmethod
-    def is_importer_for(cls, url):
+    def is_importer_for(cls, url, options=None):
         parser = TparserRhel5()
         if not parser.parse(url):
             return False
@@ -932,7 +933,7 @@ class TreeInfoFedora(TreeInfoBase, Importer):
 
     """
     @classmethod
-    def is_importer_for(cls, url):
+    def is_importer_for(cls, url, options=None):
         parser = Tparser()
         if not parser.parse(url):
             return False
@@ -1033,7 +1034,7 @@ name = Load Balancer
 repository = LoadBalancer
     """
     @classmethod
-    def is_importer_for(cls, url):
+    def is_importer_for(cls, url, options=None):
         parser = Tparser()
         if not parser.parse(url):
             return False
@@ -1138,7 +1139,7 @@ mainimage = images/install.img
 
     """
     @classmethod
-    def is_importer_for(cls, url):
+    def is_importer_for(cls, url, options=None):
         parser = Tparser()
         if not parser.parse(url):
             return False
@@ -1227,7 +1228,7 @@ kernel = images/pxeboot/vmlinuz
 
     """
     @classmethod
-    def is_importer_for(cls, url):
+    def is_importer_for(cls, url, options=None):
         parser = Tparser()
         if not parser.parse(url):
             return False
@@ -1273,10 +1274,74 @@ kernel = images/pxeboot/vmlinuz
         return self.parser.get('images-%s' % self.tree['arch'],'initrd')
 
 
-def Build(url):
+class NakedTree(Importer):
+    @classmethod
+    def is_importer_for(cls, url, options=None):
+        if not options:
+            return False
+        if not options.kernel:
+            return False
+        if not options.initrd:
+            return False
+        if not options.name:
+            return False
+        if not options.family:
+            return False
+        if not options.version:
+            return False
+        if not options.arch:
+            return False
+        return True
+
+    def process(self, urls, options, repos=[]):
+        self.scheduler = SchedulerProxy(options)
+        self.tree = dict()
+
+        urls = [os.path.join(url,'') for url in urls]
+        self.tree['urls'] = urls
+        self.tree['kernel_options'] = options.kopts
+        self.tree['kernel_options_post'] = options.kopts_post
+        self.tree['ks_meta'] = options.ks_meta
+        family  = options.family
+        version = options.version
+        self.tree['name'] = options.name
+        self.tree['variant'] = options.variant or ''
+        self.tree['arch'] = options.arch
+        self.tree['tree_build_time'] = options.buildtime or \
+                                       time.time()
+        self.tree['tags'] = options.tags
+        self.tree['osmajor'] = "%s%s" % (family, version.split('.')[0])
+        if version.find('.') != -1:
+            self.tree['osminor'] = version.split('.')[1]
+        else:
+            self.tree['osminor'] = '0'
+
+        self.tree['arches'] = [options.arch]
+        self.tree['repos'] = repos
+
+        # Add install images
+        self.tree['images'] = []
+        self.tree['images'].append(dict(type='kernel',
+                                        path=options.kernel))
+        self.tree['images'].append(dict(type='initrd',
+                                        path=options.initrd))
+
+
+        logging.debug('\n%s' % pprint.pformat(self.tree))
+        try:
+            self.add_to_beaker()
+            logging.info('%s added to beaker.' % self.tree['name'])
+        except (xmlrpclib.Fault, socket.error), e:
+            raise BX('failed to add %s to beaker: %s' % (self.tree['name'],e))
+
+    def add_to_beaker(self):
+        self.scheduler.add_distro(self.tree)
+
+def Build(url, options=None):
     logging.info("Importing: %s", url)
-    for cls in Importer.__subclasses__():
-        parser = cls.is_importer_for(url)
+    # Try all other importers before trying NakedTree
+    for cls in Importer.__subclasses__() + [NakedTree]:
+        parser = cls.is_importer_for(url, options)
         if parser != False:
             logging.debug("\tImporter %s Matches", cls.__name__)
             return cls(parser)
@@ -1285,7 +1350,10 @@ def Build(url):
     raise BX('No valid importer found for %s' % url)
 
 def main():
-    parser = OptionParser()
+    usage = "usage: %prog [options] distro_url [distro_url] [distro_url]"
+    description = """Imports distro(s) from the given distro_url.  Valid distro_urls are nfs://, http:// and ftp://.  A primary distro_url of either http:// or ftp:// must be specified. In order for an import to succeed a .treeinfo or a .composeinfo must be present at the distro_url or you can do what is called a "naked" import if you specify the following arguments: --family, --version, --name, --arch, --kernel, --initrd. Only one tree can be imported at a time when doing a naked import."""
+
+    parser = OptionParser(usage=usage, description=description)
     parser.add_option("-c", "--add-distro-cmd",
                       default="/var/lib/beaker/addDistro.sh",
                       help="Command to run to add a new distro")
@@ -1297,10 +1365,6 @@ def main():
                       action="append",
                       dest="tags",
                       help="Additional tags to add")
-    parser.add_option("--root",
-                      action='store_true',
-                      default=False,
-                      help="Add root=live: to kernel_options")
     parser.add_option("-r", "--run-jobs",
                       action='store_true',
                       default=False,
@@ -1313,9 +1377,40 @@ def main():
                       action='store_true',
                       default=False,
                       help="less messages")
-    parser.add_option("-f", "--family",
+    parser.add_option("--family",
                       default=None,
-                      help="Override family in .treeinfo")
+                      help="Specify family")
+    parser.add_option("--variant",
+                      default=None,
+                      help="Specify variant")
+    parser.add_option("--version",
+                      default=None,
+                      help="Specify version")
+    parser.add_option("--kopts",
+                      default=None,
+                      help="add kernel options to use for install")
+    parser.add_option("--kopts-post",
+                      default=None,
+                      help="add kernel options to use for after install")
+    parser.add_option("--ks-meta",
+                      default=None,
+                      help="add variables to use in kickstart templates")
+    parser.add_option("--buildtime",
+                      default=None,
+                      type=float,
+                      help="Specify build time")
+    group = OptionGroup(parser, "Naked Tree Options",
+                       "These options only apply when importing without a .treeinfo or .composeinfo")
+    group.add_option("--kernel",
+                      default=None,
+                      help="Specify path to kernel (relative to distro_url)")
+    group.add_option("--initrd",
+                      default=None,
+                      help="Specify path to initrd (relative to distro_url)")
+    group.add_option("--arch",
+                      default=None,
+                      help="Specify arch")
+    parser.add_option_group(group)
                       
     (opts, urls) = parser.parse_args()
 
@@ -1356,7 +1451,7 @@ def main():
         sys.exit(20)
 
     try:
-        build = Build(primary)
+        build = Build(primary, options=opts)
         build.process(urls, opts)
     except BX, err:
         logging.critical(err)
