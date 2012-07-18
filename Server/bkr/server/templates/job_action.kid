@@ -1,6 +1,6 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#">
-<div>
+<div class='job-action-container'>
 <a class='list' href="${value.clone_link()}">Clone</a>
 <span py:if="('admin' in tg.identity.groups or value.is_owner(tg.identity.user)) and not value.is_finished()" py:strip='1'>
 <a class='list job-action' href="${value.cancel_link()}">Cancel</a>

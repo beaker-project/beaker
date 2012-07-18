@@ -712,6 +712,11 @@ body { font-family:Arial, Helvetica, Sans-Serif; font-size:12px; margin:0px 20px
   display: block;
 }
 
+td.list .job-action-container {
+  white-space: nowrap;
+  margin-right: 1em;
+}
+
 td.list .job-action {
   display: inline;
   margin-left: 0.5em;
