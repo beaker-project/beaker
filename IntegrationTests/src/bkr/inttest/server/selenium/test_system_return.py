@@ -20,14 +20,14 @@ class SystemReturnTest(SeleniumTestCase):
         self.login() #login as admin
         sel = self.selenium
         sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load(30000)
         sel.click('link=(Take)')
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load(30000)
 
         self.logout()
         self.login(user=self.user.user_name, password='password')
         sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load(3000)
+        sel.wait_for_page_to_load(30000)
 
         # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
         sel.open('user_change?id=%s' % self.system.id)

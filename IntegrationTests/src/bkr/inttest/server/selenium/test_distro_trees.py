@@ -107,7 +107,7 @@ class DistroTreeViewTest(WebDriverTestCase):
         response = requests.get(
                 urlparse.urljoin(b.current_url, repo_link.get_attribute('href')))
         response.raise_for_status()
-        self.assertEqual(response.headers['Content-Type'], 'text/plain')
+        self.assert_('text/plain' in response.headers['Content-Type'])
         self.assert_('baseurl=' in response.text, response.text)
 
 class DistroTreesFilterXmlRpcTest(XmlRpcTestCase):
