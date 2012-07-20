@@ -1,3 +1,6 @@
+{% if ignoredisk %}
+ignoredisk {{ ignoredisk }}
+{% endif %}
 zerombr
 {% if ondisk %}
 clearpart --drives {{ ondisk }} --all --initlabel
