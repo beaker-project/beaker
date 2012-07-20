@@ -2518,10 +2518,6 @@ class OSMajor(MappedObject):
                                     OSMajor.alias==name_alias)).one()
 
     @classmethod
-    def get_all(cls):
-        return [(0,"All")] + [(major.id, major.osmajor) for major in cls.query]
-
-    @classmethod
     def in_any_lab(cls, query=None):
         if query is None:
             query = cls.query
@@ -2532,6 +2528,31 @@ class OSMajor(MappedObject):
                     .join(osversion_table))
                 .where(OSVersion.osmajor_id == OSMajor.id)
                 .correlate(osmajor_table))
+
+    @classmethod
+    def used_by_any_recipe(cls, query=None):
+        if query is None:
+            query = cls.query
+        return query.filter(exists([1], from_obj=
+                recipe_table
+                    .join(distro_tree_table)
+                    .join(distro_table)
+                    .join(osversion_table))
+                .where(OSVersion.osmajor_id == OSMajor.id)
+                .correlate(osmajor_table))
+
+    @classmethod
+    def ordered_by_osmajor(cls, query=None):
+        if query is None:
+            query = cls.query
+        return sorted(query, key=cls._sort_key)
+
+    def _sort_key(self):
+        # Separate out the trailing digits, so that Fedora9 sorts before Fedora10
+        name, version = re.match(r'(.*?)(\d*)$', self.osmajor.lower()).groups()
+        if version:
+            version = int(version)
+        return (name, version)
 
     def tasks(self):
         """
