@@ -89,12 +89,20 @@ class CSV(RPCRoot):
         TurboGears method to import data from csv
         """
         log = []
-        csv_data = csv_file.file
-        dialect = csv.Sniffer().sniff(csv_data.read(1024))
-        csv_data.seek(0)
         # ... process CSV file contents here ...
-        reader = csv.DictReader(csv_data, dialect=dialect)
+        missing = object()
+        reader = csv.DictReader(csv_file.file, restkey=missing, restval=missing)
         for data in reader:
+            if missing in data:
+                log.append('Too many fields on line %s (expecting %s)'
+                        % (reader.line_num, len(reader.fieldnames)))
+                continue
+            if any(value is missing for value in data.itervalues()):
+                missing_fields = [field for field, value in data.iteritems()
+                        if value is missing]
+                log.append('Missing fields on line %s: %s' % (reader.line_num,
+                        ', '.join(missing_fields)))
+                continue
             if 'csv_type' in data:
                 if data['csv_type'] in system_types and \
                   'fqdn' in data:
@@ -136,7 +144,7 @@ class CSV(RPCRoot):
                     else:
                         log.append('%s is not a valid user' % data['user'])
                 else:
-                    log.append("Invalid csv_type %s or missing required fields" % csv_type)
+                    log.append("Invalid csv_type %s or missing required fields" % data['csv_type'])
             else:
                 log.append("Missing csv_type from record")
 

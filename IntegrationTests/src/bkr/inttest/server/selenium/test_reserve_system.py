@@ -125,6 +125,27 @@ class ReserveSystem(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
+    def test_show_all_columns_work(self):
+        pass_ ='password'
+        with session.begin():
+            user = data_setup.create_user(password=pass_)
+        b = self.browser
+        login(b, user=user.user_name, password=pass_)
+
+        go_to_reserve_systems(b, self.distro_tree)
+        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_xpath("//select[@id='systemsearch_0_table']"
+            + "/option[@value='System/Name']").click()
+        b.find_element_by_xpath("//select[@id='systemsearch_0_operation']"
+            + "/option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='systemsearch_0_value']") \
+            .send_keys(self.system.fqdn)
+        b.find_element_by_link_text('Toggle Result Columns').click()
+        b.find_element_by_link_text('Select All').click()
+        b.find_element_by_xpath("//form[@id='searchform']").submit()
+        columns = b.find_elements_by_xpath("//table[@id='widget']//th")
+        self.assert_(len(columns) == 29)
+
     def test_exluded_distro_system_not_there(self):
         with session.begin():
             self.system.excluded_osmajor.append(ExcludeOSMajor(

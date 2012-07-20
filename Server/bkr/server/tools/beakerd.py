@@ -450,17 +450,6 @@ def scheduled_recipes(*args):
                     recipe.recipeset.abort(repo_fail_msg)
                     break
 
-                # Start the first task in the recipe
-                try:
-                    recipe.tasks[0].start()
-                except exceptions.Exception, e:
-                    log.exception("Failed to Start recipe %s", recipe.id)
-                    recipe.recipeset.abort(u"Failed to provision recipeid %s, %s" %
-                                                                             (
-                                                                         recipe.id,
-                                                                            e))
-                    break
-
                 try:
                     recipe.provision()
                     recipe.system.activity.append(

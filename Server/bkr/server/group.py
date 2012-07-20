@@ -8,8 +8,10 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, GroupPermissions
+from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
+    GroupPermissions, DeleteLinkWidgetForm
 from bkr.server.admin_page import AdminPage
+from bkr.server.controller_utilities import restrict_http_method
 import cherrypy
 
 # from bkr.server import json
@@ -83,6 +85,8 @@ class Groups(AdminPage):
         action = 'save_data',
         submit_text = _(u'Add'),
     )
+
+    delete_link = DeleteLinkWidgetForm()
 
     def __init__(self,*args,**kw):
         kw['search_url'] =  url("/groups/by_name?anywhere=1")
@@ -280,7 +284,9 @@ class Groups(AdminPage):
     @expose(template="bkr.server.templates.grid")
     @paginate('list', default_order='group_name', limit=20)
     def index(self, *args, **kw):
-        return self.groups(user=identity.current.user, *args, **kw)
+        template_data = self.groups(user=identity.current.user, *args, **kw)
+        template_data['grid'] = myPaginateDataGrid(fields=template_data['grid_fields'])
+        return template_data
    
     @expose(template="bkr.server.templates.admin_grid")
     @identity.require(identity.in_group('admin'))
@@ -288,10 +294,16 @@ class Groups(AdminPage):
     def admin(self, *args, **kw):
         groups = self.process_search(*args, **kw)
         template_data = self.groups(groups, identity.current.user, *args, **kw)
+        template_data['grid_fields'].append((' ',
+            lambda x: self.delete_link.display(dict(id=x.group_id),
+                                               action=url('remove'),
+                                               action_text='Remove (-)')))
+        groups_grid = myPaginateDataGrid(fields=template_data['grid_fields'])
+        template_data['grid'] = groups_grid
 
         alpha_nav_data = set([elem.group_name[0].capitalize() for elem in groups])
         nav_bar = self._build_nav_bar(alpha_nav_data,'group')
-        template_data['alpha_nav_bar'] = nav_bar 
+        template_data['alpha_nav_bar'] = nav_bar
         template_data['addable'] = True
         return template_data
 
@@ -304,6 +316,7 @@ class Groups(AdminPage):
         my_groups = Group.by_user(current_user)
         template_data = self.groups(my_groups,current_user,*args,**kw)
         template_data['title'] = 'My Groups'
+        template_data['grid'] = myPaginateDataGrid(template_data['grid_fields'])
         return template_data
 
     def show_permissions(self):
@@ -315,16 +328,13 @@ class Groups(AdminPage):
     def groups(self, groups=None, user=None, *args,**kw):
         if groups is None:
             groups = session.query(Group)
-         
         try:
             if user.is_admin(): #Raise if no user, then give default columns
                 group_name = ('Group Name', lambda x: make_edit_link(x.group_name,x.group_id))
-                remove_link = (' ', lambda x: make_remove_link(x.group_id))  
             else:
                 raise AttributeError() #If we aren't admin, the except block will assign our columns below
         except AttributeError, e: 
             group_name = ('Group Name', lambda x: make_link('group_members?id=%s' % x.group_id,x.group_name))
-            remove_link = None
      
         def f(x):
             if len(x.systems):
@@ -334,13 +344,9 @@ class Groups(AdminPage):
 
         systems = ('Systems', lambda x: f(x))
         display_name = ('Display Name', lambda x: x.display_name)
-        
-        potential_grid = (group_name,display_name,systems,remove_link)     
-        actual_grid = [elem for elem in potential_grid if elem is not None]
-   
-        groups_grid = myPaginateDataGrid(fields=actual_grid)
+        grid_fields =  [group_name, display_name, systems]
         return_dict = dict(title=u"Groups",
-                           grid = groups_grid, 
+                           grid_fields = grid_fields,
                            object_count = groups.count(), 
                            search_bar = None,
                            search_widget = self.search_widget_form, 
@@ -364,6 +370,7 @@ class Groups(AdminPage):
 
     @identity.require(identity.in_group("admin"))
     @expose()
+    @restrict_http_method('post')
     def removeSystem(self, group_id=None, id=None, **kw):
         group = Group.by_id(group_id)
         groupSystems = group.systems
@@ -387,7 +394,7 @@ class Groups(AdminPage):
         session.add(activity)
         for system in group.systems:
             SystemActivity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"", object=system)
-        flash( _(u"%s Deleted") % group.display_name )
+        flash( _(u"%s deleted") % group.display_name )
         raise redirect(".")
 
     @expose(format='json')

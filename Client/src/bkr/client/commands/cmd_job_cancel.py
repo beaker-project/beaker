@@ -76,6 +76,7 @@ class Job_Cancel(BeakerCommand):
     def run(self, *args, **kwargs):
         if len(args) < 1:
             self.parser.error('Please specify a taskspec to cancel')
+        self.check_taskspec_args(args)
 
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)

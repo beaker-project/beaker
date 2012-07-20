@@ -197,6 +197,20 @@ EOF
                     path=u'../../../Server-optional/s390x/os'),
             DistroTreeRepo(repo_id=u'repos_Server', repo_type=u'os', path=u'.'),
         ]
+        cls.rhel70nightly_server_ppc64 = data_setup.create_distro_tree(
+                distro=cls.rhel70nightly, variant=u'Server', arch=u'ppc64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/ppc64/os/'])
+        cls.rhel70nightly_server_ppc64.repos[:] = [
+            DistroTreeRepo(repo_id=u'repos_debug_Server_optional',
+                    repo_type=u'debug',
+                    path=u'../../../Server-optional/ppc64/debuginfo'),
+            DistroTreeRepo(repo_id=u'repos_debug_Server', repo_type=u'debug',
+                    path=u'../debuginfo'),
+            DistroTreeRepo(repo_id=u'repos_Server-optional', repo_type=u'addon',
+                    path=u'../../../Server-optional/ppc64/os'),
+            DistroTreeRepo(repo_id=u'repos_Server', repo_type=u'os', path=u'.'),
+        ]
 
         cls.f16 = data_setup.create_distro(name=u'Fedora-16',
                 osmajor=u'Fedora16', osminor=u'0')
@@ -545,6 +559,34 @@ EOF
                 not in recipe.rendered_kickstart.kickstart.splitlines(),
                 recipe.rendered_kickstart.kickstart)
 
+    def test_leavebootorder(self):
+        system = data_setup.create_system(arch=u'ppc64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.loaned = self.user
+        system.user = self.user
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0])
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="ppc64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assert_(
+                r'''bootloader --location=mbr --leavebootorder'''
+                in recipe.rendered_kickstart.kickstart.splitlines(),
+                recipe.rendered_kickstart.kickstart)
+
     def test_grubport(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
@@ -714,7 +756,9 @@ logvol /butter --fstype btrfs --name=butter --vgname=TestVolume001 --size=25600
             ''', system)
         self.assert_('''
 mkdir -p /root/.ssh
-echo ssh-rsa lolthisismykey description >> /root/.ssh/authorized_keys
+cat >>/root/.ssh/authorized_keys <<"__EOF__"
+ssh-rsa lolthisismykey description
+__EOF__
 restorecon -R /root/.ssh
 chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
 '''
@@ -748,7 +792,7 @@ chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
             ''', system)
         # check the reboot snippet is after the ssh key
         self.assert_('Force a reboot'
-                     in recipe.rendered_kickstart.kickstart.split('echo ssh-rsa')[1],
+                     in recipe.rendered_kickstart.kickstart.split('cat >>/root/.ssh/authorized_keys')[1],
                      recipe.rendered_kickstart.kickstart)
 
     def test_ksappends(self):
@@ -858,3 +902,53 @@ bootloader --location=mbr
         self.assert_('repo --name=beaker-optional-x86_64-debug' not in k, k)
         self.assert_('/etc/yum.repos.d/beaker-debug.repo' not in k, k)
         self.assert_('/etc/yum.repos.d/beaker-optional-x86_64-debug.repo' not in k, k)
+
+    def test_beaker_url(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('export BEAKER="%s"' % get_server_base() in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=834147
+    def test_ftp_no_http(self):
+        ftp_lc = data_setup.create_labcontroller()
+        system = data_setup.create_system(arch=u'x86_64', lab_controller=ftp_lc)
+        system.loaned = self.user
+        system.user = self.user
+        self.rhel62_server_x86_64.lab_controller_assocs.append(
+                LabControllerDistroTree(lab_controller=ftp_lc, url='ftp://something/'))
+        session.flush()
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('repo --name=beaker-Server --cost=100 --baseurl=ftp://something/Server' in k, k)
+        self.assert_('name=beaker-Server\nbaseurl=ftp://something/Server' in k, k)

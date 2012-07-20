@@ -72,6 +72,8 @@ class Job_Results(BeakerCommand):
 
 
     def run(self, *args, **kwargs):
+        self.check_taskspec_args(args)
+
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         prettyxml   = kwargs.pop("prettyxml", None)

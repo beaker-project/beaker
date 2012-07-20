@@ -15,13 +15,13 @@
 %endif
 
 Name:           beaker
-Version:        0.9.0
-Release:        7%{?dist}
+Version:        0.9.1
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
-URL:            http://fedorahosted.org/beaker
-Source0:        http://fedorahosted.org/releases/b/e/%{name}-%{version}.tar.gz
+URL:            http://beaker-project.org/
+Source0:        http://beaker-project.org/releases/%{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  make
@@ -117,7 +117,7 @@ Requires:       kobo
 Requires:       java-1.6.0-openjdk
 Requires:       Xvfb
 Requires:       firefox
-Requires:       python-requests
+Requires:       python-requests >= 0.11
 %endif
 
 
@@ -349,6 +349,82 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Thu Jul 19 2012 Raymond Mancy <rmancy@redhat.com> 0.9.1-3
+- Ensure job actions are not on newlines regardless of whiteboard length. See
+  732025 (rmancy@redhat.com)
+
+* Wed Jul 18 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.1-2
+- Improvement on error msg for invalid product/tag combos. See bug 821287
+  (rmancy@redhat.com)
+- group_permission.js was still using the old do_and_confirm
+  (rmancy@redhat.com)
+- Add confirmation for groups remove. Also removed 'Remove' from regular groups
+  page. See bug 743025 (rmancy@redhat.com)
+- 840724 Add NOT NULL property to group_activity.group_id and add SQL
+  statements to accomodate (rmancy@redhat.com)
+- Fix for some weird formatting on job page introduced by 732025
+  (rmancy@redhat.com)
+- This fixes hover highlighting on the system page; introduced by 732024.
+  (rmancy@redhat.com)
+
+* Fri Jul 13 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.1-1
+- typo _all_ should be __all__ (rmancy@redhat.com)
+- 782284 expand CPU flag column (dcallagh@redhat.com)
+- 822492 allow whiteboard to wrap on job and recipe pages (dcallagh@redhat.com)
+- 802842 strict CSV parsing for imports (dcallagh@redhat.com)
+- Update import to run jobs (bpeck@redhat.com)
+- 732024 Coloured indicators for status and result text for the jobs and
+  recipes page. (rmancy@redhat.com)
+- 823400 Start RepeatTimer for message bus auth (rmancy@redhat.com)
+- 732025 Job actions are now on a single line with added padding between them
+  (rmancy@redhat.com)
+- fix typo in CSV import (dcallagh@redhat.com)
+- 820724 [RFE] beaker-import should support --family (bpeck@redhat.com)
+- 836396 add exponential backoff for power command retries
+  (dcallagh@redhat.com)
+- 835753 update bkr system-provision options to reflect the new Cobbler-less
+  reality (dcallagh@redhat.com)
+- 836603 Fix typo, DistoTree to DistroTree (rmancy@redhat.com)
+- 830475 strip and validate SSH keys; write them out safely
+  (dcallagh@redhat.com)
+- 837710 ignore failures when reprovisioning a system on release
+  (dcallagh@redhat.com)
+- 595512 show friendly error for invalid taskspec arguments
+  (dcallagh@redhat.com)
+- 811404 generate yum config file for repos in a distro tree
+  (dcallagh@redhat.com)
+- 837460 serialize power commands by power address (dcallagh@redhat.com)
+- increase verbosity of power scripts where possible (dcallagh@redhat.com)
+- ping power controller before running ipmilan (dcallagh@redhat.com)
+- 835912 Speed up of /recipes page (rmancy@redhat.com)
+- 646773 pass Beaker server URL to test machines as $BEAKER
+  (dcallagh@redhat.com)
+- 749698 show a warning with link to reservation policy, if configured
+  (dcallagh@redhat.com)
+- 838571 Remove rhel7/ppc64 boot order workaround, add leavebootorder to
+  bootargs (bpeck@redhat.com)
+- 799029 [RFE] Make console.log even more readable remove whole ansi sequences
+  (bpeck@redhat.com)
+- 732026 Progressbar redesigned (mganisin@redhat.com)
+- 825774 Fix for report problem with multiple recipes on a job page
+  (rmancy@redhat.com)
+- 649608 bkr job-cancel can cancel other people's job (bpeck@redhat.com)
+- 835594 lab controller can't lookup secret/NDA machines (bpeck@redhat.com)
+- 821287 Added ability to modify Job retention tag and product via bkr client
+  (rmancy@redhat.com)
+- 835373 re-introduce clear_logs command for clearing console logs
+  (dcallagh@redhat.com)
+- 767243 Added more search options for distro and distrotrees.
+  (rmancy@redhat.com)
+- 834147 support distros imported as ftp:// but not http://
+  (dcallagh@redhat.com)
+- 670868 allow marshalling None in beaker-proxy (dcallagh@redhat.com)
+- 743025 Ask users for confirmation before deleting DB entities.
+  (rmancy@redhat.com)
+- 747000 Create Activity page for Lab Controller (rmancy@redhat.com)
+- 817525 Fixes problem with toggling some columns on reserve system page
+  (rmancy@redhat.com)
+
 * Mon Jul 02 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.0-7
 - 836325 [BUG] don't try and modify /etc/sysconfig/ntpd if it doesn't exist.
   (bpeck@redhat.com)
@@ -1001,7 +1077,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 * Thu Jun 30 2011 Bill Peck <bpeck@redhat.com> 0.6.14-3
 - Can't return None with xmlrpc. (bpeck@redhat.com)
 
-* Thu Jun 30 2011 Dan Callaghan 0.6.14-2
+* Thu Jun 30 2011 Dan Callaghan <dcallagh@redhat.com> 0.6.14-2
 - handle hypervisor=None from inventory scripts (dcallagh@redhat.com)
 
 * Wed Jun 29 2011 Raymond Mancy <rmancy@redhat.com> 0.6.14-1

@@ -23,8 +23,10 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
 from bkr.server import model, search_utility
 from bkr.server.bexceptions import BeakerException
 from bkr.server.helpers import make_fake_link
+from bkr.server.validators import UniqueLabControllerEmail
 import logging
 log = logging.getLogger(__name__)
+
 
 class Hostname(validators.Regex):
     messages = {'invalid': 'The supplied value is not a valid hostname'}
@@ -97,12 +99,92 @@ jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js',
 
 local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime_v2.js')
 
+
+class UnmangledHiddenField(HiddenField):
+
+    @property
+    def field_id(self):
+        return self.name
+
+    def update_params(self, d):
+        super(UnmangledHiddenField, self).update_params(d)
+        d['name'] = self.name
+
+
+class DeleteLinkWidget(Widget):
+    javascript = [LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),
+        LocalJSLink('bkr', '/static/javascript/util.js')]
+    css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
+
+    def update_params(self, d):
+        if not d.get('action_text', None):
+            d['action_text'] = 'Delete ( - )'
+        # 'class' cannot be interpolated in our templates
+        # so we use 'class_' before changing it back
+        if d.get('attrs', None):
+            class_ = d['attrs'].pop('class_', None)
+            if class_:
+                d['attrs']['class'] = class_
+        else:
+            d['attrs']= {'class' : 'link'}
+        super(DeleteLinkWidget, self).update_params(d)
+
+
+class DeleteLinkWidgetForm(Form, DeleteLinkWidget):
+    template = """
+    <span xmlns:py='http://purl.org/kid/ns#' py:strip='1'>
+      <form action="${action}" method="post">
+        <script>
+          var action = function(form_node) { return function() { form_node.submit(); }}
+          var job_delete = function (form_node) {
+            do_and_confirm_form('${msg}', 'delete', action(form_node));
+          }
+        </script>
+        <span py:for="field in hidden_fields"
+          py:replace="field.display()"/>
+            <a href="#" onclick="javascript:job_delete(this.parentNode);return false;" 
+               py:attrs='attrs'>${action_text}</a>
+      </form>
+    </span>
+    """
+    params = ['attrs', 'msg', 'action_text']
+
+    def update_params(self, d):
+        super(DeleteLinkWidgetForm, self).update_params(d)
+        form_args = d['value']
+        d['hidden_fields'] = []
+        for id, val in form_args.items():
+            hidden_field = UnmangledHiddenField(id, attrs={'value' : val })
+            d['hidden_fields'].append(hidden_field)
+
+
+class DeleteLinkWidgetAJAX(DeleteLinkWidget):
+
+    template="""<a xmlns:py='http://purl.org/kid/ns#' href="#"
+        onclick="javascript:do_and_confirm_ajax('${action}', ${data}, ${callback},
+        '${msg}', '${action_type}');return false" py:attrs='attrs'>${action_text}</a>"""
+    params = ['data', 'callback', 'action_type', 'msg', 'action_text']
+
+    def display(self, value=None, **params):
+        missing = [(i, True) for i in ['action', 'data', 'callback']
+                      if not params.get(i)]
+        if any(missing):
+            raise ValueError('Missing arguments to %s: %s' %
+                (self.__class__.__name__, ','.join(dict(missing).keys())))
+        params['action_type'] = params.get('action_type', 'delete')
+        params['msg'] = params.get('msg', None)
+        if not params.get('action_text', None):
+            params['action_text'] = 'Delete'
+        params['data'] = jsonify.encode(params['data'])
+        return super(DeleteLinkWidgetAJAX, self).display(value, **params)
+
+
 class GroupPermissions(Widget):
 
-    javascript = [LocalJSLink('bkr', '/static/javascript/group_permission.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/group_permission_v2.js'),
         LocalJSLink('bkr', '/static/javascript/util.js'),
-        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
-    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')]
+        LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),]
+    css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     member_widgets = ['form', 'grid']
     template = """
         <div xmlns:py="http://purl.org/kid/ns#">
@@ -165,11 +247,11 @@ class PowerTypeForm(CompoundFormField):
         super(PowerTypeForm,self).__init__(*args, **kw)
         self.search_controller=search_controller
         self.powercontroller_field = SingleSelectField(name="powercontroller", options=callback)
-	self.key_field = HiddenField(name="key")
+        self.key_field = HiddenField(name="key")
 
 class ReserveSystem(TableForm):
     fields = [ 
-	      HiddenField(name='system_id'),
+          HiddenField(name='system_id'),
               Label(name='system', label=_(u'System to Provision')),
               Label(name='distro', label=_(u'Distro Tree to Provision')),
               TextField(name='whiteboard', attrs=dict(size=50),
@@ -326,8 +408,8 @@ class myPaginateDataGrid(PaginateDataGrid):
 
 class LabControllerDataGrid(myPaginateDataGrid):
     javascript = [LocalJSLink('bkr','/static/javascript/lab_controller_remove.js'),
-                  LocalJSLink('bkr', '/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
-    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')]
+                  LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),]
+    css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
 
 class SingleSelectFieldJSON(SingleSelectField):
     params = ['for_column']
@@ -358,7 +440,8 @@ class TextFieldJSON(TextField):
 class LabControllerFormSchema(validators.Schema):
     fqdn = validators.UnicodeString(not_empty=True, max=256, strip=True)
     lusername = validators.UnicodeString(not_empty=True)
-    email = validators.UnicodeString(not_empty=True)
+    email = validators.Email(not_empty=True)
+    chained_validators = [UniqueLabControllerEmail('id', 'email', 'lusername')]
 
 
 class LabControllerForm(TableForm):
@@ -404,11 +487,11 @@ class JobQuickSearch(CompoundWidget):
 
 class AckPanel(RadioButtonList): 
 
-    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'),
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui.js'),
                   LocalJSLink('bkr','/static/javascript/loader_v2.js'),
                   LocalJSLink('bkr','/static/javascript/response_v3.js')]
 
-    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
+    css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     params = ['widget_name','unreal_response','comment_id','comment_class']
     template = """
     <ul xmlns:py="http://purl.org/kid/ns#"
@@ -489,9 +572,10 @@ class AckPanel(RadioButtonList):
         return super(AckPanel,self).display(value,*args,**params)
  
 class JobMatrixReport(Form):     
-    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'),
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui.js'),
                   LocalJSLink('bkr', '/static/javascript/job_matrix_v2.js')]
-    css = [LocalCSSLink('bkr','/static/css/job_matrix.css'), LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
+    css = [LocalCSSLink('bkr','/static/css/job_matrix.css'),
+        LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     template = 'bkr.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button','nack_list', 'whiteboard_filter',
         'whiteboard_filter_button']
@@ -531,10 +615,10 @@ class JobMatrixReport(Form):
 
 class SearchBar(RepeatingFormField):
     """Search Bar""" 
-    css = [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')] 
+    css = [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     javascript = [LocalJSLink('bkr', '/static/javascript/search_object.js'),
                   LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'), 
-                  LocalJSLink('bkr','/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
+                  LocalJSLink('bkr','/static/javascript/jquery-ui.js'),]
     template = "bkr.server.templates.search_bar"
 
     params = ['repetitions', 'search_object', 'form_attrs', 'search_controller',
@@ -617,7 +701,7 @@ class SearchBar(RepeatingFormField):
     def display(self, value=None, **params): 
         if 'options' in params: 
             if 'columns' in params['options']:
-	        params['columns'] = params['options']['columns']
+                params['columns'] = params['options']['columns']
             if 'simplesearch' in params['options']:
                 params['simplesearch'] = params['options']['simplesearch']     
             if 'result_columns' in params['options']:
@@ -742,7 +826,7 @@ class LabInfoForm(Form):
 
     def __init__(self, *args, **kw):
         super(LabInfoForm, self).__init__(*args, **kw)
-	self.id = HiddenField(name="id")
+        self.id = HiddenField(name="id")
         self.labinfo = HiddenField(name="labinfo")
         self.orig_cost = TextField(name='orig_cost', label=_(u'Original Cost'),
                                    validator=validators.Money())
@@ -778,7 +862,7 @@ class PowerForm(Form):
 
     def __init__(self, *args, **kw):
         super(PowerForm, self).__init__(*args, **kw)
-	self.id = HiddenField(name="id")
+        self.id = HiddenField(name="id")
         self.power = HiddenField(name="power")
         self.power_type_id = SingleSelectField(name='power_type_id',
                                            label=_(u'Power Type'),
@@ -910,12 +994,13 @@ class ExcludedFamilies(FormField):
 
 class SystemKeys(Form):
     template = "bkr.server.templates.system_keys"
-    member_widgets = ["id", "key_name", "key_value"]
+    member_widgets = ["id", "key_name", "key_value", "delete_link"]
     params = ['options', 'readonly', 'key_values_int', 'key_values_string']
+    delete_link = DeleteLinkWidgetForm()
 
     def __init__(self, *args, **kw):
         super(SystemKeys, self).__init__(*args, **kw)
-	self.id = HiddenField(name="id")
+        self.id = HiddenField(name="id")
         self.key_name = TextField(name='key_name', label=_(u'Key'))
         self.key_value = TextField(name='key_value', label=_(u'Value'))
 
@@ -930,12 +1015,13 @@ class SystemKeys(Form):
 
 class SystemArches(Form):
     template = "bkr.server.templates.system_arches"
-    member_widgets = ["id", "arch"]
+    member_widgets = ["id", "arch", "delete_link"]
     params = ['options', 'readonly', 'arches']
+    delete_link = DeleteLinkWidgetForm()
 
     def __init__(self, *args, **kw):
         super(SystemArches, self).__init__(*args, **kw)
-	self.id    = HiddenField(name="id")
+        self.id    = HiddenField(name="id")
         self.arch  = AutoCompleteField(name='arch',
                                       search_controller="/arches/by_name",
                                       search_param="name",
@@ -950,12 +1036,15 @@ class SystemArches(Form):
 
 class DistroTags(Form):
     template = "bkr.server.templates.distro_tags"
-    member_widgets = ["id", "tag"]
+    member_widgets = ["id", "tag", "delete_link"]
+    javascript = [LocalJSLink('bkr', '/static/javascript/util.js'),
+        LocalJSLink('bkr', '/static/javascript/magic_forms.js')]
     params = ['options', 'readonly', 'tags']
 
     def __init__(self, *args, **kw):
         super(DistroTags, self).__init__(*args, **kw)
-	self.id    = HiddenField(name="id")
+        self.id    = HiddenField(name="id")
+        self.delete_link = DeleteLinkWidgetForm()
         self.tag = AutoCompleteField(name='tag',
                                       search_controller="/tags/by_tag",
                                       search_param="tag",
@@ -971,12 +1060,13 @@ class DistroTags(Form):
 class SystemGroups(Form): 
     javascript = [LocalJSLink('bkr','/static/javascript/system_admin.js')]
     template = "bkr.server.templates.system_groups"
-    member_widgets = ["id", "group"]
+    member_widgets = ["id", "group", "delete_link"]
     params = ['options', 'readonly', 'group_assocs', 'can_admin']
-    
+    delete_link = DeleteLinkWidgetForm()
+
     def __init__(self, *args, **kw):
         super(SystemGroups, self).__init__(*args, **kw)
-    	self.id    = HiddenField(name="id")
+        self.id    = HiddenField(name="id")
         self.group = AutoCompleteField(name='group',
                                       search_controller=url("/groups/by_name"),
                                       search_param="input",
@@ -1005,8 +1095,8 @@ class SystemProvision(Form):
 
     def __init__(self, *args, **kw):
         super(SystemProvision, self).__init__(*args, **kw)
-	self.id           = HiddenField(name="id")
-	self.power        = HiddenField(name="power")
+        self.id           = HiddenField(name="id")
+        self.power        = HiddenField(name="power")
         self.schedule_reserve_days = SingleSelectField(name='reserve_days',
                                                        label=_('Days to reserve for'),
                                                        options = range(1, self.MAX_DAYS_PROVISION + 1),
@@ -1045,12 +1135,14 @@ class SystemInstallOptions(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/install_options.js')]
     template = "bkr.server.templates.system_installoptions"
     member_widgets = ["id", "prov_arch", "prov_osmajor", "prov_osversion",
-                       "prov_ksmeta", "prov_koptions", "prov_koptionspost"]
+                       "prov_ksmeta", "prov_koptions", "prov_koptionspost", "delete_link"]
     params = ['options', 'readonly', 'provisions']
+    delete_link = DeleteLinkWidgetForm()
+
     
     def __init__(self, *args, **kw):
         super(SystemInstallOptions, self).__init__(*args, **kw)
-	self.id                = HiddenField(name="id")
+        self.id                = HiddenField(name="id")
         self.prov_arch         = SingleSelectField(name='prov_arch',
                                  label=_(u'Arch'),
                                  options=[],
@@ -1079,12 +1171,13 @@ class SystemInstallOptions(Form):
 
 class SystemNotes(Form):
     template = "bkr.server.templates.system_notes"
-    member_widgets = ["id", "note"]
+    member_widgets = ["id", "note", "delete_link"]
     params = ['options', 'readonly', 'notes']
+    delete_link = DeleteLinkWidgetAJAX()
 
     def __init__(self, *args, **kw):
         super(SystemNotes, self).__init__(*args, **kw)
-	self.id = HiddenField(name="id")
+        self.id = HiddenField(name="id")
         self.note = TextArea(name='note', label=_(u'Note'))
 
     def update_params(self, d):
@@ -1111,7 +1204,7 @@ class SystemExclude(Form):
 
     def __init__(self, *args, **kw):
         super(SystemExclude, self).__init__(*args, **kw)
-	self.id = HiddenField(name="id")
+        self.id = HiddenField(name="id")
         self.excluded_families = ExcludedFamilies(name="excluded_families")
 
     def update_params(self, d):
@@ -1274,11 +1367,10 @@ class SystemForm(Form):
             d["loaned_email_link"] = ""
 
         if d["options"]["readonly"]:
-	    d["readonly"] = True
- 	    attrs = {'attrs':{'readonly':'True'}}
- 	    d["display_field_for"] = lambda f: self.display_field_for(f,
-                                                          d["value_for"](f),
-                                                                  **attrs)
+            d["readonly"] = True
+            attrs = {'attrs':{'readonly':'True'}}
+            d["display_field_for"] = lambda f: self.display_field_for(f,
+                d["value_for"](f), **attrs)
 
 class TasksWidget(CompoundWidget):
     template = "bkr.server.templates.tasks_widget"
@@ -1352,7 +1444,7 @@ class ReportProblemForm(RemoteForm):
     member_widgets = ['submit']
     params = ['system', 'recipe']
     name = 'problem'
-    on_success = 'success(\'Your problem as been reported, Thankyou\')'
+    on_success = 'success(\'Your problem has been reported, Thankyou\')'
     on_failure = 'failure(\'We were unable to report your problem at this time\')'
  
     def update_params(self, d):
@@ -1367,11 +1459,11 @@ class ReportProblemForm(RemoteForm):
             d['options']['name'], jsonify.encode(self.get_options(d)), d['action'])})
 
 
-class RecipeActionWidget(RecipeTaskActionWidget, CompoundWidget):
+class RecipeActionWidget(CompoundWidget):
     template = 'bkr.server.templates.recipe_action'
-    javascript = [LocalJSLink('bkr', '/static/javascript/util.js'), 
-        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.7.3.custom.min.js'),]
-    css =  [LocalCSSLink('bkr','/static/css/smoothness/jquery-ui-1.7.3.custom.css')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/util.js'),
+        LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),]
+    css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     problem_form = ReportProblemForm()
     params = ['report_problem_options', 'report_link']
     member_widgets = ['problem_form']
@@ -1381,10 +1473,11 @@ class RecipeActionWidget(RecipeTaskActionWidget, CompoundWidget):
 
     def display(self, task, **params):
         if task.system:
-            params['report_link'] = make_fake_link(attrs={'onclick' : "show_field('report_problem_recipe','%s')" % self.problem_form.desc},
+            params['report_link'] = make_fake_link(
+                attrs={'onclick': "show_field('report_problem_recipe_%s','%s')" % (task.id, self.problem_form.desc)},
                 text='Report Problem with system')
             params['report_problem_options'] = {'system' : task.system,
-                'recipe' : task, 'name' : 'report_problem_recipe',
+                'recipe' : task, 'name' : 'report_problem_recipe_%s' % task.id,
                 'action' : '../system_action/report_system_problem'}
         else:
             params['report_link'] = None
@@ -1605,44 +1698,45 @@ class TaskActionWidget(RPC):
             jsonify.encode(self.get_options(d)),
             )
 
-class JobActionWidget(RecipeTaskActionWidget):
+class JobActionWidget(CompoundWidget):
     template = 'bkr.server.templates.job_action'
-    params = ['redirect_to']
-    action = url('/jobs/delete_job_from_ui')
-    javascript = [LocalJSLink('bkr', '/static/javascript/job_delete.js'),
-        LocalJSLink('bkr', '/static/javascript/util.js'),
-        LocalJSLink('bkr', '/static/javascript/job_row_delete.js')]
+    params = ['redirect_to', 'job_delete_attrs']
+    member_widgets = ['delete_link']
+    javascript = [LocalJSLink('bkr', '/static/javascript/job_row_delete.js')]
+    delete_link = DeleteLinkWidgetAJAX()
 
-    def __init__(self, *args, **kw):
-        super(JobActionWidget, self).__init__(*args, **kw)
-
-    def display(self, task, action=None, **params): 
+    def display(self, task, **params):
         t_id = task.t_id
-        job_details={'id': 'delete_%s' % t_id,
-            't_id' : t_id}
+        job_details = {'id': 'delete_%s' % t_id,
+                       't_id' : t_id,
+                       'class' : 'list'}
         params['job_details'] = job_details
         if 'export' not in params:
             params['export'] = None
-        if action:
-            params['action'] = action
+
+        job_data = {'t_id' : params['job_details'].get('t_id')}
+        params['job_delete_attrs'] = {'data' : job_data,
+                                      'action_text' : 'Delete',
+                                      'action' : params['delete_action'],
+                                      'callback' : 'job_delete_success',
+                                      'attrs' : {'class' : 'list job-action'} }
         return super(JobActionWidget, self).display(task, **params)
 
-    def update_params(self, d):
-        super(JobActionWidget, self).update_params(d)
-        d['job_details']['onclick'] = "JobDelete('%s',%s, %s)" % (
-            d.get('action'),
-            jsonify.encode({'t_id': d['job_details'].get('t_id')}),
-            jsonify.encode(self.get_options(d)),
-            )
 
 class JobPageActionWidget(JobActionWidget):
     params = []
-    javascript = [LocalJSLink('bkr', '/static/javascript/job_delete.js'),
-        LocalJSLink('bkr', '/static/javascript/util.js'),
-        LocalJSLink('bkr', '/static/javascript/job_page_delete.js')]
+    javascript = [LocalJSLink('bkr', '/static/javascript/job_page_delete.js'),
+        LocalJSLink('bkr', '/static/javascript/util.js')]
+    delete_link = DeleteLinkWidgetForm()
 
-    def __init__(self, *args, **kw):
-        super(JobPageActionWidget, self).__init__(*args, **kw)
+    def update_params(self, d):
+        super(JobPageActionWidget, self).update_params(d)
+        value = {'t_id' : d['job_details'].get('t_id') }
+        d['job_delete_attrs'] = { 'value' : value,
+                                  'action_text' : 'Delete',
+                                  'attrs' : { 'class' : 'list' },
+                                  'action' : d['job_delete_attrs'].get('action') }
+
 
 class DistroTreeInstallOptionsWidget(Widget):
     template = 'bkr.server.templates.distrotree_install_options'

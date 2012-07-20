@@ -128,7 +128,7 @@
    <td class="title"><b>Progress</b></td>
    <td class="value">${job.progress_bar}</td>
    <td class="title" rowspan="2"><b>Action(s)</b></td>
-   <td class="value" rowspan="2">${action_widget(task=job, redirect_to=redirect_job_delete, export=tg.url("/to_xml?taskid=%s" % job.t_id))}</td>
+   <td class="value" rowspan="2">${action_widget(job, delete_action=delete_action, export=tg.url("/to_xml?taskid=%s" % job.t_id))}</td>
   </tr>
   <tr>
    <td class="title"><b>CC</b></td>
@@ -136,7 +136,7 @@
   </tr>
   <tr>
    <td class="title"><b>Whiteboard</b></td>
-   <td class="value" colspan="3" style="vertical-align: top;">${whiteboard_widget(value=job.whiteboard, job_id=job.id, readonly=not job.can_admin(tg.identity.user))}</td>
+   <td class="value" colspan="3" style="vertical-align: top; white-space: normal;">${whiteboard_widget(value=job.whiteboard, job_id=job.id, readonly=not job.can_admin(tg.identity.user))}</td>
   </tr> 
   <tr>
   <td class="title"><b>Retention Tag</b></td>

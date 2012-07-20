@@ -1,29 +1,3 @@
-$(document).ready(function() {
-    $("a[id^='delete_note_']").click(function() {
-        var element_id = $(this).attr('id')
-        var id_regex = /delete_note_(\d+)/
-        var id = element_id.replace(id_regex, "$1")
-        var callback = on_complete(id)
-        do_and_confirm('../delete_note',{'id':id}, callback, undefined, 'delete')
-    });
-
-});
-
-function on_complete (element_id) {
-
-    return function(success) {
-        if (!success) {
-            note_delete_failure()
-        } else {
-            note_delete_success(element_id)
-        }
-    }
-}
-
-function note_delete_failure () {
-    failure('Could not delete note please contact your administrator')
-}
-
 function note_delete_success(id) {
 
     //Test to see if we are currently showing deleted notes
@@ -48,7 +22,6 @@ function note_delete_success(id) {
     }
     $('#delete_note_' + id).remove();
 }
-
 
 function toggle_deleted_notes() {
     $("tbody[id^='note_deleted']").toggle()

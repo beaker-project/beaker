@@ -305,7 +305,7 @@ class Tasks(RPCRoot):
             tasks = tasks.filter(RecipeTask.result == kw['result'])
         if kw.get('osmajor_id'):
             tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree,
-                    DistoTree.distro, Distro.osversion, OSVersion.osmajor)\
+                    DistroTree.distro, Distro.osversion, OSVersion.osmajor)\
                     .filter(OSMajor.id == kw.get('osmajor_id'))
         if kw.get('whiteboard'):
             tasks = tasks.join(['recipe']).filter(Recipe.whiteboard==kw.get('whiteboard'))

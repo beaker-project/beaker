@@ -4,6 +4,7 @@ import os, os.path
 import errno
 import logging
 import time
+import random
 import signal
 from optparse import OptionParser
 import pkg_resources
@@ -59,6 +60,12 @@ class CommandQueuePoller(ProxyHelper):
             predecessors = [self.greenlets[c['id']]
                     for c in self.commands.itervalues()
                     if c['fqdn'] == command['fqdn']]
+            if 'power' in command and command['power'].get('address'):
+                # Also wait for other commands running against the same power address
+                predecessors.extend(self.greenlets[c['id']]
+                        for c in self.commands.itervalues()
+                        if 'power' in c and c['power'].get('address')
+                            == command['power']['address'])
             self.commands[command['id']] = command
             self.greenlets[command['id']] = gevent.spawn(self.handle, command, predecessors)
 
@@ -82,6 +89,8 @@ class CommandQueuePoller(ProxyHelper):
             elif command['action'] == u'reboot':
                 handle_power(dict(command.items() + [('action', u'off')]))
                 handle_power(dict(command.items() + [('action', u'on')]))
+            elif command['action'] == u'clear_logs':
+                handle_clear_logs(self.conf, command)
             elif command['action'] == u'configure_netboot':
                 handle_configure_netboot(command)
             elif command['action'] == u'clear_netboot':
@@ -114,6 +123,17 @@ def build_power_env(command):
     env['power_pass'] = (command['power'].get('passwd') or u'').encode('utf8')
     env['power_mode'] = command['action'].encode('utf8')
     return env
+
+def handle_clear_logs(conf, command):
+    console_log = os.path.join(conf['CONSOLE_LOGS'], command['fqdn'])
+    logger.debug('Truncating console log %s', console_log)
+    try:
+        f = open(console_log, 'r+')
+    except IOError, e:
+        if e.errno != errno.ENOENT:
+            raise
+    else:
+        f.truncate()
 
 def handle_configure_netboot(command):
     netboot.fetch_images(command['netboot']['distro_tree_id'],
@@ -154,6 +174,16 @@ def handle_power(command):
     # We try the command up to 5 times, because some power commands
     # are flakey (apparently)...
     for attempt in range(1, 6):
+        if attempt > 1:
+            # After the first attempt fails we do a randomised exponential
+            # backoff in the style of Ethernet.
+            # Instead of just doing time.sleep we do a timed wait on
+            # shutting_down, so that our delay doesn't hold up the shutdown.
+            delay = random.uniform(attempt, 2**attempt)
+            logger.debug('Backing off %0.3f seconds for power command %s',
+                    delay, command['id'])
+            if shutting_down.wait(timeout=delay):
+                break
         logger.debug('Launching power script %s (attempt %s) with env %r',
                 script, attempt, env)
         # N.B. the timeout value used here affects daemon shutdown time,

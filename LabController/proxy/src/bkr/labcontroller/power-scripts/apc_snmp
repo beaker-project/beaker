@@ -1,3 +1,3 @@
 #!/bin/sh
 set -e
-fence_apc_snmp -a "$power_address" -n "$power_id" -o "$power_mode"
+fence_apc_snmp -v -a "$power_address" -n "$power_id" -o "$power_mode"

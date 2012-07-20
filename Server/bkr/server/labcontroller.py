@@ -37,7 +37,7 @@ class LabControllers(RPCRoot):
     labcontroller_form = LabControllerForm()
 
     @identity.require(identity.in_group("admin"))
-    @expose(template='bkr.server.templates.form')
+    @expose(template='bkr.server.templates.form-post')
     def new(self, **kw):
         return dict(
             form = self.labcontroller_form,
@@ -47,13 +47,19 @@ class LabControllers(RPCRoot):
         )
 
     @identity.require(identity.in_group("admin"))
-    @expose(template='bkr.server.templates.form')
+    @expose(template='bkr.server.templates.form-post')
     def edit(self, id, **kw):
-        labcontroller = LabController.by_id(id)
+        options = {}
+        if id:
+            labcontroller = LabController.by_id(id)
+            options.update({'user' : labcontroller.user})
+        else:
+            labcontroller=None
+
         return dict(
             form = self.labcontroller_form,
             action = './save',
-            options = {'user': labcontroller.user},
+            options = options,
             value = labcontroller,
         )
 
@@ -66,7 +72,11 @@ class LabControllers(RPCRoot):
             labcontroller = LabController.by_id(kw['id'])
         else:
             labcontroller =  LabController()
-        labcontroller.fqdn = kw['fqdn']
+        if labcontroller.fqdn != kw['fqdn']:
+            activity = LabControllerActivity(identity.current.user,
+                'WEBUI', 'Changed', 'FQDN', labcontroller.fqdn, kw['fqdn'])
+            labcontroller.fqdn = kw['fqdn']
+            labcontroller.write_activity.append(activity)
 
         # labcontroller.user is used by the lab controller to login here
         try:
@@ -76,28 +86,31 @@ class LabControllers(RPCRoot):
             # Nope, create from scratch
             luser = User()
         if labcontroller.user != luser:
+            if labcontroller.user is None:
+                old_user_name = None
+            else:
+                old_user_name = labcontroller.user.user_name
+            activity = LabControllerActivity(identity.current.user, 'WEBUI',
+                'Changed', 'User', old_user_name, unicode(kw['lusername']))
             labcontroller.user = luser
+            labcontroller.write_activity.append(activity)
 
         # Make sure user is a member of lab_controller group
         group = Group.by_name(u'lab_controller')
         if group not in luser.groups:
             luser.groups.append(group)
-        # Verify email address is unique.
-        try:
-            ouser = User.by_email_address(kw['email'])
-        except InvalidRequestError:
-            ouser = None
-        if ouser and ouser != luser:
-            session.rollback()
-            flash( _(u"%s not saved, Duplicate email address" % labcontroller.fqdn) )
-            redirect(".")
-        
         luser.display_name = kw['fqdn']
         luser.email_address = kw['email']
         luser.user_name = kw['lusername']
+
         if kw['lpassword']:
             luser.password = kw['lpassword']
-        labcontroller.disabled = kw['disabled']
+        if labcontroller.disabled != kw['disabled']:
+            activity = LabControllerActivity(identity.current.user, 'WEBUI',
+                'Changed', 'Disabled', unicode(labcontroller.disabled), 
+                unicode(kw['disabled']))
+            labcontroller.disabled = kw['disabled']
+            labcontroller.write_activity.append(activity)
 
         flash( _(u"%s saved" % labcontroller.fqdn) )
         redirect(".")
@@ -251,7 +264,8 @@ class LabControllers(RPCRoot):
                     'passwd': cmd.system.power.power_passwd,
                 }
             elif cmd.action == u'configure_netboot':
-                distro_tree_url = cmd.distro_tree.url_in_lab(lab_controller, 'http')
+                distro_tree_url = cmd.distro_tree.url_in_lab(lab_controller,
+                        scheme=['http', 'ftp'])
                 if not distro_tree_url:
                     cmd.abort(u'No usable URL found for distro tree %s in lab %s'
                             % (cmd.distro_tree.id, lab_controller.fqdn))
@@ -420,6 +434,13 @@ class LabControllers(RPCRoot):
         labcontroller = LabController.by_id(id)
         labcontroller.removed = None
         labcontroller.disabled = False
+
+        LabControllerActivity(identity.current.user, 'WEBUI', 
+            'Changed', 'Disabled', unicode(True), unicode(False),
+            lab_controller_id = id)
+        LabControllerActivity(identity.current.user, 'WEBUI', 
+            'Changed', 'Removed', unicode(True), unicode(False), 
+            lab_controller_id=id)
         flash('Succesfully re-added %s' % labcontroller.fqdn)
         redirect(url('.'))
 
@@ -438,6 +459,11 @@ class LabControllers(RPCRoot):
         try:
             labcontroller = LabController.by_id(id)
             labcontroller.removed = datetime.utcnow()
+            systems = System.query.filter_by(lab_controller_id=id).values(System.id)
+            for system_id in systems:
+                sys_activity = SystemActivity(identity.current.user, 'WEBUI', \
+                    'Changed', 'lab_controller', labcontroller.fqdn,
+                    None, system_id=system_id[0])
             system_table.update().where(system_table.c.lab_controller_id == id).\
                 values(lab_controller_id=None).execute()
             watchdogs = Watchdog.by_status(labcontroller=labcontroller, 
@@ -452,9 +478,15 @@ class LabControllers(RPCRoot):
                         new_value=None))
                 session.delete(lca)
             labcontroller.disabled = True
+            LabControllerActivity(identity.current.user, 'WEBUI', 
+                'Changed', 'Disabled', unicode(False), unicode(True), 
+                lab_controller_id=id)
+            LabControllerActivity(identity.current.user, 'WEBUI', 
+                'Changed', 'Removed', unicode(False), unicode(True), 
+                lab_controller_id=id)
             session.commit()
         finally:
             session.close()
 
-        flash( _(u"%s Removed") % labcontroller.fqdn )
+        flash( _(u"%s removed") % labcontroller.fqdn )
         raise redirect(".")

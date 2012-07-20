@@ -25,11 +25,11 @@ class DistroViewTest(SeleniumTestCase):
         sel = self.selenium
         go_to_distro_view(sel, self.distro)
         sel.type('tags_tag_text', 'HAPPY')
-        sel.click('//form[@name="tags"]//a[text()="Add ( + )"]')
+        sel.click('//a[text()="Add ( + )"]')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'Added Tag HAPPY')
         self.assert_(sel.is_element_present(
-                '//form[@name="tags"]//td[normalize-space(text())="HAPPY"]'))
+                '//td[normalize-space(text())="HAPPY"]'))
 
     def test_can_remove_tag_from_distro(self):
         self.login(data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)
@@ -38,7 +38,9 @@ class DistroViewTest(SeleniumTestCase):
         sel.click( # delete link inside cell beside "SAD" cell
                 '//table[@class="list"]//td'
                 '[normalize-space(preceding-sibling::td[1]/text())="SAD"]'
-                '/a[text()="Delete ( - )"]')
+                '//a[text()="Delete ( - )"]')
+        self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure")))
+        sel.click("//button[@type='button' and text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'Removed Tag SAD')
         self.assert_(not sel.is_element_present(
@@ -97,7 +99,10 @@ class DistroViewTest(SeleniumTestCase):
         sel.click( # delete link inside cell beside "SAD" cell
                 '//table[@class="list"]//td'
                 '[normalize-space(preceding-sibling::td[1]/text())="SAD"]'
-                '/a[text()="Delete ( - )"]')
+                '//a[text()="Delete ( - )"]')
+
+        self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure")))
+        sel.click("//button[@type='button' and text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'Removed Tag SAD')
         with session.begin():

@@ -1,11 +1,110 @@
 
 import datetime
 from turbogears.database import session
-from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase
-from bkr.inttest import data_setup
+from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase, \
+    WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login, is_activity_row_present
+from bkr.inttest import data_setup, get_server_base
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
         System, SystemStatus, TaskStatus, CommandActivity, CommandStatus
 from bkr.server.tools import beakerd
+from bkr.inttest.server.selenium.test_activity import is_activity_row_present
+from bkr.server.model import LabController
+
+
+class LabControllerViewTest(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+        login(self.browser)
+
+    def tearDown(self):
+        self.browser.quit()
+
+    def _add_lc(self, b, lc_name, lc_email, user_name,):
+        b.get(get_server_base() + 'labcontrollers')
+        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_name('fqdn').send_keys(lc_name)
+        b.find_element_by_name('email').send_keys(lc_email)
+        b.find_element_by_name('lusername').send_keys(user_name)
+        b.find_element_by_id('form').submit()
+
+    def test_lab_controller_add(self):
+        b = self.browser
+        lc_name = data_setup.unique_name('lc%s.com')
+        lc_email = data_setup.unique_name('me@my%s.com')
+        self._add_lc(b, lc_name, lc_email, data_setup.ADMIN_USER)
+        self.assert_('%s saved' % lc_name in
+            b.find_element_by_css_selector('.flash').text)
+
+        # Search in activity
+        b.get(get_server_base() + 'activity/labcontroller')
+        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/"
+            "option[@value='LabController/Name']").click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/"
+            "option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='activitysearch_0_value']"). \
+            send_keys(lc_name)
+        b.find_element_by_xpath("//input[@name='Search']").click()
+
+        self.assert_(is_activity_row_present(b,
+            object_='LabController: %s' % lc_name, via='WEBUI',
+            property_='FQDN', action='Changed', new_value=lc_name))
+        self.assert_(is_activity_row_present(b,
+            object_='LabController: %s' % lc_name, via='WEBUI',
+            property_='User', action='Changed',
+            new_value=data_setup.ADMIN_USER))
+        self.assert_(is_activity_row_present(b,
+            object_='LabController: %s' % lc_name, via='WEBUI',
+            property_='Disabled', action='Changed', new_value='False'))
+
+    def test_lab_controller_remove(self):
+        b = self.browser
+        lc_name = data_setup.unique_name('lc%s.com')
+        lc_email = data_setup.unique_name('me@my%s.com')
+        self._add_lc(b, lc_name, lc_email, data_setup.ADMIN_USER)
+        with session.begin():
+            sys = data_setup.create_system()
+            sys.lab_controller = LabController.by_name(lc_name)
+        b.get(get_server_base() + 'labcontrollers')
+        b.find_element_by_xpath("//table[@id='widget']/tbody/tr/"
+            "td[preceding-sibling::td/a[normalize-space(text())='%s']]"
+            "/a[normalize-space(text())='Remove (-)']" % lc_name).click()
+        self.assert_('%s removed' % lc_name in
+            b.find_element_by_css_selector('.flash').text)
+
+        # Search in  LC activity
+        b.get(get_server_base() + 'activity/labcontroller')
+        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/"
+            "option[@value='LabController/Name']").click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/"
+            "option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='activitysearch_0_value']"). \
+            send_keys(lc_name)
+        b.find_element_by_xpath("//input[@name='Search']").click()
+        self.assert_(is_activity_row_present(b,
+            object_='LabController: %s' % lc_name, via='WEBUI',
+            property_='Disabled', action='Changed', new_value='True'))
+        self.assert_(is_activity_row_present(b,
+            object_='LabController: %s' % lc_name, via='WEBUI',
+            property_='Removed', action='Changed', new_value='True'))
+
+        # Ensure System Actvity has been updated to note removal of LC
+        b.get(get_server_base() + 'activity/system')
+        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/"
+            "option[@value='System/Name']").click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/"
+            "option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='activitysearch_0_value']"). \
+            send_keys(sys.fqdn)
+        b.find_element_by_xpath("//input[@name='Search']").click()
+        self.assert_(is_activity_row_present(b,
+            object_='System: %s' % sys.fqdn, via='WEBUI',
+            property_='lab_controller', action='Changed', new_value=''))
+
 
 class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
 
@@ -265,7 +364,7 @@ class TestPowerFailures(XmlRpcTestCase):
 
         with session.begin():
             job = Job.query.get(job.id)
-            self.assertEqual(job.status, TaskStatus.running)
+            self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
             command = system.command_queue[0]
             self.assertEquals(command.action, 'reboot')
@@ -297,7 +396,7 @@ class TestPowerFailures(XmlRpcTestCase):
 
         with session.begin():
             job = Job.query.get(job.id)
-            self.assertEqual(job.status, TaskStatus.running)
+            self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
             command = system.command_queue[1]
             self.assertEquals(command.action, 'configure_netboot')

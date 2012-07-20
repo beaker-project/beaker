@@ -1,29 +1,9 @@
 from turbogears.database import session
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, is_activity_row_present
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import User, DistroActivity, SystemActivity, \
     GroupActivity
-
-def is_activity_row_present(b, via=u'testdata', object_=None, property_=None,
-        action=None, old_value=None, new_value=None):
-    row_count = len(b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr'))
-    for row in range(1, row_count + 1):
-        if via and via != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[2]' % row).text:
-            continue
-        if object_ and object_ != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[4]' % row).text:
-            continue
-        if property_ and property_ != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[5]' % row).text:
-            continue
-        if action and action != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[6]' % row).text:
-            continue
-        if old_value and old_value != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[7]' % row).text:
-            continue
-        if new_value and new_value != b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[8]' % row).text:
-            continue
-        return True
-    return False
-
 
 class ActivityTestWD(WebDriverTestCase):
 

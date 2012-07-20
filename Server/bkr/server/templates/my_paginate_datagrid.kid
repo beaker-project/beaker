@@ -15,7 +15,7 @@
       <a href="${tg.paginate.href_last}">&gt;&gt;</a>
     </span>
   </div>
-  <table id="${name}" class="list">
+  <table id="${name}" class="list highlight-row">
     <thead py:if="columns" class="list">
       <th py:for="i, col in enumerate(columns)" class="list">
         <a class="head_list" py:if="col.get_option('sortable', False) and getattr(tg, 'paginate', False)"

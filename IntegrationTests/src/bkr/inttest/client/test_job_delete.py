@@ -2,7 +2,7 @@
 import unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
-from bkr.inttest.client import run_client, create_client_config
+from bkr.inttest.client import run_client, create_client_config, ClientError
 
 class JobDeleteTest(unittest.TestCase):
 
@@ -18,3 +18,11 @@ class JobDeleteTest(unittest.TestCase):
                 config=self.client_config)
         self.assert_(out.startswith('Jobs deleted:'), out)
         self.assert_(self.job.t_id in out, out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=595512
+    def test_invalid_taskspec(self):
+        try:
+            run_client(['bkr', 'job-delete', '12345'])
+            fail('should raise')
+        except ClientError, e:
+            self.assert_('Invalid taskspec' in e.stderr_output)

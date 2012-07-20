@@ -3,6 +3,9 @@
     py:extends="'master.kid'">
 <head>
 <meta content="text/html; charset=utf-8" http-equiv="Content-Type" py:replace="''"/>
+<script type='text/javascript' src="${tg.url('/static/javascript/util.js')}" />
+<script type='text/javascript' src="${tg.url('/static/javascript/jquery-ui.js')}" />
+<link rel="stylesheet" type="text/css" href="${tg.url('/static/css/smoothness/jquery-ui.css')}" />
 <title>$title</title>
 </head>
 <body>

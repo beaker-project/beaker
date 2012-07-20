@@ -29,6 +29,8 @@ from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server import search_utility
+from bkr.server.controller_utilities import _custom_status, _custom_result, \
+    restrict_http_method
 import datetime
 import pkg_resources
 import lxml.etree
@@ -122,30 +124,41 @@ class Jobs(RPCRoot):
             value = kw,
         )
 
+    def _check_job_deletability(self, job):
+        if not isinstance(job, Job):
+            raise TypeError('%s is not of type %s' % (t_id, Job.__name__))
+        if not job.can_admin(identity.current.user):
+            raise BeakerException(_(u'You do not have permission to delete %s' % t_id))
+
+    def _delete_job(self, t_id):
+        job = TaskBase.get_by_t_id(t_id)
+        self._check_job_deletability(job)
+        Job.delete_jobs([job])
+        return [t_id]
+
     @expose()
-    def delete_job_from_ui(self, t_id, *args, **kw):
-        to_return = {'t_id' : t_id}
+    @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
+    def delete_job_page(self, t_id):
         try:
             self._delete_job(t_id)
-            to_return['success'] = True
-        except Exception, e:
-            log.exception('Unable to delete t_id:%s' % t_id)
-            to_return['success'] = False
-            to_return['err_msg'] = unicode(e)
-            session.rollback()
-        return to_return
+            flash(_(u'Succesfully deleted %s' % t_id))
+        except (BeakerException, TypeError), e:
+            flash(_(u'Unable to delete %s' % t_id))
+            redirect('.')
+        redirect('./mine')
 
-    def _delete_job(self, t_id, *args, **kw):
-        if not isinstance(t_id,list):
-            t_id = [t_id]
-        jobs_to_try_to_del = []
-        for j_id in t_id:
-            job = TaskBase.get_by_t_id(j_id)
-            if not isinstance(job,Job):
-                raise BeakerException('Incorrect task type passed %s' % t_id )
-            jobs_to_try_to_del.append(job)
-        return Job.delete_jobs(jobs=jobs_to_try_to_del, **kw)
-
+    @expose()
+    @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
+    def delete_job_row(self, t_id):
+        try:
+            self._delete_job(t_id)
+            return [t_id]
+        except (BeakerException, TypeError), e:
+            log.debug(str(e))
+            response.status = 400
+            return ['Unable to delete %s' % t_id]
 
     @cherrypy.expose
     def list(self, tags, days_complete_for, family, product, **kw):
@@ -502,6 +515,50 @@ class Jobs(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
+    def set_retention_product(self, job_t_id, retention_tag_name, product_name):
+        job = TaskBase.get_by_t_id(job_t_id)
+        if job.can_admin(identity.current.user):
+            if retention_tag_name:
+                try:
+                    retention_tag = RetentionTag.by_name(retention_tag_name)
+                except NoResultFound:
+                    raise ValueError('%s is not a valid tag' % retention_tag_name)
+            else:
+                retention_tag = None
+            if product_name:
+                try:
+                    product = Product.by_name(product_name)
+                    product_id = product.id
+                except NoResultFound:
+                    raise ValueError('%s is not a valid product' % product_name)
+            elif product_name == "":
+                product = ProductWidget.product_deselected
+                product_id = product
+            else:
+                product = None
+                product_id = product
+
+            retentiontag_id = getattr(retention_tag, 'id', None)
+            result = Utility.update_task_product(job,
+                retentiontag_id=retentiontag_id, product_id=product_id)
+            if not result['success'] is True:
+                raise BeakerException('Job %s not updated: %s' % (job.id, result.get('msg', 'Unknown reason')))
+
+            if product == ProductWidget.product_deselected and \
+                job.product != None:
+                job.product = None
+            elif product is not None and product != job.product:
+                job.product = product
+
+            if retention_tag is not None and retention_tag != job.retention_tag:
+                job.retention_tag = retention_tag
+
+        else:
+            raise BeakerException('No permission to modify %s' % job)
+
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
     def set_response(self, job_t_id, response):
         job = TaskBase.get_by_t_id(job_t_id)
         try: # See if we are a 'RecipeSet'
@@ -572,7 +629,7 @@ class Jobs(RPCRoot):
  
     def jobs(self,jobs,action='.', title=u'Jobs', *args, **kw):
         jobs = jobs.filter(and_(Job.deleted == None, Job.to_delete == None))
-        jobs_return = self._jobs(jobs,**kw) 
+        jobs_return = self._jobs(jobs, **kw)
         searchvalue = None
         search_options = {}
         if jobs_return:
@@ -582,32 +639,34 @@ class Jobs(RPCRoot):
                 searchvalue = jobs_return['searchvalue']
             if 'simplesearch' in jobs_return:
                 search_options['simplesearch'] = jobs_return['simplesearch']
-         
-        jobs_grid = myPaginateDataGrid(fields=[
-            widgets.PaginateDataGrid.Column(name='id',
-                getter=lambda x:make_link(url = './%s' % x.id, text = x.t_id),
-                title='ID', options=dict(sortable=True)),
-		    widgets.PaginateDataGrid.Column(name='whiteboard',
-                getter=lambda x:x.whiteboard, title='Whiteboard',
-                options=dict(sortable=True)),
-		    widgets.PaginateDataGrid.Column(name='owner',
-                getter=lambda x:x.owner.email_link, title='Owner',
-                options=dict(sortable=True)),
-            widgets.PaginateDataGrid.Column(name='progress',
-                getter=lambda x: x.progress_bar, title='Progress',
-                options=dict(sortable=False)),
-                    widgets.PaginateDataGrid.Column(name='status',
-                getter=lambda x:x.status, title='Status',
-                options=dict(sortable=True)),
-		    widgets.PaginateDataGrid.Column(name='result',
-                getter=lambda x:x.result, title='Result',
-                options=dict(sortable=True)),
-		    widgets.PaginateDataGrid.Column(name='action',
-                getter=lambda x: self.job_list_action_widget.display(task=x, type_='joblist',
-                export=url('/to_xml?taskid=%s' % x.t_id) ,
-                title='Action', options=dict(sortable=False)))])
-
-        
+        PDC = widgets.PaginateDataGrid.Column
+        jobs_grid = myPaginateDataGrid(
+            fields=[
+                PDC(name='id',
+                    getter=lambda x:make_link(url = './%s' % x.id, text = x.t_id),
+                    title='ID', options=dict(sortable=True)),
+                PDC(name='whiteboard',
+                    getter=lambda x:x.whiteboard, title='Whiteboard',
+                    options=dict(sortable=True)),
+                PDC(name='owner',
+                    getter=lambda x:x.owner.email_link, title='Owner',
+                    options=dict(sortable=True)),
+                PDC(name='progress',
+                    getter=lambda x: x.progress_bar, title='Progress',
+                    options=dict(sortable=False)),
+                PDC(name='status',
+                    getter= _custom_status, title='Status',
+                    options=dict(sortable=True)),
+                PDC(name='result',
+                    getter=_custom_result, title='Result',
+                    options=dict(sortable=True)),
+                PDC(name='action',
+                    getter=lambda x: \
+                        self.job_list_action_widget.display(
+                        task=x, type_='joblist',
+                        delete_action=url('/jobs/delete_job_row'),
+                        export=url('/to_xml?taskid=%s' % x.t_id),
+                        title='Action', options=dict(sortable=False)))])
 
         search_bar = SearchBar(name='jobsearch',
                            label=_(u'Job Search'),    
@@ -674,6 +733,7 @@ class Jobs(RPCRoot):
     @identity.require(identity.not_anonymous())
     @expose(format='json')
     def update(self, id, **kw):
+        # XXX Thus function is awkward and needs to be cleaned up.
         try:
             job = Job.by_id(id)
         except InvalidRequestError:
@@ -693,7 +753,7 @@ class Jobs(RPCRoot):
             retention_tag_id = kw.get('retention_tag_id')
             product_id = kw.get('product_id')
             #update_task_product should also ensure that our id's are valid
-            returns.update(Utility.update_task_product(id,retention_tag_id,product_id))
+            returns.update(Utility.update_task_product(job,retention_tag_id,product_id))
             if returns['success'] is False:
                 return returns
         #kw should be santised and correct by the time it gets here
@@ -736,7 +796,6 @@ class Jobs(RPCRoot):
                                widgets.DataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New value', options=dict(sortable=True)),])
 
         return_dict = dict(title = 'Job',
-                           redirect_job_delete = '/jobs/mine',
                            recipeset_widget = self.recipeset_widget,
                            recipe_widget = self.recipe_widget,
                            hidden_id = widgets.HiddenField(name='job_id',value=job.id),
@@ -744,12 +803,10 @@ class Jobs(RPCRoot):
                            job_history_grid = job_history_grid,
                            whiteboard_widget = self.whiteboard_widget,
                            action_widget = self.job_page_action_widget,
+                           delete_action = url('delete_job_page'),
                            job = job,
                            product_widget = self.product_widget,
                            retention_tag_widget = self.retention_tag_widget,
-                           #priorities = TaskPriority.query().all(), Don't think this is used?
-                           #retentiontags = RetentionTag.query().all(),  Don't think this is used?
-                           #priority_widget = self.priority_widget, Don't think this is used?
                           )
         return return_dict
 

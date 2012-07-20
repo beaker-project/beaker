@@ -2,7 +2,7 @@
 import unittest
 from turbogears.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import start_client
+from bkr.inttest.client import start_client, run_client, ClientError
 import time
 from nose.plugins.skip import SkipTest
 
@@ -20,3 +20,11 @@ class JobWatchTest(unittest.TestCase):
         self.assert_(out.startswith('Watching tasks'), out)
         self.assert_('New: 1 [total: 1]' in out, out)
         self.assert_('Completed: 1 [total: 1]' in out, out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=595512
+    def test_invalid_taskspec(self):
+        try:
+            run_client(['bkr', 'job-watch', '12345'])
+            fail('should raise')
+        except ClientError, e:
+            self.assert_('Invalid taskspec' in e.stderr_output)

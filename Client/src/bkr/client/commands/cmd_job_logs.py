@@ -60,6 +60,8 @@ class Job_Logs(BeakerCommand):
 
 
     def run(self, *args, **kwargs):
+        self.check_taskspec_args(args, permitted_types=['J', 'RS', 'R'])
+
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
 

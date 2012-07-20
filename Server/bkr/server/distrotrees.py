@@ -5,14 +5,14 @@ from kid import Element
 from sqlalchemy.sql import exists
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears import expose, flash, redirect, paginate, identity, widgets
+from turbogears import expose, flash, redirect, paginate, identity, widgets, url
 from bkr.server.model import session, DistroTree, Distro, OSVersion, OSMajor, \
         LabController, LabControllerDistroTree, DistroTreeActivity, \
         distro_tree_lab_controller_map, lab_controller_table, Arch, DistroTag
 from bkr.server.widgets import TaskSearchForm, myPaginateDataGrid, SearchBar, \
-        DistroTreeInstallOptionsWidget
+        DistroTreeInstallOptionsWidget, DeleteLinkWidgetForm
 from bkr.server.helpers import make_link
-from bkr.server.controller_utilities import Utility
+from bkr.server.controller_utilities import Utility, restrict_http_method
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server import search_utility
 
@@ -21,6 +21,7 @@ __all__ = ['DistroTrees']
 class DistroTrees(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
+    delete_link = DeleteLinkWidgetForm()
 
     @expose(template='bkr.server.templates.grid')
     @paginate('list', default_order='-date_created', limit=50)
@@ -66,6 +67,7 @@ class DistroTrees(RPCRoot):
                 table=search_utility.DistroTree.search.create_search_table(),
                 search_controller=None,
                 complete_data=search_utility.DistroTree.search.create_complete_search_table(),
+                date_picker=['created'],
                 )
 
         return dict(title=u'Distro Trees',
@@ -108,9 +110,42 @@ class DistroTrees(RPCRoot):
                     tabber=widgets.Tabber(use_cookie=True),
                     install_options_widget=DistroTreeInstallOptionsWidget(),
                     form_task=form_task,
+                    delete_link=self.delete_link,
                     lab_controllers=lab_controllers,
                     lab_controller_assocs=lab_controller_assocs,
                     readonly=not is_admin)
+
+    @expose(content_type='text/plain')
+    def yum_config(self, distro_tree_id, *args, **kwargs):
+        # Ignore positional args, so that we can make nice URLs like
+        # /distrotrees/yum_config/12345/RHEL-6.2-Server-i386.repo
+        try:
+            distro_tree = DistroTree.by_id(int(distro_tree_id))
+        except (ValueError, NoResultFound):
+            raise cherrypy.NotFound(distro_tree_id)
+        if not kwargs.get('lab'):
+            lc = distro_tree.lab_controller_assocs[0].lab_controller
+        else:
+            try:
+                lc = LabController.by_name(kwargs['lab'])
+            except NoResultFound:
+                raise cherrypy.HTTPError(status=400,
+                        message='No such lab controller %r' % kwargs['lab'])
+        base = distro_tree.url_in_lab(lc, scheme='http')
+        if not base:
+            raise cherrypy.HTTPError(status=404,
+                    message='%s is not present in lab %s' % (distro_tree, lc))
+        if not distro_tree.repos:
+            return '# No repos for %s' % distro_tree
+        sections = []
+        for repo in distro_tree.repos:
+            sections.append('''[%s]
+name=%s
+baseurl=%s
+enabled=1
+gpgcheck=0
+''' % (repo.repo_id, repo.repo_id, urlparse.urljoin(base, repo.path)))
+        return '\n'.join(sections)
 
     @expose()
     @identity.require(identity.in_group('admin'))
@@ -137,14 +172,17 @@ class DistroTrees(RPCRoot):
         flash(_(u'Added %s %s') % (lab_controller, url))
         redirect(str(distro_tree.id))
 
+
     @expose()
     @identity.require(identity.in_group('admin'))
+    @restrict_http_method('post')
     def lab_controller_remove(self, id):
         try:
             lca = LabControllerDistroTree.by_id(id)
         except NoResultFound:
             flash(_(u'Invalid lab_controller_assoc id %s') % id)
             redirect('.')
+
         session.delete(lca)
         lca.distro_tree.activity.append(DistroTreeActivity(
                 user=identity.current.user, service=u'WEBUI',

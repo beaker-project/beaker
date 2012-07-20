@@ -32,11 +32,11 @@
                             </listitem>
                           </itemizedlist>
                         </para>
-                        <para>The variable HOSTNAME can be used by runtest.sh to determine its identity. It is set by beaker-environment.sh, and will be unique for each host within a recipeset. 
+                        <para>The variable HOSTNAME can be used by runtest.sh to determine its identity. It is set by rhts-environment.sh, and will be unique for each host within a recipeset. 
                         </para>
                         <para>Your test can thus decide whether it is a client, server or driver by investigating these variables: see the example below. 
                         </para>
-                        <para>When you are developing your test outside the lab environment, only HOSTNAME is set for you (when sourcing the beaker-environment.sh script). Typically you will copy your test to multiple development machines, set up CLIENTS, SERVERS and DRIVER manually within a shell on each machine, and then manually run the runtest.sh on each one, debugging as necessary. 
+                        <para>When you are developing your test outside the lab environment, only HOSTNAME is set for you (when sourcing the rhts-environment.sh script). Typically you will copy your test to multiple development machines, set up CLIENTS, SERVERS and DRIVER manually within a shell on each machine, and then manually run the runtest.sh on each one, debugging as necessary. 
                         </para>
                         <para>A multihost test needs to be marked as such in the<emphasis> Type: Multihost</emphasis>. 
                         </para>

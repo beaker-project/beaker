@@ -384,6 +384,11 @@ table.list {
     width: 100%;
 }
 
+table.highlight-row tr:hover {
+    background: #FFFF99;
+}
+
+
 th.list {
     padding-left: 25px;
     padding-top: 5px;
@@ -453,18 +458,25 @@ div.recipe {
 div.dd { 
    /*position: relative; /* IE is dumb */
     display: block;                 
-    float: left;     
     width: 100px; 
-    height: 16px; 
+    height: 4px; 
     margin: 0 0 2px; 
     background: #fff; 
-    border: 1px solid #333;
+}
+
+tr.even div.dd { 
+    background: #f1f1f1; 
+}
+
+div.progressPercentage {
+    width: 100px;
+    text-align: center;
 }
 
 div.dd div.green { 
     /*position: relative; */
     background: #0f0; 
-    height: 16px; 
+    height: 4px; 
     width: 75%; 
     text-align:right; 
     display:block;
@@ -474,7 +486,7 @@ div.dd div.green {
 div.dd div.orange { 
     /*position: relative; */
     background: #F88017; 
-    height: 16px; 
+    height: 4px; 
     width: 75%; 
     text-align:right; 
     display:block;
@@ -484,7 +496,7 @@ div.dd div.orange {
 div.dd div.red { 
     /*position: relative; */
     background: #f00; 
-    height: 16px; 
+    height: 4px; 
     width: 75%; 
     text-align:right; 
     display:block;
@@ -494,7 +506,7 @@ div.dd div.red {
 div.dd div.blue { 
     /*position: relative; */
     background: #00f; 
-    height: 16px; 
+    height: 4px; 
     width: 75%; 
     text-align:right; 
     display:block;
@@ -696,6 +708,20 @@ body { font-family:Arial, Helvetica, Sans-Serif; font-size:12px; margin:0px 20px
 #menu .corner_right { position:absolute; left:132px; top:0px;}
 #menu .middle { position:absolute; left:18px; height: 20px; width: 115px; top:0px;}
 
+.job-action {
+  display: block;
+}
+
+td.list .job-action-container {
+  white-space: nowrap;
+  margin-right: 1em;
+}
+
+td.list .job-action {
+  display: inline;
+  margin-left: 0.5em;
+}
+
 .ackpanel {
     list-style-type:none;
     float:left;
@@ -733,3 +759,9 @@ warn {
     color: red;
     font-weight: bold;
 }
+
+.statusCompleted, .resultPassed { color: green; }
+.statusAborted, .resultFail { color: red; }
+.statusCancelled, .resultWarn { color: goldenrod; }
+.statusRunning { color: blue; }
+

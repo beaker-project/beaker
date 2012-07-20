@@ -371,7 +371,7 @@ cpu_flag_table = Table('cpu_flag', metadata,
            nullable=False, primary_key=True),
     Column('cpu_id', Integer, ForeignKey('cpu.id',
            onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('flag', String(10)),
+    Column('flag', String(255)),
     mysql_engine='InnoDB',
 )
 
@@ -703,6 +703,13 @@ system_activity_table = Table('system_activity', metadata,
     mysql_engine='InnoDB',
 )
 
+lab_controller_activity_table = Table('lab_controller_activity', metadata,
+    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
+    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id'),
+        nullable=False),
+    mysql_engine='InnoDB',
+)
+
 recipeset_activity_table = Table('recipeset_activity', metadata,
     Column('id', Integer,ForeignKey('activity.id'), primary_key=True),
     Column('recipeset_id', Integer, ForeignKey('recipe_set.id')),
@@ -711,7 +718,8 @@ recipeset_activity_table = Table('recipeset_activity', metadata,
 
 group_activity_table = Table('group_activity', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
-    Column('group_id', Integer, ForeignKey('tg_group.group_id')),
+    Column('group_id', Integer, ForeignKey('tg_group.group_id'),
+        nullable=False),
     mysql_engine='InnoDB',
 )
 
@@ -1458,6 +1466,16 @@ class User(MappedObject):
                 return True
         return False
 
+    def has_permission(self, requested_permission):
+        """ Check if user has requested permission """
+        try:
+            permission = Permission.by_name(requested_permission)
+        except NoResultFound:
+            permission = None
+        if permission in self.permissions:
+            return True
+        return False
+
 
 class Permission(MappedObject):
     """
@@ -1625,7 +1643,8 @@ class System(SystemObject):
                 user = None
 
         if user:
-            if not user.is_admin():
+            if not user.is_admin() and \
+               not user.has_permission(u'secret_visible'):
                 query = query.filter(
                             or_(System.private==False,
                                 System.groups.any(Group.users.contains(user)),
@@ -2172,17 +2191,25 @@ class System(SystemObject):
                 self.action_power(action=u'on', service=service)
             elif self.release_action == ReleaseAction.reprovision:
                 if self.reprovision_distro_tree:
-                    from bkr.server.kickstart import generate_kickstart
-                    install_options = self.install_options(self.reprovision_distro_tree)
-                    if 'ks' not in install_options.kernel_options:
-                        rendered_kickstart = generate_kickstart(install_options,
-                                distro_tree=self.reprovision_distro_tree,
-                                system=self, user=self.owner)
-                        install_options.kernel_options['ks'] = rendered_kickstart.link
-                    self.configure_netboot(self.reprovision_distro_tree,
-                            install_options.kernel_options_str,
-                            service=service)
-                    self.action_power(action=u'reboot', service=service)
+                    # There are plenty of things that can go wrong here if the 
+                    # system or distro tree is misconfigured. But we don't want 
+                    # that to prevent the recipe from being stopped, so we log 
+                    # and ignore any errors.
+                    try:
+                        from bkr.server.kickstart import generate_kickstart
+                        install_options = self.install_options(self.reprovision_distro_tree)
+                        if 'ks' not in install_options.kernel_options:
+                            rendered_kickstart = generate_kickstart(install_options,
+                                    distro_tree=self.reprovision_distro_tree,
+                                    system=self, user=self.owner)
+                            install_options.kernel_options['ks'] = rendered_kickstart.link
+                        self.configure_netboot(self.reprovision_distro_tree,
+                                install_options.kernel_options_str,
+                                service=service)
+                        self.action_power(action=u'reboot', service=service)
+                    except Exception:
+                        log.exception('Failed to re-provision %s on %s, ignoring',
+                                self.reprovision_distro_tree, self)
             else:
                 raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
         # Default is to power off, if we can
@@ -2196,6 +2223,9 @@ class System(SystemObject):
         except Exception:
             user = None
         if self.lab_controller:
+            self.command_queue.append(CommandActivity(user=user,
+                    service=service, action=u'clear_logs',
+                    status=CommandStatus.queued, callback=callback))
             command = CommandActivity(user=user,
                     service=service, action=u'configure_netboot',
                     status=CommandStatus.queued, callback=callback)
@@ -2919,22 +2949,34 @@ class DistroTree(MappedObject):
         return '%s(distro=%r, variant=%r, arch=%r)' % (
                 self.__class__.__name__, self.distro, self.variant, self.arch)
 
-    def url_in_lab(self, lab_controller, scheme=None):
-        # If scheme isn't given, we can use our own judgment. NFS is good.
-        if scheme is None:
-            urls = [lca.url for lca in self.lab_controller_assocs
-                    if lca.lab_controller == lab_controller]
-            if not urls:
-                return None
-            schemes = ['nfs', 'http', 'ftp']
-            return sorted(urls, key=lambda url: schemes.index(urlparse.urlparse(url).scheme))[0]
+    def url_in_lab(self, lab_controller, scheme=None, required=False):
+        """
+        Returns an absolute URL for this distro tree in the given lab.
+
+        If *scheme* is a string, the URL returned will use that scheme. Callers 
+        can also pass a list of allowed schemes in order of preference; the URL 
+        returned will use one of them. If *scheme* is None or absent, any 
+        scheme will be used.
+
+        If the *required* argument is false or absent, then None will be 
+        returned if this distro tree is not in the given lab. If *required* is 
+        true, then an exception will be raised.
+        """
+        if isinstance(scheme, basestring):
+            scheme = [scheme]
+        urls = [lca.url for lca in self.lab_controller_assocs
+                if lca.lab_controller == lab_controller]
+        if scheme is not None:
+            urls = [url for url in urls if urlparse.urlparse(url).scheme in scheme]
+            scheme_order = scheme
         else:
-            urls = [lca.url for lca in self.lab_controller_assocs
-                    if lca.lab_controller == lab_controller
-                    and lca.url.startswith('%s:' % scheme)]
-            if not urls:
+            scheme_order = ['nfs', 'http', 'ftp']
+        if not urls:
+            if required:
+                raise ValueError('No usable URL found for %r in %r' % (self, lab_controller))
+            else:
                 return None
-            return urls[0]
+        return sorted(urls, key=lambda url: scheme_order.index(urlparse.urlparse(url).scheme))[0]
 
     def repo_by_id(self, repoid):
         for repo in self.repos:
@@ -3028,6 +3070,11 @@ class Activity(MappedObject):
 
     def object_name(self):
         return None
+
+
+class LabControllerActivity(Activity):
+    def object_name(self):
+        return 'LabController: %s' % self.object.fqdn
 
 
 class SystemActivity(Activity):
@@ -3377,8 +3424,15 @@ class TaskBase(MappedObject):
         div.append(Element('div', {'class': 'orange', 'style': 'width:%s%%' % wwidth}))
         div.append(Element('div', {'class': 'red', 'style': 'width:%s%%' % fwidth}))
         div.append(Element('div', {'class': 'blue', 'style': 'width:%s%%' % kwidth}))
-        div.tail = "%s%%" % percentCompleted
-        return div
+
+        percents = Element('div', {'class': 'progressPercentage'})
+        percents.text = "%s%%" % percentCompleted
+
+        span = Element('span')
+        span.append(percents)
+        span.append(div)
+
+        return span
     progress_bar = property(progress_bar)
     
     def access_rights(self,user):
@@ -3689,12 +3743,7 @@ class Job(TaskBase):
         valid_jobs = []
         if jobs:
             for j in jobs:
-                try:
-                    user = identity.current.user
-                    is_owner = user == j.owner
-                except AttributeError, e: #not logged in
-                    is_owner = False
-                if j.is_finished() and not j.counts_as_deleted() and is_owner:
+                if j.is_finished() and not j.counts_as_deleted():
                     valid_jobs.append(j)
             return valid_jobs
         elif query:
@@ -4094,7 +4143,7 @@ class RecipeSet(TaskBase):
             self.nacked.response = Response.by_response(response)
 
     def is_owner(self,user):
-        if self.job.owner == user:
+        if self.owner == user:
             return True
         return False
 
@@ -4103,6 +4152,10 @@ class RecipeSet(TaskBase):
         return a tuple of strings containing the Recipes RS and J
         """
         return (self.job.t_id,)
+
+    def owner(self):
+        return self.job.owner
+    owner = property(owner)
 
     def to_xml(self, clone=False, from_job=True, *args, **kw):
         recipeSet = xmldoc.createElement("recipeSet")
@@ -4372,6 +4425,10 @@ class Recipe(TaskBase):
             if rt_log:
                 logs_to_return.extend(rt_log)
         return logs_to_return
+
+    def owner(self):
+        return self.recipeset.job.owner
+    owner = property(owner)
 
     def delete(self):
         """
@@ -4935,8 +4992,8 @@ class Recipe(TaskBase):
         """
         A class method that can be used to search for Jobs that belong to a user
         """
-        return cls.query.join(Recipe.recipeset, RecipeSet.job, Job.owner)\
-                .filter(Job.owner == owner)
+        return cls.query.filter(Recipe.recipeset.has(
+                RecipeSet.job.has(Job.owner == owner)))
 
 
 class RecipeRoleListAdapter(object):
@@ -5330,6 +5387,10 @@ class RecipeTask(TaskBase):
         self._change_status(TaskStatus.completed)
         self.update_status()
         return True
+
+    def owner(self):
+        return self.recipe.recipeset.job.owner
+    owner = property(owner)
 
     def cancel(self, msg=None):
         """
@@ -5991,7 +6052,7 @@ System.mapper = mapper(System, system_table,
                                                 backref='system'),
                      'activity':relation(SystemActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
-                        backref='object', cascade='all, delete, delete-orphan'),
+                        backref='object', cascade='all, delete'),
                      'dyn_activity': dynamic_loader(SystemActivity,
                         order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()]),
                      'command_queue':relation(CommandActivity,
@@ -6074,12 +6135,16 @@ mapper(SerialType, serial_type_table)
 mapper(Install, install_table)
 
 mapper(LabControllerDistroTree, distro_tree_lab_controller_map)
-
 mapper(LabController, lab_controller_table,
         properties = {'_distro_trees': relation(LabControllerDistroTree,
                         backref='lab_controller', cascade='all, delete-orphan'),
                       'dyn_systems' : dynamic_loader(System),
                       'user'        : relation(User, uselist=False),
+                      'write_activity': relation(LabControllerActivity, lazy='noload'),
+                      'activity' : relation(LabControllerActivity,
+                                            order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
+                                            cascade='all, delete',
+                                            backref='object'),
                      }
       )
 mapper(Distro, distro_table,
@@ -6105,10 +6170,12 @@ mapper(DistroTree, distro_tree_table, properties={
 })
 mapper(DistroTreeRepo, distro_tree_repo_table, properties={
     'distro_tree': relation(DistroTree, backref=backref('repos',
+        cascade='all, delete-orphan',
         order_by=[distro_tree_repo_table.c.repo_type, distro_tree_repo_table.c.repo_id])),
 })
 mapper(DistroTreeImage, distro_tree_image_table, properties={
-    'distro_tree': relation(DistroTree, backref='images'),
+    'distro_tree': relation(DistroTree, backref=backref('images',
+        cascade='all, delete-orphan')),
 })
 
 mapper(Visit, visits_table)
@@ -6177,6 +6244,9 @@ mapper(CommandActivity, command_queue_table, inherits=Activity,
                    'system':relation(System),
                    'distro_tree': relation(DistroTree),
                   })
+
+mapper(LabControllerActivity, lab_controller_activity_table, inherits=Activity,
+    polymorphic_identity=u'lab_controller_activity')
 
 mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,
@@ -6373,6 +6443,10 @@ def import_module(modname):
      return sys.modules[modname]
 
 def auto_cmd_handler(command, new_status):
-    if new_status in (CommandStatus.failed, CommandStatus.aborted) \
-       and command.system.open_reservation:
-        command.system.open_reservation.recipe.abort("Command %s failed" % command.id)
+    if not command.system.open_reservation:
+        return
+    recipe = command.system.open_reservation.recipe
+    if new_status in (CommandStatus.failed, CommandStatus.aborted):
+        recipe.abort("Command %s failed" % command.id)
+    elif command.action == u'reboot':
+        recipe.tasks[0].start()

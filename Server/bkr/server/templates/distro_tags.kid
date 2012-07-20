@@ -1,7 +1,4 @@
-<form xmlns:py="http://purl.org/kid/ns#"
- name="${name}"
- action="${tg.url(action)}"
- method="${method}" width="100%">
+<span xmlns:py="http://purl.org/kid/ns#" py:strip='1'>
  <table class="list">
   <tr class="list">
    <th class="list">
@@ -16,8 +13,11 @@
     ${display_field_for("tag")}
    </td>
    <td class="list">
+   <form name="${name}" action="${tg.url(action)}" method="POST">
     ${display_field_for("id")}
-    <a class="button" href="javascript:document.${name}.submit();">Add ( + )</a>
+    <input type='hidden' id="${name}_${tag.name}_${tag.text_field.name}_hidden" name="${tag.name}.text" />
+    <a class="button" href="javascript:document.${name}.submit();" onclick="populate_form_elements(this.parentNode); return true;">Add ( + )</a>
+    </form>
    </td>
   </tr>
   <?python row_color = "#f1f1f1" ?>
@@ -26,9 +26,11 @@
     ${tag}
    </td>
    <td class="list">
-    <a py:if="not readonly" class="button" href="${tg.url('./tag_remove', id=value_for('id'), tag=tag)}">Delete ( - )</a>
+    <span py:if="not readonly" py:strip='1'>
+     ${delete_link.display(dict(id=value_for('id'), tag=tag), action=tg.url('tag_remove'))}
+    </span>
    </td>
     <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
   </tr>
  </table>
-</form>
+</span>

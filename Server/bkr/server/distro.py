@@ -10,7 +10,7 @@ from bkr.server.widgets import TaskSearchForm
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.model import System
 from bkr.server.helpers import *
-from bkr.server.controller_utilities import Utility
+from bkr.server.controller_utilities import Utility, restrict_http_method
 from bkr.server import search_utility 
 
 import cherrypy
@@ -115,6 +115,7 @@ class Distros(RPCRoot):
 
     @expose()
     @identity.require(identity.has_permission('tag_distro'))
+    @restrict_http_method('post')
     def tag_remove(self, id=None, tag=None, *args, **kw):
         try:
             distro = Distro.by_id(id)
@@ -206,7 +207,8 @@ class Distros(RPCRoot):
                            table=search_utility.Distro.search.create_search_table(), 
                            complete_data = search_utility.Distro.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_distros"), 
-                           extra_hiddens=hidden_fields
+                           extra_hiddens=hidden_fields,
+                           date_picker=['created']
                            )
 
         return dict(title="Distros", 

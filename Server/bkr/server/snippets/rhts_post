@@ -34,19 +34,6 @@ if [ -e "/boot/grub/grub.conf" ]; then
 fi
 {% endif %}
 
-{% if distro_tree is arch('ppc', 'ppc64') and distro is osmajor('RedHatEnterpriseLinux7') %}
-{{ end }}
-%post --nochroot --log=/dev/console
-if [ -e "/tmp/boot-device.bak" ]; then
-   nvsetenv boot-device "$(cat /tmp/boot-device.bak)"
-   logger "Read boot-device.bak from /tmp"
-else
-   logger "Error: /tmp/boot-device.bak does not exist!"
-fi
-{{ end }}
-%post --log=/dev/console
-{% endif -%}
-
 # If efibootmgr exists then re-order boot options
 if [ -x '/usr/sbin/efibootmgr' ]; then
     BOOT=$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print $2}' | awk -F, '{print $1}')
@@ -85,7 +72,7 @@ popd
 {% if distro is osmajor('RedHatEnterpriseLinux7') %}
 {{ snippet('print_repos') }}
 {% else %}
-{% set repo_base = distro_tree.url_in_lab(system.lab_controller, 'http') %}
+{% set repo_base = distro_tree.url_in_lab(system.lab_controller, scheme=['http', 'ftp']) %}
 {% if repo_base %}
 {% for repo in distro_tree.repos %}
 {% if var('no_%s_repos' % repo.repo_type) is undefined %}
@@ -200,5 +187,6 @@ chkconfig --level 345 rhts-compat on
 
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
+{{ snippet('beaker_env') }}
 {{ snippet('lab_env') }}
 {{ snippet('clear_netboot') }}

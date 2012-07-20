@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from datetime import datetime, timedelta
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, is_text_present
@@ -23,7 +24,8 @@ class Search(WebDriverTestCase):
             osmajor=cls.distro_one_osmajor, osminor = cls.distro_one_osminor,
             tags =cls.distro_one_tags)
         data_setup.create_distro_tree(distro=cls.distro_one)
-
+        # Two days in the future
+        cls.distro_one.created = datetime.utcnow() + timedelta(days=2)
         cls.distro_two_name = data_setup.unique_name(u'nametest%s')
         cls.distro_two_osmajor = u'osmajortest2'
         cls.distro_two_osminor = u'2'
@@ -87,6 +89,7 @@ class Search(WebDriverTestCase):
         OSMajor -> is -> osmajortest1
         START
         """
+        b.get(get_server_base() + 'distros')
         b.find_element_by_id('advancedsearch').click()
         b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='OSMajor']").click()
         b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is']").click()
@@ -94,6 +97,42 @@ class Search(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys('osmajortest1')
         b.find_element_by_name('Search').click()
         distro_search_result_2 = \
+            b.find_element_by_xpath('//table[@id="widget"]').text
+        self.assert_(self.distro_one.name in distro_search_result_2)
+        self.assert_(self.distro_two.name not in distro_search_result_2)
+        self.assert_(self.distro_three.name not in distro_search_result_2)
+        """
+        END
+        """
+        """
+        OSMinor -> is -> 1
+        START
+        """
+        b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='OSMinor']").click()
+        b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is']").click()
+        b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
+        b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys('1')
+        b.find_element_by_name('Search').click()
+        distro_search_result_3 = \
+            b.find_element_by_xpath('//table[@id="widget"]').text
+        self.assert_(self.distro_one.name in distro_search_result_2)
+        self.assert_(self.distro_two.name not in distro_search_result_2)
+        self.assert_(self.distro_three.name not in distro_search_result_2)
+        """
+        END
+        """
+        """
+        Created -> after -> future
+        START
+        """
+        b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='Created']").click()
+        b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='after']").click()
+        b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
+        now_and_1 = datetime.utcnow() + timedelta(days=1)
+        now_and_1_string = now_and_1.strftime('%Y-%m-%d')
+        b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys(now_and_1_string)
+        b.find_element_by_name('Search').click()
+        distro_search_result_3 = \
             b.find_element_by_xpath('//table[@id="widget"]').text
         self.assert_(self.distro_one.name in distro_search_result_2)
         self.assert_(self.distro_two.name not in distro_search_result_2)

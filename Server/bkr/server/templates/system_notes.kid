@@ -1,19 +1,15 @@
 <div xmlns:py='http://purl.org/kid/ns#'>
-<script type='text/javascript' src="${tg.url('/static/javascript/system_notes.js')}" />
-<script type='text/javascript' src="${tg.url('/static/javascript/util.js')}" />
-
-<form
- name="${name}"
- action="${tg.url(action)}"
- method="${method}" width="100%">
-
- <div py:if="not readonly">
+ <script type='text/javascript' src="${tg.url('/static/javascript/system_notes.js')}" />
+ <script type='text/javascript' src="${tg.url('/static/javascript/util.js')}" />
+ <form name="${name}" action="${tg.url(action)}" method="${method}">
+  <div py:if="not readonly">
    ${display_field_for("note")}
    ${display_field_for("id")}
-    <a class="button" href="javascript:document.${name}.submit();">Add ( + )</a>
+   <a class="button" href="javascript:document.${name}.submit();">Add ( + )</a>
+  </div>
+ </form>
   <br/>
   <br/>
- </div>
  <table class="list">
   <?python row_color = "#F1F1F1" ?>
   <div py:for="note in notes" py:strip="1">
@@ -29,7 +25,18 @@
     <td class="list" colspan="3">
       <pre>${note.text}</pre>
       <span py:if="not readonly" py:strip="1">
-        <a class="link" id='delete_note_${note.id}'>(Delete this note)</a>
+       <script type='text/javascript'>
+        function delete_note(id) {
+            function inner() {
+                note_delete_success(id)
+             }
+             return inner
+         }
+        </script>
+        ${delete_link(action=tg.url('/delete_note'), data=dict(id=note.id),
+            callback="delete_note(%s)" % note.id, 
+            attrs=dict(class_='link', id="delete_note_%s" % note.id),
+            action_text='(Delete this note)')}
       </span>
     </td>
    </tr>
@@ -63,5 +70,4 @@
   <a py:if="not readonly and [1 for note in notes if note.deleted]" style='display:inline;' class="link" id='toggle_deleted_notes' onclick="javascript:toggle_deleted_notes()">Toggle deleted notes</a>
   <a py:if="readonly or not [1 for note in notes if note.deleted]" style='display:none;' class="link" id='toggle_deleted_notes' onclick="javascript:toggle_deleted_notes()">Toggle deleted notes</a>
 
-</form>
 </div>

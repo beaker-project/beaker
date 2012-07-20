@@ -37,6 +37,8 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+def replace_with_blanks(match):
+    return ' ' * (match.end() - match.start() - 1) + '\n'
 
 class ProxyHelper(object):
 
@@ -212,10 +214,12 @@ class WatchFile(object):
             self.filename="console.log"
             # Leave newline
             self.control_chars = ''.join(map(unichr, range(0,9) + range(11,32) + range(127,160)))
-            self.strip_ansi = re.compile('[%s]' % re.escape(self.control_chars))
+            self.strip_ansi = re.compile("(\033\[[0-9;\?]*[ABCDHfsnuJKmhr])")
+            self.strip_cntrl = re.compile('[%s]' % re.escape(self.control_chars))
             self.panic = re.compile(r'%s' % panic)
         else:
             self.strip_ansi = None
+            self.strip_cntrl = None
             self.panic = None
         self.where = 0
 
@@ -238,8 +242,13 @@ class WatchFile(object):
             file.seek(where)
             line = file.read(self.blocksize)
             size = len(line)
+            # We can't just strip the ansi codes, that would change the size
+            # of the file, so whatever we end up stripping needs to be replaced
+            # with spaces and a terminating \n.
             if self.strip_ansi:
-                line = self.strip_ansi.sub(' ',line.decode('ascii', 'replace').encode('ascii', 'replace'))
+                line = self.strip_ansi.sub(replace_with_blanks, line)
+            if self.strip_cntrl:
+                line = self.strip_cntrl.sub(' ', line)
             now = file.tell()
             file.close()
             if self.panic:
@@ -381,7 +390,7 @@ class Watchdog(ProxyHelper):
 
     def purge_old_watchdog(self, watchdog_systems):
         try:
-            self.watchdogs.pop(watchdog_systems).clear_console()
+            del self.watchdogs[watchdog_systems]
         except KeyError, e:
             logger.error('Trying to remove a watchdog that is already removed')
 
@@ -481,10 +490,6 @@ class Monitor(ProxyHelper):
         """ check the logs for new data to upload/or cp
         """
         return self.console_watch.update()
-
-    def clear_console(self):
-        logger.debug('Truncating console log %s', self.console_watch.log)
-        self.console_watch.truncate()
 
 class Proxy(ProxyHelper):
     def task_upload_file(self, 

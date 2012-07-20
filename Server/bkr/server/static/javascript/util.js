@@ -1,6 +1,6 @@
 function failure(err_msg) {
     //show error message
-    var newpara = $('<p></p>').text(err_msg)
+    var newpara = $('<p></p>').text("Your request failed with the following error: " + err_msg)
     var dialog_div = $('<div></div>').attr('title','Error').append(newpara);
 
     dialog_div.dialog({
@@ -16,9 +16,26 @@ function failure(err_msg) {
     });
 }
 
-function do_and_confirm(action, data, callback, msg, action_type) {
-    var newpara = $('<p></p>').text('Are you sure you want to '+ action_type +' this?')
+function do_and_confirm_form(msg, action_type, yes_action) {
+    _do_and_confirm(false, null, null, null, msg, action_type, yes_action);
+}
+
+function do_and_confirm_ajax(url, data, callback, msg, action_type) {
+    _do_and_confirm(true, url, data, callback, msg, action_type, null);
+}
+
+function _do_and_confirm(ajax, url, data, callback, msg, action_type, yes_action) {
+    if (! msg) {
+        msg = 'Are you sure you want to '+ action_type +' this?'
+    }
+    var newpara = $('<p></p>').text(msg)
     var dialog_div = $('<div></div>').attr('title',action_type[0].toUpperCase() + action_type.slice(1,action_type.length)).append(newpara)
+
+    if (! yes_action) {
+        if (ajax == true) {
+            yes_action = function() { do_action(url, data, callback) };
+        }
+    }
 
     dialog_div.dialog({
         resizable: false,
@@ -27,7 +44,7 @@ function do_and_confirm(action, data, callback, msg, action_type) {
         buttons: {
             "Yes": function() {
                 $( this ).dialog( "close" );
-                do_action(action,data,callback)
+                yes_action();
                 },
             Cancel: function() {
                 $(this).dialog("close");
@@ -57,27 +74,13 @@ function success(msg) {
     });
 }
 
-function failure(err_msg) {
-    //show error message
-    var newpara = $('<p></p>').text(err_msg)
-    var dialog_div = $('<div></div>').attr('title','Error').append(newpara);
-
-    dialog_div.dialog({
-        resizable: true,
-        height: 250,
-        width: 380,
-        modal: true,
-        buttons: {
-            Ok: function() {
-                $( this ).dialog( "close" );
-                }
-            }
-    });
+function post_error(response) {
+    failure(response.responseText)
 }
 
 function do_action(action,data,callback) {
-    var d = loadJSONDoc(action + "?" + queryString(data))
-    d.addCallback(callback)
+    data = queryString(data)
+    jQuery.post(action, data, callback).error(post_error)
 }
 
 function show_field(id, title) {

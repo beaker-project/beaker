@@ -13,7 +13,7 @@ IFS=":" read -r apc_address ether_address <<< "$power_address"
 ether_address=$(echo $ether_address| sed -e 's/-/:/g')
 
 for plug in $power_id; do
-    fence_apc_snmp -a "$apc_address" -n "$plug" -o "$power_mode"
+    fence_apc_snmp -v -a "$apc_address" -n "$plug" -o "$power_mode"
 done
 
 if [ "$power_mode" = "on" ]; then

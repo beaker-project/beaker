@@ -55,7 +55,8 @@ from bkr.server.recipesets import RecipeSets
 from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
 from bkr.server.kickstart import KickstartController
-from bkr.server.controller_utilities import Utility, SystemSaveForm, SearchOptions, SystemTab
+from bkr.server.controller_utilities import Utility, \
+    SystemSaveForm, SystemTab, restrict_http_method
 from bkr.server.bexceptions import *
 import bkr.server.validators as beaker_validators
 from cherrypy import request, response
@@ -403,10 +404,10 @@ class Root(RPCRoot):
         def reserve_link(x, distro_tree):
             if x.is_free():
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
-                        % (Utility.get_correct_system_column(x).id, distro_tree.id), 'Reserve Now')
+                        % (x.id, distro_tree.id), 'Reserve Now')
             else:
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
-                        % (Utility.get_correct_system_column(x).id, distro_tree.id), 'Queue Reservation')
+                        % (x.id, distro_tree.id), 'Queue Reservation')
         try:
             distro_tree = DistroTree.by_id(kw['distro_tree_id'])
         except KeyError:
@@ -537,41 +538,31 @@ class Root(RPCRoot):
             for elem in kw:
                 if re.match('systemsearch_column_',elem):
                     columns.append(kw[elem])
-           
-            if columns.__len__() == 0:  #If nothing is selected, let's give them the default    
+
+            if columns.__len__() == 0:  #If nothing is selected, let's give them the default
                 for elem in default_result_columns:
                     key = 'systemsearch_column_',elem
                     kw[key] = elem
                     columns.append(elem)
-
             use_custom_columns = False
             for column in columns:
                 table,col = column.split('/')
                 if sys_search.translate_name(table) is not su.System:
-                    use_custom_columns = True     
-                    break     
-
-            sys_search.add_columns_desc(columns) 
+                    use_custom_columns = True
+                    break
+            sys_search.add_columns_desc(columns)
             systems = self._system_search(kw,sys_search)
-
-            (system_columns_desc,extra_columns_desc) = sys_search.get_column_descriptions()  
-            if use_custom_columns is True:
-                my_fields = Utility.custom_systems_grid(system_columns_desc,extra_columns_desc)
-            else: 
-                my_fields = Utility.custom_systems_grid(system_columns_desc)
-        else: 
-            use_custom_columns = False
+            system_columns_desc = sys_search.get_column_descriptions()
+            my_fields = Utility.custom_systems_grid(system_columns_desc, use_custom_columns)
+        else:
             columns = None
             searchvalue = None
             my_fields = Utility.custom_systems_grid(default_result_columns)
-        
         if 'direct_columns' in kw: #Let's add our direct columns here
             for index,col in kw['direct_columns']:
                 my_fields.insert(index - 1, col)
-                
         display_grid = myPaginateDataGrid(fields=my_fields)
-        col_data = Utility.result_columns(columns)   
-        #systems_count = len(systems)     
+        col_data = Utility.result_columns(columns)
         return dict(title=title,
                     grid = display_grid,
                     list = systems,
@@ -596,6 +587,7 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
     def key_remove(self, system_id=None, key_type=None, key_value_id=None):
         removed = None
         if system_id and key_value_id and key_type:
@@ -632,6 +624,7 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
     def arch_remove(self, system_id=None, arch_id=None):
         removed = None
         if system_id and arch_id:
@@ -659,6 +652,7 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
     def group_remove(self, system_id=None, group_id=None):
         removed = None
         if system_id and group_id:
@@ -1388,6 +1382,7 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
     def save_arch(self, id, **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -1619,6 +1614,7 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
+    @restrict_http_method('post')
     def remove_install(self, system_id, arch_id, **kw):
         try:
             system = System.by_id(system_id, identity.current.user)

@@ -126,18 +126,18 @@
 			Beaker is an Open Source automated testing framework, consisting of the following core parts:
 			<itemizedlist>
 			  <listitem>
-			    <para><application>Lab Controller</application>:   The Lab Controller maintains inventory data about distros available to install and machines to install on. It can be used by itself or in conjunction with the Beaker server. The Lab Controller is the only conduit of communication between the Lab Machines and the Beaker Server. The Lab Controller is built on top of several existing tools:
+			    <para><application>Lab Controller</application>:   The Lab Controller maintains inventory data about distros available to install and machines to install on. The Lab Controller is the only conduit of communication between the Lab Machines and the Beaker Server. The Lab Controller is built on top of several existing tools:
 			      <itemizedlist>
                 <listitem>
-                  <para><application>Cobbler</application>: Does the actul interations with the test systems (install distro etc).
-                  </para>
+                  <para><application>TFTP server</application>: Serves images 
+                  and configuration files for network installations.</para>
                 </listitem>
                 <listitem>
                   <para><application>Conserver</application>: Provides console logging
                   </para>
                 </listitem>
                 <listitem>
-                  <para><application>Fence-agents</application>: Power cycles machines to start PXE installs and to recover.
+                  <para><application>Fence-agents</application>: Power cycles machines to start network installs and to recover.
                   </para>
                 </listitem>
                 <listitem>
