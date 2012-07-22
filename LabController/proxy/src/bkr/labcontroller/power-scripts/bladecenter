@@ -1,3 +1,7 @@
 #!/bin/sh
 set -e
+if [ "$power_mode" == interrupt ] ; then
+    echo "interrupt not supported by bladecenter" >&2
+    exit 1
+fi
 fence_bladecenter -v -x -a "$power_address" -l "$power_user" -p "$power_pass" -n "$power_id" -o "$power_mode"

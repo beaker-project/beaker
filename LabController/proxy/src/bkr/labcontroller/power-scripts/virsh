@@ -2,7 +2,10 @@
 set -e
 
 # Set proper virsh operation
-if [ "$power_mode" = "on" ] ; then
+if [ "$power_mode" == interrupt ] ; then
+    echo "interrupt not supported by virsh" >&2
+    exit 1
+elif [ "$power_mode" = "on" ] ; then
     operation="start"
 else
     operation="destroy"

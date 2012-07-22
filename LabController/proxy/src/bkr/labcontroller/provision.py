@@ -84,7 +84,7 @@ class CommandQueuePoller(ProxyHelper):
         logger.debug('Handling command %r', command)
         self.mark_command_running(command['id'])
         try:
-            if command['action'] in (u'on', u'off'):
+            if command['action'] in (u'on', u'off', 'interrupt'):
                 handle_power(command)
             elif command['action'] == u'reboot':
                 handle_power(dict(command.items() + [('action', u'off')]))

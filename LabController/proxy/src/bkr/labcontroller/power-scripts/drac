@@ -1,5 +1,9 @@
 #!/bin/sh
 set -e
+if [ "$power_mode" == interrupt ] ; then
+    echo "interrupt not supported by drac" >&2
+    exit 1
+fi
 if [ -n "$power_id" ] ; then
     fence_drac -a "$power_address" -l "$power_user" -p "$power_pass" -m "$power_id" -o "$power_mode"
 else
