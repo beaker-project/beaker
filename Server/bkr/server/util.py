@@ -80,19 +80,42 @@ def to_unicode(obj, encoding='utf-8'):
             obj = unicode(obj, encoding, 'replace')
     return obj
 
+def url_no_webpath(tgpath, tgparams=None, **kw):
+    """
+    Like turbogears.url but without webpath pre-pended
+    """
+    webpath = (config.get('server.webpath') or '').rstrip('/')
+    theurl = url(tgpath, tgparams=tgparams, **kw)
+    if webpath and theurl.startswith(webpath):
+        theurl = theurl[len(webpath):]
+    return theurl
+
 # TG1.1 has this: http://docs.turbogears.org/1.1/URLs#turbogears-absolute-url
-def absolute_url(tgpath, tgparams=None, **kw):
+def absolute_url(tgpath, tgparams=None, scheme=None, 
+                 labdomain=False, webpath=True, **kw):
     """
     Like turbogears.url, but makes the URL absolute (with scheme, hostname, 
     and port from the tg.url_scheme and tg.url_domain configuration 
     directives).
+    If labdomain is True we serve an alternate tg.proxy_domain if defined
+    in server.cfg.  This is to support multi-home systems which have
+    different external vs internal names.
     """
+    order = []
+    if labdomain:
+        order.append(config.get('tg.lab_domain'))
+    order.extend([config.get('tg.url_domain'),
+                  config.get('servername'),
+                  socket.getfqdn()])
+
     # TODO support relative paths
-    theurl = url(tgpath, tgparams, **kw)
+    if webpath:
+        theurl = url(tgpath, tgparams, **kw)
+    else:
+        theurl = url_no_webpath(tgpath, tgparams, **kw)
     assert theurl.startswith('/')
-    scheme = config.get('tg.url_scheme', 'http')
-    host_port = config.get('tg.url_domain', config.get('servername',
-                                            socket.getfqdn()))
+    scheme = scheme or config.get('tg.url_scheme', 'http')
+    host_port = filter(None, order)[0]
     return '%s://%s%s' % (scheme, host_port, theurl)
 
 # http://stackoverflow.com/questions/1809531/_/1820949#1820949

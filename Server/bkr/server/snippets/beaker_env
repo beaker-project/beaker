@@ -1,11 +1,11 @@
 cat <<"EOF" >/etc/profile.d/beaker.sh
-export BEAKER="{{ absolute_url('/') }}"
+export BEAKER="{{ absolute_url('/', labdomain=True) }}"
 {% if config.get('beaker.reservation_policy_url') %}
 export BEAKER_RESERVATION_POLICY_URL="{{ config.get('beaker.reservation_policy_url') }}"
 {% endif %}
 EOF
 cat <<"EOF" >/etc/profile.d/beaker.csh
-setenv BEAKER "{{ absolute_url('/') }}"
+setenv BEAKER "{{ absolute_url('/', labdomain=True) }}"
 {% if config.get('beaker.reservation_policy_url') %}
 setenv BEAKER_RESERVATION_POLICY_URL "{{ config.get('beaker.reservation_policy_url') }}"
 {% endif %}

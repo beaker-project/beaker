@@ -4368,10 +4368,6 @@ class Recipe(TaskBase):
     stop_types = ['abort','cancel']
 
     @property
-    def servername(self):
-        return get('tg.url_domain', get('servername', socket.getfqdn()))
-
-    @property
     def harnesspath(self):
         return get('basepath.harness', '/var/www/beaker/harness')
 
@@ -4439,8 +4435,12 @@ class Recipe(TaskBase):
             task.delete()
 
     def task_repo(self):
-        return ("beaker-tasks","http://%s/repos/%s" % (self.servername, self.id))
-
+        return ('beaker-tasks',absolute_url('/repos/%s' % self.id,
+                                            scheme='http',
+                                            labdomain=True,
+                                            webpath=False,
+                                           )
+               )
 
     def harness_repo(self):
         """
@@ -4449,8 +4449,14 @@ class Recipe(TaskBase):
         if self.distro_tree:
             if os.path.exists("%s/%s" % (self.harnesspath,
                                             self.distro_tree.distro.osversion.osmajor)):
-                return ("beaker-harness", "http://%s/harness/%s/"
-                        % (self.servername, self.distro_tree.distro.osversion.osmajor))
+                return ('beaker-harness',
+                    absolute_url('/harness/%s' % 
+                                 self.distro_tree.distro.osversion.osmajor,
+                                 scheme='http',
+                                 labdomain=True,
+                                 webpath=False,
+                                )
+                       )
 
     def generated_install_options(self):
         ks_meta = {
@@ -4689,7 +4695,7 @@ class Recipe(TaskBase):
             os.chdir(self.rpmspath)
             # update base repo, specifying -o and baseurl allow us to copy the repo and have it
             # still reference the rpms in another directory.
-            os.system("createrepo -q --update --checksum sha -o . --baseurl http://%s/rpms ." % (self.servername))
+            os.system("createrepo -q --update --checksum sha -o . --baseurl %s ." % absolute_url('/rpms/', scheme='http', labdomain=True, webpath=False))
             # Copy updated repo to recipe specific repo
             shutil.copytree('%s/repodata' % (self.rpmspath), '%s/repodata' % (directory))
             os.chdir(cwd)
@@ -5731,11 +5737,8 @@ class RenderedKickstart(MappedObject):
         if self.url:
             return self.url
         assert self.id is not None, 'not flushed?'
-        url = absolute_url('/kickstart/%s' % self.id)
-        # Beaker might be configured to use SSL but with a cert signed by
-        # a custom CA. But there's no nice way to educate Anaconda about
-        # custom CAs, so let's just stick with http:// for serving kickstarts.
-        url = url.replace('https://', 'http://')
+        url = absolute_url('/kickstart/%s' % self.id, scheme='http',
+                           labdomain=True)
         return url
 
 class Task(MappedObject):
