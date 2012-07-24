@@ -3533,13 +3533,17 @@ class Job(TaskBase):
     @classmethod
     def expired_logs(cls):
         """Return log files for expired recipes
+
+        Will not return recipes that have already been deleted. Does
+        return recipes that are marked to be deleted though.
         """
         expired_logs = []
-        job_ids = [job.id for job in cls.marked_for_deletion()]
+        job_ids = [job_id for job_id, in cls.marked_for_deletion().values(Job.id)]
         for tag in RetentionTag.get_transient():
             expire_in = tag.expire_in_days
             tag_name = tag.tag
-            job_ids.extend([job.id for job in cls.find_jobs(tag=tag_name, complete_days=expire_in) if job.deleted is None])
+            job_ids.extend(job_id for job_id, in cls.find_jobs(tag=tag_name,
+                complete_days=expire_in, include_to_delete=True).values(Job.id))
         job_ids = set(job_ids)
         for job_id in job_ids:
             job = Job.by_id(job_id)
@@ -3583,7 +3587,7 @@ class Job(TaskBase):
             sanitise_job_ids takes a list of job ids and returns the list
             sans ids that are not 'valid' (i.e deleted jobs)
         """
-        invalid_job_ids = [j.id for j in cls.marked_for_deletion()]
+        invalid_job_ids = [j[0] for j in cls.marked_for_deletion().values(Job.id)]
         valid_job_ids = []
         for job_id in job_ids:
             if job_id not in invalid_job_ids:
@@ -3679,12 +3683,23 @@ class Job(TaskBase):
 
     @classmethod
     def marked_for_deletion(cls):
-        return cls.query.filter(and_(cls.to_delete!=None, cls.deleted==None)).all()
+        return cls.query.filter(and_(cls.to_delete!=None, cls.deleted==None))
 
     @classmethod
-    def find_jobs(cls, query=None, tag=None, complete_days=None, family=None, product=None,  **kw):
+    def find_jobs(cls, query=None, tag=None, complete_days=None,
+        family=None, product=None, include_deleted=False,
+        include_to_delete=False, **kw):
+        """Return a filtered job query
+
+        Does what it says. Also helps searching for expired jobs
+        easier.
+        """
         if not query:
             query = cls.query
+        if not include_deleted:
+            query = query.filter(Job.deleted == None)
+        if not include_to_delete:
+            query = query.filter(Job.to_delete == None)
         if complete_days:
             #This takes the same kw names as timedelta
             query = cls.complete_delta({'days':int(complete_days)}, query)

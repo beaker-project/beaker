@@ -75,16 +75,14 @@ class LogDelete(unittest.TestCase):
 
     def test_log_delete_to_delete(self):
         with session.begin():
-            job_to_delete = self.job_to_delete
-            job_to_delete.to_delete = datetime.datetime.utcnow()
-            job_to_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename=u'test.log'))
-
-        r_ = job_to_delete.recipesets[0].recipes[0]
+            self.job_to_delete.to_delete = datetime.datetime.utcnow()
+            self.job_to_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename=u'test.log'))
+        r_ = self.job_to_delete.recipesets[0].recipes[0]
         dir = os.path.join(r_.logspath ,r_.filepath)
         self.make_dir(dir)
         f = open(os.path.join(dir,'test.log'), 'w')
         f.close()
         log_delete.log_delete()
-        self._assert_logs_not_in_db(Job.by_id(job_to_delete.id))
+        self._assert_logs_not_in_db(Job.by_id(self.job_to_delete.id))
         self.check_dir_not_there(dir)
 
