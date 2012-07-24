@@ -270,6 +270,12 @@ class BeakerWorkflow(BeakerCommand):
             default=False,
             help="/distribution/install won't be added to recipe"
         )
+        self.parser.add_option(
+            "--ignore-panic",
+            default=False,
+            action="store_true",
+            help="Tell the watchdog to not abort jobs that output panics on the serial console.",
+        )
 
     def getArches(self, *args, **kwargs):
         """ Get all arches that apply to either this distro or family/osmajor """
@@ -526,6 +532,7 @@ class BeakerRecipeBase(BeakerBase):
         requires = kwargs.get("hostrequire", [])
         repos = kwargs.get("repo", [])
         random = kwargs.get("random", False)
+        ignore_panic = kwargs.get("ignore_panic", False)
         if distro:
             distroName = self.doc.createElement('distro_name')
             distroName.setAttribute('op', '=')
@@ -598,6 +605,8 @@ class BeakerRecipeBase(BeakerBase):
         
         if random:
             self.addAutopick(random)
+        if ignore_panic:
+            self.add_ignore_panic()
 
     def addRepo(self, node):
         self.repos.appendChild(node.cloneNode(True))
@@ -672,6 +681,11 @@ class BeakerRecipeBase(BeakerBase):
         recipeAutopick = self.doc.createElement('autopick')
         recipeAutopick.setAttribute('random', unicode(random).lower())
         self.node.appendChild(recipeAutopick)
+
+    def add_ignore_panic(self):
+        recipeIgnorePanic = self.doc.createElement('watchdog')
+        recipeIgnorePanic.setAttribute('panic', 'ignore')
+        self.node.appendChild(recipeIgnorePanic)
 
     def set_ks_meta(self, value):
         return self.node.setAttribute('ks_meta', value)
