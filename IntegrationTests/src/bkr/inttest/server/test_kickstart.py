@@ -16,14 +16,23 @@ from bkr.inttest import data_setup, get_server_base
 def compare_expected(name, recipe_id, actual):
     expected = pkg_resources.resource_string('bkr.inttest',
             'server/kickstarts/%s.expected' % name)
-    expected = expected.replace('@RECIPEID@', str(recipe_id))
-    server_base = urlparse.urljoin(get_server_base(), '/')
-    expected = expected.replace('@SERVERBASE@', server_base)
+    # Unfortunately there are a few things that vary for each test run,
+    # so we have to substitute them:
+    vars = {
+        '@RECIPEID@': str(recipe_id),
+        '@BEAKER@': get_server_base(),
+        '@REPOS@': urlparse.urljoin(get_server_base(), '/repos/'),
+        '@HARNESS@': urlparse.urljoin(get_server_base(), '/harness/'),
+    }
+    for name, value in vars.iteritems():
+        expected = expected.replace(name, value)
     if expected != actual:
         expected_path = pkg_resources.resource_filename('bkr.inttest',
                 'server/kickstarts/%s.expected' % name)
-        actual = re.sub(r'\b%s\b' % recipe_id, '@RECIPEID@', actual)
-        actual = actual.replace(server_base, '@SERVERBASE@')
+        # Undo the substitutions, so that we get a sensible diff
+        actual = re.sub(r'\b%s\b' % vars.pop('RECIPEID'), '@RECIPEID@', actual)
+        for name, value in vars.iteritems():
+            actual = actual.replace(value, name)
         actual_temp = tempfile.NamedTemporaryFile(prefix='beaker-kickstart-test-',
                 suffix='-actual', delete=False)
         actual_temp.write(actual)

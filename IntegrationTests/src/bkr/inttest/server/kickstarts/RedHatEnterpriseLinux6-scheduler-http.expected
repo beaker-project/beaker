@@ -235,7 +235,7 @@ EOF
 cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
 name=beaker-tasks
-baseurl=@SERVERBASE@repos/@RECIPEID@
+baseurl=@REPOS@@RECIPEID@
 enabled=1
 gpgcheck=0
 EOF
@@ -245,7 +245,7 @@ EOF
 cat << EOF >/etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=beaker-harness
-baseurl=@SERVERBASE@harness/RedHatEnterpriseLinux6/
+baseurl=@HARNESS@RedHatEnterpriseLinux6/
 enabled=1
 gpgcheck=0
 EOF
@@ -309,10 +309,10 @@ chkconfig --level 345 rhts-compat on
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
 cat <<"EOF" >/etc/profile.d/beaker.sh
-export BEAKER="@SERVERBASE@"
+export BEAKER="@BEAKER@"
 EOF
 cat <<"EOF" >/etc/profile.d/beaker.csh
-setenv BEAKER "@SERVERBASE@"
+setenv BEAKER "@BEAKER@"
 EOF
 
 cat << EOF > /etc/profile.d/rh-env.sh
