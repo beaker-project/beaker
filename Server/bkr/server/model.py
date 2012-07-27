@@ -2720,6 +2720,18 @@ class Numa(SystemObject):
 
 
 class DeviceClass(SystemObject):
+
+    @classmethod
+    def lazy_create(cls, device_class=None, **kwargs):
+        """
+        Like the normal lazy_create, but with special handling for
+        device_class None -> "NONE".
+        """
+        if not device_class:
+            device_class = 'NONE'
+        return super(DeviceClass, cls).lazy_create(
+                device_class=device_class, **kwargs)
+
     def __init__(self, device_class=None, description=None):
         super(DeviceClass, self).__init__()
         if not device_class:
