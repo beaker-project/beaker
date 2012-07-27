@@ -31,8 +31,8 @@ class TestSystemGroups(WebDriverTestCase):
         b.find_element_by_name('group.text').send_keys(group.group_name)
         b.find_element_by_xpath("//form[@name='groups']/"
             "a[normalize-space(text())='Add ( + )']").click()
-        group_just_added = b.find_element_by_xpath('//table[@id="systemgroups"]//tr[position()=last()]/td').text
-        self.assert_(group_just_added == group.group_name)
+        group_just_added = b.find_element_by_xpath('//table[@id="systemgroups"]').text
+        self.assert_(group.group_name in group_just_added)
 
     def delete_group_from_system(self, b, system=None, group=None):
         if not system:

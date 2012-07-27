@@ -7,7 +7,8 @@ class RemoveLabController(SeleniumTestCase):
     @with_transaction
     def setUp(self):
         self.system = data_setup.create_system()
-        self.lc = data_setup.create_labcontroller(fqdn=u'1111')
+        self.lc = data_setup.create_labcontroller(
+            fqdn=data_setup.unique_name(u'%d1111'))
         self.system.lab_controller = self.lc
         self.distro_tree = data_setup.create_distro_tree()
         self.selenium = self.get_selenium()
@@ -29,7 +30,7 @@ class RemoveLabController(SeleniumTestCase):
         sel.click("//a[@onclick=\"has_watchdog('%s')\"]" % self.lc.id)
         sel.wait_for_page_to_load("30000")
 
-        self.failUnless(sel.is_text_present("exact:%s Removed" % self.lc))
+        self.failUnless(sel.is_text_present("exact:%s removed" % self.lc))
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.lab_controller is None)
