@@ -181,6 +181,9 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         rootpw_validity = ConfigItem(name='root_password_validity',
                                      description=u"Maximum number of days a user's root password is valid for",
                                      numeric=True)
+    session.flush()
+    if ConfigItem.by_name('root_password').current_value() is None:
+        ConfigItem.by_name('root_password').set('beaker', user=admin.users[0])
 
     session.commit()
     session.close()
