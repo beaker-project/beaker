@@ -724,12 +724,14 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
     kernels = ['images/pxeboot/vmlinuz',
                'images/kernel.img',
                'ppc/ppc64/vmlinuz',
-               'ppc/iSeries/vmlinux',
+               'ppc/chrp/vmlinuz',
+               # We don't support iSeries right now 'ppc/iSeries/vmlinux',
               ]
     initrds = ['images/pxeboot/initrd.img',
                'images/initrd.img',
                'ppc/ppc64/ramdisk.image.gz',
-               'ppc/iSeries/ramdisk.image.gz',
+               'ppc/chrp/ramdisk.image.gz',
+               # We don't support iSeries right now 'ppc/iSeries/ramdisk.image.gz',
               ]
 
     @classmethod
