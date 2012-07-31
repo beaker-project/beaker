@@ -191,11 +191,12 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('%s' % self.distro_three_name)
         b.find_element_by_name('Search').click()
+        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
+                % self.distro_three.name)
         distro_search_result_1 = \
             b.find_element_by_xpath('//table[@id="widget"]').text
         self.assert_(self.distro_one.name not in distro_search_result_1)
         self.assert_(self.distro_two.name not in distro_search_result_1)
-        self.assert_(self.distro_three.name in distro_search_result_1)
         """
         END
         """
@@ -212,9 +213,10 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('%s' % self.distro_one_osmajor)
         b.find_element_by_name('Search').click()
+        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
+                % self.distro_one.name)
         distro_search_result_2 = \
             b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_one.name in distro_search_result_2)
         self.assert_(self.distro_two.name not in distro_search_result_2)
         self.assert_(self.distro_three.name not in distro_search_result_2)
         """
@@ -233,9 +235,10 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('1')
         b.find_element_by_name('Search').click()
+        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
+                % self.distro_one.name)
         distro_search_result_3 = \
             b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_one.name in distro_search_result_3)
         self.assert_(self.distro_two.name not in distro_search_result_3)
         self.assert_(self.distro_three.name not in distro_search_result_3)
         """
@@ -253,9 +256,10 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('%s' % self.distro_one_variant)
         b.find_element_by_name('Search').click()
+        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
+                % self.distro_one.name)
         distro_search_result_4 = \
             b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_one.name in distro_search_result_4)
         self.assert_(self.distro_two.name not in distro_search_result_4)
         self.assert_(self.distro_three.name not in distro_search_result_4)
         """
@@ -275,10 +279,11 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys(now_and_1_string)
         b.find_element_by_name('Search').click()
+        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
+                % self.distro_two.name)
         distro_search_result_5 = \
             b.find_element_by_xpath('//table[@id="widget"]').text
         self.assert_(self.distro_one.name not in distro_search_result_5)
-        self.assert_(self.distro_two.name in distro_search_result_5)
         self.assert_(self.distro_three.name not in distro_search_result_5)
         """
         END
@@ -292,11 +297,12 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath("//select[@id='search_0_operation']/"
             "option[@value='is']").click()
         b.find_element_by_xpath("//select[@id='search_0_value']/"
-            "option[@value='%s']" % self.distro_one_tag[0])
+            "option[@value='%s']" % self.distro_one_tag[0]).click()
         b.find_element_by_name('Search').click()
+        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
+                % self.distro_one.name)
         distro_search_result_6 = \
             b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_one.name in distro_search_result_6)
         self.assert_(self.distro_two.name not in distro_search_result_6)
         self.assert_(self.distro_three.name not in distro_search_result_6)
         """
