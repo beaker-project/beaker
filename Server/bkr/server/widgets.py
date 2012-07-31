@@ -626,7 +626,7 @@ class SearchBar(RepeatingFormField):
     """Search Bar""" 
     css = [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     javascript = [LocalJSLink('bkr', '/static/javascript/search_object.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'), 
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v8.js'),
                   LocalJSLink('bkr','/static/javascript/jquery-ui.js'),]
     template = "bkr.server.templates.search_bar"
 
@@ -1270,7 +1270,7 @@ class SystemForm(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/provision_v2.js'),
                   LocalJSLink('bkr', '/static/javascript/install_options.js'),
                   LocalJSLink('bkr','/static/javascript/system_admin_v2.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'),
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v8.js'),
                   JSLink(static,'ajax.js'),
                  ]
     template = "bkr.server.templates.system_form"
