@@ -42,11 +42,10 @@
 				</section>
 				<section id="User_Guide-Getting_Started-Process-Tests">
 				  <title>Tests</title>
-				     <xi:include href="test_arch_considerations.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
-            <xi:include href="writing_and_running_multihost_tests.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
-           <!-- <xi:include href="multihost_testing.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />-->
-            <xi:include href="unassimilated_or_unfinished_content.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
-				    <xi:include href="reporting_results.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+                    <xi:include href="test_arch_considerations.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+                    <xi:include href="writing_and_running_multihost_tests.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+                    <xi:include href="reporting_results.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+                    <xi:include href="test_writing_tips.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 				</section>
 				</section>
       <xi:include href="Checklist.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
