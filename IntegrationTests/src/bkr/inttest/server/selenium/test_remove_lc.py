@@ -73,7 +73,7 @@ class RemoveLabController(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         sel.click("//a[@href='unremove?id=%s']" % self.lc.id)
         sel.wait_for_page_to_load('30000')
-        sel.open('view/%s' % self.system.fqdn)
+        sel.open('edit/%s' % self.system.fqdn)
         sel.wait_for_page_to_load('30000')
         sel.select("form_lab_controller_id", "label=%s" % self.lc.fqdn)
         sel.click("link=Save Changes")
