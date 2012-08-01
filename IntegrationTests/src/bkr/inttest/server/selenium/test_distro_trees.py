@@ -130,6 +130,23 @@ class DistroTreesFilterXmlRpcTest(XmlRpcTestCase):
         self.assert_(distro_tree_in.id in [d['distro_tree_id'] for d in distro_trees], distro_trees)
         self.assert_(distro_tree_out.id not in [d['distro_tree_id'] for d in distro_trees], distro_trees)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=839820
+    def test_xml_filter(self):
+        with session.begin():
+            distro_trees_in = [
+                data_setup.create_distro_tree(distro_tags=[u'MYTAG1']),
+                data_setup.create_distro_tree(distro_tags=[u'MYTAG2']),
+            ]
+            distro_tree_out = data_setup.create_distro_tree(distro_tags=[u'MYTAG3'])
+        distro_trees = self.server.distrotrees.filter({'xml': '''
+            <or>
+                <distro_tag value="MYTAG1" />
+                <distro_tag value="MYTAG2" />
+            </or>
+            '''})
+        returned_ids = [dt['distro_tree_id'] for dt in distro_trees]
+        self.assertEquals(returned_ids, [dt.id for dt in distro_trees_in])
+
 class DistroTreeSearch(WebDriverTestCase):
 
 

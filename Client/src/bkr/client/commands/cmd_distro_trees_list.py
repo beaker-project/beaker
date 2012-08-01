@@ -50,6 +50,12 @@ Options
 
    Limit to distro trees for the given arch.
 
+.. option:: --xml-filter <xml>
+
+   Limit to distro trees which match the given XML filter criteria. Supports 
+   the same criteria as inside the ``<distroRequires/>`` element in Beaker job 
+   XML.
+
 .. option:: --limit <number>
 
    Return at most <number> distro trees.
@@ -142,6 +148,10 @@ class Distro_Trees_List(BeakerCommand):
             default=None,
             help="filter by arch",
         )
+        self.parser.add_option(
+            '--xml-filter', default=None, metavar='XML',
+            help='filter by XML criteria, as in <distroRequires/>',
+        )
 
 
     def run(self, *args, **kwargs):
@@ -154,6 +164,7 @@ class Distro_Trees_List(BeakerCommand):
                        family   = kwargs.pop("family", None),
                        arch     = kwargs.pop("arch", None),
                        tags     = kwargs.pop("tag", []),
+                       xml      = kwargs.pop('xml_filter', None),
                      )
         format = kwargs['format']
 
