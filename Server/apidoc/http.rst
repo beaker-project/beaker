@@ -76,6 +76,12 @@ System inventory information
       For a list of supported filter criteria, please refer to the search box 
       on the system listing page.
 
+   .. object:: xmlsearch
+
+      As an alternative to the ``systemsearch`` filter, you can pass XML 
+      filter criteria in this parameter. It supports the same criteria as in 
+      the ``<hostRequires/>`` element in Beaker job XML.
+
    .. versionadded:: 0.6
 
 .. object:: /view/{FQDN}

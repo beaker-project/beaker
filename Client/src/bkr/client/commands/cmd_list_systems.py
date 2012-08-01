@@ -87,6 +87,11 @@ mutually exclusive.
 
    Limit to systems which have a device with <description>.
 
+.. option:: --xml-filter <xml>
+
+   Limit to systems which match the given XML filter criteria. Supports the 
+   same criteria as inside the ``<hostRequires/>`` element in Beaker job XML.
+
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
 
@@ -169,6 +174,9 @@ class List_Systems(BeakerCommand):
         self.parser_add_option('--dev-description', metavar='DESCRIPTION',
                 table='Devices/Description',
                 help='only include systems with a device that has DESCRIPTION')
+        self.parser.add_option('--xml-filter', metavar='XML',
+                help='only include systems matching the given XML filter, '
+                'as in <hostRequires/>')
         self.parser.set_defaults(feed='')
 
     def run(self, *args, **kwargs):
@@ -189,6 +197,8 @@ class List_Systems(BeakerCommand):
                     ('systemsearch-%d.operation' % i, 'is'),
                     ('systemsearch-%d.value' % i,     kwargs[x[0]])
                 ])
+        if 'xml_filter' in kwargs:
+            qs_args.append(('xmlsearch', kwargs['xml_filter']))
 
         feed_url = '/%s?%s' % (kwargs['feed'], urllib.urlencode(qs_args))
 
