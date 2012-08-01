@@ -600,6 +600,42 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         self.assert_(with_cciss not in systems)
         self.assert_(without_cciss in systems)
 
+    def test_key_present(self):
+        module_key = Key.by_name(u'MODULE')
+        with_module = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        with_module.key_values_string.extend([
+                Key_Value_String(module_key, u'cciss'),
+                Key_Value_String(module_key, u'kvm')])
+        without_module = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        session.flush()
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <key_value key="MODULE" op="==" />
+            </hostRequires>
+            """))
+        self.assert_(with_module in systems)
+        self.assert_(without_module not in systems)
+
+    def test_key_absent(self):
+        module_key = Key.by_name(u'MODULE')
+        with_module = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        with_module.key_values_string.extend([
+                Key_Value_String(module_key, u'cciss'),
+                Key_Value_String(module_key, u'kvm')])
+        without_module = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        session.flush()
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <key_value key="MODULE" op="!=" />
+            </hostRequires>
+            """))
+        self.assert_(with_module not in systems)
+        self.assert_(without_module in systems)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=729156
     def test_keyvalue_does_not_cause_duplicate_rows(self):
         system = data_setup.create_system(arch=u'i386', shared=True,
