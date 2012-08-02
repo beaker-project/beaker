@@ -14,7 +14,7 @@ from bkr.server.widgets import TaskSearchForm, myPaginateDataGrid, SearchBar, \
 from bkr.server.helpers import make_link
 from bkr.server.controller_utilities import Utility, restrict_http_method
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server import search_utility
+from bkr.server import search_utility, needpropertyxml
 
 __all__ = ['DistroTrees']
 
@@ -250,6 +250,10 @@ gpgcheck=0
             'labcontroller'
                 FQDN of lab controller. Limit to distro trees which are 
                 available on this lab controller. May include % SQL wildcards.
+            'xml'
+                XML filter criteria in the same format allowed inside 
+                ``<distroRequires/>`` in a job, for example
+                ``<or><distro_tag value="RELEASED"/><distro_tag value="STABLE"/></or>``.
             'limit'
                 Integer limit to number of distro trees returned.
 
@@ -270,6 +274,7 @@ gpgcheck=0
         arch = filter.get('arch', None)
         treepath = filter.get('treepath', None)
         labcontroller = filter.get('labcontroller', None)
+        xml = filter.get('xml', None)
         limit = filter.get('limit', None)
         for tag in tags:
             query = query.filter(Distro._tags.any(DistroTag.tag == tag))
@@ -293,6 +298,8 @@ gpgcheck=0
         else:
             # we only want distro trees that are active in at least one lab controller
             query = query.filter(DistroTree.lab_controller_assocs.any())
+        if xml:
+            query = needpropertyxml.apply_filter('<and>%s</and>' % xml, query)
         query = query.order_by(DistroTree.date_created.desc())
         if limit:
             query = query[:limit]

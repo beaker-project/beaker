@@ -64,7 +64,7 @@ from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from bkr.server.helpers import *
 from bkr.server.tools.init import dummy
-from bkr.server import mail
+from bkr.server import mail, needpropertyxml
 from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
@@ -530,6 +530,9 @@ class Root(RPCRoot):
        
         default_result_columns = ('System/Name', 'System/Status', 'System/Vendor',
                                   'System/Model','System/Arch', 'System/User', 'System/Type') 
+
+        if kw.get('xmlsearch'):
+            systems = needpropertyxml.apply_filter('<and>%s</and>' % kw['xmlsearch'], systems)
 
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']

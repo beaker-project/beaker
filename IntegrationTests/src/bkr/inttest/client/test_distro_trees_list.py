@@ -66,3 +66,12 @@ class DistroTreesListTest(unittest.TestCase):
         self.assert_('Arch: %s' % self.distro_tree.arch in output, output)
         self.assert_('Variant: %s' % self.distro_tree.variant in output, output)
         self.assert_('OSVersion: %s' % self.distro_tree.distro.osversion in output, output)
+
+    def test_xml_filter(self):
+        output = run_client(['bkr', 'distro-trees-list', '--format=json',
+                '--xml-filter',
+                '<distro_name value="%s" />' % self.distro_tree.distro.name])
+        trees = json.loads(output)
+        self.assertEquals(len(trees), 1)
+        self.assertEquals(trees[0]['distro_tree_id'], self.distro_tree.id)
+        self.assertEquals(trees[0]['distro_name'], self.distro_tree.distro.name)
