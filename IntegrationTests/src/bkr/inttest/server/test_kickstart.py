@@ -6,6 +6,7 @@ import re
 import pkg_resources
 import jinja2
 import xmltramp
+import crypt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
         CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch
 from bkr.server.kickstart import template_env
@@ -990,3 +991,31 @@ bootloader --location=mbr
         k = recipe.rendered_kickstart.kickstart
         self.assert_('repo --name=beaker-Server --cost=100 --baseurl=ftp://something/Server' in k, k)
         self.assert_('name=beaker-Server\nbaseurl=ftp://something/Server' in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=838671
+    def test_root_password(self):
+        self.user.root_password = None
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        for line in recipe.rendered_kickstart.kickstart.split('\n'):
+            match = re.match("rootpw --iscrypted (.*)", line)
+            if match:
+                self.assert_(crypt.crypt('beaker', match.group(1)) == match.group(1))
+                break
+        else:
+           self.fail("Password missing from kickstart")
