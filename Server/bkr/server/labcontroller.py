@@ -252,7 +252,7 @@ class LabControllers(RPCRoot):
             if cmd.delay_until:
                 d['delay'] = max(0, total_seconds(cmd.delay_until - datetime.utcnow()))
             # Fill in details specific to the type of command
-            if cmd.action in (u'on', u'off', u'reboot'):
+            if cmd.action in (u'on', u'off', u'reboot', u'interrupt'):
                 if not cmd.system.power:
                     cmd.abort(u'Power control unavailable for %s' % cmd.system)
                     continue

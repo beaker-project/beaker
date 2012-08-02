@@ -8,6 +8,11 @@
 
 set -e
 
+if [ "$power_mode" == interrupt ] ; then
+    echo "interrupt not supported by apc_snmp_then_etherwake" >&2
+    exit 1
+fi
+
 IFS=":" read -r apc_address ether_address <<< "$power_address"
 
 ether_address=$(echo $ether_address| sed -e 's/-/:/g')

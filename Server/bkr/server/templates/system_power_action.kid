@@ -44,6 +44,14 @@ function confirmSubmit(action)
        <input type="hidden" name="action" value="reboot" class="hiddenfield"/>
        <input type="Submit" value="Reboot System" id="reboot" name="reboot"/>
   </form>
+  <form onSubmit="return confirmSubmit('interrupt system');"
+   name="${name}_interrupt"
+   action="${tg.url(action)}"
+   method="${method}" width="100%">
+       ${id.display(value_for(id), **params_for(id))}
+       <input type="hidden" name="action" value="interrupt" class="hiddenfield"/>
+       <input type="submit" value="Interrupt System" />
+  </form>
  </span>
  <span py:if="not enabled">System is not configured for power support</span>
 </div>
