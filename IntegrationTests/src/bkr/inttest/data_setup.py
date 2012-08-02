@@ -286,12 +286,12 @@ def create_recipe(system=None, distro_tree=None, task_list=None,
         rt_log = lambda: LogRecipeTask(path=u'/tasks', filename=u'dummy.txt', basepath='/')
     else:
         rt_log = lambda: LogRecipeTask(server=u'http://dummy-archive-server/beaker/recipe_path/tasks', filename=u'dummy.txt')
+
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
             rt = RecipeTask(task=t)
             rt.logs = [rt_log()]
             recipe.tasks.append(rt)
-
     else:
         rt = RecipeTask(task=create_task(name=task_name))
         rt.logs = [rt_log()]
@@ -328,9 +328,9 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
 
 def create_job(owner=None, cc=None, distro_tree=None, product=None,
         retention_tag=None, task_name=u'/distribution/reservesys', whiteboard=None,
-        recipe_whiteboard=None, server_log=False, **kwargs):
+        recipe_whiteboard=None, server_log=False, task_list=None, **kwargs):
     recipe = create_recipe(distro_tree=distro_tree, task_name=task_name,
-            whiteboard=recipe_whiteboard, server_log=server_log)
+            whiteboard=recipe_whiteboard, server_log=server_log, task_list=task_list)
     return create_job_for_recipes([recipe], owner=owner,
             whiteboard=whiteboard, cc=cc, product=product,retention_tag=retention_tag)
 

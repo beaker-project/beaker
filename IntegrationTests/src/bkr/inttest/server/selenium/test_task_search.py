@@ -7,29 +7,41 @@ from turbogears.database import session
 
 class TaskSearchWD(WebDriverTestCase):
 
-    @classmethod
-    @with_transaction
-    def setupClass(cls):
-        with session.begin():
-            cls.task_one = data_setup.create_task(
-                name=data_setup.unique_name(u'/a/a/a%s'))
 
     def setUp(self):
         self.browser = self.get_browser()
 
-    @with_transaction
+    def tearDown(self):
+        self.browser.quit()
+
     def test_executed_tasks(self):
         with session.begin():
-            self.job = data_setup.create_completed_job(task_name=self.task_one.name)
+            task_two = data_setup.create_task(name=data_setup.unique_name(u'/a/a/a%s'))
+            task_one = data_setup.create_task(name=data_setup.unique_name(u'/a/a/a%s'))
+            job = data_setup.create_completed_job(task_list=[task_one, task_two])
         b = self.browser
-        b.get(get_server_base() + 'tasks/%d' % self.task_one.id)
-        r = self.job.recipesets[0].recipes[0]
+        r = job.recipesets[0].recipes[0]
+        rtask = r.tasks[0]
+        b.get(get_server_base() + 'tasks/%d' % rtask.task.id)
         b.find_element_by_xpath("//select[@name='osmajor_id']/"
             "option[normalize-space(text())='%s']" %
              r.distro_tree.distro.osversion.osmajor).click()
         b.find_element_by_xpath("//form[@id='form']").submit()
         b.find_element_by_xpath("//div[@id='task_items']//"
-            "a[normalize-space(text())='%s']" % r.tasks[0].t_id)
+            "a[normalize-space(text())='%s']" % rtask.t_id)
+
+        # Search by single recipe task id
+        b.get(get_server_base() + 'tasks/executed?recipe_task_id=%s' % rtask.id)
+        b.find_element_by_xpath("//div[@id='task_items']//"
+            "a[normalize-space(text())='%s']" % rtask.t_id)
+
+        # Search by multiple recipe task id
+        rtask2 = r.tasks[1]
+        b.get(get_server_base() + 'tasks/executed?recipe_task_id=%s&recipe_task_id=%s' % (rtask2.id, rtask.id))
+        b.find_element_by_xpath("//div[@id='task_items']//"
+            "a[normalize-space(text())='%s']" % rtask.t_id)
+        b.find_element_by_xpath("//div[@id='task_items']//"
+            "a[normalize-space(text())='%s']" % rtask2.t_id)
 
 
 class Search(SeleniumTestCase):
