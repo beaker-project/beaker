@@ -443,13 +443,13 @@
                                               <para><application>ethdevices=tg3,e1000</application> Only load these network modules if set</para>
                                              </listitem>
                                              <listitem>
-                                              <para><application>!os_repos</application> If this option is specified it will omit os repos from the kickstart</para>
+                                              <para><application>no_TYPE_repos</application> If this option is specified it will omit repos of TYPE from the kickstart, TYPE can be one of debug, optional, adddon or variant.  You can see the different types of repos available for a distro on the /distrotrees page under the repo tab.</para>
                                              </listitem>
                                              <listitem>
-                                              <para><application>!debug_repos</application> If this option is specified it will omit debuginfo repos from the kickstart</para>
+                                              <para><application>skipx</application> Do the install without setting up graphics.  This is needed for headless systems.</para>
                                              </listitem>
                                              <listitem>
-                                              <para><application>!optional_repos</application> If this option is specified it will omit optional repos from the kickstart</para>
+                                              <para><application>ignoredisk</application> Use this to ignore certain disks for install.  For example: ignoredisk=--only-use=sda </para>
                                              </listitem>
                                             </itemizedlist>
                                           </para>
