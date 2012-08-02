@@ -587,6 +587,14 @@ class Proxy(ProxyHelper):
                 # delay 30 seconds so that Anaconda can unmount filesystems
                 30)
 
+    def power(self, hostname, action):
+        # XXX this should also be authenticated and
+        # restricted to systems in the same recipeset as the caller
+        logger.debug('power %s %s', hostname, action)
+        return self.hub.systems.power(action, hostname, False,
+                # force=True because we are not the system's user
+                True)
+
     def status_watchdog(self, task_id):
         """ Ask the scheduler how many seconds are left on a watchdog for this task
         """
