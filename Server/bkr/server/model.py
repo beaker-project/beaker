@@ -4498,7 +4498,7 @@ class Recipe(TaskBase):
             if os.path.exists("%s/%s" % (self.harnesspath,
                                             self.distro_tree.distro.osversion.osmajor)):
                 return ('beaker-harness',
-                    absolute_url('/harness/%s' % 
+                    absolute_url('/harness/%s/' %
                                  self.distro_tree.distro.osversion.osmajor,
                                  scheme='http',
                                  labdomain=True,
