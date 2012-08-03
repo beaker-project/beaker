@@ -72,11 +72,7 @@ vim-enhanced
 
 %pre --log=/dev/console
 # Check in with Beaker Server
-python << _EOF_
-import xmlrpclib
-server = xmlrpclib.Server("http://lab.test-kickstart.invalid:8000")
-server.install_start("test01.test-kickstart.invalid")
-_EOF_
+wget -O - http://lab.test-kickstart.invalid:8000/install_start/test01.test-kickstart.invalid
 
 wget -O /tmp/anamon 'http://lab.test-kickstart.invalid/beaker/anamon'
 python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
@@ -268,11 +264,7 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
-python << _EOF_
-import xmlrpclib
-server = xmlrpclib.Server("http://lab.test-kickstart.invalid:8000")
-server.clear_netboot("test01.test-kickstart.invalid")
-_EOF_
+wget -O - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
 # Error: no snippet data for Fedora_post
 
 # Error: no snippet data for system_post

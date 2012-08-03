@@ -11,6 +11,7 @@ from datetime import datetime
 import SocketServer
 import DocXMLRPCServer
 import socket
+import xmlrpclib
 
 from bkr.common.helpers import RepeatTimer
 from bkr.labcontroller.proxy import Proxy
@@ -25,8 +26,46 @@ logger = logging.getLogger(__name__)
 
 set_except_hook()
 
+class XMLRPCServer(DocXMLRPCServer.DocXMLRPCServer):
+    def __init__(self, *args, **kwargs):
+        self.get_funcs = {}
+        DocXMLRPCServer.DocXMLRPCServer.__init__(self, *args, **kwargs)
+
+    def register_get_function(self, function, name=None):
+        if name is None:
+            name = function.__name__
+        self.get_funcs[name] = function
+
+    def _get_dispatch(self, method, params):
+        func = None
+        try:
+            # check to see if a matching get_function has been registered
+            func = self.get_funcs[method]
+        except KeyError:
+            pass
+        if func is not None:
+            return func(*params)
+        else:
+            raise Exception('method "%s" is not supported' % method)
+
 class XMLRPCRequestHandler(DocXMLRPCServer.DocXMLRPCRequestHandler):
     rpc_paths = ('/', '/RPC2', '/server')
+
+    def do_GET(self):
+        if self.is_rpc_path_valid():
+            DocXMLRPCServer.DocXMLRPCRequestHandler.do_GET(self)
+        else:
+            args = self.path.split('/')
+            try:
+                response = self.server._get_dispatch(args[1], args[2:])
+            except Exception, e:
+                response = str(e)
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.send_header("Content-length", str(len(response)))
+            self.end_headers()
+            self.wfile.write(response)
+
     def do_POST(self):
         """
         This is a replacement for the real do_POST, to work around RHBZ#789790.
@@ -76,11 +115,11 @@ class XMLRPCRequestHandler(DocXMLRPCServer.DocXMLRPCRequestHandler):
 
             
 class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
-                           DocXMLRPCServer.DocXMLRPCServer):
+                           XMLRPCServer):
     allow_reuse_address = True
 
     def __init__(self, *args, **kwargs):
-        DocXMLRPCServer.DocXMLRPCServer.__init__(self, *args,
+        XMLRPCServer.__init__(self, *args,
                 requestHandler=XMLRPCRequestHandler, **kwargs)
 
     def _dispatch(self, method, params):
@@ -88,7 +127,7 @@ class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
         """
         start = datetime.utcnow()
         try:
-            result=DocXMLRPCServer.DocXMLRPCServer._dispatch(self, method, params)
+            result=XMLRPCServer._dispatch(self, method, params)
         except:
             logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
             raise
@@ -130,6 +169,12 @@ def main_loop(conf=None, foreground=False):
     login.start()
     server = ForkingXMLRPCServer(("", 8000), allow_none=True)
     server.register_instance(proxy)
+    # register nopxe and install_start as get methods
+    # http://Example.com:8000/nopxe/fqdn <- Remove netboot record for fqdn
+    # http://Example.com:8000/install_start/fqdn <- Register start of install
+    server.register_get_function(proxy.clear_netboot, 'nopxe')
+    server.register_get_function(proxy.install_start)
+    server.register_get_function(proxy.postreboot)
     try:
         server.serve_forever()
     except (ShutdownException, KeyboardInterrupt):
