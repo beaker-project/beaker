@@ -166,6 +166,15 @@ class LabControllers(RPCRoot):
                 dtr.repo_type = repo['type']
                 dtr.path = repo['path']
 
+        if 'kernel_options' in new_distro:
+            distro_tree.kernel_options = new_distro['kernel_options']
+
+        if 'kernel_options_post' in new_distro:
+            distro_tree.kernel_options_post = new_distro['kernel_options_post']
+
+        if 'ks_meta' in new_distro:
+            distro_tree.ks_meta = new_distro['ks_meta']
+
         if 'images' in new_distro:
             for image in new_distro['images']:
                 try:
