@@ -214,7 +214,9 @@ class CSV(RPCRoot):
     def to_datastruct(self):
         datastruct = dict()
         for csv_key in self.csv_keys:
-            val = getattr(self, csv_key, None) or ''
+            val = getattr(self, csv_key, None)
+            if val is None:
+                val = ''
             datastruct[csv_key] = unicode(val)
         yield datastruct
 
