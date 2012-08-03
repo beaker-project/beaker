@@ -109,6 +109,12 @@ class SeleniumTestCase(unittest.TestCase):
             return True
         return False
 
+    def assert_system_view_text(self, field, val):
+        sel = self.selenium
+        text = sel.get_text("//td[preceding-sibling::"
+            "th/label[@for='form_%s']]" % field)
+        assert text.strip() == val
+
 class WebDriverTestCase(unittest.TestCase):
 
     @classmethod
