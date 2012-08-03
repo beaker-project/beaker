@@ -46,16 +46,30 @@
    <td class="list">
     ${group.display_name}
    </td>
-   <td class="list">  
+   <td class="list">
    <span py:if="'admin' not in [group.group_name]">
-
    <span py:if="group_assoc.admin">
-     <span id="admin_group_${group.group_id}">Yes&nbsp;<a py:if="'admin' in tg.identity.groups or can_admin" id="remove_admin_${group.group_id}" href="#">(Remove)</a></span>
-     <span id="non_admin_group_${group.group_id}" style="display:none">No&nbsp;<a py:if="'admin' in tg.identity.groups or can_admin"  id="add_admin_${group.group_id}" href="#">(Add)</a></span>
+     <span id="admin_group_${group.group_id}">Yes&nbsp;
+      <a py:if="'admin' in tg.identity.groups or can_admin"
+       onclick="remove_system_admin('${change_admin_url}', ${group.group_id});return false;"
+       href="#">(Remove)</a>
+     </span>
+     <span id="non_admin_group_${group.group_id}" style="display:none">No
+       <a py:if="'admin' in tg.identity.groups or can_admin"
+        onclick="add_system_admin('${change_admin_url}', ${group.group_id});return false;"
+        href="#">(Add)</a>
+     </span>
    </span>
    <span py:if="not group_assoc.admin">
-     <span id="admin_group_${group.group_id}" style="display:none">Yes&nbsp;<a py:if="'admin' in tg.identity.groups or can_admin" id="remove_admin_${group.group_id}" href="#">(Remove)</a></span>
-     <span id="non_admin_group_${group.group_id}" >No&nbsp;<a py:if="'admin' in tg.identity.groups or can_admin"  id="add_admin_${group.group_id}" href="#">(Add)</a></span>
+     <span id="admin_group_${group.group_id}" style="display:none">Yes
+      <a py:if="'admin' in tg.identity.groups or can_admin"
+       onclick="remove_system_admin('${change_admin_url}', ${group.group_id});return false"
+       href="#">(Remove)</a>
+     </span>
+     <span id="non_admin_group_${group.group_id}">No
+      <a py:if="'admin' in tg.identity.groups or can_admin"
+       onclick="add_system_admin('${change_admin_url}', ${group.group_id});return false"
+       href="#">(Add)</a></span>
    </span>
    </span>
    </td>

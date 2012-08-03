@@ -1057,11 +1057,15 @@ class DistroTags(Form):
         if 'tags' in d['options']:
             d['tags'] = d['options']['tags']
 
-class SystemGroups(Form): 
-    javascript = [LocalJSLink('bkr','/static/javascript/system_admin.js')]
+
+class SystemGroups(Form):
+    # XXX As it's currently used, this JS is not loaded from here
+    # but from the SystemForm widget. It should stay here, just in case
+    # we change how we display this widget
+    javascript = [LocalJSLink('bkr','/static/javascript/system_admin_v2.js')]
     template = "bkr.server.templates.system_groups"
     member_widgets = ["id", "group", "delete_link"]
-    params = ['options', 'readonly', 'group_assocs', 'can_admin']
+    params = ['options', 'readonly', 'group_assocs', 'can_admin', 'change_admin_url']
     delete_link = DeleteLinkWidgetForm()
 
     def __init__(self, *args, **kw):
@@ -1082,6 +1086,7 @@ class SystemGroups(Form):
             d['system_id'] = d['options']['system_id']
         if 'can_admin' in d['options']:
             d['can_admin'] = d['options']['can_admin']
+        d['change_admin_url'] = url('/change_system_admin')
 
 
 class SystemProvision(Form):
@@ -1253,7 +1258,7 @@ class SystemHistory(CompoundWidget):
 class SystemForm(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/provision_v2.js'),
                   LocalJSLink('bkr', '/static/javascript/install_options.js'),
-                  LocalJSLink('bkr','/static/javascript/system_admin.js'),
+                  LocalJSLink('bkr','/static/javascript/system_admin_v2.js'),
                   LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'),
                   JSLink(static,'ajax.js'),
                  ]
