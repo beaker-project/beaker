@@ -3,10 +3,10 @@ from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, with_transaction, get_server_base
 import unittest, time, re, os
 from turbogears.database import session
+from bkr.server.model import OSMajor
 
 
 class TaskSearchWD(WebDriverTestCase):
-
 
     def setUp(self):
         self.browser = self.get_browser()
@@ -42,6 +42,23 @@ class TaskSearchWD(WebDriverTestCase):
             "a[normalize-space(text())='%s']" % rtask.t_id)
         b.find_element_by_xpath("//div[@id='task_items']//"
             "a[normalize-space(text())='%s']" % rtask2.t_id)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=840720
+    def test_executed_tasks_family_sorting(self):
+        with session.begin():
+            task = data_setup.create_task()
+            data_setup.create_completed_job(task_name=task.name,
+                    distro_tree=data_setup.create_distro_tree(osmajor=u'BlueShoe10'))
+            data_setup.create_completed_job(task_name=task.name,
+                    distro_tree=data_setup.create_distro_tree(osmajor=u'BlueShoe9'))
+            # plus one that is never used
+            OSMajor.lazy_create(osmajor=u'neverused666')
+        b = self.browser
+        b.get(get_server_base() + 'tasks/%d' % task.id)
+        options = [element.text for element in
+                b.find_elements_by_xpath("//select[@name='osmajor_id']/option")]
+        self.assert_(options.index('BlueShoe9') < options.index('BlueShoe10'), options)
+        self.assert_('neverused666' not in options, options)
 
 
 class Search(SeleniumTestCase):

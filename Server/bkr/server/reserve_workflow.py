@@ -91,10 +91,9 @@ class ReserveWorkflow:
         tags = DistroTag.used()
         options['tag'] = [('', 'None selected')] + \
                 [(tag.tag, tag.tag) for tag in tags]
-        osmajors = sorted(OSMajor.in_any_lab(), key=lambda osmajor:
-                re.match(r'(.*?)(\d*)$', osmajor.osmajor).groups())
         options['osmajor'] = [('', 'None selected')] + \
-                [(osmajor.osmajor, osmajor.osmajor) for osmajor in osmajors]
+                [(osmajor.osmajor, osmajor.osmajor) for osmajor
+                in OSMajor.ordered_by_osmajor(OSMajor.in_any_lab())]
         options['distro'] = self._get_distro_options(**kwargs)
         options['distro_tree_id'] = self._get_distro_tree_options(**kwargs)
 

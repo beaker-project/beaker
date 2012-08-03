@@ -800,7 +800,8 @@ class TaskSearchForm(RemoteForm):
               TextField(name='distro', label=_(u'Distro')),
               TextField(name='whiteboard', label=_(u'Recipe Whiteboard')),
               SingleSelectField(name='osmajor_id', label=_(u'Family'),validator=validators.Int(),
-                                options=model.OSMajor.get_all),
+                                options=lambda: [(0, 'All')] + [(m.id, m.osmajor) for m
+                                    in model.OSMajor.ordered_by_osmajor(model.OSMajor.used_by_any_recipe())]),
               SingleSelectField(name='status', label=_(u'Status'), validator=ValidEnumValue(model.TaskStatus),
                                 options=lambda: [(None, 'All')] + [(status, status.value) for status in model.TaskStatus]),
               SingleSelectField(name='result', label=_(u'Result'), validator=ValidEnumValue(model.TaskResult),
@@ -1154,7 +1155,8 @@ class SystemInstallOptions(Form):
                                  validator=validators.NotEmpty())
         self.prov_osmajor      = SingleSelectField(name='prov_osmajor',
                                  label=_(u'Family'),
-                                 options=model.OSMajor.get_all,
+                                 options=lambda: [(0, 'All')] +
+                                    [(m.id, m.osmajor) for m in model.OSMajor.ordered_by_osmajor()],
                                  validator=validators.NotEmpty())
         self.prov_osversion    = SingleSelectField(name='prov_osversion',
                                  label=_(u'Update'),
