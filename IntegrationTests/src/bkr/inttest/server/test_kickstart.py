@@ -25,15 +25,15 @@ def compare_expected(name, recipe_id, actual):
         '@REPOS@': urlparse.urljoin(get_server_base(), '/repos/'),
         '@HARNESS@': urlparse.urljoin(get_server_base(), '/harness/'),
     }
-    for name, value in vars.iteritems():
-        expected = expected.replace(name, value)
+    for var, value in vars.iteritems():
+        expected = expected.replace(var, value)
     if expected != actual:
         expected_path = pkg_resources.resource_filename('bkr.inttest',
                 'server/kickstarts/%s.expected' % name)
         # Undo the substitutions, so that we get a sensible diff
-        actual = re.sub(r'\b%s\b' % vars.pop('RECIPEID'), '@RECIPEID@', actual)
-        for name, value in vars.iteritems():
-            actual = actual.replace(value, name)
+        actual = re.sub(r'\b%s\b' % vars.pop('@RECIPEID@'), '@RECIPEID@', actual)
+        for var, value in vars.iteritems():
+            actual = actual.replace(value, var)
         actual_temp = tempfile.NamedTemporaryFile(prefix='beaker-kickstart-test-',
                 suffix='-actual', delete=False)
         actual_temp.write(actual)
