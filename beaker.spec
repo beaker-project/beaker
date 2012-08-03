@@ -15,8 +15,8 @@
 %endif
 
 Name:           beaker
-Version:        0.9.1
-Release:        3%{?dist}
+Version:        0.9.2
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -349,6 +349,55 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Fri Aug 03 2012 Bill Peck <bpeck@redhat.com> 0.9.2-1
+- 830288 RFE: Please extend the watchdog panic time to 10 minutes
+  (bpeck@redhat.com)
+- Bump test time on beaker/import task (bpeck@redhat.com)
+- do not run jobs on beaker import task. (bpeck@redhat.com)
+- 572834 new 'interrupt' power command, for sending an NMI or break to the
+  system (dcallagh@redhat.com)
+- 840983 [RFE] add ignoredisk to ks_meta support, also fix up the docs to
+  match. (bpeck@redhat.com)
+- 841743 [RFE] bkr command option to turn off panic detection for submitting
+  task (bpeck@redhat.com)
+- tests: fix kickstart tests when mounted at /bkr/ (dcallagh@redhat.com)
+- 841619 Allow importing without a .composeinfo and .treeinfo.
+  (bpeck@redhat.com)
+- 572834 proxy method for triggering a power command (dcallagh@redhat.com)
+- 841398 special case lazy_create for DeviceClass to handle None -> "NONE"
+  (dcallagh@redhat.com)
+- 838671 Set a default root password for new installations (stl@redhat.com)
+- 841105 Remove spurious html elements (rmancy@redhat.com)
+- 841749 [RFE] server config parameter to set external URL (bpeck@redhat.com)
+- 843561 PPC64 installs fail after 0.9 upgrade (bpeck@redhat.com)
+- tests: fixes for distro and distro tree search (dcallagh@redhat.com)
+- 844512 return false from onclick handlers in search bar (dcallagh@redhat.com)
+- 805019 Support GET URL for displaying executed tasks by recipe task id
+  (rmancy@redhat.com)
+- 840084 Document REBOOTCOUNT (rmancy@redhat.com)
+- 839820 expose distro XML filter for XML-RPC, bkr client, and beaker-pxemenu
+  (dcallagh@redhat.com)
+- 690063 allow searching for key with any value in hostRequires XML
+  (dcallagh@redhat.com)
+- 690063 expose systems XML filter for bkr list-systems (dcallagh@redhat.com)
+- update beaker-repo-update's default URL to beaker-project.org
+  (dcallagh@redhat.com)
+- 835355 Make system groups work on '/bkr' mounted installations
+  (rmancy@redhat.com)
+- 842923 Reduce data set loaded by log_delete. (rmancy@redhat.com)
+- 840720 filter and sort "Family" dropdown in task search form
+  (dcallagh@redhat.com)
+- 839093 Do not convert CSV-exported False bools to empty strings
+  (stl@redhat.com)
+- 790484 Seperate system page into view and edit mode (rmancy@redhat.com)
+- 835179 Fix task search from giving memory error (rmancy@redhat.com)
+- 817518 console.log for host should be updated until whole recipeset completes
+  (bpeck@redhat.com)
+- add back trailing slash to harness URL (dcallagh@redhat.com)
+- Fix doubling of url() on form action (rmancy@redhat.com)
+- 841975 [RFE] support url method for deleteing a systems pxe record
+  (bpeck@redhat.com)
+
 * Thu Jul 19 2012 Raymond Mancy <rmancy@redhat.com> 0.9.1-3
 - Ensure job actions are not on newlines regardless of whiteboard length. See
   732025 (rmancy@redhat.com)
