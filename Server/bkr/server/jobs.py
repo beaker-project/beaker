@@ -174,9 +174,10 @@ class Jobs(RPCRoot):
         Returns a two-element array. The first element is an array of JobIDs 
         of the form ``'J:123'``, suitable to be passed to the 
         :meth:`jobs.delete_jobs` method. The second element is a human-readable 
-        count of the number of Jobs matched.
+        count of the number of Jobs matched. Does not return deleted jobs.
         """
-        jobs = Job.find_jobs(tag=tags, complete_days=days_complete_for, family=family, product=product, **kw).all()
+        jobs = Job.find_jobs(tag=tags, complete_days=days_complete_for,
+            family=family, product=product, **kw).all()
         return_value = [j.t_id for j in jobs]
         return return_value,'Count: %s' % len(return_value)
 
@@ -210,7 +211,9 @@ class Jobs(RPCRoot):
                 jobs_to_try_to_del.append(job)
             delete_jobs_kw = dict(jobs=jobs_to_try_to_del)
         else:
-            delete_jobs_kw = dict(query=Job.find_jobs(tag=tag, complete_days=complete_days, family=family, product=product))
+            delete_jobs_kw = dict(query=Job.find_jobs(tag=tag,
+                complete_days=complete_days,
+                family=family, product=product))
 
         deleted_jobs = Job.delete_jobs(**delete_jobs_kw)
         
