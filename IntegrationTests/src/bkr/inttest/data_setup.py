@@ -278,8 +278,11 @@ def create_recipe(system=None, distro_tree=None, task_list=None,
     recipe.distro_requires = recipe.distro_tree.to_xml().toxml()
 
     if not server_log:
+        if system:
+            recipe.log_server = system.lab_controller.fqdn
         recipe.logs = [LogRecipe(path=u'/recipe_path',filename=u'dummy.txt', basepath=u'/beaker')]
     else:
+        recipe.log_server = u'dummy-archive-server'
         recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/recipe_path', filename=u'dummy.txt' )]
 
     if not server_log:
@@ -342,6 +345,8 @@ def create_completed_job(**kwargs):
 def mark_recipe_complete(recipe, result=TaskResult.pass_, system=None,
         start_time=None, finish_time=None, **kwargs):
     assert result in TaskResult
+    if finish_time is None:
+        finish_time = datetime.datetime.utcnow()
     if system is None:
         recipe.system = create_system(arch=recipe.arch)
     else:
@@ -357,14 +362,12 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_, system=None,
     recipe.update_status()
     for recipe_task in recipe.tasks:
         rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
-        recipe_task.finish_time = finish_time or datetime.datetime.utcnow()
+        recipe_task.finish_time = finish_time
         recipe_task.status = TaskStatus.completed
         recipe_task.results.append(rtr)
+    reservation.finish_time = finish_time
+    recipe.finish_time = finish_time
     recipe.update_status()
-
-    if finish_time:
-        reservation.finish_time = finish_time
-        recipe.finish_time = finish_time
     log.debug('Marked %s as complete with result %s', recipe.t_id, result)
 
 def mark_job_complete(job, **kwargs):

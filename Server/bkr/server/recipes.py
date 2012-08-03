@@ -77,13 +77,14 @@ class Recipes(RPCRoot):
        """
        Return a list of recipes which have logs which belong to server
        default limit of 50 at a time.
+       Only return recipes where the whole recipeset has completed.
        """
-       finished = [u'Completed',u'Aborted',u'Cancelled']
-       recipes = Recipe\
-                 .query.filter(Recipe.finish_time != None)\
-                       .filter(Recipe.log_server == server)\
-                 .limit(limit)
-       return [r.id for r in recipes]
+       recipes = Recipe.query.join(Recipe.recipeset)\
+                        .filter(not_(RecipeSet.recipes.any(
+                                               Recipe.finish_time == None)))\
+                        .filter(Recipe.log_server == server)\
+                        .limit(limit)
+       return [recipe_id for recipe_id, in recipes.values(Recipe.id)]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
