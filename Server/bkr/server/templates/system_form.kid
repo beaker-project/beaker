@@ -22,7 +22,7 @@ $(document).ready(function(){
 </label>
 <form xmlns:py="http://purl.org/kid/ns#"
   name="${name}"
-  action="${tg.url(action)}"
+  action="${action}"
   method="${method}" width="100%">
 
     <div xmlns:py="http://purl.org/kid/ns#">

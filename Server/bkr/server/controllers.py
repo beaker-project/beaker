@@ -696,7 +696,7 @@ class Root(RPCRoot):
             title    = 'New System',
             form     = self.system_form,
             widgets  = {},
-            action   = '/save',
+            action   = url('/save'),
             value    = None,
             options  = options)
 
@@ -822,7 +822,7 @@ class Root(RPCRoot):
             title           = title,
             readonly        = readonly,
             form            = self.system_form,
-            action          = '/save',
+            action          = url('/save'),
             value           = system,
             options         = options,
             history_data    = historical_data,
@@ -909,7 +909,7 @@ class Root(RPCRoot):
                     options=options, 
                     title=title, 
                     value=system, 
-                    action='/save')
+                    action=url('/save'))
 
     @cherrypy.expose
     def view(self, fqdn=None, **kwargs):
@@ -1102,7 +1102,7 @@ class Root(RPCRoot):
         return dict(
             title=_(u'Notify CC list for %s') % system.fqdn,
             form=self.system_cc_form,
-            action='save_cc',
+            action=url('/save_cc'),
             options=None,
             value={'id': system.id, 'cc': system._system_ccs},
         )
