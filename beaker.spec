@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -349,6 +349,11 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Wed Aug 08 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.2-2
+- Abort beaker-init if no admin account exists or is specified (stl@redhat.com)
+- Display condition report in system view similarly to system edit
+  (rmancy@redhat.com)
+
 * Fri Aug 03 2012 Bill Peck <bpeck@redhat.com> 0.9.2-1
 - 830288 RFE: Please extend the watchdog panic time to 10 minutes
   (bpeck@redhat.com)
