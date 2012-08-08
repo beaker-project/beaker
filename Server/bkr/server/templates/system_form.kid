@@ -13,6 +13,14 @@ $(document).ready(function(){
     if ($('#form_status :selected').text() == 'Manual' || $('#form_status :selected').text() == 'Automated') {
          $('#condition_report_row').addClass('hidden')
     } 
+
+    // Get The element that contains our condition text
+    var condition_elem = $('label[for="form_status"]').parent().next()
+    var condition_text = $.trim($(condition_elem).text())
+    // Hide the condition field if we are in view mode
+    if (condition_text == 'Manual' || condition_text == 'Automated') {
+        $('#condition_report_row').addClass('hidden')
+    }
 });
 </script>
 <label py:def="label_for(field_name)"

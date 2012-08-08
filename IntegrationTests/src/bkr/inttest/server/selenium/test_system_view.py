@@ -100,6 +100,18 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), system.fqdn)
 
+    def test_system_view_condition_report(self):
+        sel = self.selenium
+        self.login()
+        self.go_to_system_view()
+        is_hidden = sel.get_xpath_count("//tr[@id='condition_report_row' and @class='list hidden']")
+        self.assert_(is_hidden == 1)
+        with session.begin():
+            self.system.status = SystemStatus.broken
+        self.go_to_system_view()
+        not_hidden = sel.get_xpath_count("//tr[@id='condition_report_row' and @class='list']")
+        self.assert_(not_hidden == 1)
+
     def test_current_job(self):
         sel = self.selenium
         self.login()
