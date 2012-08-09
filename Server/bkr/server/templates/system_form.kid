@@ -13,6 +13,14 @@ $(document).ready(function(){
     if ($('#form_status :selected').text() == 'Manual' || $('#form_status :selected').text() == 'Automated') {
          $('#condition_report_row').addClass('hidden')
     } 
+
+    // Get The element that contains our condition text
+    var condition_elem = $('label[for="form_status"]').parent().next()
+    var condition_text = $.trim($(condition_elem).text())
+    // Hide the condition field if we are in view mode
+    if (condition_text == 'Manual' || condition_text == 'Automated') {
+        $('#condition_report_row').addClass('hidden')
+    }
 });
 </script>
 <label py:def="label_for(field_name)"
@@ -22,18 +30,20 @@ $(document).ready(function(){
 </label>
 <form xmlns:py="http://purl.org/kid/ns#"
   name="${name}"
-  action="${tg.url(action)}"
+  action="${action}"
   method="${method}" width="100%">
 
     <div xmlns:py="http://purl.org/kid/ns#">
-     ${display_field_for("id")}
-     <table class="list">
+     <span py:if="options.get('edit')" py:strip="1">
+      ${display_system_property("id")}
+     </span>
+     <table class="list" style="margin-bottom:1em">
       <tr class="list">
        <th class="list">
         ${label_for('fqdn')}
        </th>
        <td class="list" colspan="3">
-        ${display_field_for("fqdn")}
+        ${display_system_property("fqdn")}
         <br/><span py:if="error_for('fqdn')" class="fielderror" py:content="error_for('fqdn')" />
        </td>
       </tr>
@@ -62,7 +72,7 @@ $(document).ready(function(){
         ${label_for('vendor')}
        </th>
        <td class="list">
-        ${display_field_for("vendor")}
+        ${display_system_property("vendor")}
        </td>
       </tr>
       <tr class="list">
@@ -70,13 +80,13 @@ $(document).ready(function(){
         ${label_for('lender')}
        </th>
        <td class="list">
-        ${display_field_for('lender')}
+        ${display_system_property('lender')}
        </td>
        <th class="list">
         ${label_for('model')}
        </th>
        <td class="list">
-        ${display_field_for("model")}
+        ${display_system_property("model")}
        </td>
       </tr>
       <tr class="list">
@@ -84,13 +94,13 @@ $(document).ready(function(){
         ${label_for('serial')}
        </th>
        <td class="list">
-        ${display_field_for("serial")}
+        ${display_system_property("serial")}
        </td>
        <th class="list">
         ${label_for('location')}
        </th>
        <td class="list">
-        ${display_field_for("location")}
+        ${display_system_property("location")}
        </td>
       </tr>
       <tr class="list">
@@ -98,7 +108,7 @@ $(document).ready(function(){
         ${label_for('status')}
        </th>
        <td class="list">
-        ${display_field_for("status")}
+        ${display_system_property("status")}
        </td>
        <th class="list">
         ${label_for('owner')}
@@ -118,7 +128,7 @@ $(document).ready(function(){
         ${label_for('status_reason')}
        </th>
        <td class="list"> 
-        ${display_field_for("status_reason")}
+        ${display_system_property("status_reason")}
        </td>
       </tr>
       <tr class="list"> 
@@ -127,7 +137,7 @@ $(document).ready(function(){
        </th>
        <td class="list">
         <span py:if="value_for('fqdn')">
-         ${display_field_for("shared")}
+         ${display_system_property("shared")}
         </span>
        </td>
        <th class="list">
@@ -148,7 +158,7 @@ $(document).ready(function(){
         ${label_for('private')}
        </th>
        <td class="list">
-        ${display_field_for("private")}
+        ${display_system_property("private")}
        </td>
        <th class="list">
         ${label_for('loaned')}
@@ -165,13 +175,13 @@ $(document).ready(function(){
         ${label_for('lab_controller_id')}
        </th>
        <td class="list">
-        ${display_field_for("lab_controller_id")}
+        ${display_system_property("lab_controller_id")}
        </td>
        <th class="list">
         ${label_for('mac_address')}
        </th>
        <td class="list">
-        ${display_field_for("mac_address")}
+        ${display_system_property("mac_address")}
        </td>
       </tr> 
       <tr class="list">
@@ -179,14 +189,14 @@ $(document).ready(function(){
         ${label_for('type')}
        </th>
        <td class="list">
-        ${display_field_for("type")}
+        ${display_system_property("type")}
        </td>
-       <th class="list" py:if="show_cc or not readonly">
+       <th class="list" py:if="show_cc">
         ${label_for('cc')}
        </th>
-       <td class="list" py:if="show_cc or not readonly">
+       <td class="list" py:if="show_cc">
         ${'; '.join(value_for("cc") or [])}
-        <a py:if="not readonly" href="${tg.url('/cc_change', system_id=id)}">(Change)</a>
+        <a href="${tg.url('/cc_change', system_id=id)}">(Change)</a>
        </td>
       </tr>
       <tr class="list">
@@ -194,15 +204,16 @@ $(document).ready(function(){
         ${label_for('hypervisor_id')}
        </th>
        <td class="list">
-        ${display_field_for("hypervisor_id")}
-       </td>
-      </tr>
-      <tr py:if="not readonly">
-       <td colspan="4">
-        <a class="button" href="javascript:document.${name}.submit();">Save Changes</a>
+        ${display_system_property("hypervisor_id")}
        </td>
       </tr>
      </table>
+        <span py:if='options.get("edit")' py:strip='1'>
+         <a class="button" href="javascript:document.${name}.submit();">Save Changes</a>
+        </span>
+        <span py:if='not options.get("edit")' py:strip='1'>
+         <a class="button" href="${tg.url('/edit/%s' % value_for('fqdn'))}">Edit System</a>
+        </span>
     </div>
 </form>
 </div>

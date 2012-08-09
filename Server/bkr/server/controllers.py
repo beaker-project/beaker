@@ -64,7 +64,7 @@ from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from bkr.server.helpers import *
 from bkr.server.tools.init import dummy
-from bkr.server import mail
+from bkr.server import mail, needpropertyxml
 from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
@@ -531,6 +531,9 @@ class Root(RPCRoot):
         default_result_columns = ('System/Name', 'System/Status', 'System/Vendor',
                                   'System/Model','System/Arch', 'System/User', 'System/Type') 
 
+        if kw.get('xmlsearch'):
+            systems = needpropertyxml.apply_filter('<and>%s</and>' % kw['xmlsearch'], systems)
+
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']
             sys_search = su.System.search(systems)
@@ -688,14 +691,48 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     def new(self):
         options = {}
-        options['readonly'] = False
+        options['edit'] = True
         return dict(
             title    = 'New System',
             form     = self.system_form,
             widgets  = {},
-            action   = '/save',
+            action   = url('/save'),
             value    = None,
             options  = options)
+
+    def _get_system_options(self, system):
+        options = {}
+        our_user = identity.current.user
+        if system.can_admin(user=our_user):
+            options['owner_change_text'] = ' (Change)'
+            options['show_cc'] = True
+
+        options['loan_widget'] = LoanWidget() 
+        if system.current_loan(our_user) and system.is_admin():
+            options['loan_type'] = LoanWidget.RETURN_CHANGE
+        elif system.current_loan(our_user):
+            options['loan_type'] = LoanWidget.RETURN
+        elif system.can_loan(our_user):
+            options['loan_type'] = LoanWidget.LOAN
+
+        # Has privs and machine is available, can take
+        if system.can_share(our_user) and \
+            system.can_provision_now(our_user):
+                options['user_change_text'] = ' (Take)'
+
+        if system.current_user(our_user):
+            options['user_change_text'] = ' (Return)'
+        if system.open_reservation is not None and \
+            system.open_reservation.recipe:
+                job_id = system.open_reservation.recipe.recipeset.job.id
+                options['running_job'] = '/jobs/%s' % job_id
+
+        options['system_actions'] = self.system_actions
+        options['loan'] = {'system' : system.fqdn, 'name' : 'request_loan',
+            'action' : '../system_action/loan_request'}
+        options['report_problem'] = {'system' : system,
+            'name' : 'report_problem', 'action' : '../system_action/report_system_problem'}
+        return options
 
     @expose(template="bkr.server.templates.system")
     @paginate('history_data',limit=30,default_order='-created')
@@ -721,41 +758,22 @@ class Root(RPCRoot):
                 flash( _(u"Unable to find system with id of %s" % kw['id']) )
                 redirect("/")
         else:
-            system = None
-        options = {}
-        readonly = False
-        is_user = False
-        title = 'New'
-        if system:
-            title = system.fqdn
-            our_user = identity.current.user #simple optimisation
-            currently_held = system.user == our_user
-            if system.can_admin(user=our_user):
-                options['owner_change_text'] = ' (Change)'
-                options['show_cc'] = True
-            else:
-                readonly = True
-
-            options['loan_widget'] = LoanWidget() 
-            if system.current_loan(our_user) and system.is_admin():
-                options['loan_type'] = LoanWidget.RETURN_CHANGE
-            elif system.current_loan(our_user):
-                options['loan_type'] = LoanWidget.RETURN
-            elif system.can_loan(our_user):
-                options['loan_type'] = LoanWidget.LOAN
-
-            if system.can_share(our_user) and system.can_provision_now(our_user): #Has privs and machine is available, can take
-                options['user_change_text'] = ' (Take)'
-
-            if system.current_user(our_user):
-                options['user_change_text'] = ' (Return)'
-                is_user = True
-            if system.open_reservation is not None and\
-                system.open_reservation.recipe:
-                job_id = system.open_reservation.recipe.recipeset.job.id
-                options['running_job'] = '/jobs/%s' % job_id
-
-            self.provision_now_rights,self.will_provision,self.provision_action = \
+            flash( _(u"No given system to view") )
+            redirect("/")
+        our_user = identity.current.user
+        if system.can_admin(user=our_user):
+            readonly = False
+        else:
+            readonly = True
+        if system.current_user(our_user):
+            is_user = True
+        else:
+            is_user = False
+        title = system.fqdn
+        currently_held = system.user == our_user
+        options = self._get_system_options(system)
+        options['edit'] = False
+        self.provision_now_rights,self.will_provision,self.provision_action = \
                 SystemTab.get_provision_perms(system, our_user, currently_held)
 
         if 'activities_found' in histories_return:
@@ -768,7 +786,6 @@ class Root(RPCRoot):
         else:
             attrs = dict()
         options['readonly'] = readonly
-
         options['reprovision_distro_tree_id'] = [(dt.id, unicode(dt)) for dt in
                 system.distro_trees().order_by(Distro.name,
                     DistroTree.variant, DistroTree.arch_id)]
@@ -781,11 +798,6 @@ class Root(RPCRoot):
         except AttributeError,e:
             can_admin = False
 
-        options['system_actions'] = self.system_actions
-        options['loan'] = {'system' : system.fqdn, 'name' : 'request_loan',
-            'action' : '../system_action/loan_request'}
-        options['report_problem'] = {'system' : system,
-            'name' : 'report_problem', 'action' : '../system_action/report_system_problem'}
 
         # If you have anything in your widgets 'javascript' variable,
         # do not return the widget here, the JS will not be loaded,
@@ -809,9 +821,8 @@ class Root(RPCRoot):
         return dict(
             title           = title,
             readonly        = readonly,
-            is_user         = is_user,
             form            = self.system_form,
-            action          = '/save',
+            action          = url('/save'),
             value           = system,
             options         = options,
             history_data    = historical_data,
@@ -877,6 +888,28 @@ class Root(RPCRoot):
         else:
             cherrypy.response.headers['Content-Type'] = 'application/rdf+xml'
             return graph.serialize(format='pretty-xml')
+
+    @identity.require(identity.not_anonymous())
+    @expose('bkr.server.templates.form-post')
+    def edit(self, fqdn=None, **kw):
+        our_user = identity.current.user
+        id = kw.get('id')
+        if id:
+            system = System.by_id(id, our_user)
+        elif fqdn:
+            system = System.by_fqdn(fqdn, our_user)
+        if system and not system.can_admin(user=our_user):
+            flash(_(u"You do not have permission to edit %s" % fqdn))
+            redirect('/')
+        title = system.fqdn
+        options = self._get_system_options(system)
+        options['edit'] = True
+        form = SystemForm()
+        return dict(form=form, 
+                    options=options, 
+                    title=title, 
+                    value=system, 
+                    action=url('/save'))
 
     @cherrypy.expose
     def view(self, fqdn=None, **kwargs):
@@ -1069,7 +1102,7 @@ class Root(RPCRoot):
         return dict(
             title=_(u'Notify CC list for %s') % system.fqdn,
             form=self.system_cc_form,
-            action='save_cc',
+            action=url('/save_cc'),
             options=None,
             value={'id': system.id, 'cc': system._system_ccs},
         )

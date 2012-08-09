@@ -800,7 +800,8 @@ class TaskSearchForm(RemoteForm):
               TextField(name='distro', label=_(u'Distro')),
               TextField(name='whiteboard', label=_(u'Recipe Whiteboard')),
               SingleSelectField(name='osmajor_id', label=_(u'Family'),validator=validators.Int(),
-                                options=model.OSMajor.get_all),
+                                options=lambda: [(0, 'All')] + [(m.id, m.osmajor) for m
+                                    in model.OSMajor.ordered_by_osmajor(model.OSMajor.used_by_any_recipe())]),
               SingleSelectField(name='status', label=_(u'Status'), validator=ValidEnumValue(model.TaskStatus),
                                 options=lambda: [(None, 'All')] + [(status, status.value) for status in model.TaskStatus]),
               SingleSelectField(name='result', label=_(u'Result'), validator=ValidEnumValue(model.TaskResult),
@@ -1057,11 +1058,15 @@ class DistroTags(Form):
         if 'tags' in d['options']:
             d['tags'] = d['options']['tags']
 
-class SystemGroups(Form): 
-    javascript = [LocalJSLink('bkr','/static/javascript/system_admin.js')]
+
+class SystemGroups(Form):
+    # XXX As it's currently used, this JS is not loaded from here
+    # but from the SystemForm widget. It should stay here, just in case
+    # we change how we display this widget
+    javascript = [LocalJSLink('bkr','/static/javascript/system_admin_v2.js')]
     template = "bkr.server.templates.system_groups"
     member_widgets = ["id", "group", "delete_link"]
-    params = ['options', 'readonly', 'group_assocs', 'can_admin']
+    params = ['options', 'readonly', 'group_assocs', 'can_admin', 'change_admin_url']
     delete_link = DeleteLinkWidgetForm()
 
     def __init__(self, *args, **kw):
@@ -1082,6 +1087,7 @@ class SystemGroups(Form):
             d['system_id'] = d['options']['system_id']
         if 'can_admin' in d['options']:
             d['can_admin'] = d['options']['can_admin']
+        d['change_admin_url'] = url('/change_system_admin')
 
 
 class SystemProvision(Form):
@@ -1149,7 +1155,8 @@ class SystemInstallOptions(Form):
                                  validator=validators.NotEmpty())
         self.prov_osmajor      = SingleSelectField(name='prov_osmajor',
                                  label=_(u'Family'),
-                                 options=model.OSMajor.get_all,
+                                 options=lambda: [(0, 'All')] +
+                                    [(m.id, m.osmajor) for m in model.OSMajor.ordered_by_osmajor()],
                                  validator=validators.NotEmpty())
         self.prov_osversion    = SingleSelectField(name='prov_osversion',
                                  label=_(u'Update'),
@@ -1253,7 +1260,7 @@ class SystemHistory(CompoundWidget):
 class SystemForm(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/provision_v2.js'),
                   LocalJSLink('bkr', '/static/javascript/install_options.js'),
-                  LocalJSLink('bkr','/static/javascript/system_admin.js'),
+                  LocalJSLink('bkr','/static/javascript/system_admin_v2.js'),
                   LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'),
                   JSLink(static,'ajax.js'),
                  ]
@@ -1323,8 +1330,35 @@ class SystemForm(Form):
         if item not in [hfield.name for hfield in hidden_fields]:
             return value
 
+    def display(self, value, options={}, **params):
+        if not options.get('edit'):
+            # Access value before it's been altered to a dict of field values
+            params['display_system_property'] = \
+                lambda f: self.custom_value_for(f, value)
+        return super(SystemForm, self).display(value, options=options, **params)
+
+    def custom_value_for(self, item, value):
+        """ Return system property fit for display
+
+        Default is to return the item attribute of value, otherwise
+        custom attribute values can be returned.
+        """
+        mapper = dict(lab_controller_id=lambda: value.lab_controller and \
+                                                 value.lab_controller.fqdn,
+                      hypervisor_id=lambda: value.hypervisor and \
+                                              value.hypervisor.hypervisor)
+        property_func = mapper.get(item)
+        if property_func:
+            property_value = property_func()
+        else:
+            property_value = getattr(value, item, None)
+
+        return property_value
+
     def update_params(self, d):
         super(SystemForm, self).update_params(d)
+        if d['options'].get('edit'):
+            d['display_system_property'] = lambda f: self.display_field_for(f, d["value_for"](f))
         if d["options"].has_key("loan"):
             d["loan"] = d["options"]["loan"]
         if d["options"].has_key("report_problem"):
@@ -1366,11 +1400,6 @@ class SystemForm(Form):
         else:
             d["loaned_email_link"] = ""
 
-        if d["options"]["readonly"]:
-            d["readonly"] = True
-            attrs = {'attrs':{'readonly':'True'}}
-            d["display_field_for"] = lambda f: self.display_field_for(f,
-                d["value_for"](f), **attrs)
 
 class TasksWidget(CompoundWidget):
     template = "bkr.server.templates.tasks_widget"

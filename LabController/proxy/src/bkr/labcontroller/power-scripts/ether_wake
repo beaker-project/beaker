@@ -1,5 +1,9 @@
 #!/bin/sh
 set -e
+if [ "$power_mode" == interrupt ] ; then
+    echo "interrupt not supported by etherwake" >&2
+    exit 1
+fi
 if which ether-wake >/dev/null 2>/dev/null ; then
     ether-wake "$power_address"
 elif which powerwake >/dev/null 2>/dev/null ; then

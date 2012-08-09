@@ -18,6 +18,7 @@ setup(
        	'*.xml',
         'server/kickstarts/*',
         'server/motd.xml',
+        'server/selenium/*.csv',
         'server/selenium/*.rpm',
         'server/selenium/invalid-task_file',] +
         map(lambda x: x.replace('src/bkr/inttest/',''), find_osversion())

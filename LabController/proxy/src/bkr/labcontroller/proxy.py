@@ -273,11 +273,11 @@ class WatchFile(object):
                             if task()['status'] == 'Running':
                                 break
                         self.proxy.task_result(task()['id'], 'panic', '/', 0, panic.group())
-                        # set the watchdog timeout to 10 seconds, gives some time for all data to 
+                        # set the watchdog timeout to 10 minutes, gives some time for all data to 
                         # print out on the serial console
                         # this may abort the recipe depending on what the recipeSets
                         # watchdog behaviour is set to.
-                        self.proxy.extend_watchdog(task()['id'], 10)
+                        self.proxy.extend_watchdog(task()['id'], 60 * 10)
             if not line:
                 return False
             # If we didn't read our full blocksize and we are still growing
@@ -586,6 +586,14 @@ class Proxy(ProxyHelper):
                 True,
                 # delay 30 seconds so that Anaconda can unmount filesystems
                 30)
+
+    def power(self, hostname, action):
+        # XXX this should also be authenticated and
+        # restricted to systems in the same recipeset as the caller
+        logger.debug('power %s %s', hostname, action)
+        return self.hub.systems.power(action, hostname, False,
+                # force=True because we are not the system's user
+                True)
 
     def status_watchdog(self, task_id):
         """ Ask the scheduler how many seconds are left on a watchdog for this task

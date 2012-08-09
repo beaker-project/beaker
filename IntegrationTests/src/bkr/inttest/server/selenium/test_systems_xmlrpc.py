@@ -720,6 +720,22 @@ class PushXmlRpcTest(XmlRpcTestCase):
             system = data_setup.create_system()
         self.server.push(system.fqdn, {'Bothria': 8})
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=841398
+    def test_device_with_no_class(self):
+        with session.begin():
+            system1 = data_setup.create_system()
+            system2 = data_setup.create_system()
+        device_data = {'Devices': [{
+            'type': None, 'bus': u'pci', 'driver': u'noclass',
+            'description': u'Oh so very tacky',
+            'vendorID': None, 'deviceID': None,
+            'subsysVendorID': None, 'subsysDeviceID': None,
+        }]}
+        self.server.push(system1.fqdn, device_data)
+        # DeviceClass('NONE') already exists now, so do it again
+        # and check that nothing blows up
+        self.server.push(system2.fqdn, device_data)
+
 class SystemHistoryXmlRpcTest(XmlRpcTestCase):
 
     def setUp(self):

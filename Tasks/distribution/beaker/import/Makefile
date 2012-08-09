@@ -71,7 +71,7 @@ $(METADATA): Makefile
 	@echo "License:      GPLv2" >> $(METADATA)
 	@echo "TestVersion:  $(TESTVERSION)"	>> $(METADATA)
 	@echo "Description:  Import distros into beaker ">> $(METADATA)
-	@echo "TestTime:     1h" >> $(METADATA)
+	@echo "TestTime:     2h" >> $(METADATA)
 	@echo "RunFor:       $(PACKAGE_NAME)" >> $(METADATA)  
 	@echo "Requires:     $(PACKAGE_NAME)" >> $(METADATA)  
 	@echo "Requires:     mysql-server" >> $(METADATA)  

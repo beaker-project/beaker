@@ -25,7 +25,7 @@ class Search(WebDriverTestCase):
             tags =cls.distro_one_tags)
         data_setup.create_distro_tree(distro=cls.distro_one)
         # Two days in the future
-        cls.distro_one.created = datetime.utcnow() + timedelta(days=2)
+        cls.distro_one.date_created = datetime.utcnow() + timedelta(days=2)
         cls.distro_two_name = data_setup.unique_name(u'nametest%s')
         cls.distro_two_osmajor = u'osmajortest2'
         cls.distro_two_osminor = u'2'
@@ -77,9 +77,10 @@ class Search(WebDriverTestCase):
         b.get(get_server_base() + 'distros')
         b.find_element_by_name('simplesearch').send_keys(self.distro_one.name)
         b.find_element_by_name('search').click()
+        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
+                % self.distro_one.name)
         distro_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_one.name in distro_search_result)
         self.assert_(self.distro_two.name not in distro_search_result)
         self.assert_(self.distro_three.name not in distro_search_result)
         """
@@ -96,11 +97,12 @@ class Search(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys('osmajortest1')
         b.find_element_by_name('Search').click()
-        distro_search_result_2 = \
+        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
+                % self.distro_one.name)
+        distro_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_one.name in distro_search_result_2)
-        self.assert_(self.distro_two.name not in distro_search_result_2)
-        self.assert_(self.distro_three.name not in distro_search_result_2)
+        self.assert_(self.distro_two.name not in distro_search_result)
+        self.assert_(self.distro_three.name not in distro_search_result)
         """
         END
         """
@@ -113,11 +115,12 @@ class Search(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys('1')
         b.find_element_by_name('Search').click()
-        distro_search_result_3 = \
+        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
+                % self.distro_one.name)
+        distro_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_one.name in distro_search_result_2)
-        self.assert_(self.distro_two.name not in distro_search_result_2)
-        self.assert_(self.distro_three.name not in distro_search_result_2)
+        self.assert_(self.distro_two.name not in distro_search_result)
+        self.assert_(self.distro_three.name not in distro_search_result)
         """
         END
         """
@@ -132,11 +135,12 @@ class Search(WebDriverTestCase):
         now_and_1_string = now_and_1.strftime('%Y-%m-%d')
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys(now_and_1_string)
         b.find_element_by_name('Search').click()
-        distro_search_result_3 = \
+        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
+                % self.distro_one.name)
+        distro_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_one.name in distro_search_result_2)
-        self.assert_(self.distro_two.name not in distro_search_result_2)
-        self.assert_(self.distro_three.name not in distro_search_result_2)
+        self.assert_(self.distro_two.name not in distro_search_result)
+        self.assert_(self.distro_three.name not in distro_search_result)
         """
         END
         """

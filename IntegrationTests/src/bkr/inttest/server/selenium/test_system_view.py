@@ -35,6 +35,7 @@ from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System, \
         SystemStatus
 from bkr.server.tools import beakerd
 
+
 class SystemViewTest(SeleniumTestCase):
 
     @with_transaction
@@ -68,6 +69,23 @@ class SystemViewTest(SeleniumTestCase):
     def tearDown(self):
         self.selenium.stop()
 
+
+    def go_to_system_edit(self, system=None):
+        if system is None:
+            system = self.system
+        sel = self.selenium
+        sel.open('')
+        sel.wait_for_page_to_load('30000')
+        sel.type('simplesearch', system.fqdn)
+        sel.click('search')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), 'Systems')
+        sel.click('link=%s' % system.fqdn)
+        sel.wait_for_page_to_load('30000')
+        sel.click('link=Edit System')
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_title(), system.fqdn)
+
     def go_to_system_view(self, system=None):
         if system is None:
             system = self.system
@@ -81,6 +99,18 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('link=%s' % system.fqdn)
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), system.fqdn)
+
+    def test_system_view_condition_report(self):
+        sel = self.selenium
+        self.login()
+        self.go_to_system_view()
+        is_hidden = sel.get_xpath_count("//tr[@id='condition_report_row' and @class='list hidden']")
+        self.assert_(is_hidden == 1)
+        with session.begin():
+            self.system.status = SystemStatus.broken
+        self.go_to_system_view()
+        not_hidden = sel.get_xpath_count("//tr[@id='condition_report_row' and @class='list']")
+        self.assert_(not_hidden == 1)
 
     def test_current_job(self):
         sel = self.selenium
@@ -124,18 +154,18 @@ class SystemViewTest(SeleniumTestCase):
             system.labcontroller = None
         self.login()
         sel = self.selenium
-        self.go_to_system_view(system=system)
+        self.go_to_system_edit(system=system)
         new_fqdn = 'zx81.example.com'
         sel.type('fqdn', new_fqdn)
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_value('fqdn'), new_fqdn)
+        self.assert_system_view_text('fqdn', new_fqdn)
 
     def test_update_system(self):
         orig_date_modified = self.system.date_modified
         self.login()
         sel = self.selenium
-        self.go_to_system_view()
+        self.go_to_system_edit()
         changes = {
             'fqdn': 'zx80.example.com',
             'vendor': 'Sinclair',
@@ -148,7 +178,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
         for k, v in changes.iteritems():
-            self.assertEquals(sel.get_value(k), v)
+            self.assert_system_view_text(k, v)
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
@@ -157,11 +187,11 @@ class SystemViewTest(SeleniumTestCase):
         orig_date_modified = self.system.date_modified
         self.login()
         sel = self.selenium
-        self.go_to_system_view()
+        self.go_to_system_edit()
         sel.select('status', u'Broken')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_selected_label('status'), u'Broken')
+        self.assert_system_view_text('status', u'Broken')
         with session.begin():
             session.refresh(self.system)
             self.assertEqual(self.system.status, SystemStatus.broken)
@@ -188,27 +218,27 @@ class SystemViewTest(SeleniumTestCase):
             self.system.status = SystemStatus.automated
         self.login()
         sel = self.selenium
-        self.go_to_system_view()
-        self.go_to_system_view()
+        self.go_to_system_edit()
+        self.go_to_system_edit()
         sel.select('status', u'Broken')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), self.system.fqdn)
-        self.assertEqual(sel.get_selected_label('status'), u'Broken')
+        self.assert_system_view_text('status', u'Broken')
 
     def test_strips_surrounding_whitespace_from_fqdn(self):
         self.login()
         sel = self.selenium
-        self.go_to_system_view()
+        self.go_to_system_edit()
         sel.type('fqdn', '    lol    ')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_value('fqdn'), 'lol')
+        self.assert_system_view_text('fqdn', 'lol')
 
     def test_rejects_malformed_fqdn(self):
         self.login()
         sel = self.selenium
-        self.go_to_system_view()
+        self.go_to_system_edit()
         sel.type('fqdn', 'lol...?')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
@@ -218,7 +248,7 @@ class SystemViewTest(SeleniumTestCase):
     def test_rejects_non_ascii_chars_in_fqdn(self):
         self.login()
         sel = self.selenium
-        self.go_to_system_view()
+        self.go_to_system_edit()
         sel.type('fqdn', u'lööööl')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
@@ -229,11 +259,11 @@ class SystemViewTest(SeleniumTestCase):
     def test_forces_fqdn_to_lowercase(self):
         self.login()
         sel = self.selenium
-        self.go_to_system_view()
+        self.go_to_system_edit()
         sel.type('fqdn', 'LooOOooL')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_value('fqdn'), 'looooool')
+        self.assert_system_view_text('fqdn', 'looooool')
 
     def test_add_arch(self):
         orig_date_modified = self.system.date_modified
@@ -460,7 +490,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'Saved Lab Info')
         for k, v in changes.iteritems():
-            self.assertEquals(sel.get_value(k), v)
+            self.assertEqual(sel.get_value(k), v)
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
@@ -535,25 +565,24 @@ class SystemViewTest(SeleniumTestCase):
                     user=data_setup.create_user())
         self.login()
         sel = self.selenium
-        self.go_to_system_view()
+        self.go_to_system_edit()
         sel.select('lab_controller_id', 'None')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_text('css=.flash'),
                 'Unable to change lab controller while system is in use '
                 '(return the system first)')
-        self.assertEqual(sel.get_selected_label('lab_controller_id'),
-                self.lab_controller.fqdn)
+        self.assert_system_view_text('lab_controller_id', self.lab_controller.fqdn)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=714974
     def test_change_hypervisor(self):
         self.login()
         sel = self.selenium
-        self.go_to_system_view()
+        self.go_to_system_edit()
         sel.select('hypervisor_id', 'KVM')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_selected_label('hypervisor_id'), 'KVM')
+        self.assert_system_view_text('hypervisor_id', 'KVM')
         with session.begin():
             session.refresh(self.system)
             self.assertEqual(self.system.hypervisor, Hypervisor.by_name(u'KVM'))
@@ -563,11 +592,11 @@ class SystemViewTest(SeleniumTestCase):
         bad_mac_address = u'aяяяяяяяяяяяяяяяяя'
         self.login()
         sel = self.selenium
-        self.go_to_system_view()
+        self.go_to_system_edit()
         sel.type('mac_address', bad_mac_address)
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_value('mac_address'), bad_mac_address)
+        self.assert_system_view_text('mac_address', bad_mac_address)
         with session.begin():
             session.refresh(self.system)
             self.assertEqual(self.system.mac_address, bad_mac_address)
@@ -579,6 +608,7 @@ class SystemViewTest(SeleniumTestCase):
         self.go_to_system_view()
         self.assert_(sel.is_element_present(
                 '//input[@value="Power On System"]'))
+        self.go_to_system_edit()
         sel.select('lab_controller_id', 'None')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')

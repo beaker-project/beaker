@@ -56,14 +56,17 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
     #Setup User account
     if user_name:
         if password:
-            user = User(user_name=user_name, password=password)
+            user = User(user_name=user_name.encode('utf8'), password=password.encode('utf8'))
             if user_display_name:
-                user.display_name = user_display_name
+                user.display_name = user_display_name.encode('utf8')
             if user_email_address:
-                user.email_address = user_email_address
+                user.email_address = user_email_address.encode('utf8')
             admin.users.append(user)
         else:
             print "Password must be provided with username"
+    elif len(admin.users) == 0:
+        print "No admin account exists, please create one with --user"
+        sys.exit(1)
 
     # Create proxy_auth perm if not present
     try:
@@ -130,33 +133,33 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
 
     #Setup key types
     if Key.query.count() == 0:
-        DISKSPACE       = Key('DISKSPACE',True)
-        COMMENT         = Key('COMMENT')
-        CPUFAMILY	= Key('CPUFAMILY',True)
-        CPUFLAGS	= Key('CPUFLAGS')
-        CPUMODEL	= Key('CPUMODEL')
-        CPUMODELNUMBER 	= Key('CPUMODELNUMBER', True)
-        CPUSPEED	= Key('CPUSPEED',True)
-        CPUVENDOR	= Key('CPUVENDOR')
-        DISK		= Key('DISK',True)
-        FORMFACTOR 	= Key('FORMFACTOR')
-        HVM		= Key('HVM')
-        MEMORY		= Key('MEMORY',True)
-        MODEL		= Key('MODEL')
-        MODULE		= Key('MODULE')
-        NETWORK		= Key('NETWORK')
-        NR_DISKS	= Key('NR_DISKS',True)
-        NR_ETH		= Key('NR_ETH',True)
-        NR_IB		= Key('NR_IB',True)
-        PCIID		= Key('PCIID')
-        PROCESSORS	= Key('PROCESSORS',True)
-        RTCERT		= Key('RTCERT')
-        SCRATCH		= Key('SCRATCH')
-        STORAGE		= Key('STORAGE')
-        USBID		= Key('USBID')
-        VENDOR		= Key('VENDOR')
-        XENCERT		= Key('XENCERT')
-        NETBOOT		= Key('NETBOOT_METHOD')
+        DISKSPACE       = Key(u'DISKSPACE',True)
+        COMMENT         = Key(u'COMMENT')
+        CPUFAMILY       = Key(u'CPUFAMILY',True)
+        CPUFLAGS        = Key(u'CPUFLAGS')
+        CPUMODEL        = Key(u'CPUMODEL')
+        CPUMODELNUMBER  = Key(u'CPUMODELNUMBER', True)
+        CPUSPEED        = Key(u'CPUSPEED',True)
+        CPUVENDOR       = Key(u'CPUVENDOR')
+        DISK            = Key(u'DISK',True)
+        FORMFACTOR      = Key(u'FORMFACTOR')
+        HVM             = Key(u'HVM')
+        MEMORY          = Key(u'MEMORY',True)
+        MODEL           = Key(u'MODEL')
+        MODULE          = Key(u'MODULE')
+        NETWORK         = Key(u'NETWORK')
+        NR_DISKS        = Key(u'NR_DISKS',True)
+        NR_ETH          = Key(u'NR_ETH',True)
+        NR_IB           = Key(u'NR_IB',True)
+        PCIID           = Key(u'PCIID')
+        PROCESSORS      = Key(u'PROCESSORS',True)
+        RTCERT          = Key(u'RTCERT')
+        SCRATCH         = Key(u'SCRATCH')
+        STORAGE         = Key(u'STORAGE')
+        USBID           = Key(u'USBID')
+        VENDOR          = Key(u'VENDOR')
+        XENCERT         = Key(u'XENCERT')
+        NETBOOT         = Key(u'NETBOOT_METHOD')
 
     #Setup ack/nak reposnses
     if Response.query.count() == 0:
@@ -171,16 +174,19 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         AUDIT           = RetentionTag(tag=u'audit', needs_product=True)
 
     try:
-        ConfigItem.by_name('root_password')
+        ConfigItem.by_name(u'root_password')
     except NoResultFound:
-        rootpw_clear    = ConfigItem(name='root_password',
+        rootpw_clear    = ConfigItem(name=u'root_password',
                                      description=u'Plaintext root password for provisioned systems')
     try:
-        ConfigItem.by_name('root_password_validity')
+        ConfigItem.by_name(u'root_password_validity')
     except NoResultFound:
-        rootpw_validity = ConfigItem(name='root_password_validity',
+        rootpw_validity = ConfigItem(name=u'root_password_validity',
                                      description=u"Maximum number of days a user's root password is valid for",
                                      numeric=True)
+    session.flush()
+    if ConfigItem.by_name(u'root_password').current_value() is None:
+        ConfigItem.by_name(u'root_password').set(u'beaker', user=admin.users[0])
 
     session.commit()
     session.close()

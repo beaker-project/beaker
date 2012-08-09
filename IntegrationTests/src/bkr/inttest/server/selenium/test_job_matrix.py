@@ -18,6 +18,7 @@ import logging
 import time
 import tempfile
 from turbogears.database import session
+from selenium.webdriver.support.ui import WebDriverWait
 from bkr.server.model import TaskResult
 from bkr.inttest.server.webdriver_utils import login, is_text_present, delete_and_confirm
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
@@ -48,6 +49,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.get(get_server_base() + 'matrix')
         b.find_element_by_id('remote_form_whiteboard_filter').send_keys(whiteboard)
         b.find_element_by_id('remote_form_do_filter').click()
+        WebDriverWait(b, 5).until(lambda driver: driver.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % whiteboard))
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % whiteboard).click()
         b.find_element_by_xpath('//input[@value="Generate"]').click()
         self.failUnless(is_text_present(b, "Your whiteboard contains %d jobs, only %s will be used" % (c, Job.max_by_whiteboard)))

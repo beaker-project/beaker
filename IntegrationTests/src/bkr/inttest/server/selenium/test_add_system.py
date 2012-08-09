@@ -8,18 +8,10 @@ class AddSystem(SeleniumTestCase):
     def setUp(self):
         with session.begin():
             data_setup.create_labcontroller(fqdn=u'lab-devel.rhts.eng.bos.redhat.com')
-
-        try:
-            self.verificationErrors = []
-            self.selenium = self.get_selenium()
-            self.selenium.start()
-            self.condition_report = 'never being fixed'
-            logged_in = self.login() 
-            if not logged_in:
-                raise AssertionError('Could not log in')
-        except AssertionError, e: self.verificationErrors.append(str(e))    
-        except Exception,e:self.verificationErrors.append(str(e))    
-
+        self.selenium = self.get_selenium()
+        self.selenium.start()
+        self.condition_report = 'never being fixed'
+        logged_in = self.login()
 
     def test_case_1(self):
         system_details = dict(fqdn = 'test-system-1',
@@ -35,28 +27,21 @@ class AddSystem(SeleniumTestCase):
                               location = 'brisbane',
                               mac = '33333333')
 
-        #system_details = [fqdn,lender,serial,status,lab_controller,
-        #                  type,private,shared,vendor,model,location,mac]
-        try:
-            sel = self.selenium
-            sel.open("")
-            sel.wait_for_page_to_load("30000")
-            sel.click("//div[@id='fedora-content']/a")
-            sel.wait_for_page_to_load("30000")
-            self.add_system(**system_details)
-            self.failUnless(sel.is_text_present("DetailsArch(s)Key/ValuesGroupsExcluded FamiliesPowerNotesInstall OptionsProvisionLab InfoHistoryTasks")) 
-            self.assertEqual(system_details['fqdn'], sel.get_value("form_fqdn"))
-            self.assertEqual(system_details['lender'], sel.get_value("form_lender")) 
-            self.assertEqual(system_details['vendor'], sel.get_value("form_vendor"))
-            self.assertEqual(system_details['model'], sel.get_value("form_model"))
-            self.assertEqual(system_details['location'], sel.get_value("form_location"))
-            self.assertEqual("off", sel.get_value("form_shared"))
-            self.assertEqual("off", sel.get_value("form_private"))
-            results = self.check_db(system_details['fqdn'])
-            if str(results['status']) != system_details['status']:
-                raise AssertionError('System status not set correctly to %s' % system_details['status'])
-        except AssertionError,e:self.verificationErrors.append(str(e))    
-        except Exception,e:self.verificationErrors.append(str(e))    
+        sel = self.selenium
+        sel.open("")
+        sel.wait_for_page_to_load("30000")
+        sel.click("//div[@id='fedora-content']/a")
+        sel.wait_for_page_to_load("30000")
+        self.add_system(**system_details)
+        self.assert_system_view_text('fqdn', system_details['fqdn'])
+        self.assert_system_view_text('lender', system_details['lender'])
+        self.assert_system_view_text('model', system_details['model'])
+        self.assert_system_view_text('location', system_details['location'])
+        self.assert_system_view_text('shared', 'False')
+        self.assert_system_view_text('private', 'False')
+        results = self.check_db(system_details['fqdn'])
+        if str(results['status']) != system_details['status']:
+            raise AssertionError('System status not set correctly to %s' % system_details['status'])
 
     def test_case_2(self):
         system_details = dict(fqdn = 'test-system-2',
@@ -72,25 +57,20 @@ class AddSystem(SeleniumTestCase):
                               location = 'brisbane',
                               mac = '33333333')
 
-        #system_details = [fqdn,lender,serial,status,lab_controller,
-        #                  type,private,shared,vendor,model,location,mac]
-        try:
-            sel = self.selenium
-            sel.open("")
-            sel.wait_for_page_to_load("30000")
-            sel.click("//div[@id='fedora-content']/a")
-            sel.wait_for_page_to_load("30000")
-            self.add_system(**system_details)
-            self.failUnless(sel.is_text_present("DetailsArch(s)Key/ValuesGroupsExcluded FamiliesPowerNotesInstall OptionsProvisionLab InfoHistoryTasks")) 
-            self.assertEqual(system_details['fqdn'], sel.get_value("form_fqdn"))
-            self.assertEqual(system_details['lender'], sel.get_value("form_lender"))
-            self.assertEqual(self.condition_report, sel.get_value("form_status_reason"))
-            self.assertEqual(system_details['vendor'], sel.get_value("form_vendor"))
-            self.assertEqual(system_details['model'], sel.get_value("form_model"))
-            self.assertEqual(system_details['location'], sel.get_value("form_location"))
-            self.assertEqual("off", sel.get_value("form_shared"))
-            self.assertEqual("off", sel.get_value("form_private"))
-        except Exception,e:self.verificationErrors.append(str(e))
+        sel = self.selenium
+        sel.open("")
+        sel.wait_for_page_to_load("30000")
+        sel.click("//div[@id='fedora-content']/a")
+        sel.wait_for_page_to_load("30000")
+        self.add_system(**system_details)
+        self.assert_system_view_text('fqdn', system_details['fqdn'])
+        self.assert_system_view_text('lender', system_details['lender'])
+        self.assert_system_view_text('vendor', system_details['vendor'])
+        self.assert_system_view_text('status_reason', self.condition_report)
+        self.assert_system_view_text('model', system_details['model'])
+        self.assert_system_view_text('location', system_details['location'])
+        self.assert_system_view_text('shared', 'False')
+        self.assert_system_view_text('private', 'False')
 
     def test_case_3(self):
         system_details = dict(fqdn = 'test-system-3',
@@ -106,24 +86,19 @@ class AddSystem(SeleniumTestCase):
                               location = '',
                               mac = '33333333')
 
-        #system_details = [fqdn,lender,serial,status,lab_controller,
-        #                  type,private,shared,vendor,model,location,mac]
-        try:
-            sel = self.selenium 
-            sel.open("")
-            sel.wait_for_page_to_load("30000")
-            sel.click("//div[@id='fedora-content']/a")
-            sel.wait_for_page_to_load("30000")
-            self.add_system(**system_details)
-            self.failUnless(sel.is_text_present("DetailsArch(s)Key/ValuesGroupsExcluded FamiliesPowerNotesInstall OptionsProvisionLab InfoHistoryTasks")) 
-            self.assertEqual(system_details['fqdn'], sel.get_value("form_fqdn"))
-            self.assertEqual(system_details['lender'], sel.get_value("form_lender")) 
-            self.assertEqual(system_details['vendor'], sel.get_value("form_vendor"))
-            self.assertEqual(system_details['model'], sel.get_value("form_model"))
-            self.assertEqual(system_details['location'], sel.get_value("form_location"))
-            self.assertEqual("off", sel.get_value("form_shared"))
-            self.assertEqual("on", sel.get_value("form_private")) 
-        except Exception,e:self.verificationErrors.append(str(e))    
+        sel = self.selenium
+        sel.open("")
+        sel.wait_for_page_to_load("30000")
+        sel.click("//div[@id='fedora-content']/a")
+        sel.wait_for_page_to_load("30000")
+        self.add_system(**system_details)
+        self.assert_system_view_text('fqdn', system_details['fqdn'])
+        self.assert_system_view_text('lender', system_details['lender'])
+        self.assert_system_view_text('vendor', system_details['vendor'])
+        self.assert_system_view_text('model', system_details['model'])
+        self.assert_system_view_text('location', system_details['location'])
+        self.assert_system_view_text('shared', 'False')
+        self.assert_system_view_text('private', 'True')
 
     def test_case_4(self):
         system_details = dict(fqdn = 'test-system-4',
@@ -139,25 +114,19 @@ class AddSystem(SeleniumTestCase):
                               location = 'brisbane',
                               mac = '33333333')
 
-        #system_details = [fqdn,lender,serial,status,lab_controller,
-        #                  type,private,shared,vendor,model,location,mac]
-        try:
-            sel = self.selenium 
-            sel.open("")
-            sel.wait_for_page_to_load("30000")
-            sel.click("//div[@id='fedora-content']/a")
-            sel.wait_for_page_to_load("30000")
-            self.add_system(**system_details)
-            self.failUnless(sel.is_text_present("DetailsArch(s)Key/ValuesGroupsExcluded FamiliesNotesInstall OptionsLab InfoHistoryTasks"))
-            self.assertEqual(system_details['fqdn'], sel.get_value("form_fqdn"))
-            self.assertEqual(system_details['lender'], sel.get_value("form_lender"))
-            self.assertEqual(self.condition_report, sel.get_value("form_status_reason"))
-            self.assertEqual(system_details['vendor'], sel.get_value("form_vendor"))
-            self.assertEqual(system_details['model'], sel.get_value("form_model"))
-            self.assertEqual(system_details['location'], sel.get_value("form_location"))
-            self.assertEqual("off", sel.get_value("form_shared"))
-            self.assertEqual("on", sel.get_value("form_private"))
-        except Exception,e:self.verificationErrors.append(str(e))    
+        sel = self.selenium
+        sel.open("")
+        sel.wait_for_page_to_load("30000")
+        sel.click("//div[@id='fedora-content']/a")
+        sel.wait_for_page_to_load("30000")
+        self.add_system(**system_details)
+        self.assert_system_view_text('fqdn', system_details['fqdn'])
+        self.assert_system_view_text('lender', system_details['lender'])
+        self.assert_system_view_text('vendor', system_details['vendor'])
+        self.assert_system_view_text('model', system_details['model'])
+        self.assert_system_view_text('location', system_details['location'])
+        self.assert_system_view_text('shared', 'False')
+        self.assert_system_view_text('private', 'True')
 
     def test_case_5(self):
         data_setup.create_system(fqdn=u'preexisting-system')
@@ -175,17 +144,13 @@ class AddSystem(SeleniumTestCase):
                               location = 'brisbane',
                               mac = '33333333')
 
-        #system_details = [fqdn,lender,serial,status,lab_controller,
-        #                  type,private,shared,vendor,model,location,mac]
-        try:
-            sel = self.selenium 
-            sel.open("")
-            sel.wait_for_page_to_load("30000")
-            sel.click("//div[@id='fedora-content']/a")
-            sel.wait_for_page_to_load("30000")
-            self.add_system(**system_details)
-            self.assert_(sel.is_text_present("preexisting-system already exists!"))
-        except Exception,e:self.verificationErrors.append(str(e))
+        sel = self.selenium
+        sel.open("")
+        sel.wait_for_page_to_load("30000")
+        sel.click("//div[@id='fedora-content']/a")
+        sel.wait_for_page_to_load("30000")
+        self.add_system(**system_details)
+        self.assert_(sel.is_text_present("preexisting-system already exists!"))
 
     def check_db(self,fqdn):
         conn = get_engine().connect()
@@ -222,8 +187,6 @@ class AddSystem(SeleniumTestCase):
 
     def tearDown(self):
         self.selenium.stop()
-        self.assertEqual([], self.verificationErrors)
-      
 
 if __name__ == "__main__":
         unittest.main()

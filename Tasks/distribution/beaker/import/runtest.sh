@@ -118,7 +118,7 @@ function LabController()
                 result="Fail"
                 beaker-import ${nfs}/$composeinfo \
                               ${http}/$composeinfo \
-                              ${ftp}/$composeinfo --debug --run-jobs
+                              ${ftp}/$composeinfo --debug
                 if [ $? -eq 0 ]; then
                     result="Pass"
                 fi

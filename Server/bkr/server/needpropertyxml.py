@@ -245,26 +245,39 @@ class XmlKeyValue(ElementWrapper):
         key = self.get_xml_attr('key', unicode, None)
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        query = None
         try:
             _key = Key.by_name(key)
         except NoResultFound:
             return (joins, None)
-        if key and op and value:
-            if _key.numeric:
-                key_value_cls = Key_Value_Int
-                collection = System.key_values_int
-            else:
-                key_value_cls = Key_Value_String
-                collection = System.key_values_string
-            if op == '__ne__':
-                query = not_(collection.any(and_(
-                        key_value_cls.key == _key,
-                        key_value_cls.key_value == value)))
-            else:
-                query = collection.any(and_(
-                        key_value_cls.key == _key,
-                        getattr(key_value_cls.key_value, op)(value)))
+        if op not in ('__eq__', '__ne__') and not value:
+            # makes no sense, discard
+            return (joins, None)
+        if _key.numeric:
+            key_value_cls = Key_Value_Int
+            collection = System.key_values_int
+        else:
+            key_value_cls = Key_Value_String
+            collection = System.key_values_string
+        # <key_value key="THING" op="==" /> -- must have key with any value
+        # <key_value key="THING" op="==" value="VALUE" /> -- must have key with given value
+        # <key_value key="THING" op="!=" /> -- must not have key
+        # <key_value key="THING" op="!=" value="VALUE" /> -- must not have key with given value
+        if op == '__ne__' and value is None:
+            query = not_(collection.any(key_value_cls.key == _key))
+        elif op == '__ne__':
+            query = not_(collection.any(and_(
+                    key_value_cls.key == _key,
+                    key_value_cls.key_value == value)))
+        elif op == '__eq__' and value is None:
+            query = collection.any(key_value_cls.key == _key)
+        elif op == '__eq__':
+            query = collection.any(and_(
+                    key_value_cls.key == _key,
+                    key_value_cls.key_value == value))
+        else:
+            query = collection.any(and_(
+                    key_value_cls.key == _key,
+                    getattr(key_value_cls.key_value, op)(value)))
         return (joins, query)
 
 class XmlAnd(ElementWrapper):

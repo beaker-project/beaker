@@ -2518,10 +2518,6 @@ class OSMajor(MappedObject):
                                     OSMajor.alias==name_alias)).one()
 
     @classmethod
-    def get_all(cls):
-        return [(0,"All")] + [(major.id, major.osmajor) for major in cls.query]
-
-    @classmethod
     def in_any_lab(cls, query=None):
         if query is None:
             query = cls.query
@@ -2532,6 +2528,31 @@ class OSMajor(MappedObject):
                     .join(osversion_table))
                 .where(OSVersion.osmajor_id == OSMajor.id)
                 .correlate(osmajor_table))
+
+    @classmethod
+    def used_by_any_recipe(cls, query=None):
+        if query is None:
+            query = cls.query
+        return query.filter(exists([1], from_obj=
+                recipe_table
+                    .join(distro_tree_table)
+                    .join(distro_table)
+                    .join(osversion_table))
+                .where(OSVersion.osmajor_id == OSMajor.id)
+                .correlate(osmajor_table))
+
+    @classmethod
+    def ordered_by_osmajor(cls, query=None):
+        if query is None:
+            query = cls.query
+        return sorted(query, key=cls._sort_key)
+
+    def _sort_key(self):
+        # Separate out the trailing digits, so that Fedora9 sorts before Fedora10
+        name, version = re.match(r'(.*?)(\d*)$', self.osmajor.lower()).groups()
+        if version:
+            version = int(version)
+        return (name, version)
 
     def tasks(self):
         """
@@ -2720,6 +2741,18 @@ class Numa(SystemObject):
 
 
 class DeviceClass(SystemObject):
+
+    @classmethod
+    def lazy_create(cls, device_class=None, **kwargs):
+        """
+        Like the normal lazy_create, but with special handling for
+        device_class None -> "NONE".
+        """
+        if not device_class:
+            device_class = 'NONE'
+        return super(DeviceClass, cls).lazy_create(
+                device_class=device_class, **kwargs)
+
     def __init__(self, device_class=None, description=None):
         super(DeviceClass, self).__init__()
         if not device_class:
@@ -3533,13 +3566,17 @@ class Job(TaskBase):
     @classmethod
     def expired_logs(cls):
         """Return log files for expired recipes
+
+        Will not return recipes that have already been deleted. Does
+        return recipes that are marked to be deleted though.
         """
         expired_logs = []
-        job_ids = [job.id for job in cls.marked_for_deletion()]
+        job_ids = [job_id for job_id, in cls.marked_for_deletion().values(Job.id)]
         for tag in RetentionTag.get_transient():
             expire_in = tag.expire_in_days
             tag_name = tag.tag
-            job_ids.extend([job.id for job in cls.find_jobs(tag=tag_name, complete_days=expire_in) if job.deleted is None])
+            job_ids.extend(job_id for job_id, in cls.find_jobs(tag=tag_name,
+                complete_days=expire_in, include_to_delete=True).values(Job.id))
         job_ids = set(job_ids)
         for job_id in job_ids:
             job = Job.by_id(job_id)
@@ -3583,7 +3620,7 @@ class Job(TaskBase):
             sanitise_job_ids takes a list of job ids and returns the list
             sans ids that are not 'valid' (i.e deleted jobs)
         """
-        invalid_job_ids = [j.id for j in cls.marked_for_deletion()]
+        invalid_job_ids = [j[0] for j in cls.marked_for_deletion().values(Job.id)]
         valid_job_ids = []
         for job_id in job_ids:
             if job_id not in invalid_job_ids:
@@ -3679,12 +3716,23 @@ class Job(TaskBase):
 
     @classmethod
     def marked_for_deletion(cls):
-        return cls.query.filter(and_(cls.to_delete!=None, cls.deleted==None)).all()
+        return cls.query.filter(and_(cls.to_delete!=None, cls.deleted==None))
 
     @classmethod
-    def find_jobs(cls, query=None, tag=None, complete_days=None, family=None, product=None,  **kw):
+    def find_jobs(cls, query=None, tag=None, complete_days=None,
+        family=None, product=None, include_deleted=False,
+        include_to_delete=False, **kw):
+        """Return a filtered job query
+
+        Does what it says. Also helps searching for expired jobs
+        easier.
+        """
         if not query:
             query = cls.query
+        if not include_deleted:
+            query = query.filter(Job.deleted == None)
+        if not include_to_delete:
+            query = query.filter(Job.to_delete == None)
         if complete_days:
             #This takes the same kw names as timedelta
             query = cls.complete_delta({'days':int(complete_days)}, query)
@@ -4368,10 +4416,6 @@ class Recipe(TaskBase):
     stop_types = ['abort','cancel']
 
     @property
-    def servername(self):
-        return get('tg.url_domain', get('servername', socket.getfqdn()))
-
-    @property
     def harnesspath(self):
         return get('basepath.harness', '/var/www/beaker/harness')
 
@@ -4439,8 +4483,12 @@ class Recipe(TaskBase):
             task.delete()
 
     def task_repo(self):
-        return ("beaker-tasks","http://%s/repos/%s" % (self.servername, self.id))
-
+        return ('beaker-tasks',absolute_url('/repos/%s' % self.id,
+                                            scheme='http',
+                                            labdomain=True,
+                                            webpath=False,
+                                           )
+               )
 
     def harness_repo(self):
         """
@@ -4449,8 +4497,14 @@ class Recipe(TaskBase):
         if self.distro_tree:
             if os.path.exists("%s/%s" % (self.harnesspath,
                                             self.distro_tree.distro.osversion.osmajor)):
-                return ("beaker-harness", "http://%s/harness/%s/"
-                        % (self.servername, self.distro_tree.distro.osversion.osmajor))
+                return ('beaker-harness',
+                    absolute_url('/harness/%s/' %
+                                 self.distro_tree.distro.osversion.osmajor,
+                                 scheme='http',
+                                 labdomain=True,
+                                 webpath=False,
+                                )
+                       )
 
     def generated_install_options(self):
         ks_meta = {
@@ -4689,7 +4743,7 @@ class Recipe(TaskBase):
             os.chdir(self.rpmspath)
             # update base repo, specifying -o and baseurl allow us to copy the repo and have it
             # still reference the rpms in another directory.
-            os.system("createrepo -q --update --checksum sha -o . --baseurl http://%s/rpms ." % (self.servername))
+            os.system("createrepo -q --update --checksum sha -o . --baseurl %s ." % absolute_url('/rpms/', scheme='http', labdomain=True, webpath=False))
             # Copy updated repo to recipe specific repo
             shutil.copytree('%s/repodata' % (self.rpmspath), '%s/repodata' % (directory))
             os.chdir(cwd)
@@ -5731,11 +5785,8 @@ class RenderedKickstart(MappedObject):
         if self.url:
             return self.url
         assert self.id is not None, 'not flushed?'
-        url = absolute_url('/kickstart/%s' % self.id)
-        # Beaker might be configured to use SSL but with a cert signed by
-        # a custom CA. But there's no nice way to educate Anaconda about
-        # custom CAs, so let's just stick with http:// for serving kickstarts.
-        url = url.replace('https://', 'http://')
+        url = absolute_url('/kickstart/%s' % self.id, scheme='http',
+                           labdomain=True)
         return url
 
 class Task(MappedObject):

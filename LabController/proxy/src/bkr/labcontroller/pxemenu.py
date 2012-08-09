@@ -48,6 +48,9 @@ pxelinux.cfg/beaker_menu containing distros from Beaker.
 Use the generated menu with menu.c32 from SYSLINUX.''')
     parser.add_option('--tag', metavar='TAG', action='append', dest='tags',
             help='Only include distros tagged with TAG')
+    parser.add_option('--xml-filter', metavar='XML',
+            help='Only include distro trees which match the given '
+            'XML filter criteria, as in <distroRequires/>')
     parser.add_option('--tftp-root', metavar='DIR',
             default='/var/lib/tftpboot',
             help='Path to TFTP root directory [default: %default]')
@@ -71,7 +74,11 @@ Use the generated menu with menu.c32 from SYSLINUX.''')
         existing_tree_ids = []
 
     proxy = xmlrpclib.ServerProxy('http://localhost:8000', allow_none=True)
-    distrotrees = proxy.get_distro_trees({'arch': ['x86_64', 'i386'], 'tags': opts.tags})
+    distrotrees = proxy.get_distro_trees({
+        'arch': ['x86_64', 'i386'],
+        'tags': opts.tags,
+        'xml': opts.xml_filter,
+    })
 
     obsolete_tree_ids = set(existing_tree_ids).difference(
             str(dt['distro_tree_id']) for dt in distrotrees)

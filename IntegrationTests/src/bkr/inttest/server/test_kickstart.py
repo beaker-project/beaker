@@ -6,6 +6,7 @@ import re
 import pkg_resources
 import jinja2
 import xmltramp
+import crypt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
         CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch
 from bkr.server.kickstart import template_env
@@ -16,14 +17,23 @@ from bkr.inttest import data_setup, get_server_base
 def compare_expected(name, recipe_id, actual):
     expected = pkg_resources.resource_string('bkr.inttest',
             'server/kickstarts/%s.expected' % name)
-    expected = expected.replace('@RECIPEID@', str(recipe_id))
-    server_base = urlparse.urljoin(get_server_base(), '/')
-    expected = expected.replace('@SERVERBASE@', server_base)
+    # Unfortunately there are a few things that vary for each test run,
+    # so we have to substitute them:
+    vars = {
+        '@RECIPEID@': str(recipe_id),
+        '@BEAKER@': get_server_base(),
+        '@REPOS@': urlparse.urljoin(get_server_base(), '/repos/'),
+        '@HARNESS@': urlparse.urljoin(get_server_base(), '/harness/'),
+    }
+    for var, value in vars.iteritems():
+        expected = expected.replace(var, value)
     if expected != actual:
         expected_path = pkg_resources.resource_filename('bkr.inttest',
                 'server/kickstarts/%s.expected' % name)
-        actual = re.sub(r'\b%s\b' % recipe_id, '@RECIPEID@', actual)
-        actual = actual.replace(server_base, '@SERVERBASE@')
+        # Undo the substitutions, so that we get a sensible diff
+        actual = re.sub(r'\b%s\b' % vars.pop('@RECIPEID@'), '@RECIPEID@', actual)
+        for var, value in vars.iteritems():
+            actual = actual.replace(value, var)
         actual_temp = tempfile.NamedTemporaryFile(prefix='beaker-kickstart-test-',
                 suffix='-actual', delete=False)
         actual_temp.write(actual)
@@ -497,6 +507,35 @@ EOF
         compare_expected('Fedora16-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_ignoredisk(self):
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.loaned = self.user
+        system.user = self.user
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
+                ks_meta=u'ignoredisk=--only-use=sda')
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assert_(
+                r'''ignoredisk --only-use=sda'''
+                in recipe.rendered_kickstart.kickstart.splitlines(),
+                recipe.rendered_kickstart.kickstart)
+
     def test_skipx(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
@@ -952,3 +991,31 @@ bootloader --location=mbr
         k = recipe.rendered_kickstart.kickstart
         self.assert_('repo --name=beaker-Server --cost=100 --baseurl=ftp://something/Server' in k, k)
         self.assert_('name=beaker-Server\nbaseurl=ftp://something/Server' in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=838671
+    def test_root_password(self):
+        self.user.root_password = None
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        for line in recipe.rendered_kickstart.kickstart.split('\n'):
+            match = re.match("rootpw --iscrypted (.*)", line)
+            if match:
+                self.assert_(crypt.crypt('beaker', match.group(1)) == match.group(1))
+                break
+        else:
+           self.fail("Password missing from kickstart")

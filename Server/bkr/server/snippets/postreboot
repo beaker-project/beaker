@@ -1,10 +1,7 @@
 {% if postreboot is defined %}
-%post --nochroot
+%post
 sync
-python << _EOF_
-import xmlrpclib
-server = xmlrpclib.Server("http://{{ system.lab_controller.fqdn }}:8000")
-server.reboot("{{ system.fqdn }}")
-_EOF_
+wget -O - http://{{ system.lab_controller.fqdn }}:8000/postreboot/{{ system.fqdn }}
+sync
 {{ end }}
 {% endif %}

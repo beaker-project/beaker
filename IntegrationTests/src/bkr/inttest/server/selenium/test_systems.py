@@ -29,7 +29,7 @@ from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.assertions import assert_sorted
-from bkr.server.model import Cpu
+from bkr.server.model import Cpu, Key, Key_Value_String
 
 def atom_xpath(expr):
     return lxml.etree.XPath(expr, namespaces={'atom': 'http://www.w3.org/2005/Atom'})
@@ -240,3 +240,19 @@ class TestSystemsAtomFeed(unittest.TestCase):
         feed = lxml.etree.parse(urlopen(feed_url)).getroot()
         self.assert_(not self.feed_contains_system(feed, 'nogroup.system'))
         self.assert_(self.feed_contains_system(feed, 'grouped.system'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=690063
+    def test_xml_filter(self):
+        with session.begin():
+            module_key = Key.by_name(u'MODULE')
+            with_module = data_setup.create_system()
+            with_module.key_values_string.extend([
+                    Key_Value_String(module_key, u'cciss'),
+                    Key_Value_String(module_key, u'kvm')])
+            without_module = data_setup.create_system()
+        feed_url = urljoin(get_server_base(), '?' + urlencode({
+                'tg_format': 'atom', 'list_tgp_order': '-date_modified',
+                'xmlsearch': '<key_value key="MODULE" />'}))
+        feed = lxml.etree.parse(urlopen(feed_url)).getroot()
+        self.assert_(self.feed_contains_system(feed, with_module.fqdn))
+        self.assert_(not self.feed_contains_system(feed, without_module.fqdn))

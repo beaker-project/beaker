@@ -120,16 +120,29 @@ $(document).ready(function() {
                              yearRange: '2008:2012' 
                             }); 
     });
-    $('#advancedsearch').click( function() { $('#searchform').toggle('slow');
-                                                $('#simpleform').toggle('slow');});
-
-
-
-    $('#customcolumns').click( function() { $('#selectablecolumns').toggle('slow'); });
-    
-    $('#selectnone').click( function() { $("input[name *= 'systemsearch_column_']").removeAttr('checked'); }); 
-    $('#selectall').click( function() { $("input[name *= 'systemsearch_column_']").attr('checked',1); });
-    $('#selectdefault').click( function() { $("input[name *= 'systemsearch_column_']").each( function() { select_only_default($(this))}) });
+    $('#advancedsearch').click(function () {
+        $('#searchform').toggle('slow');
+        $('#simpleform').toggle('slow');
+        return false;
+    });
+    $('#customcolumns').click(function () {
+        $('#selectablecolumns').toggle('slow');
+        return false;
+    });
+    $('#selectnone').click(function () {
+        $("input[name *= 'systemsearch_column_']").removeAttr('checked');
+        return false;
+    });
+    $('#selectall').click(function () {
+        $("input[name *= 'systemsearch_column_']").attr('checked', 1);
+        return false;
+    });
+    $('#selectdefault').click(function () {
+        $("input[name *= 'systemsearch_column_']").each(function () {
+            select_only_default($(this));
+        });
+        return false;
+    });
 
     function select_only_default(obj) {
         var defaults = ${default_result_columns}
