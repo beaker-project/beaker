@@ -1324,6 +1324,10 @@ class SystemForm(Form):
                                  label=_(u'Hypervisor'),
                                  options=lambda: [(0, 'None')] + model.Hypervisor.get_all_types(),
                                  validator=validators.Int()),
+               SingleSelectField(name='kernel_type_id',
+                                 label=_(u'Kernel Type'),
+                                 options=model.KernelType.get_all_types,
+                                 validator=validators.Int()),
     ]
 
     def display_value(self, item, hidden_fields, value=None):
@@ -1345,6 +1349,8 @@ class SystemForm(Form):
         """
         mapper = dict(lab_controller_id=lambda: value.lab_controller and \
                                                  value.lab_controller.fqdn,
+                      kernel_type_id=lambda: value.kernel_type and \
+                                             value.kernel_type.kernel_type,
                       hypervisor_id=lambda: value.hypervisor and \
                                               value.hypervisor.hypervisor)
         property_func = mapper.get(item)

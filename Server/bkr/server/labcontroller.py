@@ -181,9 +181,16 @@ class LabControllers(RPCRoot):
                     image_type = ImageType.from_string(image['type'])
                 except ValueError:
                     continue # ignore
-                dti = distro_tree.image_by_type(image_type)
+                if 'kernel_type' not in image:
+                    image['kernel_type'] = 'default'
+                try:
+                    kernel_type = KernelType.by_name(image['kernel_type'])
+                except NoResultFound:
+                    continue # ignore
+                dti = distro_tree.image_by_type(image_type, kernel_type)
                 if dti is None:
-                    dti = DistroTreeImage(image_type=image_type)
+                    dti = DistroTreeImage(image_type=image_type,
+                                          kernel_type=kernel_type)
                     distro_tree.images.append(dti)
                 dti.path = image['path']
 
@@ -279,11 +286,21 @@ class LabControllers(RPCRoot):
                     cmd.abort(u'No usable URL found for distro tree %s in lab %s'
                             % (cmd.distro_tree.id, lab_controller.fqdn))
                     continue
-                kernel = cmd.distro_tree.image_by_type(ImageType.kernel)
+
+                if cmd.system.kernel_type.uboot:
+                    by_kernel = ImageType.uimage
+                    by_initrd = ImageType.uinitrd
+                else:
+                    by_kernel = ImageType.kernel
+                    by_initrd = ImageType.initrd
+
+                kernel = cmd.distro_tree.image_by_type(by_kernel,
+                                                       cmd.system.kernel_type)
                 if not kernel:
                     cmd.abort(u'Kernel image not found for distro tree %s' % cmd.distro_tree.id)
                     continue
-                initrd = cmd.distro_tree.image_by_type(ImageType.initrd)
+                initrd = cmd.distro_tree.image_by_type(by_initrd,
+                                                       cmd.system.kernel_type)
                 if not initrd:
                     cmd.abort(u'Initrd image not found for distro tree %s' % cmd.distro_tree.id)
                     continue
@@ -317,10 +334,20 @@ class LabControllers(RPCRoot):
         if not distro_tree_url:
             raise ValueError('No usable URL found for distro tree %s in lab %s'
                     % (cmd.distro_tree.id, lab_controller.fqdn))
-        kernel = cmd.distro_tree.image_by_type(ImageType.kernel)
+
+        if cmd.system.kernel_type.uboot:
+            by_kernel = ImageType.uimage
+            by_initrd = ImageType.uinitrd
+        else:
+            by_kernel = ImageType.kernel
+            by_initrd = ImageType.initrd
+
+        kernel = cmd.distro_tree.image_by_type(by_kernel,
+                                               cmd.system.kernel_type)
         if not kernel:
             raise ValueError('Kernel image not found for distro tree %s' % cmd.distro_tree.id)
-        initrd = cmd.distro_tree.image_by_type(ImageType.initrd)
+        initrd = cmd.distro_tree.image_by_type(by_initrd,
+                                               cmd.system.kernel_type)
         if not initrd:
             raise ValueError('Initrd image not found for distro tree %s' % cmd.distro_tree.id)
         return {

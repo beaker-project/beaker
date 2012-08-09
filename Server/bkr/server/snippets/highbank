@@ -1,0 +1,17 @@
+# Install U-Boot boot.scr
+pushd /boot
+
+# get the root device from fstab, typically UUID=<string>
+ROOTDEV=`grep -w / /etc/fstab | cut -d ' ' -f1`
+
+# setup boot.scr
+cat <<EOL > boot.cmd
+setenv bootargs console=ttyAMA0 root=$ROOTDEV ro rootwait
+ext2load scsi 0:1 \${ramdisk_addr_r} uInitrd
+ext2load scsi 0:1 \${kernel_addr_r} uImage
+bootm \${kernel_addr_r} \${ramdisk_addr_r} \${fdt_addr}
+EOL
+
+/usr/bin/mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Highbank Fedora" -d boot.cmd boot.scr
+
+popd

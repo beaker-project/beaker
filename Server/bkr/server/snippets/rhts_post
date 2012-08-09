@@ -190,3 +190,9 @@ useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82
 {{ snippet('beaker_env') }}
 {{ snippet('lab_env') }}
 {{ snippet('clear_netboot') }}
+{% if system.kernel_type.kernel_type == 'highbank' %}
+{{ snippet('highbank') }}
+{% endif %}
+{% if system.kernel_type.kernel_type == 'mvebu' %}
+{{ snippet('mvebu') }}
+{% endif %}
