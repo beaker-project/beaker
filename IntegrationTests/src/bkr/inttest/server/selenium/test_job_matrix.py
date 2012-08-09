@@ -47,12 +47,27 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
                 c += 1
         b = self.browser
         b.get(get_server_base() + 'matrix')
-        b.find_element_by_id('remote_form_whiteboard_filter').send_keys(whiteboard)
-        b.find_element_by_id('remote_form_do_filter').click()
-        WebDriverWait(b, 5).until(lambda driver: driver.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % whiteboard))
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % whiteboard).click()
         b.find_element_by_xpath('//input[@value="Generate"]').click()
         self.failUnless(is_text_present(b, "Your whiteboard contains %d jobs, only %s will be used" % (c, Job.max_by_whiteboard)))
+
+    def test_whiteboard_filtering(self):
+        whiteboard = u'Colonel Tear Won'
+        with session.begin():
+            data_setup.create_completed_job(whiteboard=whiteboard)
+        b = self.browser
+        b.get(get_server_base() + 'matrix')
+        b.find_element_by_id('remote_form_whiteboard_filter')\
+            .send_keys('this will not find anything')
+        b.find_element_by_id('remote_form_do_filter').click()
+        # Wait for our empty list of whiteboards to come back
+        b.find_element_by_xpath('//select[@name="whiteboard" and not(./option)]')
+        # Now filter for a real whiteboard
+        b.find_element_by_id('remote_form_whiteboard_filter').clear()
+        b.find_element_by_id('remote_form_whiteboard_filter')\
+            .send_keys(whiteboard[:len(whiteboard) // 2])
+        b.find_element_by_id('remote_form_do_filter').click()
+        b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % whiteboard)
 
     def test_deleted_whiteboard_not_shown(self):
         b = self.browser
@@ -157,14 +172,8 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
 
         b = self.browser
         b.get(get_server_base() + 'matrix')
-        b.find_element_by_name('whiteboard_filter').send_keys(unique_whiteboard)
-        b.find_element_by_name('do_filter').click()
-        # With the following click() I often got a:
-        # "StaleElementReferenceException: Element not found in the cache -
-        # perhaps the page has changed since it was looked up"
-        # I could do the retry in a loop, but this is qicker and simpler
-        from time import sleep
-        sleep(2)
+        # No need to filter the whiteboard, we just created the jobs so they 
+        # will be at the top of the list of whiteboards.
         b.find_element_by_xpath("//select/option[@value='%s']" % unique_whiteboard).click()
         b.find_element_by_xpath('//input[@value="Generate"]').click()
         b.find_element_by_link_text('Pass: 1').click()
@@ -216,14 +225,6 @@ class TestJobMatrix(SeleniumTestCase):
 
     def tearDown(self):
         self.selenium.stop()
-
-    def test_filter_button(self):
-        sel = self.selenium
-        sel.open('matrix')
-        sel.wait_for_page_to_load('30000')
-        sel.type("remote_form_whiteboard_filter", self.job_whiteboard[:int(len(self.job_whiteboard) /2)])
-        sel.click("remote_form_do_filter")
-        self.wait_and_try(lambda: self.assert_(self.job_whiteboard in sel.get_text('//select[@id="remote_form_whiteboard"]')))
 
     def test_generate_by_whiteboard(self):
         sel = self.selenium
