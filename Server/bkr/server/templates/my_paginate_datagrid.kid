@@ -17,19 +17,23 @@
   </div>
   <table id="${name}" class="list highlight-row">
     <thead py:if="columns" class="list">
-      <th py:for="i, col in enumerate(columns)" class="list">
-        <a class="head_list" py:if="col.get_option('sortable', False) and getattr(tg, 'paginate', False)"
-            href="${tg.paginate.get_href(1, col.name, col.get_option('reverse_order', False))}">${col.title}</a>
-        <span py:if="not getattr(tg, 'paginate', False) or not col.get_option('sortable', False)" py:replace="col.title"/>
-      </th>
+      <tr>
+        <th py:for="i, col in enumerate(columns)" class="list">
+          <a class="head_list" py:if="col.get_option('sortable', False) and getattr(tg, 'paginate', False)"
+              href="${tg.paginate.get_href(1, col.name, col.get_option('reverse_order', False))}">${col.title}</a>
+          <span py:if="not getattr(tg, 'paginate', False) or not col.get_option('sortable', False)" py:replace="col.title"/>
+        </th>
+      </tr>
     </thead>
-    <tr py:for="i, row in enumerate(value)" class="${i%2 and 'odd' or 'even'}">
-      <td py:for="col in columns" class="list">
-        <span class="datetime" py:strip="not col.get_option('datetime', False)">
-            ${col.get_field(row)}
-        </span>
-      </td>
-    </tr>
+    <tbody>
+      <tr py:for="i, row in enumerate(value)" class="${i%2 and 'odd' or 'even'}">
+        <td py:for="col in columns" class="list">
+          <span class="datetime" py:strip="not col.get_option('datetime', False)">
+              ${col.get_field(row)}
+          </span>
+        </td>
+      </tr>
+    </tbody>
   </table>
   <div class="list">
     <span py:if="tg.paginate.href_prev">
