@@ -1019,3 +1019,30 @@ bootloader --location=mbr
                 break
         else:
            self.fail("Password missing from kickstart")
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=743441
+    def test_rootfstype(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="rootfstype=btrfs">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assert_('''
+part /boot --fstype ext3 --size 200 --recommended --asprimary
+part / --fstype btrfs --size 1024 --grow
+part swap --recommended
+
+'''
+                in recipe.rendered_kickstart.kickstart,
+                recipe.rendered_kickstart.kickstart)

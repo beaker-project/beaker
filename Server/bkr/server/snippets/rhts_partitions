@@ -8,7 +8,7 @@ clearpart --drives {{ ondisk }} --all --initlabel
 clearpart --all --initlabel
 {% endif %}
 
-{% if partitions or ondisk %}
+{% if partitions or ondisk or rootfstype %}
 
 {#
 ## Arch Specific Boot requirements
@@ -28,7 +28,7 @@ part /boot --fstype ext3 --size 200 --recommended --asprimary
 {#
 ## Basic root Filesystem plus Swap
 #}
-part / --fstype ext3 --size 1024 --grow
+part / --fstype {{ rootfstype|default('ext3') }} --size 1024 --grow
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 
 part swap --recommended
