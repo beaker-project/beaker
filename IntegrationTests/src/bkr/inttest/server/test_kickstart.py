@@ -758,9 +758,9 @@ EOF
             </job>
             ''', self.system)
         self.assert_('''
-part /boot --fstype ext3 --size 200 --recommended
-part / --fstype ext3 --size 1024 --grow --asprimary
-part swap --recommended --asprimary
+part /boot --fstype ext3 --size 200 --recommended --asprimary
+part / --fstype ext3 --size 1024 --grow
+part swap --recommended
 part pv.001 --size=25605
 volgroup TestVolume001 pv.001
 logvol /butter --fstype btrfs --name=butter --vgname=TestVolume001 --size=25600
