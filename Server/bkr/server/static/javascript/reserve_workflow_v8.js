@@ -5,23 +5,19 @@ ReserveWorkflow = function (div, get_distros_rpc, get_distro_trees_rpc) {
     this.get_distro_trees_rpc = get_distro_trees_rpc;
     this.deferred_get_distros = new Deferred();
     this.deferred_get_distro_trees = new Deferred();
-    $('select[name=osmajor]', this.div).change(this.get_distros);
-    $('select[name=tag]', this.div).change(this.get_distros);
-    $('select[name=distro]', this.div).change(this.get_distro_trees);
     $('select', this.div).change(this.update_state);
+    $('.distro_filter_criterion', this.div).change(this.get_distros);
+    $('.distro_tree_filter_criterion', this.div).change(this.get_distro_trees);
     this.update_state();
 };
 
 ReserveWorkflow.prototype.get_distros = function() {
     this.deferred_get_distros.cancel();
-    var osmajor = $('select[name=osmajor]', this.div).val();
-    var tag = $('select[name=tag]', this.div).val();
-    if (osmajor) {
-        var params = { 'tg_format' : 'json',
-                       'osmajor': osmajor,
-                       'tag' : tag };
+    if ($('select[name=osmajor]', this.div).val()) {
         var loader = new AjaxLoader2($('select[name=distro]', this.div));
-        var d = this.deferred_get_distros = loadJSONDoc(this.get_distros_rpc + '?' + queryString(params));
+        var d = this.deferred_get_distros = loadJSONDoc(
+                this.get_distros_rpc + '?tg_format=json&' +
+                $('.distro_filter_criterion', this.div).serialize());
         d.addCallback(this.replaceDistros);
         d.addBoth(loader.remove);
     } else {
@@ -41,13 +37,11 @@ ReserveWorkflow.prototype.replaceDistros = function(result) {
 
 ReserveWorkflow.prototype.get_distro_trees = function () {
     this.deferred_get_distro_trees.cancel();
-    var distro = $('select[name=distro]', this.div).val();
-    if (distro) {
-        var params = {'tg_format': 'json',
-                      'distro': distro};
+    if ($('select[name=distro]', this.div).val()) {
         var loader = new AjaxLoader2($('select[name=distro_tree_id]', this.div));
         var d = this.deferred_get_distro_trees = loadJSONDoc(
-                this.get_distro_trees_rpc + '?' + queryString(params));
+                this.get_distro_trees_rpc + '?tg_format=json&' +
+                $('.distro_tree_filter_criterion', this.div).serialize());
         d.addCallback(this.replace_distro_trees);
         d.addBoth(loader.remove);
     } else {

@@ -280,16 +280,25 @@ class ReserveSystem(TableForm):
 
 class ReserveWorkflow(Form): 
     javascript = [LocalJSLink('bkr', '/static/javascript/loader_v2.js'),
-                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v7.js'),
+                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v8.js'),
                  ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
     fields = [
-        SingleSelectField(name='osmajor', label=_(u'Family'), validator=validators.NotEmpty()),
-        SingleSelectField(name='tag', label=_(u'Tag'), validator=validators.NotEmpty()),
-        SingleSelectField(name='distro', label=_(u'Distro'), validator=validators.NotEmpty()),
+        SingleSelectField(name='osmajor', label=_(u'Family'),
+            validator=validators.UnicodeString(),
+            css_classes=['distro_filter_criterion']),
+        SingleSelectField(name='tag', label=_(u'Tag'),
+            validator=validators.UnicodeString(),
+            css_classes=['distro_filter_criterion']),
+        SingleSelectField(name='distro', label=_(u'Distro'),
+            validator=validators.UnicodeString(),
+            css_classes=['distro_tree_filter_criterion']),
+        SingleSelectField(name='lab_controller_id', label=_(u'Lab'),
+            validator=validators.Int(),
+            css_classes=['distro_tree_filter_criterion']),
         MultipleSelectField(name='distro_tree_id', label=_(u'Distro Tree'),
-                size=7, validator=validators.NotEmpty()),
+                size=7, validator=validators.Int()),
     ]
     params = ['get_distros_rpc', 'get_distro_trees_rpc']
 
