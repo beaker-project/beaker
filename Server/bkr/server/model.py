@@ -2997,19 +2997,25 @@ class DistroTree(MappedObject):
         """
         if isinstance(scheme, basestring):
             scheme = [scheme]
-        urls = [lca.url for lca in self.lab_controller_assocs
-                if lca.lab_controller == lab_controller]
+        urls = dict((urlparse.urlparse(lca.url).scheme, lca.url)
+                for lca in self.lab_controller_assocs
+                if lca.lab_controller == lab_controller)
         if scheme is not None:
-            urls = [url for url in urls if urlparse.urlparse(url).scheme in scheme]
-            scheme_order = scheme
+            for s in scheme:
+                if s in urls:
+                    return urls[s]
         else:
-            scheme_order = ['nfs', 'http', 'ftp']
-        if not urls:
-            if required:
-                raise ValueError('No usable URL found for %r in %r' % (self, lab_controller))
-            else:
-                return None
-        return sorted(urls, key=lambda url: scheme_order.index(urlparse.urlparse(url).scheme))[0]
+            for s in ['nfs', 'http', 'ftp']:
+                if s in urls:
+                    return urls[s]
+            # caller didn't specify any schemes, so pick anything if we have it
+            if urls:
+                return urls.itervalues().next()
+        # nothing suitable found
+        if required:
+            raise ValueError('No usable URL found for %r in %r' % (self, lab_controller))
+        else:
+            return None
 
     def repo_by_id(self, repoid):
         for repo in self.repos:

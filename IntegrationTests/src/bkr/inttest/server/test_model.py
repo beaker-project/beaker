@@ -356,6 +356,34 @@ class DistroTreeTest(unittest.TestCase):
         self.assert_(included_system in systems and
                 excluded_system not in systems, systems)
 
+    def test_url_in_lab(self):
+        self.distro_tree.lab_controller_assocs[:] = [
+            LabControllerDistroTree(lab_controller=self.lc, url=u'ftp://unimportant'),
+            LabControllerDistroTree(lab_controller=self.lc, url=u'nfs+iso://unimportant'),
+        ]
+        other_lc = data_setup.create_labcontroller()
+        session.flush()
+
+        self.assertEquals(self.distro_tree.url_in_lab(self.lc),
+                'ftp://unimportant')
+        self.assertEquals(self.distro_tree.url_in_lab(other_lc), None)
+        self.assertRaises(ValueError, lambda:
+                self.distro_tree.url_in_lab(other_lc, required=True))
+
+        self.assertEquals(self.distro_tree.url_in_lab(self.lc, scheme='ftp'),
+                'ftp://unimportant')
+        self.assertEquals(self.distro_tree.url_in_lab(self.lc, scheme='http'),
+                None)
+        self.assertRaises(ValueError, lambda: self.distro_tree.url_in_lab(
+                self.lc, scheme='http', required=True))
+
+        self.assertEquals(self.distro_tree.url_in_lab(self.lc,
+                scheme=['http', 'ftp']), 'ftp://unimportant')
+        self.assertEquals(self.distro_tree.url_in_lab(self.lc,
+                scheme=['http', 'nfs']), None)
+        self.assertRaises(ValueError, lambda: self.distro_tree.url_in_lab(
+                self.lc, scheme=['http', 'nfs'], required=True))
+
 class DistroTreeSystemsFilterTest(unittest.TestCase):
 
     def setUp(self):
