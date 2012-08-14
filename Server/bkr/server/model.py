@@ -1649,6 +1649,7 @@ class System(SystemObject):
                             or_(System.private==False,
                                 System.groups.any(Group.users.contains(user)),
                                 System.owner == user,
+                                System.loaned == user,
                                 System.user == user))
         else:
             query = query.filter(System.private==False)
