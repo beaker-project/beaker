@@ -39,6 +39,9 @@ class LabBeakerBus(BeakerBus):
     service_queue_name = __conf.get('QPID_SERVICE_QUEUE')
     _broker = __conf.get('QPID_BROKER')
     krb_auth = __conf.get('QPID_KRB_AUTH')
+    stopped = True
+    _shared_state = {}
+
 
     @classmethod
     def do_krb_auth(cls):
@@ -49,17 +52,27 @@ class LabBeakerBus(BeakerBus):
 
     def __init__(self, watchdog=None, *args, **kw):
         super(LabBeakerBus,self).__init__(*args, **kw)
-        self.thread_handlers.update({'beaker' : { 'watchdog' :  self._watchdog_listener,}})
-        self.threads = []
+        if not self._shared_state:
+            self._shared_state = dict(thread_handlers=
+                {'beaker': {'watchdog':  self._watchdog_listener,}},
+                threads=[],
+                watchdog=watchdog)
+        self.__dict__.update(self._shared_state)
 
-        self.watchdog = watchdog
+    def stop(self):
+        self.stopped = True
 
     def run(self, services, *args, **kw):
+        if not self.stopped:
+            log.warn('%s is already running' % self.__class__.__name__)
+            return
+        self.stopped = False
         for service in services:
             system, service_name = service.split('.')
             system_key = self.thread_handlers[system]
             service = system_key.get(service_name)
-            thread = Thread(target=service, args=(self.conn.session(),) + args, kwargs=kw)
+            session = [self.conn.session()]
+            thread = Thread(target=service, args=(session,) + args, kwargs=kw)
             self.threads.append(thread)
             thread.setDaemon(False)
             thread.start()
@@ -79,28 +92,31 @@ class LabBeakerBus(BeakerBus):
                 x-bindings :[{ exchange :"' + self.topic_exchange + '", queue: "' + queue_name +'", \
                                key: "beaker.Watchdog.' + lc +'"}]}}'
 
-        receiver = session.receiver(addr_string)
-
         while True:
             # This is a poor attempt to slow down any attempt to fill up our logs
             # by creating bad messages
             sleep(2)
             try:
+                if self.stopped:
+                    log.info('Shutting down,'
+                        'no longer receiving watchdog notifications')
+                    break
                 log.debug('Waiting in watchdog')
-                message = receiver.fetch()
+                message = self.fetch(session, addr_string, timeout=self._fetch_timeout)
+                if message is None:
+                    continue
                 log.debug('Got message %s' % message)
-
                 try:
                     watchdog_data = message.content['watchdog']
                 except KeyError:
                     log.exception(u"msg content has no key 'watchdog'")
-                    session.acknowledge()
+                    session[0].acknowledge()
                     continue
                 try:
                     status = message.content['status']
                 except KeyError:
                     log.exception(u"msg content has no key 'status'")
-                    session.acknowledge()
+                    session[0].acknowledge()
                     continue
 
                 try:
@@ -118,7 +134,7 @@ class LabBeakerBus(BeakerBus):
                     else:
                         raise ValueError("status in watchdog message content should be 'expired' \
                             or 'active' ")
-                    session.acknowledge()
+                    session[0].acknowledge()
                 except xmlrpclibFault, e:
                     # We should probably retry this one
                     log.exception(str(e))
@@ -127,6 +143,4 @@ class LabBeakerBus(BeakerBus):
                 # Let's log it then acknowledge it to make sure we don't get
                 # the same message
                 log.exception(str(e))
-                session.acknowledge()
-
-
+                session[0].acknowledge()

@@ -85,6 +85,7 @@ def main_loop(conf=None, foreground=False):
                 auth_renew.stop()
                 signal.signal(signal.SIGINT, signal.SIG_IGN)
                 signal.signal(signal.SIGTERM, signal.SIG_IGN)
+                lbb.stop()
                 logger.info('Exiting...')
                 break
 

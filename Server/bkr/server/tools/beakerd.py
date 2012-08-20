@@ -526,7 +526,7 @@ def schedule():
 
     reload_config()
 
-    if config.get('beaker.qpid_enabled') is True: 
+    if config.get('beaker.qpid_enabled') is True:
        bb = ServerBeakerBus()
        bb.run()
 
@@ -574,6 +574,8 @@ def schedule():
        running = False
        event.set()
        rc = 0
+       if config.get('beaker.qpid_enabled')is True:
+           bb.stop()
 
     new_recipes_thread.join(10)
     processed_recipesets_thread.join(10)
@@ -634,14 +636,16 @@ def main():
     # config file called 'default.cfg' packaged in the egg.
     load_config(opts.configfile)
 
+    signal.signal(signal.SIGHUP, sighup_handler)
+    signal.signal(signal.SIGINT, sigterm_handler)
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
     if not opts.foreground:
         log.debug("Launching beakerd daemon")
         pid_file = opts.pid_file
         if pid_file is None:
             pid_file = config.get("PID_FILE", "/var/run/beaker/beakerd.pid")
-        d = daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(pid_file, acquire_timeout=0),
-                                 signal_map={signal.SIGHUP: sighup_handler,
-                                             signal.SIGTERM: sigterm_handler})
+        d = daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(pid_file, acquire_timeout=0),)
         util_logger = logging.getLogger('bkr.server.util')
         util_logger.disabled = True
 
