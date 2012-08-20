@@ -1,0 +1,49 @@
+#!/usr/bin/python
+
+import xmlrpclib
+import sys
+import getopt
+import os
+from xml.dom.minidom import parseString
+
+def main():
+    lab_controller = None
+    recipeid = None
+
+    if ('LAB_CONTROLLER' in os.environ.keys()):
+        lab_controller = os.environ['LAB_CONTROLLER']
+    if ('RECIPEID' in os.environ.keys()):
+        recipeid = os.environ['RECIPEID']
+
+    args = sys.argv[1:]
+
+    try:
+        opts, args = getopt.getopt(args, 'l:r:', ['lab_controller='])
+    except:
+        usage()
+    for opt, val in opts:
+        if opt in ('-l', '--lab_controller'):
+            lab_controller = val
+        if opt in ('-r', '--recipeid'):
+            recipeid = val
+
+    if not recipeid:
+        print "You must specify the recipe id with the -r flag"
+        sys.exit(1)
+
+    if not lab_controller:
+        print "You must specify the lab controller with the -l flag"
+        sys.exit(1)
+
+    proxy = xmlrpclib.ServerProxy("http://%s:8000" % lab_controller)
+    myrecipe = proxy.get_my_recipe(dict(recipe_id=recipeid))
+    job = parseString(myrecipe)
+    for recipe in job.getElementsByTagName('recipe') + \
+                  job.getElementsByTagName('guestrecipe'):
+        if recipe.getAttribute("id") == recipeid and \
+           recipe.getAttribute("result") != "Pass":
+            sys.exit(1)
+
+if __name__ == '__main__':
+    main()
+    sys.exit(0)

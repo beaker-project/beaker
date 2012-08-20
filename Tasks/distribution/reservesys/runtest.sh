@@ -223,6 +223,14 @@ BUILD_()
     RETURNSCRIPT
 }
 
+if [ -n "$RESERVE_IF_FAIL" ]; then
+    ./recipe_status
+    if [ $? -eq 0 ]; then
+        RprtRslt $TEST PASS 0
+        exit 0
+    fi
+fi
+
 BUILD_
 
 echo "***** End of reservesys test *****" >> $OUTPUTFILE
