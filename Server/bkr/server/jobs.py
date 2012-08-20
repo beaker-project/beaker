@@ -492,8 +492,6 @@ class Jobs(RPCRoot):
             raise BX(_('Invalid task(s): %s') % ', '.join(invalid_tasks))
         for xmltask in xmltasks:
             task = Task.by_name(xmltask.name)
-            if not recipe.is_task_applicable(task):
-                continue
             recipetask = RecipeTask()
             recipetask.task = task
             recipetask.role = xmltask.role
