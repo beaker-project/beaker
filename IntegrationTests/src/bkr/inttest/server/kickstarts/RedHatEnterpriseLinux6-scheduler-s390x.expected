@@ -8,7 +8,7 @@ key --skip
 bootloader --location=mbr
 cmdline
 
-# Error: no snippet data for network
+# no specific network configuration
 
 firewall --disabled
 # System keyboard

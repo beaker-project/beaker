@@ -9,7 +9,7 @@ auth --useshadow --enablemd5
 bootloader --location=mbr
 
 
-# Error: no snippet data for network
+# no specific network configuration
 
 firewall --disabled
 # System keyboard

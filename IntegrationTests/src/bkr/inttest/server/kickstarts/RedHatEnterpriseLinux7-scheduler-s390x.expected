@@ -6,7 +6,7 @@ auth --useshadow --enablemd5
 bootloader --location=mbr
 # Use text mode install
 text
-# Error: no snippet data for network
+# no specific network configuration
 
 repo --name=repos_Server-optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/os
 repo --name=repos_debug_Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/debuginfo

@@ -8,7 +8,7 @@ bootloader --location=mbr
 # Use text mode install
 text
 
-# Error: no snippet data for network
+# no specific network configuration
 
 firewall --disabled
 # Run the Setup Agent on first boot

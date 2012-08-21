@@ -7,7 +7,7 @@ auth --useshadow --enablemd5
 bootloader --location=mbr
 # Use text mode install
 text
-# Error: no snippet data for network
+# no specific network configuration
 
 
 repo --name=myupdates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f16&arch=x86_64
