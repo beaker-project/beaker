@@ -451,6 +451,9 @@
                                              <listitem>
                                               <para><application>ignoredisk</application> Use this to ignore certain disks for install.  For example: ignoredisk=--only-use=sda </para>
                                              </listitem>
+                                             <listitem>
+                                              <para><application>rootfstype</application> Specifies root filesystem type</para>
+                                             </listitem>
                                             </itemizedlist>
                                           </para>
                                         </listitem>

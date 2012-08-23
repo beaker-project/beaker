@@ -8,7 +8,7 @@ clearpart --drives {{ ondisk }} --all --initlabel
 clearpart --all --initlabel
 {% endif %}
 
-{% if partitions or ondisk %}
+{% if partitions or ondisk or rootfstype %}
 
 {#
 ## Arch Specific Boot requirements
@@ -18,20 +18,20 @@ part /boot/efi --fstype vfat --size 200 --recommended
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% elif distro_tree is arch('ppc', 'ppc64') %}
 part None --fstype 'PPC PReP Boot' --size 8
-part /boot --fstype ext3 --size 200 --recommended
+part /boot --fstype ext3 --size 200 --recommended --asprimary
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% else %}
-part /boot --fstype ext3 --size 200 --recommended
+part /boot --fstype ext3 --size 200 --recommended --asprimary
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% endif %}
 
 {#
 ## Basic root Filesystem plus Swap
 #}
-part / --fstype ext3 --size 1024 --grow --asprimary
+part / --fstype {{ rootfstype|default('ext3') }} --size 1024 --grow
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 
-part swap --recommended --asprimary
+part swap --recommended
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {%- if swapsize %} --size {{ swapsize }}{% endif %}
 

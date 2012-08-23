@@ -44,9 +44,9 @@ zerombr
 clearpart --all --initlabel
 
 
-part /boot --fstype ext3 --size 200 --recommended
-part / --fstype ext3 --size 1024 --grow --asprimary
-part swap --recommended --asprimary
+part /boot --fstype ext3 --size 200 --recommended --asprimary
+part / --fstype ext3 --size 1024 --grow
+part swap --recommended
 part /home --fstype ext4 --size=5120
 
 
