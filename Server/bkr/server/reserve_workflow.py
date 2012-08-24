@@ -1,13 +1,14 @@
 from turbogears import controllers, identity, expose, url, database, validate, flash, redirect
 from turbogears.database import session
 from sqlalchemy.sql.expression import and_, func, not_
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import InvalidRequestError
 from bkr.server.widgets import ReserveWorkflow as ReserveWorkflowWidget
 from bkr.server.widgets import ReserveSystem
 from bkr.server.model import (osversion_table, distro_table, osmajor_table, arch_table, distro_tag_table,
                               Distro, Job, RecipeSet, MachineRecipe, System, RecipeTask, RecipeTaskParam,
-                              Task, Arch, OSMajor, DistroTag, SystemType, OSVersion, DistroTree)
-from bkr.server.model import Job
+                              Task, Arch, OSMajor, DistroTag, SystemType, OSVersion, DistroTree,
+                              LabController, LabControllerDistroTree)
 from bkr.server.jobs import Jobs as JobController
 from bexceptions import *
 import re
@@ -37,7 +38,7 @@ class ReserveWorkflow:
 
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
-    def reserve(self, distro_tree_id, system_id=None):
+    def reserve(self, distro_tree_id, system_id=None, lab_controller_id=None):
         """ Either queue or provision the system now """
         if system_id == 'search':
             redirect('/reserve_system', distro_tree_id=distro_tree_id)
@@ -95,6 +96,8 @@ class ReserveWorkflow:
                 [(osmajor.osmajor, osmajor.osmajor) for osmajor
                 in OSMajor.ordered_by_osmajor(OSMajor.in_any_lab())]
         options['distro'] = self._get_distro_options(**kwargs)
+        options['lab_controller_id'] = [(None, 'None selected')] + \
+                LabController.get_all(valid=True)
         options['distro_tree_id'] = self._get_distro_tree_options(**kwargs)
 
         attrs = {}
@@ -129,7 +132,7 @@ class ReserveWorkflow:
     def get_distro_tree_options(self, **kwargs):
         return {'options': self._get_distro_tree_options(**kwargs)}
 
-    def _get_distro_tree_options(self, distro=None, **kwargs):
+    def _get_distro_tree_options(self, distro=None, lab_controller_id=None, **kwargs):
         """
         Returns a list of distro trees for the given distro.
         """
@@ -140,6 +143,14 @@ class ReserveWorkflow:
         except NoResultFound:
             return []
         trees = distro.dyn_trees.join(DistroTree.arch)\
-                .filter(DistroTree.lab_controller_assocs.any())\
                 .order_by(DistroTree.variant, Arch.arch)
+        if lab_controller_id:
+            try:
+                lc = LabController.by_id(lab_controller_id)
+            except NoResultFound:
+                return []
+            trees = trees.filter(DistroTree.lab_controller_assocs.any(
+                    LabControllerDistroTree.lab_controller == lc))
+        else:
+            trees = trees.filter(DistroTree.lab_controller_assocs.any())
         return [(tree.id, unicode(tree)) for tree in trees]

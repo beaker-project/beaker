@@ -32,6 +32,10 @@ jQuery(function () {
     <form action="${tg.url(action)}">
         <h3>Distro Tree</h3>
         <div>
+            <label for="${field_for('lab_controller_id').field_id}">${field_for('lab_controller_id').label}</label>
+            ${display_field_for('lab_controller_id')}
+        </div>
+        <div>
             ${display_field_for('distro_tree_id')}
         </div>
         <div>
