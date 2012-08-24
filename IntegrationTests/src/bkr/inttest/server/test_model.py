@@ -311,6 +311,22 @@ class DistroTreeByFilterTest(unittest.TestCase):
         self.assert_(excluded not in distro_trees)
         self.assert_(included in distro_trees)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=831448
+    def test_distrolabcontroller_notequal(self):
+        excluded = data_setup.create_distro_tree()
+        included = data_setup.create_distro_tree()
+        lc = data_setup.create_labcontroller()
+        excluded.lab_controller_assocs.append(LabControllerDistroTree(
+                lab_controller=lc, url=u'http://notimportant'))
+        session.flush()
+        distro_trees = DistroTree.by_filter("""
+            <distroRequires>
+                <distrolabcontroller op="!=" value="%s" />
+            </distroRequires>
+            """ % lc.fqdn).all()
+        self.assert_(excluded not in distro_trees)
+        self.assert_(included in distro_trees)
+
 class DistroTreeTest(unittest.TestCase):
 
     def setUp(self):
@@ -532,6 +548,23 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
                 </or>
                </hostRequires>
             """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=831448
+    def test_hostlabcontroller_notequal(self):
+        desirable_lc = data_setup.create_labcontroller()
+        undesirable_lc = data_setup.create_labcontroller()
+        included = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=desirable_lc)
+        excluded = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=undesirable_lc)
+        session.flush()
+        systems = list(self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <hostlabcontroller op="!=" value="%s" />
+                </hostRequires>
+                """ % undesirable_lc.fqdn))
         self.assert_(excluded not in systems)
         self.assert_(included in systems)
 
