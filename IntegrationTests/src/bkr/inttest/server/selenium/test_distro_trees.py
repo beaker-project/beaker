@@ -144,8 +144,8 @@ class DistroTreesFilterXmlRpcTest(XmlRpcTestCase):
                 <distro_tag value="MYTAG2" />
             </or>
             '''})
-        returned_ids = [dt['distro_tree_id'] for dt in distro_trees]
-        self.assertEquals(returned_ids, [dt.id for dt in distro_trees_in])
+        returned_ids = set(dt['distro_tree_id'] for dt in distro_trees)
+        self.assertEquals(returned_ids, set(dt.id for dt in distro_trees_in))
 
 class DistroTreeSearch(WebDriverTestCase):
 
