@@ -1,9 +1,9 @@
 #!/usr/bin/python
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, logout, is_text_present
+from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, \
+        search_for_system
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import Arch, ExcludeOSMajor, SystemType
-from selenium.webdriver.support.ui import Select
 import unittest, time, re, os
 from turbogears.database import session
 
@@ -97,15 +97,6 @@ class ReserveWorkflow(SeleniumTestCase):
 
 def go_to_reserve_systems(browser, distro_tree):
     browser.get(get_server_base() + 'reserve_system?distro_tree_id=%s' % distro_tree.id)
-
-def search_for_system(browser, system):
-    browser.find_element_by_link_text('Toggle Search').click()
-    Select(browser.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('System/Name')
-    Select(browser.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is')
-    browser.find_element_by_name('systemsearch-0.value').send_keys(system.fqdn)
-    browser.find_element_by_name('systemsearch').submit()
 
 def is_results_table_empty(browser):
     rows = browser.find_elements_by_xpath('//table[@class="list"]//td')
