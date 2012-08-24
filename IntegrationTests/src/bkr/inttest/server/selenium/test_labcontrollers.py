@@ -6,7 +6,8 @@ from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase, \
 from bkr.inttest.server.webdriver_utils import login, is_activity_row_present
 from bkr.inttest import data_setup, get_server_base
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
-        System, SystemStatus, TaskStatus, CommandActivity, CommandStatus
+        System, SystemStatus, TaskStatus, CommandActivity, CommandStatus, \
+        KernelType
 from bkr.server.tools import beakerd
 from bkr.inttest.server.selenium.test_activity import is_activity_row_present
 from bkr.server.model import LabController
@@ -159,9 +160,11 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
                     '../../optional/x86_64/os/')
             self.assertEquals(distro_tree.repo_by_id('debuginfo').path,
                     '../debug/')
-            self.assertEquals(distro_tree.image_by_type(ImageType.kernel).path,
+            self.assertEquals(distro_tree.image_by_type(ImageType.kernel,
+                    KernelType.by_name(u'default')).path,
                     'images/pxeboot/vmlinuz')
-            self.assertEquals(distro_tree.image_by_type(ImageType.initrd).path,
+            self.assertEquals(distro_tree.image_by_type(ImageType.initrd,
+                    KernelType.by_name(u'default')).path,
                     'images/pxeboot/initrd.img')
             self.assertEquals(distro_tree.activity[0].field_name, u'lab_controller_assocs')
             self.assertEquals(distro_tree.activity[0].action, u'Added')
