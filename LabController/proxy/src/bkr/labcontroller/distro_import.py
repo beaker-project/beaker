@@ -683,11 +683,7 @@ class TreeInfoBase(object):
         self.tree['repos'] = repos + self.find_repos()
 
         # Add install images
-        self.tree['images'] = []
-        self.tree['images'].append(dict(type='kernel',
-                                        path=self.get_kernel_path()))
-        self.tree['images'].append(dict(type='initrd',
-                                        path=self.get_initrd_path()))
+        self.tree['images'] = self.get_images()
 
         self.tree['kernel_options'] = self.options.kopts
         self.tree['kernel_options_post'] = self.options.kopts_post
@@ -699,6 +695,14 @@ class TreeInfoBase(object):
             logging.info('%s added to beaker.' % self.tree['name'])
         except (xmlrpclib.Fault, socket.error), e:
             raise BX('failed to add %s to beaker: %s' % (self.tree['name'],e))
+
+    def get_images(self):
+        images = []
+        images.append(dict(type='kernel',
+                                        path=self.get_kernel_path()))
+        images.append(dict(type='initrd',
+                                        path=self.get_initrd_path()))
+        return images
 
     def add_to_beaker(self):
         self.scheduler.add_distro(self.tree)
@@ -947,6 +951,9 @@ class TreeInfoFedora(TreeInfoBase, Importer):
                 return False
         if not parser.get('general', 'family').startswith("Fedora"):
             return False
+        # Arm uses a different importer because of all the kernel types.
+        if parser.get('general', 'arch') in ['armhfp']:
+            return False
         return parser
 
     def get_kernel_path(self):
@@ -976,6 +983,106 @@ class TreeInfoFedora(TreeInfoBase, Importer):
                             )
         return repos
 
+
+class TreeInfoFedoraArm(TreeInfoFedora, Importer):
+    """
+
+    """
+    @classmethod
+    def is_importer_for(cls, url, options=None):
+        parser = Tparser()
+        if not parser.parse(url):
+            return False
+        for r in cls.required:
+            if parser.get(r['section'], r['key'], '') == '':
+                return False
+        for e in cls.excluded:
+            if parser.get(e['section'], e['key'], '') != '':
+                return False
+        if not parser.get('general', 'family').startswith("Fedora"):
+            return False
+        # Arm uses a different importer because of all the kernel types.
+        if parser.get('general', 'arch') not in ['armhfp']:
+            return False
+        return parser
+
+    def get_kernel_path(self, kernel_type=None):
+        if kernel_type:
+            kernel_type = '%s-' % kernel_type
+        else:
+            kernel_type = ''
+        return self.parser.get('images-%s%s' % (kernel_type,
+                                                self.tree['arch']),'kernel')
+
+    def get_initrd_path(self, kernel_type=None):
+        if kernel_type:
+            kernel_type = '%s-' % kernel_type
+        else:
+            kernel_type = ''
+        return self.parser.get('images-%s%s' % (kernel_type,
+                                                self.tree['arch']),'initrd')
+
+    def get_uimage_path(self, kernel_type=None):
+        if kernel_type:
+            kernel_type = '%s-' % kernel_type
+        else:
+            kernel_type = ''
+        return self.parser.get('images-%s%s' % (kernel_type,
+                                                self.tree['arch']),'uimage')
+
+    def get_uinitrd_path(self, kernel_type=None):
+        if kernel_type:
+            kernel_type = '%s-' % kernel_type
+        else:
+            kernel_type = ''
+        return self.parser.get('images-%s%s' % (kernel_type,
+                                                self.tree['arch']),'uinitrd')
+
+    def get_images(self):
+        images = []
+        images.append(dict(type='kernel',
+                                        path=self.get_kernel_path()))
+        images.append(dict(type='initrd',
+                                        path=self.get_initrd_path()))
+        images.append(dict(type='uimage',
+                                        path=self.get_uimage_path()))
+        images.append(dict(type='uinitrd',
+                                        path=self.get_uinitrd_path()))
+        kernel_type_string = self.parser.get(self.tree['arch'],
+                                             'platforms', '')
+        kernel_types = map(string.strip,
+                           kernel_type_string and
+                           kernel_type_string.split(',') or [])
+        for kernel_type in kernel_types:
+            images.append(dict(type='kernel',
+                               kernel_type=kernel_type,
+                               path=self.get_kernel_path(
+                                                 kernel_type=kernel_type
+                                                        )
+                              )
+                         )
+            images.append(dict(type='uimage',
+                               kernel_type=kernel_type,
+                               path=self.get_uimage_path(
+                                                 kernel_type=kernel_type
+                                                         )
+                              )
+                         )
+            images.append(dict(type='initrd',
+                               kernel_type=kernel_type,
+                               path=self.get_initrd_path(
+                                                 kernel_type=kernel_type
+                                                        )
+                              )
+                         )
+            images.append(dict(type='uinitrd',
+                              kernel_type=kernel_type,
+                              path=self.get_uinitrd_path(
+                                                 kernel_type=kernel_type
+                                                        )
+                             )
+                         )
+        return images
 
 class TreeInfoRhel6(TreeInfoBase, Importer):
     """
@@ -1246,6 +1353,9 @@ kernel = images/pxeboot/vmlinuz
             return False
         if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
             return False
+        # Arm uses a different importer because of all the kernel types.
+        if parser.get('general', 'arch') in ['armhfp']:
+            return False
         return parser
 
     def find_repos(self):
@@ -1274,6 +1384,152 @@ kernel = images/pxeboot/vmlinuz
 
     def get_initrd_path(self):
         return self.parser.get('images-%s' % self.tree['arch'],'initrd')
+
+
+class TreeInfoRhelArm(TreeInfoRhel, Importer):
+    """
+[addon-HighAvailability]
+id = HighAvailability
+name = High Availability
+repository = addons/HighAvailability
+uid = Server-HighAvailability
+
+[addon-LoadBalancer]
+id = LoadBalancer
+name = Load Balancer
+repository = addons/LoadBalancer
+uid = Server-LoadBalancer
+
+[addon-ResilientStorage]
+id = ResilientStorage
+name = Resilient Storage
+repository = addons/ResilientStorage
+uid = Server-ResilientStorage
+
+[addon-ScalableFileSystem]
+id = ScalableFileSystem
+name = Scalable Filesystem Support
+repository = addons/ScalableFileSystem
+uid = Server-ScalableFileSystem
+
+[general]
+addons = HighAvailability,LoadBalancer,ResilientStorage,ScalableFileSystem
+arch = x86_64
+family = Red Hat Enterprise Linux
+version = 7.0
+variant = Server
+timestamp = 
+name = RHEL-7.0-20120201.0
+repository = 
+
+[images-x86_64]
+boot.iso = images/boot.iso
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+
+[images-xen]
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+
+    """
+    @classmethod
+    def is_importer_for(cls, url, options=None):
+        parser = Tparser()
+        if not parser.parse(url):
+            return False
+        for r in cls.required:
+            if parser.get(r['section'], r['key'], '') == '':
+                return False
+        for e in cls.excluded:
+            if parser.get(e['section'], e['key'], '') != '':
+                return False
+        if parser.get('images-%s' % parser.get('general','arch'), 'kernel', '') == '':
+            return False
+        if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
+            return False
+        if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
+            return False
+        # Arm uses a different importer because of all the kernel types.
+        if parser.get('general', 'arch') not in ['armhfp']:
+            return False
+        return parser
+
+    def get_kernel_path(self, kernel_type=None):
+        if kernel_type:
+            kernel_type = '%s-' % kernel_type
+        else:
+            kernel_type = ''
+        return self.parser.get('images-%s%s' % (kernel_type,
+                                                self.tree['arch']),'kernel')
+
+    def get_initrd_path(self, kernel_type=None):
+        if kernel_type:
+            kernel_type = '%s-' % kernel_type
+        else:
+            kernel_type = ''
+        return self.parser.get('images-%s%s' % (kernel_type,
+                                                self.tree['arch']),'initrd')
+
+    def get_uimage_path(self, kernel_type=None):
+        if kernel_type:
+            kernel_type = '%s-' % kernel_type
+        else:
+            kernel_type = ''
+        return self.parser.get('images-%s%s' % (kernel_type,
+                                                self.tree['arch']),'uimage')
+
+    def get_uinitrd_path(self, kernel_type=None):
+        if kernel_type:
+            kernel_type = '%s-' % kernel_type
+        else:
+            kernel_type = ''
+        return self.parser.get('images-%s%s' % (kernel_type,
+                                                self.tree['arch']),'uinitrd')
+    def get_images(self):
+        images = []
+        images.append(dict(type='kernel',
+                                        path=self.get_kernel_path()))
+        images.append(dict(type='initrd',
+                                        path=self.get_initrd_path()))
+        images.append(dict(type='uimage',
+                                        path=self.get_uimage_path()))
+        images.append(dict(type='uinitrd',
+                                        path=self.get_uinitrd_path()))
+        kernel_type_string = self.parser.get(self.tree['arch'],
+                                             'platforms', '')
+        kernel_types = map(string.strip,
+                           kernel_type_string and
+                           kernel_type_string.split(',') or [])
+        for kernel_type in kernel_types:
+            images.append(dict(type='kernel',
+                               kernel_type=kernel_type,
+                               path=self.get_kernel_path(
+                                                 kernel_type=kernel_type
+                                                        )
+                              )
+                         )
+            images.append(dict(type='uimage',
+                               kernel_type=kernel_type,
+                               path=self.get_uimage_path(
+                                                 kernel_type=kernel_type
+                                                         )
+                              )
+                         )
+            images.append(dict(type='initrd',
+                               kernel_type=kernel_type,
+                               path=self.get_initrd_path(
+                                                 kernel_type=kernel_type
+                                                        )
+                              )
+                         )
+            images.append(dict(type='uinitrd',
+                              kernel_type=kernel_type,
+                              path=self.get_uinitrd_path(
+                                                 kernel_type=kernel_type
+                                                        )
+                             )
+                         )
+        return images
 
 
 class NakedTree(Importer):

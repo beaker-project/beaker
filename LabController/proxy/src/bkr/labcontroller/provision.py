@@ -152,6 +152,9 @@ def handle_configure_netboot(command):
         netboot.configure_efigrub(fqdn, ko)
     if 'ia64' in arch:
         netboot.configure_elilo(fqdn, ko)
+    if 'armhfp' in arch:
+        # it looks like arm uses the same as pxe for its format.
+        netboot.configure_pxelinux(fqdn, ko)
 
 def handle_clear_netboot(command):
     fqdn = command['fqdn']
