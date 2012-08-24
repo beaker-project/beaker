@@ -49,6 +49,7 @@ BuildRequires:  cracklib-python
 BuildRequires:  python-concurrentloghandler
 BuildRequires:  rpm-python
 BuildRequires:  rhts-python
+BuildRequires:  python-netaddr
 %endif
 
 # As above, these client dependencies are needed in build because of sphinx
