@@ -100,6 +100,7 @@ Requires:       python-concurrentloghandler
 Requires:       rhts-python
 Requires:       cracklib-python
 Requires:       python-jinja2
+Requires:       python-netaddr
 %endif
 
 
