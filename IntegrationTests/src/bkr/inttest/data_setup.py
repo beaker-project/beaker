@@ -374,25 +374,31 @@ def mark_job_complete(job, **kwargs):
     for recipe in job.all_recipes:
         mark_recipe_complete(recipe, **kwargs)
 
+def mark_recipe_waiting(recipe):
+    recipe.process()
+    recipe.queue()
+    recipe.schedule()
+    recipe.system = create_system(owner=recipe.recipeset.job.owner)
+    recipe.system.reserve(service=u'testdata',
+            user=recipe.recipeset.job.owner,
+            reservation_type=u'recipe', recipe=recipe)
+    recipe.watchdog = Watchdog(system=recipe.system)
+    recipe.waiting()
+    log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.system)
+
 def mark_job_waiting(job):
     for recipeset in job.recipesets:
         for recipe in recipeset.recipes:
-            recipe.process()
-            recipe.queue()
-            recipe.schedule()
-            recipe.system = create_system(owner=job.owner)
-            recipe.system.reserve(service=u'testdata', user=job.owner,
-                    reservation_type=u'recipe', recipe=recipe)
-            recipe.watchdog = Watchdog(system=recipe.system)
-            recipe.waiting()
-            log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.system)
+            mark_recipe_waiting(recipe)
+
+def mark_recipe_running(recipe):
+    mark_recipe_waiting(recipe)
+    recipe.tasks[0].start()
+    log.debug('Started %s', recipe.tasks[0].t_id)
 
 def mark_job_running(job):
-    mark_job_waiting(job)
     for recipe in job.all_recipes:
-        for rt in recipe.tasks:
-            rt.start()
-            log.debug('Started %s', rt.t_id)
+        mark_recipe_running(recipe)
 
 def mark_job_queued(job):
     for recipe in job.all_recipes:
