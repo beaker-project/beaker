@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.3
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -351,6 +351,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Fri Aug 24 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.3-2
+- fix server API docs build (dcallagh@redhat.com)
+
 * Fri Aug 24 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.3-1
 - Add missing tr and tbody elements to my_paginate_datagrid (stl@redhat.com)
 - remove dead koan-related bits (dcallagh@redhat.com)
