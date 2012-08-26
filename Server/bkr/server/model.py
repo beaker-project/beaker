@@ -30,7 +30,7 @@ from bkr.server.bexceptions import BeakerException, BX, CobblerTaskFailedExcepti
 from bkr.server.enum import DeclEnum
 from bkr.server.helpers import *
 from bkr.server.util import unicode_truncate, absolute_url
-from bkr.server import mail
+from bkr.server import mail, metrics
 import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
@@ -2348,6 +2348,7 @@ class System(SystemObject):
             .value(func.count(DistroTree.id.distinct()))
         if count >= 2:
             # Broken!
+            metrics.increment('counters.suspicious_aborts')
             reason = unicode(_(u'System has a run of aborted recipes ' 
                     'with reliable distros'))
             log.warn(reason)
@@ -4949,6 +4950,7 @@ class Recipe(TaskBase):
         if self.start_time and not self.finish_time and self.is_finished():
             # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
+            metrics.increment('counters.recipes_%s' % self.status.name)
 
     def provision(self):
         from bkr.server.kickstart import generate_kickstart
