@@ -32,7 +32,7 @@ from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arc
         LabControllerDistroTree, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
         LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
-        SystemGroup, DeviceClass, DistroTreeRepo, TaskPackage
+        SystemGroup, DeviceClass, DistroTreeRepo, TaskPackage, KernelType
 
 log = logging.getLogger(__name__)
 
@@ -185,7 +185,7 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
 
 def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
         owner=None, fqdn=None, shared=False, exclude_osmajor=[],
-        exclude_osversion=[], hypervisor=None, **kw):
+        exclude_osversion=[], hypervisor=None, kernel_type=None, **kw):
     if owner is None:
         owner = create_user()
     if fqdn is None:
@@ -203,6 +203,8 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
             osversion=osversion) for osversion in exclude_osversion)
     if hypervisor:
         system.hypervisor = Hypervisor.by_name(hypervisor)
+    if kernel_type:
+        system.kernel_type = KernelType.by_name(kernel_type)
     system.date_modified = datetime.datetime.utcnow()
     log.debug('Created system %r', system)
     return system
