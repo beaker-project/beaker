@@ -8,6 +8,7 @@ Run the following SQL:
 	ADD CONSTRAINT system_kernel_type_id_fk
 	    FOREIGN KEY (kernel_type_id) REFERENCES kernel_type (id);
     ALTER TABLE distro_tree_image
+	MODIFY image_type enum('kernel','initrd','live','uimage','uinitrd') NOT NULL,
 	ADD kernel_type_id INT(11) NOT NULL;
     UPDATE distro_tree_image set kernel_type_id = (SELECT id FROM kernel_type WHERE kernel_type = 'default');
     ALTER TABLE distro_tree_image
