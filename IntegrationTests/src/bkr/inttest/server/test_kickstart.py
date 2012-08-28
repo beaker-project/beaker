@@ -232,6 +232,14 @@ EOF
         cls.f16_x86_64.repos[:] = [
             DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
         ]
+        cls.f16_armhfp = data_setup.create_distro_tree(
+                distro=cls.f16, variant=u'Fedora', arch=u'armhfp',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-16/GOLD/Fedora/armhfp/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-16/GOLD/Fedora/armhfp/os/'])
+        cls.f16_armhfp.repos[:] = [
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+        ]
 
         session.flush()
 
@@ -1071,3 +1079,51 @@ network --bootproto=dhcp
 network --bootproto=static --device=00:11:22:33:44:55 --ip=192.168.99.1 --netmask=255.255.255.0
 network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netmask=255.255.255.0
 ''' in k, k)
+
+    def test_highbank(self):
+        system = data_setup.create_system(arch=u'armhfp', status=u'Automated',
+                lab_controller=self.lab_controller, kernel_type=u'highbank')
+        system.loaned = self.user
+        system.user = self.user
+        session.flush()
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-16" />
+                            <distro_arch op="=" value="armhfp" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('# Install U-Boot boot.scr' in k.splitlines(), k)
+
+    def test_mvebu(self):
+        system = data_setup.create_system(arch=u'armhfp', status=u'Automated',
+                lab_controller=self.lab_controller, kernel_type=u'mvebu')
+        system.loaned = self.user
+        system.user = self.user
+        session.flush()
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-16" />
+                            <distro_arch op="=" value="armhfp" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('# Install U-Boot boot.scr' in k.splitlines(), k)

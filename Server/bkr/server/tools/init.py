@@ -122,6 +122,7 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         ppc64  = Arch(u'ppc64')
         s390   = Arch(u's390')
         s390x  = Arch(u's390x')
+        armhfp = Arch(u'armhfp')
 
     #Setup base power types
     if PowerType.query.count() == 0:
