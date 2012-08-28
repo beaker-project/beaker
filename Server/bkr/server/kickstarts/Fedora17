@@ -9,12 +9,20 @@
 {% if manual is undefined %}
 auth --useshadow --enablemd5
 # System bootloader configuration
-bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}{% if distro_tree is arch('ppc', 'ppc64') %} --leavebootorder{% endif %}
+bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
 
 # Use text mode install
 {{ mode|default('text') }}
 {{ snippet('network') }}
-{{ snippet('print_anaconda_repos') }}
+
+{% if distro.osversion.osmajor.osmajor.startswith('Fedora') %}
+{% set releasever = distro.osversion.osmajor.osmajor[6:] %}
+repo --name=myupdates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f{{ releasever }}&arch={{ distro_tree.arch.arch }}
+{% endif %}
+{% if distro_tree is arch('armhfp') %}
+# Fedora17 Arm needs an additional repo in order to install.
+repo --name=ges-arm --baseurl="http://intranet.ges.redhat.com/es/arm/yum/ges/f17-arm/armhfp/os/Packages/"
+{% endif %}
 
 {#
 ## Firewall configuration
@@ -39,12 +47,10 @@ reboot
 rootpw --iscrypted {{ password|default(user.root_password, True) }}
 # SELinux configuration
 selinux {{ selinux|default('--enforcing') }}
-
 {% if skipx is defined %}
 # Do not configure the X Window System
 skipx
 {% endif %}
-
 # System timezone
 timezone {{ timezone|default('America/New_York') }}
 # Install OS instead of upgrade
@@ -52,10 +58,13 @@ install
 
 {{ snippet('rhts_devices') }}
 {{ snippet('rhts_partitions') }}
-{{ snippet('RedHatEnterpriseLinux7') }}
+{{ snippet('Fedora') }}
 {{ snippet('system') }}
 
 %packages --ignoremissing
+{% if distro_tree is arch('armhfp') %}
+uboot-tools
+{% endif %}
 {% if packages %}
 {{ snippet('rhts_packages') }}
 {% else %}
@@ -71,25 +80,30 @@ install
 
 %pre --log=/dev/console
 {{ snippet('rhts_pre') }}
-{{ snippet('RedHatEnterpriseLinux7_pre') }}
+{{ snippet('Fedora_pre') }}
 {{ snippet('system_pre') }}
 %end
 
 
 %post --log=/dev/console
 {{ snippet('rhts_post') }}
-{{ snippet('RedHatEnterpriseLinux7_post') }}
+{{ snippet('Fedora_post') }}
 {{ snippet('system_post') }}
 {{ snippet('ssh_keys') }}
 %end
 
 # Disable rhts-compat for Fedora15 and newer.
+{% if distro.osversion.osmajor.osmajor.startswith('Fedora') %}
+{% set releasever = distro.osversion.osmajor.osmajor[6:] %}
+{% if releasever|int >= 15 %}
 %post --log=/dev/console
 cat >> /etc/profile.d/task-overrides-rhts.sh <<END
 export RHTS_OPTION_COMPATIBLE=
 export RHTS_OPTION_COMPAT_SERVICE=
 END
 %end
+{% endif %}
+{% endif %}
 
 {{ ks_appends|join('\n') }}
 {{ snippet('post_s390_reboot') }}

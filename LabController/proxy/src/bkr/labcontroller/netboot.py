@@ -226,6 +226,23 @@ def extract_initrd_arg(kernel_options):
     else:
         return (None, kernel_options)
 
+def configure_armlinux(fqdn, kernel_options):
+    pxe_dir = os.path.join(get_tftp_root(), 'pxelinux.cfg')
+    makedirs_ignore(pxe_dir, mode=0755)
+
+    basename = pxe_basename(fqdn)
+    config = '''default linux
+prompt 0
+timeout 100
+label linux
+    kernel /images/%s/kernel
+    initrd /images/%s/initrd
+    append %s netboot_method=armpxe
+''' % (fqdn, fqdn, kernel_options)
+    logger.debug('Writing armlinux config for %s as %s', fqdn, basename)
+    with atomically_replaced_file(os.path.join(pxe_dir, basename)) as f:
+        f.write(config)
+
 def configure_pxelinux(fqdn, kernel_options):
     pxe_dir = os.path.join(get_tftp_root(), 'pxelinux.cfg')
     makedirs_ignore(pxe_dir, mode=0755)
