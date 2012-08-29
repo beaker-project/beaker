@@ -9,7 +9,7 @@
 {% if manual is undefined %}
 auth --useshadow --enablemd5
 # System bootloader configuration
-bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
+bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
 
 # Use text mode install
 {{ mode|default('text') }}
