@@ -750,7 +750,8 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
         for e in cls.excluded:
             if parser.get(e['section'], e['key'], '') != '':
                 return False
-        if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
+        if not (parser.get('general', 'family').startswith("Red Hat Enterprise Linux")\
+	   or parser.get('general', 'family').startswith("CentOS")):
             return False
         if int(parser.get('general', 'version').split('.')[0]) > 4:
             return False
@@ -874,7 +875,8 @@ mainimage = images/stage2.img
         for e in cls.excluded:
             if parser.get(e['section'], e['key'], '') != '':
                 return False
-        if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
+        if not (parser.get('general', 'family').startswith("Red Hat Enterprise Linux")\
+	   or parser.get('general', 'family').startswith("CentOS")):
             return False
         if int(parser.get('general', 'version').split('.')[0]) != 5:
             return False
@@ -1157,7 +1159,8 @@ repository = LoadBalancer
             return False
         if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
             return False
-        if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
+        if not (parser.get('general', 'family').startswith("Red Hat Enterprise Linux")
+	   or parser.get('general', 'family').startswith("CentOS")):
             return False
         if int(parser.get('general', 'version').split('.')[0]) != 6:
             return False
@@ -1258,7 +1261,8 @@ mainimage = images/install.img
         for e in cls.excluded:
             if parser.get(e['section'], e['key'], '') != '':
                 return False
-        if not parser.get('general', 'family').startswith("Red Hat Storage"):
+        if not (parser.get('general', 'family').startswith("Red Hat Storage")\
+	   or parser.get('general', 'family').startswith("CentOS")):
             return False
         return parser
 
@@ -1351,7 +1355,8 @@ kernel = images/pxeboot/vmlinuz
             return False
         if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
             return False
-        if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
+        if not (parser.get('general', 'family').startswith("Red Hat Enterprise Linux")\
+	   or parser.get('general', 'family').startswith("CentOS")):
             return False
         # Arm uses a different importer because of all the kernel types.
         if parser.get('general', 'arch') in ['armhfp']:
@@ -1447,7 +1452,8 @@ kernel = images/pxeboot/vmlinuz
             return False
         if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
             return False
-        if not parser.get('general', 'family').startswith("Red Hat Enterprise Linux"):
+        if not (parser.get('general', 'family').startswith("Red Hat Enterprise Linux")\
+	   or parser.get('general', 'family').startswith("CentOS")):
             return False
         # Arm uses a different importer because of all the kernel types.
         if parser.get('general', 'arch') not in ['armhfp']:
