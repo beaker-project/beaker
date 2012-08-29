@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -349,6 +349,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Wed Aug 29 2012 Bill Peck <bpeck@redhat.com> 0.9.2-3
+- Fix for log-delete to send trailing slashes. (bpeck@redhat.com)
+
 * Wed Aug 08 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.2-2
 - Abort beaker-init if no admin account exists or is specified (stl@redhat.com)
 - Display condition report in system view similarly to system edit
