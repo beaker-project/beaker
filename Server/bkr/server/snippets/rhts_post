@@ -1,5 +1,5 @@
 set -x
-{{ snippet('clear_netboot') }}
+{% snippet 'clear_netboot' %}
 {% if recipe %}
 echo {{ recipe.id }} > /root/RECIPE.TXT
 {% endif %}
@@ -11,8 +11,8 @@ echo $netboot_method >/root/NETBOOT_METHOD.TXT
 fi
 
 # Enable post-install boot notification
-{{ snippet('post_anamon') }}
-{{ snippet('readahead_sysconfig') }}
+{% snippet 'post_anamon' %}
+{% snippet 'readahead_sysconfig' %}
 
 {#
 ## Turn on ntpd
@@ -72,7 +72,7 @@ popd
 
 # Add Repos
 {% if distro is osmajor('RedHatEnterpriseLinux7') %}
-{{ snippet('print_repos') }}
+{% snippet 'print_repos' %}
 {% else %}
 {% set repo_base = distro_tree.url_in_lab(system.lab_controller, scheme=['http', 'ftp']) %}
 {% if repo_base %}
@@ -189,15 +189,11 @@ chkconfig --level 345 rhts-compat on
 
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
-{{ snippet('beaker_env') }}
-{{ snippet('lab_env') }}
-
-{%- if system.kernel_type.kernel_type == 'highbank' %}
-
-{{ snippet('highbank') }}
+{% snippet 'beaker_env' %}
+{% snippet 'lab_env' %}
+{% if system.kernel_type.kernel_type == 'highbank' %}
+{% snippet 'highbank' %}
 {% endif %}
-
-{%- if system.kernel_type.kernel_type == 'mvebu' %}
-
-{{ snippet('mvebu') }}
+{% if system.kernel_type.kernel_type == 'mvebu' %}
+{% snippet 'mvebu' %}
 {% endif %}

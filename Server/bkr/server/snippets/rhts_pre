@@ -7,4 +7,4 @@ wget -O - http://{{ system.lab_controller.fqdn }}:8000/install_start/{{ system.f
 {#
 ## Enable installation monitoring
 #}
-{{ snippet('pre_anamon') }}
+{% snippet 'pre_anamon' %}

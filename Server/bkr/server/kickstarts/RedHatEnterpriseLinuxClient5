@@ -1,10 +1,10 @@
 {% if sysprofile %}
 {% for snippet_profile in sysprofile|split(';') %}
 # Snippet Profile: {{ snippet_profile }}
-{{ snippet(snippet_profile) }}
+{% snippet snippet_profile %}
 {% endfor  %}
 {% else %}
-{{ snippet('install_method') }}
+{% snippet 'install_method' %}
 
 {% if manual is undefined %}
 auth --enableshadow --enablemd5
@@ -18,7 +18,7 @@ key {{ key|default('da3122afdb7edd23') }}
 
 {{ mode }}
 
-{{ snippet('network') }}
+{% snippet 'network' %}
 {#
 ## Firewall configuration
 ## firewall in kickstart metadata will enable the firewall
@@ -53,10 +53,10 @@ timezone {{ timezone|default('America/New_York') }}
 # Install OS instead of upgrade
 install
 
-{{ snippet('rhts_scsi_ethdevices') }}
-{{ snippet('rhts_partitions') }}
-{{ snippet('RedHatEnterpriseLinuxClient5') }}
-{{ snippet('system') }}
+{% snippet 'rhts_scsi_ethdevices' %}
+{% snippet 'rhts_partitions' %}
+{% snippet 'RedHatEnterpriseLinuxClient5' %}
+{% snippet 'system' %}
 
 %packages --resolvedeps --ignoremissing
 {#
@@ -64,7 +64,7 @@ install
 ## packages=httpd:selinux:kernel
 #}
 {% if packages %}
-{{ snippet('rhts_packages') }}
+{% snippet 'rhts_packages' %}
 {% else %}
 @development-tools
 @development-libs
@@ -100,16 +100,16 @@ xkeyboard-config
 {% endif %}{# sysprofile #}
 
 %pre --log=/dev/console
-{{ snippet('rhts_pre') }}
-{{ snippet('RedHatEnterpriseLinuxClient5_pre') }}
-{{ snippet('system_pre') }}
+{% snippet 'rhts_pre' %}
+{% snippet 'RedHatEnterpriseLinuxClient5_pre' %}
+{% snippet 'system_pre' %}
 
 %post --log=/dev/console
-{{ snippet('rhts_post') }}
-{{ snippet('RedHatEnterpriseLinuxClient5_post') }}
-{{ snippet('system_post') }}
-{{ snippet('ssh_keys') }}
+{% snippet 'rhts_post' %}
+{% snippet 'RedHatEnterpriseLinuxClient5_post' %}
+{% snippet 'system_post' %}
+{% snippet 'ssh_keys' %}
 
 {{ ks_appends|join('\n') }}
-{{ snippet('post_s390_reboot') }}
-{{ snippet('postreboot') }}
+{% snippet 'post_s390_reboot' %}
+{% snippet 'postreboot' %}

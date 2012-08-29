@@ -1,4 +1,4 @@
-{{ snippet('readahead_packages') }}
+{% snippet 'readahead_packages' %}
 
 {#
 ## If packages variable is set add additional packages to this install

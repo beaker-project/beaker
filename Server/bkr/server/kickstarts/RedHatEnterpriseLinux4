@@ -1,10 +1,10 @@
 {% if sysprofile %}
 {% for snippet_profile in sysprofile|split(';') %}
 # Snippet Profile: {{ snippet_profile }}
-{{ snippet(snippet_profile) }}
+{% snippet snippet_profile %}
 {% endfor  %}
 {% else %}
-{{ snippet('install_method') }}
+{% snippet 'install_method' %}
 
 {% if manual is undefined %}
 authconfig --enableshadow --enablemd5
@@ -13,7 +13,7 @@ bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_option
 
 {{ mode }}
 
-{{ snippet('network') }}
+{% snippet 'network' %}
 {#
 ## Firewall configuration
 ## firewall in kickstart metadata will enable the firewall
@@ -46,10 +46,10 @@ timezone {{ timezone|default('America/New_York') }}
 # Install OS instead of upgrade
 install
 
-{{ snippet('rhts_scsi_ethdevices') }}
-{{ snippet('rhts_partitions') }}
-{{ snippet('RedHatEnterpriseLinux4') }}
-{{ snippet('system') }}
+{% snippet 'rhts_scsi_ethdevices' %}
+{% snippet 'rhts_partitions' %}
+{% snippet 'RedHatEnterpriseLinux4' %}
+{% snippet 'system' %}
 
 %packages --resolvedeps --ignoremissing
 {#
@@ -57,7 +57,7 @@ install
 ## packages=httpd:selinux:kernel
 #}
 {% if packages %}
-{{ snippet('rhts_packages') }}
+{% snippet 'rhts_packages' %}
 {% else %}
 @development-tools
 @development-libs
@@ -83,16 +83,16 @@ lvm2
 {% endif %}{# sysprofile #}
 
 %pre --log=/dev/console
-{{ snippet('rhts_pre') }}
-{{ snippet('RedHatEnterpriseLinux4_pre') }}
-{{ snippet('system_pre') }}
+{% snippet 'rhts_pre' %}
+{% snippet 'RedHatEnterpriseLinux4_pre' %}
+{% snippet 'system_pre' %}
 
 %post --log=/dev/console
-{{ snippet('rhts_post') }}
-{{ snippet('RedHatEnterpriseLinux4_post') }}
-{{ snippet('system_post') }}
-{{ snippet('ssh_keys') }}
+{% snippet 'rhts_post' %}
+{% snippet 'RedHatEnterpriseLinux4_post' %}
+{% snippet 'system_post' %}
+{% snippet 'ssh_keys' %}
 
 {{ ks_appends|join('\n') }}
-{{ snippet('post_s390_reboot') }}
-{{ snippet('postreboot') }}
+{% snippet 'post_s390_reboot' %}
+{% snippet 'postreboot' %}

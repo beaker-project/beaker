@@ -1,10 +1,10 @@
 {% if sysprofile %}
 {% for snippet_profile in sysprofile|split(';') %}
 # Snippet Profile: {{ snippet_profile }}
-{{ snippet(snippet_profile) }}
+{% snippet snippet_profile %}
 {% endfor  %}
 {% else %}
-{{ snippet('install_method') }}
+{% snippet 'install_method' %}
 
 {% if manual is undefined %}
 auth --useshadow --enablemd5
@@ -13,8 +13,8 @@ bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} 
 
 # Use text mode install
 {{ mode|default('text') }}
-{{ snippet('network') }}
-{{ snippet('print_anaconda_repos') }}
+{% snippet 'network' %}
+{% snippet 'print_anaconda_repos' %}
 
 {#
 ## Firewall configuration
@@ -50,14 +50,14 @@ timezone {{ timezone|default('America/New_York') }}
 # Install OS instead of upgrade
 install
 
-{{ snippet('rhts_devices') }}
-{{ snippet('rhts_partitions') }}
-{{ snippet('RedHatEnterpriseLinux7') }}
-{{ snippet('system') }}
+{% snippet 'rhts_devices' %}
+{% snippet 'rhts_partitions' %}
+{% snippet 'RedHatEnterpriseLinux7' %}
+{% snippet 'system' %}
 
 %packages --ignoremissing
 {% if packages %}
-{{ snippet('rhts_packages') }}
+{% snippet 'rhts_packages' %}
 {% else %}
 @development
 @desktop-platform-devel
@@ -70,17 +70,17 @@ install
 {% endif %}{# sysprofile #}
 
 %pre --log=/dev/console
-{{ snippet('rhts_pre') }}
-{{ snippet('RedHatEnterpriseLinux7_pre') }}
-{{ snippet('system_pre') }}
+{% snippet 'rhts_pre' %}
+{% snippet 'RedHatEnterpriseLinux7_pre' %}
+{% snippet 'system_pre' %}
 %end
 
 
 %post --log=/dev/console
-{{ snippet('rhts_post') }}
-{{ snippet('RedHatEnterpriseLinux7_post') }}
-{{ snippet('system_post') }}
-{{ snippet('ssh_keys') }}
+{% snippet 'rhts_post' %}
+{% snippet 'RedHatEnterpriseLinux7_post' %}
+{% snippet 'system_post' %}
+{% snippet 'ssh_keys' %}
 %end
 
 # Disable rhts-compat for Fedora15 and newer.
@@ -92,5 +92,5 @@ END
 %end
 
 {{ ks_appends|join('\n') }}
-{{ snippet('post_s390_reboot') }}
-{{ snippet('postreboot') }}
+{% snippet 'post_s390_reboot' %}
+{% snippet 'postreboot' %}

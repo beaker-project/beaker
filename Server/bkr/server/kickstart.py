@@ -8,18 +8,45 @@ from sqlalchemy.orm.exc import NoResultFound
 from turbogears import identity, config
 from turbogears.controllers import expose
 import cherrypy
-import jinja2.sandbox
+import jinja2.sandbox, jinja2.ext, jinja2.nodes
 from bkr.server.model import session, RenderedKickstart
 from bkr.server.util import absolute_url
 
 log = logging.getLogger(__name__)
+
+class SnippetExtension(jinja2.ext.Extension):
+
+    """
+    An extension which defines a block-level snippet statement::
+
+        {% snippet 'rhts_post' %}
+
+    equivalent to the expression::
+
+        {{ snippet('rhts_post') }}
+
+    See http://jinja.pocoo.org/docs/extensions/
+    """
+
+    tags = set(['snippet'])
+
+    def parse(self, parser):
+        lineno = parser.stream.next()
+        snippet_name = parser.parse_expression()
+        node = jinja2.nodes.Output([
+            jinja2.nodes.Call(jinja2.nodes.Name('snippet', 'load'),
+                    [snippet_name], [], None, None),
+        ])
+        node.set_lineno(lineno)
+        return node
 
 template_env = jinja2.sandbox.SandboxedEnvironment(
         loader=jinja2.ChoiceLoader([
             jinja2.FileSystemLoader('/etc/beaker'),
             jinja2.PackageLoader('bkr.server', ''),
         ]),
-        trim_blocks=True)
+        trim_blocks=True,
+        extensions=[SnippetExtension])
 
 class TemplateRenderingEnvironment(object):
     """
@@ -144,7 +171,10 @@ def generate_kickstart(install_options, distro_tree, system, user,
     def snippet(name):
         template = snippet_template(name, distro_tree, system)
         if template:
-            return template.render(context)
+            retval = template.render(context)
+            if retval and not retval.endswith('\n'):
+                retval += '\n'
+            return retval
         else:
             return u'# Error: no snippet data for %s\n' % name
     restricted_context['snippet'] = snippet
@@ -153,7 +183,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
     with TemplateRenderingEnvironment():
         if kickstart:
             template = template_env.from_string(
-                    "{{ snippet('install_method') }}\n" + kickstart)
+                    "{% snippet 'install_method' %}\n" + kickstart)
             result = template.render(restricted_context)
         else:
             template = kickstart_template(distro_tree)
