@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.3
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -351,6 +351,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Wed Aug 29 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.3-4
+- Update to arm support. (bpeck@redhat.com)
+
 * Tue Aug 28 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.3-3
 - fix whitespace for highbank and mvebu snippets (dcallagh@redhat.com)
 - Fix SchemaUpgrade docs, we were missing the updates to image_type ENUM
