@@ -191,6 +191,7 @@ chkconfig --level 345 rhts-compat on
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
 {% snippet 'beaker_env' %}
 {% snippet 'lab_env' %}
+{% snippet 'ssh_keys' %}
 {% if system.kernel_type.kernel_type == 'highbank' %}
 {% snippet 'highbank' %}
 {% endif %}

@@ -94,7 +94,6 @@ redhat-lsb
 {% snippet 'rhts_post' %}
 {% snippet 'RedHatStorage2_post' %}
 {% snippet 'system_post' %}
-{% snippet 'ssh_keys' %}
 %end
 
 %post --nochroot

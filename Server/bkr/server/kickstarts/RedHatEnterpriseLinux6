@@ -80,7 +80,6 @@ install
 {% snippet 'rhts_post' %}
 {% snippet 'RedHatEnterpriseLinux6_post' %}
 {% snippet 'system_post' %}
-{% snippet 'ssh_keys' %}
 
 {{ ks_appends|join('\n') }}
 {% snippet 'post_s390_reboot' %}

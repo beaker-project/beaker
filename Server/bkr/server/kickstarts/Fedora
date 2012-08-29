@@ -82,7 +82,6 @@ install
 {% snippet 'rhts_post' %}
 {% snippet 'Fedora_post' %}
 {% snippet 'system_post' %}
-{% snippet 'ssh_keys' %}
 %end
 
 # Disable rhts-compat for Fedora15 and newer.

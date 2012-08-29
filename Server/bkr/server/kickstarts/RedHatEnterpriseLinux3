@@ -82,7 +82,6 @@ PATH=/usr/bin:$PATH
 {% snippet 'rhts_post' %}
 {% snippet 'RedHatEnterpriseLinux3_post' %}
 {% snippet 'system_post' %}
-{% snippet 'ssh_keys' %}
 ) 2>&1 | /usr/bin/tee /dev/console
 
 {{ ks_appends|join('\n') }}
