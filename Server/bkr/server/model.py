@@ -3350,7 +3350,7 @@ class Log(MappedObject):
             dir = '%s/%s' % (self.server, self.path or '')
             presult = urlparse.urlparse(dir)
             server_url = '%s://%s' % (presult[0], presult[1])
-            dir = '%s%s' % (server_url, posixpath.normpath(presult[2]))
+            dir = '%s%s/' % (server_url, posixpath.normpath(presult[2]))
         else:
             dir = '%s/%s' % (self.parent.filepath, self.path or '')
             dir = posixpath.normpath(dir)
