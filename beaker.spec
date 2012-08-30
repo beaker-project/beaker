@@ -351,6 +351,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Wed Aug 29 2012 Bill Peck <bpeck@redhat.com> 0.9.2-3
+- Fix for log-delete to send trailing slashes. (bpeck@redhat.com)
+
 * Wed Aug 29 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.3-4
 - Update to arm support. (bpeck@redhat.com)
 
