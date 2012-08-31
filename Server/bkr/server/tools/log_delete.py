@@ -33,15 +33,17 @@ def main():
     parser.add_option('--dry-run', action='store_true',
             help='Do not delete any files, and issue ROLLBACK instead of '
                 'COMMIT after performing database operations')
+    parser.add_option('--limit', default=None,
+        help='Set a limit on the number of jobs whose logs will be deleted')
     parser.set_defaults(verbose=False, debug=False, dry_run=False)
     options, args = parser.parse_args()
     load_config(options.config)
     # urllib3 installs a NullHandler, we can just remove it and let the messages propagate
     logging.getLogger('requests.packages.urllib3').handlers[:] = []
     log_to_stream(sys.stderr, level=logging.DEBUG if options.debug else logging.WARNING)
-    return log_delete(options.verbose, options.dry_run)
+    return log_delete(options.verbose, options.dry_run, options.limit)
 
-def log_delete(print_logs=False, dry=False):
+def log_delete(print_logs=False, dry=False, limit=None):
     if dry:
         logger.info('Dry run only')
     logger.info('Getting expired jobs')
@@ -50,7 +52,8 @@ def log_delete(print_logs=False, dry=False):
     if not dry:
         requests_session = requests.session(
                 auth=requests.auth.HTTPKerberosAuth(require_mutual_auth=False))
-    for job, logs in Job.expired_logs():
+    for job, logs in Job.expired_logs(limit):
+        logger.info('Deleting logs for %s', job.t_id)
         try:
             session.begin()
             for log in logs:

@@ -1,6 +1,7 @@
 import unittest, datetime, os, errno, shutil
 import tempfile
 import subprocess
+import sys
 from bkr.server.model import LogRecipe, TaskBase, Job
 from bkr.inttest import data_setup, with_transaction, Process
 from bkr.server.tools import log_delete
@@ -36,6 +37,40 @@ class LogDelete(unittest.TestCase):
                     self.assert_(rt.logs == [])
                     for rtr in rt.results:
                         self.assert_(rtr.logs == [])
+
+    def test_limit(self):
+        limit = 10
+
+        def _create_jobs():
+            with session.begin():
+                for i in range(limit + 1):
+                    job_to_delete = data_setup.create_completed_job(
+                            start_time=datetime.datetime.utcnow() - datetime.timedelta(days=60),
+                            finish_time=datetime.datetime.utcnow() - datetime.timedelta(days=31))
+                    job_to_delete.recipesets[0].recipes[0].logs.append(LogRecipe(filename=u'test.log'))
+
+        def _get_output(f):
+            tmp_file =  tempfile.TemporaryFile()
+            sys_std_out = sys.stdout
+            sys.stdout = tmp_file
+            f()
+            tmp_file.seek(0)
+            log_delete_output = tmp_file.read()
+            tmp_file.close()
+            sys.stdout = sys_std_out
+            return log_delete_output
+
+        # Test with limit
+        _create_jobs()
+        with_limit = _get_output(lambda:
+            log_delete.log_delete(dry=True, print_logs=True, limit=10))
+        self.assert_(len(with_limit.splitlines()) == limit)
+
+        # Test no limit set
+        _create_jobs()
+        no_limit = _get_output(lambda:
+            log_delete.log_delete(dry=True, print_logs=True))
+        self.assert_(len(no_limit.splitlines()) > limit)
 
     def test_log_not_delete(self):
         # Job that is not within it's expiry time
