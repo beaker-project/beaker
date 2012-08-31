@@ -170,7 +170,7 @@ def handle_clear_netboot(command):
     if 'ia64' in arch:
         netboot.clear_elilo(fqdn)
     if 'armhfp' in arch:
-        netboot.clear_pxelinux(fqdn)
+        netboot.clear_armlinux(fqdn)
 
 def handle_power(command):
     script = find_power_script(command['power']['type'])
