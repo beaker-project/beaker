@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.3
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -351,6 +351,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Tue Sep 04 2012 Bill Peck <bpeck@redhat.com> 0.9.3-6
+- Fix pxe conflicts between arm and x86 systems. (bpeck@redhat.com)
+
 * Thu Aug 30 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.3-5
 - Merge hotfix from 0.9.2 (dcallagh@redhat.com)
 
