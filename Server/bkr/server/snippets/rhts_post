@@ -1,3 +1,4 @@
+set -x
 {{ snippet('clear_netboot') }}
 {% if recipe %}
 echo {{ recipe.id }} > /root/RECIPE.TXT
