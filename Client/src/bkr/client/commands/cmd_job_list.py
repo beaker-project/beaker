@@ -38,6 +38,22 @@ Options
 
    Limit to jobs which were testing the product identified by <cpeid>.
 
+.. option:: owner <username>
+
+   Limit to jobs which are owned by the user identified by <username>.
+
+.. option:: whiteboard <string>
+
+   Limit to jobs whose whiteboard contains <string>
+
+.. option:: mine
+
+   Presence of --mine is equivalent to including own username in --owner
+
+.. option:: --limit <number>
+
+   Limit to displaying only the first <number> of results
+
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
 
@@ -94,6 +110,31 @@ class Job_List(BeakerCommand):
             help="Jobs for a particular product"
         )
 
+        self.parser.add_option(
+            "-o",
+            "--owner",
+            help="Jobs with a particular owner"
+        )
+
+        self.parser.add_option(
+            "-w",
+            "--whiteboard",
+            help="Jobs of a particular whiteboard"
+        )
+
+        self.parser.add_option(
+            "--mine",
+            default=False,
+            action="store_true",
+            help="Jobs owned by the querying user"
+        )
+
+        self.parser.add_option(
+            "-l",
+            "--limit",
+            help="Place a limit on the number of results"
+        )
+
     def run(self,*args, **kwargs):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
@@ -101,14 +142,25 @@ class Job_List(BeakerCommand):
         tag = kwargs.pop('tag', None)
         product = kwargs.pop('product', None)
         complete_days = kwargs.pop('completeDays', None)
+        owner = kwargs.pop('owner', None)
+        whiteboard = kwargs.pop('whiteboard', None)
+        mine = kwargs.pop('mine', None)
+        limit = kwargs.pop('limit', None)
 
         if complete_days is not None and complete_days < 1:
             self.parser.error('Please pass a positive integer to completeDays')
 
-        if complete_days is None and tag is None and family is None and product is None:
-            self.parser.error('Please pass either the completeDays time delta, a tag, product or family')
+        if complete_days is None and tag is None and family is None and product is None\
+           and owner is None and mine is None and whiteboard is None:
+            self.parser.error('Please pass either the completeDays time delta, a tag, product, family, or owner')
 
         self.set_hub(username,password)
         jobs = []
-        print self.hub.jobs.list(tag,complete_days,family,product)
-
+        print self.hub.jobs.filter(dict(tag=tag,
+                                        daysComplete=complete_days,
+                                        family=family,
+                                        product=product,
+                                        owner=owner,
+                                        whiteboard=whiteboard,
+                                        mine=mine,
+                                        limit=limit))
