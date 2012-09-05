@@ -38,7 +38,7 @@ class CSVRoundtripTest(WebDriverTestCase):
         url = get_server_base() + ('csv/action_export?csv_type=%s' % csv_type)
         cookies = dict((cookie['name'].encode('ascii', 'replace'), cookie['value'])
                 for cookie in b.get_cookies())
-        request = requests.get(url, cookies=cookies)
+        request = requests.get(url, cookies=cookies, prefetch=False)
         request.raise_for_status()
         return request.iter_lines()
 
