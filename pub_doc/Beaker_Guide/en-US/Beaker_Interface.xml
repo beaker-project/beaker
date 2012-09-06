@@ -451,6 +451,9 @@
                                              <listitem>
                                               <para><application>ignoredisk</application> Use this to ignore certain disks for install.  For example: ignoredisk=--only-use=sda </para>
                                              </listitem>
+                                             <listitem>
+                                              <para><application>rootfstype</application> Specifies root filesystem type</para>
+                                             </listitem>
                                             </itemizedlist>
                                           </para>
                                         </listitem>
@@ -630,7 +633,67 @@
       &lt;/recipe&gt;
     &lt;/recipeSet&gt;
 &lt;/job&gt;
-</screen>
+                               </screen>
+                               <para>
+                                 By default, the kickstart fed to Anaconda is a generalised 
+                                 kickstart for a specific distro major version. However, there are a couple of ways 
+                                 to pass in a customized kickstart.
+                               </para>
+                               <para>
+                                 One method is to pass the <code>ks</code> key/value 
+                                 to the <code>kernel_options</code> parameter of the <code>recipe</code> element.
+                                 Using this method the kickstart will be used by Anaconda unaltered.
+                                 <screen>
+&lt;recipe kernel_options='ks=http://example.com/ks.cfg' /&gt;
+                                 </screen>
+                                </para>
+                                 <para>
+                                   Alternatively, the kickstart can be written out within the <code>recipe</code> element.
+                               <screen>
+
+&lt;kickstart&gt;
+  install
+  key --skip
+  lang en_US.UTF-8
+  skipx
+  keyboard us
+  network --device eth0 --bootproto dhcp
+  rootpw --plaintext testingpassword
+  firewall --disabled
+  authconfig --enableshadow --enablemd5
+  selinux --permissive
+  timezone --utc Europe/Prague
+
+  bootloader --location=mbr --driveorder=sda,sdb
+# Clear the Master Boot Record
+  zerombr
+# Partition clearing information
+  clearpart --all --initlabel
+# Disk partitioning information
+  part /RHTSspareLUN1 --fstype=ext3 --size=20480 --asprimary --label=sda_20GB --ondisk=sda
+  part /RHTSspareLUN2 --fstype=ext3 --size=1 --grow --asprimary --label=sda_rest --ondisk=sda
+  part /boot --fstype=ext3 --size=200 --asprimary --label=BOOT --ondisk=sdb
+# part swap --fstype=swap --size=512  --asprimary --label=SWAP_007 --ondisk=sdb
+  part / --fstype=ext3 --size=1 --grow --asprimary --label=ROOT  --ondisk=sdb
+
+  reboot
+
+  %packages --excludedocs --ignoremissing --nobase
+&lt;/kickstart&gt;
+                               </screen>
+                               </para>
+                               <para>
+                                 When passed a custom kickstart in this manner, Beaker will add
+                                 extra entries into the kickstart.
+                                 These will come from install options that have been specified for that
+                                 system, arch and distro combination;
+                                 partitions, packages and repos that have been specified
+                                 in the <code>recipe</code> element; the relevant 
+                                 snippets needed for running the harness. For further information on how Beaker processes
+                                 kickstarts and how to utilize their templating language, see
+                                 <xref linkend="Administration-Customizing_Kickstarts" />.
+                               </para>
+
 </section>
                          <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Jobs-Job_Submission-Job_Results">
                             <title>Job Results</title>

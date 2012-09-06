@@ -1,3 +1,4 @@
+{{ snippet('clear_netboot') }}
 {% if recipe %}
 echo {{ recipe.id }} > /root/RECIPE.TXT
 {% endif %}
@@ -189,4 +190,13 @@ chkconfig --level 345 rhts-compat on
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
 {{ snippet('beaker_env') }}
 {{ snippet('lab_env') }}
-{{ snippet('clear_netboot') }}
+
+{%- if system.kernel_type.kernel_type == 'highbank' %}
+
+{{ snippet('highbank') }}
+{% endif %}
+
+{%- if system.kernel_type.kernel_type == 'mvebu' %}
+
+{{ snippet('mvebu') }}
+{% endif %}

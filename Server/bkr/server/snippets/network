@@ -1,0 +1,10 @@
+{% if static_networks %}
+network --bootproto=dhcp
+{% for network in static_networks|split(';') %}
+{% set device, cidr = network|split(',') %}
+{% set ip = netaddr.IPNetwork(cidr) %}
+network --bootproto=static --device={{ device }} --ip={{ ip.ip }} --netmask={{ ip.netmask }}
+{% endfor %}
+{% else %}
+# no specific network configuration
+{% endif %}

@@ -18,18 +18,18 @@ ifdef WITH_INTTESTS
 endif
 
 build:
-	for i in $(SUBDIRS); do $(MAKE) -C $$i build; done
+	set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i build; done
 
 include rpmspec_rules.mk
 include git_rules.mk
 include upload_rules.mk
 
 install:
-	for i in $(SUBDIRS); do $(MAKE) -C $$i install; done
+	set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i install; done
 
 clean:
 	-rm -rf rpm-build
-	for i in $(SUBDIRS); do $(MAKE) -C $$i clean; done
+	set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i clean; done
 
 srpm: clean $(PKGNAME)-$(PKGVERSION).tar.bz2
 	mkdir -p rpm-build

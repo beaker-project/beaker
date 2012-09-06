@@ -1,7 +1,9 @@
 #!/usr/bin/python
 from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
     Device, DeviceClass
-from bkr.inttest.server.selenium import SeleniumTestCase
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import get_server_base, login, \
+        search_for_system
 from bkr.inttest import data_setup, with_transaction
 import unittest, time, re, os, datetime
 from turbogears.database import session
@@ -391,6 +393,40 @@ class Search(SeleniumTestCase):
 
     def tearDown(self):
         self.assertEqual([], self.verificationErrors)
+
+class SearchWDTest(WebDriverTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.user = data_setup.create_user(password=u'password')
+        self.browser = self.get_browser()
+
+    def tearDown(self):
+        self.browser.quit()
+
+    def test_secret_system_not_visible(self):
+        with session.begin():
+            secret_system = data_setup.create_system()
+            secret_system.private = True
+        b = self.browser
+        login(b, user=self.user.user_name, password=u'password')
+        b.get(get_server_base())
+        search_for_system(b, secret_system)
+        # results grid should be empty
+        b.find_element_by_xpath('//table[@id="widget" and not(.//td)]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=582008
+    def test_secret_system_visible_when_loaned(self):
+        with session.begin():
+            secret_system = data_setup.create_system()
+            secret_system.private = True
+            secret_system.loaned = self.user
+        b = self.browser
+        login(b, user=self.user.user_name, password=u'password')
+        b.get(get_server_base())
+        search_for_system(b, secret_system)
+        b.find_element_by_xpath('//table[@id="widget"]'
+                '//tr/td[1][./a/text()="%s"]' % secret_system.fqdn)
 
 class HypervisorSearchTest(SeleniumTestCase):
 

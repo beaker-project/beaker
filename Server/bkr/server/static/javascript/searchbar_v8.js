@@ -214,7 +214,7 @@ SearchBar.prototype.createValueField = function(current, vals) {
         if (current.nodeName == 'SELECT') {
             //update options and get out of here
             replaceChildNodes(current,map(this.replaceValOptions,vals))
-            return [undefined, clone_attrs]
+            return [current, clone_attrs]
         }
         var new_dom = SELECT(null,map(this.replaceValOptions, vals))
     } else {

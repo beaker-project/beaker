@@ -15,8 +15,8 @@
 %endif
 
 Name:           beaker
-Version:        0.9.2
-Release:        2%{?dist}
+Version:        0.9.3
+Release:        6%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -49,6 +49,7 @@ BuildRequires:  cracklib-python
 BuildRequires:  python-concurrentloghandler
 BuildRequires:  rpm-python
 BuildRequires:  rhts-python
+BuildRequires:  python-netaddr
 %endif
 
 # As above, these client dependencies are needed in build because of sphinx
@@ -100,6 +101,7 @@ Requires:       python-concurrentloghandler
 Requires:       rhts-python
 Requires:       cracklib-python
 Requires:       python-jinja2
+Requires:       python-netaddr
 %endif
 
 
@@ -349,6 +351,52 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Tue Sep 04 2012 Bill Peck <bpeck@redhat.com> 0.9.3-6
+- Fix pxe conflicts between arm and x86 systems. (bpeck@redhat.com)
+
+* Thu Aug 30 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.3-5
+- Merge hotfix from 0.9.2 (dcallagh@redhat.com)
+
+* Wed Aug 29 2012 Bill Peck <bpeck@redhat.com> 0.9.2-3
+- Fix for log-delete to send trailing slashes. (bpeck@redhat.com)
+
+* Wed Aug 29 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.3-4
+- Update to arm support. (bpeck@redhat.com)
+
+* Tue Aug 28 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.3-3
+- fix whitespace for highbank and mvebu snippets (dcallagh@redhat.com)
+- Fix SchemaUpgrade docs, we were missing the updates to image_type ENUM
+  (bpeck@redhat.com)
+
+* Fri Aug 24 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.3-2
+- fix server API docs build (dcallagh@redhat.com)
+
+* Fri Aug 24 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.3-1
+- Add missing tr and tbody elements to my_paginate_datagrid (stl@redhat.com)
+- remove dead koan-related bits (dcallagh@redhat.com)
+- tests: fix race in test_max_whiteboard (dcallagh@redhat.com)
+- 806113 rhts_partitions: /boot needs --asprimary, but / and swap do not
+  (dcallagh@redhat.com)
+- 743441 new ks_meta variable 'rootfstype' to customise the root filesystem
+  type (dcallagh@redhat.com)
+- 847629 fix DistroTree.url_in_lab when an unusual URL scheme is present
+  (dcallagh@redhat.com)
+- 582008 allow users to see secret systems when loaned to them
+  (dcallagh@redhat.com)
+- 831448 support op="!=" in <distrolabcontroller/> and <hostlabcontroller/>
+  (dcallagh@redhat.com)
+- 841197 Beaker ignores tasks, no error reported (bpeck@redhat.com)
+- 623933 if RESERVE_IF_FAIL=1 is passed to task then it will only reserve on
+  failure (bpeck@redhat.com)
+- 849818 handle NULL recipetask_id in watchdogs grid (dcallagh@redhat.com)
+- 578812 new ks_meta variable static_networks (dcallagh@redhat.com)
+- 841969 [RFE] Add arm support to beaker-provision (bpeck@redhat.com)
+- 843854 %%post power commands need to be synchronous (bpeck@redhat.com)
+- 630902 allow filtering distros by lab controller in reserve workflow
+  (dcallagh@redhat.com)
+- 838615 Custom kickstart documented (rmancy@redhat.com)
+- 844517 Fix searchbar js error (rmancy@redhat.com)
+
 * Wed Aug 08 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.2-2
 - Abort beaker-init if no admin account exists or is specified (stl@redhat.com)
 - Display condition report in system view similarly to system edit

@@ -139,6 +139,7 @@ class SystemType(DeclEnum):
         ('virtual',   u'Virtual',   dict()),
     ]
 
+
 class ReleaseAction(DeclEnum):
 
     symbols = [
@@ -153,6 +154,8 @@ class ImageType(DeclEnum):
         ('kernel', u'kernel', dict()),
         ('initrd', u'initrd', dict()),
         ('live', u'live', dict()),
+        ('uimage', u'uimage', dict()),
+        ('uinitrd', u'uinitrd', dict())
     ]
 
 xmldoc = xml.dom.minidom.Document()
@@ -166,6 +169,14 @@ hypervisor_table = Table('hypervisor', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
     Column('hypervisor', Unicode(100), nullable=False),
+    mysql_engine='InnoDB',
+)
+
+kernel_type_table = Table('kernel_type', metadata,
+    Column('id', Integer, autoincrement=True,
+           nullable=False, primary_key=True),
+    Column('kernel_type', Unicode(100), nullable=False),
+    Column('uboot', Boolean(), default=False),
     mysql_engine='InnoDB',
 )
 
@@ -203,6 +214,10 @@ system_table = Table('system', metadata,
            ForeignKey('distro_tree.id')),
     Column('hypervisor_id', Integer,
            ForeignKey('hypervisor.id')),
+    Column('kernel_type_id', Integer,
+           ForeignKey('kernel_type.id'),
+           default=select([kernel_type_table.c.id], limit=1).where(kernel_type_table.c.kernel_type==u'default').correlate(None),
+           nullable=False),
     mysql_engine='InnoDB',
 )
 
@@ -494,6 +509,10 @@ distro_tree_image_table = Table('distro_tree_image', metadata,
             nullable=False, primary_key=True),
     Column('image_type', ImageType.db_type(),
             nullable=False, primary_key=True),
+    Column('kernel_type_id', Integer,
+           ForeignKey('kernel_type.id'),
+           default=select([kernel_type_table.c.id], limit=1).where(kernel_type_table.c.kernel_type==u'default').correlate(None),
+           nullable=False, primary_key=True),
     Column('path', UnicodeText, nullable=False),
     mysql_engine='InnoDB',
 )
@@ -1588,7 +1607,8 @@ class System(SystemObject):
     def __init__(self, fqdn=None, status=None, contact=None, location=None,
                        model=None, type=None, serial=None, vendor=None,
                        owner=None, lab_controller=None, lender=None,
-                       hypervisor=None, loaned=None, memory=None):
+                       hypervisor=None, loaned=None, memory=None,
+                       kernel_type=None):
         super(System, self).__init__()
         self.fqdn = fqdn
         self.status = status
@@ -1604,6 +1624,7 @@ class System(SystemObject):
         self.hypervisor = hypervisor
         self.loaned = loaned
         self.memory = memory
+        self.kernel_type = kernel_type
     
     def to_xml(self, clone=False):
         """ Return xml describing this system """
@@ -1649,6 +1670,7 @@ class System(SystemObject):
                             or_(System.private==False,
                                 System.groups.any(Group.users.contains(user)),
                                 System.owner == user,
+                                System.loaned == user,
                                 System.user == user))
         else:
             query = query.filter(System.private==False)
@@ -2429,6 +2451,28 @@ class SystemGroup(MappedObject):
 
     pass
 
+
+class KernelType(SystemObject):
+
+    def __repr__(self):
+        return self.kernel_type
+
+    @classmethod
+    def get_all_types(cls):
+        """
+        return an array of tuples containing id, kernel_type
+        """
+        return [(ktype.id, ktype.kernel_type) for ktype in cls.query]
+
+    @classmethod
+    def get_all_names(cls):
+        return [ktype.kernel_type for ktype in cls.query]
+
+    @classmethod
+    def by_name(cls, kernel_type):
+        return cls.query.filter_by(kernel_type=kernel_type).one()
+
+
 class Hypervisor(SystemObject):
 
     def __repr__(self):
@@ -2997,28 +3041,35 @@ class DistroTree(MappedObject):
         """
         if isinstance(scheme, basestring):
             scheme = [scheme]
-        urls = [lca.url for lca in self.lab_controller_assocs
-                if lca.lab_controller == lab_controller]
+        urls = dict((urlparse.urlparse(lca.url).scheme, lca.url)
+                for lca in self.lab_controller_assocs
+                if lca.lab_controller == lab_controller)
         if scheme is not None:
-            urls = [url for url in urls if urlparse.urlparse(url).scheme in scheme]
-            scheme_order = scheme
+            for s in scheme:
+                if s in urls:
+                    return urls[s]
         else:
-            scheme_order = ['nfs', 'http', 'ftp']
-        if not urls:
-            if required:
-                raise ValueError('No usable URL found for %r in %r' % (self, lab_controller))
-            else:
-                return None
-        return sorted(urls, key=lambda url: scheme_order.index(urlparse.urlparse(url).scheme))[0]
+            for s in ['nfs', 'http', 'ftp']:
+                if s in urls:
+                    return urls[s]
+            # caller didn't specify any schemes, so pick anything if we have it
+            if urls:
+                return urls.itervalues().next()
+        # nothing suitable found
+        if required:
+            raise ValueError('No usable URL found for %r in %r' % (self, lab_controller))
+        else:
+            return None
 
     def repo_by_id(self, repoid):
         for repo in self.repos:
             if repo.repo_id == repoid:
                 return repo
 
-    def image_by_type(self, image_type):
+    def image_by_type(self, image_type, kernel_type):
         for image in self.images:
-            if image.image_type == image_type:
+            if image.image_type == image_type and \
+               image.kernel_type == kernel_type:
                 return image
 
     def install_options(self):
@@ -3298,7 +3349,7 @@ class Log(MappedObject):
             dir = '%s/%s' % (self.server, self.path or '')
             presult = urlparse.urlparse(dir)
             server_url = '%s://%s' % (presult[0], presult[1])
-            dir = '%s%s' % (server_url, posixpath.normpath(presult[2]))
+            dir = '%s%s/' % (server_url, posixpath.normpath(presult[2]))
         else:
             dir = '%s/%s' % (self.parent.filepath, self.path or '')
             dir = posixpath.normpath(dir)
@@ -6058,6 +6109,7 @@ class ConfigValueInt(MappedObject):
 
 # set up mappers between identity tables and classes
 Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
+KernelType.mapper = mapper(KernelType, kernel_type_table)
 System.mapper = mapper(System, system_table,
                    properties = {
                      'status': column_property(system_table.c.status,
@@ -6125,6 +6177,7 @@ System.mapper = mapper(System, system_table,
                                   system_status_duration_table.c.id.desc()]),
                      'dyn_status_durations': dynamic_loader(SystemStatusDuration),
                      'hypervisor':relation(Hypervisor, uselist=False),
+                     'kernel_type':relation(KernelType, uselist=False),
                      'dyn_recipes': dynamic_loader(Recipe),
                      })
 
@@ -6227,6 +6280,7 @@ mapper(DistroTreeRepo, distro_tree_repo_table, properties={
 mapper(DistroTreeImage, distro_tree_image_table, properties={
     'distro_tree': relation(DistroTree, backref=backref('images',
         cascade='all, delete-orphan')),
+    'kernel_type':relation(KernelType, uselist=False),
 })
 
 mapper(Visit, visits_table)

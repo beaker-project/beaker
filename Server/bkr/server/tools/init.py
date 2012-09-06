@@ -104,6 +104,15 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         hyperv    = Hypervisor(hypervisor=u'HyperV')
         vmware    = Hypervisor(hypervisor=u'VMWare')
 
+    #Setup kernel_type Table
+    if KernelType.query.count() == 0:
+        default  = KernelType(kernel_type=u'default', uboot=False)
+        highbank = KernelType(kernel_type=u'highbank', uboot=False)
+        imx      = KernelType(kernel_type=u'imx', uboot=False)
+        mvebu    = KernelType(kernel_type=u'mvebu', uboot=True)
+        omap     = KernelType(kernel_type=u'omap', uboot=False)
+        tegra    = KernelType(kernel_type=u'tegra', uboot=False)
+
     #Setup base Architectures
     if Arch.query.count() == 0:
         i386   = Arch(u'i386')
@@ -113,6 +122,7 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         ppc64  = Arch(u'ppc64')
         s390   = Arch(u's390')
         s390x  = Arch(u's390x')
+        armhfp = Arch(u'armhfp')
 
     #Setup base power types
     if PowerType.query.count() == 0:

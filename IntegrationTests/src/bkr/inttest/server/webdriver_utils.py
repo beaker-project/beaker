@@ -1,4 +1,7 @@
 
+from __future__ import absolute_import
+
+from selenium.webdriver.support.ui import Select
 from selenium import webdriver
 from bkr.inttest import data_setup, get_server_base
 
@@ -48,3 +51,12 @@ def is_activity_row_present(b, via=u'testdata', object_=None, property_=None,
             continue
         return True
     return False
+
+def search_for_system(browser, system):
+    browser.find_element_by_link_text('Toggle Search').click()
+    Select(browser.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Name')
+    Select(browser.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+    browser.find_element_by_name('systemsearch-0.value').send_keys(system.fqdn)
+    browser.find_element_by_name('systemsearch').submit()

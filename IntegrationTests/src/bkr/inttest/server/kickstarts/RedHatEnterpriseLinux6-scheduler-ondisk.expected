@@ -8,7 +8,7 @@ key --skip
 bootloader --location=mbr
 cmdline
 
-# Error: no snippet data for network
+# no specific network configuration
 
 firewall --disabled
 # System keyboard
@@ -44,9 +44,9 @@ zerombr
 clearpart --drives /dev/sda --all --initlabel
 
 
-part /boot --fstype ext3 --size 200 --recommended --ondisk=/dev/sda
-part / --fstype ext3 --size 1024 --grow --asprimary --ondisk=/dev/sda
-part swap --recommended --asprimary --ondisk=/dev/sda
+part /boot --fstype ext3 --size 200 --recommended --asprimary --ondisk=/dev/sda
+part / --fstype ext3 --size 1024 --grow --ondisk=/dev/sda
+part swap --recommended --ondisk=/dev/sda
 
 
 # Error: no snippet data for RedHatEnterpriseLinux6
@@ -95,6 +95,7 @@ python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstar
 
 
 %post --log=/dev/console
+wget -O - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
 echo @RECIPEID@ > /root/RECIPE.TXT
 
 # If netboot_method= is found in /proc/cmdline record it to /root
@@ -330,7 +331,6 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
-wget -O - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
 # Error: no snippet data for RedHatEnterpriseLinux6_post
 
 # Error: no snippet data for system_post

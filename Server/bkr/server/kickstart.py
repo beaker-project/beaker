@@ -3,6 +3,7 @@ import string
 import re
 import urlparse
 import logging
+import netaddr
 from sqlalchemy.orm.exc import NoResultFound
 from turbogears import identity, config
 from turbogears.controllers import expose
@@ -81,6 +82,7 @@ def var(context, name):
 
 template_env.globals.update({
     're': re,
+    'netaddr': netaddr,
     'chr': chr,
     'ord': ord,
     'var': var,

@@ -232,6 +232,14 @@ EOF
         cls.f16_x86_64.repos[:] = [
             DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
         ]
+        cls.f16_armhfp = data_setup.create_distro_tree(
+                distro=cls.f16, variant=u'Fedora', arch=u'armhfp',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-16/GOLD/Fedora/armhfp/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-16/GOLD/Fedora/armhfp/os/'])
+        cls.f16_armhfp.repos[:] = [
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+        ]
 
         session.flush()
 
@@ -758,9 +766,9 @@ EOF
             </job>
             ''', self.system)
         self.assert_('''
-part /boot --fstype ext3 --size 200 --recommended
-part / --fstype ext3 --size 1024 --grow --asprimary
-part swap --recommended --asprimary
+part /boot --fstype ext3 --size 200 --recommended --asprimary
+part / --fstype ext3 --size 1024 --grow
+part swap --recommended
 part pv.001 --size=25605
 volgroup TestVolume001 pv.001
 logvol /butter --fstype btrfs --name=butter --vgname=TestVolume001 --size=25600
@@ -1019,3 +1027,105 @@ bootloader --location=mbr
                 break
         else:
            self.fail("Password missing from kickstart")
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=743441
+    def test_rootfstype(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="rootfstype=btrfs">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assert_('''
+part /boot --fstype ext3 --size 200 --recommended --asprimary
+part / --fstype btrfs --size 1024 --grow
+part swap --recommended
+
+'''
+                in recipe.rendered_kickstart.kickstart,
+                recipe.rendered_kickstart.kickstart)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=578812
+    def test_static_networks(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="static_networks=00:11:22:33:44:55,192.168.99.1/24;66:77:88:99:aa:bb,192.168.100.1/24">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('''
+network --bootproto=dhcp
+network --bootproto=static --device=00:11:22:33:44:55 --ip=192.168.99.1 --netmask=255.255.255.0
+network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netmask=255.255.255.0
+''' in k, k)
+
+    def test_highbank(self):
+        system = data_setup.create_system(arch=u'armhfp', status=u'Automated',
+                lab_controller=self.lab_controller, kernel_type=u'highbank')
+        system.loaned = self.user
+        system.user = self.user
+        session.flush()
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-16" />
+                            <distro_arch op="=" value="armhfp" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('# Install U-Boot boot.scr' in k.splitlines(), k)
+        self.assert_('Highbank Fedora' in k, k)
+
+    def test_mvebu(self):
+        system = data_setup.create_system(arch=u'armhfp', status=u'Automated',
+                lab_controller=self.lab_controller, kernel_type=u'mvebu')
+        system.loaned = self.user
+        system.user = self.user
+        session.flush()
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-16" />
+                            <distro_arch op="=" value="armhfp" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('# Install U-Boot boot.scr' in k.splitlines(), k)
+        self.assert_('Yosemite Fedora' in k, k)

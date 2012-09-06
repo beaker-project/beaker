@@ -1299,6 +1299,7 @@ class Root(RPCRoot):
             kw['hypervisor'] = None
         else:
             kw['hypervisor'] = Hypervisor.by_id(kw['hypervisor_id'])
+        kw['kernel_type'] = KernelType.by_id(kw['kernel_type_id'])
 
         # Don't change lab controller while the system is in use
         if system.lab_controller != kw['lab_controller'] and \
@@ -1309,7 +1310,7 @@ class Root(RPCRoot):
 
         log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 
                        'mac_address', 'status', 'status_reason', 
-                       'lab_controller', 'type', 'hypervisor']
+                       'lab_controller', 'type', 'hypervisor', 'kernel_type']
 
         for field in log_fields:
             try:
@@ -1366,6 +1367,7 @@ class Root(RPCRoot):
         system.fqdn=kw['fqdn']
         system.status_reason = kw['status_reason']
         system.date_modified = datetime.utcnow()
+        system.kernel_type = kw['kernel_type']
         if kw.get('private'):
             system.private=kw['private']
         else:

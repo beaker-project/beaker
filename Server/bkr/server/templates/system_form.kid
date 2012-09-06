@@ -206,6 +206,12 @@ $(document).ready(function(){
        <td class="list">
         ${display_system_property("hypervisor_id")}
        </td>
+       <th class="list">
+        ${label_for('kernel_type_id')}
+       </th>
+       <td class="list">
+        ${display_system_property("kernel_type_id")}
+       </td>
       </tr>
      </table>
         <span py:if='options.get("edit")' py:strip='1'>

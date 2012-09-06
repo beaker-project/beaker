@@ -280,16 +280,25 @@ class ReserveSystem(TableForm):
 
 class ReserveWorkflow(Form): 
     javascript = [LocalJSLink('bkr', '/static/javascript/loader_v2.js'),
-                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v7.js'),
+                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v8.js'),
                  ] 
     template="bkr.server.templates.reserve_workflow"
     css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
     fields = [
-        SingleSelectField(name='osmajor', label=_(u'Family'), validator=validators.NotEmpty()),
-        SingleSelectField(name='tag', label=_(u'Tag'), validator=validators.NotEmpty()),
-        SingleSelectField(name='distro', label=_(u'Distro'), validator=validators.NotEmpty()),
+        SingleSelectField(name='osmajor', label=_(u'Family'),
+            validator=validators.UnicodeString(),
+            css_classes=['distro_filter_criterion']),
+        SingleSelectField(name='tag', label=_(u'Tag'),
+            validator=validators.UnicodeString(),
+            css_classes=['distro_filter_criterion']),
+        SingleSelectField(name='distro', label=_(u'Distro'),
+            validator=validators.UnicodeString(),
+            css_classes=['distro_tree_filter_criterion']),
+        SingleSelectField(name='lab_controller_id', label=_(u'Lab'),
+            validator=validators.Int(),
+            css_classes=['distro_tree_filter_criterion']),
         MultipleSelectField(name='distro_tree_id', label=_(u'Distro Tree'),
-                size=7, validator=validators.NotEmpty()),
+                size=7, validator=validators.Int()),
     ]
     params = ['get_distros_rpc', 'get_distro_trees_rpc']
 
@@ -617,7 +626,7 @@ class SearchBar(RepeatingFormField):
     """Search Bar""" 
     css = [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     javascript = [LocalJSLink('bkr', '/static/javascript/search_object.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'), 
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v8.js'),
                   LocalJSLink('bkr','/static/javascript/jquery-ui.js'),]
     template = "bkr.server.templates.search_bar"
 
@@ -1261,7 +1270,7 @@ class SystemForm(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/provision_v2.js'),
                   LocalJSLink('bkr', '/static/javascript/install_options.js'),
                   LocalJSLink('bkr','/static/javascript/system_admin_v2.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v7.js'),
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v8.js'),
                   JSLink(static,'ajax.js'),
                  ]
     template = "bkr.server.templates.system_form"
@@ -1324,6 +1333,10 @@ class SystemForm(Form):
                                  label=_(u'Hypervisor'),
                                  options=lambda: [(0, 'None')] + model.Hypervisor.get_all_types(),
                                  validator=validators.Int()),
+               SingleSelectField(name='kernel_type_id',
+                                 label=_(u'Kernel Type'),
+                                 options=model.KernelType.get_all_types,
+                                 validator=validators.Int()),
     ]
 
     def display_value(self, item, hidden_fields, value=None):
@@ -1345,6 +1358,8 @@ class SystemForm(Form):
         """
         mapper = dict(lab_controller_id=lambda: value.lab_controller and \
                                                  value.lab_controller.fqdn,
+                      kernel_type_id=lambda: value.kernel_type and \
+                                             value.kernel_type.kernel_type,
                       hypervisor_id=lambda: value.hypervisor and \
                                               value.hypervisor.hypervisor)
         property_func = mapper.get(item)

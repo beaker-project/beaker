@@ -1,0 +1,17 @@
+# Install U-Boot boot.scr
+pushd /boot
+
+# get the root device from fstab, typically UUID=<string>
+ROOTDEV=`grep -w / /etc/fstab | cut -d ' ' -f1`
+
+# setup boot.scr
+cat <<EOL > boot.cmd
+setenv bootargs console=ttyS0,115200n8 video=matroxfb:init,vesa:0x11B root=$ROOTDEV rw earlyprintk
+ext2load ide 0:1 0x2880000 uInitrd
+ext2load ide 0:1 0x2080000 uImage
+bootm 0x2080000 0x2880000
+EOL
+
+/usr/bin/mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "Yosemite Fedora" -d boot.cmd boot.scr
+
+popd

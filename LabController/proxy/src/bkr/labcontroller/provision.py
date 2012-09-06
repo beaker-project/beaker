@@ -152,6 +152,8 @@ def handle_configure_netboot(command):
         netboot.configure_efigrub(fqdn, ko)
     if 'ia64' in arch:
         netboot.configure_elilo(fqdn, ko)
+    if 'armhfp' in arch:
+        netboot.configure_armlinux(fqdn, ko)
 
 def handle_clear_netboot(command):
     fqdn = command['fqdn']
@@ -167,6 +169,8 @@ def handle_clear_netboot(command):
         netboot.clear_efigrub(fqdn)
     if 'ia64' in arch:
         netboot.clear_elilo(fqdn)
+    if 'armhfp' in arch:
+        netboot.clear_armlinux(fqdn)
 
 def handle_power(command):
     script = find_power_script(command['power']['type'])

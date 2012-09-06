@@ -1,13 +1,14 @@
 #!/usr/bin/python
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, logout, is_text_present
+from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, \
+        search_for_system
 from bkr.inttest import data_setup, get_server_base, with_transaction
-from bkr.server.model import Arch, ExcludeOSMajor, SystemType
+from bkr.server.model import Arch, ExcludeOSMajor, SystemType, LabControllerDistroTree
 from selenium.webdriver.support.ui import Select
 import unittest, time, re, os
 from turbogears.database import session
 
-class ReserveWorkflow(SeleniumTestCase):
+class ReserveWorkflow(WebDriverTestCase):
 
     @with_transaction
     def setUp(self):
@@ -26,86 +27,91 @@ class ReserveWorkflow(SeleniumTestCase):
         self.system2.lab_controller = self.lc
         self.system2.shared = True
 
-        self.selenium = self.get_selenium()
-        self.selenium.start()
+        self.browser = self.get_browser()
+
+    def tearDown(self):
+        self.browser.quit()
 
     def test_reserve_multiple_arch_got_distro(self):
-        self.login()
-        sel = self.selenium
-        sel.open("reserveworkflow")
-        sel.wait_for_page_to_load('30000')
-        sel.select('name=tag', 'label=None selected')
-        sel.select('name=osmajor', self.distro.osversion.osmajor.osmajor)
-        self.wait_for_condition(lambda: sel.get_select_options('name=distro'))
-        sel.select('name=distro', self.distro.name)
-        self.wait_for_condition(lambda: sel.get_select_options('name=distro_tree_id'))
-        sel.add_selection('name=distro_tree_id', 'label=%s Server i386' % self.distro.name)
-        sel.add_selection('name=distro_tree_id', 'label=%s Server x86_64' % self.distro.name)
-        sel.click('//button[@class="auto_pick"]')
-        sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_title(), 'Reserve System Any System')
-        self.assertEquals(sel.get_text('form_distro'),
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow')
+        Select(b.find_element_by_name('tag')).select_by_visible_text('None selected')
+        Select(b.find_element_by_name('osmajor'))\
+            .select_by_visible_text(self.distro.osversion.osmajor.osmajor)
+        Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
+        s = Select(b.find_element_by_name('distro_tree_id'))
+        s.select_by_visible_text('%s Server i386' % self.distro.name)
+        s.select_by_visible_text('%s Server x86_64' % self.distro.name)
+        b.find_element_by_xpath('//button[@class="auto_pick"]').click()
+        self.assertEquals(b.find_element_by_id('form_distro').text,
                 '%s Server i386, %s Server x86_64'
                 % (self.distro.name, self.distro.name))
+        self.assertEquals(b.title, 'Reserve System Any System')
 
     def test_no_lab_controller_distro(self):
         """ Test distros that have no lab controller are not shown"""
         with session.begin():
             self.distro_tree_i386.lab_controller_assocs[:] = []
-        self.login()
+        login(self.browser)
         #Selecting multiple arch
-        sel = self.selenium
-        sel.open("reserveworkflow")
-        sel.wait_for_page_to_load('30000')
-        sel.select('name=tag', 'label=None selected')
-        sel.select('name=osmajor', self.distro.osversion.osmajor.osmajor)
-        self.wait_for_condition(lambda: sel.get_select_options('name=distro'))
-        sel.select('name=distro', self.distro.name)
-        self.wait_for_condition(lambda: sel.get_select_options('name=distro_tree_id'))
-        trees = sel.get_select_options('name=distro_tree_id')
-        self.assert_(not any('i386' in option for option in trees), trees)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow')
+        Select(b.find_element_by_name('tag')).select_by_visible_text('None selected')
+        Select(b.find_element_by_name('osmajor'))\
+            .select_by_visible_text(self.distro.osversion.osmajor.osmajor)
+        Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
+        options = b.find_elements_by_xpath('//select[@name="distro_tree_id"]/option')
+        self.assert_(not any('i386' in option.text for option in options), options)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=630902
+    def test_filtering_by_lab_controller(self):
+        with session.begin():
+            self.distro_tree_x86_64.lab_controller_assocs[:] = [LabControllerDistroTree(
+                    lab_controller=self.lc, url=u'http://whatever')]
+            other_lc = data_setup.create_labcontroller()
+            self.distro_tree_i386.lab_controller_assocs[:] = [LabControllerDistroTree(
+                    lab_controller=other_lc, url=u'http://whatever')]
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow')
+        Select(b.find_element_by_name('tag')).select_by_visible_text('None selected')
+        Select(b.find_element_by_name('osmajor'))\
+            .select_by_visible_text(self.distro.osversion.osmajor.osmajor)
+        Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
+        Select(b.find_element_by_name('lab_controller_id'))\
+            .select_by_visible_text(self.lc.fqdn)
+        b.find_element_by_xpath('//select[@name="distro_tree_id" '
+                'and ./option and not(./option[text()="i386"])]')
 
     def test_reserve_multiple_arch_tag_got_distro(self):
         with session.begin():
             self.distro.tags.append(u'FOO')
-        self.login()
-        sel = self.selenium
-        sel.open("reserveworkflow")
-        sel.wait_for_page_to_load('30000')
-        sel.select('name=osmajor', self.distro.osversion.osmajor.osmajor)
-        sel.select('name=tag', 'label=FOO')
-        self.wait_for_condition(lambda: sel.get_select_options('name=distro'))
-        distros = sel.get_select_options('name=distro')
-        self.assert_(self.distro.name in distros, distros)
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow')
+        Select(b.find_element_by_name('tag')).select_by_visible_text('FOO')
+        Select(b.find_element_by_name('osmajor'))\
+            .select_by_visible_text(self.distro.osversion.osmajor.osmajor)
+        Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
 
     def test_reserve_single_arch(self):
-        self.login()
-        sel = self.selenium
-        sel.open("reserveworkflow")
-        sel.wait_for_page_to_load('30000')
-        sel.select('name=osmajor', self.distro.osversion.osmajor.osmajor)
-        sel.select('name=tag', 'label=None selected')
-        self.wait_for_condition(lambda: sel.get_select_options('name=distro'))
-        sel.select('name=distro', self.distro.name)
-        self.wait_for_condition(lambda: sel.get_select_options('name=distro_tree_id'))
-        sel.select('name=distro_tree_id', 'label=%s Server i386' % self.distro.name)
-        sel.click('//button[@class="auto_pick"]')
-        sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_title(), 'Reserve System Any System')
-        self.assertEquals(sel.get_text('form_distro'),
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow')
+        Select(b.find_element_by_name('tag')).select_by_visible_text('None selected')
+        Select(b.find_element_by_name('osmajor'))\
+            .select_by_visible_text(self.distro.osversion.osmajor.osmajor)
+        Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
+        Select(b.find_element_by_name('distro_tree_id'))\
+            .select_by_visible_text('%s Server i386' % self.distro.name)
+        b.find_element_by_xpath('//button[@class="auto_pick"]').click()
+        self.assertEquals(b.find_element_by_id('form_distro').text,
                 '%s Server i386' % self.distro.name)
+        self.assertEquals(b.title, 'Reserve System Any System')
 
 def go_to_reserve_systems(browser, distro_tree):
     browser.get(get_server_base() + 'reserve_system?distro_tree_id=%s' % distro_tree.id)
-
-def search_for_system(browser, system):
-    browser.find_element_by_link_text('Toggle Search').click()
-    Select(browser.find_element_by_name('systemsearch-0.table'))\
-            .select_by_visible_text('System/Name')
-    Select(browser.find_element_by_name('systemsearch-0.operation'))\
-            .select_by_visible_text('is')
-    browser.find_element_by_name('systemsearch-0.value').send_keys(system.fqdn)
-    browser.find_element_by_name('systemsearch').submit()
 
 def is_results_table_empty(browser):
     rows = browser.find_elements_by_xpath('//table[@class="list"]//td')

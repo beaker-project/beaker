@@ -327,26 +327,40 @@ class XmlHostLabController(ElementWrapper):
     """
     Pick a system from this lab controller
     """
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 '!=' : '__ne__'}
     def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        query = None
-        if value:
-            joins = joins.join(System.lab_controller)
-            query = LabController.fqdn == value
+        if not value:
+            return (joins, None)
+        joins = joins.join(System.lab_controller)
+        query = getattr(LabController.fqdn, op)(value)
         return (joins, query)
 
 class XmlDistroLabController(ElementWrapper):
     """
     Pick a distro tree available on this lab controller
     """
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 '!=' : '__ne__'}
     def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        query = None
-        if value:
+        if not value:
+            return (joins, None)
+        if op == '__eq__':
             query = exists([1],
                     from_obj=[distro_tree_lab_controller_map.join(lab_controller_table)])\
                     .where(LabControllerDistroTree.distro_tree_id == DistroTree.id)\
                     .where(LabController.fqdn == value)
+        else:
+            query = not_(exists([1],
+                    from_obj=[distro_tree_lab_controller_map.join(lab_controller_table)])\
+                    .where(LabControllerDistroTree.distro_tree_id == DistroTree.id)\
+                    .where(LabController.fqdn == value))
         return (joins, query)
 
 class XmlHypervisor(ElementWrapper):

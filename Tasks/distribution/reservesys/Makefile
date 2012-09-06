@@ -18,10 +18,11 @@ BUILT_FILES=$(METADATA)
 
 FILES=$(BUILT_FILES) \
 	runtest.sh   \
+	recipe_status \
 	Makefile
 
 build: $(BUILT_FILES)
-	chmod a+x ./runtest.sh
+	chmod a+x ./runtest.sh ./recipe_status
 
 clean:
 	rm -rf ./mnt
