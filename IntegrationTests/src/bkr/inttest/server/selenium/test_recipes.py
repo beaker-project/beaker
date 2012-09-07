@@ -142,11 +142,10 @@ class TestRecipeView(WebDriverTestCase):
         self.go_to_recipe_view(r)
         b.find_element_by_id("all_recipe_%s" % r.id).click()
         rt_log_server_link = b.find_element_by_xpath("//tr[@class='even pass_recipe_%s recipe_%s']//td[position()=4]//a" % (r.id, r.id)).get_attribute('href')
-        rt_log = r.tasks[0].logs[0]
-        self.assert_(rt_log_server_link == rt_log.server + '/' + rt_log.filename)
+        self.assertEquals(rt_log_server_link, 'http://dummy-archive-server/beaker/tasks/dummy.txt')
         b.find_element_by_id("logs_button_%s" % r.id).click()
         r_server_link = b.find_element_by_xpath("//table[@class='show']/tbody//tr[position()=6]/td/a").get_attribute('href')
-        self.assert_(r_server_link == r.logs[0].server + '/' + r.logs[0].filename)
+        self.assertEquals(r_server_link, 'http://dummy-archive-server/beaker/recipe_path/dummy.txt')
 
     def test_task_pagination(self):
         with session.begin():
