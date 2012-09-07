@@ -38,7 +38,7 @@ class ClientError(Exception):
 client_command = os.environ.get('BEAKER_CLIENT_COMMAND',
         os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'run-client.sh'))
 
-def start_client(args, config=None):
+def start_client(args, config=None, **kwargs):
     if config is None:
         global default_client_config
         config = default_client_config
@@ -48,11 +48,14 @@ def start_client(args, config=None):
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             env=dict(os.environ.items() +
                 [('PYTHONUNBUFFERED', '1'),
-                 ('BEAKER_CLIENT_CONF', config.name)]))
+                 ('BEAKER_CLIENT_CONF', config.name)]),
+            **kwargs)
 
-def run_client(args, config=None):
-    p = start_client(args, config)
-    out, err = p.communicate()
+def run_client(args, config=None, input=None, **kwargs):
+    if input is not None:
+        kwargs.setdefault('stdin', subprocess.PIPE)
+    p = start_client(args, config, **kwargs)
+    out, err = p.communicate(input)
     if p.returncode:
         raise ClientError(args, p.returncode, err)
     assert err == '', err

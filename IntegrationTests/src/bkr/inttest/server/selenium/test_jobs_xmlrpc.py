@@ -1,4 +1,6 @@
 
+# vim: set fileencoding=utf-8 :
+
 # Beaker
 #
 # Copyright (C) 2010 Red Hat, Inc.
@@ -120,3 +122,21 @@ class JobUploadTest(XmlRpcTestCase):
             self.fail('should raise')
         except xmlrpclib.Fault, e:
             self.assert_('root password has expired' in e.faultString)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=768167
+    def test_doesnt_barf_on_xml_encoding_declaration(self):
+        job_tid = self.server.jobs.upload(u'''<?xml version="1.0" encoding="utf-8"?>
+            <job>
+                <whiteboard>job with encoding in XML declaration яяя</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            '''.encode('utf8'))
+        self.assert_(job_tid.startswith('J:'))
