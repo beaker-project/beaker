@@ -101,7 +101,7 @@ class RemoteLogDeletionTest(unittest.TestCase):
         self.archive_server.stop()
         shutil.rmtree(self.logs_dir, ignore_errors=True)
 
-    def create_delete_job_with_log(self, path, filename):
+    def create_deleted_job_with_log(self, path, filename):
         with session.begin():
             job = data_setup.create_completed_job()
             job.to_delete = datetime.datetime.utcnow()
@@ -116,29 +116,25 @@ class RemoteLogDeletionTest(unittest.TestCase):
         os.mkdir(os.path.join(self.logs_dir, 'recipe'))
         open(os.path.join(self.logs_dir, 'recipe', 'dummy.txt'), 'w').write('dummy')
         os.mkdir(os.path.join(self.logs_dir, 'dont_tase_me_bro'))
-        self.create_delete_job_with_log(u'recipe', u'dummy.txt')
-        # XXX should assert exit status: self.assertEquals(log_delete.log_delete(), 0)
-        log_delete.log_delete()
+        self.create_deleted_job_with_log(u'recipe/', u'dummy.txt')
+        self.assertEquals(log_delete.log_delete(), 0) # exit status
         self.assert_(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
         self.assert_(os.path.exists(os.path.join(self.logs_dir, 'dont_tase_me_bro')))
 
     def test_301_redirect(self):
         os.mkdir(os.path.join(self.logs_dir, 'recipe'))
         open(os.path.join(self.logs_dir, 'recipe', 'dummy.txt'), 'w').write('dummy')
-        self.create_delete_job_with_log(u'redirect/301/recipe', u'dummy.txt')
-        # XXX should assert exit status: self.assertEquals(log_delete.log_delete(), 0)
-        log_delete.log_delete()
+        self.create_deleted_job_with_log(u'redirect/301/recipe/', u'dummy.txt')
+        self.assertEquals(log_delete.log_delete(), 0) # exit status
         self.assert_(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
 
     def test_302_redirect(self):
         os.mkdir(os.path.join(self.logs_dir, 'recipe'))
         open(os.path.join(self.logs_dir, 'recipe', 'dummy.txt'), 'w').write('dummy')
-        self.create_delete_job_with_log(u'redirect/302/recipe', u'dummy.txt')
-        # XXX should assert exit status: self.assertEquals(log_delete.log_delete(), 0)
-        log_delete.log_delete()
+        self.create_deleted_job_with_log(u'redirect/302/recipe/', u'dummy.txt')
+        self.assertEquals(log_delete.log_delete(), 0) # exit status
         self.assert_(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
 
     def test_404(self):
-        self.create_delete_job_with_log(u'notexist', u'dummy.txt')
-        # XXX should assert exit status: self.assertEquals(log_delete.log_delete(), 0)
-        log_delete.log_delete()
+        self.create_deleted_job_with_log(u'notexist/', u'dummy.txt')
+        self.assertEquals(log_delete.log_delete(), 0) # exit status

@@ -19,28 +19,32 @@ __description__ = 'Script to delete expired log files'
 def main():
 
     parser = OptionParser('usage: %prog [options]',
-            description='Permanently deletes log files from Beaker and/or \
-                archive server',
+            description='Permanently deletes log files from Beaker and/or '
+                'archive server',
             version=bkr_version)
     parser.add_option('-c', '--config', metavar='FILENAME',
             help='Read configuration from FILENAME')
     parser.add_option('-v', '--verbose', action='store_true',
-            help='Return deleted files')
+            help='Print the path/URL of deleted files to stdout')
+    parser.add_option('--debug', action='store_true',
+            help='Print debugging messages to stderr')
     parser.add_option('--dry-run', action='store_true',
-            help='Execute deletions, but issue ROLLBACK instead of COMMIT, \
-                and do not actually delete files')
-    parser.set_defaults(verbose=False, dry_run=False)
+            help='Do not delete any files, and issue ROLLBACK instead of '
+                'COMMIT after performing database operations')
+    parser.set_defaults(verbose=False, debug=False, dry_run=False)
     options, args = parser.parse_args()
     load_config(options.config)
-    log_to_stream(sys.stderr)
-    log_delete(options.verbose, options.dry_run)
+    # urllib3 installs a NullHandler, we can just remove it and let the messages propagate
+    logging.getLogger('requests.packages.urllib3').handlers[:] = []
+    log_to_stream(sys.stderr, level=logging.DEBUG if options.debug else logging.WARNING)
+    return log_delete(options.verbose, options.dry_run)
 
-def log_delete(verb=False, dry=False):
+def log_delete(print_logs=False, dry=False):
     if dry:
-        print 'Dry run only'
-    if verb:
-        print 'Getting expired jobs'
+        logger.info('Dry run only')
+    logger.info('Getting expired jobs')
 
+    failed = False
     if not dry:
         requests_session = requests.session(
                 auth=requests.auth.HTTPKerberosAuth(require_mutual_auth=False))
@@ -59,7 +63,7 @@ def log_delete(verb=False, dry=False):
                         except OSError, e:
                             if e.errno == errno.ENOENT:
                                 pass
-                if verb:
+                if print_logs:
                     print log
             if not dry:
                 job.delete()
@@ -69,9 +73,10 @@ def log_delete(verb=False, dry=False):
                 session.close()
         except Exception, e:
             session.close()
-            logger.error(str(e))
+            logger.exception('Exception while deleting logs for %s', job.t_id)
+            failed = True
             continue
+    return 1 if failed else 0
 
 if __name__ == '__main__':
-    main()
-
+    sys.exit(main())
