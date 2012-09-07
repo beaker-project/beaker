@@ -70,40 +70,6 @@ pushd /root
 popd
 {% endif %}
 
-# Add Repos
-{% if distro is osmajor('RedHatEnterpriseLinux7') %}
-{% snippet 'print_repos' %}
-{% else %}
-{% set repo_base = distro_tree.url_in_lab(system.lab_controller, scheme=['http', 'ftp']) %}
-{% if repo_base %}
-{% for repo in distro_tree.repos %}
-{% if var('no_%s_repos' % repo.repo_type) is undefined %}
-cat << EOF >/etc/yum.repos.d/beaker-{{ repo.repo_id }}.repo
-[beaker-{{ repo.repo_id }}]
-name=beaker-{{ repo.repo_id }}
-baseurl={{ repo_base|urljoin(repo.path) }}
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-{% endif %}
-{% endfor %}
-{% endif %}
-{% endif %}
-{% if customrepos %}
-{% for repo in customrepos|split('|') %}
-{% set repo_id, url = repo|split(',', 1) %}
-cat << EOF >/etc/yum.repos.d/{{ repo_id }}.repo
-[{{ repo_id }}]
-name={{ repo_id }}
-baseurl={{ url }}
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-{% endfor %}
-{% endif %}
-
 #Add Task Repo
 {% if taskrepo %}
 {% set reponame, repourl = taskrepo.split(',', 1) %}
@@ -128,6 +94,9 @@ enabled=1
 gpgcheck=0
 EOF
 {% endif %}
+
+# Add distro and custom Repos
+{{ snippet('print_repos') }}
 
 # fill the yum cache and redirect output to /dev/null
 # This speeds up yum because of a bug where it will update stdout too often.

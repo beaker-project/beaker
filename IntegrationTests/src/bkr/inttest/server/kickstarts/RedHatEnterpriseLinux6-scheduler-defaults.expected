@@ -151,7 +151,26 @@ fi
 
 
 
-# Add Repos
+#Add Task Repo
+cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
+[beaker-tasks]
+name=beaker-tasks
+baseurl=@REPOS@@RECIPEID@
+enabled=1
+gpgcheck=0
+EOF
+
+
+# Add Harness Repo
+cat << EOF >/etc/yum.repos.d/beaker-harness.repo
+[beaker-harness]
+name=beaker-harness
+baseurl=@HARNESS@RedHatEnterpriseLinux6/
+enabled=1
+gpgcheck=0
+EOF
+
+# Add distro and custom Repos
 cat << EOF >/etc/yum.repos.d/beaker-HighAvailability.repo
 [beaker-HighAvailability]
 name=beaker-HighAvailability
@@ -217,24 +236,6 @@ gpgcheck=0
 skip_if_unavailable=1
 EOF
 
-#Add Task Repo
-cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
-[beaker-tasks]
-name=beaker-tasks
-baseurl=@REPOS@@RECIPEID@
-enabled=1
-gpgcheck=0
-EOF
-
-
-# Add Harness Repo
-cat << EOF >/etc/yum.repos.d/beaker-harness.repo
-[beaker-harness]
-name=beaker-harness
-baseurl=@HARNESS@RedHatEnterpriseLinux6/
-enabled=1
-gpgcheck=0
-EOF
 
 # fill the yum cache and redirect output to /dev/null
 # This speeds up yum because of a bug where it will update stdout too often.

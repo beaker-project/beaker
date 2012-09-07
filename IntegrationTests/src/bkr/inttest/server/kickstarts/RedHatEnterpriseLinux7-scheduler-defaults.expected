@@ -6,11 +6,11 @@ bootloader --location=mbr
 # Use text mode install
 text
 # no specific network configuration
-repo --name=repos_addons_ScalableFileSystem --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/addons/ScalableFileSystem
-repo --name=repos_Workstation-optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/os
-repo --name=repos_debug_Workstation --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/debuginfo
-repo --name=repos_debug_Workstation_optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/debuginfo
-repo --name=repos_Workstation --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/
+repo --name=beaker-repos_addons_ScalableFileSystem --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/addons/ScalableFileSystem
+repo --name=beaker-repos_Workstation-optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/os
+repo --name=beaker-repos_debug_Workstation --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/debuginfo
+repo --name=beaker-repos_debug_Workstation_optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/debuginfo
+repo --name=beaker-repos_Workstation --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/
 
 firewall --disabled
 # Run the Setup Agent on first boot
@@ -150,40 +150,6 @@ fi
 
 
 
-# Add Repos
-cat >> /etc/yum.repos.d/beaker-additional.repo <<EOF
-[repos_addons_ScalableFileSystem]
-name=repos_addons_ScalableFileSystem
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/addons/ScalableFileSystem
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-[repos_Workstation-optional]
-name=repos_Workstation-optional
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/os
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-[repos_debug_Workstation]
-name=repos_debug_Workstation
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/debuginfo
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-[repos_debug_Workstation_optional]
-name=repos_debug_Workstation_optional
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/debuginfo
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-[repos_Workstation]
-name=repos_Workstation
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-
 #Add Task Repo
 cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
@@ -202,6 +168,49 @@ baseurl=@HARNESS@RedHatEnterpriseLinux7/
 enabled=1
 gpgcheck=0
 EOF
+
+# Add distro and custom Repos
+cat << EOF >/etc/yum.repos.d/beaker-repos_addons_ScalableFileSystem.repo
+[beaker-repos_addons_ScalableFileSystem]
+name=beaker-repos_addons_ScalableFileSystem
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/addons/ScalableFileSystem
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat << EOF >/etc/yum.repos.d/beaker-repos_Workstation-optional.repo
+[beaker-repos_Workstation-optional]
+name=beaker-repos_Workstation-optional
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/os
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat << EOF >/etc/yum.repos.d/beaker-repos_debug_Workstation.repo
+[beaker-repos_debug_Workstation]
+name=beaker-repos_debug_Workstation
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/debuginfo
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat << EOF >/etc/yum.repos.d/beaker-repos_debug_Workstation_optional.repo
+[beaker-repos_debug_Workstation_optional]
+name=beaker-repos_debug_Workstation_optional
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/debuginfo
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat << EOF >/etc/yum.repos.d/beaker-repos_Workstation.repo
+[beaker-repos_Workstation]
+name=beaker-repos_Workstation
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+
 
 # fill the yum cache and redirect output to /dev/null
 # This speeds up yum because of a bug where it will update stdout too often.

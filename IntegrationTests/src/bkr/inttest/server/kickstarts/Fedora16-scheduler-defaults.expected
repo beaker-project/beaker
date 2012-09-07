@@ -146,16 +146,6 @@ fi
 
 
 
-# Add Repos
-cat << EOF >/etc/yum.repos.d/beaker-debug.repo
-[beaker-debug]
-name=beaker-debug
-baseurl=http://lab.test-kickstart.invalid/distros/F-16/GOLD/Fedora/x86_64/debug
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-
 #Add Task Repo
 cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
@@ -174,6 +164,17 @@ baseurl=@HARNESS@Fedora16/
 enabled=1
 gpgcheck=0
 EOF
+
+# Add distro and custom Repos
+cat << EOF >/etc/yum.repos.d/beaker-debug.repo
+[beaker-debug]
+name=beaker-debug
+baseurl=http://lab.test-kickstart.invalid/distros/F-16/GOLD/Fedora/x86_64/debug
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+
 
 # fill the yum cache and redirect output to /dev/null
 # This speeds up yum because of a bug where it will update stdout too often.

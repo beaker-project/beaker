@@ -287,12 +287,12 @@ these if necessary.</para>
 
 <variablelist>
   <varlistentry>
-    <term><filename>anaconda_repos</filename></term>
     <term><filename>print_anaconda_repos</filename></term>
     <listitem>
       <para>Provides the <command>repo</command> kickstart commands which 
       tell Anaconda where to find the distro tree’s Yum repositories for 
-      installation.</para>
+      installation.  This includes any custom repos passed in the job xml
+      as well, ie. <&gt;>repo name="repo_id" url="http://server/path/to/repo"<&lt;></para>
     </listitem>
   </varlistentry>
   <varlistentry>

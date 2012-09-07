@@ -6,10 +6,10 @@ bootloader --location=mbr
 # Use text mode install
 text
 # no specific network configuration
-repo --name=repos_Server-optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/os
-repo --name=repos_debug_Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/debuginfo
-repo --name=repos_debug_Server_optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/debuginfo
-repo --name=repos_Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/
+repo --name=beaker-repos_Server-optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/os
+repo --name=beaker-repos_debug_Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/debuginfo
+repo --name=beaker-repos_debug_Server_optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/debuginfo
+repo --name=beaker-repos_Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/
 
 firewall --disabled
 # Run the Setup Agent on first boot
@@ -149,34 +149,6 @@ fi
 
 
 
-# Add Repos
-cat >> /etc/yum.repos.d/beaker-additional.repo <<EOF
-[repos_Server-optional]
-name=repos_Server-optional
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/os
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-[repos_debug_Server]
-name=repos_debug_Server
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/debuginfo
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-[repos_debug_Server_optional]
-name=repos_debug_Server_optional
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/debuginfo
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-[repos_Server]
-name=repos_Server
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-
 #Add Task Repo
 cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
@@ -195,6 +167,41 @@ baseurl=@HARNESS@RedHatEnterpriseLinux7/
 enabled=1
 gpgcheck=0
 EOF
+
+# Add distro and custom Repos
+cat << EOF >/etc/yum.repos.d/beaker-repos_Server-optional.repo
+[beaker-repos_Server-optional]
+name=beaker-repos_Server-optional
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/os
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat << EOF >/etc/yum.repos.d/beaker-repos_debug_Server.repo
+[beaker-repos_debug_Server]
+name=beaker-repos_debug_Server
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/debuginfo
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat << EOF >/etc/yum.repos.d/beaker-repos_debug_Server_optional.repo
+[beaker-repos_debug_Server_optional]
+name=beaker-repos_debug_Server_optional
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/debuginfo
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat << EOF >/etc/yum.repos.d/beaker-repos_Server.repo
+[beaker-repos_Server]
+name=beaker-repos_Server
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+
 
 # fill the yum cache and redirect output to /dev/null
 # This speeds up yum because of a bug where it will update stdout too often.

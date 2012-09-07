@@ -1,15 +1,27 @@
 {% set repo_base = distro_tree.url_in_lab(system.lab_controller, scheme=['http', 'ftp']) %}
 {% if repo_base %}
-cat >> /etc/yum.repos.d/beaker-additional.repo <<EOF
 {% for repo in distro_tree.repos %}
 {% if var('no_%s_repos' % repo.repo_type) is undefined %}
-[{{ repo.repo_id }}]
-name={{ repo.repo_id }}
+cat << EOF >/etc/yum.repos.d/beaker-{{ repo.repo_id }}.repo
+[beaker-{{ repo.repo_id }}]
+name=beaker-{{ repo.repo_id }}
 baseurl={{ repo_base|urljoin(repo.path) }}
 enabled=1
 gpgcheck=0
 skip_if_unavailable=1
+EOF
 {% endif %}
 {% endfor %}
+{% endif %}
+{% if customrepos %}
+{% for repo in customrepos %}
+cat << EOF >/etc/yum.repos.d/{{ repo.repo_id }}.repo
+[{{ repo.repo_id }}]
+name={{ repo.repo_id }}
+baseurl={{ repo.path }}
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
 EOF
+{% endfor %}
 {% endif %}

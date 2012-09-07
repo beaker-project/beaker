@@ -4590,7 +4590,7 @@ class Recipe(TaskBase):
     def generated_install_options(self):
         ks_meta = {
             'packages': ':'.join(p.package for p in self.packages),
-            'customrepos': '|'.join('%s,%s' % (r.name, r.url) for r in self.repos),
+            'customrepos': [dict(repo_id=r.name, path=r.url) for r in self.repos],
             'harnessrepo': '%s,%s' % self.harness_repo(),
             'taskrepo': '%s,%s' % self.task_repo(),
             'partitions': self.partitionsKSMeta,

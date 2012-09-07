@@ -146,16 +146,6 @@ pushd /root
 /bin/rpm -Uvh yum-2.2.2-1.rhts.EL4.noarch.rpm
 popd
 
-# Add Repos
-cat << EOF >/etc/yum.repos.d/beaker-AS.repo
-[beaker-AS]
-name=beaker-AS
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-4/U9/AS/x86_64/repo-AS-x86_64
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-
 #Add Task Repo
 cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
@@ -174,6 +164,17 @@ baseurl=@HARNESS@RedHatEnterpriseLinux4/
 enabled=1
 gpgcheck=0
 EOF
+
+# Add distro and custom Repos
+cat << EOF >/etc/yum.repos.d/beaker-AS.repo
+[beaker-AS]
+name=beaker-AS
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-4/U9/AS/x86_64/repo-AS-x86_64
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+
 
 # fill the yum cache and redirect output to /dev/null
 # This speeds up yum because of a bug where it will update stdout too often.

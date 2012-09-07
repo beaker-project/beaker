@@ -54,7 +54,7 @@ timezone {{ timezone|default('America/New_York') }}
 # Install OS instead of upgrade
 install
 
-{% snippet 'anaconda_repos' %}
+{% snippet 'print_anaconda_repos' %}
 {% snippet 'rhts_devices' %}
 {% snippet 'rhts_partitions' %}
 {% snippet 'RedHatStorage2' %}
