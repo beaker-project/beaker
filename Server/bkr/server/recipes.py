@@ -138,7 +138,7 @@ class Recipes(RPCRoot):
             myserver = '%s/%s' % (server, mylog['filepath'])
             mybasepath = '%s/%s' % (basepath, mylog['filepath'])
             self.change_file(mylog['tid'], myserver, mybasepath)
-        recipe.log_server = urlparse.urlparse(myserver)[1]
+        recipe.log_server = urlparse.urlparse(server)[1]
         return True
 
     @cherrypy.expose
