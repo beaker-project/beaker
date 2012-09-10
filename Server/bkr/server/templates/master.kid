@@ -239,18 +239,31 @@ from bkr.server.reports import Reports
     </div>
     <!-- End of main_content -->
 <span py:if="tg.config('piwik.base_url') and tg.config('piwik.site_id')" py:strip="True">
+<!--! This is a modified version of the Piwik tracking code that uses DOM
+      manipulation instead of document.write to inject the Piwik <script/>.
+      This lets the document.ready event fire without waiting for Piwik to be
+      loaded (in case the Piwik server is nonresponsive).
+
+      The basic technique is described here:
+        http://www.nczonline.net/blog/2009/06/23/loading-javascript-without-blocking/
+      but we can use jQuery.getScript() to do all the hard work for us.
+      -->
 <!-- Piwik -->
 <script type="text/javascript">
 var pkBaseURL = (("https:" == document.location.protocol) ? "https:${tg.config('piwik.base_url')}" : "http:${tg.config('piwik.base_url')}");
-document.write(unescape("%3Cscript src='" + pkBaseURL + "piwik.js' type='text/javascript'%3E%3C/script%3E"));
-</script>
-<script type="text/javascript">
+jQuery.ajax({
+    url: pkBaseURL + 'piwik.js',
+    dataType: 'script',
+    cache: true, // prevent jQuery appending a stupid timestamp parameter
+    success: function () {
 try {
 var piwikTracker = Piwik.getTracker(pkBaseURL + "piwik.php", ${tg.config('piwik.site_id')});
 piwikTracker.setCustomVariable(1, 'beaker_user', '${tg.identity.user}');
 piwikTracker.trackPageView();
 piwikTracker.enableLinkTracking();
 } catch( err ) {}
+    }
+});
 </script><noscript><p><img src="${tg.config('piwik.base_url')}piwik.php?idsite=${tg.config('piwik.site_id')}" style="border:0" alt="" /></p></noscript>
 <!-- End Piwik Tracking Code -->
 </span>
