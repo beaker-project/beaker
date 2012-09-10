@@ -84,6 +84,7 @@ vim-enhanced
 
 
 %pre --log=/dev/console
+set -x
 # Check in with Beaker Server
 wget -O - http://lab.test-kickstart.invalid:8000/install_start/test01.test-kickstart.invalid
 
@@ -96,6 +97,7 @@ python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstar
 
 
 %post --log=/dev/console
+set -x
 wget -O - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
 echo @RECIPEID@ > /root/RECIPE.TXT
 
