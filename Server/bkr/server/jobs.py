@@ -236,6 +236,9 @@ class Jobs(RPCRoot):
             unknown tasks to be silently discarded (default is False)
         :type ignore_missing_tasks: bool
         """
+        # xml.sax (and thus, xmltramp) expect raw bytes, not unicode
+        if isinstance(jobxml, unicode):
+            jobxml = jobxml.encode('utf8')
         xml = xmltramp.parse(jobxml)
         xmljob = XmlJob(xml)
         job = self.process_xmljob(xmljob,identity.current.user,
@@ -271,9 +274,11 @@ class Jobs(RPCRoot):
             textxml = recipeset.to_xml(clone=True,from_job=False).toprettyxml()
         elif isinstance(filexml, cgi.FieldStorage):
             # Clone from file
-            textxml = filexml.file.read()
+            textxml = filexml.value.decode('utf8')
         elif textxml:
             try:
+                # xml.sax (and thus, xmltramp) expect raw bytes, not unicode
+                textxml = textxml.encode('utf8')
                 if not confirmed:
                     job_schema = lxml.etree.RelaxNG(self.job_schema_doc)
                     if not job_schema.validate(lxml.etree.fromstring(textxml)):
