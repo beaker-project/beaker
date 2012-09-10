@@ -531,8 +531,7 @@ msg, div.msg {
 msg.success, div.msg.success {
   background:#00FF00; 
   font-weight:normal;
-  padding: 1 1 1 1;
-   
+  padding: 1px;
 }
 
 msg.warn, div.msg.warn {

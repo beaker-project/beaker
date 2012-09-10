@@ -28,7 +28,9 @@
                     return; // skip it and keep going
                 elem.textContent = iso8601(d);
             } catch (e) {
-                console.log(e); // and keep going
+                if (typeof console != 'undefined' && typeof console.log != 'undefined') {
+                    console.log(e); // and keep going
+                }
             }
         });
     };
