@@ -82,7 +82,6 @@ Requires:       TurboGears >= 1.1.3
 Requires:       python-sqlalchemy >= 0.6
 Requires:       intltool
 Requires:       python-decorator
-Requires:       python-urllib2_kerberos
 Requires:       python-xmltramp
 Requires:       python-lxml
 Requires:       python-ldap
@@ -102,6 +101,8 @@ Requires:       rhts-python
 Requires:       cracklib-python
 Requires:       python-jinja2
 Requires:       python-netaddr
+# Kerberos support was added to requests in 0.13.4
+Requires:       python-requests >= 0.13.4
 %endif
 
 

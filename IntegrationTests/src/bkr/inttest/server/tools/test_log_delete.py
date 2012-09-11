@@ -1,6 +1,8 @@
 import unittest, datetime, os, errno, shutil
+import tempfile
+import subprocess
 from bkr.server.model import LogRecipe, TaskBase, Job
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup, with_transaction, Process
 from bkr.server.tools import log_delete
 from turbogears.database import session
 
@@ -86,3 +88,53 @@ class LogDelete(unittest.TestCase):
         self._assert_logs_not_in_db(Job.by_id(self.job_to_delete.id))
         self.check_dir_not_there(dir)
 
+class RemoteLogDeletionTest(unittest.TestCase):
+
+    def setUp(self):
+        self.logs_dir = tempfile.mkdtemp(prefix='beaker-test-log-delete')
+        self.archive_server = Process('archive_server.py',
+                args=[os.path.join(os.path.dirname(__file__), '..', '..', 'archive_server.py'),
+                      '--base', self.logs_dir])
+        self.archive_server.start()
+
+    def tearDown(self):
+        self.archive_server.stop()
+        shutil.rmtree(self.logs_dir, ignore_errors=True)
+
+    def create_deleted_job_with_log(self, path, filename):
+        with session.begin():
+            job = data_setup.create_completed_job()
+            job.to_delete = datetime.datetime.utcnow()
+            session.flush()
+            job.recipesets[0].recipes[0].log_server = u'localhost:19998'
+            job.recipesets[0].recipes[0].logs[:] = [
+                    LogRecipe(server=u'http://localhost:19998/%s' % path, filename=filename)]
+            for rt in job.recipesets[0].recipes[0].tasks:
+                rt.logs[:] = []
+
+    def test_deletion(self):
+        os.mkdir(os.path.join(self.logs_dir, 'recipe'))
+        open(os.path.join(self.logs_dir, 'recipe', 'dummy.txt'), 'w').write('dummy')
+        os.mkdir(os.path.join(self.logs_dir, 'dont_tase_me_bro'))
+        self.create_deleted_job_with_log(u'recipe/', u'dummy.txt')
+        self.assertEquals(log_delete.log_delete(), 0) # exit status
+        self.assert_(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
+        self.assert_(os.path.exists(os.path.join(self.logs_dir, 'dont_tase_me_bro')))
+
+    def test_301_redirect(self):
+        os.mkdir(os.path.join(self.logs_dir, 'recipe'))
+        open(os.path.join(self.logs_dir, 'recipe', 'dummy.txt'), 'w').write('dummy')
+        self.create_deleted_job_with_log(u'redirect/301/recipe/', u'dummy.txt')
+        self.assertEquals(log_delete.log_delete(), 0) # exit status
+        self.assert_(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
+
+    def test_302_redirect(self):
+        os.mkdir(os.path.join(self.logs_dir, 'recipe'))
+        open(os.path.join(self.logs_dir, 'recipe', 'dummy.txt'), 'w').write('dummy')
+        self.create_deleted_job_with_log(u'redirect/302/recipe/', u'dummy.txt')
+        self.assertEquals(log_delete.log_delete(), 0) # exit status
+        self.assert_(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
+
+    def test_404(self):
+        self.create_deleted_job_with_log(u'notexist/', u'dummy.txt')
+        self.assertEquals(log_delete.log_delete(), 0) # exit status

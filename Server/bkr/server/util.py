@@ -70,6 +70,7 @@ def log_to_stream(stream, level=logging.WARNING):
     stream_handler.setLevel(level)
     stream_handler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s'))
     # XXX terrible hack, but there is no better way in Python 2.4 :-(
+    logging.Logger.manager.root.handlers = [stream_handler]
     for logger in logging.Logger.manager.loggerDict.itervalues():
         if getattr(logger, 'handlers', None):
             logger.handlers = [stream_handler]
