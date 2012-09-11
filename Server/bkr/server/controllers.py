@@ -1665,13 +1665,53 @@ class Root(RPCRoot):
         if kw.get('osversion_id'):
             # remove osversion option
             osversion = OSVersion.by_id(int(kw['osversion_id']))
+            prov = system.provisions[arch].provision_families[osversion.osmajor]\
+                    .provision_family_updates[osversion]
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'WEBUI', action=u'Removed',
+                    field_name=u'InstallOption:ks_meta:%s/%s' % (arch, osversion),
+                    old_value=prov.ks_meta, new_value=None))
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'WEBUI', action=u'Removed',
+                    field_name=u'InstallOption:kernel_options:%s/%s' % (arch, osversion),
+                    old_value=prov.kernel_options, new_value=None))
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'WEBUI', action=u'Removed',
+                    field_name=u'InstallOption:kernel_options_post:%s/%s' % (arch, osversion),
+                    old_value=prov.kernel_options_post, new_value=None))
             system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates[osversion] = None
         elif kw.get('osmajor_id'):
             # remove osmajor option
             osmajor = OSMajor.by_id(int(kw['osmajor_id']))
+            prov = system.provisions[arch].provision_families[osmajor]
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'WEBUI', action=u'Removed',
+                    field_name=u'InstallOption:ks_meta:%s/%s' % (arch, osmajor),
+                    old_value=prov.ks_meta, new_value=None))
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'WEBUI', action=u'Removed',
+                    field_name=u'InstallOption:kernel_options:%s/%s' % (arch, osmajor),
+                    old_value=prov.kernel_options, new_value=None))
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'WEBUI', action=u'Removed',
+                    field_name=u'InstallOption:kernel_options_post:%s/%s' % (arch, osmajor),
+                    old_value=prov.kernel_options_post, new_value=None))
             system.provisions[arch].provision_families[osmajor] = None
         else:
             # remove arch option
+            prov = system.provisions[arch]
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'WEBUI', action=u'Removed',
+                    field_name=u'InstallOption:ks_meta:%s' % arch,
+                    old_value=prov.ks_meta, new_value=None))
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'WEBUI', action=u'Removed',
+                    field_name=u'InstallOption:kernel_options:%s' % arch,
+                    old_value=prov.kernel_options, new_value=None))
+            system.activity.append(SystemActivity(user=identity.current.user,
+                    service=u'WEBUI', action=u'Removed',
+                    field_name=u'InstallOption:kernel_options_post:%s' % arch,
+                    old_value=prov.kernel_options_post, new_value=None))
             system.provisions[arch] = None
         system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
