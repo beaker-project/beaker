@@ -11,7 +11,8 @@ install:
 	for i in $(SUBDIRS); do $(MAKE) -C $$i install; done
 	$(INSTALL) aux/anamon $(DESTDIR)/var/www/beaker/anamon
 	$(INSTALL) aux/anamon.init $(DESTDIR)/var/www/beaker/anamon.init
-	$(INSTALL) conf.d/beaker-lab-controller.conf $(DESTDIR)/etc/httpd/conf.d/beaker-lab-controller.conf
+	$(INSTALL) apache/beaker-lab-controller.conf $(DESTDIR)/etc/httpd/conf.d/beaker-lab-controller.conf
+	$(INSTALL) apache/404.html $(DESTDIR)/usr/share/bkr/lab-controller/404.html
 	$(INSTALL_EXEC) cron.hourly/beaker_expire_distros $(DESTDIR)/etc/cron.hourly/beaker_expire_distros
 	mkdir -p $(DESTDIR)/var/run/beaker-lab-controller
 	install -D -m755 addDistro/addDistro.sh $(DESTDIR)/var/lib/beaker/addDistro.sh
