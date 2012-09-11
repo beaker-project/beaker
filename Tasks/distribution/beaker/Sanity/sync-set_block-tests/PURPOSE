@@ -1,0 +1,18 @@
+PURPOSE of /distribution/beaker/Sanity/sync-set_block-tests
+Description: Verifies that the rhts-sync-[set|block] tests work correctly
+Author: Bill Peck <bpeck@redhat.com>
+
+<job>
+	<recipeSet>
+		<recipe>
+			<task name="/distribution/beaker/Sanity/sync-set_block-tests" role="CLIENTONE"/>
+		</recipe>
+		<recipe>
+			<task name="/distribution/beaker/Sanity/sync-set_block-tests" role="CLIENTTWO"/>
+		</recipe>
+		<recipe>
+			<task name="/distribution/beaker/Sanity/sync-set_block-tests" role="SERVERS"/>
+		</recipe>
+	</recipeSet>
+</job>
+
