@@ -1380,16 +1380,24 @@ class Job(SystemObject):
                            'Id' : MyColumn(col_type='numeric',column=model.Job.id),
                            'Owner/Username' : MyColumn(col_type='string',column=model.User.user_name, relations='owner'),
                            'Owner/Email' : MyColumn(col_type='string',column=model.User.email_address, relations='owner'),
+                           'Product': MyColumn(col_type='string', 
+                                               column=model.Product.name, 
+                                               relations=model.Job.product),
+                           'Tag': MyColumn(col_type='string', 
+                                           column=model.RetentionTag.tag,
+                                           relations=model.Job.retention_tag),
                            'Status' : MyColumn(col_type='string', column=model.Job.status),
                            'Result' : MyColumn(col_type='string', column=model.Job.result),
                            'Whiteboard' : MyColumn(col_type='string', column=model.Job.whiteboard)
-
                          }
 
     search_values_dict = {'Status' : lambda: model.TaskStatus.values(),
-                          'Result' : lambda: model.TaskResult.values()}
-                         
-            
+                          'Result' : lambda: model.TaskResult.values(),
+                          'Tag': lambda: [tag[0] for tag in 
+                              model.RetentionTag.query.values(model.RetentionTag.tag)],
+                          'Product': lambda: [('','None')] + ([p[0] for p in 
+                              model.Product.query.values(model.Product.name)]) }
+
 class Cpu(SystemObject):      
     display_name = 'CPU'   
     search_values_dict = { 'Hyper' : lambda: ['True','False'] }
