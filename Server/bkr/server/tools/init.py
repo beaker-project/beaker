@@ -19,6 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
+__requires__ = ['TurboGears']
+
 import sys
 from bkr.server.model import *
 from bkr.server.commands import ConfigurationError

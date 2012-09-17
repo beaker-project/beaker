@@ -1,4 +1,7 @@
 #!/usr/bin/python
+
+__requires__ = ['TurboGears']
+
 from bkr.server.model import OSMajor
 from bkr.server.util import load_config, log_to_stream
 from optparse import OptionParser

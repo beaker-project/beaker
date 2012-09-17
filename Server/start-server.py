@@ -25,6 +25,9 @@ directory. When the project is installed, easy_install will create a
 proper start script.
 """
 
+__requires__ = ['TurboGears']
+import pkg_resources
+
 import sys
 from bkr.server.commands import start, ConfigurationError
 

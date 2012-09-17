@@ -1,4 +1,7 @@
 #!/usr/bin/python
+
+__requires__ = ['TurboGears']
+
 import sys
 from bkr.server.model import Product
 from bkr.server.util import load_config, log_to_stream

@@ -1,3 +1,6 @@
+
+__requires__ = ['TurboGears']
+
 import sys
 import datetime
 from sqlalchemy.sql import and_

@@ -19,6 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
+__requires__ = ['TurboGears']
+
 import sys
 import os
 import random

@@ -1,7 +1,8 @@
 import sys
 sys.stdout = sys.stderr
+import __main__
+__main__.__requires__ = ['TurboGears']
 import pkg_resources
-pkg_resources.require("CherryPy<3.0")
 import resource
 
 import os

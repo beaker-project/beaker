@@ -1,4 +1,7 @@
 #!/usr/bin/python
+
+__requires__ = ['TurboGears']
+
 import sys
 from turbogears import database, config as tg_config
 from bkr.server.util import load_config

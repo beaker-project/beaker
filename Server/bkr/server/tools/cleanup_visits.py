@@ -21,6 +21,7 @@
 
 __version__ = '0.1'
 __description__ = 'Cleans up stale records from the Beaker visit table'
+__requires__ = ['TurboGears']
 
 import sys
 import datetime

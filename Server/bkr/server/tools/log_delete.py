@@ -1,4 +1,6 @@
 
+__requires__ = ['TurboGears']
+
 import sys
 import errno
 import shutil
