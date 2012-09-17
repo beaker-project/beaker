@@ -521,6 +521,7 @@ def main_recipes_loop(*args, **kwargs):
 
 def schedule():
     global running
+
     reload_config()
 
     if config.get('beaker.qpid_enabled') is True: 
@@ -579,7 +580,7 @@ def schedule():
     sys.exit(rc)
 
 @atexit.register
-def atexit():
+def stop_interface():
     interface.stop()
 
 def sighup_handler(signal, frame):
@@ -590,14 +591,23 @@ def sighup_handler(signal, frame):
 def sigterm_handler(signal, frame):
     raise SystemExit("received SIGTERM")
 
-def reload_config():
+def purge_handlers():
+    #shutdown logging subsystem
+    logging.shutdown()
+
+    # Remove handlers
     for (_, logger) in logging.root.manager.loggerDict.items():
         if hasattr(logger, 'handlers'):
             for handler in logger.handlers:
                 logger.removeHandler(handler)
-    for handler in logging._handlerList[:]:
-        handler.flush()
-        handler.close()
+
+    #clear out logging's internal handler list
+    logging._handlerList = []
+
+
+def reload_config():
+    purge_handlers()
+
     if interface.running:
         interface.stop()
 
@@ -632,13 +642,9 @@ def main():
                                              signal.SIGTERM: sigterm_handler})
         util_logger = logging.getLogger('bkr.server.util')
         util_logger.disabled = True
-        for (_, logger) in logging.root.manager.loggerDict.items():
-            if hasattr(logger, 'handlers'):
-                for handler in logger.handlers:
-                    logger.removeHandler(handler)
-        for handler in logging._handlerList[:]:
-            handler.flush()
-            handler.close()
+
+        purge_handlers()
+
         try:
             d.open()
         except pidlockfile.AlreadyLocked:
