@@ -151,7 +151,7 @@ def setup_package():
         os.mkdir('/tmp/selenium')
     processes.extend([
         Process('Xvfb', args=['Xvfb', ':4', '-extension', 'GLX',
-                '-screen', '0', '1024x768x24']),
+                '-screen', '0', '1024x768x24'], listen_port=6004),
         Process('selenium-server', args=['java',
                 '-Djava.io.tmpdir=/tmp/selenium',
                 '-jar', '/usr/local/share/selenium/selenium-server-standalone-2.21.0.jar',
