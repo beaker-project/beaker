@@ -1,0 +1,58 @@
+# Bkr file for Bash Completion
+# Author: Filip Holec [fholec@redhat.com]
+
+# Function expands options from main option (like workflow-tcms)
+_bkr_complete()
+{
+    local component=$( echo $COMP_LINE | cut -d' ' -f2 )
+    if [ $component != "" ] ; then
+        local opts=$(echo $( bkr $component --help  | grep -o -- '--[^ =]*' | sort | uniq ) --help )
+
+        [[ $COMP_LINE == bkr\ $component* ]] && \
+            printf %s "$opts"
+    fi
+}
+
+# Main for bkr
+_bkr()
+{
+    COMPREPLY=()
+    local bkr=$1
+    local cur prev
+    local -a words
+    if type _get_comp_words_by_ref &>/dev/null; then
+        _get_comp_words_by_ref cur prev words
+    else
+        cur=$2 prev=$3 words=("${COMP_WORDS[@]}")
+    fi
+
+    # Commands offered as completions for bkr
+    local cmds=( $( bkr --help | grep "  " | cut -d' ' -f3 | sed '1d' | cut -d'=' -f1 ) -h --help )
+
+    local i c cmd
+    for (( i=1; i < ${#words[@]}-1; i++ )) ; do
+        [[ -n $cmd ]] && break
+        # Recognize additional commands and aliases
+        for c in ${cmds[@]} ; do
+            [[ ${words[i]} == $c ]] && cmd=$c && break
+        done
+    done
+
+    # Check if element is command
+    exists=0
+    for i in ${cmds[@]} ; do
+        if [[ $cmd == $i ]] ; then
+            exists=1
+        fi
+    done
+
+    # Check for main option choices
+    if [[ $cmd =~ [a-z]* && $exists == 1 ]] ; then
+       COMPREPLY=( $( compgen -W '$( _bkr_complete )' -- "$cur" ) )
+       return 0
+    fi
+
+    # Check for main options
+    COMPREPLY=( $( compgen -W ' ${cmds[@]}' -- "$cur" ) )
+} &&
+complete -F _bkr -o filenames bkr bkrmain.py
