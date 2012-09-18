@@ -66,8 +66,8 @@ def get_gerrit_changes(bug_ids):
 
 def changes_for_bug(changes, bug_id):
     for change in changes:
-        change_bug, = [t['id'] for t in change['trackingIds'] if t['system'] == 'Bugzilla']
-        if int(change_bug) == bug_id:
+        change_bugs = [int(t['id']) for t in change['trackingIds'] if t['system'] == 'Bugzilla']
+        if bug_id in change_bugs:
             yield change
 
 def abbrev_user(user):
