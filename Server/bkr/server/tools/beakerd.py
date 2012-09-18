@@ -646,6 +646,10 @@ def main():
             log.fatal("could not acquire lock on %s, exiting" % pid_file)
             sys.stderr.write("could not acquire lock on %s" % pid_file)
             sys.exit(1)
+    else:
+        signal.signal(signal.SIGHUP, sighup_handler)
+        signal.signal(signal.SIGTERM, sigterm_handler)
+        signal.signal(signal.SIGINT, sigterm_handler)
 
     schedule()
 
