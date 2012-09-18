@@ -155,9 +155,9 @@ def processed_recipesets(*args):
             else:
                 # Find all the lab controllers that this recipeset may run.
                 rsl_controllers = set(LabController.query\
-                                              .join(['systems',
-                                                     'queued_recipes',
-                                                     'recipeset'])\
+                                              .join('systems',
+                                                    'queued_recipes',
+                                                    'recipeset')\
                                               .filter(RecipeSet.id==recipeset.id).all())
     
                 # Any lab controllers that are not associated to all recipes in the
@@ -166,8 +166,8 @@ def processed_recipesets(*args):
                 # on one lab controller
                 for recipe in recipeset.recipes:
                     rl_controllers = set(LabController.query\
-                                               .join(['systems',
-                                                      'queued_recipes'])\
+                                               .join('systems',
+                                                     'queued_recipes')\
                                                .filter(Recipe.id==recipe.id).all())
                     bad_l_controllers = bad_l_controllers.union(rl_controllers.difference(rsl_controllers))
         

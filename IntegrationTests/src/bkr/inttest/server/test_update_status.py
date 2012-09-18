@@ -9,9 +9,9 @@ from bkr.inttest import data_setup
 from bkr.server.model import TaskStatus, TaskResult, Watchdog, RecipeSet, Distro
 
 def watchdogs_for_job(job):
-    return Watchdog.query.join(['recipe', 'recipeset', 'job'])\
+    return Watchdog.query.join('recipe', 'recipeset', 'job')\
             .filter(RecipeSet.job == job).all() + \
-           Watchdog.query.join(['recipetask', 'recipe', 'recipeset', 'job'])\
+           Watchdog.query.join('recipetask', 'recipe', 'recipeset', 'job')\
             .filter(RecipeSet.job == job).all()
 
 class TestUpdateStatus(unittest.TestCase):

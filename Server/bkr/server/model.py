@@ -2661,9 +2661,9 @@ class OSVersion(MappedObject):
     @classmethod
     def list_osmajor_by_name(cls,name,find_anywhere=False):
         if find_anywhere:
-            q = cls.query.join(['osmajor']).filter(OSMajor.osmajor.like('%%%s%%' % name))
+            q = cls.query.join('osmajor').filter(OSMajor.osmajor.like('%%%s%%' % name))
         else:
-            q = cls.query.join(['osmajor']).filter(OSMajor.osmajor.like('%s%%' % name))
+            q = cls.query.join('osmajor').filter(OSMajor.osmajor.like('%s%%' % name))
         return q
     
 
@@ -4239,7 +4239,7 @@ class RecipeSetResponse(MappedObject):
             clause = Job.id == job_id
         else:
             raise BeakerException('job_ids needs to be either type \'int\' or \'list\'. Found %s' % job_ids_type)
-        queri = cls.query.outerjoin(['recipesets','job']).filter(clause)
+        queri = cls.query.outerjoin('recipesets','job').filter(clause)
         results = {}
         for elem in queri:
             results[elem.recipe_set_id] = elem.comment
@@ -4344,7 +4344,7 @@ class RecipeSet(TaskBase):
 
     @classmethod
     def by_job_id(cls,job_id):
-        queri = RecipeSet.query.outerjoin(['job']).filter(Job.id == job_id)
+        queri = RecipeSet.query.outerjoin('job').filter(Job.id == job_id)
         return queri
 
     def cancel(self, msg=None):

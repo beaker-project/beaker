@@ -421,7 +421,7 @@ class CSV_Power(CSV):
 
     @classmethod
     def query(cls):
-        for power in System.permissable_systems(Power.query.outerjoin(['system','user'])):
+        for power in System.permissable_systems(Power.query.outerjoin('system','user')):
             if power.system:
                 yield CSV_Power(power)
 
@@ -440,7 +440,7 @@ class CSV_LabInfo(CSV):
 
     @classmethod
     def query(cls):
-        for labinfo in System.permissable_systems(LabInfo.query.outerjoin(['system','user'])):
+        for labinfo in System.permissable_systems(LabInfo.query.outerjoin('system','user')):
             if labinfo.system:
                 yield CSV_LabInfo(labinfo)
 
@@ -472,10 +472,10 @@ class CSV_Exclude(CSV):
 
     @classmethod
     def query(cls):
-        for exclude in System.permissable_systems(ExcludeOSMajor.query.outerjoin(['system','user'])):
+        for exclude in System.permissable_systems(ExcludeOSMajor.query.outerjoin('system','user')):
             if exclude.system:
                 yield CSV_Exclude(exclude)
-        for exclude in System.permissable_systems(ExcludeOSVersion.query.outerjoin(['system','user'])):
+        for exclude in System.permissable_systems(ExcludeOSVersion.query.outerjoin('system','user')):
             if exclude.system:
                 yield CSV_Exclude(exclude)
 
@@ -553,7 +553,7 @@ class CSV_Install(CSV):
 
     @classmethod
     def query(cls):
-        for install in System.permissable_systems(Provision.query.outerjoin(['system','user'])):
+        for install in System.permissable_systems(Provision.query.outerjoin('system','user')):
             if install.system:
                 yield CSV_Install(install)
 
@@ -694,10 +694,10 @@ class CSV_KeyValue(CSV):
 
     @classmethod
     def query(cls):        
-        for key_int in System.permissable_systems(Key_Value_Int.query.outerjoin(['system','user'])):
+        for key_int in System.permissable_systems(Key_Value_Int.query.outerjoin('system','user')):
             if key_int.system:
                 yield CSV_KeyValue(key_int)
-        for key_string in System.permissable_systems(Key_Value_String.query.outerjoin(['system','user'])):
+        for key_string in System.permissable_systems(Key_Value_String.query.outerjoin('system','user')):
             if key_string.system:
                 yield CSV_KeyValue(key_string)
 

@@ -990,7 +990,7 @@ class Task(SystemObject):
 
     @classmethod
     def distro_is_filter(cls,x,y): 
-        queri = model.Task.query.outerjoin(['excluded_osmajor','osmajor'])
+        queri = model.Task.query.outerjoin('excluded_osmajor','osmajor')
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard
             osmajors = model.OSMajor.query.filter(model.OSMajor.osmajor.like(wildcard_y))
@@ -1031,7 +1031,7 @@ class Task(SystemObject):
 
     @classmethod
     def arch_is_filter(cls,x,y): 
-        queri = model.Task.query.outerjoin(['excluded_arch','arch'])
+        queri = model.Task.query.outerjoin('excluded_arch','arch')
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard
             arches = model.Arch.query.filter(model.Arch.arch.like(wildcard_y))
@@ -1125,7 +1125,7 @@ class Task(SystemObject):
 
     @classmethod
     def _opposites_contains_filter(cls,col,val): 
-        queri = model.Task.query.outerjoin(['excluded_arch','arch']).filter(model.Arch.arch.like('%%%s%%' % val))
+        queri = model.Task.query.outerjoin('excluded_arch','arch').filter(model.Arch.arch.like('%%%s%%' % val))
         ids = [r.id for r in queri]
         return not_(model.Task.id.in_(ids))
 
