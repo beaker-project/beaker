@@ -113,7 +113,7 @@ class SeleniumTestCase(unittest.TestCase):
         sel = self.selenium
         text = sel.get_text("//td[preceding-sibling::"
             "th/label[@for='form_%s']]" % field)
-        assert text.strip() == val
+        self.assertEqual(text.strip(), val)
 
 class WebDriverTestCase(unittest.TestCase):
 
