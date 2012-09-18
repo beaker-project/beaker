@@ -95,9 +95,9 @@ class ProxyHelper(object):
                 recipe_id, name, offset, size)
         if self.conf.get("CACHE",False):
             if int(offset) == 0:
-                self.hub.recipes.register_file('%s/recipes/%s' % (self.log_base_url, recipe_id),
+                self.hub.recipes.register_file('%s/recipes/%s/' % (self.log_base_url, recipe_id),
                                                                   recipe_id, path, name,
-                                               '%s/recipes/%s' % (self.basepath, recipe_id))
+                                               '%s/recipes/%s/' % (self.basepath, recipe_id))
             return self.upload('/recipes/%s/%s' % (recipe_id, path), 
                                name, 
                                size, 
@@ -333,8 +333,6 @@ class Watchdog(ProxyHelper):
                 mylogs = self.hub.recipes.files(recipe_id)
                 trlogs = []
                 for mylog in mylogs:
-                    server = '%s/%s' % (self.conf.get("ARCHIVE_SERVER"), mylog['filepath'])
-                    basepath = '%s/%s' % (self.conf.get("ARCHIVE_BASEPATH"), mylog['filepath'])
                     mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
                     mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
                                               mylog['path'], mylog['filename'])
@@ -516,9 +514,9 @@ class Proxy(ProxyHelper):
                 task_id, name, offset, size)
         if self.conf.get("CACHE",False):
             if int(offset) == 0:
-                self.hub.recipes.tasks.register_file('%s/tasks/%s' % (self.log_base_url, task_id), 
+                self.hub.recipes.tasks.register_file('%s/tasks/%s/' % (self.log_base_url, task_id), 
                                                      task_id, path, name, 
-                                                     '%s/tasks/%s' % (self.basepath, task_id))
+                                                     '%s/tasks/%s/' % (self.basepath, task_id))
 
             return self.upload('/tasks/%s/%s' % (task_id, path), 
                                name, 
@@ -635,9 +633,9 @@ class Proxy(ProxyHelper):
                 result_id, name, offset, size)
         if self.conf.get("CACHE",False):
             if int(offset) == 0:
-                self.hub.recipes.tasks.register_result_file('%s/results/%s' % (self.log_base_url,result_id),
+                self.hub.recipes.tasks.register_result_file('%s/results/%s/' % (self.log_base_url,result_id),
                                                             result_id, path, name,
-                                                            '%s/results/%s' % (self.basepath, 
+                                                            '%s/results/%s/' % (self.basepath, 
                                                                                result_id))
 
             return self.upload('/results/%s/%s' % (result_id, path), 

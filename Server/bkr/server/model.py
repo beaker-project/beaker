@@ -870,6 +870,23 @@ recipe_set_table = Table('recipe_set',metadata,
         mysql_engine='InnoDB',
 )
 
+# Log tables all have the following fields:
+#   path
+#       Subdirectory of this log, relative to the root of the recipe/RT/RTR. 
+#       Probably won't have an initial or trailing slash, but I wouldn't bet on 
+#       it. ;-) Notably, the value '/' is used (rather than the empty string) 
+#       to represent no subdirectory.
+#   filename
+#       Filename of this log.
+#   server
+#       Absolute URL to the directory where the log is stored. Path and 
+#       filename are relative to this.
+#       Always NULL if log transferring is not enabled (CACHE=False).
+#   basepath
+#       Absolute filesystem path to the directory where the log is stored on 
+#       the remote system. XXX we shouldn't need to store this!
+#       Always NULL if log transferring is not enabled (CACHE=False).
+
 log_recipe_table = Table('log_recipe', metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_id', Integer, ForeignKey('recipe.id'),
@@ -3338,39 +3355,41 @@ class Log(MappedObject):
 
     result = property(result)
 
-    def full_log_directory(self):
-        if self.server:
-            return self.log_directory()
-        else:
-            return '%s/%s' % (self.parent.logspath, self.log_directory())
+    def _combined_path(self):
+        """Combines path (which is really the "subdir" of sorts) with filename:
+                      , log.txt => log.txt
+                /     , log.txt => log.txt
+                /debug, log.txt => debug/log.txt
+                debug , log.txt => debug/log.txt
+        """
+        return os.path.join((self.path or '').lstrip('/'), self.filename)
 
-    def log_directory(self):
-        # if server is defined then the logs are stored elsewhere
+    @property
+    def full_path(self):
+        """ Like .href, but returns an absolute filesystem path if the log is local. """
         if self.server:
-            dir = '%s/%s' % (self.server, self.path or '')
-            presult = urlparse.urlparse(dir)
-            server_url = '%s://%s' % (presult[0], presult[1])
-            dir = '%s%s/' % (server_url, posixpath.normpath(presult[2]))
+            return self.href
         else:
-            dir = '%s/%s' % (self.parent.filepath, self.path or '')
-            dir = posixpath.normpath(dir)
+            return os.path.join(self.parent.logspath, self.parent.filepath, self._combined_path())
 
-        return dir
-
-    def log_url(self):
+    @property
+    def href(self):
         if self.server:
-            server_url = '%s/%s' % (self.log_directory(), self.filename)
+            # self.server points at a directory so it should end in 
+            # a trailing slash, but older versions of the code didn't do that
+            url = self.server
+            if not url.endswith('/'):
+                url += '/'
+            return '%s%s' % (url, self._combined_path())
         else:
-            server_url = '/logs/%s/%s' % (self.log_directory(), self.filename)
-        return server_url
+            return os.path.join('/logs', self.parent.filepath, self._combined_path())
 
     def link(self):
         """ Return a link to this Log
         """
-        text = "%s/%s" % (self.path != '/' and self.path or '', self.filename)
+        text = '/%s' % self._combined_path()
         text = text[-50:]
-        server_url = self.log_url()
-        return make_link(url = server_url,
+        return make_link(url = self.href,
                          text = text)
     link = property(link)
 
@@ -3384,7 +3403,7 @@ class Log(MappedObject):
                     tid      = '%s:%s' % (self.type, self.id),
                     filepath = self.parent.filepath,
                     basepath = self.basepath,
-                    url      = urlparse.urljoin(absolute_url('/'), self.log_url()),
+                    url      = urlparse.urljoin(absolute_url('/'), self.href),
                    )
 
     @classmethod 
@@ -4514,7 +4533,7 @@ class Recipe(TaskBase):
     filepath = property(filepath)
 
     def get_log_dirs(self):
-        logs_to_return = [log.full_log_directory() for log in self.logs]
+        logs_to_return = [os.path.dirname(log.full_path) for log in self.logs]
 
         for task in self.tasks:
             rt_log = task.get_log_dirs()
@@ -5289,7 +5308,7 @@ class RecipeTask(TaskBase):
         return (self.recipe.recipeset.job.t_id, self.recipe.recipeset.t_id, self.recipe.t_id)
 
     def get_log_dirs(self):
-        logs_to_return = [log.full_log_directory() for log in self.logs]
+        logs_to_return = [os.path.dirname(log.full_path) for log in self.logs]
         for result in self.results:
             rtr_log = result.get_log_dirs()
             if rtr_log:
@@ -5790,7 +5809,7 @@ class RecipeTaskResult(TaskBase):
         return result
 
     def get_log_dirs(self):
-        return [log.full_log_directory() for log in self.logs]
+        return [os.path.dirname(log.full_path) for log in self.logs]
 
     def task_info(self):
         """

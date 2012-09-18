@@ -135,8 +135,8 @@ class Recipes(RPCRoot):
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
         for mylog in recipe.all_logs:
-            myserver = '%s/%s' % (server, mylog['filepath'])
-            mybasepath = '%s/%s' % (basepath, mylog['filepath'])
+            myserver = '%s/%s/' % (server, mylog['filepath'])
+            mybasepath = '%s/%s/' % (basepath, mylog['filepath'])
             self.change_file(mylog['tid'], myserver, mybasepath)
         recipe.log_server = urlparse.urlparse(server)[1]
         return True

@@ -282,15 +282,17 @@ def create_recipe(system=None, distro_tree=None, task_list=None,
     if not server_log:
         if system:
             recipe.log_server = system.lab_controller.fqdn
-        recipe.logs = [LogRecipe(path=u'/recipe_path',filename=u'dummy.txt', basepath=u'/beaker')]
+        recipe.logs = [LogRecipe(path=u'recipe_path',filename=u'dummy.txt')]
     else:
         recipe.log_server = u'dummy-archive-server'
-        recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/recipe_path', filename=u'dummy.txt' )]
+        recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/',
+                path=u'recipe_path', filename=u'dummy.txt' )]
 
     if not server_log:
-        rt_log = lambda: LogRecipeTask(path=u'/tasks', filename=u'dummy.txt', basepath='/')
+        rt_log = lambda: LogRecipeTask(path=u'tasks', filename=u'dummy.txt')
     else:
-        rt_log = lambda: LogRecipeTask(server=u'http://dummy-archive-server/beaker/recipe_path/tasks', filename=u'dummy.txt')
+        rt_log = lambda: LogRecipeTask(server=u'http://dummy-archive-server/beaker/',
+                path=u'tasks', filename=u'dummy.txt')
 
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
