@@ -249,15 +249,61 @@
       <element name="or">
         <zeroOrMore><ref name="distroreq"/></zeroOrMore>
       </element>
-      <element name="distro"><ref name="req"/></element>
-      <element name="distro_family"><ref name="req"/></element>
-      <element name="distro_name"><ref name="req"/></element>
-      <element name="distro_tag"><ref name="req"/></element>
-      <element name="distro_variant"><ref name="req"/></element>
-      <element name="distro_arch"><ref name="req"/></element>
-      <element name="distro_virt"><ref name="req"/></element>
-      <element name="distro_method"><ref name="req"/></element>
-      <element name="distrolabcontroller"><ref name="req"/></element>
+      <element name="distro_family">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;family&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="family"><ref name="req"/></element>
+      <element name="distro_name">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;name&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="name"><ref name="req"/></element>
+      <element name="distro_tag">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;tag&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="tag"><ref name="req"/></element>
+      <element name="distro_variant">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;variant&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="variant"><ref name="req"/></element>
+      <element name="distro_arch">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;arch&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="arch"><ref name="req"/></element>
+      <element name="distro_virt">
+        <a:documentation xml:lang="en">
+          Deprecated.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="distro_method">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;method&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="method"><ref name="req"/></element>
+      <element name="distrolabcontroller">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;labcontroller&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="labcontroller"><ref name="req"/></element>
     </choice>
   </define>
   <define name="hostreq">
@@ -268,17 +314,62 @@
       <element name="or">
         <zeroOrMore><ref name="hostreq"/></zeroOrMore>
       </element>
-      <element name="host"><ref name="req"/></element>
-      <element name="hostlabcontroller"><ref name="req"/></element>
-      <element name="system_type"><ref name="req"/></element>
-      <element name="system"><ref name="req"/></element>
-      <element name="memory"><ref name="req"/></element>
-      <element name="cpu_count"><ref name="req"/></element>
-      <element name="numa_node_count"><ref name="req"/></element>
-      <element name="hostname"><ref name="req"/></element>
-      <element name="arch"><ref name="req"/></element>
+      <element name="host">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;system&gt;&lt;name&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="labcontroller"><ref name="req"/></element>
+      <element name="hostlabcontroller">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;labcontroller&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="system_type">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;system&gt;&lt;type&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="memory">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;system&gt;&lt;memory&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="cpu_count">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;cpu&gt;&lt;processors&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="numa_node_count">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;system&gt;&lt;numanodes&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="hostname">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;system&gt;&lt;name&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
+      <element name="arch">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;system&gt;&lt;arch&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
       <element name="auto_prov"><ref name="req"/></element>
-      <element name="hypervisor"><ref name="req"/></element>
+      <element name="hypervisor">
+        <a:documentation xml:lang="en">
+          Deprecated.  Use &lt;system&gt;&lt;hypervisor&gt; instead.
+        </a:documentation>
+        <ref name="req"/>
+      </element>
       <element name="device">
         <a:documentation xml:lang="en">
           Selects systems by device. If operator is ==, selects systems which
@@ -286,13 +377,7 @@
           which have no matching devices.
         </a:documentation>
         <optional>
-          <attribute name="op">
-            <choice>
-              <value>!=</value>
-              <value>==</value>
-              <value>=</value>
-            </choice>
-          </attribute>
+          <ref name="equality_op" />
         </optional>
         <oneOrMore>
           <choice>
@@ -303,30 +388,171 @@
             <attribute name="device_id" />
             <attribute name="subsys_vendor_id" />
             <attribute name="subsys_device_id" />
+            <attribute name="description" />
           </choice>
         </oneOrMore>
       </element>
       <element name="group">
-        <ref name="equality_op"/>
-        <attribute name="value"/>
+        <ref name="equality_op" />
+        <attribute name="value" />
       </element>
       <element name="key_value">
-        <attribute name="key"/>
+        <attribute name="key" />
         <ref name="op"/>
-        <attribute name="value"/>
+        <attribute name="value" />
+      </element>
+      <element name="cpu">
+       <zeroOrMore><ref name="cpureq"/></zeroOrMore>
+      </element>
+      <element name="system">
+       <zeroOrMore><ref name="systemreq"/></zeroOrMore>
       </element>
     </choice>
+  </define>
+  <define name="cpureq">
+   <choice>
+    <element name="and">
+      <zeroOrMore><ref name="cpureq"/></zeroOrMore>
+    </element>
+    <element name="or">
+      <zeroOrMore><ref name="cpureq"/></zeroOrMore>
+    </element>
+    <element name="cores">
+      <ref name="op" />
+      <attribute name="value" />
+    </element>
+    <element name="family">
+      <ref name="op" />
+      <attribute name="value" />
+    </element>
+    <element name="hyper">
+      <ref name="boolean_value"/>
+    </element>
+    <element name="model">
+      <ref name="op" />
+      <attribute name="value" />
+    </element>
+    <element name="model_name">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="processors">
+      <ref name="op" />
+      <attribute name="value" />
+    </element>
+    <element name="sockets">
+      <ref name="op" />
+      <attribute name="value" />
+    </element>
+    <element name="speed">
+      <ref name="op" />
+      <attribute name="value" />
+    </element>
+    <element name="stepping">
+      <ref name="op" />
+      <attribute name="value" />
+    </element>
+    <element name="vendor">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="flag">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+   </choice>
+  </define>
+  <define name="systemreq">
+   <choice>
+    <element name="and">
+      <zeroOrMore><ref name="systemreq"/></zeroOrMore>
+    </element>
+    <element name="or">
+      <zeroOrMore><ref name="systemreq"/></zeroOrMore>
+    </element>
+    <element name="name">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="lender">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="model">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="vendor">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="added">
+      <ref name="op" />
+      <attribute name="value">
+        <data type="date"/>
+      </attribute>
+    </element>
+    <element name="arch">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="memory">
+      <ref name="op" />
+      <attribute name="value" />
+    </element>
+    <element name="numanodes">
+      <ref name="op" />
+      <attribute name="value" />
+    </element>
+    <element name="owner">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="user">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="loaned">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="location">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="powertype">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="serial">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="hypervisor">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="status">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+    <element name="type">
+      <ref name="equality_op" />
+      <attribute name="value" />
+    </element>
+   </choice>
   </define>
   <define name="req">
     <optional>
       <ref name="op"/>
     </optional>
-    <attribute name="value"/>
+    <attribute name="value" />
   </define>
   <define name="op">
     <attribute name="op">
       <choice>
         <value>!=</value>
+        <value>like</value>
         <value>==</value>
         <value>=</value>
         <value>&lt;=</value>
@@ -340,8 +566,18 @@
    <attribute name="op">
     <choice>
         <value>!=</value>
+        <value>like</value>
         <value>==</value>
         <value>=</value>
+    </choice>
+   </attribute>
+  </define>
+  <define name="boolean_value">
+   <attribute name="value">
+    <choice>
+        <data type="boolean"/>
+        <value>TRUE</value>
+        <value>FALSE</value>
     </choice>
    </attribute>
   </define>
