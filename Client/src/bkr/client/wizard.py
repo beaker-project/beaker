@@ -2400,7 +2400,7 @@ class Test(SingleChoice):
 #   Main
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-if __name__ == '__main__':
+def main():
     # parse options and user preferences
     options = Options()
 
@@ -2419,3 +2419,7 @@ if __name__ == '__main__':
     # and finally create the test file structure
     test.create()
     test.savePreferences()
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
