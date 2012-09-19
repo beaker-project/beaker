@@ -73,6 +73,8 @@ Requires:       libxslt-python
 Requires:       python-simplejson
 %endif
 Requires:       libxml2-python
+# beaker-wizard was moved from rhts-devel to here in 4.52
+Conflicts:      rhts-devel < 4.52
 
 %if %{with server}
 %package server
@@ -318,6 +320,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{python_sitelib}/bkr/client/
 %{python_sitelib}/bkr.client-%{version}-*
 %{python_sitelib}/bkr.client-%{version}-py%{pyver}.egg-info/
+%{_bindir}/beaker-wizard
 %{_bindir}/bkr
 %{_mandir}/man1/*.1.gz
 
