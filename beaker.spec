@@ -297,7 +297,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %attr(0755,root,root)%{_bindir}/%{name}d
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-server.conf
-%attr(-,apache,root) %{_datadir}/bkr
+%attr(-,apache,root) %dir %{_datadir}/bkr
+%attr(-,apache,root) %{_datadir}/bkr/%{name}-server.wsgi
+%attr(-,apache,root) %{_datadir}/bkr/server
 %attr(-,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
@@ -341,6 +343,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/%{name}-expire-distros
 %doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
+%attr(-,apache,root) %dir %{_datadir}/bkr
+%attr(-,apache,root) %{_datadir}/bkr/lab-controller
 %{_sysconfdir}/cron.hourly/beaker_expire_distros
 %attr(-,apache,root) %{_var}/www/beaker/*
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
