@@ -469,6 +469,15 @@ class SystemViewTest(SeleniumTestCase):
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
             self.assert_(self.distro_tree.arch not in self.system.provisions)
+            self.assertEquals(self.system.activity[0].action, u'Removed')
+            self.assertEquals(self.system.activity[0].field_name,
+                    u'InstallOption:kernel_options_post:i386')
+            self.assertEquals(self.system.activity[1].action, u'Removed')
+            self.assertEquals(self.system.activity[1].field_name,
+                    u'InstallOption:kernel_options:i386')
+            self.assertEquals(self.system.activity[2].action, u'Removed')
+            self.assertEquals(self.system.activity[2].field_name,
+                    u'InstallOption:ks_meta:i386')
 
     def test_update_labinfo(self):
         orig_date_modified = self.system.date_modified
