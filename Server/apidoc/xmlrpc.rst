@@ -104,6 +104,8 @@ Running jobs
 
 .. automethod:: jobs.list
 
+.. automethod:: jobs.filter
+
 .. automethod:: jobs.delete_jobs
 
 .. automodule:: bkr.server.recipes

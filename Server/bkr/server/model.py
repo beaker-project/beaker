@@ -3686,6 +3686,16 @@ class Job(TaskBase):
         return query.join('product').filter(product_query)
 
     @classmethod
+    def by_owner(cls, owner, query=None):
+        if query is None:
+            query=cls.query
+        if type(owner) is list:
+            owner_query = cls.owner.in_(*[User.by_user_name(p) for p in owner])
+        else:
+            owner_query = cls.owner == User.by_user_name(owner)
+        return query.join('owner').filter(owner_query)
+
+    @classmethod
     def sanitise_job_ids(cls, job_ids):
         """
             sanitise_job_ids takes a list of job ids and returns the list
@@ -3790,9 +3800,8 @@ class Job(TaskBase):
         return cls.query.filter(and_(cls.to_delete!=None, cls.deleted==None))
 
     @classmethod
-    def find_jobs(cls, query=None, tag=None, complete_days=None,
-        family=None, product=None, include_deleted=False,
-        include_to_delete=False, **kw):
+    def find_jobs(cls, query=None, tag=None, complete_days=None, family=None,
+        product=None, include_deleted=False, include_to_delete=False, **kw):
         """Return a filtered job query
 
         Does what it says. Also helps searching for expired jobs
@@ -3835,7 +3844,6 @@ class Job(TaskBase):
                 err_msg = _('Product is invalid: %s') % product
                 log.exception(err_msg)
                 raise BX(err_msg)
-
         return query
 
     @classmethod

@@ -171,16 +171,94 @@ class Jobs(RPCRoot):
         :param family: limit to recipe sets which used distros with this family name
         :type family: string
 
-        Returns a two-element array. The first element is an array of JobIDs 
-        of the form ``'J:123'``, suitable to be passed to the 
-        :meth:`jobs.delete_jobs` method. The second element is a human-readable 
+        Returns a two-element array. The first element is an array of JobIDs
+        of the form ``'J:123'``, suitable to be passed to the
+        :meth:`jobs.delete_jobs` method. The second element is a human-readable
+        count of the number of Jobs matched. Does not return deleted jobs.
+
+        .. deprecated:: 0.9.4
+            Use :meth:`jobs.filter` instead.
+        """
+
+        jobs = {'tags':tags,
+                'daysComplete':days_complete_for,
+                'family':family,
+                'product':product}
+
+        return self.filter(jobs)
+
+    @cherrypy.expose
+    def filter(self, filters):
+        """
+        Returns a list of details for jobs filtered by the given criteria.
+
+        The *filter* argument must be a an XML-RPC structure (dict) specifying
+        filter criteria. The following keys are recognised:
+
+            'tags'
+                List of job tags.
+            'daysComplete'
+                Number of days elapsed since the jobs completion.
+            'family'
+                Job distro family, for example ``'RedHatEnterpriseLinuxServer5'``.
+            'product'
+                Job product name
+            'owner'
+                Job owner username
+            'mine'
+                Inclusion is equivalent to including own username in 'owner'
+            'whiteboard'
+                Job whiteboard
+            'limit'
+                Integer limit to number of jobs returned.
+
+        Returns a two-element array. The first element is an array of JobIDs
+        of the form ``'J:123'``, suitable to be passed to the
+        :meth:`jobs.delete_jobs` method. The second element is a human-readable
         count of the number of Jobs matched. Does not return deleted jobs.
         """
-        jobs = Job.find_jobs(tag=tags, complete_days=days_complete_for,
-            family=family, product=product, **kw).all()
-        return_value = [j.t_id for j in jobs]
-        return return_value,'Count: %s' % len(return_value)
+        jobs = session.query(Job)
+        tags = filters.get('tags', None)
+        complete_days = filters.get('daysComplete', None)
+        family = filters.get('family', None)
+        product = filters.get('product', None)
+        owner = filters.get('owner', None)
+        whiteboard = filters.get('whiteboard', None)
+        mine = filters.get('mine', None)
+        limit = filters.get('limit', None)
 
+        if mine and identity.not_anonymous():
+            if owner:
+                if type(owner) is list:
+                    owner.append(identity.current.user.user_name)
+                else:
+                    owner = [owner, identity.current.user.user_name]
+            else:
+                owner = identity.current.user.user_name
+
+        jobs = jobs.order_by(Job.id.desc())
+        if tags:
+            jobs = Job.by_tag(tags, jobs)
+        if complete_days:
+            jobs = Job.complete_delta({'days':int(complete_days)}, jobs)
+        if family:
+            jobs = Job.has_family(family, jobs)
+        if product:
+            jobs = Job.by_product(product, jobs)
+        if owner:
+            jobs = Job.by_owner(owner, jobs)
+        if whiteboard:
+            jobs = Job.by_whiteboard(whiteboard, jobs)
+
+        jobs = Job.sanitise_jobs(jobs)
+
+        if limit:
+            limit = int(limit)
+            jobs = jobs.limit(limit)
+
+        jobs = jobs.values(Job.id)
+        return_value = ['J:%s' % j[0] for j in jobs]
+        return return_value,'Count: %s' % len(return_value)
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
