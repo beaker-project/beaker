@@ -117,9 +117,9 @@ Requires:       %{name}-server = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       python-nose >= 0.10
-Requires:       python-selenium >= 2.12
+Requires:       selenium-python >= 2.12
 Requires:       kobo
-Requires:       java-1.6.0-openjdk
+Requires:       java-openjdk >= 1:1.6.0
 Requires:       Xvfb
 Requires:       firefox
 Requires:       lsof
@@ -135,11 +135,8 @@ Requires:       python
 Requires:       httpd
 Requires:       cobbler >= 1.4
 Requires:       yum-utils
-%if 0%{?fedora} || 0%{?rhel} > 5
-Requires:       /usr/sbin/fenced
-%else
-Requires:       /sbin/fenced
-%endif
+Requires:       fence-agents
+Requires:       ipmitool
 Requires:       telnet
 Requires:       python-cpio
 Requires:	%{name} = %{version}-%{release}
