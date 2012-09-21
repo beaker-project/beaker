@@ -13,6 +13,7 @@ from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
         query, object_mapper, mapper, column_property, contains_eager
 from sqlalchemy.orm.interfaces import AttributeExtension
+from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.sql import exists
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exc import InvalidRequestError, IntegrityError
@@ -1621,8 +1622,8 @@ class Group(MappedObject):
 
 class System(SystemObject):
 
-    def __init__(self, fqdn=None, status=None, contact=None, location=None,
-                       model=None, type=None, serial=None, vendor=None,
+    def __init__(self, fqdn=None, status=SystemStatus.broken, contact=None, location=None,
+                       model=None, type=SystemType.machine, serial=None, vendor=None,
                        owner=None, lab_controller=None, lender=None,
                        hypervisor=None, loaned=None, memory=None,
                        kernel_type=None):
@@ -2449,7 +2450,7 @@ class SystemStatusAttributeExtension(AttributeExtension):
         log.debug('%r status changed from %r to %r', obj, oldchild, child)
         if child == oldchild:
             return child
-        if oldchild is None:
+        if oldchild in (None, NEVER_SET):
             assert not obj.status_durations
         else:
             assert obj.status_durations[0].finish_time is None
