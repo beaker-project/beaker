@@ -1,5 +1,5 @@
 
-extensions = []
+extensions = ['sphinx.ext.autodoc']
 master_doc = 'index'
 exclude_patterns = ['_build']
 
@@ -17,7 +17,10 @@ man_pages = [
         [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1),
     ('bkr-workflow-xslt', 'bkr-workflow-xslt', 'XSLT-based Beaker job generator',
         [u'David Sommerseth <davids@redhat.com>'], 1),
+    ('beaker-wizard', 'beaker-wizard', 'Tool to ease the creation of a new Beaker task',
+        [u'Petr Splichal <psplicha@redhat.com>'], 1),
 ]
+man_show_urls = True
 
 # This config is also a Sphinx extension with some Beaker-specific customisations:
 

@@ -23,7 +23,322 @@
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-from optparse import OptionParser, OptionGroup, IndentedHelpFormatter
+DESCRIPTION = """Beaker Wizard is a tool which can transform that
+"create all the necessary files with correct names, values, and paths"
+boring phase of every test creation into one-line joy. For power
+users there is a lot of inspiration in the man page. For quick start
+just ``cd`` to your test package directory and simply run
+``beaker-wizard``.
+"""
+
+__doc__ = """
+beaker-wizard: Tool to ease the creation of a new Beaker task
+=============================================================
+
+.. program:: beaker-wizard
+
+Synopsis
+--------
+
+| :program:`beaker-wizard` [*options*] <testname> <bug>
+
+The *testname* argument should be specified as::
+
+    [[[NAMESPACE/]PACKAGE/]TYPE/][PATH/]NAME
+
+which can be shortened as you need::
+
+    TESTNAME
+    TYPE/TESTNAME
+    TYPE/PATH/TESTNAME
+    PACKAGE/TYPE/NAME
+    PACKAGE/TYPE/PATH/NAME
+    NAMESPACE/PACKAGE/TYPE/NAME
+    NAMESPACE/PACKAGE/TYPE/PATH/NAME
+
+| :program:`beaker-wizard` Makefile
+
+This form will run the Wizard in the Makefile edit mode which allows you to
+quickly and simply update metadata of an already existing test while trying to
+keep the rest of the Makefile untouched.
+
+Description
+-----------
+
+%(DESCRIPTION)s
+
+The beaker-wizard was designed to be flexible: it is intended not only for
+beginning Beaker users who will welcome questions with hints but also for
+experienced test writers who can make use of the extensive command-line
+options to push their new-test-creating productivity to the limits.
+
+For basic usage help, see Options_ below or run ``beaker-wizard -h``.
+For advanced features and expert usage examples, read on.
+
+Highlights
+~~~~~~~~~~
+
+* provide reasonable defaults wherever possible
+* flexible confirmation (``--every``, ``--common``, ``--yes``)
+* predefined skeletons (beaker, beakerlib, simple, multihost, empty)
+* saved user preferences (defaults, user skeletons, licenses)
+* Bugzilla integration (fetch bug info, reproducers, suggest name, description)
+* Makefile edit mode (quick adding of bugs, limiting archs or releases...)
+* automated adding created files to the git repository
+
+Skeletons
+~~~~~~~~~
+
+Another interesting feature is that you can save your own skeletons into
+the preferences file, so that you can automatically populate the new
+test scripts with your favourite structure.
+
+All of the test related metadata gathered by the Wizard can be expanded
+inside the skeletons using XML tags. For example: use ``<package/>`` for
+expanding into the test package name or ``<test/>`` for the full test name.
+
+The following metadata variables are available:
+
+* test namespace package type path testname description
+* bugs reproducers requires architectures releases version time
+* priority license confidential destructive
+* skeleton author email
+
+Options
+-------
+
+-h, --help        show this help message and exit
+-V, --version     display version info and quit
+
+Basic metadata:
+  -d DESCRIPTION  short description
+  -a ARCHS        architectures [All]
+  -r RELEASES     releases [All]
+  -o PACKAGES     run for packages [wizard]
+  -q PACKAGES     required packages [wizard]
+  -t TIME         test time [5m]
+
+Extra metadata:
+  -z VERSION      test version [1.0]
+  -p PRIORITY     priority [Normal]
+  -l LICENSE      license [GPLv2]
+  -i INTERNAL     confidential [No]
+  -u UGLY         destructive [No]
+
+Author info:
+  -n NAME         your name [Petr Splichal]
+  -m MAIL         your email address [psplicha@redhat.com]
+
+Test creation specifics:
+  -s SKELETON     skeleton to use [beakerlib]
+  -j PREFIX       join the bug prefix to the testname [Yes]
+  -f, --force     force without review and overwrite existing files
+  -w, --write     write preferences to ~/.beaker_client/wizard
+  -b, --bugzilla  contact bugzilla to get bug details
+  -g, --git       add created files to the git repository
+
+Confirmation and verbosity:
+  -v, --verbose   display detailed info about every action
+  -e, --every     prompt for each and every available option
+  -c, --common    confirm only commonly used options [Default]
+  -y, --yes       yes, I'm sure, no questions, just do it!
+
+Examples
+--------
+
+Some brief examples::
+
+    beaker-wizard overload-performance 379791
+        regression test with specified bug and name
+        -> /CoreOS/perl/Regression/bz379791-overload-performance
+
+    beaker-wizard buffer-overflow 2008-1071 -a i386
+        security test with specified CVE and name, i386 arch only
+        -> /CoreOS/perl/Security/CVE-2008-1071-buffer-overflow
+
+    beaker-wizard Sanity/options -y -a?
+        sanity test with given name, ask just for architecture
+        -> /CoreOS/perl/Sanity/options
+
+    beaker-wizard Sanity/server/smoke
+        add an optional path under test type directory
+        -> /CoreOS/perl/Sanity/server/smoke
+
+    beaker-wizard -by 1234
+        contact bugzilla for details, no questions, just review
+        -> /CoreOS/installer/Regression/bz1234-Swap-partition-Installer
+
+    beaker-wizard -byf 2007-0455
+        security test, no questions, no review, overwrite existing files
+        -> /CoreOS/gd/Security/CVE-2007-0455-gd-buffer-overrun
+
+All of the previous examples assume you're in the package tests
+directory (e.g. ``cd git/tests/perl``). All the necessary directories and
+files are created under this location.
+
+Bugzilla integration
+~~~~~~~~~~~~~~~~~~~~
+
+The following example creates a regression test for bug #227655.
+Option ``-b`` is used to contact Bugzilla to automatically fetch bug
+details and ``-y`` to skip unnecessary questions.
+
+::
+
+    # beaker-wizard -by 227655
+    Contacting bugzilla...
+    Fetching details for bz227655
+    Examining attachments for possible reproducers
+    Adding test.pl (simple test using Net::Config)
+    Adding libnet.cfg (libnet.cfg test config file)
+
+    Ready to create the test, please review
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    /CoreOS/perl/Regression/bz227655-libnet-cfg-in-wrong-directory
+
+                 Namespace : CoreOS
+                   Package : perl
+                 Test type : Regression
+             Relative path : None
+                 Test name : bz227655-libnet-cfg-in-wrong-directory
+               Description : Test for bz227655 (libnet.cfg in wrong directory)
+
+        Bug or CVE numbers : bz227655
+      Reproducers to fetch : test.pl, libnet.cfg
+         Required packages : None
+             Architectures : All
+                  Releases : All
+                   Version : 1.0
+                      Time : 5m
+
+                  Priority : Normal
+                   License : GPLv2
+              Confidential : No
+               Destructive : No
+
+                  Skeleton : beakerlib
+                    Author : Petr Splichal
+                     Email : psplicha@redhat.com
+
+    [Everything OK?]
+    Directory Regression/bz227655-libnet-cfg-in-wrong-directory created
+    File Regression/bz227655-libnet-cfg-in-wrong-directory/PURPOSE written
+    File Regression/bz227655-libnet-cfg-in-wrong-directory/runtest.sh written
+    File Regression/bz227655-libnet-cfg-in-wrong-directory/Makefile written
+    Attachment test.pl downloaded
+    Attachment libnet.cfg downloaded
+
+Command line
+~~~~~~~~~~~~
+
+The extensive command line syntax can come in handy for example
+when creating a bunch of sanity tests for a component. Let's
+create a test skeleton for each of wget's feature areas::
+
+    # cd git/tests/wget
+    # for test in download recursion rules authentication; do
+    >   beaker-wizard -yf $test -t 10m -q httpd,vsftpd \\
+    >       -d "Sanity test for $test options"
+    > done
+
+    ...
+
+    /CoreOS/wget/Sanity/authentication
+
+                 Namespace : CoreOS
+                   Package : wget
+                 Test type : Sanity
+             Relative path : None
+                 Test name : authentication
+               Description : Sanity test for authentication options
+
+        Bug or CVE numbers : None
+      Reproducers to fetch : None
+         Required packages : httpd, vsftpd
+             Architectures : All
+                  Releases : All
+                   Version : 1.0
+                      Time : 10m
+
+                  Priority : Normal
+                   License : GPLv2
+              Confidential : No
+               Destructive : No
+
+                  Skeleton : beakerlib
+                    Author : Petr Splichal
+                     Email : psplicha@redhat.com
+
+    Directory Sanity/authentication created
+    File Sanity/authentication/PURPOSE written
+    File Sanity/authentication/runtest.sh written
+    File Sanity/authentication/Makefile written
+
+    # tree
+    .
+    `-- Sanity
+        |-- authentication
+        |   |-- Makefile
+        |   |-- PURPOSE
+        |   `-- runtest.sh
+        |-- download
+        |   |-- Makefile
+        |   |-- PURPOSE
+        |   `-- runtest.sh
+        |-- recursion
+        |   |-- Makefile
+        |   |-- PURPOSE
+        |   `-- runtest.sh
+        `-- rules
+            |-- Makefile
+            |-- PURPOSE
+            `-- runtest.sh
+
+Notes
+-----
+
+If you provide an option with a "?" you will be given a list of
+available options and a prompt to type your choice in.
+
+For working Bugzilla integration you need ``python-bugzilla`` package installed on your system.
+If you are trying to access a bug with restricted access, log
+in to Bugzilla first with the following command::
+
+    bugzilla login
+
+You will be asked for email and password and after successfully logging in a
+``~/.bugzillacookies`` file will be created which then will be used
+in all subsequent Bugzilla queries. Logout can be performed with
+``rm ~/.bugzillacookies`` ;-)
+
+Files
+-----
+
+All commonly used preferences can be saved into ``~/.beaker_client/wizard``.
+Use "write" command to save current settings when reviewing gathered
+test data or edit the file with you favourite editor.
+
+All options in the config file are self-explanatory. For confirm level choose
+one of: nothing, common or everything.
+
+Bugs
+----
+
+If you encounter an issue or have an idea for enhancement, please `file a new bug`_.
+See also `open bugs`_.
+
+.. _file a new bug: https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker&component=command+line&short_desc=beaker-wizard:+&assigned_to=psplicha@redhat.com
+.. _open bugs: https://bugzilla.redhat.com/buglist.cgi?product=Beaker&bug_status=__open__&short_desc=beaker-wizard&short_desc_type=allwordssubstr
+
+See also
+--------
+
+* `Beaker documentation <http://beaker-project.org/help.html>`_
+* `BeakerLib <https://fedorahosted.org/beakerlib>`_
+""" % globals()
+
+from optparse import OptionParser, OptionGroup, IndentedHelpFormatter, SUPPRESS_HELP
 from xml.dom.minidom import parse, parseString
 from datetime import date
 from time import sleep
@@ -392,114 +707,11 @@ class Help:
         return "beaker-wizard %s" % WizardVersion
 
     def description(self):
-        return dedentText("""Beaker Wizard is a tool which can transform that
-            create-all-the-necessary-files-with-correct-names-values-and-paths
-            boring phase of every test creation into one line joy. For power
-            users there is a lot of inspiration in the extra help page. For
-            quick start just cd to your test package directory and simply type:
-            "beaker-wizard".""")
+        return DESCRIPTION
 
     def expert(self):
-        return dedentText("""
-            NAME:
-                beaker-wizard - tool to ease the creation of a new Beaker test
-
-            SYNOPSIS:
-                beaker-wizard [options] [TESTNAME] [BUG/CVE ...]
-
-                where TESTNAME is specified as:
-                    [[[NAMESPACE/]PACKAGE/]TYPE/][PATH/]NAME
-
-                which can be shortened as you need:
-                    TESTNAME
-                    TYPE/TESTNAME
-                    TYPE/PATH/TESTNAME
-                    PACKAGE/TYPE/NAME
-                    PACKAGE/TYPE/PATH/NAME
-                    NAMESPACE/PACKAGE/TYPE/NAME
-                    NAMESPACE/PACKAGE/TYPE/PATH/NAME
-
-                beaker-wizard [path/to/]Makefile
-
-                will run the Wizard in the Makefile edit mode which allows to
-                quickly & simply update metadata of an already existing test
-                while trying to keep the rest of the Makefile untouched.
-
-            EXAMPLES:
-                beaker-wizard overload-performance 379791
-                    regression test with specified bug and name
-                    -> /CoreOS/perl/Regression/bz379791-overload-performance
-
-                beaker-wizard buffer-overflow 2008-1071 -a i386
-                    security test with specified CVE and name, i386 arch only
-                    -> /CoreOS/perl/Security/CVE-2008-1071-buffer-overflow
-
-                beaker-wizard Sanity/options -y -a?
-                    sanity test with given name, ask just for architecture
-                    -> /CoreOS/perl/Sanity/options
-
-                beaker-wizard Sanity/server/smoke
-                    add an optional path under test type directory
-                    -> /CoreOS/perl/Sanity/server/smoke
-
-                beaker-wizard -by 1234
-                    contact bugzilla for details, no questions, just review
-                    -> /CoreOS/installer/Regression/bz1234-Swap-partition-Installer
-
-                beaker-wizard -byf 2007-0455
-                    security test, no questions, no review, overwrite existing files
-                    -> /CoreOS/gd/Security/CVE-2007-0455-gd-buffer-overrun
-
-                All of the previous examples assume you're in the package tests
-                directory (e.g. cd git/tests/perl). All the necessary directories and
-                files are created under this location.
-
-            TIP:
-                If you provide an option with a "?" you will be given a list of
-                available options and a prompt to type your choice in.
-
-            PREFERENCES:
-                All commonly used preferences can be saved into ~/.beaker_client/wizard.
-                Use "write" command to save current settings when reviewing gathered
-                test data or edit the file with you favourite editor.
-
-                All options are self-explanatory. For confirm level choose one of:
-                nothing, common or everything.
-
-            SKELETONS:
-                Another interesting feature is that you can save your own skeletons into
-                the preferences file, so that you can automatically populate the new
-                test scripts with your favourite structure.
-
-                All of the test related metadata gathered by Wizard can be expanded
-                inside the skeletons using xml tags. For example: use <package/> for
-                expanding into the test package name or <test/> for the full test name.
-
-                The following metadata variables are available:
-                    * test namespace package type path testname description
-                    * bugs reproducers requires architectures releases version time
-                    * priority license confidential destructive
-                    * skeleton author email
-
-            LINKS:
-                Beaker Wizard Project Page
-                https://fedorahosted.org/beaker/wiki/BeakerWizard
-
-                Beaker Documentation:
-                https://fedorahosted.org/beaker/wiki/BeakerUserGuide
-
-                BeakerLib
-                https://fedorahosted.org/beakerlib
-
-            BUGS:
-                If you find a bug or have an idea for enhancement, do not hesitate
-                to contact me on the address below. Or, even better, file a new bug:
-                https://fedorahosted.org/beaker/wiki/BeakerWizard#Bugs
-
-            AUTHOR:
-                Petr Splichal <psplicha@redhat.com>
-                Enjoy the wizard! :-)
-            """)
+        os.execv('/usr/bin/man', ['man', 'beaker-wizard'])
+        sys.exit(1)
 
 
 class Makefile:
@@ -641,7 +853,7 @@ class Options:
         parser.add_option("-x", "--expert",
             dest="expert",
             action="store_true",
-            help="extra help, expert usage, examples")
+            help=SUPPRESS_HELP)
         parser.add_option("-V", "--version",
             dest="ver",
             action="store_true",

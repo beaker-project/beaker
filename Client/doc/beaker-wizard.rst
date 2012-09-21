@@ -1,0 +1,2 @@
+
+.. automodule:: bkr.client.wizard
