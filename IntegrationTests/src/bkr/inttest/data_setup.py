@@ -231,9 +231,14 @@ def create_system_activity(user=None, **kw):
     return activity
 
 def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
-        uploader=None, owner=None, priority=u'Manual', valid=None, requires=None):
+        uploader=None, owner=None, priority=u'Manual', valid=None, path=None, 
+        description=None, requires=None):
     if name is None:
         name = unique_name(u'/distribution/test_task_%s')
+    if path is None:
+        path = u'/mnt/tests/%s' % name
+    if description is None:
+        description = unique_name('description%s')
     if uploader is None:
         uploader = create_user(user_name=u'task-uploader%s' % name.replace('/', '-'))
     if owner is None:
@@ -251,6 +256,8 @@ def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
     task.owner = owner
     task.priority = priority
     task.valid = valid
+    task.path = path
+    task.description = description
     if exclude_arch:
        [TaskExcludeArch(arch_id=Arch.by_name(arch).id, task_id=task.id) for arch in exclude_arch]
     if exclude_osmajor:

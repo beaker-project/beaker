@@ -56,6 +56,7 @@ import os.path
 import xmlrpclib
 from xml.dom.minidom import Document, parseString
 
+
 class Task_Details(BeakerCommand):
     """Show details about Task"""
     enabled = True
@@ -75,15 +76,28 @@ class Task_Details(BeakerCommand):
             help="show invalid task",
         )
 
+        self.parser.add_option(
+            "--prettyxml",
+            default=False,
+            action="store_true",
+            help="Pretty print the xml",
+        )
+
     def run(self, *args, **kwargs):
         filter = dict()
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         xml = kwargs.pop("xml")
+        prettyxml = kwargs.pop("prettyxml")
         valid = True
         if kwargs.get("invalid"):
             valid = None
 
         self.set_hub(username, password)
         for task in args:
-            print "%s %s" % (task, self.hub.tasks.to_dict(task,valid))
+            if xml:
+                print "%s %s" % (task, self.hub.tasks.to_xml(task, valid))
+            elif prettyxml:
+               print "%s %s" % (task, self.hub.tasks.to_xml(task, prettyxml, valid))
+            else:
+                print "%s %s" % (task, self.hub.tasks.to_dict(task,valid))
