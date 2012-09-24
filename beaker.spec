@@ -342,7 +342,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_datadir}/bkr
 %attr(-,apache,root) %{_datadir}/bkr/lab-controller
 %{_sysconfdir}/cron.hourly/beaker_expire_distros
-%attr(-,apache,root) %{_var}/www/beaker/*
+%attr(-,apache,root) %dir %{_var}/www/beaker
+%attr(-,apache,root) %dir %{_var}/www/beaker/logs
 %attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
