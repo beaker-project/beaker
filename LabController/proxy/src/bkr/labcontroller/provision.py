@@ -88,6 +88,11 @@ class CommandQueuePoller(ProxyHelper):
                 handle_power(command)
             elif command['action'] == u'reboot':
                 handle_power(dict(command.items() + [('action', u'off')]))
+                # This 5 second delay period is not very scientific, it's just 
+                # copied from Cobbler. The idea is to give the PSU a chance to 
+                # discharge, in case the power controller is returning from the 
+                # 'off' command too soon.
+                time.sleep(5)
                 handle_power(dict(command.items() + [('action', u'on')]))
             elif command['action'] == u'clear_logs':
                 handle_clear_logs(self.conf, command)
