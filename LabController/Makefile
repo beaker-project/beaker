@@ -1,24 +1,14 @@
-INSTALL = install -D -m644
-INSTALL_EXEC = install -D -m755
-ADDDISTROD = $(shell cd addDistro; ls addDistro.d/*)
+# License: GPL v2 or later
+# Copyright Red Hat Inc. 2008
 
-SUBDIRS := proxy
+PKGNAME=beaker
 
-build:
-	for i in $(SUBDIRS); do $(MAKE) -C $$i; done
+all:	py-build
 
-install:
-	for i in $(SUBDIRS); do $(MAKE) -C $$i install; done
-	$(INSTALL) aux/anamon $(DESTDIR)/var/www/beaker/anamon
-	$(INSTALL) aux/anamon.init $(DESTDIR)/var/www/beaker/anamon.init
-	$(INSTALL) apache/beaker-lab-controller.conf $(DESTDIR)/etc/httpd/conf.d/beaker-lab-controller.conf
-	$(INSTALL) apache/404.html $(DESTDIR)/usr/share/bkr/lab-controller/404.html
-	$(INSTALL_EXEC) cron.hourly/beaker_expire_distros $(DESTDIR)/etc/cron.hourly/beaker_expire_distros
-	mkdir -p $(DESTDIR)/var/run/beaker-lab-controller
-	install -D -m755 addDistro/addDistro.sh $(DESTDIR)/var/lib/beaker/addDistro.sh
-	for addDistro in $(ADDDISTROD); do \
-		install -D -m755 addDistro/$$addDistro $(DESTDIR)/var/lib/beaker/$$addDistro;\
-	done
+include ../rpmspec_rules.mk
+include ../py_rules.mk
 
-clean:
-	for i in $(SUBDIRS); do $(MAKE) -C $$i clean; done
+build:	py-build
+install:	py-install
+
+clean:	py-clean

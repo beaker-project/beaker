@@ -15,8 +15,8 @@ Common/setup.py
 Client/build
 Client/setup.py
 Client/doc/bkr-*.rst
-LabController/proxy/build
-LabController/proxy/setup.py
+LabController/build
+LabController/setup.py
 IntegrationTests/build
 IntegrationTests/setup.py
 *.diff

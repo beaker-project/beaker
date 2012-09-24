@@ -338,7 +338,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/%{name}-provision
 %{_bindir}/%{name}-pxemenu
 %{_bindir}/%{name}-expire-distros
-%doc LabController/README
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %attr(-,apache,root) %dir %{_datadir}/bkr
 %attr(-,apache,root) %{_datadir}/bkr/lab-controller

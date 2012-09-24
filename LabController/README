@@ -1,3 +1,0 @@
-# Setup requires the following...
-
-cobbler aclsetup --adduser=apache
