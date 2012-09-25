@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 """
 
 import os
+import errno
 import sys
 import string
 import time
@@ -134,8 +135,12 @@ class MountWatcher:
 
     def update(self):
         found = 0
-        if os.path.exists('/proc/mounts'):
+        try:
             fd = open('/proc/mounts')
+        except IOError, e:
+            if e.errno != errno.ENOENT:
+                raise
+        else:
             while 1:
                 line = fd.readline()
                 if not line:
