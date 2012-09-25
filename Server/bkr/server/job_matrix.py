@@ -102,7 +102,7 @@ class JobMatrix:
                 only_valid=True)
         else:
             query = model.Job.sanitise_jobs(model.Job.query)
-        query = query.group_by([model.Job.whiteboard]). \
+        query = query.group_by(model.Job.whiteboard). \
             order_by(model.Job.id.desc()).limit(50)
         whiteboards = query.values(model.Job.whiteboard)
         options = []
