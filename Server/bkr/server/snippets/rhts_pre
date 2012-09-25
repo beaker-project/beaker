@@ -1,7 +1,7 @@
 set -x
 {% if recipe %}
 # Check in with Beaker Server
-wget -O - http://{{ system.lab_controller.fqdn }}:8000/install_start/{{ system.fqdn }}
+wget -O - http://{{ system.lab_controller.fqdn }}:8000/install_start/{{ recipe.id }}
 {% endif %}
 
 {#

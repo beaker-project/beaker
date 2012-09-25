@@ -2703,12 +2703,6 @@ class Watchdog(MappedObject):
     """ Every running task has a corresponding watchdog which will
         Return the system if it runs too long
     """
-    @classmethod
-    def by_system(cls, system):
-        """ Find a watchdog based on the system name
-        """
-        return cls.query.join(Watchdog.recipe, Recipe.system).filter_by(system=system).one()
-
 
     @classmethod
     def by_status(cls, labcontroller=None, status="active"):

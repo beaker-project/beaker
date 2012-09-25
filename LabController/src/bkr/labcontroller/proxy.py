@@ -166,25 +166,14 @@ class ProxyHelper(object):
         logger.debug("job_stop %s", job_id)
         return self.hub.jobs.stop(job_id, stop_type, msg)
 
-    def get_recipe(self, system_name=None):
-        """ return the active recipe for this system """
-        # Deprecated
-        if system_name:
-            logger.debug("get_recipe %s", system_name)
-            return self.hub.recipes.system_xml(system_name)
-
     def get_my_recipe(self, request):
-        """ Accepts a dict with either system_name or recipe_id
-                if system_name is defined return active recipe for that system
-                if recipe_id is defined return the recipe for that id
-            Returns a recipe XML document.
+        """
+        Accepts a dict with key 'recipe_id'. Returns an XML document for the 
+        recipe with that id.
         """
         if 'recipe_id' in request:
             logger.debug("get_recipe recipe_id:%s", request['recipe_id'])
             return self.hub.recipes.to_xml(request['recipe_id'])
-        if 'system_name' in request:
-            logger.debug("get_recipe system_name:%s", request['system_name'])
-            return self.hub.recipes.system_xml(request['system_name'])
 
     def extend_watchdog(self, task_id, kill_time):
         """ tell the scheduler to extend the watchdog by kill_time seconds
@@ -256,8 +245,10 @@ class WatchFile(object):
                 # The regex is stored in /etc/beaker/proxy.conf
                 panic = self.panic.search(line)
                 if panic:
-                    logger.info("Panic detected for system: %s", self.watchdog['system'])
-                    recipeset = xmltramp.parse(self.proxy.get_recipe(self.watchdog['system'])).recipeSet
+                    logger.info("Panic detected for recipe %s, system %s",
+                            self.watchdog['recipe_id'], self.watchdog['system'])
+                    recipeset = xmltramp.parse(self.proxy.get_my_recipe(
+                            dict(recipe_id=self.watchdog['recipe_id']))).recipeSet
                     try:
                         recipe = recipeset.recipe
                     except AttributeError:
@@ -542,7 +533,7 @@ class Proxy(ProxyHelper):
         return self.hub.recipes.tasks.start(task_id, kill_time)
 
 
-    def install_start(self, system_name=None):
+    def install_start(self, recipe_id=None):
         """ Called from %pre of the test machine.  We record a start
         result on the scheduler and extend the watchdog
         This is a little ugly.. but better than putting this logic in
@@ -553,7 +544,8 @@ class Proxy(ProxyHelper):
         kill_time = 10800
         # look up system recipe based on hostname...
         # get first task
-        recipeset = xmltramp.parse(self.get_recipe(system_name)).recipeSet
+        recipeset = xmltramp.parse(self.get_my_recipe(
+                dict(recipe_id=recipe_id))).recipeSet
         try:
             task = recipeset.recipe.task()
         except AttributeError:
