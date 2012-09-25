@@ -2933,6 +2933,10 @@ class Distro(MappedObject):
         return make_link(url = '/distros/view?id=%s' % self.id,
                          text = self.name)
 
+    def expire(self, service='XMLRPC'):
+        for tree in self.trees:
+            tree.expire(service=service)
+
     tags = association_proxy('_tags', 'tag', creator=_create_tag)
 
 class DistroTree(MappedObject):
@@ -2944,6 +2948,17 @@ class DistroTree(MappedObject):
         query = cls.query.filter(DistroTree.lab_controller_assocs.any())
         query = apply_filter(filter, query)
         return query.order_by(DistroTree.date_created.desc())
+
+    def expire(self, lab_controller=None, service=u'XMLRPC'):
+        """ Expire this tree """
+        for lca in list(self.lab_controller_assocs):
+            if not lab_controller or lca.lab_controller == lab_controller:
+                self.lab_controller_assocs.remove(lca)
+                self.activity.append(DistroTreeActivity(
+                    user=identity.current.user, service=service,
+                    action=u'Removed', field_name=u'lab_controller_assocs',
+                    old_value=u'%s %s' % (lca.lab_controller, lca.url),
+                    new_value=None))
 
     def to_xml(self, clone=False):
         """ Return xml describing this distro """

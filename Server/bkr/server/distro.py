@@ -1,3 +1,4 @@
+import cherrypy
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from turbogears.widgets import AutoCompleteField, HiddenField
@@ -112,6 +113,12 @@ class Distros(RPCRoot):
                     old_value=None, new_value=tag['text']))
         flash(_(u"Added Tag %s" % tag['text']))
         redirect("./view?id=%s" % id)
+
+    @cherrypy.expose
+    @identity.require(identity.has_permission('distro_expire'))
+    def expire(self, name):
+        distro = Distro.by_name(name)
+        distro.expire()
 
     @expose()
     @identity.require(identity.has_permission('tag_distro'))

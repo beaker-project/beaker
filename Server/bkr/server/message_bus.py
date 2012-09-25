@@ -19,23 +19,21 @@ except ImportError, e:
 
 class ServerBeakerBus(BeakerBus):
 
-    _queue_timeout = 5
     _shared_state = {}
-
-    @classmethod
-    def do_krb_auth(cls):
-        from bkr.common.krb_auth import AuthManager
-        principal = tg_config.get('identity.krb_auth_qpid_principal')
-        keytab = tg_config.get('identity.krb_auth_qpid_keytab')
-        cls._auth_mgr = AuthManager(primary_principal=principal, keytab=keytab)
 
     def __init__(self, *args, **kw):
         if not self._shared_state:
             state = dict(topic_exchange=tg_config.get('beaker.qpid_topic_exchange'),
                 _broker=tg_config.get('beaker.qpid_broker'),
-                krb_auth=tg_config.get('beaker.qpid_krb_auth'),
                 stopped = True)
             self._shared_state.update(state)
         self.__dict__.update(self._shared_state)
         super(ServerBeakerBus, self).__init__(*args, **kw)
 
+    def do_krb_auth(self):
+        from bkr.common.krb_auth import AuthManager
+        if not self.principal:
+            self.principal = tg_config.get('identity.krb_auth_qpid_principal')
+        if not self.keytab:
+            self.keytab = tg_config.get('identity.krb_auth_qpid_keytab')
+        self.auth_mgr = AuthManager(primary_principal=self.principal, keytab=self.keytab)

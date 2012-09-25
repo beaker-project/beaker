@@ -70,6 +70,12 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         print "No admin account exists, please create one with --user"
         sys.exit(1)
 
+    # Create distro_expire perm if not present
+    try:
+        distro_expire_perm = Permission.by_name(u'distro_expire')
+    except NoResultFound:
+        distro_expire_perm = Permission(u'distro_expire')
+
     # Create proxy_auth perm if not present
     try:
         proxy_auth_perm = Permission.by_name(u'proxy_auth')

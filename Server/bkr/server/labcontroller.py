@@ -225,14 +225,7 @@ class LabControllers(RPCRoot):
         lab_controller = identity.current.user.lab_controller
         for distro_tree_id in distro_tree_ids:
             distro_tree = DistroTree.by_id(distro_tree_id)
-            for lca in list(distro_tree.lab_controller_assocs):
-                if lca.lab_controller == lab_controller:
-                    distro_tree.lab_controller_assocs.remove(lca)
-                    distro_tree.activity.append(DistroTreeActivity(
-                            user=identity.current.user, service=u'XMLRPC',
-                            action=u'Removed', field_name=u'lab_controller_assocs',
-                            old_value=u'%s %s' % (lca.lab_controller, lca.url),
-                            new_value=None))
+            distro_tree.expire(lab_controller=lab_controller)
         return True
 
     @cherrypy.expose

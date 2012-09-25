@@ -29,7 +29,6 @@ class BeakerBus(object):
 
     # XXX Config file ?
     _reconnect = False
-    _auth_mgr = None
     _fetch_timeout = 60
     _broker = None
     _reconnect_interval = 10
@@ -38,7 +37,6 @@ class BeakerBus(object):
     connection_lock = Lock()
 
 
-    @classmethod
     def do_krb_auth(self):
         raise NotImplementedError('Configured to use kerberos auth but not implemented by class %s' % self.__name__)
 
@@ -89,7 +87,13 @@ class BeakerBus(object):
         finally:
             self.connection_lock.release()
 
-    def __init__(self, connection=None, *args, **kw):
+    def __init__(self, connection=None, krb=False, *args, **kw):
+        if krb:
+            self.krb_auth = True
+            self.principal = kw.get('principal', None)
+            self.keytab = kw.get('keytab', None)
+        else:
+            self.krb_auth = False
         if connection is None:
             connection = self._manage_initial_connection()
         self.stopped = False
