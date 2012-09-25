@@ -10,6 +10,7 @@ is installed on your system. See :manpage:`bkr(1)`.
 .. toctree::
    :maxdepth: 1
 
+   beaker-wizard
    bkr
    bkr-distro-trees-list
    bkr-distro-trees-verify

@@ -11,7 +11,7 @@ include ../py_rules.mk
 
 .PHONY: build
 build: $(_SETUP_PY)
-	env PYTHONPATH=../Common$${PYTHONPATH:+:$$PYTHONPATH} \
+	env PYTHONPATH=../Common:src:$${PYTHONPATH:+:$$PYTHONPATH} \
 	    python $(SETUP_PY) build \
 	    | tee build.out
 	@if grep -q ImportError build.out ; then \
