@@ -1084,26 +1084,6 @@ recipe_task_table =Table('recipe_task',metadata,
         mysql_engine='InnoDB',
 )
 
-recipe_role_table = Table('recipe_role', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_id', Integer,
-                ForeignKey('recipe.id')),
-        Column('role',Unicode(255)),
-        Column('system_id', Integer,
-                ForeignKey('system.id')),
-        mysql_engine='InnoDB',
-)
-
-recipe_task_role_table = Table('recipe_task_role', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_task_id', Integer,
-                ForeignKey('recipe_task.id')),
-        Column('role',Unicode(255)),
-        Column('system_id', Integer,
-                ForeignKey('system.id')),
-        mysql_engine='InnoDB',
-)
-        
 recipe_task_param_table = Table('recipe_task_param', metadata,
         Column('id', Integer, primary_key=True),
         Column('recipe_task_id', Integer,
@@ -4656,9 +4636,9 @@ class Recipe(TaskBase):
                 ks_appends.appendChild(ks_append.to_xml())
         recipe.appendChild(ks_appends)
             
-        if self.roles and not clone:
+        if not self.is_queued() and not clone:
             roles = xmldoc.createElement("roles")
-            for role in self.roles.to_xml():
+            for role in self.roles_to_xml():
                 roles.appendChild(role)
             recipe.appendChild(roles)
         repos = xmldoc.createElement("repos")
@@ -5136,94 +5116,26 @@ class Recipe(TaskBase):
         return cls.query.filter(Recipe.recipeset.has(
                 RecipeSet.job.has(Job.owner == owner)))
 
+    def peer_roles(self):
+        """
+        Returns dict of (role -> recipes) for all "peer" recipes (recipes in 
+        the same recipe set as this recipe, *including this recipe*).
+        """
+        result = {}
+        for peer in self.recipeset.recipes:
+            result.setdefault(peer.role, []).append(peer)
+        return result
 
-class RecipeRoleListAdapter(object):
-    def __init__(self, parent, role):
-        self.__parent = parent
-        self.__role = role
+    def roles_to_xml(self):
+        for key, recipes in sorted(self.peer_roles().iteritems()):
+            role = xmldoc.createElement("role")
+            role.setAttribute("value", "%s" % key)
+            for recipe in recipes:
+                system = xmldoc.createElement("system")
+                system.setAttribute("value", "%s" % recipe.system)
+                role.appendChild(system)
+            yield(role)
 
-    def __cached(self):
-        try:
-            return self.__cached_systems
-        except AttributeError:
-            self.__cached_systems = [item.system for item in self.__parent._roles if item.role == self.__role]
-            return self.__cached_systems
-    __cached = property(__cached)
-
-    def __delcached(self):
-        try:
-            del self.__cached_systems
-        except AttributeError:
-            pass
-
-    def __iter__(self):
-        return iter(self.__cached)
-
-    def __eq__(self, other):
-        return list(self) == list(other)
-
-    def __repr__(self):
-        return repr(list(self))
-
-    def append(self, item):
-        self.__delcached()
-        self.__parent._roles.append(RecipeRole(self.__role, item))
-
-    def __getitem__(self, index):
-        return self.__cached[index]
-
-    def __setitem__(self, index, value):
-        self.__delcached()
-        [item for item in self.__parent._roles if item.role == self.__role][index].roles = value
-        self.__cached[index] = value
-
-
-class RecipeRoleDictAdapterAttribute(object):
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        class RecipeRoleDictAdapter(object):
-            def __getitem__(self, role):
-                return RecipeRoleListAdapter(instance, role)
-            def keys(self):
-                return iter(set([item.role for item in instance._roles]))
-            def __eq__(self, other):
-                return dict(self) == dict(other)
-            def __repr__(self):
-                return repr(dict(self))
-            def to_xml(self):
-                """ For each key return an xml dom
-                """
-                for key in self.keys():
-                    role = xmldoc.createElement("role")
-                    role.setAttribute("value", "%s" % key)
-                    for s in RecipeRoleListAdapter(instance, key):
-                        system = xmldoc.createElement("system")
-                        system.setAttribute("value", "%s" % s)
-                        role.appendChild(system)
-                    yield(role)
-
-            # other dict like methods
-
-        return RecipeRoleDictAdapter()
-
-    def __set__(self, instance, somedict):
-        l =[]
-        for key, somelist in somedict.items():
-            for item in somelist:
-                l.append(RecipeRole(key, item))
-                instance._roles = l
-
-
-Recipe.roles = RecipeRoleDictAdapterAttribute()
-
-class RecipeRole(MappedObject):
-    """ Holds the roles for every Recipe
-    """
-    def __init__(self, role, system):
-        super(RecipeRole, self).__init__()
-        self.role = role
-        self.system = system
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
@@ -5346,9 +5258,9 @@ class RecipeTask(TaskBase):
             task.appendChild(rpm)
         if self.duration and not clone:
             task.setAttribute("duration", "%s" % self.duration)
-        if self.roles and not clone:
+        if not self.is_queued() and not clone:
             roles = xmldoc.createElement("roles")
-            for role in self.roles.to_xml():
+            for role in self.roles_to_xml():
                 roles.appendChild(role)
             task.appendChild(roles)
         params = xmldoc.createElement("params")
@@ -5644,93 +5556,36 @@ class RecipeTask(TaskBase):
    
     score = property(no_value)
 
-class RecipeTaskRoleListAdapter(object):
-    def __init__(self, parent, role):
-        self.__parent = parent
-        self.__role = role
+    def peer_roles(self):
+        """
+        Returns dict of (role -> recipetasks) for all "peer" RecipeTasks, 
+        *including this RecipeTask*. A peer RecipeTask is one which appears at 
+        the same position in another recipe from the same recipe set as this 
+        recipe.
+        """
+        result = {}
+        i = self.recipe.tasks.index(self)
+        for peer in self.recipe.recipeset.recipes:
+            # Roles are only shared amongst like recipe types
+            if type(self.recipe) != type(peer):
+                continue
+            if i >= len(peer.tasks):
+                # We have uneven tasks
+                continue
+            peertask = peer.tasks[i]
+            result.setdefault(peertask.role, []).append(peertask)
+        return result
 
-    def __cached(self):
-        try:
-            return self.__cached_systems
-        except AttributeError:
-            self.__cached_systems = [item.system for item in self.__parent._roles if item.role == self.__role]
-            return self.__cached_systems
-    __cached = property(__cached)
+    def roles_to_xml(self):
+        for key, recipetasks in sorted(self.peer_roles().iteritems()):
+            role = xmldoc.createElement("role")
+            role.setAttribute("value", "%s" % key)
+            for recipetask in recipetasks:
+                system = xmldoc.createElement("system")
+                system.setAttribute("value", "%s" % recipetask.recipe.system)
+                role.appendChild(system)
+            yield(role)
 
-    def __delcached(self):
-        try:
-            del self.__cached_systems
-        except AttributeError:
-            pass
-
-    def __iter__(self):
-        return iter(self.__cached)
-
-    def __eq__(self, other):
-        return list(self) == list(other)
-
-    def __repr__(self):
-        return repr(list(self))
-
-    def append(self, item):
-        self.__delcached()
-        self.__parent._roles.append(RecipeTaskRole(self.__role, item))
-
-    def __getitem__(self, index):
-        return self.__cached[index]
-
-    def __setitem__(self, index, value):
-        self.__delcached()
-        [item for item in self.__parent._roles if item.role == self.__role][index].roles = value
-        self.__cached[index] = value
-
-
-class RecipeTaskRoleDictAdapterAttribute(object):
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        class RecipeTaskRoleDictAdapter(object):
-            def __getitem__(self, role):
-                return RecipeTaskRoleListAdapter(instance, role)
-            def keys(self):
-                return iter(set([item.role for item in instance._roles]))
-            def __eq__(self, other):
-                return dict(self) == dict(other)
-            def __repr__(self):
-                return repr(dict(self))
-            def to_xml(self):
-                """ For each key return an xml dom
-                """
-                for key in self.keys():
-                    role = xmldoc.createElement("role")
-                    role.setAttribute("value", "%s" % key)
-                    for s in RecipeTaskRoleListAdapter(instance, key):
-                        system = xmldoc.createElement("system")
-                        system.setAttribute("value", "%s" % s)
-                        role.appendChild(system)
-                    yield(role)
-
-            # other dict like methods
-
-        return RecipeTaskRoleDictAdapter()
-
-    def __set__(self, instance, somedict):
-        l =[]
-        for key, somelist in somedict.items():
-            for item in somelist:
-                l.append(RecipeTaskRole(key, item))
-                instance._roles = l
-
-
-RecipeTask.roles = RecipeTaskRoleDictAdapterAttribute()
-
-class RecipeTaskRole(MappedObject):
-    """ Holds the roles for every task
-    """
-    def __init__(self, role, system):
-        super(RecipeTaskRole, self).__init__()
-        self.role = role
-        self.system = system
 
 class RecipeTaskParam(MappedObject):
     """
@@ -6579,7 +6434,6 @@ mapper(Recipe, recipe_table,
                       'repos':relation(RecipeRepo),
                       'rpms':relation(RecipeRpm, backref='recipe'),
                       'logs':relation(LogRecipe, backref='parent', cascade='delete, delete-orphan'),
-                      '_roles':relation(RecipeRole),
                       'custom_packages':relation(TaskPackage,
                                         secondary=task_packages_custom_map),
                       'ks_appends':relation(RecipeKSAppend),
@@ -6607,20 +6461,11 @@ mapper(RecipeTask, recipe_task_table,
                       'bugzillas':relation(RecipeTaskBugzilla, 
                                            backref='recipetask'),
                       'task':relation(Task, uselist=False, backref='runs'),
-                      '_roles':relation(RecipeTaskRole),
                       'logs':relation(LogRecipeTask, backref='parent', cascade='delete, delete-orphan'),
                       'watchdog':relation(Watchdog, uselist=False),
                      }
       )
 
-mapper(RecipeRole, recipe_role_table,
-        properties = {'system':relation(System, uselist=False),
-                     }
-      )
-mapper(RecipeTaskRole, recipe_task_role_table,
-        properties = {'system':relation(System, uselist=False),
-                     }
-      )
 mapper(RecipeTaskParam, recipe_task_param_table)
 mapper(RecipeTaskComment, recipe_task_comment_table,
         properties = {'user':relation(User, uselist=False, backref='comments')})

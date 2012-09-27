@@ -290,11 +290,12 @@ def create_tasks(xmljob):
         create_task(name=name)
 
 def create_recipe(system=None, distro_tree=None, task_list=None,
-    task_name=u'/distribution/reservesys', whiteboard=None, server_log=False):
+        task_name=u'/distribution/reservesys', whiteboard=None,
+        server_log=False, role=None):
     if not distro_tree:
         distro_tree = create_distro_tree()
     recipe = MachineRecipe(ttasks=1, system=system, whiteboard=whiteboard,
-            distro_tree=distro_tree)
+            distro_tree=distro_tree, role=role)
     recipe.distro_requires = recipe.distro_tree.to_xml().toxml()
 
     if not server_log:
@@ -382,9 +383,9 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_, system=None,
     assert result in TaskResult
     if finish_time is None:
         finish_time = datetime.datetime.utcnow()
-    if system is None:
+    if not recipe.system and not system:
         recipe.system = create_system(arch=recipe.arch)
-    else:
+    elif system:
         recipe.system = system
     recipe.start_time = start_time or datetime.datetime.utcnow()
     recipe.recipeset.queue_time = datetime.datetime.utcnow()

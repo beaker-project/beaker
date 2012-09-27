@@ -1316,6 +1316,35 @@ class TaskTypeTest(unittest.TestCase):
         self.assertEquals(TaskType.query.filter_by(type=u'CookieMonster').count(), 1)
 
 
+class RecipeTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.rollback()
+
+    def test_roles_to_xml(self):
+        dt = data_setup.create_distro_tree()
+        lc = data_setup.create_labcontroller()
+        systems = [
+            data_setup.create_system(fqdn='server.roles_to_xml', lab_controller=lc),
+            data_setup.create_system(fqdn='clientone.roles_to_xml', lab_controller=lc),
+            data_setup.create_system(fqdn='clienttwo.roles_to_xml', lab_controller=lc),
+        ]
+        job = data_setup.create_job_for_recipes([
+            data_setup.create_recipe(distro_tree=dt, system=systems[0], role='SERVER'),
+            data_setup.create_recipe(distro_tree=dt, system=systems[1], role='CLIENTONE'),
+            data_setup.create_recipe(distro_tree=dt, system=systems[2], role='CLIENTTWO'),
+        ])
+        data_setup.mark_job_complete(job)
+        xml = job.recipesets[0].recipes[0].to_xml(clone=False).toxml()
+        self.assert_('<roles>'
+                '<role value="CLIENTONE"><system value="clientone.roles_to_xml"/></role>'
+                '<role value="CLIENTTWO"><system value="clienttwo.roles_to_xml"/></role>'
+                '<role value="SERVER"><system value="server.roles_to_xml"/></role>'
+                '</roles>' in xml, xml)
+
 class GuestRecipeTest(unittest.TestCase):
 
     def setUp(self):
@@ -1336,6 +1365,7 @@ class GuestRecipeTest(unittest.TestCase):
                 distro_tree=distro_tree, system=guest_system)
         job.recipesets[0].recipes[0].guests.append(guest_recipe)
         job.recipesets[0].recipes.append(guest_recipe)
+        session.flush()
 
         guestxml = guest_recipe.to_xml().toxml()
         self.assert_('location="nfs://something:/somewhere"' in guestxml, guestxml)

@@ -421,21 +421,6 @@ def scheduled_recipes(*args):
                     break
                 recipe.waiting()
 
-                # Go Through each recipe and find out everyone's role.
-                for peer in recipe.recipeset.recipes:
-                    recipe.roles[peer.role].append(peer.system)
-
-                # Go Through each task and find out the roles of everyone else
-                for i, task in enumerate(recipe.tasks):
-                    for peer in recipe.recipeset.recipes:
-                        # Roles are only shared amongst like recipe types
-                        if type(recipe) == type(peer):
-                            try:
-                                task.roles[peer.tasks[i].role].append(peer.system)
-                            except IndexError:
-                                # We have uneven tasks
-                                pass
-
                 repo_fail = []
                 if not recipe.harness_repo():
                     repo_fail.append(u'harness')

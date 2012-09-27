@@ -18,3 +18,23 @@ To roll back, run the following SQL:
         MODIFY system_id INT NOT NULL,
         ADD CONSTRAINT watchdog_system_id_fk
             FOREIGN KEY (system_id) REFERENCES system (id);
+
+
+Remove recipe_role and recipe_task_role tables
+----------------------------------------------
+
+Run the following SQL:
+
+    DROP TABLE recipe_role;
+    DROP TABLE recipe_task_role;
+
+To roll back, run beaker-init to recreate the recipe_role and recipe_task_role
+tables, then run the following SQL to populate them:
+
+    INSERT INTO recipe_role (id, recipe_id, role, system_id)
+        SELECT NULL, id, role, system_id
+        FROM recipe;
+    INSERT INTO recipe_task_role (id, recipe_task_id, role, system_id)
+        SELECT NULL, recipe_task.id, recipe.role, recipe.system_id
+        FROM recipe_task
+        INNER JOIN recipe ON recipe_task.recipe_id = recipe.id;
