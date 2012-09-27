@@ -32,7 +32,7 @@ Repo Layout
       Templates of controllers and custom widgets are found here.
 
 
-* Lab Controller/
+* LabController/
   This contains all the source code for the lab controller.
 
     + addDistro/
@@ -40,27 +40,30 @@ Repo Layout
       See [the installation guide](http://beaker-project.org/guide/Installation-Setup_Lab_Controller-AddDistro_Jobs.html)
       for details.
 
-    + conf.d/
+    + apache/beaker-lab-controller.conf
       Apache configuration file. Used to configure the serving of various files
       including logs.
+
+    + apache/404.html
+      Custom 404 error page for logs.
+
+    + aux/anamon, aux/anamon.init
+      "Anamon", the Anaconda monitoring script. This runs during Anaconda
+      installations and periodically uploads Anaconda logs to Beaker.
 
     + cron.hourly/
       Anything to be run as a cron job on the lab controller goes in here.
       Currently contains a single script that expires distros.
 
-    + proxy/
-      Contains the source code for the core functionality that is generically
-      termed the 'lab controller'.
+    + init.d/
+      Contains the init scripts for the individual lab controller processes.
 
-        - init.d/
-          Contains the init scripts for the individual lab controller processes.
+    + src/bkr/labcontroller/
+      Modules that act as entry points for the main processes listed in
+      init.d/, as well as related modules.
 
-        - src/bkr/labcontroller/
-          Modules that act as entry points for the main processes listed in
-          init.d/, as well as related modules.
-
-        - src/bkr/labcontroller/power-scripts
-          Contains scripts responsible for power cycling test machines.
+    + src/bkr/labcontroller/power-scripts
+      Contains scripts responsible for power cycling test machines.
 
 
 * IntegrationTests/
