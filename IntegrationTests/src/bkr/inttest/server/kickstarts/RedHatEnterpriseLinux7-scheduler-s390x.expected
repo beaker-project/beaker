@@ -1,18 +1,15 @@
 url --url=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/
 
-
 auth --useshadow --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
 # Use text mode install
 text
 # no specific network configuration
-
 repo --name=repos_Server-optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/os
 repo --name=repos_debug_Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/debuginfo
 repo --name=repos_debug_Server_optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/debuginfo
 repo --name=repos_Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/
-
 
 firewall --disabled
 # Run the Setup Agent on first boot
@@ -34,21 +31,16 @@ timezone America/New_York
 # Install OS instead of upgrade
 install
 
-
 zerombr
 clearpart --all --initlabel
 
 autopart
-
 # Error: no snippet data for RedHatEnterpriseLinux7
-
 # Error: no snippet data for system
-
 
 %packages --ignoremissing
 # readahead conflicts with auditd, see bug 561486 for detailed explanation.
 -readahead
-
 
 @desktop-platform-devel
 @development
@@ -69,7 +61,6 @@ emacs
 sendmail
 unifdef
 vim-enhanced
-
 %end
 
 
@@ -81,11 +72,8 @@ wget -O - http://lab.test-kickstart.invalid:8000/install_start/test02.test-kicks
 
 wget -O /tmp/anamon 'http://lab.test-kickstart.invalid/beaker/anamon'
 python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
-
 # Error: no snippet data for RedHatEnterpriseLinux7_pre
-
 # Error: no snippet data for system_pre
-
 %end
 
 
@@ -116,7 +104,6 @@ RECIPE_ID="@RECIPEID@"
 LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
 __EOT__
 
-
 # readahead conflicts with auditd, see bug 561486 for detailed explanation.
 
 cat << EOF >>/etc/sysconfig/readahead
@@ -130,7 +117,6 @@ READAHEAD_COLLECT="no"
 READAHEAD_COLLECT_ON_RPM="no"
 
 EOF
-
 
 /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
 /sbin/chkconfig ntpd on >/dev/null 2>&1 || :
@@ -190,7 +176,6 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-
 
 #Add Task Repo
 cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
@@ -291,10 +276,7 @@ setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
 # Error: no snippet data for RedHatEnterpriseLinux7_post
-
 # Error: no snippet data for system_post
-
-
 %end
 
 # Disable rhts-compat for Fedora15 and newer.
@@ -304,7 +286,6 @@ export RHTS_OPTION_COMPATIBLE=
 export RHTS_OPTION_COMPAT_SERVICE=
 END
 %end
-
 
 
 

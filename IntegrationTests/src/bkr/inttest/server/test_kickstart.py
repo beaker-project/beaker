@@ -926,6 +926,40 @@ bootloader --location=mbr
         self.assert_('# Add Harness Repo' in klines, k)
         self.assert_('yum -y install beah' in klines, k)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=801676
+    def test_custom_kickstart_ssh_keys(self):
+        user = data_setup.create_user(password=u'password')
+        user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'lolthisismykey', u'description'))
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.loaned = user
+        system.user = user
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <kickstart><![CDATA[
+install
+%packages
+mysillypackage
+%end
+                        ]]></kickstart>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('ssh-rsa lolthisismykey description' in k.splitlines(), k)
+
     def test_no_debug_repos(self):
         recipe = self.provision_recipe('''
             <job>

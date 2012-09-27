@@ -1,14 +1,12 @@
 nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-4/U9/AS/x86_64/tree/
 #url --url=nfs://lab.test-kickstart.invalid:/distros/RHEL-4/U9/AS/x86_64/tree/
 
-
 authconfig --enableshadow --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
 
 
 # no specific network configuration
-
 firewall --disabled
 # System keyboard
 keyboard us
@@ -28,21 +26,16 @@ timezone America/New_York
 # Install OS instead of upgrade
 install
 
-
 zerombr
 clearpart --all --initlabel
 
 autopart
-
 # Error: no snippet data for RedHatEnterpriseLinux4
-
 # Error: no snippet data for system
-
 
 %packages --resolvedeps --ignoremissing
 # readahead conflicts with auditd, see bug 561486 for detailed explanation.
 -readahead
-
 
 @desktop-platform-devel
 @development
@@ -66,7 +59,6 @@ vim-enhanced
 
 
 
-
 %pre --log=/dev/console
 set -x
 # Check in with Beaker Server
@@ -74,11 +66,8 @@ wget -O - http://lab.test-kickstart.invalid:8000/install_start/test01.test-kicks
 
 wget -O /tmp/anamon 'http://lab.test-kickstart.invalid/beaker/anamon'
 python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
-
 # Error: no snippet data for RedHatEnterpriseLinux4_pre
-
 # Error: no snippet data for system_pre
-
 
 %post --log=/dev/console
 set -x
@@ -107,7 +96,6 @@ RECIPE_ID="@RECIPEID@"
 LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
 __EOT__
 
-
 # readahead conflicts with auditd, see bug 561486 for detailed explanation.
 
 cat << EOF >>/etc/sysconfig/readahead
@@ -121,7 +109,6 @@ READAHEAD_COLLECT="no"
 READAHEAD_COLLECT_ON_RPM="no"
 
 EOF
-
 
 /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
 /sbin/chkconfig ntpd on >/dev/null 2>&1 || :
@@ -268,11 +255,7 @@ setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
 # Error: no snippet data for RedHatEnterpriseLinux4_post
-
 # Error: no snippet data for system_post
-
-
-
 
 
 

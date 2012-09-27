@@ -5009,31 +5009,31 @@ class Recipe(TaskBase):
             if self.distro_tree.distro.osversion.osmajor.osmajor == u'RedHatEnterpriseLinux3':
                 kicktemplate = """
 %(beforepackages)s
-{{ snippet('rhts_packages') }}
+{%% snippet 'rhts_packages' %%}
 %(afterpackages)s
 
 %%pre
 (
-{{ snippet('rhts_pre') }}
+{%% snippet 'rhts_pre' %%}
 ) 2>&1 | /usr/bin/tee /dev/console
 
 %%post
 (
-{{ snippet('rhts_post') }}
+{%% snippet 'rhts_post' %%}
 ) 2>&1 | /usr/bin/tee /dev/console
                 """
             else:
                 kicktemplate = """
 %(beforepackages)s
-{{ snippet('rhts_packages') }}
+{%% snippet 'rhts_packages' %%}
 %(afterpackages)s
 
 %%pre --log=/dev/console
-{{ snippet('rhts_pre') }}
+{%% snippet 'rhts_pre' %%}
 {{ end }}
 
 %%post --log=/dev/console
-{{ snippet('rhts_post') }}
+{%% snippet 'rhts_post' %%}
 {{ end }}
                 """
             kickstart = kicktemplate % dict(

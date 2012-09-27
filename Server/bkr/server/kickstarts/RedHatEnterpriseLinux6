@@ -1,10 +1,10 @@
 {% if sysprofile %}
 {% for snippet_profile in sysprofile|split(';') %}
 # Snippet Profile: {{ snippet_profile }}
-{{ snippet(snippet_profile) }}
+{% snippet snippet_profile %}
 {% endfor  %}
 {% else %}
-{{ snippet('install_method') }}
+{% snippet 'install_method' %}
 
 key --skip
 
@@ -17,7 +17,7 @@ bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_option
 
 {{ mode|default('cmdline') }}
 
-{{ snippet('network') }}
+{% snippet 'network' %}
 {#
 ## Firewall configuration
 ## firewall in kickstart metadata will enable the firewall
@@ -54,17 +54,17 @@ timezone {{ timezone|default('America/New_York') }}
 # Install OS instead of upgrade
 install
 
-{{ snippet('anaconda_repos') }}
-{{ snippet('rhts_devices') }}
-{{ snippet('rhts_partitions') }}
-{{ snippet('RedHatEnterpriseLinux6') }}
-{{ snippet('system') }}
+{% snippet 'anaconda_repos' %}
+{% snippet 'rhts_devices' %}
+{% snippet 'rhts_partitions' %}
+{% snippet 'RedHatEnterpriseLinux6' %}
+{% snippet 'system' %}
 
 %packages --ignoremissing
 {%- if packages is undefined %} --default
 {% else %}
 
-{{ snippet('rhts_packages') }}
+{% snippet 'rhts_packages' %}
 {% endif %}
 
 {% endif %}{# manual #}
@@ -72,16 +72,15 @@ install
 {% endif %}{# sysprofile #}
 
 %pre --log=/dev/console
-{{ snippet('rhts_pre') }}
-{{ snippet('RedHatEnterpriseLinux6_pre') }}
-{{ snippet('system_pre') }}
+{% snippet 'rhts_pre' %}
+{% snippet 'RedHatEnterpriseLinux6_pre' %}
+{% snippet 'system_pre' %}
 
 %post --log=/dev/console
-{{ snippet('rhts_post') }}
-{{ snippet('RedHatEnterpriseLinux6_post') }}
-{{ snippet('system_post') }}
-{{ snippet('ssh_keys') }}
+{% snippet 'rhts_post' %}
+{% snippet 'RedHatEnterpriseLinux6_post' %}
+{% snippet 'system_post' %}
 
 {{ ks_appends|join('\n') }}
-{{ snippet('post_s390_reboot') }}
-{{ snippet('postreboot') }}
+{% snippet 'post_s390_reboot' %}
+{% snippet 'postreboot' %}
