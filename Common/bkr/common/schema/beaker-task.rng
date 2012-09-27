@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0"
+         datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes"
+         xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0">
+  <start>
+    <ref name="task"/>
+  </start>
+  <define name="task">
+    <element name="task">
+      <interleave>
+        <attribute name="name">
+          <data type="string"/>
+          <a:documentation xml:lang="en">
+            The name of the task, consists of namespaces seperated by '/'
+          </a:documentation>
+        </attribute>
+        <attribute name="creation_date">
+          <data type="string"/>
+          <a:documentation xml:lang="en">
+            This is the datetime when the task was initially created
+          </a:documentation>
+        </attribute>
+        <attribute name="destructive" >
+          <data type="boolean"/>
+          <a:documentation xml:lang="en">
+            A destructive task is one that destroys data on the machine
+          </a:documentation>
+        </attribute>
+        <attribute name="nda">
+          <data type="boolean"/>
+          <a:documentation xml:lang="en">
+            This is to inform whether or not the task is subject to
+            a non disclosure agreement
+          </a:documentation>
+        </attribute>
+        <attribute name="version">
+          <a:documentation xml:lang="en">
+            The current version of the task. The tracking of this
+            revision is upto the maintainer of the task. It will
+            be reflected in the rpm name
+          </a:documentation>
+        </attribute>
+        <ref name="description"/>
+        <ref name="owner"/>
+        <optional>
+          <ref name="types"/>
+        </optional>
+        <optional>
+          <ref name="excludedDistroFamilies"/>
+        </optional>
+        <optional>
+          <ref name="excludedArches"/>
+        </optional>
+        <optional>
+          <ref name="runFor"/>
+        </optional>
+        <optional>
+          <ref name="requires"/>
+        </optional>
+        <optional>
+          <ref name="bugzillas"/>
+        </optional>
+        <optional>
+          <ref name="repo"/>
+        </optional>
+        <ref name="rpms"/>
+        <ref name="path"/>
+      </interleave>
+    </element>
+  </define>
+  <define name="description">
+    <element name="description">
+      <data type="string"/>
+      <a:documentation xml:lang="en">
+        This is element is descriptive text explaining
+        the purpose of the task
+      </a:documentation>
+    </element>
+  </define>
+  <define name="owner">
+    <element name="owner">
+      <data type='string'/>
+      <a:documentation xml:lang="en">
+        This is the owner of the task. This correlates
+        to the initial uploader. This value is non transferrable
+      </a:documentation>
+    </element>
+  </define>
+  <define name="types">
+    <element name="types">
+      <oneOrMore>
+        <ref name="type"/>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="excludedDistroFamilies">
+    <element name="excludedDistroFamilies">
+      <a:description xml:lang="en">
+        This is all of the distro families, on which the
+        task will not run.
+      </a:description>
+      <oneOrMore>
+        <ref name="distroFamily"/>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="distroFamily">
+    <element name="distroFamily">
+      <data type="string"/>
+      <a:documentation xml:lang="en">
+        This is the name of the distro family (otherwise known as OSMajor)
+      </a:documentation>
+    </element>
+  </define>
+  <define name="excludedArches">
+    <element name="excludedArches">
+      <a:documentation xml:lang="en">
+        These are arches on which the task will not be run
+      </a:documentation>
+      <oneOrMore>
+        <ref name="arch"/>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="arch">
+    <element name="arch">
+      <data type="string"/>
+      <a:documentation xml:lang="en">
+        This is the hardware architecture
+      </a:documentation>
+    </element>
+  </define>
+  <define name="runFor">
+    <element name="runFor">
+      <a:documentation xml:lang="en">
+        This describes the different products/applications
+        that utilise this task
+      </a:documentation>
+      <oneOrMore>
+        <ref name="application"/>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="application">
+    <element name="application">
+      <data type="string"/>
+      <a:documentation xml:lang="en">
+        This can refer to anything that be loosely thought of as a product
+        or application
+      </a:documentation>
+    </element>
+  </define>
+  <define name="requires">
+    <element name="requires">
+      <a:documentation xml:lang="en">
+        Packages that are required to be installed for the task to run
+      </a:documentation>
+      <oneOrMore>
+        <ref name="package"/>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="package">
+    <element name="package">
+      <data type="string"/>
+      <a:documentation xml:lang="en">
+        This represents a package name which can be installed via
+        the yum command
+      </a:documentation>
+    </element>
+  </define>
+  <define name="bugzillas">
+    <element name="bugzillas">
+      <a:documentation xml:lang="en">
+        Contains one or more references to tickets in the Bugzilla
+        bug tracking system
+      </a:documentation>
+      <oneOrMore>
+        <ref name="bugzilla"/>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="bugzilla">
+    <element name="bugzilla">
+      <data type="int" />
+    </element>
+  </define>
+  <define name="repo">
+    <element name="repo">
+      <data type="anyURI"/>
+      <a:documentation xml:lang="en">
+        A location of the repo where the task lives
+      </a:documentation>
+    </element>
+  </define>
+  <define name="rpms">
+    <element name="rpms">
+      <interleave>
+        <optional>
+          <element name="oldrpm">
+            <ref name="rpm"/>
+          </element>
+        </optional>
+        <ref name="rpm"/>
+      </interleave>
+    </element>
+  </define>
+  <define name="rpm">
+    <element name="rpm">
+      <interleave>
+        <attribute name="name">
+          <data type="string"/>
+        </attribute>
+        <attribute name="url">
+          <a:description xml:lang="en">
+            This is the location of where the rpm is stored
+          </a:description>
+          <data type="anyURI"/>
+        </attribute>
+      </interleave>
+    </element>
+  </define>
+  <define name="type">
+    <element name="type">
+      <data type="string"/>
+      <a:documentation xml:lang="en">
+        This is a non specific category, used for high level grouping.
+        i.e 'KernelTier1' etc.
+      </a:documentation>
+    </element>
+  </define>
+  <define name="path">
+    <element name="path">
+      <data type='string'/>
+      <a:documentation xml:lang="en">
+        This is the path of the task when it's installed
+      </a:documentation>
+    </element>
+  </define>
+</grammar>

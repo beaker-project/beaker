@@ -20,20 +20,84 @@ import unittest
 import pkg_resources
 import lxml.etree
 
-class JobSchemaTest(unittest.TestCase):
-    
-    job_schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
-            'bkr.common', 'schema/beaker-job.rng'))
+class SchemaTest:
 
     def assert_valid(self, xml):
-        schema = lxml.etree.RelaxNG(self.job_schema_doc)
+        schema = lxml.etree.RelaxNG(self.schema_doc)
         schema.assertValid(lxml.etree.fromstring(xml))
 
     def assert_not_valid(self, xml, error_message):
-        schema = lxml.etree.RelaxNG(self.job_schema_doc)
+        schema = lxml.etree.RelaxNG(self.schema_doc)
         self.assert_(not schema.validate(lxml.etree.fromstring(xml)))
         messages = [str(e.message) for e in schema.error_log]
         self.assert_(error_message in messages, messages)
+
+class TaskSchemaTest(unittest.TestCase, SchemaTest):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
+        'bkr.common', 'schema/beaker-task.rng'))
+
+    def test_minimal_task(self):
+        self.assert_valid('''
+            <task name='/distribution/example' 
+                  creation_date='2010-05-0517:39:14'
+                  destructive='0'
+                  nda='0'
+                  version='1.0'>
+              <description>Testing description</description>
+              <owner>Me!</owner>
+              <rpms>
+                <rpm url='http://example.com/task.rpm' name='task.rpm' />
+              </rpms>
+              <path>/mnt/test/distribution/example</path>
+             </task>
+            ''')
+
+    def test_maximal_task(self):
+        self.assert_valid('''
+            <task name='/distribution/example' 
+                  creation_date='2010-05-05 17:39:14'
+                  destructive='0'
+                  nda='0'
+                  version='1.0'>
+              <description>Testing description</description>
+              <owner>Me!</owner>
+              <rpms>
+                <rpm url='http://example.com/task.rpm' name='task.rpm' />
+              </rpms>
+              <path>/mnt/test/distribution/example</path>
+              <excludedDistroFamilies>
+                <distroFamily>Major1</distroFamily>
+                <distroFamily>Major2</distroFamily>
+              </excludedDistroFamilies>
+              <excludedArches>
+                <arch>i386</arch>
+                <arch>s390x</arch>
+              </excludedArches>
+              <requires>
+                <package>selenium-python</package>
+                <package>some-valid-pacakge</package>
+              </requires>
+              <runFor>
+                <application>Beaker</application>
+                <application>Beah</application>
+              </runFor>
+              <bugzillas>
+                <bugzilla>893445</bugzilla>
+                <bugzilla>3424623</bugzilla>
+              </bugzillas>
+            </task>
+           ''')
+
+
+class JobSchemaTest(unittest.TestCase, SchemaTest):
+
+    @classmethod
+    def setupClass(cls):
+        cls.schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
+            'bkr.common', 'schema/beaker-job.rng'))
 
     def test_minimal_job(self):
         self.assert_valid('''

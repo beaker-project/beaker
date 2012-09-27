@@ -46,6 +46,7 @@ import crypt
 import random
 import string
 import cracklib
+import lxml.etree
 
 from turbogears import identity
 
@@ -5932,6 +5933,73 @@ class Task(MappedObject):
                     required = ['%s' % package for package in self.required],
                     bugzillas = ['%s' % bug.bugzilla_id for bug in self.bugzillas],
                    )
+
+    def to_xml(self, pretty=False):
+        task = lxml.etree.Element('task',
+                                  name=self.name,
+                                  creation_date=str(self.creation_date),
+                                  destructive=self.destructive or u'%s' % False,
+                                  nda=self.nda or u'%s' %  False,
+                                  version=str(self.version),
+                                  )
+
+        desc =  lxml.etree.Element('description')
+        desc.text =u'%s' % self.description
+        task.append(desc)
+
+        owner = lxml.etree.Element('owner')
+        owner.text = u'%s' % self.owner
+        task.append(owner)
+
+        path = lxml.etree.Element('path')
+        path.text = u'%s' % self.path
+        task.append(path)
+
+        rpms = lxml.etree.Element('rpms')
+        rpms.append(lxml.etree.Element('rpm',
+                                       url=absolute_url('/rpms/%s' % self.rpm),
+                                       name=u'%s' % self.rpm))
+        if self.oldrpm:
+            rpms.append(lxml.etree.Element('oldrpm',
+                                            name=self.rpm))
+        if self.bugzillas:
+            bzs = lxml.etree.Element('bugzillas')
+            for bz in self.bugzillas:
+                bz_elem = lxml.etree.Element('bugzilla')
+                bz_elem.text = bz.bugzilla_id
+                bzs.append(bz_elem)
+        if self.runfor:
+            runfor = lxml.etree.Element('application')
+            for package in self.runfor:
+                package_elem = lxml.etree.Element('package')
+                package_elem.text = package
+                runfor.append(package_elem)
+        if self.required:
+            requires = lxml.etree.Element('requires')
+            for required in self.required:
+                required_elem = lxml.etree.Element('package')
+                required_elem.text = package
+                requires.append(required_elem)
+        if self.types:
+            types = lxml.etree.Element('types')
+            for type in self.types:
+                type_elem = lxml.etree.Element('type')
+                type_elem.text = text.type
+                types.append(type_elem)
+        if self.excluded_osmajor:
+            excluded = lxml.etree.Element('excludedDistroFamilies')
+            for osmajor in excluded_osmajor:
+                osmajor_elem = lxml.Element('DistroFamily')
+                osmajor_elem.text = osmajor.osmajor
+                excluded.append(osmajor_elem)
+        if self.excluded_arch:
+            excluded = lxml.etree.Element('excludedArches')
+            for arch in self.excluded_arch:
+                arch_elem = lxml.Element('arch')
+                arch_elem.text=arch.arch
+                excluded.append(arch_elem)
+        return lxml.etree.tostring(task, pretty_print=pretty)
+
 
     def elapsed_time(self, suffixes=[' year',' week',' day',' hour',' minute',' second'], add_s=True, separator=', '):
         """
