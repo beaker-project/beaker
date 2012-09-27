@@ -18,7 +18,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import xmltramp
 import os
 import sys
 from bkr.server.model import *
@@ -28,6 +27,7 @@ from sqlalchemy import or_, and_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import aliased
 import datetime
+from lxml import etree
 
 class ElementWrapper(object):
     # Operator translation table
@@ -43,7 +43,7 @@ class ElementWrapper(object):
     subclassDict = []
 
     def get_subclass(self, element):
-        name = element._name
+        name = element.tag
 
         if name in self.subclassDict:
             return self.subclassDict[name]
@@ -59,14 +59,14 @@ class ElementWrapper(object):
 
     def __iter__(self):
         for child in self.wrappedEl:
-            if isinstance(child, xmltramp.Element):
+            if isinstance(child, etree._Element):
                 yield self.get_subclass(child)(child, self.subclassDict)
             else:
                 yield child
 
     def __getitem__(self, n):
         child = self.wrappedEl[n]
-        if isinstance(child, xmltramp.Element):
+        if isinstance(child, etree._Element):
             return self.get_subclass(child)(child, self.subclassDict)
         else:
             return child
@@ -76,24 +76,10 @@ class ElementWrapper(object):
         for child in self:
             child.recurse(visitor)
 
-    def get_text(self):
-        # Simple API for extracting textual content below this node, stripping
-        # out any markup
-        #print 'get_text: %s' % self
-        result = ''
-        for child in self:
-            if isinstance(child, ElementWrapper):
-                # Recurse:
-                result += child.get_text()
-            else:
-                #print child
-                result += child
-
-        return result
-
     def get_xml_attr(self, attr, typeCast, defaultValue):
-        if attr in self.wrappedEl._attrs:
-            return typeCast(self.wrappedEl(attr))
+        attributes = self.wrappedEl.attrib
+        if attr in attributes:
+            return typeCast(attributes[attr])
         else:
             return defaultValue
 
@@ -848,7 +834,7 @@ class XmlDistro(ElementWrapper):
 
 def apply_system_filter(filter, query):
     if isinstance(filter, basestring):
-        filter = XmlHost(xmltramp.parse(filter))
+        filter = XmlHost(etree.fromstring(filter))
     clauses = []
     for child in filter:
         if callable(getattr(child, 'filter', None)):
@@ -861,7 +847,7 @@ def apply_system_filter(filter, query):
 
 def apply_distro_filter(filter, query):
     if isinstance(filter, basestring):
-        filter = XmlDistro(xmltramp.parse(filter))
+        filter = XmlDistro(etree.fromstring(filter))
     clauses = []
     for child in filter:
         if callable(getattr(child, 'filter', None)):
