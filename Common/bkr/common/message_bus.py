@@ -1,4 +1,4 @@
-__all__ = [ "BeakerBus", "VALID_AMQP_TYPES"]
+__all__ = [ "BeakerBus"]
 
 import ConfigParser
 import os
@@ -22,7 +22,6 @@ except ImportError, e:
 import logging
 log = logging.getLogger(__name__)
 
-VALID_AMQP_TYPES=[list,dict,bool,int,long,float,unicode,dict,list,str,type(None)]
 _connection = None
 
 
@@ -37,28 +36,6 @@ class BeakerBus(object):
     _connection_attempts = 10
     _heartbeat_timeout = 60
     connection_lock = Lock()
-
-
-    class RPCInterface:
-
-        """ Provides a way of calling RPC as attributes
-        """
-
-        def __init__(self, bus, *args, **kw):
-            if  not isinstance(bus,BeakerBus):
-                raise TypeError('%s can only be used with %s, not %s' % \
-                    (self.__class__.__name__, BeakerBus.__name__, bus.__class__.__name__))
-            self.bus = bus
-
-        def __getattr__(self, name):
-            return _Method(curry(self.bus.send_action, 'service_queue'), name)
-
-        def __repr__(self):
-            return (
-                "<BeakerBusRPC for %s:%s>" %
-                (self.bus._broker, self.bus.service_queue_name))
-
-        __str__ = __repr__
 
 
     @classmethod
@@ -115,60 +92,18 @@ class BeakerBus(object):
     def __init__(self, connection=None, *args, **kw):
         if connection is None:
             connection = self._manage_initial_connection()
+        self.stopped = False
         self.conn = connection
-        self.rpc = self.RPCInterface(self)
 
-    def service_queue_sender(self, session, method, *args):
-        reply_to_queue_name = 'tmp.beaker-receive' + str(datatypes.uuid4())
-        reply_to_addr_string = reply_to_queue_name +'; { create:receiver, \
-                node: { type: queue, durable:False, \
-                x-declare: {exclusive: True, auto-delete:True, \
-                            arguments: { \'qpid.policy_type\': ring, \
-                                         \'qpid.max_size\': 50000000, \
-                                         \'qpid.last_value_queue\': 1 } }, \
-                x-bindings: [{ exchange: "' + self.direct_exchange + '", \
-                               key: "' + reply_to_queue_name + '", \
-                               queue: "' + reply_to_queue_name + '", } ] } }'
-        msg = Message(reply_to=reply_to_queue_name)
-        msg.properties['method'] = method
-        msg.properties['args'] = args
-        msg.subject = self.service_queue_name
-        msg.properties['qpid.LVQ_key'] = str(datatypes.uuid4())
-        while True:
-            self.send(session, self.direct_exchange, msg)
-            message_response = self.fetch(session,
-                                          reply_to_addr_string,
-                                          timeout=self._fetch_timeout)
-            if message_response is None:
-                log.debug('Try send/receive pattern again')
-                continue
-            if message_response.properties.get('error'):
-                raise BeakerException(message_response.content)
-            return message_response.content
+    def stop(self):
+        log.debug('%s is stopping' % self.__class__.__name__)
+        self.stopped = True
+        self.cleanup()
 
-    def send_action(self, method_name, *args, **kw):
-        log.debug('In send_action')
-        send_action = getattr(self, '%s_sender' % method_name, None)
-        if send_action is None:
-            raise BeakerException(u'%s is not a valid send handler' % method_name)
-
-        new_session = [self.conn.session()]
-        try:
-            log.debug('Calling %s from send_action' % send_action)
-            response = send_action(new_session, *args, **kw)
-            return response
-        finally:
-            new_session[0].close()
-
-    def listen_action(self, method_name, **args):
-        listen_action = getattr(self, '%s_listener' % method_name, None)
-        if listen_action is None:
-            raise BeakerException(u'%s is not a valid listen handler' % method_name)
-        new_session = [self.conn.session()]
-        try:
-            listen_action(new_session, *args)
-        finally:
-            new_session[0].close()
+    def cleanup(self):
+        log.debug('%s is cleaning up' % self.__class__.__name__)
+        self.conn.close()
+        log.debug('%s has cleaned up' % self.__class__.__name__)
 
     def _manage_connection(self, action, ssn):
         local_ssn = ssn[0]
@@ -221,24 +156,4 @@ class BeakerBus(object):
 
     def run(self, *args, **kw):
         raise NotImplementedError('class %s must implement run() method' % self.__class__.__name__)
-
-
-class _Method:
-
-
-    """A class that enables RPCs to be accessed as attributes ala xmlrpclib.ServerProxy
-       Inspired/ripped from xmlrpclib.ServerProxy
-    """
-
-    def __init__(self, send, name):
-        self.__send = send
-        self.__name = name
-
-    def __getattr__(self, name):
-        return _Method(self.__send, "%s.%s" % (self.__name, name))
-
-    def __call__(self, *args):
-        return self.__send(self.__name, *args)
-
-
 

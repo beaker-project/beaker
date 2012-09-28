@@ -2411,11 +2411,6 @@ class System(SystemObject):
         # Watchdog checking -- don't return a system with an active watchdog,
         # unless the correct watchdog has been passed in to be cleared
         if self.watchdog and self.watchdog == watchdog:
-            if get('beaker.qpid_enabled'):
-                from bkr.server.message_bus import ServerBeakerBus
-                bb = ServerBeakerBus()
-                bb.send_action('watchdog_notify', 'removed',
-                    [{'recipe_id' : self.watchdog.recipe_id, 'system' : self.watchdog.system.fqdn}], self.watchdog.system.lab_controller.fqdn)
             session.delete(self.watchdog)
         elif self.watchdog and watchdog is None:
             raise BX(_(u'System has active recipe %s') % self.watchdog.recipe_id)
@@ -3471,11 +3466,6 @@ class TaskBase(MappedObject):
         current_status = self.status
         if current_status != new_status:
             self.status = new_status
-            #Send msg that task has status has been updated
-            if get('beaker.qpid_enabled') is True:
-                from bkr.server.message_bus import ServerBeakerBus
-                bb = ServerBeakerBus()
-                bb.send_action('task_update', **self.task_info())
             return True
         else:
             return False

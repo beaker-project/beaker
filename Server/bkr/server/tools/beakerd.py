@@ -28,7 +28,6 @@ from bkr.server.bexceptions import BX, CobblerTaskFailedException
 from bkr.server.model import *
 from bkr.server.util import load_config, log_traceback
 from bkr.server.recipetasks import RecipeTasks
-from bkr.server.message_bus import ServerBeakerBus
 from turbogears.database import session
 from turbogears import config
 from turbomail.control import interface
@@ -387,13 +386,6 @@ def queued_recipes(*args):
                     # Create the watchdog without an Expire time.
                     log.debug("Created watchdog for recipe id: %s and system: %s" % (recipe.id, system))
                     recipe.watchdog = Watchdog(system=recipe.system)
-                    # If we start ok, we need to send event active watchdog event
-                    if config.get('beaker.qpid_enabled'):
-                        bb = ServerBeakerBus()
-                        bb.send_action('watchdog_notify', 'active',
-                            [{'recipe_id' : recipe.id, 
-                            'system' : recipe.watchdog.system.fqdn}], 
-                            recipe.watchdog.system.lab_controller.fqdn)
                     log.info("recipe ID %s moved from Queued to Scheduled" % recipe.id)
             session.commit()
         except exceptions.Exception:
@@ -526,10 +518,6 @@ def schedule():
 
     reload_config()
 
-    if config.get('beaker.qpid_enabled') is True:
-       bb = ServerBeakerBus()
-       bb.run()
-
     if config.get('carbon.address'):
         log.debug('starting metrics thread')
         metrics_thread = threading.Thread(target=metrics_loop, name='metrics')
@@ -574,8 +562,6 @@ def schedule():
        running = False
        event.set()
        rc = 0
-       if config.get('beaker.qpid_enabled')is True:
-           bb.stop()
 
     new_recipes_thread.join(10)
     processed_recipesets_thread.join(10)
@@ -616,10 +602,6 @@ def reload_config():
         interface.stop()
 
     load_config(opts.configfile)
-    config.update({'identity.krb_auth_qpid_principal':
-                       config.get('identity.krb_auth_beakerd_principal'),
-                   'identity.krb_auth_qpid_keytab':
-                       config.get('identity.krb_auth_beakerd_keytab')})
     interface.start(config)
 
 def main():

@@ -416,68 +416,6 @@ exec beaker-pxemenu --quiet
       </screen>
     </para>
   </section>
-  <section id='Installation-QPID'>
-  <title>Integration with QPID</title>
-    <section id="Installation-QPID-Introduction">
-      <title>Introduction</title>
-        <para>
-          From version 0.7 onwards Beaker is able to communicate over a QPID message bus. This is only for selected services. So far these are
-          the <emphasis>watchdog</emphasis> and the beaker client <emphasis>job-watch</emphasis>. The services that urtilise QPID may be expanded
-          in the future. The advantages for using services via QPID are mainly reduced server load and faster response times in a high traffic
-          beaker instance.
-        </para>
-
-    </section>
-    <section id="Installation-QPID-ConfigureBeaker">
-      <title>Configuring Beaker</title>
-      <para>To use QPID with Beaker there are a few extra settings that need to be configured</para>
-      <para>
-        Both the server, and the lab controllers will have an <emphasis>/etc/beaker/message_bus.conf</emphasis> file which
-        holds information about the QPID broker, exchange names etc. Here is an example.
-        <screen>
-        topic_exchange=amqp.topic
-        headers_exchange=amqp.headers
-        service_queue=example-service-queue
-        broker=test.hostname.com
-        krb_auth=True
-        </screen>
-      </para>
-
-      <para>
-        The config file <emphasis>/etc/beaker/server.cfg</emphasis> on the beaker server also needs a couple more config options
-        <screen>
-          beaker.qpid_enabled = True
-          beaker.qpid_listen_to=['beaker.expired_watchdogs', 'beaker.service_queue']
-         </screen>
-
-        In the watchdog config file, <emphasis>/etc/beaker/labcontroller.conf</emphasis> we need to add the following
-        <screen>
-          QPID_BUS=True
-          QPID_LISTEN_TO = ['beaker.watchdog']
-        </screen>
-        </para>
-     </section>
-    <section id="Installation-QPID-ConfigureQPID">
-    <title>Configuring QPID</title>
-    <para>
-      Beaker's packages do not contain a qpid broker, you will either have one already, or will need to install one.
-      Although each sites QPID broker acls may be different, here is an example of the kind of acls you may need with GSSAPI.
-    <screen>
-    acl allow beakerd/beaker-server.example.com@EXAMPLE.COM all exchange name=eso.topic
-    acl allow beakerd/beaker-server.example.com@EXAMPLE.COM all exchange name=eso.headers
-    acl allow beakerd/beaker-server.example.com@EXAMPLE.COM all exchange routingkey=tmp.*
-    acl allow beaker-server/beaker-server.example.com@EXAMPLE.COM all exchange name=eso.topic
-    acl allow beaker-server/beaker-server.example.com@EXAMPLE.COM all exchange name=eso.headers
-    acl allow beaker-watchdog/lab-controller.example.com@EXAMPLE.COM all exchange routingkey=tmp.*
-    acl allow all bind all
-    acl allow all access all
-    acl allow all consume all
-    acl allow all create queue name=tmp.*
-    </screen>
-    </para>
-
-    </section>
-    </section>
   </chapter>
   
 <!-- vim: set sw=2 : -->
