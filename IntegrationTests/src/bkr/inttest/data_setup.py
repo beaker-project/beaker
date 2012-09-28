@@ -32,7 +32,8 @@ from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arc
         LabControllerDistroTree, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
         LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
-        SystemGroup, DeviceClass, DistroTreeRepo, TaskPackage, KernelType
+        SystemGroup, DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
+        LogRecipeTaskResult
 
 log = logging.getLogger(__name__)
 
@@ -300,15 +301,28 @@ def create_recipe(system=None, distro_tree=None, task_list=None,
     else:
         rt_log = lambda: LogRecipeTask(server=u'http://dummy-archive-server/beaker/',
                 path=u'tasks', filename=u'dummy.txt')
+    if not server_log:
+        rtr_log = lambda: LogRecipeTaskResult(path=u'/', filename=u'result.txt')
+    else:
+        rtr_log = lambda: LogRecipeTask(server=u'http://dummy-archive-server/beaker/',
+                path=u'/', filename=u'result.txt')
 
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
             rt = RecipeTask(task=t)
             rt.logs = [rt_log()]
+            rtr = RecipeTaskResult(path=t.name + '/passed',
+                    result=TaskResult.pass_)
+            rtr.logs = [rtr_log()]
+            rt.results.append(rtr)
             recipe.tasks.append(rt)
     else:
         rt = RecipeTask(task=create_task(name=task_name))
         rt.logs = [rt_log()]
+        rtr = RecipeTaskResult(path=task_name + '/passed',
+                result=TaskResult.pass_)
+        rtr.logs = [rtr_log()]
+        rt.results.append(rtr)
         recipe.tasks.append(rt)
     return recipe
 

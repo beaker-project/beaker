@@ -116,6 +116,9 @@ class Recipes(RPCRoot):
 
         :param recipe_id: id of recipe
         :type recipe_id: integer
+
+        .. deprecated:: 0.9.4
+           Use :meth:`taskactions.files` instead.
         """
         try:
             recipe = Recipe.by_id(recipe_id)

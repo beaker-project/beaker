@@ -68,6 +68,14 @@ class TaskActions(RPCRoot):
                 raise BX(_("Invalid %s %s" % (task_type, task_id)))
         return task.to_xml(clone,from_job).toxml()
 
+    @cherrypy.expose
+    def files(self, taskid):
+        """
+        Returns an array of XML-RPC structures (dicts) describing each of the 
+        result files for the given job component and its descendants.
+        """
+        return TaskBase.get_by_t_id(taskid).all_logs
+
     @identity.require(identity.not_anonymous())
     @cherrypy.expose
     def stop(self, taskid, stop_type, msg):
