@@ -185,7 +185,8 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
 
 def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
         owner=None, fqdn=None, shared=False, exclude_osmajor=[],
-        exclude_osversion=[], hypervisor=None, kernel_type=None, **kw):
+        exclude_osversion=[], hypervisor=None, kernel_type=None,
+        date_added=None,  **kw):
     if owner is None:
         owner = create_user()
     if fqdn is None:
@@ -194,6 +195,8 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
         raise ValueError('Attempted to create duplicate system %s' % fqdn)
     system = System(fqdn=fqdn,type=type, owner=owner,
                 status=status, **kw)
+    if date_added is not None:
+        system.date_added = datetime.date(*map(int, date_added.split('-')))
     system.shared = shared
     system.arch.append(Arch.by_name(arch))
     configure_system_power(system)

@@ -2945,10 +2945,10 @@ class DistroTree(MappedObject):
 
     @classmethod
     def by_filter(cls, filter):
-        from bkr.server.needpropertyxml import apply_filter
+        from bkr.server.needpropertyxml import apply_distro_filter
         # Limit to distro trees which exist in at least one lab
         query = cls.query.filter(DistroTree.lab_controller_assocs.any())
-        query = apply_filter(filter, query)
+        query = apply_distro_filter(filter, query)
         return query.order_by(DistroTree.date_created.desc())
 
     def to_xml(self, clone=False):
@@ -2978,9 +2978,9 @@ class DistroTree(MappedObject):
         return distro_requires
 
     def systems_filter(self, user, filter, only_in_lab=False):
-        from bkr.server.needpropertyxml import apply_filter
+        from bkr.server.needpropertyxml import apply_system_filter
         systems = System.query
-        systems = apply_filter(filter, systems)
+        systems = apply_system_filter(filter, systems)
         systems = self.all_systems(user, systems)
         if only_in_lab:
             systems = systems.join(System.lab_controller)\

@@ -532,7 +532,7 @@ class Root(RPCRoot):
                                   'System/Model','System/Arch', 'System/User', 'System/Type') 
 
         if kw.get('xmlsearch'):
-            systems = needpropertyxml.apply_filter('<and>%s</and>' % kw['xmlsearch'], systems)
+            systems = needpropertyxml.apply_system_filter('<and>%s</and>' % kw['xmlsearch'], systems)
 
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']

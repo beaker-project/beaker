@@ -18,7 +18,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import xmltramp
 import os
 import sys
 from bkr.server.model import *
@@ -26,52 +25,49 @@ from turbogears.database import session
 import turbogears
 from sqlalchemy import or_, and_
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm import aliased
+import datetime
+from lxml import etree
 
 class ElementWrapper(object):
     # Operator translation table
     op_table = { '=' : '__eq__',
                  '==' : '__eq__',
+                 'like': 'like',
                  '!=' : '__ne__',
                  '>'  : '__gt__',
                  '>=' : '__ge__',
                  '<'  : '__lt__',
                  '<=' : '__le__'}
 
-    @classmethod
-    def get_subclass(cls, element):
-        name = element._name
+    subclassDict = []
 
-        if name in subclassDict:
-            return subclassDict[name]
+    def get_subclass(self, element):
+        name = element.tag
+
+        if name in self.subclassDict:
+            return self.subclassDict[name]
         return UnknownElement
     
-    def __init__(self, wrappedEl, alias=None):
+    def __init__(self, wrappedEl, subclassDict=None):
         self.wrappedEl = wrappedEl
-        if alias:
-            self.alias = alias
-        else:
-            ## Alias counter for each sub table
-            self.alias = { 'key_value'  : 0,
-                           'arch'       : {},
-                           'distro_tag' : 0,
-                           'system_group' : 0,
-                         }
-
+        if self.subclassDict == None:
+            self.subclassDict = subclassDict
 
     def __repr__(self):
         return '%s("%s")' % (self.__class__, repr(self.wrappedEl))
 
     def __iter__(self):
         for child in self.wrappedEl:
-            if isinstance(child, xmltramp.Element):
-                yield ElementWrapper.get_subclass(child)(child,self.alias)
+            if isinstance(child, etree._Element):
+                yield self.get_subclass(child)(child, self.subclassDict)
             else:
                 yield child
 
     def __getitem__(self, n):
         child = self.wrappedEl[n]
-        if isinstance(child, xmltramp.Element):
-            return ElementWrapper.get_subclass(child)(child,self.alias)
+        if isinstance(child, etree._Element):
+            return self.get_subclass(child)(child, self.subclassDict)
         else:
             return child
 
@@ -80,35 +76,50 @@ class ElementWrapper(object):
         for child in self:
             child.recurse(visitor)
 
-    def get_text(self):
-        # Simple API for extracting textual content below this node, stripping
-        # out any markup
-        #print 'get_text: %s' % self
-        result = ''
-        for child in self:
-            if isinstance(child, ElementWrapper):
-                # Recurse:
-                result += child.get_text()
-            else:
-                #print child
-                result += child
-
-        return result
-
     def get_xml_attr(self, attr, typeCast, defaultValue):
-        if attr in self.wrappedEl._attrs:
-            return typeCast(self.wrappedEl(attr))
+        attributes = self.wrappedEl.attrib
+        if attr in attributes:
+            return typeCast(attributes[attr])
         else:
             return defaultValue
+
+    def filter(self, joins):
+        queries = []
+        for child in self:
+            if callable(getattr(child, 'filter', None)):
+                (joins, query) = child.filter(joins)
+                if query is not None:
+                    queries.append(query)
+        if not queries:
+            return (joins, None)
+        return (joins, and_(*queries))
+
 
 class UnknownElement(ElementWrapper):
     pass
 
-class XmlHost(ElementWrapper):
-    pass
 
-class XmlDistro(ElementWrapper):
-    pass
+class XmlAnd(ElementWrapper):
+    subclassDict = None
+
+
+class XmlOr(ElementWrapper):
+    """
+    Combine sub queries into or_ statements
+    """
+    subclassDict = None
+
+    def filter(self, joins):
+        queries = []
+        for child in self:
+            if callable(getattr(child, 'filter', None)):
+                (joins, query) = child.filter(joins)
+                if query is not None:
+                    queries.append(query)
+        if not queries:
+            return (joins, None)
+        return (joins, or_(*queries))
+
 
 class XmlDistroArch(ElementWrapper):
     """
@@ -189,20 +200,6 @@ class XmlDistroVirt(ElementWrapper):
     def filter(self, joins):
         return (joins, None)
 
-class XmlSystem(ElementWrapper):
-    """
-    Filter 
-    """
-    def filter(self, joins):
-        key = self.get_xml_attr('key', unicode, None)
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        value = self.get_xml_attr('value', unicode, None)
-        query = None
-        if key and op and value:
-            # Filter using the operator we looked up
-            query = getattr(getattr(System, key), op)(value)
-        return (joins, query)
-
 
 class XmlGroup(ElementWrapper):
     """
@@ -279,36 +276,6 @@ class XmlKeyValue(ElementWrapper):
                     key_value_cls.key == _key,
                     getattr(key_value_cls.key_value, op)(value)))
         return (joins, query)
-
-class XmlAnd(ElementWrapper):
-    """
-    Combine sub queries into and_ statements
-    """
-    def filter(self, joins):
-        queries = []
-        for child in self:
-            if callable(getattr(child, 'filter', None)):
-                (joins, query) = child.filter(joins)
-                if query is not None:
-                    queries.append(query)
-        if not queries:
-            return (joins, None)
-        return (joins, and_(*queries))
-
-class XmlOr(ElementWrapper):
-    """
-    Combine sub queries into or_ statements
-    """
-    def filter(self, joins):
-        queries = []
-        for child in self:
-            if callable(getattr(child, 'filter', None)):
-                (joins, query) = child.filter(joins)
-                if query is not None:
-                    queries.append(query)
-        if not queries:
-            return (joins, None)
-        return (joins, or_(*queries))
 
 class XmlAutoProv(ElementWrapper):
     """
@@ -387,6 +354,17 @@ class XmlSystemType(ElementWrapper):
             query = System.type == value
         return (joins, query)
 
+class XmlSystemStatus(ElementWrapper):
+    """
+    Pick a system with the correct system status.
+    """
+    def filter(self, joins):
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            query = System.status == value
+        return (joins, query)
+
 class XmlHostName(ElementWrapper):
     """
     Pick a system wth the correct hostname.
@@ -397,6 +375,66 @@ class XmlHostName(ElementWrapper):
         query = None
         if value:
             query = getattr(System.fqdn, op)(value)
+        return (joins, query)
+
+class XmlSystemLender(ElementWrapper):
+    """
+    Pick a system wth the correct lender.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            query = getattr(System.lender, op)(value)
+        return (joins, query)
+
+class XmlSystemVendor(ElementWrapper):
+    """
+    Pick a system wth the correct vendor.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            query = getattr(System.vendor, op)(value)
+        return (joins, query)
+
+class XmlSystemLocation(ElementWrapper):
+    """
+    Pick a system wth the correct location.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            query = getattr(System.location, op)(value)
+        return (joins, query)
+
+class XmlSystemSerial(ElementWrapper):
+    """
+    Pick a system wth the correct Serial Number.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            query = getattr(System.serial, op)(value)
+        return (joins, query)
+
+class XmlSystemModel(ElementWrapper):
+    """
+    Pick a system wth the correct model.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            query = getattr(System.model, op)(value)
         return (joins, query)
 
 class XmlMemory(ElementWrapper):
@@ -411,9 +449,77 @@ class XmlMemory(ElementWrapper):
             query = getattr(System.memory, op)(value)
         return (joins, query)
 
-class XmlCpuCount(ElementWrapper):
+class XmlSystemOwner(ElementWrapper):
     """
-    Pick a system with the correct amount of processors.
+    Pick a system with the correct owner.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            owner_alias = aliased(User)
+            joins = joins.join((owner_alias, System.owner))
+            query = getattr(owner_alias.user_name, op)(value)
+        return (joins, query)
+
+class XmlSystemUser(ElementWrapper):
+    """
+    Pick a system with the correct user.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            user_alias = aliased(User)
+            joins = joins.join((user_alias, System.user))
+            query = getattr(user_alias.user_name, op)(value)
+        return (joins, query)
+
+class XmlSystemLoaned(ElementWrapper):
+    """
+    Pick a system that has been loaned to this user.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            loaned_alias = aliased(User)
+            joins = joins.join((loaned_alias, System.loaned))
+            query = getattr(loaned_alias.user_name, op)(value)
+        return (joins, query)
+
+class XmlSystemAdded(ElementWrapper):
+    """
+    Pick a system based on when it was added
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        date_added = datetime.date(*map(int, value.split('-')))
+        query = None
+        if value:
+            query = getattr(System.date_added, op)(value)
+        return (joins, query)
+
+class XmlSystemPowertype(ElementWrapper):
+    """
+    Pick a system that has been loaned to this user.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            joins = joins.join(System.power, Power.power_type)
+            query = getattr(PowerType.name, op)(value)
+        return (joins, query)
+
+class XmlCpuProcessors(ElementWrapper):
+    """
+    Pick a system with the correct amount of cpu processors.
     """
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
@@ -422,6 +528,152 @@ class XmlCpuCount(ElementWrapper):
         if value:
             joins = joins.join(System.cpu)
             query = getattr(Cpu.processors, op)(value)
+        return (joins, query)
+
+
+class XmlCpuCores(ElementWrapper):
+    """
+    Pick a system with the correct amount of cpu cores.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        query = None
+        if value:
+            joins = joins.join(System.cpu)
+            query = getattr(Cpu.cores, op)(value)
+        return (joins, query)
+
+
+class XmlCpuFamily(ElementWrapper):
+    """
+    Pick a system with the correct cpu family.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        query = None
+        if value:
+            joins = joins.join(System.cpu)
+            query = getattr(Cpu.family, op)(value)
+        return (joins, query)
+
+
+class XmlCpuModel(ElementWrapper):
+    """
+    Pick a system with the correct cpu model.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        query = None
+        if value:
+            joins = joins.join(System.cpu)
+            query = getattr(Cpu.model, op)(value)
+        return (joins, query)
+
+
+class XmlCpuModelName(ElementWrapper):
+    """
+    Pick a system with the correct cpu model_name.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            joins = joins.join(System.cpu)
+            query = getattr(Cpu.model_name, op)(value)
+        return (joins, query)
+
+
+class XmlCpuSockets(ElementWrapper):
+    """
+    Pick a system with the correct number of cpu sockets.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        query = None
+        if value:
+            joins = joins.join(System.cpu)
+            query = getattr(Cpu.sockets, op)(value)
+        return (joins, query)
+
+
+class XmlCpuSpeed(ElementWrapper):
+    """
+    Pick a system with the correct cpu speed.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        query = None
+        if value:
+            joins = joins.join(System.cpu)
+            query = getattr(Cpu.speed, op)(value)
+        return (joins, query)
+
+
+class XmlCpuStepping(ElementWrapper):
+    """
+    Pick a system with the correct cpu stepping.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        query = None
+        if value:
+            joins = joins.join(System.cpu)
+            query = getattr(Cpu.stepping, op)(value)
+        return (joins, query)
+
+
+class XmlCpuVendor(ElementWrapper):
+    """
+    Pick a system with the correct cpu vendor.
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            joins = joins.join(System.cpu)
+            query = getattr(Cpu.vendor, op)(value)
+        return (joins, query)
+
+
+class XmlCpuHyper(ElementWrapper):
+    """
+    Pick a system with cpu's that have hyperthreading enabled.
+    """
+    def filter(self, joins):
+        op = '__eq__'
+        uvalue = self.get_xml_attr('value', unicode, False).lower()
+        value = uvalue in ('true', '1') and True or False
+        query = None
+        if value:
+            joins = joins.join(System.cpu)
+            query = getattr(Cpu.hyper, op)(value)
+        return (joins, query)
+
+
+class XmlCpuFlag(ElementWrapper):
+    """
+    Filter systems based on System.cpu.flags
+    """
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        equal = op == '__ne__' and '__equal__' or op
+        value = self.get_xml_attr('value', int, None)
+        query = None
+        if value:
+            joins = joins.join(System.cpu)
+            query = getattr(CpuFlag.flag, equal)(value)
+            if op == '__eq__':
+                query = Cpu.flags.any(query)
+            else:
+                query = not_(Cpu.flags.any(query))
         return (joins, query)
 
 class XmlArch(ElementWrapper):
@@ -471,58 +723,131 @@ class XmlDevice(ElementWrapper):
 
     op_table = { '=' : '__eq__',
                  '==' : '__eq__',
+                 'like' : 'like',
                  '!=' : '__ne__'}
 
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        equal = op == '__ne__' and '__equal__' or op
         query = None
         filter_clauses = []
         for attr in ['bus', 'driver', 'vendor_id', 'device_id',
-                     'subsys_vendor_id', 'subsys_device_id']:
+                     'subsys_vendor_id', 'subsys_device_id', 'description']:
             value = self.get_xml_attr(attr, unicode, None)
             if value:
-                filter_clauses.append(getattr(Device, attr) == value)
+                filter_clauses.append(getattr(getattr(Device, attr),equal)(value))
         if self.get_xml_attr('type', unicode, None):
             filter_clauses.append(Device.device_class.has(
                     DeviceClass.device_class ==
                     self.get_xml_attr('type', unicode, None)))
         if filter_clauses:
-            if op == '__eq__':
-                query = System.devices.any(and_(*filter_clauses))
-            else:
+            if op == '__ne__':
                 query = not_(System.devices.any(and_(*filter_clauses)))
+            else:
+                query = System.devices.any(and_(*filter_clauses))
         return (joins, query)
 
-subclassDict = {
-    'host'                : XmlHost,
-    'distro'              : XmlDistro,
-    'key_value'           : XmlKeyValue,
-    'auto_prov'           : XmlAutoProv,
-    'and'                 : XmlAnd,
-    'or'                  : XmlOr,
-    'distro_arch'         : XmlDistroArch,
-    'distro_family'       : XmlDistroFamily,
-    'distro_variant'      : XmlDistroVariant,
-    'distro_name'         : XmlDistroName,
-    'distro_tag'          : XmlDistroTag,
-    'distro_virt'         : XmlDistroVirt,
-    'hostlabcontroller'   : XmlHostLabController,
-    'distrolabcontroller' : XmlDistroLabController,
-    'system_type'         : XmlSystemType,
-    'system'              : XmlSystem,
-    'memory'              : XmlMemory,
-    'cpu_count'           : XmlCpuCount,
-    'hostname'            : XmlHostName,
-    'arch'                : XmlArch,
-    'numa_node_count'     : XmlNumaNodeCount,
-    'group'               : XmlGroup,
-    'hypervisor'          : XmlHypervisor,
-    'device'              : XmlDevice,
-    }
 
-def apply_filter(filter, query):
+class XmlCpu(ElementWrapper):
+    subclassDict = {
+                    'and': XmlAnd,
+                    'or': XmlOr,
+                    'processors': XmlCpuProcessors,
+                    'cores': XmlCpuCores,
+                    'family': XmlCpuFamily,
+                    'hyper': XmlCpuHyper,
+                    'model': XmlCpuModel,
+                    'model_name': XmlCpuModelName,
+                    'sockets': XmlCpuSockets,
+                    'speed': XmlCpuSpeed,
+                    'stepping': XmlCpuStepping,
+                    'vendor': XmlCpuVendor,
+                    'flag': XmlCpuFlag,
+                   }
+
+
+class XmlSystem(ElementWrapper):
+    subclassDict = {
+                    'and': XmlAnd,
+                    'or': XmlOr,
+                    'name': XmlHostName,
+                    'type': XmlSystemType,
+                    'status': XmlSystemStatus,
+                    'lender': XmlSystemLender,
+                    'vendor': XmlSystemVendor,
+                    'model': XmlSystemModel,
+                    'owner': XmlSystemOwner,
+                    'user': XmlSystemUser,
+                    'loaned': XmlSystemLoaned,
+                    'location': XmlSystemLocation,
+                    'powertype': XmlSystemPowertype, #Should this be here?
+                    'serial': XmlSystemSerial,
+                    'memory': XmlMemory,
+                    'arch': XmlArch,
+                    'numanodes': XmlNumaNodeCount,
+                    'hypervisor': XmlHypervisor,
+                    'added': XmlSystemAdded,
+                   }
+
+
+class XmlHost(ElementWrapper):
+    subclassDict = {
+                    'and': XmlAnd,
+                    'or': XmlOr,
+                    'labcontroller': XmlHostLabController,
+                    'system': XmlSystem,
+                    'cpu': XmlCpu,
+                    'device': XmlDevice,
+                    'group': XmlGroup,
+                    'key_value': XmlKeyValue,
+                    'auto_prov': XmlAutoProv,
+                    'hostlabcontroller': XmlHostLabController, #deprecated
+                    'system_type': XmlSystemType, #deprecated
+                    'memory': XmlMemory, #deprecated
+                    'cpu_count': XmlCpuProcessors, #deprecated
+                    'hostname': XmlHostName, #deprecated
+                    'arch': XmlArch, #deprecated
+                    'numa_node_count': XmlNumaNodeCount, #deprecated
+                    'hypervisor': XmlHypervisor, #deprecated
+                   }
+
+class XmlDistro(ElementWrapper):
+    subclassDict = {
+                    'and': XmlAnd,
+                    'or': XmlOr,
+                    'arch': XmlDistroArch,
+                    'family': XmlDistroFamily,
+                    'variant': XmlDistroVariant,
+                    'name': XmlDistroName,
+                    'tag': XmlDistroTag,
+                    'virt': XmlDistroVirt,
+                    'labcontroller': XmlDistroLabController,
+                    'distro_arch': XmlDistroArch, #deprecated
+                    'distro_family': XmlDistroFamily, #deprecated
+                    'distro_variant': XmlDistroVariant, #deprecated
+                    'distro_name': XmlDistroName, #deprecated
+                    'distro_tag': XmlDistroTag, #deprecated
+                    'distro_virt': XmlDistroVirt, #deprecated
+                    'distrolabcontroller': XmlDistroLabController, #deprecated
+                   }
+
+
+def apply_system_filter(filter, query):
     if isinstance(filter, basestring):
-        filter = ElementWrapper(xmltramp.parse(filter))
+        filter = XmlHost(etree.fromstring(filter))
+    clauses = []
+    for child in filter:
+        if callable(getattr(child, 'filter', None)):
+            (query, clause) = child.filter(query)
+            if clause is not None:
+                clauses.append(clause)
+    if clauses:
+        query = query.filter(and_(*clauses))
+    return query
+
+def apply_distro_filter(filter, query):
+    if isinstance(filter, basestring):
+        filter = XmlDistro(etree.fromstring(filter))
     clauses = []
     for child in filter:
         if callable(getattr(child, 'filter', None)):

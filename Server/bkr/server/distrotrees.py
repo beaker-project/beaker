@@ -311,7 +311,7 @@ gpgcheck=0
             # we only want distro trees that are active in at least one lab controller
             query = query.filter(DistroTree.lab_controller_assocs.any())
         if xml:
-            query = needpropertyxml.apply_filter('<and>%s</and>' % xml, query)
+            query = needpropertyxml.apply_distro_filter('<and>%s</and>' % xml, query)
         query = query.order_by(DistroTree.date_created.desc())
         if limit:
             query = query[:limit]
