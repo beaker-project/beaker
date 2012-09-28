@@ -12,25 +12,35 @@ class _QueueAccess:
 
 
 class BkrThreadPool:
-    _pool = {}
+    _qpool = {}
+    _tpool = {}
 
     @classmethod
     def create_and_run(cls, name, target_f, target_args, num=30, *args, **kw):
-        if name in cls._pool:
+        if name in cls._qpool:
             raise Exception('%s has already been initialised in the BkrThreadPool' % name)
 
         out_q = Queue.Queue()
         in_q = Queue.Queue()
-        cls._pool[name] =  _QueueAccess(in_q, out_q)
-
+        cls._qpool[name] =  _QueueAccess(in_q, out_q)
+        cls._tpool[name] = []
         for i in range(num):
             t = Thread(target=target_f, args=target_args)
+            cls._tpool[name].append(t)
             t.setDaemon(False)
             t.start()
 
     @classmethod
     def get(self, name):
-        return self._pool[name]
+        return self._qpool[name]
+
+    @classmethod
+    def join(cls, name, timeout):
+        tpool = cls._tpool[name]
+        for t in tpool:
+            t.join(timeout)
+            if t.isAlive():
+                log.warn('Thread %s did not shutdown cleanly' % t.ident)
 
 
 class RepeatTimer(Thread):

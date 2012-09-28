@@ -59,7 +59,6 @@ See also
 
 import sys
 from bkr.client import BeakerCommand
-from bkr.client.message_bus import ClientBeakerBus
 from optparse import OptionValueError
 from bkr.client.task_watcher import *
 
@@ -86,14 +85,5 @@ class Job_Watch(BeakerCommand):
             self.parser.error('Please specify one or more tasks')
         self.check_taskspec_args(args)
 
-        if self.conf.get('QPID_BUS') is True:
-            listendepth = kwargs.get('verbosity') or 0
-            task_args = list(args)
-            task_type = [task.split(':')[0] for task in task_args]
-            failed = [t for t in task_type if t not in TaskBus.task_depth_order]
-            if len(failed) > 0:
-                self.parser.error('%s are not valid task types' % ','.join(failed))
-            sys.exit(watch_bus_tasks(int(listendepth), task_args))
-        else:
-            self.set_hub(username, password)
-            sys.exit(watch_tasks(self.hub, args))
+        self.set_hub(username, password)
+        sys.exit(watch_tasks(self.hub, args))
