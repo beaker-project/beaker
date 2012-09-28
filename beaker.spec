@@ -322,6 +322,11 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-wizard
 %{_bindir}/bkr
 %{_mandir}/man1/*.1.gz
+%if 0%{?fedora} || 0%{?rhel} > 6
+%{_datadir}/bash-completion
+%else
+%{_sysconfdir}/bash_completion.d
+%endif
 
 %if %{with labcontroller}
 %files lab-controller

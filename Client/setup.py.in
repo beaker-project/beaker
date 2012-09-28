@@ -1,4 +1,5 @@
 import sys
+import commands
 from glob import glob
 from setuptools import setup, find_packages
 from distutils.command.build import build as _build
@@ -16,6 +17,12 @@ class BuildDocWithPath(BuildDoc):
         import bkr # lameness due to namespace packages, I think
         BuildDoc.run(self)
 
+def bash_completion_dir():
+    status, output = commands.getstatusoutput('pkg-config --variable completionsdir bash-completion')
+    if status or not output:
+        return '/etc/bash_completion.d'
+    return output.strip()
+
 setup(
     name = "bkr.client",
     version = "@VERSION@",
@@ -28,6 +35,7 @@ setup(
     data_files = [
         ('/etc/beaker/', ['client.conf']),
         ('/usr/share/man/man1', glob('build/sphinx/man/*.1')),
+        (bash_completion_dir(), ['bash-completion/bkr']),
     ],
 
     entry_points = {
