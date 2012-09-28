@@ -48,6 +48,9 @@
                             <itemizedlist>
                                 <listitem><para>&lt;hostlabcontroller&gt; : Name of the lab controller</para> </listitem>
                             </itemizedlist>
+                            <itemizedlist>
+                                <listitem><para>&lt;hypervisor&gt; : Type of hypervisor that the recipe will run on. i.e 'kvm', '</para> </listitem>
+                            </itemizedlist>
                             </listitem>
                             <listitem>
                               <para>&lt;distroRequires&gt; : Set properties of the distribution you'd like to install here.

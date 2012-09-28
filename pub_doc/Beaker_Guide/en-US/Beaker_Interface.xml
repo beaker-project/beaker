@@ -589,12 +589,25 @@
         &lt;hostRequires&gt;
           &lt;and&gt;
             &lt;arch op="=" value="x86_64"/&gt;
+            &lt;hypervisor op="=" value=""/&gt;
           &lt;/and&gt;
         &lt;/hostRequires&gt;
       &lt;/recipe&gt;
     &lt;/recipeSet&gt;
 &lt;/job&gt;
  </screen>
+ <note>
+   <title>Bare metal vs hypervisor guests</title>
+   <para>
+     Beaker supports direct provisioning of hypervisor guests.
+     These hypervisor guests live on non volatile machines, and can be 
+     provisioned as a regular bare metal system would. They look the same as 
+     regular system entries, except their <varname>Hypervisor</varname> 
+     attribute is set. If your recipe requires a bare metal machine, be sure 
+     to include &lt;hypervisor op="=" value=""/&gt; in your 
+     &lt;hostRequires/&gt;
+   </para>
+ </note>
                              <para>All that's left to populate our XML with, are the<application> task </application> elements. The two attributes we need to specify are the <application>name</application> and the <application>role</application>. Details of how to find which Task's are available, see Section 5.5.2, “Task Searching”. Also note that we've added in a <application>param</application> as a descendant of <application>task</application>. The <application>value</application> of this will be assigned to a new environment variable specified by<application> name.</application>
                              </para>
                             <screen>&lt;job&gt;
