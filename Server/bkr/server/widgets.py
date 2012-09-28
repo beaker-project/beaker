@@ -921,11 +921,11 @@ class ExcludedFamilies(FormField):
        <li py:for="value, desc, subsection, attrs in a_options">
         <input type="checkbox"
                name="${name}.${arch}"
-               id="${field_id}_${value}"
+               id="${field_id}_${value}_${arch}"
                value="${value}"
                py:attrs="attrs"
         />
-        <label for="${field_id}_${value}" py:content="desc" />
+        <label for="${field_id}_${value}_${arch}" py:content="desc" />
         <ul xmlns:py="http://purl.org/kid/ns#"
             class="${field_class}"
             id="${field_id}_${value}_sub"
@@ -934,11 +934,11 @@ class ExcludedFamilies(FormField):
          <li py:for="subvalue, subdesc, attrs  in subsection">
           <input type="checkbox"
                  name="${name}_subsection.${arch}"
-                 id="${field_id}_${value}_sub_${subvalue}"
+                 id="${field_id}_${value}_sub_${subvalue}_${arch}"
                  value="${subvalue}"
                  py:attrs="attrs"
           />
-          <label for="${field_id}_${value}_sub_${subvalue}" py:content="subdesc" />
+          <label for="${field_id}_${value}_sub_${subvalue}_${arch}" py:content="subdesc" />
          </li>
         </ul>
        </li>
@@ -946,6 +946,8 @@ class ExcludedFamilies(FormField):
      </li>
     </ul>
     """
+
+
     _multiple_selection = True
     _selected_verb = 'checked'
     params = ["attrs", "options", "list_attrs"]
@@ -958,6 +960,7 @@ class ExcludedFamilies(FormField):
         super(ExcludedFamilies, self).__init__(*args, **kw)
 
     def update_params(self, d):
+
         super(ExcludedFamilies, self).update_params(d)
         a_options = []
         for arch,arch_options in d["options"]:

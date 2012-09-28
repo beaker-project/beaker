@@ -30,7 +30,7 @@ from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase
 from bkr.inttest import data_setup, get_server_base, \
         assertions, with_transaction
-from bkr.server.model import Key, Key_Value_String, Key_Value_Int, System, \
+from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
         SystemStatus
 from bkr.server.tools import beakerd
@@ -623,6 +623,45 @@ class SystemViewTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assert_(sel.is_element_present(
                 '//span[text()="System is not configured for power support"]'))
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=833275
+    def test_excluded_families(self):
+        # Uses the default distro tree which goes by the name
+        # of DansAwesomeLinux created in setUp()
+
+        # append the x86_64 architecture to the system
+        self.system.arch.append(Arch.by_name(u'x86_64'))
+
+        # set up the distro tree for x86_64
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
+            self.system.provisions[distro_tree.arch] = Provision(arch=distro_tree.arch)
+
+        self.go_to_system_view(self.system)
+        sel = self.selenium
+
+        # go to the Excluded Families Tab
+        sel.click('//ul[@class="tabbernav"]//a[text()="Excluded Families"]')
+
+        # simulate the label click for i386
+        sel.click('//li[label/text()="i386"]//label[text()="DansAwesomeLinux6.9"]')
+        # Now check if the appropriate checkbox was selected
+        self.assertEquals(sel.is_checked('//input[@name="excluded_families_subsection.i386" and @value="%s"]' %
+                                         self.distro_tree.distro.osversion_id), True)
+        self.assertEquals(sel.is_checked('//input[@name="excluded_families_subsection.x86_64" and @value="%s"]' %
+                                         self.distro_tree.distro.osversion_id), False)
+
+        # Uncheck the i386 checkbox
+        sel.uncheck('//input[@name="excluded_families_subsection.i386" and @value="%s"]' %
+                    self.distro_tree.distro.osversion_id)
+
+        # simulate the label click for x86_64
+        sel.click('//li[label/text()="x86_64"]//label[text()="DansAwesomeLinux6.9"]')
+        # Now check if the appropriate checkbox was selected
+        self.assertEquals(sel.is_checked('//input[@name="excluded_families_subsection.x86_64" and @value="%s"]' %
+                                         self.distro_tree.distro.osversion_id), True)
+        self.assertEquals(sel.is_checked('//input[@name="excluded_families_subsection.i386" and @value="%s"]' %
+                                         self.distro_tree.distro.osversion_id), False)
 
 class SystemCcTest(SeleniumTestCase):
 
