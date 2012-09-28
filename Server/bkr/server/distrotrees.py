@@ -250,6 +250,12 @@ gpgcheck=0
             'labcontroller'
                 FQDN of lab controller. Limit to distro trees which are 
                 available on this lab controller. May include % SQL wildcards.
+            'distro_id'
+                Distro id.
+                Matches are exact.
+            'distro_tree_id'
+                Distro Tree id.
+                Matches are exact.
             'xml'
                 XML filter criteria in the same format allowed inside 
                 ``<distroRequires/>`` in a job, for example
@@ -272,6 +278,8 @@ gpgcheck=0
         family = filter.get('family', None)
         tags = filter.get('tags', None) or []
         arch = filter.get('arch', None)
+        distro_id = filter.get('distro_id', None)
+        distro_tree_id = filter.get('distro_tree_id', None)
         treepath = filter.get('treepath', None)
         labcontroller = filter.get('labcontroller', None)
         xml = filter.get('xml', None)
@@ -287,6 +295,10 @@ gpgcheck=0
                 query = query.filter(Arch.arch.in_(arch))
             else:
                 query = query.filter(Arch.arch == '%s' % arch)
+        if distro_id:
+            query = query.filter(Distro.id == int(distro_id))
+        if distro_tree_id:
+            query = query.filter(DistroTree.id == int(distro_tree_id))
         if treepath:
             query = query.filter(DistroTree.lab_controller_assocs.any(
                     LabControllerDistroTree.url.like('%s' % treepath)))

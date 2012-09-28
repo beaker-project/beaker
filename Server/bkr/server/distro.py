@@ -237,6 +237,9 @@ class Distros(RPCRoot):
             'family'
                 Distro family name, for example ``'RedHatEnterpriseLinuxServer5'``. 
                 Matches are exact.
+            'distroid'
+                Distro id.
+                Matches are exact.
             'tags'
                 List of distro tags, for example ``['STABLE', 'RELEASED']``. All given 
                 tags must be present on the distro for it to match.
@@ -255,12 +258,15 @@ class Distros(RPCRoot):
         distros = session.query(Distro)
         name = filter.get('name', None)
         family = filter.get('family', None)
+        distroid = filter.get('distroid', None)
         tags = filter.get('tags', None) or []
         limit = filter.get('limit', None)
         for tag in tags:
             distros = distros.filter(Distro._tags.any(DistroTag.tag == tag))
         if name:
             distros = distros.filter(Distro.name.like('%s' % name))
+        if distroid:
+            distros = distros.filter(Distro.id == int(distroid))
         if family:
             distros = distros.join(Distro.osversion, OSVersion.osmajor)
             distros = distros.filter(OSMajor.osmajor == '%s' % family)

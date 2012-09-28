@@ -19,6 +19,20 @@ class DistroTreesListTest(unittest.TestCase):
         self.assertEquals(trees[0]['distro_tree_id'], self.distro_tree.id)
         self.assertEquals(trees[0]['distro_name'], self.distro_tree.distro.name)
 
+    def test_list_by_distro_id(self):
+        output = run_client(['bkr', 'distro-trees-list', '--format=json', '--distro-id', str(self.distro_tree.distro.id)])
+        trees = json.loads(output)
+        self.assertEquals(len(trees), 1)
+        self.assertEquals(trees[0]['distro_tree_id'], self.distro_tree.id)
+        self.assertEquals(trees[0]['distro_name'], self.distro_tree.distro.name)
+
+    def test_list_by_distro_tree_id(self):
+        output = run_client(['bkr', 'distro-trees-list', '--format=json', '--distro-tree-id', str(self.distro_tree.id)])
+        trees = json.loads(output)
+        self.assertEquals(len(trees), 1)
+        self.assertEquals(trees[0]['distro_tree_id'], self.distro_tree.id)
+        self.assertEquals(trees[0]['distro_name'], self.distro_tree.distro.name)
+
     def test_exits_with_error_if_none_match(self):
         try:
             run_client(['bkr', 'distro-trees-list', '--name', 'NOTEXIST'])

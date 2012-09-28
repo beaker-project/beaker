@@ -10,7 +10,8 @@ Synopsis
 --------
 
 | :program:`bkr distro-trees-list` [*options*]
-|       [--tag=<tag>] [--name=<name>] [--treepath=<url>] [--family=<family>] [--arch=<arch>]
+|       [--tag=<tag>] [--name=<name>] [--treepath=<url>] [--family=<family>]
+        [--arch=<arch>] [--distro-id=<distroid>] [--distro-tree-id=<distrotreeid>]
 |       [--limit=<number>] [--format=<format>]
 
 Description
@@ -49,6 +50,14 @@ Options
 .. option:: --arch <arch>
 
    Limit to distro trees for the given arch.
+
+.. option:: --distro-id <distroid>
+
+   Limit to distro trees for the given distro id.
+
+.. option:: --distro-tree-id <distrotreeid>
+
+   Limit to distro trees for the given distro tree id.
 
 .. option:: --xml-filter <xml>
 
@@ -149,6 +158,16 @@ class Distro_Trees_List(BeakerCommand):
             help="filter by arch",
         )
         self.parser.add_option(
+            "--distro-id",
+            default=None,
+            help="filter by Distro ID",
+        )
+        self.parser.add_option(
+            "--distro-tree-id",
+            default=None,
+            help="filter by Distro Tree ID",
+        )
+        self.parser.add_option(
             '--xml-filter', default=None, metavar='XML',
             help='filter by XML criteria, as in <distroRequires/>',
         )
@@ -164,6 +183,8 @@ class Distro_Trees_List(BeakerCommand):
                        family   = kwargs.pop("family", None),
                        arch     = kwargs.pop("arch", None),
                        tags     = kwargs.pop("tag", []),
+                       distro_id = kwargs.pop("distro_id", None),
+                       distro_tree_id = kwargs.pop("distro_tree_id", None),
                        xml      = kwargs.pop('xml_filter', None),
                      )
         format = kwargs['format']

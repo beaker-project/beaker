@@ -10,7 +10,8 @@ Synopsis
 --------
 
 | :program:`bkr distros-list` [*options*]
-|       [--tag=<tag>] [--name=<name>] [--treepath=<url>] [--family=<family>] [--arch=<arch>]
+|       [--tag=<tag>] [--name=<name>] [--treepath=<url>] [--family=<family>]
+        [--arch=<arch>] [--distro-id=<distroid>]
 |       [--limit=<number>] [--format=<format>]
 
 Description
@@ -34,6 +35,10 @@ Options
 
    Limit to distros of the given family (major version), for example 
    ``RedHatEnterpriseLinuxServer5``.
+
+.. option:: --distro-id <distroid>
+
+   Limit to distros of the given distroid.
 
 .. option:: --limit <number>
 
@@ -119,6 +124,11 @@ class Distros_List(BeakerCommand):
             default=None,
             help="filter by family",
         )
+        self.parser.add_option(
+            "--distro-id",
+            default=None,
+            help="filter by distro id",
+        )
 
 
     def run(self, *args, **kwargs):
@@ -128,6 +138,7 @@ class Distros_List(BeakerCommand):
                        name     = kwargs.pop("name", None),
                        family   = kwargs.pop("family", None),
                        tags     = kwargs.pop("tag", []),
+                       distroid = kwargs.pop("distro_id", None),
                      )
         format = kwargs['format']
 
