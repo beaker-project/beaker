@@ -1,6 +1,7 @@
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, with_transaction, get_server_base
 from turbogears.database import session
+from bkr.server.model import Product, RetentionTag
 
 class SearchJobsWD(WebDriverTestCase):
 
@@ -18,6 +19,74 @@ class SearchJobsWD(WebDriverTestCase):
     @classmethod
     def teardownClass(cls):
         cls.browser.quit()
+
+    def test_search_tag(self):
+        with session.begin():
+            my_job = data_setup.create_job()
+            new_tag = RetentionTag(tag=data_setup.unique_name('mytag%s'))
+            my_job.retention_tag = new_tag
+        b = self.browser
+
+        # Test with tag.
+        b.get(get_server_base() + 'jobs')
+        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
+            /option[@value='Tag']").click()
+        b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
+            /option[@value='is']").click()
+        b.find_element_by_xpath("//select[@id='jobsearch_0_value']/"
+            "option[normalize-space(text())='%s']" % new_tag.tag).click()
+        b.find_element_by_name('Search').click()
+        job_search_result = \
+            b.find_element_by_xpath('//table[@id="widget"]').text
+        self.assert_('J:%s' % my_job.id in job_search_result)
+
+
+    def test_search_product(self):
+        with session.begin():
+            my_job = data_setup.create_job()
+            new_product = Product(name=data_setup.unique_name('myproduct%s'))
+            my_job.product = new_product
+        b = self.browser
+
+        # Test with product.
+        b.get(get_server_base() + 'jobs')
+        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
+            /option[@value='Product']").click()
+        b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
+            /option[@value='is']").click()
+        b.find_element_by_xpath("//select[@id='jobsearch_0_value']/"
+            "option[normalize-space(text())='%s']" % new_product.name).click()
+        b.find_element_by_name('Search').click()
+        job_search_result = \
+            b.find_element_by_xpath('//table[@id="widget"]').text
+        self.assert_('J:%s' % my_job.id in job_search_result)
+
+        with session.begin():
+            my_job.product = None
+
+        # Test without product
+        b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
+            /option[@value='Product']").click()
+        b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
+            /option[@value='is']").click()
+        b.find_element_by_xpath("//select[@id='jobsearch_0_value']/"
+            "option[normalize-space(text())='None']").click()
+
+        b.find_element_by_link_text('Add ( + )').click()
+
+        b.find_element_by_xpath("//select[@id='jobsearch_1_table'] \
+            /option[@value='Id']").click()
+        b.find_element_by_xpath("//select[@id='jobsearch_1_operation'] \
+            /option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='jobsearch_1_value']"). \
+            send_keys(str(my_job.id))
+        b.find_element_by_name('Search').click()
+        job_search_result = \
+            b.find_element_by_xpath('//table[@id="widget"]').text
+
+        self.assert_('J:%s' % my_job.id in job_search_result)
 
     def test_search_email(self):
         b = self.browser
