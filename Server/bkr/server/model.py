@@ -3637,7 +3637,7 @@ class Job(TaskBase):
         return logs_to_return
 
     @classmethod
-    def expired_logs(cls):
+    def expired_logs(cls, limit=None):
         """Return log files for expired recipes
 
         Will not return recipes that have already been deleted. Does
@@ -3650,7 +3650,9 @@ class Job(TaskBase):
             tag_name = tag.tag
             job_ids.extend(job_id for job_id, in cls.find_jobs(tag=tag_name,
                 complete_days=expire_in, include_to_delete=True).values(Job.id))
-        job_ids = set(job_ids)
+        job_ids = list(set(job_ids))
+        if limit is not None:
+            job_ids = job_ids[:limit]
         for job_id in job_ids:
             job = Job.by_id(job_id)
             logs = job.get_log_dirs()
