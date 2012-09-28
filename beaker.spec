@@ -15,8 +15,8 @@
 %endif
 
 Name:           beaker
-Version:        0.9.3
-Release:        7%{?dist}
+Version:        0.9.4
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -363,6 +363,68 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Fri Sep 28 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.4-1
+- support for sending metrics to Graphite's carbon daemon (dcallagh@redhat.com)
+- 847914 Fixed bug in distro_import.py relating to CenOS .treeinfo files
+  (jdevries@redhat.com)
+- 853497 use flock to prevent beaker_expire_distros cron jobs from running
+  simultaneously (dcallagh@redhat.com)
+- Added README file (rmancy@redhat.com)
+- 842883 set -x in kickstart %%pre and %%post (dcallagh@redhat.com)
+- 852902 don't let piwik.js hold up the document ready event
+  (dcallagh@redhat.com)
+- 854794 cleaned up log URL generation, fixed superfluous slashes
+  (dcallagh@redhat.com)
+- 768167 fix encoding issues with job XML (dcallagh@redhat.com)
+- 853848 use requests to issue DELETE requests for log-delete
+  (dcallagh@redhat.com)
+- 853849 print failures in log-delete to stderr (dcallagh@redhat.com)
+- 725661 remove whitespace in css. add exception handle for firefox console.
+  fix a html error in template. (ryang@redhat.com)
+- 852557 disable Visit and VisitIdentity table creation on startup
+  (dcallagh@redhat.com)
+- 855104 record deletion of install options in system history
+  (dcallagh@redhat.com)
+- 855974 ensure console logs are served as text/plain by Apache
+  (dcallagh@redhat.com)
+- 811241 custom 404 page for lab controller logs (dcallagh@redhat.com)
+- 851176 Search job by retention tag and product. (rmancy@redhat.com)
+- 526348 Test case for rhts-sync-block (bpeck@redhat.com)
+- 853219 [RFE] please add ability to look up distro and distro_trees via id
+  (bpeck@redhat.com)
+- 857355 fix SystemStatusAttributeExtension for sqlalchemy 0.7
+  (dcallagh@redhat.com)
+- 856691 bash completion script for bkr (dcallagh@redhat.com)
+- 857798 add signal handling in foreground mode. (asaha@redhat.com)
+- moved beaker-wizard from rhts-devel (dcallagh@redhat.com)
+- 822387 Implemented Jobs.filter() (jdevries@redhat.com)
+- 856850 Use logging.shutdown to cleanup (asaha@redhat.com)
+- __requires__ for CherryPy 2 compat package on Fedora (dcallagh@redhat.com)
+- sqlalchemy 0.7 no longer accepts a list in .join()/.outerjoin()
+  (dcallagh@redhat.com)
+- fix Requires for Fedora (dcallagh@redhat.com)
+- 859400 delay for 5 seconds between 'off' and 'on' when rebooting
+  (dcallagh@redhat.com)
+- 857342 added man page for beaker-wizard (dcallagh@redhat.com)
+- 858122 Fixes job matrix functionality with sqlalchemy 0.7 (asaha@redhat.com)
+- 624393 Added xml and prettyxml option to `bkr task-details`
+  (rmancy@redhat.com)
+- 605561 anamon: avoid race in reading /proc/mounts during shutdown
+  (dcallagh@redhat.com)
+- new block-level statement {%% snippet %%} equivalent to {{ snippet() }}
+  (dcallagh@redhat.com)
+- 801676 move ssh_keys snippet to inside rhts_post (dcallagh@redhat.com)
+- 842907 Some improvements to the msg bus code. (rmancy@redhat.com)
+- 790312 Documented the '<hypervisor/>' element (rmancy@redhat.com)
+- 633369 RFE: custom repos available at install time. (bpeck@redhat.com)
+- 717424 Expire by distro (rmancy@redhat.com)
+- 854364 Update hostRequires to search parity with the web UI
+  (bpeck@redhat.com)
+- 833275 Fix for Duplicate Ids in Excluded Families Tab (asaha@redhat.com)
+- 854434 allow looking up logs by any job component, not just recipe
+  (dcallagh@redhat.com)
+- 853282 --limit option for log-delete (rmancy@redhat.com)
+
 * Sat Sep 08 2012 Bill Peck <bpeck@redhat.com> 0.9.3-7
 - Hotfix for beaker-transfer, if a recipe has no logs it will cause a
   traceback. (bpeck@redhat.com)
