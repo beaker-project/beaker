@@ -16,44 +16,48 @@ class JobLogsTest(unittest.TestCase):
         out = run_client(['bkr', 'job-logs', self.job.t_id])
         logs = out.splitlines()
         self.assert_(logs[0].startswith(self.base), logs[0])
-        self.assert_(logs[0].endswith('dummy.txt'), logs[0])
-        self.assert_(logs[1].startswith(self.base), logs[0])
-        self.assert_(logs[1].endswith('dummy.txt'), logs[0])
+        self.assert_(logs[0].endswith('recipe_path/dummy.txt'), logs[0])
+        self.assert_(logs[1].startswith(self.base), logs[1])
+        self.assert_(logs[1].endswith('tasks/dummy.txt'), logs[1])
+        self.assert_(logs[2].startswith(self.base), logs[2])
+        self.assert_(logs[2].endswith('result.txt'), logs[2])
 
     def test_by_recipeset(self):
         out = run_client(['bkr', 'job-logs', self.job.recipesets[0].t_id])
         logs = out.splitlines()
         self.assert_(logs[0].startswith(self.base), logs[0])
-        self.assert_(logs[0].endswith('dummy.txt'), logs[0])
-        self.assert_(logs[1].startswith(self.base), logs[0])
-        self.assert_(logs[1].endswith('dummy.txt'), logs[0])
+        self.assert_(logs[0].endswith('recipe_path/dummy.txt'), logs[0])
+        self.assert_(logs[1].startswith(self.base), logs[1])
+        self.assert_(logs[1].endswith('tasks/dummy.txt'), logs[1])
+        self.assert_(logs[2].startswith(self.base), logs[2])
+        self.assert_(logs[2].endswith('result.txt'), logs[2])
 
     def test_by_recipe(self):
         out = run_client(['bkr', 'job-logs',
                 self.job.recipesets[0].recipes[0].t_id])
         logs = out.splitlines()
         self.assert_(logs[0].startswith(self.base), logs[0])
-        self.assert_(logs[0].endswith('dummy.txt'), logs[0])
-        self.assert_(logs[1].startswith(self.base), logs[0])
-        self.assert_(logs[1].endswith('dummy.txt'), logs[0])
+        self.assert_(logs[0].endswith('recipe_path/dummy.txt'), logs[0])
+        self.assert_(logs[1].startswith(self.base), logs[1])
+        self.assert_(logs[1].endswith('tasks/dummy.txt'), logs[1])
+        self.assert_(logs[2].startswith(self.base), logs[2])
+        self.assert_(logs[2].endswith('result.txt'), logs[2])
 
-    def test_by_task_gives_error(self):
-        try:
-            run_client(['bkr', 'job-logs',
-                    self.job.recipesets[0].recipes[0].tasks[0].t_id])
-            self.fail('should raise')
-        except ClientError, e:
-            self.assert_('Taskspec type must be one of [J, RS, R]'
-                    in e.stderr_output, e.stderr_output)
+    def test_by_task(self):
+        out = run_client(['bkr', 'job-logs',
+                self.job.recipesets[0].recipes[0].tasks[0].t_id])
+        logs = out.splitlines()
+        self.assert_(logs[0].startswith(self.base), logs[0])
+        self.assert_(logs[0].endswith('tasks/dummy.txt'), logs[0])
+        self.assert_(logs[1].startswith(self.base), logs[1])
+        self.assert_(logs[1].endswith('result.txt'), logs[1])
 
-    def test_by_taskresult_gives_error(self):
-        try:
-            run_client(['bkr', 'job-logs',
-                    self.job.recipesets[0].recipes[0].tasks[0].results[0].t_id])
-            self.fail('should raise')
-        except ClientError, e:
-            self.assert_('Taskspec type must be one of [J, RS, R]'
-                    in e.stderr_output, e.stderr_output)
+    def test_by_taskresult(self):
+        out = run_client(['bkr', 'job-logs',
+                self.job.recipesets[0].recipes[0].tasks[0].results[0].t_id])
+        logs = out.splitlines()
+        self.assert_(logs[0].startswith(self.base), logs[0])
+        self.assert_(logs[0].endswith('result.txt'), logs[0])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=595512
     def test_invalid_taskspec(self):

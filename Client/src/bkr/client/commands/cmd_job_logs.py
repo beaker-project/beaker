@@ -19,7 +19,7 @@ log files for each argument will be printed to stdout.
 
 The <taskspec> arguments follow the same format as in other :program:`bkr` 
 subcommands (for example, ``J:1234``). See :ref:`Specifying tasks <taskspec>` 
-in :manpage:`bkr(1)`. Doesn't work for  T:$TASKID and TR:$RESULTID.
+in :manpage:`bkr(1)`.
 
 Options
 -------
@@ -60,19 +60,13 @@ class Job_Logs(BeakerCommand):
 
 
     def run(self, *args, **kwargs):
-        self.check_taskspec_args(args, permitted_types=['J', 'RS', 'R'])
+        self.check_taskspec_args(args)
 
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
 
         self.set_hub(username, password)
         for task in args:
-            recipes = libxml2.parseDoc(self.hub.taskactions.to_xml(task))\
-                    .xpathNewContext().xpathEval("//recipe")
-            if not recipes:
-                sys.stderr.write('No recipes found for %s. Specify J, RS, or R.\n' % task)
-                sys.exit(1)
-            for recipe in recipes:
-               logfiles = self.hub.recipes.files(recipe.prop('id'))
-               for log in logfiles:
-                   print log['url']
+            logfiles = self.hub.taskactions.files(task)
+            for log in logfiles:
+                print log['url']

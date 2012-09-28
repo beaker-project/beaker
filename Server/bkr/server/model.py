@@ -3926,6 +3926,10 @@ class Job(TaskBase):
                 logs.extend(rs_logs)
         return logs
 
+    @property
+    def all_logs(self):
+        return sum([rs.all_logs for rs in self.recipesets], [])
+
     def clone_link(self):
         """ return link to clone this job
         """
@@ -4264,6 +4268,10 @@ class RecipeSet(TaskBase):
             if r_logs:
                 logs.extend(r_logs)
         return logs
+
+    @property
+    def all_logs(self):
+        return sum([recipe.all_logs for recipe in self.recipes], [])
 
     def set_response(self, response):
         if self.nacked is None:
@@ -5104,14 +5112,8 @@ class Recipe(TaskBase):
         """
         Return all logs for this recipe
         """
-        for mylog in self.logs:
-            yield mylog.dict
-        for task in self.tasks:
-            for mylog in task.logs:
-                yield mylog.dict
-            for result in task.results:
-                for mylog in result.logs:
-                    yield mylog.dict
+        return [mylog.dict for mylog in self.logs] + \
+               sum([task.all_logs for task in self.tasks], [])
 
     def is_task_applicable(self, task):
         """ Does the given task apply to this recipe?
@@ -5385,6 +5387,11 @@ class RecipeTask(TaskBase):
                          text = self.task.name)
 
     link = property(link)
+
+    @property
+    def all_logs(self):
+        return [mylog.dict for mylog in self.logs] + \
+               sum([result.all_logs for result in self.results], [])
 
     def set_status(self, value):
         self._status = value
@@ -5817,6 +5824,10 @@ class RecipeTaskResult(TaskBase):
         result.appendChild(xmldoc.createTextNode("%s" % self.log))
         #FIXME Append any binary logs as URI's
         return result
+
+    @property
+    def all_logs(self):
+        return [mylog.dict for mylog in self.logs]
 
     def get_log_dirs(self):
         return [os.path.dirname(log.full_path) for log in self.logs]
