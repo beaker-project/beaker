@@ -36,7 +36,6 @@ from bkr.server import mail, metrics
 import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
-import errno
 import bkr.timeout_xmlrpclib
 import os
 import shutil
@@ -49,6 +48,8 @@ import string
 import cracklib
 import lxml.etree
 import netaddr
+from bkr.common.helpers import Flock, makedirs_ignore, unlink_ignore
+import subprocess
 from turbogears import identity
 
 from datetime import timedelta, date, datetime
@@ -1209,7 +1210,6 @@ task_table = Table('task',metadata,
         Column('id', Integer, primary_key=True),
         Column('name', Unicode(2048)),
         Column('rpm', Unicode(2048)),
-        Column('oldrpm', Unicode(2048)),
         Column('path', Unicode(4096)),
         Column('description', Unicode(2048)),
         Column('repo', Unicode(256)),
@@ -4857,11 +4857,26 @@ class Recipe(TaskBase):
         for guestrecipe in getattr(self, 'guests', []):
             guestrecipe._process()
 
+    def _link_rpms(self, dst):
+        """
+        Hardlink the task rpms into dst
+        """
+        names = os.listdir(self.rpmspath)
+        makedirs_ignore(dst, 0755)
+        for name in names:
+            srcname = os.path.join(self.rpmspath, name)
+            dstname = os.path.join(dst, name)
+            if os.path.isdir(srcname):
+                continue
+            else:
+                unlink_ignore(dstname)
+                os.link(srcname, dstname)
+
     def createRepo(self):
         """
         Create Recipe specific task repo based on the tasks requested.
         """
-        directory = '%s/%s' % (self.repopath, self.id)
+        directory = os.path.join(self.repopath, str(self.id))
         try:
             os.makedirs(directory)
         except OSError:
@@ -4869,15 +4884,18 @@ class Recipe(TaskBase):
             if not os.path.isdir(directory):
                 #something else must have gone wrong
                 raise
-        if not os.path.isdir('%s/repodata' % (directory)):
-            cwd = os.getcwd()
-            os.chdir(self.rpmspath)
-            # update base repo, specifying -o and baseurl allow us to copy the repo and have it
-            # still reference the rpms in another directory.
-            os.system("createrepo -q --update --checksum sha -o . --baseurl %s ." % absolute_url('/rpms/', scheme='http', labdomain=True, webpath=False))
+        # This should only run if we are missing repodata in the rpms path
+        # since this should normally be updated when new tasks are uploaded
+        if not os.path.isdir(os.path.join(self.rpmspath, 'repodata')):
+            log.info("repodata missing, generating...")
+            Task.update_repo()
+        if not os.path.isdir(os.path.join(directory, 'repodata')):
             # Copy updated repo to recipe specific repo
-            shutil.copytree('%s/repodata' % (self.rpmspath), '%s/repodata' % (directory))
-            os.chdir(cwd)
+            with Flock(self.rpmspath):
+                self._link_rpms(directory)
+                shutil.copytree(os.path.join(self.rpmspath, 'repodata'),
+                                os.path.join(directory, 'repodata')
+                               )
         return True
 
     def destroyRepo(self):
@@ -5943,12 +5961,21 @@ class Task(MappedObject):
             query=cls.query
         return query.join('runfor').filter(TaskPackage.package==package)
 
+    @classmethod
+    def update_repo(cls):
+        basepath = get("basepath.rpms", "/var/www/beaker/rpms")
+        with Flock(basepath):
+            # Removed --baseurl, if upgrading you will need to manually
+            # delete repodata directory before this will work correctly.
+            subprocess.check_call(['createrepo', '-q', '--update',
+                                   '--checksum', 'sha', '.'],
+                                  cwd=basepath)
+
     def to_dict(self):
         """ return a dict of this object """
         return dict(id = self.id,
                     name = self.name,
                     rpm = self.rpm,
-                    oldrpm = self.oldrpm,
                     path = self.path,
                     description = self.description,
                     repo = '%s' % self.repo,
@@ -5996,9 +6023,6 @@ class Task(MappedObject):
         rpms.append(lxml.etree.Element('rpm',
                                        url=absolute_url('/rpms/%s' % self.rpm),
                                        name=u'%s' % self.rpm))
-        if self.oldrpm:
-            rpms.append(lxml.etree.Element('oldrpm',
-                                            name=self.oldrpm))
         task.append(rpms)
         if self.bugzillas:
             bzs = lxml.etree.Element('bugzillas')
@@ -6081,10 +6105,9 @@ class Task(MappedObject):
         """
         Disable task so it can't be used.
         """
-        for rpm in [self.oldrpm, self.rpm]:
-            rpm_path = "%s/%s" % (self.task_dir, rpm)
-            if os.path.exists(rpm_path):
-                os.unlink(rpm_path)
+        rpm_path = os.path.join(self.task_dir, self.rpm)
+        if os.path.exists(rpm_path):
+            os.unlink(rpm_path)
         self.valid=False
         return
 

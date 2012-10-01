@@ -1,3 +1,36 @@
+Bug 835367: running createrepo all the time is inefficient
+----------------------------------------------------------
+
+There was a change in how we generate repodata so the existing repodata
+directory must be deleted.
+
+    rm -rf /var/www/beaker/rpms/repodata
+
+We also need to drop the task.oldrpm column, but first get a list of old RPMs
+to be deleted:
+
+    mysql $CREDENTIALS beaker -B -N \
+        -e 'SELECT oldrpm FROM task WHERE oldrpm IS NOT NULL;' \
+        >oldrpms.txt
+
+The RPMs in this list should not be deleted immediately since some existing
+recipes may refer to them and will try to install them. Delete them a few days
+after upgrading.
+
+Now you can run the following SQL to drop the column:
+
+    ALTER TABLE task DROP oldrpm;
+
+To roll back, delete the repodata directory again:
+
+    rm -rf /var/www/beaker/rpms/repodata
+
+and restore the dropped column (but we won't have the old data to restore):
+
+    ALTER TABLE task
+        ADD COLUMN oldrpm VARCHAR(2048) DEFAULT NULL;
+
+
 Remove system_id from watchdog table
 ------------------------------------
 

@@ -28,14 +28,17 @@ from bkr.server.widgets import SearchBar
 from bkr.server.widgets import TaskActionWidget
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
+from bkr.common.helpers import atomically_replaced_file, unlink_ignore, siphon
 from rhts import testinfo
 from rhts.testinfo import ParserError, ParserWarning
 from sqlalchemy.orm import joinedload, joinedload_all
 from sqlalchemy.orm.exc import NoResultFound
-from subprocess import *
+from subprocess import Popen, PIPE
+import tempfile
 
 import rpm
 import os
+import errno
 
 import cherrypy
 
@@ -187,20 +190,25 @@ class Tasks(RPCRoot):
         :param task_rpm_data: contents of the task RPM
         :type task_rpm_data: XML-RPC binary
         """
-        rpm_file = "%s/%s" % (self.task_dir, task_rpm_name)
+        rpm_file = os.path.join(self.task_dir, task_rpm_name)
         if os.path.exists("%s" % rpm_file):
             raise BX(_(u'Cannot import duplicate task %s') % task_rpm_name)
+        try:
+            with atomically_replaced_file(rpm_file) as f:
+                f.write(task_rpm_data.data)
+                f.flush()
+                f.seek(0)
+                task = self.process_taskinfo(self.read_taskinfo(f))
+            old_rpm = task.rpm
+            task.rpm = task_rpm_name
+            Task.update_repo()
+        except Exception:
+            unlink_ignore(rpm_file)
+            raise
         else:
-            FH = open(rpm_file, "w")
-            FH.write(task_rpm_data.data)
-            FH.close()
-            try:
-                task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-            except Exception, e:
-                # Delete invalid rpm
-                os.unlink(rpm_file)
-                raise
-            return "Success"
+            if old_rpm:
+                unlink_ignore(os.path.join(self.task_dir, old_rpm))
+        return "Success"
 
     @expose()
     @identity.require(identity.not_anonymous())
@@ -208,29 +216,34 @@ class Tasks(RPCRoot):
         """
         TurboGears method to upload task rpm package
         """
-        rpm_file = "%s/%s" % (self.task_dir, task_rpm.filename)
+        rpm_file = os.path.join(self.task_dir, task_rpm.filename)
 
         if os.path.exists("%s" % rpm_file):
             flash(_(u'Failed to import because we already have %s' % 
                                                      task_rpm.filename ))
             redirect(url("./new"))
-        else:
-            myrpm = task_rpm.file.read()
-            FH = open(rpm_file, "w")
-            FH.write(myrpm)
-            FH.close()
-            try:
-                task = self.process_taskinfo(self.read_taskinfo(rpm_file))
-            except Exception, err:
-                # Delete invalid rpm
-                os.unlink(rpm_file)
-                session.rollback()
-                log.exception('Failed to import %s', task_rpm.filename)
-                flash(_(u'Failed to import task: %s' % err))
-                redirect(url("./new"))
 
-            flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
-            redirect(".")
+        try:
+            with atomically_replaced_file(rpm_file) as f:
+                siphon(task_rpm.file, f)
+                f.flush()
+                f.seek(0)
+                task = self.process_taskinfo(self.read_taskinfo(f))
+            old_rpm = task.rpm
+            task.rpm = task_rpm.filename
+            Task.update_repo()
+        except Exception, err:
+            session.rollback()
+            unlink_ignore(rpm_file)
+            log.exception('Failed to import %s', task_rpm.filename)
+            flash(_(u'Failed to import task: %s' % err))
+            redirect(url("./new"))
+        else:
+            if old_rpm:
+                unlink_ignore(os.path.join(self.task_dir, old_rpm))
+
+        flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
+        redirect(".")
 
     @expose(template='bkr.server.templates.task_search')
     @validate(form=task_form)
@@ -430,15 +443,6 @@ class Tasks(RPCRoot):
         # RPM is the same version we have. don't process		
         if task.version == raw_taskinfo['hdr']['ver']:
             raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
-        # Keep N-1 versions of task rpms.  This allows currently running tasks to finish.
-        if task.oldrpm and os.path.exists("%s/%s" % (self.task_dir, task.oldrpm)):
-            try:
-                os.unlink("%s/%s" % (self.task_dir, task.oldrpm))
-            except OSError, err:
-                raise BX(_("%s" % err))   
-        # Current becomes old
-        task.oldrpm = task.rpm
-        task.rpm = raw_taskinfo['hdr']['rpm']
         task.version = raw_taskinfo['hdr']['ver']
         task.description = tinfo.test_description
         task.types = []
@@ -520,38 +524,37 @@ class Tasks(RPCRoot):
         """
         return Task.by_name(name, valid).to_dict()
 
-    def read_taskinfo(self, rpm_file):
+    def read_taskinfo(self, fd):
         taskinfo = dict(desc = '',
                         hdr  = '',
                        )
-        taskinfo['hdr'] = self.get_rpm_info(rpm_file)
+        taskinfo['hdr'] = self.get_rpm_info(fd)
         taskinfo_file = None
 	for file in taskinfo['hdr']['files']:
             if file.endswith('testinfo.desc'):
                 taskinfo_file = file
         if taskinfo_file:
-            p1 = Popen(["rpm2cpio", rpm_file], stdout=PIPE)
+            fd.seek(0)
+            p1 = Popen(["rpm2cpio"], stdin=fd.fileno(), stdout=PIPE)
             p2 = Popen(["cpio", "--quiet", "--extract" , "--to-stdout", ".%s" % taskinfo_file], stdin=p1.stdout, stdout=PIPE)
             taskinfo['desc'] = p2.communicate()[0]
         return taskinfo
 
-    def get_rpm_info(self, rpm_file):
+    def get_rpm_info(self, fd):
         """Returns rpm information by querying a rpm"""
         ts = rpm.ts()
-        fdno = os.open(rpm_file, os.O_RDONLY)
+        fd.seek(0)
         try:
-            hdr = ts.hdrFromFdno(fdno)
+            hdr = ts.hdrFromFdno(fd.fileno())
         except rpm.error:
-            fdno = os.open(rpm_file, os.O_RDONLY)
             ts.setVSFlags(rpm._RPMVSF_NOSIGNATURES)
-            hdr = ts.hdrFromFdno(fdno)
-        os.close(fdno)
+            fd.seek(0)
+            hdr = ts.hdrFromFdno(fd.fileno())
         return { 'name': hdr[rpm.RPMTAG_NAME], 
                  'ver' : "%s-%s" % (hdr[rpm.RPMTAG_VERSION],
                                     hdr[rpm.RPMTAG_RELEASE]), 
                  'epoch': hdr[rpm.RPMTAG_EPOCH],
                  'arch': hdr[rpm.RPMTAG_ARCH] , 
-                 'rpm': "%s" % rpm_file.split('/')[-1:][0],
                  'files': hdr['filenames']}
 
 

@@ -186,16 +186,7 @@
   </define>
   <define name="rpms">
     <element name="rpms">
-      <interleave>
-        <optional>
-          <element name="oldrpm">
-            <attribute name="name">
-              <data type="string" />
-            </attribute>
-          </element>
-        </optional>
-        <ref name="rpm"/>
-      </interleave>
+     <ref name="rpm"/>
     </element>
   </define>
   <define name="rpm">
