@@ -292,7 +292,7 @@ these if necessary.</para>
       <para>Provides the <command>repo</command> kickstart commands which 
       tell Anaconda where to find the distro tree’s Yum repositories for 
       installation.  This includes any custom repos passed in the job xml
-      as well, ie. <&gt;>repo name="repo_id" url="http://server/path/to/repo"<&lt;></para>
+      as well, ie. <literal>&lt;repo name="repo_id" url="http://server/path/to/repo"/&gt;</literal></para>
     </listitem>
   </varlistentry>
   <varlistentry>
