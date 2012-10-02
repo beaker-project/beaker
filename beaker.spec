@@ -34,6 +34,7 @@ BuildRequires:  python-sphinx10
 %else
 BuildRequires:  python-sphinx >= 1.0
 %endif
+BuildRequires:  bash-completion
 
 %if %{with server}
 BuildRequires:  python-kid
@@ -322,7 +323,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-wizard
 %{_bindir}/bkr
 %{_mandir}/man1/*.1.gz
-%if 0%{?fedora} || 0%{?rhel} > 6
+%if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
 %{_datadir}/bash-completion
 %else
 %{_sysconfdir}/bash_completion.d
