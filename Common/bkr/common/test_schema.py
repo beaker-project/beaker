@@ -81,8 +81,8 @@ class TaskSchemaTest(unittest.TestCase, SchemaTest):
                 <package>some-valid-pacakge</package>
               </requires>
               <runFor>
-                <application>Beaker</application>
-                <application>Beah</application>
+                <package>beaker-server</package>
+                <package>beah</package>
               </runFor>
               <bugzillas>
                 <bugzilla>893445</bugzilla>

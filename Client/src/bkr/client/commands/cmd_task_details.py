@@ -96,8 +96,8 @@ class Task_Details(BeakerCommand):
         self.set_hub(username, password)
         for task in args:
             if xml:
-                print "%s %s" % (task, self.hub.tasks.to_xml(task, valid))
+                print "%s\n%s" % (task, self.hub.tasks.to_xml(task, prettyxml, valid))
             elif prettyxml:
-               print "%s %s" % (task, self.hub.tasks.to_xml(task, prettyxml, valid))
+               print "%s\n%s" % (task, self.hub.tasks.to_xml(task, prettyxml, valid))
             else:
                 print "%s %s" % (task, self.hub.tasks.to_dict(task,valid))

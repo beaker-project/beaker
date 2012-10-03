@@ -5956,8 +5956,8 @@ class Task(MappedObject):
         task = lxml.etree.Element('task',
                                   name=self.name,
                                   creation_date=str(self.creation_date),
-                                  destructive=self.destructive or u'%s' % False,
-                                  nda=self.nda or u'%s' %  False,
+                                  destructive=str(self.destructive or False).lower(),
+                                  nda=str(self.nda or False).lower(),
                                   version=str(self.version),
                                   )
 
@@ -5979,43 +5979,50 @@ class Task(MappedObject):
                                        name=u'%s' % self.rpm))
         if self.oldrpm:
             rpms.append(lxml.etree.Element('oldrpm',
-                                            name=self.rpm))
+                                            name=self.oldrpm))
+        task.append(rpms)
         if self.bugzillas:
             bzs = lxml.etree.Element('bugzillas')
             for bz in self.bugzillas:
                 bz_elem = lxml.etree.Element('bugzilla')
-                bz_elem.text = bz.bugzilla_id
+                bz_elem.text = str(bz.bugzilla_id)
                 bzs.append(bz_elem)
+            task.append(bzs)
         if self.runfor:
-            runfor = lxml.etree.Element('application')
+            runfor = lxml.etree.Element('runFor')
             for package in self.runfor:
                 package_elem = lxml.etree.Element('package')
-                package_elem.text = package
+                package_elem.text = package.package
                 runfor.append(package_elem)
+            task.append(runfor)
         if self.required:
             requires = lxml.etree.Element('requires')
             for required in self.required:
                 required_elem = lxml.etree.Element('package')
-                required_elem.text = package
+                required_elem.text = required.package
                 requires.append(required_elem)
+            task.append(requires)
         if self.types:
             types = lxml.etree.Element('types')
             for type in self.types:
                 type_elem = lxml.etree.Element('type')
-                type_elem.text = text.type
+                type_elem.text = type.type
                 types.append(type_elem)
+            task.append(types)
         if self.excluded_osmajor:
             excluded = lxml.etree.Element('excludedDistroFamilies')
-            for osmajor in excluded_osmajor:
-                osmajor_elem = lxml.Element('DistroFamily')
-                osmajor_elem.text = osmajor.osmajor
+            for excluded_osmajor in self.excluded_osmajor:
+                osmajor_elem = lxml.etree.Element('distroFamily')
+                osmajor_elem.text = excluded_osmajor.osmajor.osmajor
                 excluded.append(osmajor_elem)
+            task.append(excluded)
         if self.excluded_arch:
             excluded = lxml.etree.Element('excludedArches')
-            for arch in self.excluded_arch:
-                arch_elem = lxml.Element('arch')
-                arch_elem.text=arch.arch
+            for excluded_arch in self.excluded_arch:
+                arch_elem = lxml.etree.Element('arch')
+                arch_elem.text=excluded_arch.arch.arch
                 excluded.append(arch_elem)
+            task.append(excluded)
         return lxml.etree.tostring(task, pretty_print=pretty)
 
 
