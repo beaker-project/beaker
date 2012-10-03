@@ -1,4 +1,4 @@
-
+#!/usr/bin/python
 __requires__ = ['TurboGears']
 
 import sys
@@ -33,7 +33,7 @@ def main():
     parser.add_option('--dry-run', action='store_true',
             help='Do not delete any files, and issue ROLLBACK instead of '
                 'COMMIT after performing database operations')
-    parser.add_option('--limit', default=None,
+    parser.add_option('--limit', default=None, type='int',
         help='Set a limit on the number of jobs whose logs will be deleted')
     parser.set_defaults(verbose=False, debug=False, dry_run=False)
     options, args = parser.parse_args()
