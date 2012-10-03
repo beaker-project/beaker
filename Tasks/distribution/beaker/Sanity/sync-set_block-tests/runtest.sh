@@ -47,9 +47,8 @@ function ClientOne()
         rlRun "rhts-sync-set -s READY2"
         # This time we will return with a zero return code.
         rlRun "rhts-sync-block --timeout 120 -s READY2 $CLIENTTWO" 0
-        # Sleep for 2 minutes so that the server will test the --any option
-        rlRun "sleep 120"
-        rlRun "rhts-sync-set -s DONE"
+        # Set the state to DONE2, skipping DONE so we test the --any option
+        rlRun "rhts-sync-set -s DONE2"
     rlPhaseEnd
  rlJournalPrintText
  rlJournalEnd
@@ -66,6 +65,7 @@ function ClientTwo()
         rlRun "rhts-sync-block --timeout 240 -s READY2 $CLIENTONE" 0
         rlRun "rhts-sync-set -s READY2"
         rlRun "rhts-sync-set -s DONE"
+        rlRun "rhts-sync-set -s DONE2"
     rlPhaseEnd
  rlJournalPrintText
  rlJournalEnd
@@ -81,7 +81,7 @@ function Server()
 
     rlPhaseStartTest
         rlRun "rhts-sync-block --any -s DONE $CLIENTONE $CLIENTTWO"
-        rlRun "rhts-sync-block -s DONE $CLIENTONE $CLIENTTWO"
+        rlRun "rhts-sync-block -s DONE2 $CLIENTONE $CLIENTTWO"
     rlPhaseEnd
 
     rlPhaseStartCleanup
