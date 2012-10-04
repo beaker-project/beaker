@@ -133,21 +133,12 @@
   <define name="runFor">
     <element name="runFor">
       <a:documentation xml:lang="en">
-        This describes the different products/applications
+        This describes the different packages
         that utilise this task
       </a:documentation>
       <oneOrMore>
-        <ref name="application"/>
+        <ref name="package"/>
       </oneOrMore>
-    </element>
-  </define>
-  <define name="application">
-    <element name="application">
-      <data type="string"/>
-      <a:documentation xml:lang="en">
-        This can refer to anything that be loosely thought of as a product
-        or application
-      </a:documentation>
     </element>
   </define>
   <define name="requires">
@@ -198,7 +189,9 @@
       <interleave>
         <optional>
           <element name="oldrpm">
-            <ref name="rpm"/>
+            <attribute name="name">
+              <data type="string" />
+            </attribute>
           </element>
         </optional>
         <ref name="rpm"/>

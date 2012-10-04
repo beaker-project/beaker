@@ -11,8 +11,13 @@ class TaskDetailsTest(unittest.TestCase):
     def test_task_details_xml(self):
         with session.begin():
             task=data_setup.create_task(path='/testing/path',
-                                        description='blah')
-            task.owner = data_setup.create_user()
+                                        description='blah',
+                                        exclude_arch=['i386','ppc'],
+                                        exclude_osmajor=['MajorFoo', 'WunderFooBar'],
+                                        requires=['2+2', 'Tofudebeast'],
+                                        runfor=['philip', 'bradley'],
+                                        type=['type3', 'type4'],
+                                        )
 
         # regular xml
         out = run_client(['bkr', 'task-details', '--xml', task.name])
@@ -23,12 +28,23 @@ class TaskDetailsTest(unittest.TestCase):
         self.assert_(task_elem.get('name') == task.name)
         self.assert_(task_elem.get('destructive') == task.destructive or 'False')
         self.assert_(task_elem.find('description').text == task.description)
-        self.assert_(task_elem.find('owner').text == task.owner.user_name)
+        self.assert_(task_elem.find('owner').text == task.owner)
         self.assert_(task_elem.find('path').text == task.path)
+
+        self.assert_(len(task_elem.xpath("types/type[text()='type3']")) == 1)
+        self.assert_(len(task_elem.xpath("types/type[text()='type4']")) == 1)
+        self.assert_(len(task_elem.xpath("requires/package[text()='Tofudebeast']")) == 1)
+        self.assert_(len(task_elem.xpath("requires/package[text()='2+2']")) == 1)
+        self.assert_(len(task_elem.xpath("application/package[text()='philip']")) == 1)
+        self.assert_(len(task_elem.xpath("application/package[text()='bradley']")) == 1)
+        self.assert_(len(task_elem.xpath("excludedDistroFamilies/distroFamily[text()='MajorFoo']")) == 1)
+        self.assert_(len(task_elem.xpath("excludedDistroFamilies/distroFamily[text()='WunderFooBar']")) == 1)
+        self.assert_(len(task_elem.xpath("excludedArches/arch[text()='i386']")) == 1)
+        self.assert_(len(task_elem.xpath("excludedArches/arch[text()='ppc']")) == 1)
 
         # pretty xml
         pretty_out = run_client(['bkr', 'task-details', '--prettyxml', task.name])
-        pretty_minus_leading_name = re.sub(task.name, '', out, count=1)
+        pretty_minus_leading_name = re.sub(task.name, '', pretty_out, count=1)
         task_elem_pretty = lxml.etree.tostring(task_elem, pretty_print=True)
         self.assert_(task_elem_pretty.strip() == 
             pretty_minus_leading_name.strip())

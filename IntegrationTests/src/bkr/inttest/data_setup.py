@@ -33,7 +33,7 @@ from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arc
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
         LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
         SystemGroup, DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
-        LogRecipeTaskResult
+        LogRecipeTaskResult, TaskType
 
 log = logging.getLogger(__name__)
 
@@ -234,9 +234,9 @@ def create_system_activity(user=None, **kw):
             unique_name(u'random_%s'), user.user_name)
     return activity
 
-def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
+def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.0-1',
         uploader=None, owner=None, priority=u'Manual', valid=None, path=None, 
-        description=None, requires=None):
+        description=None, requires=None, runfor=None, type=None):
     if name is None:
         name = unique_name(u'/distribution/test_task_%s')
     if path is None:
@@ -262,14 +262,21 @@ def create_task(name=None, exclude_arch=[],exclude_osmajor=[], version=u'1.0-1',
     task.valid = valid
     task.path = path
     task.description = description
+    if type:
+        for t in type:
+            task.types.append(TaskType.lazy_create(type=t))
     if exclude_arch:
-       [TaskExcludeArch(arch_id=Arch.by_name(arch).id, task_id=task.id) for arch in exclude_arch]
+       for arch in exclude_arch:
+           task.excluded_arch.append(TaskExcludeArch(arch_id=Arch.by_name(arch).id))
     if exclude_osmajor:
         for osmajor in exclude_osmajor:
-            TaskExcludeOSMajor(task_id=task.id, osmajor=OSMajor.lazy_create(osmajor=osmajor))
+            task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.lazy_create(osmajor=osmajor)))
     if requires:
         for require in requires:
             task.required.append(TaskPackage.lazy_create(package=require))
+    if runfor:
+        for run in runfor:
+            task.runfor.append(TaskPackage.lazy_create(package=run))
     return task
 
 def create_tasks(xmljob):
