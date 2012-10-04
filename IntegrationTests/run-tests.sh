@@ -20,6 +20,6 @@ set -x
 # and also set BEAKER_CLIENT_TEST_QPID_BROKER to something reasonable.
 # The __requires__ nonsense below is needed on Fedora so that TurboGears can 
 # import the CherryPy 2 compatibility package.
-env PYTHONPATH=../Common:../Server:../LabController/proxy/src:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} \
+env PYTHONPATH=../Common:../Server:../LabController/src:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} \
     python -c '__requires__ = ["TurboGears"]; import pkg_resources; from nose.core import main; main()' \
     ${*:--v rhts bkr}

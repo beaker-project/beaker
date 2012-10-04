@@ -7,6 +7,13 @@ from bkr.inttest import data_setup, with_transaction, Process
 from bkr.server.tools import log_delete
 from turbogears.database import session
 
+# It makes our tests simpler here if they only need to worry about deleting 
+# logs which they themselves have created, rather than ones which might have 
+# been left behind from earlier tests in the run.
+def setUpModule():
+    for job, _ in Job.expired_logs():
+        job.delete()
+
 class LogDelete(unittest.TestCase):
 
     @with_transaction
@@ -129,7 +136,8 @@ class RemoteLogDeletionTest(unittest.TestCase):
         self.logs_dir = tempfile.mkdtemp(prefix='beaker-test-log-delete')
         self.archive_server = Process('archive_server.py',
                 args=[os.path.join(os.path.dirname(__file__), '..', '..', 'archive_server.py'),
-                      '--base', self.logs_dir])
+                      '--base', self.logs_dir],
+                listen_port=19998)
         self.archive_server.start()
 
     def tearDown(self):

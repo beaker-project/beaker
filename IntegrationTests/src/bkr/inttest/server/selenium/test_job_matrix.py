@@ -193,10 +193,15 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.find_element_by_id('remote_form_job_ids').send_keys(str(single_job_2.id))
         b.find_element_by_xpath('//input[@value="Generate"]').click()
         b.find_element_by_link_text('Pass: 1').click()
-        # This gets the last element, which shold also be the first element
-        task_id = b.find_element_by_xpath('//table[position()=2]//tr[position()=(last() - 1)]/td').text
-        self.assertEqual(task_id,
-            single_job_2.recipesets[0].recipes[0].tasks[0].t_id)
+
+        # This tests that we are indeed only looking at one recipe task.
+        task_spec_columns = b.find_elements_by_xpath('//table[2]//tr/td[1]')
+        failed = True
+        for col in task_spec_columns:
+            if col and col.text.strip():
+                self.assertEqual(col.text, single_job_2.recipesets[0].recipes[0].tasks[0].t_id)
+                failed=False
+        self.assert_(not failed)
 
     def tearDown(self):
         b = self.browser.quit()

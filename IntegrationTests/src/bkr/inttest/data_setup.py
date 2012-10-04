@@ -314,7 +314,7 @@ def create_recipe(system=None, distro_tree=None, task_list=None,
     if not server_log:
         rtr_log = lambda: LogRecipeTaskResult(path=u'/', filename=u'result.txt')
     else:
-        rtr_log = lambda: LogRecipeTask(server=u'http://dummy-archive-server/beaker/',
+        rtr_log = lambda: LogRecipeTaskResult(server=u'http://dummy-archive-server/beaker/',
                 path=u'/', filename=u'result.txt')
 
     if task_list: #don't specify a task_list and a task_name...
