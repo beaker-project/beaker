@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.4
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -364,6 +364,14 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Thu Oct 04 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.4-2
+- fix DocBook syntax error (dcallagh@redhat.com)
+- fix bash-completion problems in build (dcallagh@redhat.com)
+- hide stderr from bkr in bash-completion script (dcallagh@redhat.com)
+- Fixes for 853282 (rmancy@redhat.com)
+- Fixes for 624393 (rmancy@redhat.com)
+- fix tests (dcallagh@redhat.com)
+
 * Fri Sep 28 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.4-1
 - support for sending metrics to Graphite's carbon daemon (dcallagh@redhat.com)
 - 847914 Fixed bug in distro_import.py relating to CenOS .treeinfo files
