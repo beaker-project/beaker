@@ -135,7 +135,7 @@ class RemoteLogDeletionTest(unittest.TestCase):
     def setUp(self):
         self.logs_dir = tempfile.mkdtemp(prefix='beaker-test-log-delete')
         self.archive_server = Process('archive_server.py',
-                args=[os.path.join(os.path.dirname(__file__), '..', '..', 'archive_server.py'),
+                args=['python', os.path.join(os.path.dirname(__file__), '..', '..', 'archive_server.py'),
                       '--base', self.logs_dir],
                 listen_port=19998)
         self.archive_server.start()
