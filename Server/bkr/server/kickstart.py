@@ -31,7 +31,7 @@ class SnippetExtension(jinja2.ext.Extension):
     tags = set(['snippet'])
 
     def parse(self, parser):
-        lineno = parser.stream.next()
+        lineno = parser.stream.next().lineno
         snippet_name = parser.parse_expression()
         node = jinja2.nodes.Output([
             jinja2.nodes.Call(jinja2.nodes.Name('snippet', 'load'),
