@@ -12,7 +12,7 @@ from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
 from bkr.server.kickstart import template_env
 from bkr.server.jobs import Jobs
 from bkr.server.jobxml import XmlJob
-from bkr.inttest import data_setup, get_server_base
+from bkr.inttest import data_setup, get_server_base, with_transaction
 
 def compare_expected(name, recipe_id, actual):
     expected = pkg_resources.resource_string('bkr.inttest',
@@ -44,6 +44,7 @@ class KickstartTest(unittest.TestCase):
     maxDiff = None
 
     @classmethod
+    @with_transaction
     def setUpClass(cls):
         cls.orig_template_loader = template_env.loader
         template_env.loader = jinja2.ChoiceLoader([cls.orig_template_loader,
@@ -66,21 +67,14 @@ EOF
 '''
                 })])
 
-        session.begin()
-        cls.user = data_setup.create_user(password=u'password')
-        cls.user.root_password = '$1$beaker$yMeLK4p1IVkFa80RyTkpE.'
         cls.lab_controller = data_setup.create_labcontroller(
                 fqdn=u'lab.test-kickstart.invalid')
         cls.system = data_setup.create_system(arch=u'x86_64',
                 fqdn=u'test01.test-kickstart.invalid', status=u'Automated',
                 lab_controller=cls.lab_controller)
-        cls.system.loaned = cls.user
-        cls.system.user = cls.user
         cls.system_s390x = data_setup.create_system(arch=u's390x',
                 fqdn=u'test02.test-kickstart.invalid', status=u'Automated',
                 lab_controller=cls.lab_controller)
-        cls.system_s390x.loaned = cls.user
-        cls.system_s390x.user = cls.user
         # set postreboot ksmeta for RHEL7
         s390x = Arch.by_name(u's390x')
         rhel7 = OSMajor.lazy_create(osmajor=u'RedHatEnterpriseLinux7')
@@ -243,14 +237,22 @@ EOF
 
         session.flush()
 
+    def setUp(self):
+        session.begin()
+        self.user = data_setup.create_user(password=u'password')
+        self.user.root_password = '$1$beaker$yMeLK4p1IVkFa80RyTkpE.'
+
+    def tearDown(self):
+        session.rollback()
+
     @classmethod
     def tearDownClass(cls):
         template_env.loader = cls.orig_template_loader
-        session.rollback()
 
     def provision_recipe(self, xml, system):
         xmljob = XmlJob(xmltramp.parse(xml))
         job = Jobs().process_xmljob(xmljob, self.user)
+        job.recipesets[0].lab_controller = system.lab_controller
         recipe = job.recipesets[0].recipes[0]
         recipe.system = system
         session.flush()
@@ -518,8 +520,6 @@ EOF
     def test_ignoredisk(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
-        system.loaned = self.user
-        system.user = self.user
         system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
                 ks_meta=u'ignoredisk=--only-use=sda')
         recipe = self.provision_recipe('''
@@ -547,8 +547,6 @@ EOF
     def test_skipx(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
-        system.loaned = self.user
-        system.user = self.user
         system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
                 ks_meta=u'skipx')
         recipe = self.provision_recipe('''
@@ -576,8 +574,6 @@ EOF
     def test_manual(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
-        system.loaned = self.user
-        system.user = self.user
         system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
                 ks_meta=u'manual')
         recipe = self.provision_recipe('''
@@ -609,8 +605,6 @@ EOF
     def test_leavebootorder(self):
         system = data_setup.create_system(arch=u'ppc64', status=u'Automated',
                 lab_controller=self.lab_controller)
-        system.loaned = self.user
-        system.user = self.user
         system.provisions[system.arch[0]] = Provision(arch=system.arch[0])
         recipe = self.provision_recipe('''
             <job>
@@ -637,8 +631,6 @@ EOF
     def test_grubport(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
-        system.loaned = self.user
-        system.user = self.user
         system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
                 ks_meta=u'grubport=0x02f8')
         recipe = self.provision_recipe('''
@@ -666,8 +658,6 @@ EOF
     def test_rhel5_devices(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
-        system.loaned = self.user
-        system.user = self.user
         system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
                 ks_meta=u'scsidevices=cciss')
         recipe = self.provision_recipe('''
@@ -692,8 +682,6 @@ EOF
     def test_rhel6_devices(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
-        system.loaned = self.user
-        system.user = self.user
         system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
                 ks_meta=u'scsidevices=cciss')
         recipe = self.provision_recipe('''
@@ -719,8 +707,6 @@ EOF
     def test_kopts_post(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
-        system.loaned = self.user
-        system.user = self.user
         system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
                 kernel_options_post=u'console=ttyS0,9600n8 pci=nomsi')
         recipe = self.provision_recipe('''
@@ -777,13 +763,10 @@ logvol /butter --fstype btrfs --name=butter --vgname=TestVolume001 --size=25600
                 recipe.rendered_kickstart.kickstart)
 
     def test_sshkeys(self):
-        user = data_setup.create_user(password=u'password')
-        user.root_password = '$1$beaker$yMeLK4p1IVkFa80RyTkpE.'
-        user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'lolthisismykey', u'description'))
+        self.user.root_password = '$1$beaker$yMeLK4p1IVkFa80RyTkpE.'
+        self.user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'lolthisismykey', u'description'))
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
-        system.loaned = user
-        system.user = user
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
@@ -814,12 +797,9 @@ chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=832226
     def test_sshkeys_s390x(self):
-        user = data_setup.create_user(password=u'password')
-        user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'AAAAhhh', u'help'))
+        self.user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'AAAAhhh', u'help'))
         system = data_setup.create_system(arch=u's390x', status=u'Automated',
                 lab_controller=self.lab_controller)
-        system.loaned = user
-        system.user = user
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
@@ -928,12 +908,9 @@ bootloader --location=mbr
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=801676
     def test_custom_kickstart_ssh_keys(self):
-        user = data_setup.create_user(password=u'password')
-        user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'lolthisismykey', u'description'))
+        self.user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'lolthisismykey', u'description'))
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
-        system.loaned = user
-        system.user = user
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
@@ -1009,8 +986,6 @@ mysillypackage
     def test_ftp_no_http(self):
         ftp_lc = data_setup.create_labcontroller()
         system = data_setup.create_system(arch=u'x86_64', lab_controller=ftp_lc)
-        system.loaned = self.user
-        system.user = self.user
         self.rhel62_server_x86_64.lab_controller_assocs.append(
                 LabControllerDistroTree(lab_controller=ftp_lc, url='ftp://something/'))
         session.flush()
@@ -1117,8 +1092,6 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
     def test_highbank(self):
         system = data_setup.create_system(arch=u'armhfp', status=u'Automated',
                 lab_controller=self.lab_controller, kernel_type=u'highbank')
-        system.loaned = self.user
-        system.user = self.user
         session.flush()
         recipe = self.provision_recipe('''
             <job>
@@ -1142,8 +1115,6 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
     def test_mvebu(self):
         system = data_setup.create_system(arch=u'armhfp', status=u'Automated',
                 lab_controller=self.lab_controller, kernel_type=u'mvebu')
-        system.loaned = self.user
-        system.user = self.user
         session.flush()
         recipe = self.provision_recipe('''
             <job>

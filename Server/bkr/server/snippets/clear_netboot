@@ -1,1 +1,3 @@
-wget -O - http://{{ system.lab_controller.fqdn }}:8000/nopxe/{{ system.fqdn }}
+{% if system %}
+wget -O - http://{{ lab_controller.fqdn }}:8000/nopxe/{{ system.fqdn }}
+{% endif %}

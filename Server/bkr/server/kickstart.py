@@ -129,22 +129,15 @@ def kickstart_template(distro_tree):
     raise ValueError('No kickstart template found for %s, tried: %s'
             % (distro_tree.distro, ', '.join(candidates)))
 
-def snippet_template(name, distro_tree, system):
-    candidates = [
-        'snippets/per_system/%s/%s' % (name, system.fqdn),
-        'snippets/per_lab/%s/%s' % (name, system.lab_controller.fqdn),
-        'snippets/per_osversion/%s/%s' % (name, distro_tree.distro.osversion),
-        'snippets/per_osmajor/%s/%s' % (name, distro_tree.distro.osversion.osmajor),
-        'snippets/%s' % name,
-    ]
-    for candidate in candidates:
-        try:
-            return template_env.get_template(candidate)
-        except jinja2.TemplateNotFound:
-            continue
-
 def generate_kickstart(install_options, distro_tree, system, user,
         recipe=None, ks_appends=None, kickstart=None):
+    if recipe:
+        lab_controller = recipe.recipeset.lab_controller
+    elif system:
+        lab_controller = system.lab_controller
+    else:
+        lab_controller = None
+
     # User-supplied templates don't get access to our model objects, in case
     # they do something foolish/naughty.
     restricted_context = {
@@ -162,6 +155,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
         'distro_tree': distro_tree,
         'distro': distro_tree.distro,
         'system': system,
+        'lab_controller': lab_controller,
         'user': user,
         'recipe': recipe,
         'config': config,
@@ -169,7 +163,21 @@ def generate_kickstart(install_options, distro_tree, system, user,
     })
 
     def snippet(name):
-        template = snippet_template(name, distro_tree, system)
+        template = None
+        candidates = [
+            'snippets/per_lab/%s/%s' % (name, lab_controller.fqdn),
+            'snippets/per_osversion/%s/%s' % (name, distro_tree.distro.osversion),
+            'snippets/per_osmajor/%s/%s' % (name, distro_tree.distro.osversion.osmajor),
+            'snippets/%s' % name,
+        ]
+        if system:
+            candidates.insert(0, 'snippets/per_system/%s/%s' % (name, system.fqdn))
+        for candidate in candidates:
+            try:
+                template = template_env.get_template(candidate)
+                break
+            except jinja2.TemplateNotFound:
+                continue
         if template:
             retval = template.render(context)
             if retval and not retval.endswith('\n'):

@@ -1,12 +1,12 @@
 cat << EOF > /etc/profile.d/rh-env.sh
-export LAB_CONTROLLER={{ system.lab_controller.fqdn }}
+export LAB_CONTROLLER={{ lab_controller.fqdn }}
 export DUMPSERVER=
 #export NFSSERVERS="RHEL3,fqdn:path RHEL4,fqdn:path RHEL5,fqdn:path RHEL6,fqdn:path NETAPP,fqdn:path SOLARIS,fqdn:path"
 export LOOKASIDE=
 export BUILDURL=
 EOF
 cat << EOF > /etc/profile.d/rh-env.csh
-setenv LAB_CONTROLLER {{ system.lab_controller.fqdn }}
+setenv LAB_CONTROLLER {{ lab_controller.fqdn }}
 setenv DUMPSERVER 
 #setenv NFSSERVERS "RHEL3,fqdn:path RHEL4,fqdn:path RHEL5,fqdn:path RHEL6,fqdn:path NETAPP,fqdn:path SOLARIS,fqdn:path"
 setenv LOOKASIDE 

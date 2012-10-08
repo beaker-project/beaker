@@ -65,7 +65,7 @@ fi
 {% if yum %}
 # Install Yum
 pushd /root
-/usr/bin/wget -N http://{{ system.lab_controller.fqdn }}/beaker/{{ yum }}
+/usr/bin/wget -N http://{{ lab_controller.fqdn }}/beaker/{{ yum }}
 /bin/rpm -Uvh {{ yum }}
 popd
 {% endif %}
@@ -115,11 +115,13 @@ cat << EOF > /etc/beah_beaker.conf
 
 [DEFAULT]
 # LAB_CONTROLLER: URI of Beaker's XML-RPC handler
-LAB_CONTROLLER=http://{{ system.lab_controller.fqdn }}:8000
+LAB_CONTROLLER=http://{{ lab_controller.fqdn }}:8000
+{% if system %}
 #
 # HOSTNAME: Pretend to be machine with given name.
 # NOTE: This is mostly pointless as usually correct name is assigned by DHCP.
 HOSTNAME={{ system.fqdn }}
+{% endif %}
 {% if recipe %}
 RECIPEID={{ recipe.id }}
 {% endif %}
@@ -161,9 +163,9 @@ useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82
 {% snippet 'beaker_env' %}
 {% snippet 'lab_env' %}
 {% snippet 'ssh_keys' %}
-{% if system.kernel_type.kernel_type == 'highbank' %}
+{% if system and system.kernel_type.kernel_type == 'highbank' %}
 {% snippet 'highbank' %}
 {% endif %}
-{% if system.kernel_type.kernel_type == 'mvebu' %}
+{% if system and system.kernel_type.kernel_type == 'mvebu' %}
 {% snippet 'mvebu' %}
 {% endif %}

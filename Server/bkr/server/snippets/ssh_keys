@@ -1,7 +1,7 @@
-{% if system.user and system.user.sshpubkeys %}
+{% if user and user.sshpubkeys %}
 mkdir -p /root/.ssh
 cat >>/root/.ssh/authorized_keys <<"__EOF__"
-{% for ssh_key in system.user.sshpubkeys %}
+{% for ssh_key in user.sshpubkeys %}
 {{ ssh_key|string|replace('__EOF__', '') }}
 {% endfor %}
 __EOF__

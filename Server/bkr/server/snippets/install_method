@@ -1,4 +1,4 @@
-{% set url = distro_tree.url_in_lab(system.lab_controller, scheme=method|default(None), required=True) %}
+{% set url = distro_tree.url_in_lab(lab_controller, scheme=method|default(None), required=True) %}
 {% set parsed_url = url|parsed_url %}
 {% if parsed_url.scheme == 'nfs' or parsed_url.scheme.startswith('nfs+') %}
 {#

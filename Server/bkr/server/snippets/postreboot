@@ -1,7 +1,7 @@
-{% if postreboot is defined %}
+{% if system and postreboot is defined %}
 %post
 sync
-wget -O - http://{{ system.lab_controller.fqdn }}:8000/postreboot/{{ system.fqdn }}
+wget -O - http://{{ lab_controller.fqdn }}:8000/postreboot/{{ system.fqdn }}
 sync
 {{ end }}
 {% endif %}
