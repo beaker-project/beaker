@@ -133,7 +133,8 @@ def new_recipes(*args):
         except exceptions.Exception:
             session.rollback()
             log.exception("Failed to commit in new_recipes")
-        session.close()
+        finally:
+            session.close()
     log.debug("Exiting new_recipes routine")
     return True
 
@@ -247,7 +248,8 @@ def processed_recipesets(*args):
         except exceptions.Exception:
             session.rollback()
             log.exception("Failed to commit in processed_recipes")
-        session.close()
+        finally:
+            session.close()
     log.debug("Exiting processed_recipes routine")
     return True
 
@@ -284,7 +286,8 @@ def dead_recipes(*args):
         except exceptions.Exception, e:
             session.rollback()
             log.exception("Failed to commit due to :%s" % e)
-        session.close()
+        finally:
+            session.close()
     log.debug("Exiting dead_recipes routine")
     return True
 
@@ -391,7 +394,8 @@ def queued_recipes(*args):
         except exceptions.Exception:
             session.rollback()
             log.exception("Failed to commit in queued_recipes")
-        session.close()
+        finally:
+            session.close()
     log.debug("Exiting queued_recipes routine")
     return True
 
@@ -464,7 +468,8 @@ def scheduled_recipes(*args):
         except exceptions.Exception:
             session.rollback()
             log.exception("Failed to commit in scheduled_recipes")
-        session.close()
+        finally:
+            session.close()
     log.debug("Exiting scheduled_recipes routine")
     return True
 
