@@ -228,15 +228,27 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             loanee = data_setup.create_user()
             system = data_setup.create_system(lab_controller=self.lab_controller,
-                    loaned=loanee)
+                    shared=True, loaned=loanee)
             admin = data_setup.create_admin()
-        self.check_user_cannot_run_job_on_system(admin, system)
+        job_id = self.check_user_can_run_job_on_system(admin, system)
+        beakerd.processed_recipesets()
+        with session.begin():
+            job = Job.query.get(job_id)
+            self.assertEqual(job.status, TaskStatus.queued)
+        # Even though the system is free the job should stay queued while
+        # the loan is in place.
+        beakerd.queued_recipes()
+        with session.begin():
+            job = Job.query.get(job_id)
+            self.assertEqual(job.status, TaskStatus.queued)
+            system = System.query.get(system.id)
+            self.assertEqual(system.user, None)
 
     def test_loaned_system_with_loanee(self):
         with session.begin():
             loanee = data_setup.create_user()
             system = data_setup.create_system(lab_controller=self.lab_controller,
-                    loaned=loanee)
+                    shared=True, loaned=loanee)
         job_id = self.check_user_can_run_job_on_system(loanee, system)
         beakerd.processed_recipesets()
         with session.begin():
@@ -253,16 +265,28 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             loanee = data_setup.create_user()
             system = data_setup.create_system(lab_controller=self.lab_controller,
-                    loaned=loanee)
+                    shared=True, loaned=loanee)
             user = data_setup.create_user()
-        self.check_user_cannot_run_job_on_system(user, system)
+        job_id = self.check_user_can_run_job_on_system(user, system)
+        beakerd.processed_recipesets()
+        with session.begin():
+            job = Job.query.get(job_id)
+            self.assertEqual(job.status, TaskStatus.queued)
+        # Even though the system is free the job should stay queued while
+        # the loan is in place.
+        beakerd.queued_recipes()
+        with session.begin():
+            job = Job.query.get(job_id)
+            self.assertEqual(job.status, TaskStatus.queued)
+            system = System.query.get(system.id)
+            self.assertEqual(system.user, None)
 
     def test_loaned_system_with_owner(self):
         with session.begin():
             loanee = data_setup.create_user()
             owner = data_setup.create_user()
             system = data_setup.create_system(lab_controller=self.lab_controller,
-                    owner=owner, loaned=loanee)
+                    shared=True, owner=owner, loaned=loanee)
         # owner of the system has access, when the
         # loan is returned their job will be able to run.
         job_id = self.check_user_can_run_job_on_system(owner, system)
