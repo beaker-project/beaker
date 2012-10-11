@@ -812,11 +812,10 @@ class Root(RPCRoot):
                         install   = self.system_installoptions,
                         arches    = self.arches_form,
                       )
-        if system.type != SystemType.virtual:
-            widgets['provision'] = self.system_provision
-            widgets['power'] = self.power_form
-            widgets['power_action'] = self.power_action_form
-            widgets['power_history'] = self.power_history
+        widgets['provision'] = self.system_provision
+        widgets['power'] = self.power_form
+        widgets['power_action'] = self.power_action_form
+        widgets['power_history'] = self.power_history
 
         return dict(
             title           = title,

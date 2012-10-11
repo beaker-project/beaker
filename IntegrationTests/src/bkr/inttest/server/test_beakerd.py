@@ -80,9 +80,9 @@ class TestBeakerd(unittest.TestCase):
     def test_or_lab_controller(self):
         with session.begin():
             user = data_setup.create_user()
-            lc1 = data_setup.create_labcontroller(u'lab1')
-            lc2 = data_setup.create_labcontroller(u'lab2')
-            lc3 = data_setup.create_labcontroller(u'lab3')
+            lc1 = data_setup.create_labcontroller(u'test_or_labcontroller.lab1')
+            lc2 = data_setup.create_labcontroller(u'test_or_labcontroller.lab2')
+            lc3 = data_setup.create_labcontroller(u'test_or_labcontroller.lab3')
             system1 = data_setup.create_system(arch=u'i386', shared=True)
             system1.lab_controller = lc1
             system2 = data_setup.create_system(arch=u'i386', shared=True)
@@ -93,8 +93,8 @@ class TestBeakerd(unittest.TestCase):
             job.recipesets[0].recipes[0]._host_requires = (u"""
                    <hostRequires>
                     <or>
-                     <hostlabcontroller op="=" value="lab1"/>
-                     <hostlabcontroller op="=" value="lab2"/>
+                     <hostlabcontroller op="=" value="test_or_labcontroller.lab1"/>
+                     <hostlabcontroller op="=" value="test_or_labcontroller.lab2"/>
                     </or>
                    </hostRequires>
                    """)
@@ -322,11 +322,6 @@ class TestBeakerd(unittest.TestCase):
             beakerd.new_recipes()
             beakerd.processed_recipesets()
             beakerd.queued_recipes()
-
-            with session.begin():
-                for r in Recipe.query:
-                    if r.system:
-                        r.system.lab_controller = self.lab_controller
             beakerd.scheduled_recipes()
             with session.begin():
                 job = Job.by_id(job.id)
@@ -355,10 +350,6 @@ class TestBeakerd(unittest.TestCase):
         beakerd.new_recipes()
         beakerd.processed_recipesets()
         beakerd.queued_recipes()
-        with session.begin():
-            for r in Recipe.query:
-                if r.system:
-                    r.system.lab_controller = self.lab_controller
         beakerd.scheduled_recipes()
         with session.begin():
             job = Job.by_id(job.id)

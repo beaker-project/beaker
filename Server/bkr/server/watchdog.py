@@ -25,8 +25,8 @@ class Watchdogs(RPCRoot):
 
         col = myPaginateDataGrid.Column
         fields = [col(name='job_id', getter=lambda x: x.recipe.recipeset.job.link, title="Job ID"),
-                  col(name='system_name', getter=lambda x: x.recipe.system.link, title="System"),
-                  col(name='lab_controller', getter=lambda x: x.recipe.system.lab_controller, title="Lab Controller"),
+                  col(name='system_name', getter=lambda x: x.recipe.resource.link, title="System"),
+                  col(name='lab_controller', getter=lambda x: x.recipe.recipeset.lab_controller, title="Lab Controller"),
                   col(name='task_name', getter=lambda x: x.recipetask.link
                         if x.recipetask is not None else None, title="Task Name"),
                   col(name='kill_time', getter=lambda x: x.kill_time,

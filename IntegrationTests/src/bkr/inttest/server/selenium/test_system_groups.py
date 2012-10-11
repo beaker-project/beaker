@@ -11,7 +11,8 @@ class TestSystemGroups(WebDriverTestCase):
     def setUp(self):
         with session.begin():
             self.system_owner = data_setup.create_user(password='password')
-            self.system = data_setup.create_system(owner=self.system_owner)
+            self.system = data_setup.create_system(owner=self.system_owner,
+                    shared=False)
             self.group = data_setup.create_group()
             self.user_in_group = data_setup.create_user()
             self.user_in_group.groups.append(self.group)

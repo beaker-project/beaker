@@ -78,7 +78,7 @@ class TestSystemGridSorting(SeleniumTestCase):
                         [u'Acer', u'Dell', u'HP'],
                         [u'slow model', u'fast model', u'big model'],
                         [u'Automated', u'Manual', u'Removed'],
-                        [u'Machine', u'Virtual', u'Prototype'],
+                        [u'Machine', u'Prototype'],
                         [data_setup.create_user() for _ in range(3)]):
                     system = data_setup.create_system(vendor=vendor,
                             model=model, status=status, type=type)

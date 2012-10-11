@@ -6,13 +6,17 @@ from turbogears.database import session
 from bkr.server.model import OSMajor
 
 
-class TaskSearchWD(WebDriverTestCase):
+class ExecutedTasksTest(WebDriverTestCase):
 
     def setUp(self):
         self.browser = self.get_browser()
 
     def tearDown(self):
         self.browser.quit()
+
+    def check_recipetask_present_in_results(self, recipetask):
+        return self.browser.find_element_by_xpath("//div[@id='task_items']//"
+                "a[normalize-space(text())='%s']" % recipetask.t_id)
 
     def test_executed_tasks(self):
         with session.begin():
@@ -27,21 +31,17 @@ class TaskSearchWD(WebDriverTestCase):
             "option[normalize-space(text())='%s']" %
              r.distro_tree.distro.osversion.osmajor).click()
         b.find_element_by_xpath("//form[@id='form']").submit()
-        b.find_element_by_xpath("//div[@id='task_items']//"
-            "a[normalize-space(text())='%s']" % rtask.t_id)
+        self.check_recipetask_present_in_results(rtask)
 
         # Search by single recipe task id
         b.get(get_server_base() + 'tasks/executed?recipe_task_id=%s' % rtask.id)
-        b.find_element_by_xpath("//div[@id='task_items']//"
-            "a[normalize-space(text())='%s']" % rtask.t_id)
+        self.check_recipetask_present_in_results(rtask)
 
         # Search by multiple recipe task id
         rtask2 = r.tasks[1]
         b.get(get_server_base() + 'tasks/executed?recipe_task_id=%s&recipe_task_id=%s' % (rtask2.id, rtask.id))
-        b.find_element_by_xpath("//div[@id='task_items']//"
-            "a[normalize-space(text())='%s']" % rtask.t_id)
-        b.find_element_by_xpath("//div[@id='task_items']//"
-            "a[normalize-space(text())='%s']" % rtask2.t_id)
+        self.check_recipetask_present_in_results(rtask)
+        self.check_recipetask_present_in_results(rtask2)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=840720
     def test_executed_tasks_family_sorting(self):
@@ -60,6 +60,37 @@ class TaskSearchWD(WebDriverTestCase):
         self.assert_(options.index('BlueShoe9') < options.index('BlueShoe10'), options)
         self.assert_('neverused666' not in options, options)
 
+    def test_executed_tasks_system_filter(self):
+        with session.begin():
+            task = data_setup.create_task()
+            system = data_setup.create_system()
+            job = data_setup.create_completed_job(task_name=task.name,
+                    system=system)
+        b = self.browser
+        b.get(get_server_base() + 'tasks/%d' % task.id)
+        b.find_element_by_id('form_system').click()
+        b.find_element_by_id('form_system').send_keys(system.fqdn)
+        b.find_element_by_id('form').submit()
+        rtask = job.recipesets[0].recipes[0].tasks[0]
+        self.check_recipetask_present_in_results(rtask)
+
+    def test_executed_tasks_guest_filter(self):
+        with session.begin():
+            task = data_setup.create_task()
+            fqdn = 'test_executed_tasks_guest_fqdn_filter.invalid'
+            distro_tree = data_setup.create_distro_tree()
+            recipe = data_setup.create_recipe(distro_tree=distro_tree)
+            guestrecipe = data_setup.create_guestrecipe(host=recipe,
+                    task_name=task.name, distro_tree=distro_tree)
+            data_setup.create_job_for_recipes([recipe, guestrecipe])
+            data_setup.mark_recipe_running(recipe)
+            data_setup.mark_recipe_running(guestrecipe, fqdn=fqdn)
+        b = self.browser
+        b.get(get_server_base() + 'tasks/%d' % task.id)
+        b.find_element_by_id('form_system').click()
+        b.find_element_by_id('form_system').send_keys(fqdn)
+        b.find_element_by_id('form').submit()
+        self.check_recipetask_present_in_results(guestrecipe.tasks[0])
 
 class Search(SeleniumTestCase):
 

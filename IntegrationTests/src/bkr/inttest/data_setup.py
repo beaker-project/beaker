@@ -33,7 +33,7 @@ from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arc
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
         LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
         SystemGroup, DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
-        LogRecipeTaskResult, TaskType
+        LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, GuestResource
 
 log = logging.getLogger(__name__)
 
@@ -185,7 +185,7 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
     return distro_tree
 
 def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
-        owner=None, fqdn=None, shared=False, exclude_osmajor=[],
+        owner=None, fqdn=None, shared=True, exclude_osmajor=[],
         exclude_osversion=[], hypervisor=None, kernel_type=None,
         date_added=None,  **kw):
     if owner is None:
@@ -289,18 +289,16 @@ def create_tasks(xmljob):
     for name in names:
         create_task(name=name)
 
-def create_recipe(system=None, distro_tree=None, task_list=None,
+def create_recipe(distro_tree=None, task_list=None,
         task_name=u'/distribution/reservesys', whiteboard=None,
-        server_log=False, role=None):
+        server_log=False, role=None, cls=MachineRecipe, **kwargs):
     if not distro_tree:
         distro_tree = create_distro_tree()
-    recipe = MachineRecipe(ttasks=1, system=system, whiteboard=whiteboard,
-            distro_tree=distro_tree, role=role)
+    recipe = cls(ttasks=1, whiteboard=whiteboard,
+            distro_tree=distro_tree, role=role, **kwargs)
     recipe.distro_requires = recipe.distro_tree.to_xml().toxml()
 
     if not server_log:
-        if system:
-            recipe.log_server = system.lab_controller.fqdn
         recipe.logs = [LogRecipe(path=u'recipe_path',filename=u'dummy.txt')]
     else:
         recipe.log_server = u'dummy-archive-server'
@@ -336,6 +334,11 @@ def create_recipe(system=None, distro_tree=None, task_list=None,
         rt.results.append(rtr)
         recipe.tasks.append(rt)
     return recipe
+
+def create_guestrecipe(host, **kwargs):
+    guestrecipe = create_recipe(cls=GuestRecipe, **kwargs)
+    host.guests.append(guestrecipe)
+    return guestrecipe
 
 def create_retention_tag(name=None, default=False, needs_product=False):
     if name is None:
@@ -378,58 +381,59 @@ def create_completed_job(**kwargs):
     mark_job_complete(job, **kwargs)
     return job
 
-def mark_recipe_complete(recipe, result=TaskResult.pass_, system=None,
-        start_time=None, finish_time=None, **kwargs):
+def mark_recipe_complete(recipe, result=TaskResult.pass_,
+        finish_time=None, **kwargs):
     assert result in TaskResult
-    if finish_time is None:
-        finish_time = datetime.datetime.utcnow()
-    if not recipe.system and not system:
-        recipe.system = create_system(arch=recipe.arch)
-    elif system:
-        recipe.system = system
-    recipe.start_time = start_time or datetime.datetime.utcnow()
-    recipe.recipeset.queue_time = datetime.datetime.utcnow()
-    reservation = Reservation(type=u'recipe',
-            user=recipe.recipeset.job.owner, start_time=start_time)
-    recipe.system.reservations.append(reservation)
-    for recipe_task in recipe.tasks:
-        recipe_task.start_time = start_time or datetime.datetime.utcnow()
-        recipe_task.status = TaskStatus.running
-    recipe.update_status()
+    mark_recipe_running(recipe, **kwargs)
     for recipe_task in recipe.tasks:
         rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
-        recipe_task.finish_time = finish_time
+        recipe_task.finish_time = finish_time or datetime.datetime.utcnow()
         recipe_task.status = TaskStatus.completed
         recipe_task.results.append(rtr)
-    reservation.finish_time = finish_time
-    recipe.finish_time = finish_time
     recipe.update_status()
     log.debug('Marked %s as complete with result %s', recipe.t_id, result)
 
-def mark_job_complete(job, **kwargs):
+def mark_job_complete(job, finish_time=None, **kwargs):
     for recipe in job.all_recipes:
-        mark_recipe_complete(recipe, **kwargs)
+        mark_recipe_complete(recipe, finish_time=finish_time, **kwargs)
+        if finish_time:
+            recipe.resource.reservation.finish_time = finish_time
+            recipe.finish_time = finish_time
 
-def mark_recipe_waiting(recipe):
+def mark_recipe_waiting(recipe, start_time=None, system=None, **kwargs):
+    if start_time is None:
+        start_time = datetime.datetime.utcnow()
     recipe.process()
     recipe.queue()
     recipe.schedule()
-    recipe.system = create_system(owner=recipe.recipeset.job.owner)
-    recipe.system.reserve(service=u'testdata',
-            user=recipe.recipeset.job.owner,
-            reservation_type=u'recipe', recipe=recipe)
+    if not recipe.resource:
+        if isinstance(recipe, MachineRecipe):
+            if not system:
+                system = create_system(arch=recipe.arch)
+            reservation = system.reserve(service=u'testdata',
+                    user=recipe.recipeset.job.owner, reservation_type=u'recipe')
+            reservation.start_time = start_time
+            recipe.resource = SystemResource(system=system, reservation=reservation)
+            recipe.recipeset.lab_controller = system.lab_controller
+        elif isinstance(recipe, GuestRecipe):
+            recipe.resource = GuestResource()
+    recipe.start_time = start_time
     recipe.watchdog = Watchdog()
     recipe.waiting()
-    log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.system)
+    log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.resource.fqdn)
 
 def mark_job_waiting(job):
     for recipeset in job.recipesets:
         for recipe in recipeset.recipes:
             mark_recipe_waiting(recipe)
 
-def mark_recipe_running(recipe):
-    mark_recipe_waiting(recipe)
+def mark_recipe_running(recipe, fqdn=None, **kwargs):
+    mark_recipe_waiting(recipe, **kwargs)
     recipe.tasks[0].start()
+    if isinstance(recipe, GuestRecipe):
+        if not fqdn:
+            fqdn = unique_name('guest_fqdn_%s')
+        recipe.resource.fqdn = fqdn
     log.debug('Started %s', recipe.tasks[0].t_id)
 
 def mark_job_running(job):

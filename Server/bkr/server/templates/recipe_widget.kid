@@ -127,7 +127,7 @@ $(document).ready(function() {
   </tr>
   <tr>
    <td class="title"><b>System</b></td>
-   <td class="value"><span py:if="recipe.system" py:strip="True">${recipe.system.link}</span></td>
+   <td class="value"><span py:if="recipe.resource" py:strip="True">${recipe.resource.link}</span></td>
    <td class="title"><b>Kickstart</b></td>
    <td class="value">
     <span py:if="recipe.rendered_kickstart" py:strip="True">

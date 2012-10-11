@@ -15,13 +15,13 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
     def test_by_log_server_only_returns_completed_recipesets(self):
         with session.begin():
             dt = data_setup.create_distro_tree()
-            completed_recipe = data_setup.create_recipe(distro_tree=dt,
-                    system=data_setup.create_system(lab_controller=self.lc))
-            incomplete_recipe = data_setup.create_recipe(distro_tree=dt,
-                    system=data_setup.create_system(lab_controller=self.lc))
+            completed_recipe = data_setup.create_recipe(distro_tree=dt)
+            incomplete_recipe = data_setup.create_recipe(distro_tree=dt)
             job = data_setup.create_job_for_recipes(
                     [completed_recipe, incomplete_recipe])
-            data_setup.mark_recipe_complete(completed_recipe)
+            job.recipesets[0].lab_controller = self.lc
+            data_setup.mark_recipe_complete(completed_recipe,
+                    system=data_setup.create_system(lab_controller=self.lc))
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         result = self.server.recipes.by_log_server(self.lc.fqdn)
         self.assertEquals(result, [])

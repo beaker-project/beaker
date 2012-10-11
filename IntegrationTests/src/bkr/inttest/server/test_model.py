@@ -134,10 +134,7 @@ class TestBrokenSystemDetection(unittest.TestCase):
             distro_tree = data_setup.create_distro_tree(distro_tags=[u'RELEASED'])
         recipe = data_setup.create_recipe(distro_tree=distro_tree)
         data_setup.create_job_for_recipes([recipe])
-        recipe.system = self.system
-        recipe.tasks[0].status = TaskStatus.running
-        recipe.update_status()
-        session.flush()
+        data_setup.mark_recipe_running(recipe, system=self.system)
         recipe.abort()
 
     def test_multiple_suspicious_aborts_triggers_broken_system(self):
@@ -433,7 +430,7 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
 
     def test_system_type(self):
         excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, type=SystemType.virtual)
+                lab_controller=self.lc, type=SystemType.prototype)
         included = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc)
         session.flush()
@@ -1333,11 +1330,12 @@ class RecipeTest(unittest.TestCase):
             data_setup.create_system(fqdn='clienttwo.roles_to_xml', lab_controller=lc),
         ]
         job = data_setup.create_job_for_recipes([
-            data_setup.create_recipe(distro_tree=dt, system=systems[0], role='SERVER'),
-            data_setup.create_recipe(distro_tree=dt, system=systems[1], role='CLIENTONE'),
-            data_setup.create_recipe(distro_tree=dt, system=systems[2], role='CLIENTTWO'),
+            data_setup.create_recipe(distro_tree=dt, role='SERVER'),
+            data_setup.create_recipe(distro_tree=dt, role='CLIENTONE'),
+            data_setup.create_recipe(distro_tree=dt, role='CLIENTTWO'),
         ])
-        data_setup.mark_job_complete(job)
+        for i in range(3):
+            data_setup.mark_recipe_complete(job.recipesets[0].recipes[i], system=systems[i])
         xml = job.recipesets[0].recipes[0].to_xml(clone=False).toxml()
         self.assert_('<roles>'
                 '<role value="CLIENTONE"><system value="clientone.roles_to_xml"/></role>'
@@ -1358,11 +1356,10 @@ class GuestRecipeTest(unittest.TestCase):
         distro_tree = data_setup.create_distro_tree(lab_controllers=[lc],
                 urls=[u'nfs://something:/somewhere',
                       u'http://something/somewhere'])
-        guest_system = data_setup.create_system(lab_controller=lc,
-                type=SystemType.virtual)
-        job = data_setup.create_completed_job(distro_tree=distro_tree)
+        job = data_setup.create_completed_job(distro_tree=distro_tree,
+                system=data_setup.create_system(lab_controller=lc))
         guest_recipe = GuestRecipe(guestname=u'asdf', guestargs=u'--kvm',
-                distro_tree=distro_tree, system=guest_system)
+                distro_tree=distro_tree, status=TaskStatus.completed)
         job.recipesets[0].recipes[0].guests.append(guest_recipe)
         job.recipesets[0].recipes.append(guest_recipe)
         session.flush()

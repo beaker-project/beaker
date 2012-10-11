@@ -38,3 +38,90 @@ tables, then run the following SQL to populate them:
         SELECT NULL, recipe_task.id, recipe.role, recipe.system_id
         FROM recipe_task
         INNER JOIN recipe ON recipe_task.recipe_id = recipe.id;
+
+
+New tables recipe_resource, system_resource, guest_resource (bug 655009)
+------------------------------------------------------------------------
+
+Before proceeding with this step, ensure that you have a CSV file to re-create
+your Virtual system records in case you need to roll back. If you don't already
+have one, use Beaker’s CSV export feature. If you don't have any Virtual system
+records, ignore this step.
+
+First run beaker-init to create the new tables, and then run the following SQL
+to populate them:
+
+    INSERT INTO recipe_resource (id, recipe_id, type, fqdn)
+        SELECT NULL, recipe.id, 'system', system.fqdn
+        FROM recipe
+        INNER JOIN system ON recipe.system_id = system.id
+        WHERE system.type != 'Virtual';
+    INSERT INTO system_resource (id, system_id, reservation_id)
+        SELECT recipe_resource.id, recipe.system_id, recipe.reservation_id
+        FROM recipe
+        INNER JOIN recipe_resource ON recipe_resource.recipe_id = recipe.id
+            AND recipe_resource.type = 'system';
+
+    INSERT INTO recipe_resource (id, recipe_id, type, fqdn)
+        SELECT NULL, recipe.id, 'guest', system.fqdn
+        FROM recipe
+        INNER JOIN system ON recipe.system_id = system.id
+        WHERE system.type = 'Virtual';
+    INSERT INTO guest_resource (id)
+        SELECT recipe_resource.id
+        FROM recipe
+        INNER JOIN recipe_resource ON recipe_resource.recipe_id = recipe.id
+            AND recipe_resource.type = 'guest';
+
+    ALTER TABLE recipe
+        DROP FOREIGN KEY recipe_ibfk_4, -- system_id FK
+        DROP COLUMN system_id,
+        DROP FOREIGN KEY recipe_reservation_id_fk,
+        DROP COLUMN reservation_id;
+
+    DELETE FROM reservation
+        USING reservation
+        INNER JOIN system ON reservation.system_id = system.id
+        WHERE system.type = 'Virtual';
+    DELETE FROM system_status_duration
+        USING system_status_duration
+        INNER JOIN system ON system_status_duration.system_id = system.id
+        WHERE system.type = 'Virtual';
+    DELETE FROM system_activity
+        USING system_activity
+        INNER JOIN system ON system_activity.system_id = system.id
+        WHERE system.type = 'Virtual';
+    DELETE FROM activity
+        USING activity
+        LEFT JOIN system_activity ON activity.id = system_activity.id
+        WHERE type = 'system_activity' AND system_activity.id IS NULL;
+    DELETE FROM system
+        WHERE type = 'Virtual';
+    ALTER TABLE system
+        CHANGE type type ENUM('Machine', 'Resource', 'Laptop', 'Prototype') NOT NULL;
+
+To roll back, first restore the dropped columns:
+
+    ALTER TABLE recipe
+        ADD COLUMN system_id INT DEFAULT NULL AFTER distro_tree_id,
+        ADD CONSTRAINT recipe_system_id_fk
+            FOREIGN KEY (system_id) REFERENCES system (id),
+        ADD COLUMN reservation_id INT DEFAULT NULL AFTER autopick_random,
+        ADD CONSTRAINT recipe_reservation_id_fk
+            FOREIGN KEY (reservation_id) REFERENCES reservation (id);
+    ALTER TABLE system
+        CHANGE type type ENUM('Machine', 'Virtual', 'Resource', 'Laptop', 'Prototype') NOT NULL;
+
+Then use the CSV file you saved to re-create your Virtual system records (if
+you had any). Then run the following SQL to populate the restored columns:
+
+    UPDATE recipe
+        INNER JOIN recipe_resource ON recipe_resource.recipe_id = recipe.id
+        INNER JOIN system_resource ON recipe_resource.id = system_resource.id
+        SET recipe.system_id = system_resource.system_id,
+            recipe.reservation_id = system_resource.reservation_id;
+    UPDATE recipe
+        INNER JOIN recipe_resource ON recipe_resource.recipe_id = recipe.id
+        INNER JOIN guest_resource ON recipe_resource.id = guest_resource.id
+        INNER JOIN system ON recipe_resource.fqdn = system.fqdn
+        SET recipe.system_id = system.id;
