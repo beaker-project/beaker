@@ -201,6 +201,22 @@ class Recipes(RPCRoot):
         return getattr(recipe,stop_type)(**kwargs)
 
     @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def install_done(self, recipe_id=None, fqdn=None):
+        if not recipe_id:
+            raise BX(_("No recipe id provided!"))
+        if not fqdn:
+            raise BX(_("No fqdn provided!"))
+
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_("Invalid Recipe ID %s" % recipe_id))
+
+        recipe.resource.fqdn = fqdn
+        return True
+
+    @cherrypy.expose
     def to_xml(self, recipe_id=None):
         """ 
             Pass in recipe id and you'll get that recipe's xml

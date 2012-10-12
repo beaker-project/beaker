@@ -25,3 +25,18 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         result = self.server.recipes.by_log_server(self.lc.fqdn)
         self.assertEquals(result, [])
+
+    def test_install_done_updates_resource_fqdn(self):
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree()
+            recipe = data_setup.create_recipe(distro_tree=distro_tree)
+            guestrecipe = data_setup.create_guestrecipe(host=recipe,
+                    distro_tree=distro_tree)
+            data_setup.create_job_for_recipes([recipe, guestrecipe])
+            data_setup.mark_recipe_running(recipe)
+            data_setup.mark_recipe_waiting(guestrecipe)
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        self.server.recipes.install_done(guestrecipe.id, 'theguestname')
+        with session.begin():
+            session.expire(guestrecipe.resource)
+            self.assertEquals(guestrecipe.resource.fqdn, 'theguestname')

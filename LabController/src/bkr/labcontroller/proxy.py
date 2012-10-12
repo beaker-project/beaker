@@ -585,6 +585,10 @@ class Proxy(ProxyHelper):
                 # force=True because we are not the system's user
                 True)
 
+    def install_done(self, recipe_id=None, fqdn=None):
+        logger.debug("install_done recipe_id=%s fqdn=%s", recipe_id, fqdn)
+        return self.hub.recipes.install_done(recipe_id, fqdn)
+
     def status_watchdog(self, task_id):
         """ Ask the scheduler how many seconds are left on a watchdog for this task
         """
