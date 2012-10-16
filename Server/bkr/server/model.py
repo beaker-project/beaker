@@ -4608,6 +4608,8 @@ class Recipe(TaskBase):
             text = xmldoc.createCDATASection('%s' % self.kickstart)
             kickstart.appendChild(text)
             recipe.appendChild(kickstart)
+        if self.rendered_kickstart and not clone:
+            recipe.setAttribute('kickstart_url', self.rendered_kickstart.link)
         recipe.setAttribute("ks_meta", "%s" % self.ks_meta and self.ks_meta or '')
         recipe.setAttribute("kernel_options", "%s" % self.kernel_options and self.kernel_options or '')
         recipe.setAttribute("kernel_options_post", "%s" % self.kernel_options_post and self.kernel_options_post or '')
