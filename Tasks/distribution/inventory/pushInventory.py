@@ -430,7 +430,8 @@ def main():
     legacy_inv.update(kernel_inventory())
     del inventory['formfactor']
     if debug:
-        print "Legacy inventory:\n%s\nData:\n%s" % (legacy_inv, inventory)
+        print "Legacy inventory:\n%s\nData:\n%s" % (
+                pprint.pformat(legacy_inv), pprint.pformat(inventory))
     else:
         if not hostname:
             print "You must specify a hostname with the -h switch"
