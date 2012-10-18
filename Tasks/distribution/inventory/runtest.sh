@@ -39,10 +39,10 @@ rlJournalStart
 
     rlPhaseStartTest
         if [ -n "$INVENTORY_DEBUG" ] ; then
-            rlRun "./pushInventory.py -d >inventory.out"
+            rlRun -l "./pushInventory.py -d >inventory.out"
             rlFileSubmit inventory.out
         else
-            rlRun "./pushInventory.py --server $server -h $hostname"
+            rlRun -l "./pushInventory.py --server $server -h $hostname"
         fi
     rlPhaseEnd
 rlJournalPrintText
