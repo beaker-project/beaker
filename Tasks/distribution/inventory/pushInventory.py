@@ -25,6 +25,7 @@ import math
 import re
 import shutil
 import glob
+import tempfile
 from subprocess import Popen, PIPE
 
 sys.path.append('.')
@@ -56,25 +57,14 @@ def check_for_virt_iommu():
         #only x86 boxes support virt iommu
         return 0
 
-    #setup data directory
-    path="acpiout"
-    try:
-        os.makedirs(path)
-    except OSError:
-        pass
-
-    #find and extract data
-    if not os.path.exists("acpidump") or not os.path.exists("acpixtract"):
-        raise ("missing acpidump and/or acpixtract executables")
-    os.chdir(path)
-    os.system("../acpidump --output acpi.dump > /dev/null")
-    os.system("../acpixtract -a acpi.dump > /dev/null")
-
     #test what type of system we are on
-    if os.path.exists("DMAR.dat"):
+    if os.path.exists("/sys/firmware/acpi/tables/DMAR"):
         # alright we are on an Intel vt-d box
         hwu = False
         ba = False
+
+        # iasl can't read directly from /sys
+        shutil.copyfile('/sys/firmware/acpi/tables/DMAR', 'DMAR.dat')
 
         # create ascii file
         os.system("iasl -d DMAR.dat > /dev/null 2>&1")
@@ -103,17 +93,10 @@ def check_for_virt_iommu():
         else:
             print "VIRT_IOMMU: Failed to create DMAR.dsl"
 
-    elif os.path.exists("IVRS.dat"):
+    elif os.path.exists("/sys/firmware/acpi/tables/IVRS"):
         # alright we are on an AMD iommu box
         #  we don't have a good way to validate this
         virt_iommu = 1
-
-    #clean up
-    os.chdir("..")
-    try:
-        shutil.rmtree(path)
-    except:
-        print "VIRT_IOMMU: can't remove directory"
 
     return virt_iommu
 
