@@ -23,7 +23,7 @@ Options
 
 .. option:: --family <family>
 
-   Limit to jobs which ran with distro belonging to <family>, for example 
+   Limit to jobs which ran with distro belonging to <family>, for example
    ``RedHatEnterpriseLinuxServer5``.
 
 .. option:: --completeDays <days>
@@ -54,7 +54,16 @@ Options
 
    Limit to displaying only the first <number> of results
 
-Common :program:`bkr` options are described in the :ref:`Options 
+.. option:: --min-id id
+
+   Query jobs with a minium Job ID of id
+
+.. option:: --max-id id
+
+   Query jobs with a max Job ID of id
+
+
+Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
 
 Exit status
@@ -67,7 +76,16 @@ Examples
 
 List all scratch jobs which finished 30 or more days ago::
 
-    bkr job-list --tag scratch --completeDays 30
+     bkr job-list --tag scratch --completeDays 30
+
+List all scratch jobs with IDs between 10-100::
+
+     bkr job-list --tag=scratch --min-id=10 --max-id=100
+
+List all scratch jobs with min ID of 10::
+
+     bkr job-list --tag=scratch --min-id=10
+
 
 See also
 --------
@@ -81,7 +99,7 @@ from optparse import OptionValueError
 class Job_List(BeakerCommand):
     """List Beaker jobs """
     enabled = True
-    
+
     def options(self):
         self.parser.usage = "%%prog %s [options] ..." % self.normalized_name
         self.parser.add_option(
@@ -106,7 +124,7 @@ class Job_List(BeakerCommand):
 
         self.parser.add_option(
             "-p",
-            "--product", 
+            "--product",
             help="Jobs for a particular product"
         )
 
@@ -135,6 +153,19 @@ class Job_List(BeakerCommand):
             help="Place a limit on the number of results"
         )
 
+        self.parser.add_option(
+            "--min-id",
+            type='int',
+            help="Min Job ID to look into"
+        )
+
+        self.parser.add_option(
+            "--max-id",
+            type='int',
+            help="Max Job ID to look into"
+        )
+
+
     def run(self,*args, **kwargs):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
@@ -147,11 +178,21 @@ class Job_List(BeakerCommand):
         mine = kwargs.pop('mine', None)
         limit = kwargs.pop('limit', None)
 
+        # Process Job IDs if specified and sanity checking
+        minid = kwargs.pop('min_id', None)
+        maxid = kwargs.pop('max_id', None)
+        if minid or maxid:
+            if minid and minid<=0 or maxid and maxid <= 0:
+                self.parser.error('Please specify a non zero positive Job ID')
+            if minid and maxid:
+                if maxid <  minid:
+                    self.parser.error('Max Job ID should be greater than or equal to min Job ID')
+
         if complete_days is not None and complete_days < 1:
             self.parser.error('Please pass a positive integer to completeDays')
 
         if complete_days is None and tag is None and family is None and product is None\
-           and owner is None and mine is None and whiteboard is None:
+                and owner is None and mine is None and whiteboard is None:
             self.parser.error('Please pass either the completeDays time delta, a tag, product, family, or owner')
 
         self.set_hub(username,password)
@@ -163,4 +204,6 @@ class Job_List(BeakerCommand):
                                         owner=owner,
                                         whiteboard=whiteboard,
                                         mine=mine,
+                                        minid=minid,
+                                        maxid=maxid,
                                         limit=limit))
