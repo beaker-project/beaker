@@ -1,0 +1,8 @@
+Change-Id: I92011358e57e5d4a13d051aa1368bb55c53290d0
+Verified+1: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+2: Nick Coghlan <ncoghlan@redhat.com>
+Submitted-by: Nick Coghlan <ncoghlan@redhat.com>
+Submitted-at: Thu, 18 Oct 2012 23:40:11 -0400
+Reviewed-on: http://gerrit.beaker-project.org/1428
+Project: beaker
+Branch: refs/heads/develop
