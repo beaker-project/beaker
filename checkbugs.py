@@ -39,13 +39,18 @@ def all(iterable):
             return False
     return True
 
-def get_bugs(milestone):
+def get_bugs(milestone, release):
     bz = bugzilla.Bugzilla(url=BUGZILLA_URL)
     # Make sure the user has logged themselves in properly, otherwise we might 
     # accidentally omit private bugs from the list
     assert bz.user, 'Configure your username in ~/.bugzillarc'
     assert bz._proxy.User.valid_cookie(dict(login=bz.user))['cookie_isvalid'] == 1
-    return bz.query(dict(product='Beaker', target_milestone=milestone))
+    criteria = {'product': 'Beaker'}
+    if milestone:
+        criteria['target_milestone'] = milestone
+    if release:
+        criteria['flag'] = ['beaker-%s+' % release]
+    return bz.query(bz.build_query(**criteria))
 
 def get_gerrit_changes(bug_ids):
     p = subprocess.Popen(['ssh',
@@ -95,11 +100,13 @@ def main():
             description='Reports on the state of Beaker bugs for a given milestone')
     parser.add_option('-m', '--milestone', metavar='MILESTONE',
             help='Check bugs slated for MILESTONE')
+    parser.add_option('-r', '--release', metavar='RELEASE',
+            help='Check bugs approved for RELEASE (using flags)')
     options, args = parser.parse_args()
-    if not options.milestone:
-        parser.error('Specify a milestone with --milestone')
+    if not options.milestone and not options.release:
+        parser.error('Specify a milestone or release')
 
-    bugs = get_bugs(options.milestone)
+    bugs = get_bugs(options.milestone, options.release)
     changes = get_gerrit_changes(bug.bug_id for bug in bugs)
 
     for bug in sorted(bugs, key=lambda b: (b.assigned_to, b.bug_id)):
