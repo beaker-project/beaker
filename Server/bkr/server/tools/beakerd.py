@@ -382,12 +382,12 @@ def queued_recipes(*args):
                 recipe.systems.remove(system)
                 continue
 
+            recipe.resource = SystemResource(system=system)
+            # Reserving the system may fail here if someone stole it out from
+            # underneath us, but that is fine...
+            recipe.resource.allocate()
             recipe.schedule()
             recipe.createRepo()
-            recipe.resource = SystemResource(system=system,
-                    reservation=system.reserve(service=u'Scheduler',
-                        user=recipe.recipeset.job.owner,
-                        reservation_type=u'recipe'))
             recipe.recipeset.lab_controller = system.lab_controller
             recipe.systems = []
             # Create the watchdog without an Expire time.
@@ -396,9 +396,10 @@ def queued_recipes(*args):
             log.info("recipe ID %s moved from Queued to Scheduled" % recipe.id)
 
             for guestrecipe in recipe.guests:
+                guestrecipe.resource = GuestResource()
+                guestrecipe.resource.allocate()
                 guestrecipe.schedule()
                 guestrecipe.createRepo()
-                guestrecipe.resource = GuestResource()
                 guestrecipe.watchdog = Watchdog()
                 log.info('recipe ID %s guest %s moved from Queued to Scheduled',
                         recipe.id, guestrecipe.id)

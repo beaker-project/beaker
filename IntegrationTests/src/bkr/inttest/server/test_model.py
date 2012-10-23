@@ -8,7 +8,9 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
         Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
-        GuestRecipe
+        GuestRecipe, GuestResource, Recipe
+from sqlalchemy.sql import not_
+import netaddr
 from bkr.inttest import data_setup
 from nose.plugins.skip import SkipTest
 
@@ -1368,6 +1370,46 @@ class GuestRecipeTest(unittest.TestCase):
         self.assert_('location="nfs://something:/somewhere"' in guestxml, guestxml)
         self.assert_('nfs_location="nfs://something:/somewhere"' in guestxml, guestxml)
         self.assert_('http_location="http://something/somewhere"' in guestxml, guestxml)
+
+
+class GuestResourceTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+        # Other tests might have left behind running GuestRecipes, let's cancel them all
+        for guestrecipe in GuestRecipe.query.filter(not_(Recipe.status.in_(
+                [s for s in TaskStatus if s.finished]))):
+            guestrecipe.cancel()
+
+    def tearDown(self):
+        session.commit()
+
+    def test_lowest_free_mac_none_in_use(self):
+        self.assertEquals(GuestResource._lowest_free_mac(),
+                netaddr.EUI('52:54:00:00:00:00'))
+
+    def test_lowest_free_mac_one_in_use(self):
+        job = data_setup.create_job(num_guestrecipes=1)
+        data_setup.mark_job_running(job)
+        self.assertEquals(job.recipesets[0].recipes[0].guests[0].resource.mac_address,
+                    netaddr.EUI('52:54:00:00:00:00'))
+        self.assertEquals(GuestResource._lowest_free_mac(),
+                    netaddr.EUI('52:54:00:00:00:01'))
+
+    def test_lowest_free_mac_gap_at_start(self):
+        first_job = data_setup.create_job(num_guestrecipes=1)
+        data_setup.mark_job_running(first_job)
+        self.assertEquals(first_job.recipesets[0].recipes[0].guests[0].resource.mac_address,
+                    netaddr.EUI('52:54:00:00:00:00'))
+        second_job = data_setup.create_job(num_guestrecipes=1)
+        data_setup.mark_job_running(second_job)
+        self.assertEquals(second_job.recipesets[0].recipes[0].guests[0].resource.mac_address,
+                    netaddr.EUI('52:54:00:00:00:01'))
+        self.assertEquals(GuestResource._lowest_free_mac(),
+                    netaddr.EUI('52:54:00:00:00:02'))
+        first_job.cancel()
+        self.assertEquals(GuestResource._lowest_free_mac(),
+                    netaddr.EUI('52:54:00:00:00:00'))
 
 
 class TaskPackageTest(unittest.TestCase):

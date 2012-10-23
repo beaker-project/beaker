@@ -8,16 +8,17 @@ import ldap
 from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         String, Unicode, Integer, DateTime,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
-                        or_, and_, not_, select, case, func)
+                        or_, and_, not_, select, case, func, BigInteger)
 
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
         query, object_mapper, mapper, column_property, contains_eager
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
-from sqlalchemy.sql import exists
+from sqlalchemy.sql import exists, union
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exc import InvalidRequestError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.types import TypeDecorator
 from identity import LdapSqlAlchemyIdentityProvider
 from bkr.server.installopts import InstallOptions, global_install_options
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
@@ -47,7 +48,7 @@ import random
 import string
 import cracklib
 import lxml.etree
-
+import netaddr
 from turbogears import identity
 
 from datetime import timedelta, date, datetime
@@ -165,6 +166,31 @@ class ResourceType(DeclEnum):
         ('system', u'system', dict()),
         ('guest',  u'guest',  dict()),
     ]
+
+# A netaddr "dialect" for formatting MAC addresses... this is the most common 
+# format, and is expected by virt-install, so I'm not sure why netaddr doesn't 
+# ship with it...
+class _mac_unix(netaddr.mac_unix):
+    word_fmt = '%02x'
+
+class MACAddress(TypeDecorator):
+    """
+    Database type for MAC (EUI) addresses. Stores them as raw integers, which 
+    lets us do arithmetic on them in the database.
+    """
+    impl = BigInteger
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        if isinstance(value, netaddr.EUI):
+            return int(value)
+        return int(netaddr.EUI(value))
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        return netaddr.EUI(value, dialect=_mac_unix)
 
 xmldoc = xml.dom.minidom.Document()
 
@@ -1051,6 +1077,7 @@ system_resource_table = Table('system_resource', metadata,
 guest_resource_table = Table('guest_resource', metadata,
     Column('id', Integer, ForeignKey('recipe_resource.id',
             name='guest_resource_id_fk'), primary_key=True),
+    Column('mac_address', MACAddress(), index=True, default=None),
     mysql_engine='InnoDB',
 )
 
@@ -5160,6 +5187,8 @@ class GuestRecipe(Recipe):
         recipe = xmldoc.createElement("guestrecipe")
         recipe.setAttribute("guestname", "%s" % self.guestname)
         recipe.setAttribute("guestargs", "%s" % self.guestargs)
+        if self.resource and self.resource.mac_address and not clone:
+            recipe.setAttribute("mac_address", "%s" % self.resource.mac_address)
         if self.distro_tree and self.recipeset.lab_controller and not clone:
             location = self.distro_tree.url_in_lab(self.recipeset.lab_controller)
             if location:
@@ -5761,11 +5790,21 @@ class SystemResource(RecipeResource):
     For a recipe which is running on a Beaker system.
     """
 
-    def __init__(self, system, reservation):
+    def __init__(self, system):
         super(SystemResource, self).__init__()
         self.system = system
-        self.reservation = reservation
         self.fqdn = system.fqdn
+
+    def __repr__(self):
+        return '%s(fqdn=%r, system=%r, reservation=%r)' % (
+                self.__class__.__name__, self.fqdn, self.system,
+                self.reservation)
+
+    @property
+    def mac_address(self):
+        # XXX the type of system.mac_address should be changed to MACAddress,
+        # but for now it's not
+        return netaddr.EUI(self.system.mac_address, dialect=_mac_unix)
 
     @property
     def link(self):
@@ -5774,6 +5813,12 @@ class SystemResource(RecipeResource):
 
     def install_options(self, distro_tree):
         return self.system.install_options(distro_tree)
+
+    def allocate(self):
+        log.debug('Reserving system %s for recipe %s', self.system, self.recipe.id)
+        self.reservation = self.system.reserve(service=u'Scheduler',
+                user=self.recipe.recipeset.job.owner,
+                reservation_type=u'recipe')
 
     def release(self):
         log.debug('Releasing system %s for recipe %s', self.system, self.recipe.id)
@@ -5787,6 +5832,10 @@ class GuestResource(RecipeResource):
     MachineRecipe.
     """
 
+    def __repr__(self):
+        return '%s(fqdn=%r, mac_address=%r)' % (self.__class__.__name__,
+                self.fqdn, self.mac_address)
+
     @property
     def link(self):
         return self.fqdn # just text, not a link
@@ -5794,6 +5843,35 @@ class GuestResource(RecipeResource):
     def install_options(self, distro_tree):
         return global_install_options().combined_with(
                 distro_tree.install_options())
+
+    @staticmethod
+    def _lowest_free_mac():
+        base_addr = netaddr.EUI(get('beaker.base_mac_addr', '52:54:00:00:00:00'))
+        session.flush()
+        # This subquery gives all MAC addresses in use right now
+        mac_addrs_query = session.query(GuestResource.mac_address.label('mac_address'))\
+                .filter(GuestResource.mac_address != None)\
+                .join(GuestResource.recipe)\
+                .filter(not_(Recipe.status.in_([s for s in TaskStatus if s.finished])))
+        # This trickery finds "gaps" of unused MAC addresses by filtering for MAC
+        # addresses where address + 1 is not in use.
+        # We union with base address - 1 to find any gap at the start.
+        # Note that this relies on the MACAddress type being represented as
+        # BIGINT in the database, which lets us do arithmetic on it.
+        left_side = union(mac_addrs_query, select([int(base_addr) - 1])).alias('left_side')
+        right_side = mac_addrs_query.subquery('right_side')
+        free_addr = session.scalar(select([left_side.c.mac_address + 1],
+                from_obj=left_side.outerjoin(right_side,
+                    onclause=left_side.c.mac_address + 1 == right_side.c.mac_address))\
+                .where(right_side.c.mac_address == None)\
+                .order_by(left_side.c.mac_address).limit(1))
+        # The type of (left_side.c.mac_address + 1) comes out as Integer
+        # instead of MACAddress, I think it's a sqlalchemy bug :-(
+        return netaddr.EUI(free_addr, dialect=_mac_unix)
+
+    def allocate(self):
+        self.mac_address = self._lowest_free_mac()
+        log.debug('Allocating MAC address %s for recipe %s', self.mac_address, self.recipe.id)
 
     def release(self):
         pass

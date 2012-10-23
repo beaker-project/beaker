@@ -295,7 +295,7 @@ def create_recipe(distro_tree=None, task_list=None,
     if not distro_tree:
         distro_tree = create_distro_tree()
     recipe = cls(ttasks=1, whiteboard=whiteboard,
-            distro_tree=distro_tree, role=role, **kwargs)
+            distro_tree=distro_tree, role=role)
     recipe.distro_requires = recipe.distro_tree.to_xml().toxml()
 
     if not server_log:
@@ -347,7 +347,7 @@ def create_retention_tag(name=None, default=False, needs_product=False):
     return new_tag
 
 def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,
-        retention_tag=None):
+        retention_tag=None, **kwargs):
     if retention_tag is None:
         retention_tag = RetentionTag.by_tag(u'scratch') # Don't use default, unpredictable
     else:
@@ -368,13 +368,17 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
     session.flush()
     return job
 
-def create_job(owner=None, cc=None, distro_tree=None, product=None,
-        retention_tag=None, task_name=u'/distribution/reservesys', whiteboard=None,
-        recipe_whiteboard=None, server_log=False, task_list=None, **kwargs):
-    recipe = create_recipe(distro_tree=distro_tree, task_name=task_name,
-            whiteboard=recipe_whiteboard, server_log=server_log, task_list=task_list)
-    return create_job_for_recipes([recipe], owner=owner,
-            whiteboard=whiteboard, cc=cc, product=product,retention_tag=retention_tag)
+def create_job(num_recipes=1, num_guestrecipes=0, whiteboard=None,
+        recipe_whiteboard=None, **kwargs):
+    if kwargs.get('distro_tree', None) is None:
+        kwargs['distro_tree'] = create_distro_tree()
+    recipes = [create_recipe(whiteboard=recipe_whiteboard, **kwargs)
+            for _ in range(num_recipes)]
+    guestrecipes = [create_guestrecipe(host=recipes[0],
+            whiteboard=recipe_whiteboard, **kwargs)
+            for _ in range(num_guestrecipes)]
+    return create_job_for_recipes(recipes + guestrecipes,
+            whiteboard=whiteboard, **kwargs)
 
 def create_completed_job(**kwargs):
     job = create_job(**kwargs)
@@ -410,13 +414,13 @@ def mark_recipe_waiting(recipe, start_time=None, system=None, **kwargs):
         if isinstance(recipe, MachineRecipe):
             if not system:
                 system = create_system(arch=recipe.arch)
-            reservation = system.reserve(service=u'testdata',
-                    user=recipe.recipeset.job.owner, reservation_type=u'recipe')
-            reservation.start_time = start_time
-            recipe.resource = SystemResource(system=system, reservation=reservation)
+            recipe.resource = SystemResource(system=system)
+            recipe.resource.allocate()
+            recipe.resource.reservation.start_time = start_time
             recipe.recipeset.lab_controller = system.lab_controller
         elif isinstance(recipe, GuestRecipe):
             recipe.resource = GuestResource()
+            recipe.resource.allocate()
     recipe.start_time = start_time
     recipe.watchdog = Watchdog()
     recipe.waiting()
