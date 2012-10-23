@@ -1396,7 +1396,8 @@ class User(MappedObject):
         # Try to look up the user via local DB first.
         user = cls.query.filter_by(user_name=user_name).first()
         # If user doesn't exist in DB check ldap if enabled.
-        if not user and cls.ldapenabled:
+        # Presence of '/' indicates a Kerberos service principal.
+        if not user and cls.ldapenabled and '/' not in user_name:
             filter = "(uid=%s)" % user_name
             ldapcon = ldap.initialize(cls.uri)
             rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
