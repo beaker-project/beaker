@@ -263,9 +263,12 @@ def legacy_inventory(inv):
         else:
             data['NETWORK'] = drivers[1:][0]
 
+    # disk sizes are converted to GiB in key-values for backwards compatibility
     disks = Disks()
-    data['DISK'] = disks.disks
-    data['DISKSPACE'] = disks.diskspace
+    data['DISK'] = []
+    for disk in disks:
+        data['DISK'].append(disk.size / 1024**2)
+    data['DISKSPACE'] = disks.disk_space / 1024**2
     data['NR_DISKS'] = disks.nr_disks
 
     # finding out eth and ib interfaces...
@@ -367,6 +370,16 @@ def read_inventory():
     data['model'] = "%s" % profile.host.systemModel
     data['formfactor'] = "%s" % profile.host.formfactor
     data['memory'] = int(memory['ram'])
+
+    disklist = []
+    diskdata = {}
+    disks = Disks()
+    for disk in Disks():
+        disklist.append(disk.to_dict())
+    diskdata['Disks'] = disklist
+
+    data['Disk'] = diskdata
+
     if hasattr(profile.host, 'numaNodes'):
         data['Numa'] = {'nodes': profile.host.numaNodes}
     else:
@@ -394,6 +407,7 @@ def read_inventory():
                         type = str(Type),
                         description = str(Description))
         data['Devices'].append(device)
+
     return data
 
 def usage():

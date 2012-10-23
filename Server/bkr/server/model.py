@@ -6,7 +6,7 @@ from turbogears import url
 from copy import copy
 import ldap
 from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
-                        String, Unicode, Integer, DateTime,
+                        String, Unicode, Integer, BigInteger, DateTime,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
                         or_, and_, not_, select, case, func)
 
@@ -428,6 +428,18 @@ device_table = Table('device', metadata,
     mysql_engine='InnoDB',
 )
 Index('ix_device_pciid', device_table.c.vendor_id, device_table.c.device_id)
+
+disk_table = Table('disk', metadata,
+    Column('id', Integer, autoincrement=True,
+        nullable=False, primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
+    Column('model', String(255)),
+    # sizes are in bytes
+    Column('size', BigInteger),
+    Column('sector_size', Integer),
+    Column('phys_sector_size', Integer),
+    mysql_engine='InnoDB',
+)
 
 locked_table = Table('locked', metadata,
     Column('id', Integer, autoincrement=True,
@@ -1985,7 +1997,7 @@ class System(SystemObject):
     def get_update_method(self,obj_str):
         methods = dict ( Cpu = self.updateCpu, Arch = self.updateArch, 
                          Devices = self.updateDevices, Numa = self.updateNuma,
-                         Hypervisor = self.updateHypervisor, )
+                         Hypervisor = self.updateHypervisor, Disk = self.updateDisk)
         return methods[obj_str]
 
     def update_legacy(self, inventory):
@@ -2117,6 +2129,30 @@ class System(SystemObject):
                         service=u'XMLRPC', action=u'Added',
                         field_name=u'Arch', old_value=None,
                         new_value=new_arch.arch))
+
+    def updateDisk(self, diskinfo):
+        currentDisks = []
+        self.disks = getattr(self, 'disks', [])
+
+        for disk in diskinfo['Disks']:
+            disk = Disk(**disk)
+            if disk not in self.disks:
+                self.disks.append(disk)
+                self.activity.append(SystemActivity(
+                        user=identity.current.user,
+                        service=u'XMLRPC', action=u'Added',
+                        field_name=u'Disk', old_value=None,
+                        new_value=disk.size))
+            currentDisks.append(disk)
+
+        for disk in self.disks:
+            if disk not in currentDisks:
+                self.disks.remove(disk)
+                self.activity.append(SystemActivity(
+                        user=identity.current.user,
+                        service=u'XMLRPC', action=u'Removed',
+                        field_name=u'Disk', old_value=disk.size,
+                        new_value=None))
 
     def updateDevices(self, deviceinfo):
         currentDevices = []
@@ -2826,6 +2862,12 @@ class DeviceClass(SystemObject):
 class Device(SystemObject):
     pass
 
+class Disk(SystemObject):
+    def __init__(self, size=None, sector_size=None, phys_sector_size=None, model=None):
+        self.size = int(size)
+        self.sector_size = int(sector_size)
+        self.phys_sector_size = int(phys_sector_size)
+        self.model = model
 
 class Locked(MappedObject):
     def __init__(self, name=None):
@@ -6239,6 +6281,8 @@ System.mapper = mapper(System, system_table,
                         extension=SystemStatusAttributeExtension()),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
+                     'disks':relation(Disk, backref='system',
+                        cascade='all, delete, delete-orphan'),
                      'arch':relation(Arch,
                                      order_by=[arch_table.c.arch],
                                         secondary=system_arch_map,
@@ -6348,8 +6392,8 @@ CpuFlag.mapper = mapper(CpuFlag, cpu_flag_table)
 Numa.mapper = mapper(Numa, numa_table)
 Device.mapper = mapper(Device, device_table,
        properties = {'device_class': relation(DeviceClass)})
-
 mapper(DeviceClass, device_class_table)
+mapper(Disk, disk_table)
 mapper(Locked, locked_table)
 mapper(PowerType, power_type_table)
 mapper(Power, power_table,

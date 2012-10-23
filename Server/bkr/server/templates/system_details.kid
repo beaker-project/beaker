@@ -107,7 +107,42 @@
   </tr>
  </table>
 </span>
-<br/>
+<span py:if="hasattr(system, 'disks')">
+&nbsp;&nbsp;<b>Disks</b>
+<table class="list">
+    <tr class="list">
+        <th class="list">
+            <b>Model</b>
+        </th>
+        <th class="list">
+            <b>Size</b>
+        </th>
+        <th class="list">
+            <b>Logical sector size</b>
+        </th>
+        <th class="list">
+            <b>Physical sector size</b>
+        </th>
+    </tr>
+    <?python row_color = "#FFFFFF" ?>
+    <tr class="list" bgcolor="${row_color}" py:for="disk in system.disks" id="disk-${disk.id}">
+        <td class="list">
+            ${disk.model}
+        </td>
+        <td class="list">
+            ${'%0.2f' % (disk.size / 1000.**3)} GB /
+            ${'%0.2f' % (disk.size / 1024.**3)} GiB
+        </td>
+        <td class="list">
+            ${disk.sector_size} bytes
+        </td>
+        <td class="list">
+            ${disk.phys_sector_size} bytes
+        </td>
+        <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
+    </tr>
+</table>
+</span>
 &nbsp;&nbsp;<b>Devices</b>
 <table class="list">
     <tr class="list">

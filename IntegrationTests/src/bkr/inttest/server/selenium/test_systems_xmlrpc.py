@@ -678,6 +678,19 @@ class PushXmlRpcTest(XmlRpcTestCase):
             self.assertEquals(system.activity[1].action, u'Changed')
             self.assertEquals(system.activity[1].field_name, u'checksum')
 
+    def test_system_activity_shows_changes_for_disk(self):
+        with session.begin():
+            system=data_setup.create_system()
+        self.server.push(system.fqdn, {'Disk': {'Disks': [{'model': 'Virtio Block Device',
+                                                           'phys_sector_size': 512,
+                                                           'sector_size': 512,
+                                                           'size': str(8589934592)}]}})
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.activity[0].service, u'XMLRPC')
+            self.assertEquals(system.activity[0].action, u'Added')
+            self.assertEquals(system.activity[0].field_name, 'Disk')
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=708172
     def test_memory_is_updated(self):
         with session.begin():
@@ -687,6 +700,30 @@ class PushXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             session.refresh(system)
             self.assertEquals(system.memory, 1024)
+
+    def test_disk_is_updated(self):
+        with session.begin():
+            system = data_setup.create_system()
+
+        testdict = dict(model='foo',
+                        phys_sector_size=4096,
+                        sector_size=4096,
+                        size=str(500107837440))
+        self.server.push(system.fqdn, dict(Disk=dict(Disks=[testdict])))
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.disks[0].model, testdict['model'])
+            self.assertEquals(system.disks[0].size, int(testdict['size']))
+            self.assertEquals(system.disks[0].sector_size, testdict['sector_size'])
+            self.assertEquals(system.disks[0].phys_sector_size,
+                    testdict['phys_sector_size'])
+
+        # make sure we can update a system with existing disks
+        testdict['model'] = 'newer'
+        self.server.push(system.fqdn, dict(Disk=dict(Disks=[testdict])))
+        with session.begin():
+            session.refresh(system)
+            self.assertEquals(system.disks[0].model, testdict['model'])
 
     def test_hypervisor_none(self):
         with session.begin():
