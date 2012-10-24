@@ -34,7 +34,7 @@ class SchedulerProxy(object):
     def __init__(self, options):
         self.add_distro_cmd = options.add_distro_cmd
         # addDistroCmd = '/var/lib/beaker/addDistro.sh'
-        self.proxy = xmlrpclib.ServerProxy('http://localhost:8000',
+        self.proxy = xmlrpclib.ServerProxy(options.lab_controller,
                                            allow_none=True)
 
     def add_distro(self, profile):
@@ -1674,6 +1674,9 @@ def main():
     group.add_option("--arch",
                       default=None,
                       help="Specify arch")
+    group.add_option("--lab-controller",
+                      default="http://localhost:8000",
+                      help="Specify which lab controller to import to. Defaults to http://localhost:8000")
     parser.add_option_group(group)
                       
     (opts, urls) = parser.parse_args()
