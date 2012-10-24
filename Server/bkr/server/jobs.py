@@ -371,7 +371,6 @@ class Jobs(RPCRoot):
                         )
                 xmljob = XmlJob(xmltramp.parse(textxml))
                 job = self.process_xmljob(xmljob,identity.current.user)
-                session.add(job)
                 session.flush()
             except Exception,err:
                 session.rollback()
@@ -480,6 +479,7 @@ class Jobs(RPCRoot):
 
         if not job.recipesets:
             raise BX(_('No RecipeSets! You can not have a Job with no recipeSets!'))
+        session.add(job)
         return job
 
     def _jobs(self,job,**kw):

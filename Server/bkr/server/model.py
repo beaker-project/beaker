@@ -1344,6 +1344,14 @@ class MappedObject(object):
     def __init__(self, **kwargs):
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
+        # XXX Calling session.add(self) here is a bad idea! We only do it 
+        # because it was inherited from TurboGears 1.0 a long time ago. If 
+        # something causes the session to be flushed (for example lazy_create) 
+        # we could end up trying to persist an object which has not been fully 
+        # populated yet. See bug 869455 for an example of this.
+        # Beware that some classes are already opting out of this behaviour by 
+        # not chaining up to this __init__ method. We should work towards 
+        # eliminating it completely.
         session.add(self)
 
     def __repr__(self):
@@ -3569,6 +3577,15 @@ class Job(TaskBase):
     Container to hold like recipe sets.
     """
 
+    def __init__(self, ttasks=0, owner=None, whiteboard=None,
+            retention_tag=None, product=None):
+        # Intentionally not chaining to super(), to avoid session.add(self)
+        self.ttasks = ttasks
+        self.owner = owner
+        self.whiteboard = whiteboard
+        self.retention_tag = retention_tag
+        self.product = product
+
     stop_types = ['abort','cancel']
     max_by_whiteboard = 20
 
@@ -4267,7 +4284,7 @@ class RecipeSet(TaskBase):
     stop_types = ['abort','cancel']
 
     def __init__(self, ttasks=0, priority=None):
-        super(RecipeSet, self).__init__()
+        # Intentionally not chaining to super(), to avoid session.add(self)
         self.ttasks = ttasks
         self.priority = priority
 
@@ -4518,6 +4535,10 @@ class Recipe(TaskBase):
     Also contains what tasks will be executed.
     """
     stop_types = ['abort','cancel']
+
+    def __init__(self, ttasks=0):
+        # Intentionally not chaining to super(), to avoid session.add(self)
+        self.ttasks = ttasks
 
     @property
     def harnesspath(self):
@@ -6536,9 +6557,12 @@ mapper(TaskBugzilla, task_bugzilla_table)
 
 mapper(Job, job_table,
         properties = {'recipesets':relation(RecipeSet, backref='job'),
-                      'owner':relation(User, uselist=False, backref='jobs'),
-                      'retention_tag':relation(RetentionTag, uselist=False,backref='jobs'),
-                      'product':relation(Product, uselist=False, backref='jobs'),
+                      'owner':relation(User, uselist=False,
+                        backref=backref('jobs', cascade_backrefs=False)),
+                      'retention_tag':relation(RetentionTag, uselist=False,
+                        backref=backref('jobs', cascade_backrefs=False)),
+                      'product':relation(Product, uselist=False,
+                        backref=backref('jobs', cascade_backrefs=False)),
                       '_job_ccs': relation(JobCc, backref='job')})
 
 mapper(JobCc, job_cc_table)
@@ -6569,10 +6593,10 @@ mapper(LogRecipeTaskResult, log_recipe_task_result_table)
 mapper(Recipe, recipe_table,
         polymorphic_on=recipe_table.c.type, polymorphic_identity=u'recipe',
         properties = {'distro_tree':relation(DistroTree, uselist=False,
-                                        backref='recipes'),
+                        backref=backref('recipes', cascade_backrefs=False)),
                       'resource': relation(RecipeResource, uselist=False,
                                         backref='recipe'),
-                      'rendered_kickstart': relation(RenderedKickstart, backref='recipes'),
+                      'rendered_kickstart': relation(RenderedKickstart),
                       'watchdog':relation(Watchdog, uselist=False,
                                          cascade="all, delete, delete-orphan"),
                       'systems':relation(System, 

@@ -294,8 +294,10 @@ def create_recipe(distro_tree=None, task_list=None,
         server_log=False, role=None, cls=MachineRecipe, **kwargs):
     if not distro_tree:
         distro_tree = create_distro_tree()
-    recipe = cls(ttasks=1, whiteboard=whiteboard,
-            distro_tree=distro_tree, role=role)
+    recipe = cls(ttasks=1)
+    recipe.whiteboard = whiteboard
+    recipe.distro_tree = distro_tree
+    recipe.role = role
     recipe.distro_requires = recipe.distro_tree.to_xml().toxml()
 
     if not server_log:
