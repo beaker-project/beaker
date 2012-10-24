@@ -1,0 +1,8 @@
+Change-Id: Ie1f1deff47a17b282277b42273b89081b1a89717
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Bill Peck <bpeck@redhat.com>
+Submitted-by: Dan Callaghan <dcallagh@redhat.com>
+Submitted-at: Wed, 24 Oct 2012 02:18:18 -0400
+Reviewed-on: http://gerrit.beaker-project.org/1408
+Project: beaker
+Branch: refs/heads/develop
