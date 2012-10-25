@@ -1,6 +1,8 @@
 import sys
 import time
 import unittest
+import pkg_resources
+import lxml.etree
 import email
 from turbogears.database import session
 from bkr.server.installopts import InstallOptions
@@ -1393,6 +1395,30 @@ class DeviceTest(unittest.TestCase):
         second = Device.lazy_create(**params)
         self.assert_(first is second)
         self.assertEquals(Device.query.filter_by(**params).count(), 1)
+
+class TaskTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    def test_schema_in_task_details_xml_output(self):
+        schema_doc = lxml.etree.parse(pkg_resources.resource_stream(
+                        'bkr.common', 'schema/beaker-task.rng'))
+        schema = lxml.etree.RelaxNG(schema_doc)
+
+        vals = [None, True, False]
+
+        for destructive, nda in [(_, __) for _ in vals for __ in vals]:
+            task = data_setup.create_task()
+            task.destructive = destructive
+            task.nda = nda
+            session.flush()
+
+            doc = lxml.etree.fromstring(task.to_xml())
+            self.assert_(schema.validate(doc) is True)
 
 if __name__ == '__main__':
     unittest.main()

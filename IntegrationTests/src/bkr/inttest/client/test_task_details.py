@@ -84,3 +84,31 @@ class TaskDetailsTest(unittest.TestCase):
         out = run_client(['bkr', 'task-details', '--invalid', task.name])
         details = eval(out[len(task.name) + 1:]) # XXX dodgy
         self.assertEquals(details['name'], 'invalid_task')
+
+    def test_details_without_destructive(self):
+        with session.begin():
+            task = data_setup.create_task()
+            task.destructive = None
+        out = run_client(['bkr', 'task-details', task.name])
+        details = eval(out[len(task.name) + 1:]) # XXX dodgy
+        self.assertEquals(details['destructive'], None)
+
+        # output in xml format
+        out = run_client(['bkr', 'task-details', '--xml', task.name])
+
+        task_elem = lxml.etree.fromstring(re.sub(task.name, '', out, count=1))
+        self.assert_(task_elem.get('destructive') == None)
+
+    def test_details_without_nda(self):
+        with session.begin():
+            task = data_setup.create_task()
+            task.nda = None
+        out = run_client(['bkr', 'task-details', task.name])
+        details = eval(out[len(task.name) + 1:]) # XXX dodgy
+        self.assertEquals(details['nda'], None)
+
+        # output in xml format
+        out = run_client(['bkr', 'task-details', '--xml', task.name])
+
+        task_elem = lxml.etree.fromstring(re.sub(task.name, '', out, count=1))
+        self.assert_(task_elem.get('nda') == None)
