@@ -27,8 +27,6 @@ DC = Namespace('http://purl.org/dc/terms/')
 FOAF = Namespace('http://xmlns.com/foaf/0.1/')
 INV = Namespace('https://fedorahosted.org/beaker/rdfschema/inventory#')
 
-rdflib.term.bind(XSD.decimal, Decimal)
-
 # rdflib maps python int to xsd:integer and python long to xsd:long, 
 # which is completely wrong -- xsd:integer has no range constraint, whereas 
 # xsd:long is a subtype of xsd:integer constrained to 64 bits 
@@ -40,9 +38,7 @@ def _fixup(item):
     if py_type is long:
         datatype = XSD.integer
     return (py_type, (conversion, datatype))
-rdflib.term._PythonToXSD = map(_fixup, rdflib.term._PythonToXSD) + [
-    (Decimal, (None, XSD.decimal))
-]
+rdflib.term._PythonToXSD = map(_fixup, rdflib.term._PythonToXSD)
 del _fixup
 
 def bind_namespaces(graph):
