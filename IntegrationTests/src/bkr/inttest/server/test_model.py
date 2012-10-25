@@ -208,7 +208,6 @@ class TestJob(unittest.TestCase):
     def test_mail_exception_doesnt_prevent_status_update(self):
         job = data_setup.create_job()
         job.cc.append(u'asdf')
-        data_setup.mark_job_running(job)
         data_setup.mark_job_complete(job)
 
 class DistroTreeByFilterTest(unittest.TestCase):

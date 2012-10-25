@@ -150,7 +150,7 @@ class RecipeTasks(RPCRoot):
                 raise BX(_(u'Invalid lab controller: %s' % lc))
 
         return [dict(recipe_id = w.recipe.id,
-                        system = w.system.fqdn) for w in Watchdog.by_status(labcontroller, status)]
+                        system = w.recipe.system.fqdn) for w in Watchdog.by_status(labcontroller, status)]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

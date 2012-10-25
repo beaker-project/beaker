@@ -388,7 +388,7 @@ def queued_recipes(*args):
                     recipe.systems = []
                     # Create the watchdog without an Expire time.
                     log.debug("Created watchdog for recipe id: %s and system: %s" % (recipe.id, system))
-                    recipe.watchdog = Watchdog(system=recipe.system)
+                    recipe.watchdog = Watchdog()
                     log.info("recipe ID %s moved from Queued to Scheduled" % recipe.id)
             session.commit()
         except exceptions.Exception:

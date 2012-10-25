@@ -356,8 +356,6 @@ labinfo_table = Table('labinfo', metadata,
 watchdog_table = Table('watchdog', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id',
-           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
     Column('recipe_id', Integer, ForeignKey('recipe.id'), nullable=False),
     Column('recipetask_id', Integer, ForeignKey('recipe_task.id')),
     Column('subtask', Unicode(255)),
@@ -2410,15 +2408,19 @@ class System(SystemObject):
         if not self.current_user(user):
             raise BX(_(u'System is reserved by a different user'))
 
-        # Watchdog checking -- don't return a system with an active watchdog,
-        # unless the correct watchdog has been passed in to be cleared
-        if self.watchdog and self.watchdog == watchdog:
-            session.delete(self.watchdog)
-        elif self.watchdog and watchdog is None:
-            raise BX(_(u'System has active recipe %s') % self.watchdog.recipe_id)
-        elif self.watchdog or watchdog:
-            raise BX(_(u'Mismatched watchdogs in unreserve: %r, %r')
-                    % (self.watchdog, watchdog)) # should never happen
+        if self.open_reservation and self.open_reservation.recipe and \
+                self.open_reservation.recipe.watchdog:
+            if watchdog and self.open_reservation.recipe.watchdog == watchdog:
+                session.delete(self.open_reservation.recipe.watchdog)
+            elif watchdog is None:
+                raise BX(_(u'System has active recipe %s')
+                        % self.open_reservation.recipe.id)
+            else:
+                raise BX(_(u'Mismatched watchdogs in unreserve: %r, %r')
+                        % (self.open_reservation.recipe.watchdog, watchdog)) # should never happen
+        elif watchdog:
+            raise BX(_(u'Watchdog specified in unreserve but system has none: %r, %r')
+                    % (self, watchdog))
 
         # Update reservation atomically first, to avoid races
         session.flush()
@@ -2705,7 +2707,7 @@ class Watchdog(MappedObject):
     def by_system(cls, system):
         """ Find a watchdog based on the system name
         """
-        return cls.query.filter_by(system=system).one()
+        return cls.query.join(Watchdog.recipe, Recipe.system).filter_by(system=system).one()
 
 
     @classmethod
@@ -2746,7 +2748,7 @@ class Watchdog(MappedObject):
                 )
 
         if op and fop:
-            return cls.query.join(Watchdog.system).join(Watchdog.recipe, Recipe.recipeset).filter(my_filter)
+            return cls.query.join(Watchdog.recipe, Recipe.system).join(Watchdog.recipe, Recipe.recipeset).filter(my_filter)
                                                                                  
 
 class LabInfo(SystemObject):
@@ -5081,11 +5083,10 @@ class Recipe(TaskBase):
         """
         if self.system and self.watchdog:
             self.destroyRepo()
-            log.debug("Remove watchdog for recipe %s" % self.id)
-            if self.watchdog.system == self.system:
-                log.debug("Return system %s for recipe %s" % (self.system, self.id))
-                self.system.unreserve(service=u'Scheduler',
-                        user=self.recipeset.job.owner, watchdog=self.watchdog)
+            log.debug("Remove watchdog and return system %s for recipe %s" % (self.system, self.id))
+            self.system.unreserve(service=u'Scheduler',
+                    user=self.recipeset.job.owner, watchdog=self.watchdog)
+
 
     def task_info(self):
         """
@@ -6244,8 +6245,6 @@ System.mapper = mapper(System, system_table,
                                      order_by=[arch_table.c.arch],
                                         secondary=system_arch_map,
                                         backref='systems'),
-                     'watchdog':relation(Watchdog, uselist=False,
-                                        backref='system'),
                      'labinfo':relation(LabInfo, uselist=False, backref='system',
                         cascade='all, delete, delete-orphan'),
                      'cpu':relation(Cpu, uselist=False,backref='systems',
