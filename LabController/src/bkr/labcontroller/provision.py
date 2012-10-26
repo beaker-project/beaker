@@ -30,6 +30,13 @@ class CommandQueuePoller(ProxyHelper):
         self.commands = {} #: dict of (id -> command info) for running commands
         self.greenlets = {} #: dict of (command id -> greenlet which is running it)
 
+    def _handler_complete(self, greenlet, command_id):
+        if greenlet.exception:
+            logger.error('Command handler %r had unhandled exception: %r',
+                    greenlet, greenlet.exception)
+        del self.commands[command_id]
+        del self.greenlets[command_id]
+
     def get_queued_commands(self):
         return self.hub.labcontrollers.get_queued_command_details()
 
@@ -37,13 +44,9 @@ class CommandQueuePoller(ProxyHelper):
         self.hub.labcontrollers.mark_command_running(id)
 
     def mark_command_completed(self, id):
-        del self.commands[id]
-        del self.greenlets[id]
         self.hub.labcontrollers.mark_command_completed(id)
 
     def mark_command_failed(self, id, message):
-        del self.commands[id]
-        del self.greenlets[id]
         self.hub.labcontrollers.mark_command_failed(id, message)
 
     def clear_running_commands(self, message):
@@ -67,7 +70,10 @@ class CommandQueuePoller(ProxyHelper):
                         if 'power' in c and c['power'].get('address')
                             == command['power']['address'])
             self.commands[command['id']] = command
-            self.greenlets[command['id']] = gevent.spawn(self.handle, command, predecessors)
+            greenlet = gevent.spawn(self.handle, command, predecessors)
+            self.greenlets[command['id']] = greenlet
+            greenlet.link(lambda greenlet: self._handler_complete(
+                    greenlet, command['id']))
 
     def handle(self, command, predecessors):
         if command.get('delay'):
