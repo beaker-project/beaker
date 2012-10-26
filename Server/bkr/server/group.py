@@ -21,7 +21,6 @@ import cherrypy
 from model import *
 import string
 
-
 class GroupFormSchema(validators.Schema):
     display_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
     group_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
@@ -154,27 +153,42 @@ class Groups(AdminPage):
         return widgets.DataGrid(fields=user_fields)
 
     @expose(template='bkr.server.templates.grid')
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def systems(self,group_id=None,*args,**kw):
-        if group_id is None:
+        try:
+            group = Group.by_id(group_id)
+        except NoResultFound:
+            log.exception('Group id %s is not a valid group id' % group_id)
             flash(_(u'Need a valid group to search on'))
-            redirect(url('/groups'))
-        systems = System.by_group(group_id)
-        system_link = ('System', lambda x: x.link)
-        group = Group.by_id(group_id)
-        grid = BeakerDataGrid(fields=[system_link])
-        return dict(grid=grid,list=systems,title='Systems for group %s' % group.group_name,search_bar = None,object_count=systems.count())
-    
+            redirect('../groups/mine')
+
+        systems = System.all(identity.current.user).filter(System.groups.contains(group))
+        title = 'Systems in Group %s' % group.group_name
+        from bkr.server.controllers import Root
+        return Root()._systems(systems,title, group_id = group_id,**kw)
+
     @expose(template='bkr.server.templates.group_users')
     def group_members(self,id, **kw):
-        group = Group.by_id(id)
+        try:
+            group = Group.by_id(id)
+        except NoResultFound:
+            log.exception('Group id %s is not a valid group id' % id)
+            flash(_(u'Need a valid group to search on'))
+            redirect('../groups/')
+
         usergrid = self.show_members(id)
         return dict(value = group,grid = usergrid)
-
 
     @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.group_form')
     def edit(self, id, **kw):
-        group = Group.by_id(id)
+        try:
+            group = Group.by_id(id)
+        except NoResultFound:
+            log.exception('Group id %s is not a valid group id' % id)
+            flash(_(u'Need a valid group to search on'))
+            redirect('../groups/mine')
+
         usergrid = self.show_members(id)
         systemgrid = widgets.DataGrid(fields=[
                                   ('System Members', lambda x: x.fqdn),
@@ -254,7 +268,8 @@ class Groups(AdminPage):
         except NoResultFound:
             log.exception('Group id %s is not a valid group id' % group_id)
             response.status = 403
-            return ['Invalid group id %s' % group_id ]
+            return ['Invalid Group Id']
+
         group = Group.by_id(group_id)
         if permission not in group.permissions:
             group.permissions.append(permission)
@@ -399,11 +414,24 @@ class Groups(AdminPage):
 
     @expose(format='json')
     def get_group_users(self, group_id=None, *args, **kw):
-        users = Group.by_id(group_id).users
+        try:
+            group = Group.by_id(group_id)
+        except NoResultFound:
+            log.exception('Group id %s is not a valid group id' % group_id)
+            response.status = 403
+            return ['Invalid Group Id']
+
+        users = group.users
         return [(user.user_id, user.display_name) for user in users]
 
     @expose(format='json')
     def get_group_systems(self, group_id=None, *args, **kw):
-        systems = Group.by_id(group_id).systems
-        return [(system.id, system.fqdn) for system in systems]
+        try:
+            group = Group.by_id(group_id)
+        except NoResultFound:
+            log.exception('Group id %s is not a valid group id' % group_id)
+            response.status = 403
+            return ['Invalid Group Id']
 
+        systems = group.systems
+        return [(system.id, system.fqdn) for system in systems]

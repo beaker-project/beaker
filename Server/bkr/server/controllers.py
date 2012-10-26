@@ -477,6 +477,13 @@ class Root(RPCRoot):
         return return_dict
  
     def _systems(self, systems, title, *args, **kw):
+
+        # Added for group.get_systems()
+        if kw.has_key('group_id'):
+            extra_hiddens={'group_id':kw['group_id']}
+        else:
+            extra_hiddens = {}
+
         search_bar = SearchBar(name='systemsearch',
                                label=_(u'System Search'),
                                enable_custom_columns = True,
@@ -574,7 +581,9 @@ class Root(RPCRoot):
                     options =  {'simplesearch' : simplesearch,'columns':col_data,
                                 'result_columns' : default_result_columns,
                                 'col_defaults' : col_data['default'],
-                                'col_options' : col_data['options']},
+                                'col_options' : col_data['options'],
+                                'extra_hiddens' : extra_hiddens
+                                },
                     action = '',
                     search_bar = search_bar,
                     atom_url='?tg_format=atom&list_tgp_order=-date_modified&'
