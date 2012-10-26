@@ -3,6 +3,14 @@
 <script type="text/javascript">
 var STATUS_${recipe.id};
 
+function task_filter_${recipe.id}() {
+    var taskid = window.location.hash.split('#')[1];
+
+   if (!$('#task_items_${recipe.id} a[name=' + taskid + ']').length) {
+       $('#hide_recipe_${recipe.id}').click();
+   }
+}
+
 function getresults_${recipe.id}(f)
 {
 
@@ -12,7 +20,6 @@ function getresults_${recipe.id}(f)
     } else {
 	f()
     }
-
 }
 
 function recipe_callback_${recipe.id}()
@@ -25,6 +32,11 @@ function recipe_callback_${recipe.id}()
 		showfail_${recipe.id}();
     break;
     }
+
+    if(window.location.hash!=''){
+	task_filter_${recipe.id}();
+	window.location.hash = window.location.hash;
+    }
 }
 
 function showall_${recipe.id}()
@@ -34,6 +46,7 @@ function showall_${recipe.id}()
     $('.fail_show_recipe_${recipe.id}').show();
     $('.all_show_recipe_${recipe.id}').hide();
     $.cookie('recipe_${recipe.id}','all')
+
 }
 
 function showfail_${recipe.id}()
@@ -72,16 +85,20 @@ $(document).ready(function() {
         break;
        }
     } else {
-        STATUS_${recipe.id} = 'none';
-        shownone_${recipe.id}();
-    }
+        if(window.location.hash != ''){
+            STATUS_${recipe.id} = 'all';
+            getresults_${recipe.id}(showall_${recipe.id});
+         } else {
+               STATUS_${recipe.id} = 'none';
+               shownone_${recipe.id}();
+            }
+        }
 
     $('#all_recipe_${recipe.id}').click( function() { 
 	    STATUS_${recipe.id} = 'all';
      	getresults_${recipe.id}(showall_${recipe.id});
     });
-                                                      
-                                                    
+                                            
     $('#failed_recipe_${recipe.id}').click( function() {
         STATUS_${recipe.id} = 'fail';
         getresults_${recipe.id}(showfail_${recipe.id});
@@ -90,7 +107,12 @@ $(document).ready(function() {
     $('#hide_recipe_${recipe.id}').click( function() { shownone_${recipe.id}(); });
     $('#logs_button_${recipe.id}').click(function () { $('#logs_${recipe.id}').toggleClass('hidden', 'addOrRemove'); });
 
+
 });
+
+
+
+
 </script>
 
  <table class="show">
@@ -145,9 +167,7 @@ $(document).ready(function() {
   </tr>
   <tr py:if="recipe.systems">
    <td class="title"><b>Possible Systems</b></td>
-   <td class="value" colspan="8">
-     ${recipe_systems}
-   </td>
+   <td class="value" colspan="8">${len(recipe.systems)}</td>
   </tr>
   <tr>
    <td colspan="9">

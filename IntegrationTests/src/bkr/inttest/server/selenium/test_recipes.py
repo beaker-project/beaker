@@ -25,6 +25,7 @@ from nose.plugins.skip import SkipTest
 from bkr.server.model import Job, TaskResult, RecipeTaskResult
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present
+from selenium.webdriver.support.ui import WebDriverWait
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.assertions import assert_sorted
 
@@ -127,6 +128,7 @@ class TestRecipeView(WebDriverTestCase):
                     distro_tree=self.distro_tree, server_log=True)
             for recipe in self.job.all_recipes:
                 recipe.system = self.system
+
         self.browser = self.get_browser()
         login(self.browser, user=user.user_name, password='password')
 
@@ -200,3 +202,34 @@ class TestRecipeView(WebDriverTestCase):
         # we will get a NoSuchElementException below.
         b.implicitly_wait(30)
         b.find_element_by_xpath('//div[@id="task_items_%s"]//table' % recipe.id)
+
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=674025
+    def test_task_anchor(self):
+        with session.begin():
+            recipes = [data_setup.create_recipe(distro_tree=self.distro_tree) for _ in range(10)]
+            job = data_setup.create_job_for_recipes(recipes, owner=self.user)
+
+        b = self.browser
+        recipe = recipes[0]
+        task = job.recipesets[0].recipes[0].tasks[0].id
+        # bkr/recipes/id#task<id>
+        b.get(get_server_base() + 'recipes/%s#task%s' %(recipe.id,task))
+        # give 10 seconds for the element to be displayed
+        WebDriverWait(b, 10).until(lambda driver : driver.find_element_by_id('task_items_%s' %recipe.id).is_displayed())
+        self.assertTrue(b.find_element_by_id('task_items_%s' %recipe.id).is_displayed())
+
+        # bkr/jobs/id#task<id>
+        # for multi recipe jobs, only the recipe to which the task belongs should be visible
+        # choose a recipe and task somewhere in the middle
+        task = job.recipesets[0].recipes[6].tasks[0].id
+        recipe = recipes[6]
+        b.get(get_server_base() + 'jobs/%s#task%s' %(job.id,task))
+        # give 10 seconds for the element to be displayed
+        WebDriverWait(b, 10).until(lambda driver : driver.find_element_by_id('task_items_%s' %recipe.id).is_displayed())
+        self.assertTrue(b.find_element_by_id('task_items_%s' %recipe.id).is_displayed())
+        recipes.remove(recipe)
+        for r in recipes:
+            # be fair and give 10 seconds for the element to be displayed, if at all
+            WebDriverWait(b, 10).until(lambda driver : driver.find_element_by_id('task_items_%s' %recipe.id).is_displayed())
+            self.assertTrue(not b.find_element_by_id('task_items_%s' %r.id).is_displayed())
