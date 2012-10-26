@@ -96,7 +96,6 @@ class Search(SeleniumTestCase):
 
     @with_transaction
     def setUp(self):
-        self.verificationErrors = []
         self.selenium = self.get_selenium()
         self.arch_one = u'i386'
         self.osmajor_one = u'testosmajor'
@@ -130,7 +129,13 @@ class Search(SeleniumTestCase):
         else:
             raise AssertionError(u'Found task %s where it was deleted and should not be viewable' % self.task_three.id)
 
+    def assert_task_in_results(self, task):
+        self.assert_(self.selenium.is_element_present(
+                '//table[@id="widget"]//td[1][.//text()="%s"]' % task.name))
 
+    def assert_task_not_in_results(self, task):
+        self.assert_(not self.selenium.is_element_present(
+                '//table[@id="widget"]//td[1][.//text()="%s"]' % task.name))
 
     def test_task_search(self):
         sel = self.selenium
@@ -141,50 +146,36 @@ class Search(SeleniumTestCase):
         sel.type("tasksearch_0_value", "%s" % self.arch_one)
         sel.click("Search")
         sel.wait_for_page_to_load("30000") 
-        try: self.failUnless(sel.is_text_present("%s" % self.task_three.name))
-        except AssertionError, e: self.verificationErrors.append(unicode('1.Did not find %s' % self.task_three.name))
-        try: self.failUnless(not sel.is_text_present("%s" % self.task_two.name))
-        except AssertionError, e: self.verificationErrors.append(unicode("2. Found %s where it shouldn't have been" % self.task_two.name))
-        try: self.failUnless(not sel.is_text_present("%s" % self.task_one.name))
-        except AssertionError, e: self.verificationErrors.append(unicode("3. Found %s where it shouldn't have been" % self.task_one.name))
+        self.assert_task_in_results(self.task_three)
+        self.assert_task_not_in_results(self.task_two)
+        self.assert_task_not_in_results(self.task_one)
 
         sel.select("tasksearch_0_table", "label=Arch")  
         sel.select("tasksearch_0_operation", "label=is not")
         sel.type("tasksearch_0_value", "%s" % self.arch_one)
         sel.click("Search")
         sel.wait_for_page_to_load("30000")
-        try: self.failUnless(not sel.is_text_present("%s" % self.task_three.name))
-        except AssertionError, e: self.verificationErrors.append(unicode("4.Found %s where it shouldn't have been" % self.task_three.name))
-        try: self.failUnless(sel.is_text_present("%s" % self.task_two.name))
-        except AssertionError, e: self.verificationErrors.append(unicode("5.Did not find %s " % self.task_two.name))
-        try: self.failUnless(sel.is_text_present("%s" % self.task_one.name))
-        except AssertionError, e: self.verificationErrors.append(unicode("6.Did not find %s" % self.task_one.name))
+        self.assert_task_not_in_results(self.task_three)
+        self.assert_task_in_results(self.task_two)
+        self.assert_task_in_results(self.task_one)
 
         sel.select("tasksearch_0_table", "label=Distro")  
         sel.select("tasksearch_0_operation", "label=is")
         sel.type("tasksearch_0_value", "%s" % self.osmajor_one)
         sel.click("Search")
         sel.wait_for_page_to_load("30000")
-        try: self.failUnless(not sel.is_text_present("%s" % self.task_three.name))
-        except AssertionError, e: self.verificationErrors.append(unicode("7.Found %s where it shouldn't have been" % self.task_three.name))
-        try: self.failUnless(sel.is_text_present("%s" % self.task_two.name))
-        except AssertionError, e: self.verificationErrors.append(unicode("8.Did not find %s " % self.task_two.name))
-        try: self.failUnless(sel.is_text_present("%s" % self.task_one.name))
-        except AssertionError, e: self.verificationErrors.append(unicode("9.Did not find %s" % self.task_one.name))
-        #import pdb;pdb.set_trace()
+        self.assert_task_not_in_results(self.task_three)
+        self.assert_task_in_results(self.task_two)
+        self.assert_task_in_results(self.task_one)
 
         sel.select("tasksearch_0_table", "label=Distro")  
         sel.select("tasksearch_0_operation", "label=is not")
         sel.type("tasksearch_0_value", "%s" % self.osmajor_one)
         sel.click("Search")
         sel.wait_for_page_to_load("30000")
-        try: self.failUnless(sel.is_text_present("%s" % self.task_three.name))
-        except AssertionError, e: self.verificationErrors.append(unicode("10.Did not find" % self.task_three.name))
-        try: self.failUnless(not sel.is_text_present("%s" % self.task_two.name))
-        except AssertionError, e: self.verificationErrors.append(unicode("11.Found %s where it shouldn't have been" % self.task_two.name))
-        try: self.failUnless(not sel.is_text_present("%s" % self.task_one.name))
-        except AssertionError, e: self.verificationErrors.append(unicode("12.Found %s where it shouldn't have been" % self.task_one.name))
+        self.assert_task_in_results(self.task_three)
+        self.assert_task_not_in_results(self.task_two)
+        self.assert_task_not_in_results(self.task_one)
 
     def tearDown(self):
         self.selenium.stop()
-        self.assertEqual([], self.verificationErrors)
