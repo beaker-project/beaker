@@ -30,8 +30,8 @@ zerombr
 clearpart --all --initlabel
 
 autopart
-# Error: no snippet data for RedHatEnterpriseLinux3
-# Error: no snippet data for system
+# no snippet data for RedHatEnterpriseLinux3
+# no snippet data for system
 
 %packages --resolvedeps --ignoremissing
 # readahead conflicts with auditd, see bug 561486 for detailed explanation.
@@ -56,6 +56,7 @@ emacs
 sendmail
 unifdef
 vim-enhanced
+# no snippet data for packages
 
 
 
@@ -68,8 +69,8 @@ wget -O - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
 
 wget -O /tmp/anamon 'http://lab.test-kickstart.invalid/beaker/anamon'
 python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
-# Error: no snippet data for RedHatEnterpriseLinux3_pre
-# Error: no snippet data for system_pre
+# no snippet data for RedHatEnterpriseLinux3_pre
+# no snippet data for system_pre
 ) 2>&1 | /usr/bin/tee /dev/console
 
 %post
@@ -278,8 +279,8 @@ setenv BUILDURL http://download.test-kickstart.invalid
 EOF
 # Check in with Beaker Server, let it know our hostname
 wget -O - http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$(hostname -f)
-# Error: no snippet data for RedHatEnterpriseLinux3_post
-# Error: no snippet data for system_post
+# no snippet data for RedHatEnterpriseLinux3_post
+# no snippet data for system_post
 ) 2>&1 | /usr/bin/tee /dev/console
 
 

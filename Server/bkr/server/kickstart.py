@@ -184,7 +184,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
                 retval += '\n'
             return retval
         else:
-            return u'# Error: no snippet data for %s\n' % name
+            return u'# no snippet data for %s\n' % name
     restricted_context['snippet'] = snippet
     context['snippet'] = snippet
 

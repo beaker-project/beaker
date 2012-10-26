@@ -66,6 +66,7 @@ install
 
 {% snippet 'rhts_packages' %}
 {% endif %}
+{% snippet 'packages' %}
 
 {% endif %}{# manual #}
 

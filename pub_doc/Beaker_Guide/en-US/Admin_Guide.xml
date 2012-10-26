@@ -392,6 +392,13 @@ customized by the administrator:</para>
     </listitem>
   </varlistentry>
   <varlistentry>
+    <term><filename>packages</filename></term>
+    <listitem>
+      <para>Can be used to append extra packages to the 
+      <literal>%packages</literal> section of the kickstart.</para>
+    </listitem>
+  </varlistentry>
+  <varlistentry>
     <term><filename>system</filename></term>
     <term><filename><replaceable>distro_major_version</replaceable></filename></term>
     <listitem>

@@ -63,6 +63,7 @@ install
 @development-tools
 @development-libs
 {% endif %}
+{% snippet 'packages' %}
 
 {% endif %}{# manual #}
 

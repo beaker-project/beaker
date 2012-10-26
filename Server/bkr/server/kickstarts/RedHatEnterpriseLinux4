@@ -77,6 +77,7 @@ install
 e2fsprogs
 lvm2
 {% endif %}
+{% snippet 'packages' %}
 
 {% endif %}{# manual #}
 
