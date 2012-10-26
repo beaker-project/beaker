@@ -42,11 +42,13 @@ Options
 
 .. option:: --destructive
 
-   Limit to tasks which are destructive.
+   Limit to tasks which are destructive (Note: excludes both non-destructive
+   and unmarked tasks).
 
 .. option:: --non-destructive
 
-   Limit to tasks which are non-destructive.
+   Limit to tasks which are non-destructive (Note: excludes both destructive
+   and unmarked tasks).
 
 .. option:: --distro <name>
 
@@ -136,12 +138,14 @@ class Task_List(BeakerCommand):
         self.parser.add_option(
             "--destructive",
             action="store_true",
-            help="Only include destructive tasks",
+            help=("Only include destructive tasks (Note: excludes both "
+                  "non-destructive and unmarked tasks)"),
         )
         self.parser.add_option(
             "--non-destructive",
             action="store_true",
-            help="Only include non-destructive tasks",
+            help=("Only include non-destructive tasks (Note: excludes both "
+                  "destructive and unmarked tasks)"),
         )
 
 
