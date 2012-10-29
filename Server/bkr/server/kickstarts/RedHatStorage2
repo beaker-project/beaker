@@ -79,6 +79,7 @@ tuned
 tuned-utils
 redhat-lsb
 {% snippet 'rhts_packages' %}
+{% snippet 'packages' %}
 
 {% endif %}{# manual #}
 

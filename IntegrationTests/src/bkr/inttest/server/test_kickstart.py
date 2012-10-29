@@ -64,7 +64,9 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
-'''
+''',
+                    'snippets/per_system/packages/bz728410-system-with-packages':
+                        'special-weird-driver-package\n',
                 })])
 
         cls.lab_controller = data_setup.create_labcontroller(
@@ -1132,3 +1134,28 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
         k = recipe.rendered_kickstart.kickstart
         self.assert_('# Install U-Boot boot.scr' in k.splitlines(), k)
         self.assert_('Yosemite Fedora' in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=728410
+    def test_per_system_packages(self):
+        system = data_setup.create_system(fqdn=u'bz728410-system-with-packages',
+                arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        session.flush()
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('special-weird-driver-package' in k.splitlines(), k)

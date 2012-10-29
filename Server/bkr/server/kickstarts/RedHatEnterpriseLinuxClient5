@@ -94,6 +94,7 @@ rmt
 tzdata
 xkeyboard-config
 {% endif %}
+{% snippet 'packages' %}
 
 {% endif %}{# manual #}
 
