@@ -47,7 +47,6 @@ class JobArguments(object):
         self.current = None
         self.current_node = None
         self.re_tag = re.compile('(.*)(\[@(.*)=(.*)\])')
-        self.jobxml_parsed = False
 
     def AddArgument(self, name, argtype, tagname, tagvaltype, tagvalname, tagnamelmnt,
                     value, optional):
@@ -143,6 +142,7 @@ class JobConfig(object):
     def __init__(self, argpars, jobdefaults):
         "Constructor - Needs a optparse.OptionParser object and a JobDefaults object"
 
+        self.argpars       = argpars
         self.grparser      = OptionGroup(argpars, 'XSLT Job Config Specific Options',
                                                   'These options are specific to and defined in '\
                                                   'the Job Configuration XML')
@@ -159,6 +159,7 @@ class JobConfig(object):
         self.xslt_nodes    = None
         self.xslt_override = None
         self.xslt_name     = None
+        self.__jobxml_parsed = False
 
         # Add global job options
         globgrp = OptionGroup(argpars, 'Global XSLT Workflow Options',
@@ -350,7 +351,7 @@ class JobConfig(object):
                                      argdefault, argoptional)
 
         parser.add_option_group(self.grparser)
-        self.jobxml_parsed = True
+        self.__jobxml_parsed = True
         del jobcfg
     # EOFNC: def ParseJobXML()
 
@@ -358,8 +359,8 @@ class JobConfig(object):
     def ValidateArguments(self, kwargs):
         "Validates command line arguments, and checks if all required arguments are set"
 
-        if self.jobxml_parsed is False:
-            raise Exception('Missing --job-xml <filename>.  See --help for more information.')
+        if self.__jobxml_parsed is False:
+            self.argpars.error('Missing --job-xml <filename>.  See --help for more information.')
 
         # Validate the input from the command line
         # against what the XML jobConfig defines
