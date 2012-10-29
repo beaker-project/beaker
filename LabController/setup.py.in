@@ -22,8 +22,8 @@ setup(
                   ('/var/lib/beaker', ['addDistro/addDistro.sh']),
                   ('/var/lib/beaker/addDistro.d', glob('addDistro/addDistro.d/*')),
                   ('/var/www/beaker/logs', []),
-                  ('/usr/share/bkr/lab-controller', ['apache/404.html',
-                    'aux/anamon', 'aux/anamon.init']),
+                  ('/usr/share/bkr/lab-controller', ['apache/404.html'] +
+                    glob('aux/*')),
                  ],
     package_data = {
         'bkr.labcontroller': [

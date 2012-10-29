@@ -132,6 +132,8 @@ Requires:       python-requests >= 0.11
 %package lab-controller
 Summary:        Lab Controller xmlrpc server
 Group:          Applications/Internet
+Provides:       beaker-redhat-support <= 0.19
+Obsoletes:      beaker-redhat-support <= 0.19
 Requires:       python
 Requires:       httpd
 Requires:       cobbler >= 1.4
