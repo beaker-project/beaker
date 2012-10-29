@@ -208,9 +208,6 @@ from bkr.server.reports import Reports
 </div>
 
     <div id="fedora-nav"></div>
-    <div id="beaker-version">
-        Version - ${tg.beaker_version()}
-    </div>
     <?python
     from bkr.server import motd
     ?>
@@ -234,7 +231,9 @@ from bkr.server.reports import Reports
     </div>
     <div id="fedora-footer">
      <p>
+     Version - ${tg.beaker_version()}
      <a href="${tg.config('beaker.bz_create_link')}">Report Bug</a>
+     <a href="${tg.config('beaker.documentation_link')}">Documentation</a>
      </p>
     </div>
     <!-- End of main_content -->
