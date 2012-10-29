@@ -68,8 +68,8 @@ class SystemsController(controllers.Controller):
         .. versionadded:: 0.8.2
         """
         system = System.by_fqdn(fqdn, identity.current.user)
-        if system.recipes:
-            raise ValueError("Can't delete system %s with recipes" % fqdn)
+        if system.reservations:
+            raise ValueError("Can't delete system %s with reservations" % fqdn)
         if system.owner != identity.current.user and \
            not identity.current.user.is_admin():
             raise ValueError("Can't delete system %s you don't own" % fqdn)

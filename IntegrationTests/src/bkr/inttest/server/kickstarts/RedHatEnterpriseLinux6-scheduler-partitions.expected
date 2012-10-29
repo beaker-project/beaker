@@ -321,6 +321,8 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
+# Check in with Beaker Server, let it know our hostname
+wget -O - http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$(hostname -f)
 # Error: no snippet data for RedHatEnterpriseLinux6_post
 # Error: no snippet data for system_post
 

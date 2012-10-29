@@ -100,7 +100,7 @@ class Search(SeleniumTestCase):
             Key.by_name(u'MEMORY'), '4096'))
 
         cls.system_two_details = { 'fqdn' : u'a2',
-                                    'type' : u'Virtual',
+                                    'type' : u'Prototype',
                                     'arch' : u'x86_64',
                                     'status' : u'Manual',
                                     'owner' : data_setup.create_user(),}

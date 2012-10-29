@@ -283,19 +283,20 @@ class Tasks(RPCRoot):
             except InvalidRequestError:
                 return "<div>Invalid data:<br>%r</br></div>" % kw
         if kw.get('system_id'):
-            try:
-                tasks = tasks.join('recipe','system').filter(System.id==kw.get('system_id')).order_by(recipe_task_table.c.id.desc())
-                hidden = dict(system = 1,
-                             )
-            except InvalidRequestError:
-                return "<div>Invalid data:<br>%r</br></div>" % kw
+            tasks = tasks.join(RecipeTask.recipe,
+                    Recipe.resource.of_type(SystemResource),
+                    SystemResource.system)\
+                    .filter(System.id == kw.get('system_id'))\
+                    .order_by(RecipeTask.id.desc())
+            hidden = dict(system=1)
         if kw.get('job_id'):
             job_id = kw.get('job_id')
             if not isinstance(job_id, list):
                 job_id = [job_id]
             tasks = tasks.join('recipe','recipeset','job').filter(Job.id.in_(job_id))
         if kw.get('system'):
-            tasks = tasks.join('recipe','system').filter(System.fqdn.like('%%%s%%' % kw.get('system')))
+            tasks = tasks.join(RecipeTask.recipe, Recipe.resource)\
+                    .filter(RecipeResource.fqdn.like('%%%s%%' % kw.get('system')))
         if kw.get('task'):
             # Shouldn't have to do this.  This only happens on the LinkRemoteFunction calls
             kw['task'] = kw.get('task').replace('%2F','/')

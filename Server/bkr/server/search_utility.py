@@ -962,8 +962,8 @@ class Recipe(SystemObject):
     searchable_columns = {
                             'Id' : MyColumn(col_type='numeric', column=model.MachineRecipe.id),
                             'Whiteboard' : MyColumn(col_type='string', column=model.Recipe.whiteboard),
-                            'System' : MyColumn(col_type='string', column=model.System.fqdn,
-                                relations=[model.Recipe.system]),
+                            'System' : MyColumn(col_type='string', column=model.RecipeResource.fqdn,
+                                relations=[model.Recipe.resource]),
                             'Arch' : MyColumn(col_type='string', column=model.Arch.arch,
                                 relations=[model.Recipe.distro_tree, model.DistroTree.arch]),
                             'Distro' : MyColumn(col_type='string', column=model.Distro.name,

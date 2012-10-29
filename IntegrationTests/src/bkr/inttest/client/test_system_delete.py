@@ -52,4 +52,4 @@ class SystemDeleteTest(unittest.TestCase):
             fail('should raise')
         except ClientError, e:
             self.assertEqual(e.status, 1)
-            self.assert_(e.stderr_output.find('with recipes') != -1)
+            self.assert_(e.stderr_output.find('with reservations') != -1)

@@ -214,17 +214,5 @@ class ReserveSystem(WebDriverTestCase):
         b.implicitly_wait(0)
         self.assert_(is_results_table_empty(b))
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=740957
-    def test_reserve_workflow_does_not_list_virtual_systems(self):
-        with session.begin():
-            virtual_system = data_setup.create_system(shared=True,
-                    lab_controller=self.lc, type=SystemType.virtual)
-        login(self.browser)
-        b = self.browser
-        go_to_reserve_systems(b, self.distro_tree)
-        search_for_system(b, virtual_system)
-        b.implicitly_wait(0)
-        self.assert_(is_results_table_empty(b))
-
 if __name__ == "__main__":
     unittest.main()

@@ -169,3 +169,7 @@ useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82
 {% if system and system.kernel_type.kernel_type == 'mvebu' %}
 {% snippet 'mvebu' %}
 {% endif %}
+{% if recipe %}
+# Check in with Beaker Server, let it know our hostname
+wget -O - http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$(hostname -f)
+{% endif %}

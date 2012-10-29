@@ -8,16 +8,17 @@ import ldap
 from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         String, Unicode, Integer, DateTime,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
-                        or_, and_, not_, select, case, func)
+                        or_, and_, not_, select, case, func, BigInteger)
 
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
         query, object_mapper, mapper, column_property, contains_eager
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
-from sqlalchemy.sql import exists
+from sqlalchemy.sql import exists, union
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exc import InvalidRequestError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.types import TypeDecorator
 from identity import LdapSqlAlchemyIdentityProvider
 from bkr.server.installopts import InstallOptions, global_install_options
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
@@ -47,7 +48,7 @@ import random
 import string
 import cracklib
 import lxml.etree
-
+import netaddr
 from turbogears import identity
 
 from datetime import timedelta, date, datetime
@@ -138,7 +139,6 @@ class SystemType(DeclEnum):
         ('machine',   u'Machine',   dict()),
         ('prototype', u'Prototype', dict()),
         ('resource',  u'Resource',  dict()),
-        ('virtual',   u'Virtual',   dict()),
     ]
 
 
@@ -159,6 +159,38 @@ class ImageType(DeclEnum):
         ('uimage', u'uimage', dict()),
         ('uinitrd', u'uinitrd', dict())
     ]
+
+class ResourceType(DeclEnum):
+    """Type discriminator for RecipeResource classes."""
+    symbols = [
+        ('system', u'system', dict()),
+        ('guest',  u'guest',  dict()),
+    ]
+
+# A netaddr "dialect" for formatting MAC addresses... this is the most common 
+# format, and is expected by virt-install, so I'm not sure why netaddr doesn't 
+# ship with it...
+class _mac_unix(netaddr.mac_unix):
+    word_fmt = '%02x'
+
+class MACAddress(TypeDecorator):
+    """
+    Database type for MAC (EUI) addresses. Stores them as raw integers, which 
+    lets us do arithmetic on them in the database.
+    """
+    impl = BigInteger
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        if isinstance(value, netaddr.EUI):
+            return int(value)
+        return int(netaddr.EUI(value))
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        return netaddr.EUI(value, dialect=_mac_unix)
 
 xmldoc = xml.dom.minidom.Document()
 
@@ -953,8 +985,6 @@ recipe_table = Table('recipe',metadata,
                 ForeignKey('recipe_set.id'), nullable=False),
         Column('distro_tree_id', Integer,
                 ForeignKey('distro_tree.id')),
-        Column('system_id', Integer,
-                ForeignKey('system.id')),
         Column('rendered_kickstart_id', Integer, ForeignKey('rendered_kickstart.id')),
         Column('result', TaskResult.db_type(), nullable=False,
                 default=TaskResult.new),
@@ -988,7 +1018,6 @@ recipe_table = Table('recipe',metadata,
         Column('_partitions',UnicodeText()),
         Column('autopick_random', Boolean, default=False),
         Column('log_server', Unicode(255), index=True),
-        Column('reservation_id', Integer, ForeignKey('reservation.id'), default=None),
         mysql_engine='InnoDB',
 )
 
@@ -1022,6 +1051,34 @@ system_recipe_map = Table('system_recipe_map', metadata,
                 ForeignKey('recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
                 primary_key=True),
         mysql_engine='InnoDB',
+)
+
+recipe_resource_table = Table('recipe_resource', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('recipe_id', Integer, ForeignKey('recipe.id',
+        name='recipe_resource_recipe_id_fk',
+        onupdate='CASCADE', ondelete='CASCADE'),
+        nullable=False, unique=True),
+    Column('type', ResourceType.db_type(), nullable=False),
+    Column('fqdn', Unicode(255), default=None),
+    mysql_engine='InnoDB',
+)
+
+system_resource_table = Table('system_resource', metadata,
+    Column('id', Integer, ForeignKey('recipe_resource.id',
+            name='system_resource_id_fk'), primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id',
+            name='system_resource_system_id_fk'), nullable=False),
+    Column('reservation_id', Integer, ForeignKey('reservation.id',
+            name='system_resource_reservation_id_fk')),
+    mysql_engine='InnoDB',
+)
+
+guest_resource_table = Table('guest_resource', metadata,
+    Column('id', Integer, ForeignKey('recipe_resource.id',
+            name='guest_resource_id_fk'), primary_key=True),
+    Column('mac_address', MACAddress(), index=True, default=None),
+    mysql_engine='InnoDB',
 )
 
 recipe_tag_table = Table('recipe_tag',metadata,
@@ -2332,10 +2389,9 @@ class System(SystemObject):
                 SystemActivity.field_name == u'Status',
                 SystemActivity.action == u'Changed'))\
             .subquery()
-        nonaborted_recipe_subquery = session.query(func.max(Recipe.finish_time))\
-            .filter(and_(
-                Recipe.status != TaskStatus.aborted,
-                Recipe.system == self))\
+        nonaborted_recipe_subquery = self.dyn_recipes\
+            .filter(Recipe.status != TaskStatus.aborted)\
+            .with_entities(func.max(Recipe.finish_time))\
             .subquery()
         count = self.dyn_recipes.join(Recipe.distro_tree, DistroTree.distro)\
             .filter(and_(
@@ -2352,9 +2408,7 @@ class System(SystemObject):
             log.warn(reason)
             self.mark_broken(reason=reason)
 
-    def reserve(self, service, user=None, reservation_type=u'manual', recipe=None):
-        if reservation_type == 'recipe' and recipe is None:
-            raise BX(_(u'Reservations of type \'recipe\' must be passed a recipe'))
+    def reserve(self, service, user=None, reservation_type=u'manual'):
         if user is None:
             user = identity.current.user
         if self.user is not None and self.user == user:
@@ -2371,14 +2425,16 @@ class System(SystemObject):
                 user_id=user.user_id).rowcount != 1:
             raise BX(_(u'System %r is already reserved') % self)
         self.user = user # do it here too, so that the ORM is aware
-        self.reservations.append(Reservation(user=user, type=reservation_type, recipe=recipe))
+        reservation = Reservation(user=user, type=reservation_type)
+        self.reservations.append(reservation)
         self.activity.append(SystemActivity(user=user,
                 service=service, action=u'Reserved', field_name=u'User',
                 old_value=u'', new_value=user.user_name))
         log.debug('Created reservation for system %r with type %r, service %r, user %r',
                 self, reservation_type, service, user)
+        return reservation
 
-    def unreserve(self, service, user=None, watchdog=None):
+    def unreserve(self, service, user=None):
         if user is None:
             user = identity.current.user
 
@@ -2387,20 +2443,6 @@ class System(SystemObject):
             raise BX(_(u'System is not reserved'))
         if not self.current_user(user):
             raise BX(_(u'System is reserved by a different user'))
-
-        if self.open_reservation and self.open_reservation.recipe and \
-                self.open_reservation.recipe.watchdog:
-            if watchdog and self.open_reservation.recipe.watchdog == watchdog:
-                session.delete(self.open_reservation.recipe.watchdog)
-            elif watchdog is None:
-                raise BX(_(u'System has active recipe %s')
-                        % self.open_reservation.recipe.id)
-            else:
-                raise BX(_(u'Mismatched watchdogs in unreserve: %r, %r')
-                        % (self.open_reservation.recipe.watchdog, watchdog)) # should never happen
-        elif watchdog:
-            raise BX(_(u'Watchdog specified in unreserve but system has none: %r, %r')
-                    % (self, watchdog))
 
         # Update reservation atomically first, to avoid races
         session.flush()
@@ -2690,6 +2732,10 @@ class Watchdog(MappedObject):
             or expired for this lab controller
             All recipes in a recipeset have to expire.
         """
+        query = cls.query.join(Watchdog.recipe, Recipe.recipeset)
+        if labcontroller:
+            query = query.filter(RecipeSet.lab_controller == labcontroller)
+
         REMAP_STATUS = {
             "active"  : dict(
                                op = "__gt__",
@@ -2702,28 +2748,14 @@ class Watchdog(MappedObject):
         }
         op = REMAP_STATUS.get(status, None)['op']
         fop = REMAP_STATUS.get(status, None)['fop']
-        
-        if labcontroller is None: 
-            my_filter = and_(RecipeSet.id.in_(select([recipe_set_table.c.id], 
-                                from_obj=[watchdog_table.join(recipe_table).join(recipe_set_table)]
-                            ).group_by(RecipeSet.id).having(
-                                getattr(func, fop)(getattr(Watchdog.kill_time, op)(datetime.utcnow()))
-                                                        )
-                                )
-                )
-        else:
-            my_filter = and_(System.lab_controller==labcontroller,
-                RecipeSet.id.in_(select([recipe_set_table.c.id], 
-                            from_obj=[watchdog_table.join(recipe_table).join(recipe_set_table)]
-                            ).group_by(RecipeSet.id).having(
-                                getattr(func, fop)(getattr(Watchdog.kill_time, op)(datetime.utcnow()))
-                                                        )
-                                )
-                )
-
-        if op and fop:
-            return cls.query.join(Watchdog.recipe, Recipe.system).join(Watchdog.recipe, Recipe.recipeset).filter(my_filter)
-                                                                                 
+        query = query.filter(RecipeSet.id.in_(
+                select([recipe_set_table.c.id],
+                    from_obj=[watchdog_table.join(recipe_table).join(recipe_set_table)])
+                .group_by(RecipeSet.id)
+                .having(getattr(func, fop)(
+                    getattr(Watchdog.kill_time, op)(datetime.utcnow())))
+                ))
+        return query
 
 class LabInfo(SystemObject):
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
@@ -3118,12 +3150,6 @@ class DistroTag(MappedObject):
         if query is None:
             query = cls.query
         return query.filter(DistroTag.distros.any())
-
-class Admin(MappedObject):
-    def __init__(self,system_id,group_id):
-        super(Admin, self).__init__()
-        self.system_id = system_id
-        self.group_id = group_id
 
 # Activity model
 class Activity(MappedObject):
@@ -4291,14 +4317,19 @@ class RecipeSet(TaskBase):
         if not clone:
             recipeSet.setAttribute("id", "%s" % self.id)
 
-        for r in self.recipes:
-            if not isinstance(r,GuestRecipe):
-                recipeSet.appendChild(r.to_xml(clone, from_recipeset=True))
+        for r in self.machine_recipes:
+            recipeSet.appendChild(r.to_xml(clone, from_recipeset=True))
         if not from_job:
             job = self.job._create_job_elem(clone)
             job.appendChild(recipeSet)
             return_node = job
         return return_node
+
+    @property
+    def machine_recipes(self):
+        for recipe in self.recipes:
+            if not isinstance(recipe, GuestRecipe):
+                yield recipe
 
     def delete(self):
         for r in self.recipes:
@@ -4420,9 +4451,9 @@ class RecipeSet(TaskBase):
         # Return systems if recipeSet finished
         if self.is_finished():
             for recipe in self.recipes:
-                recipe.release_system()
+                recipe.cleanup()
 
-    def recipes_orderby(self, labcontroller):
+    def machine_recipes_orderby(self, labcontroller):
         query = select([recipe_table.c.id, 
                         func.count(System.id).label('count')],
                         from_obj=[recipe_table, 
@@ -4439,7 +4470,7 @@ class RecipeSet(TaskBase):
                                                             labcontroller.id),
                         group_by=[Recipe.id],
                         order_by='count')
-        return map(lambda x: Recipe.query.filter_by(id=x[0]).first(), session.connection(RecipeSet).execute(query).fetchall())
+        return map(lambda x: MachineRecipe.query.filter_by(id=x[0]).first(), session.connection(RecipeSet).execute(query).fetchall())
 
     def get_response(self):
         response = getattr(self.nacked,'response',None)
@@ -4604,6 +4635,8 @@ class Recipe(TaskBase):
             text = xmldoc.createCDATASection('%s' % self.kickstart)
             kickstart.appendChild(text)
             recipe.appendChild(kickstart)
+        if self.rendered_kickstart and not clone:
+            recipe.setAttribute('kickstart_url', self.rendered_kickstart.link)
         recipe.setAttribute("ks_meta", "%s" % self.ks_meta and self.ks_meta or '')
         recipe.setAttribute("kernel_options", "%s" % self.kernel_options and self.kernel_options or '')
         recipe.setAttribute("kernel_options_post", "%s" % self.kernel_options_post and self.kernel_options_post or '')
@@ -4622,8 +4655,8 @@ class Recipe(TaskBase):
         if self.panic:
             watchdog.setAttribute("panic", "%s" % self.panic)
         recipe.appendChild(watchdog)
-        if self.system and not clone:
-            recipe.setAttribute("system", "%s" % self.system)
+        if self.resource and self.resource.fqdn and not clone:
+            recipe.setAttribute("system", "%s" % self.resource.fqdn)
         packages = xmldoc.createElement("packages")
         if self.custom_packages:
             for package in self.custom_packages:
@@ -4778,6 +4811,8 @@ class Recipe(TaskBase):
         """
         for task in self.tasks:
             task._queue()
+        for guestrecipe in getattr(self, 'guests', []):
+            guestrecipe._queue()
 
     def process(self):
         """
@@ -4798,6 +4833,8 @@ class Recipe(TaskBase):
         """
         for task in self.tasks:
             task._process()
+        for guestrecipe in getattr(self, 'guests', []):
+            guestrecipe._process()
 
     def createRepo(self):
         """
@@ -4897,9 +4934,9 @@ class Recipe(TaskBase):
         self._abort(msg)
         self.update_status()
         session.flush() # XXX bad
-        if self.system is not None and \
+        if getattr(self.resource, 'system', None) and \
                 get('beaker.reliable_distro_tag', None) in self.distro_tree.distro.tags:
-            self.system.suspicious_abort()
+            self.resource.system.suspicious_abort()
 
     def _abort(self, msg=None):
         """
@@ -4975,7 +5012,7 @@ class Recipe(TaskBase):
 
     def provision(self):
         from bkr.server.kickstart import generate_kickstart
-        install_options = self.system.install_options(self.distro_tree)\
+        install_options = self.resource.install_options(self.distro_tree)\
                 .combined_with(self.generated_install_options())\
                 .combined_with(InstallOptions.from_strings(self.ks_meta,
                     self.kernel_options, self.kernel_options_post))
@@ -5034,33 +5071,39 @@ class Recipe(TaskBase):
                                         afterpackages = afterpackages)
             self.rendered_kickstart = generate_kickstart(install_options,
                     distro_tree=self.distro_tree,
-                    system=self.system, user=self.recipeset.job.owner,
+                    system=getattr(self.resource, 'system', None),
+                    user=self.recipeset.job.owner,
                     recipe=self, kickstart=kickstart)
             install_options.kernel_options['ks'] = self.rendered_kickstart.link
         else:
             ks_appends = [ks_append.ks_append for ks_append in self.ks_appends]
             self.rendered_kickstart = generate_kickstart(install_options,
                     distro_tree=self.distro_tree,
-                    system=self.system, user=self.recipeset.job.owner,
+                    system=getattr(self.resource, 'system', None),
+                    user=self.recipeset.job.owner,
                     recipe=self, ks_appends=ks_appends)
             install_options.kernel_options['ks'] = self.rendered_kickstart.link
 
-        self.system.configure_netboot(self.distro_tree,
-                install_options.kernel_options_str,
-                service=u'Scheduler',
-                callback=u'bkr.server.model.auto_cmd_handler')
-        self.system.action_power(action=u'reboot',
-                                 callback='bkr.server.model.auto_cmd_handler')
+        if isinstance(self.resource, SystemResource):
+            self.resource.system.configure_netboot(self.distro_tree,
+                    install_options.kernel_options_str,
+                    service=u'Scheduler',
+                    callback=u'bkr.server.model.auto_cmd_handler')
+            self.resource.system.action_power(action=u'reboot',
+                                     callback='bkr.server.model.auto_cmd_handler')
+            self.resource.system.activity.append(SystemActivity(
+                    user=self.recipeset.job.owner,
+                    service=u'Scheduler', action=u'Provision',
+                    field_name=u'Distro Tree', old_value=u'',
+                    new_value=unicode(self.distro_tree)))
 
-    def release_system(self):
-        """ Release the system and remove the watchdog
-        """
-        if self.system and self.watchdog:
-            self.destroyRepo()
-            log.debug("Remove watchdog and return system %s for recipe %s" % (self.system, self.id))
-            self.system.unreserve(service=u'Scheduler',
-                    user=self.recipeset.job.owner, watchdog=self.watchdog)
-
+    def cleanup(self):
+        log.debug('Removing watchdog and cleaning up for recipe %s', self.id)
+        self.destroyRepo()
+        if self.resource:
+            self.resource.release()
+        if self.watchdog:
+            session.delete(self.watchdog)
 
     def task_info(self):
         """
@@ -5068,7 +5111,7 @@ class Recipe(TaskBase):
         """
         return dict(
                     id              = "R:%s" % self.id,
-                    worker          = dict(name = "%s" % self.system),
+                    worker          = dict(name = self.resource.fqdn),
                     state_label     = "%s" % self.status,
                     state           = self.status.value,
                     method          = "%s" % self.whiteboard,
@@ -5131,9 +5174,10 @@ class Recipe(TaskBase):
             role = xmldoc.createElement("role")
             role.setAttribute("value", "%s" % key)
             for recipe in recipes:
-                system = xmldoc.createElement("system")
-                system.setAttribute("value", "%s" % recipe.system)
-                role.appendChild(system)
+                if recipe.resource:
+                    system = xmldoc.createElement("system")
+                    system.setAttribute("value", "%s" % recipe.resource.fqdn)
+                    role.appendChild(system)
             yield(role)
 
 
@@ -5143,14 +5187,14 @@ class GuestRecipe(Recipe):
         recipe = xmldoc.createElement("guestrecipe")
         recipe.setAttribute("guestname", "%s" % self.guestname)
         recipe.setAttribute("guestargs", "%s" % self.guestargs)
-        if self.system and not clone:
-            recipe.setAttribute("mac_address", "%s" % self.system.mac_address)
-        if self.distro_tree and self.system and not clone:
-            location = self.distro_tree.url_in_lab(self.system.lab_controller)
+        if self.resource and self.resource.mac_address and not clone:
+            recipe.setAttribute("mac_address", "%s" % self.resource.mac_address)
+        if self.distro_tree and self.recipeset.lab_controller and not clone:
+            location = self.distro_tree.url_in_lab(self.recipeset.lab_controller)
             if location:
                 recipe.setAttribute("location", location)
             for lca in self.distro_tree.lab_controller_assocs:
-                if lca.lab_controller == self.system.lab_controller:
+                if lca.lab_controller == self.recipeset.lab_controller:
                     scheme = urlparse.urlparse(lca.url).scheme
                     attr = '%s_location' % re.sub(r'[^a-z0-9]+', '_', scheme.lower())
                     recipe.setAttribute(attr, lca.url)
@@ -5541,7 +5585,7 @@ class RecipeTask(TaskBase):
         """
         return dict(
                     id              = "T:%s" % self.id,
-                    worker          = dict(name = "%s" % self.recipe.system),
+                    worker          = dict(name = self.recipe.resource.fqdn),
                     state_label     = "%s" % self.status,
                     state           = self.status.value,
                     method          = "%s" % self.task.name,
@@ -5581,9 +5625,10 @@ class RecipeTask(TaskBase):
             role = xmldoc.createElement("role")
             role.setAttribute("value", "%s" % key)
             for recipetask in recipetasks:
-                system = xmldoc.createElement("system")
-                system.setAttribute("value", "%s" % recipetask.recipe.system)
-                role.appendChild(system)
+                if recipetask.recipe.resource:
+                    system = xmldoc.createElement("system")
+                    system.setAttribute("value", "%s" % recipetask.recipe.resource.fqdn)
+                    role.appendChild(system)
             yield(role)
 
 
@@ -5728,6 +5773,108 @@ class RecipeTaskResult(TaskBase):
         return short_path
 
     short_path = property(short_path)
+
+class RecipeResource(MappedObject):
+    """
+    Base class for things on which a recipe can be run.
+    """
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __unicode__(self):
+        return unicode(self.fqdn)
+
+class SystemResource(RecipeResource):
+    """
+    For a recipe which is running on a Beaker system.
+    """
+
+    def __init__(self, system):
+        super(SystemResource, self).__init__()
+        self.system = system
+        self.fqdn = system.fqdn
+
+    def __repr__(self):
+        return '%s(fqdn=%r, system=%r, reservation=%r)' % (
+                self.__class__.__name__, self.fqdn, self.system,
+                self.reservation)
+
+    @property
+    def mac_address(self):
+        # XXX the type of system.mac_address should be changed to MACAddress,
+        # but for now it's not
+        return netaddr.EUI(self.system.mac_address, dialect=_mac_unix)
+
+    @property
+    def link(self):
+        return make_link(url='/view/%s' % self.system.fqdn,
+                         text=self.fqdn)
+
+    def install_options(self, distro_tree):
+        return self.system.install_options(distro_tree)
+
+    def allocate(self):
+        log.debug('Reserving system %s for recipe %s', self.system, self.recipe.id)
+        self.reservation = self.system.reserve(service=u'Scheduler',
+                user=self.recipe.recipeset.job.owner,
+                reservation_type=u'recipe')
+
+    def release(self):
+        log.debug('Releasing system %s for recipe %s', self.system, self.recipe.id)
+        self.system.unreserve(service=u'Scheduler',
+                user=self.recipe.recipeset.job.owner)
+
+
+class GuestResource(RecipeResource):
+    """
+    For a GuestRecipe which is running on a guest associated with a parent 
+    MachineRecipe.
+    """
+
+    def __repr__(self):
+        return '%s(fqdn=%r, mac_address=%r)' % (self.__class__.__name__,
+                self.fqdn, self.mac_address)
+
+    @property
+    def link(self):
+        return self.fqdn # just text, not a link
+
+    def install_options(self, distro_tree):
+        return global_install_options().combined_with(
+                distro_tree.install_options())
+
+    @staticmethod
+    def _lowest_free_mac():
+        base_addr = netaddr.EUI(get('beaker.base_mac_addr', '52:54:00:00:00:00'))
+        session.flush()
+        # This subquery gives all MAC addresses in use right now
+        mac_addrs_query = session.query(GuestResource.mac_address.label('mac_address'))\
+                .filter(GuestResource.mac_address != None)\
+                .join(GuestResource.recipe)\
+                .filter(not_(Recipe.status.in_([s for s in TaskStatus if s.finished])))
+        # This trickery finds "gaps" of unused MAC addresses by filtering for MAC
+        # addresses where address + 1 is not in use.
+        # We union with base address - 1 to find any gap at the start.
+        # Note that this relies on the MACAddress type being represented as
+        # BIGINT in the database, which lets us do arithmetic on it.
+        left_side = union(mac_addrs_query, select([int(base_addr) - 1])).alias('left_side')
+        right_side = mac_addrs_query.subquery('right_side')
+        free_addr = session.scalar(select([left_side.c.mac_address + 1],
+                from_obj=left_side.outerjoin(right_side,
+                    onclause=left_side.c.mac_address + 1 == right_side.c.mac_address))\
+                .where(right_side.c.mac_address == None)\
+                .order_by(left_side.c.mac_address).limit(1))
+        # The type of (left_side.c.mac_address + 1) comes out as Integer
+        # instead of MACAddress, I think it's a sqlalchemy bug :-(
+        return netaddr.EUI(free_addr, dialect=_mac_unix)
+
+    def allocate(self):
+        self.mac_address = self._lowest_free_mac()
+        log.debug('Allocating MAC address %s for recipe %s', self.mac_address, self.recipe.id)
+
+    def release(self):
+        pass
 
 class RenderedKickstart(MappedObject):
 
@@ -6150,7 +6297,16 @@ System.mapper = mapper(System, system_table,
                      'dyn_status_durations': dynamic_loader(SystemStatusDuration),
                      'hypervisor':relation(Hypervisor, uselist=False),
                      'kernel_type':relation(KernelType, uselist=False),
-                     'dyn_recipes': dynamic_loader(Recipe),
+                     # The relationship to 'recipe' is complicated
+                     # by the polymorphism of SystemResource :-(
+                     'recipes': relation(Recipe, viewonly=True,
+                        secondary=recipe_resource_table.join(system_resource_table),
+                        secondaryjoin=and_(system_resource_table.c.id == recipe_resource_table.c.id,
+                            recipe_resource_table.c.recipe_id == recipe_table.c.id)),
+                     'dyn_recipes': dynamic_loader(Recipe,
+                        secondary=recipe_resource_table.join(system_resource_table),
+                        secondaryjoin=and_(system_resource_table.c.id == recipe_resource_table.c.id,
+                            recipe_resource_table.c.recipe_id == recipe_table.c.id)),
                      })
 
 mapper(SystemCc, system_cc_table)
@@ -6414,8 +6570,8 @@ mapper(Recipe, recipe_table,
         polymorphic_on=recipe_table.c.type, polymorphic_identity=u'recipe',
         properties = {'distro_tree':relation(DistroTree, uselist=False,
                                         backref='recipes'),
-                      'system':relation(System, uselist=False,
-                                        backref='recipes'),
+                      'resource': relation(RecipeResource, uselist=False,
+                                        backref='recipe'),
                       'rendered_kickstart': relation(RenderedKickstart, backref='recipes'),
                       'watchdog':relation(Watchdog, uselist=False,
                                          cascade="all, delete, delete-orphan"),
@@ -6445,6 +6601,17 @@ mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
         polymorphic_identity=u'machine_recipe',
         properties = {'guests':relation(Recipe, backref='hostmachine',
                                         secondary=machine_guest_map)})
+
+mapper(RecipeResource, recipe_resource_table,
+        polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=None)
+mapper(SystemResource, system_resource_table, inherits=RecipeResource,
+        polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=ResourceType.system,
+        properties={
+            'system': relation(System),
+            'reservation': relation(Reservation),
+        })
+mapper(GuestResource, guest_resource_table, inherits=RecipeResource,
+        polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=ResourceType.guest)
 
 mapper(RecipeTag, recipe_tag_table)
 mapper(RecipeRpm, recipe_rpm_table)
@@ -6480,7 +6647,12 @@ mapper(RenderedKickstart, rendered_kickstart_table)
 mapper(Reservation, reservation_table, properties={
         'user': relation(User, backref=backref('reservations',
             order_by=[reservation_table.c.start_time.desc()])),
-        'recipe': relation(Recipe, backref='reservation', uselist=False),
+        # The relationship to 'recipe' is complicated
+        # by the polymorphism of SystemResource :-(
+        'recipe': relation(Recipe, uselist=False, viewonly=True,
+            secondary=recipe_resource_table.join(system_resource_table),
+            secondaryjoin=and_(system_resource_table.c.id == recipe_resource_table.c.id,
+                recipe_resource_table.c.recipe_id == recipe_table.c.id)),
 })
 mapper(SSHPubKey, sshpubkey_table,
         properties=dict(user=relation(User, uselist=False, backref='sshpubkeys')))

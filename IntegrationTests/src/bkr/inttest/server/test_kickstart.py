@@ -252,12 +252,10 @@ EOF
     def provision_recipe(self, xml, system):
         xmljob = XmlJob(xmltramp.parse(xml))
         job = Jobs().process_xmljob(xmljob, self.user)
-        job.recipesets[0].lab_controller = system.lab_controller
         recipe = job.recipesets[0].recipes[0]
-        recipe.system = system
         session.flush()
+        data_setup.mark_recipe_waiting(recipe, system=system)
         recipe.provision()
-        session.flush()
         return recipe
 
     def test_rhel3_defaults(self):

@@ -58,7 +58,7 @@
      ${task.recipe.distro_tree == None and ' ' or task.recipe.distro_tree.link}
     </td>
     <td class="list task" py:if="not hidden.has_key('system')">
-     ${task.recipe.system == None and ' ' or task.recipe.system.link}
+     ${task.recipe.resource == None and ' ' or task.recipe.resource.link}
     </td>
     <td class="list task" style="white-space:nowrap;" py:if="not hidden.has_key('start')">
       <span class="datetime">${task.start_time}</span><br/>
