@@ -68,6 +68,10 @@ MOTD()
                     RESULT_SERVER=$RESULT_SERVER
                            DISTRO=$DISTRO
                      ARCHITECTURE=$ARCH
+
+      Job Whiteboard: $BEAKER_JOB_WHITEBOARD
+
+      Recipe Whiteboard: $BEAKER_RECIPE_WHITEBOARD
 **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
 END
 }
