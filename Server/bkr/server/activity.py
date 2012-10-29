@@ -50,6 +50,18 @@ class Activities(RPCRoot):
 
     @expose(template='bkr.server.templates.grid')
     @paginate('list', default_order='-created', limit=50)
+    def distrotree(self, **kw):
+        activities = DistroTreeActivity.all()
+        activity_search = search_utility.DistroTreeActivity.search
+        search_bar = SearchBar(activity_search.create_search_table(),
+                               name='activitysearch',
+                               complete_data=activity_search. \
+                                             create_complete_search_table(),)
+        return self._activities_grid(activities, search_bar, 'distrotree',
+            search_utility.DistroTreeActivity, title='Distro Tree Activity', **kw)
+
+    @expose(template='bkr.server.templates.grid')
+    @paginate('list', default_order='-created', limit=50)
     def labcontroller(self, **kw):
         activities = LabControllerActivity.all()
         activity_search = search_utility.LabControllerActivity.search
