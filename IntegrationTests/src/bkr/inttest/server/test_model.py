@@ -1359,11 +1359,9 @@ class GuestRecipeTest(unittest.TestCase):
                 urls=[u'nfs://something:/somewhere',
                       u'http://something/somewhere'])
         job = data_setup.create_completed_job(distro_tree=distro_tree,
-                system=data_setup.create_system(lab_controller=lc))
-        guest_recipe = GuestRecipe(guestname=u'asdf', guestargs=u'--kvm',
-                distro_tree=distro_tree, status=TaskStatus.completed)
-        job.recipesets[0].recipes[0].guests.append(guest_recipe)
-        job.recipesets[0].recipes.append(guest_recipe)
+                system=data_setup.create_system(lab_controller=lc),
+                num_guestrecipes=1)
+        guest_recipe = job.recipesets[0].recipes[0].guests[0]
         session.flush()
 
         guestxml = guest_recipe.to_xml().toxml()
