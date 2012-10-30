@@ -22,7 +22,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
 
 from bkr.server import model, search_utility
 from bkr.server.bexceptions import BeakerException
-from bkr.server.helpers import make_fake_link
+from bkr.server.helpers import make_fake_link, make_link
 from bkr.server.validators import UniqueLabControllerEmail
 import logging
 log = logging.getLogger(__name__)
@@ -1534,11 +1534,16 @@ class RecipeActionWidget(CompoundWidget):
 class RecipeWidget(CompoundWidget):
     css = []
     template = "bkr.server.templates.recipe_widget"
-    params = ['recipe']
+    params = ['recipe', 'recipe_systems']
     member_widgets = ['recipe_tasks_widget','action_widget']
     action_widget = RecipeActionWidget()
     recipe_tasks_widget = RecipeTasksWidget()
 
+    def update_params(self, d):
+        super(RecipeWidget, self).update_params(d)
+        d['recipe_systems'] = \
+            make_link(url('/recipes/systems?recipe_id=%d' % d['recipe'].id),
+            d['recipe'].dyn_systems.count())
 
 class ProductWidget(SingleSelectField, RPC):
     javascript = [LocalJSLink('bkr', '/static/javascript/job_product.js')]

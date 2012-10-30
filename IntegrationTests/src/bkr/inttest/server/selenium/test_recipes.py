@@ -119,9 +119,9 @@ class TestRecipeView(WebDriverTestCase):
                     password='password')
             self.system_owner = data_setup.create_user()
             self.system = data_setup.create_system(owner=self.system_owner, arch=u'x86_64')
-            distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
+            self.distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
             self.job = data_setup.create_completed_job(owner=user,
-                    distro_tree=distro_tree, server_log=True)
+                    distro_tree=self.distro_tree, server_log=True)
             for recipe in self.job.all_recipes:
                 recipe.system = self.system
         self.browser = self.get_browser()
@@ -134,6 +134,24 @@ class TestRecipeView(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'recipes/mine')
         b.find_element_by_link_text(recipe.t_id).click()
+
+    def test_recipe_systems(self):
+        with session.begin():
+            queued_job = data_setup.create_job(owner=self.user,
+                    distro_tree=self.distro_tree)
+            data_setup.mark_job_queued(queued_job)
+            the_recipe = queued_job.recipesets[0].recipes[0]
+            the_recipe.systems[:] = [self.system]
+        b = self.browser
+        self.go_to_recipe_view(the_recipe)
+        b.find_element_by_xpath('//td[preceding-sibling::td/b[text()='
+            '"Possible Systems"]]/a').click()
+
+        # Make sure our system link is there
+        b.find_element_by_link_text(self.system.fqdn)
+        # Make sure we only have one system against our recipe
+        system_rows = b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr')
+        self.assert_(len(system_rows) == 1)
 
     def test_log_url_looks_right(self):
         b = self.browser

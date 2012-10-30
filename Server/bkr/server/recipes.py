@@ -345,6 +345,21 @@ class Recipes(RPCRoot):
                     options=search_options,
                     searchvalue=searchvalue)
 
+    @expose(template='bkr.server.templates.grid')
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
+    def systems(self, recipe_id=None, *args, **kw):
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except NoResultFound, e:
+            flash(_(u"Invalid recipe id %s" % recipe_id))
+            redirect(url("/recipes"))
+        PDC = widgets.PaginateDataGrid.Column
+        fields = [PDC(name='fqdn', getter=lambda x: x.link, title='Name'),
+            PDC(name='user', getter=lambda x: x.user and x.user.email_link or None, title='User'),]
+        grid = myPaginateDataGrid(fields=fields)
+        return dict(title='Recipe Systems', grid=grid, list=recipe.systems,
+            object_count = len(recipe.systems), search_bar=None)
+
     @expose(template="bkr.server.templates.recipe")
     def default(self, id):
         try:
