@@ -3,4 +3,11 @@ set -e
 if [ "$power_mode" == interrupt ] ; then
     power_mode=diag
 fi
+curr_state=$(ipmitool -H "$power_address" -U "$power_user" -P "$power_pass" power status)
+if [ "$curr_state" == "Chassis Power is on" -a "$power_mode" == "on" ]; then
+    exit 0
+fi
+if [ "$curr_state" == "Chassis Power is off" -a "$power_mode" == "off" ]; then
+    exit 0
+fi
 ipmitool -v -H "$power_address" -U "$power_user" -P "$power_pass" power "$power_mode"
