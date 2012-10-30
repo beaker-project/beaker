@@ -139,6 +139,7 @@ from bkr.server.reports import Reports
                     <li><a href="${tg.url('/activity/labcontroller')}">Lab Controllers</a></li>
                     <li><a href="${tg.url('/activity/group')}">Groups</a></li>
                     <li><a href="${tg.url('/activity/distro')}">Distros</a></li>
+                    <li><a href="${tg.url('/activity/distrotree')}">Distro Trees</a></li>
                     <li class="last">
                         <img class="corner_left" alt="" src="${tg.url('/static/images/corner_left.png')}"/>
                         <img class="middle" alt="" src="${tg.url('/static/images/dot.gif')}"/>

@@ -4,13 +4,25 @@ from bkr.inttest.server.webdriver_utils import login, is_activity_row_present, \
     delete_and_confirm
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import User, DistroActivity, SystemActivity, \
-    GroupActivity
+    GroupActivity, DistroTreeActivity
 
 class ActivityTestWD(WebDriverTestCase):
 
     @with_transaction
     def setUp(self):
         self.distro = data_setup.create_distro()
+        self.distro_tree1 = data_setup.create_distro_tree(distro=self.distro, arch='x86_64')
+        self.distro_tree2 = data_setup.create_distro_tree(distro=self.distro, arch='i386')
+
+        self.distro_tree1.activity.append(DistroTreeActivity(
+            user=User.by_user_name(data_setup.ADMIN_USER),
+            service=u'testdata', field_name=u'Nonesente',
+            old_value=u'sdfas', new_value=u'sdfa', action='Added'))
+        self.distro_tree2.activity.append(DistroTreeActivity(
+            user=User.by_user_name(data_setup.ADMIN_USER), 
+            service=u'testdata', field_name=u'Noneseonce',
+            old_value=u'bsdf', new_value=u'sdfas', action='Added'))
+
         self.distro.activity.append(DistroActivity(
                 user=User.by_user_name(data_setup.ADMIN_USER), service=u'testdata',
                 action=u'Nothing', field_name=u'Nonsense',
@@ -30,6 +42,33 @@ class ActivityTestWD(WebDriverTestCase):
 
     def tearDown(self):
         self.browser.quit()
+
+    def test_can_search_by_distro_tree_specifics(self):
+        b = self.browser
+        b.get(get_server_base() + 'activity/distrotree')
+        b.find_element_by_link_text('Toggle Search').click()
+        # Make sure only distrotree1 is returned
+        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='DistroTree/Arch']").click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.distro_tree1.arch.arch)
+
+        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_xpath("//select[@id='activitysearch_1_table']/option[@value='DistroTree/Variant']").click()
+        b.find_element_by_xpath("//select[@id='activitysearch_1_operation']/option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='activitysearch_1_value']").send_keys(self.distro_tree1.variant)
+
+        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_xpath("//select[@id='activitysearch_2_table']/option[@value='DistroTree/Distro Name']").click()
+        b.find_element_by_xpath("//select[@id='activitysearch_2_operation']/option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='activitysearch_2_value']").send_keys(self.distro_tree1.distro.name)
+
+        b.find_element_by_xpath("//input[@name='Search']").click()
+
+        self.assert_(is_activity_row_present(b,
+                object_='DistroTree: %s' % self.distro_tree1))
+
+        self.assert_(not is_activity_row_present(b,
+                object_='DistroTree: %s' % self.distro_tree2))
 
     def test_can_search_by_system_name(self):
         b = self.browser

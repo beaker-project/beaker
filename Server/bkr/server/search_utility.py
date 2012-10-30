@@ -24,7 +24,7 @@ class MyColumn(object):
     relation to another mapped object.
     """
     def __init__(self,relations=None, col_type=None,
-            column_name=None, column=None, eagerload=True, **kw):
+            column_name=None, column=None, eagerload=True, aliased=True, **kw):
             if type(col_type) != type(''):
                 raise TypeError('col_type var passed to %s must be string' % self.__class__.__name__)
 
@@ -33,6 +33,7 @@ class MyColumn(object):
             self._relations = relations
             self._column_name = column_name
             self._eagerload = eagerload
+            self._aliased = aliased
 
     def column_join(self, query):
         return_query = None
@@ -74,6 +75,10 @@ class MyColumn(object):
     @property
     def column(self):
         return self._column
+
+    @property
+    def aliased(self):
+        return self._aliased
 
 
 class CpuColumn(MyColumn):
@@ -388,14 +393,15 @@ class Search(object):
                 #to the query
                 #cls_ref.joins.add_join(col_string = str(column),join=mycolumn.join)
                 relations = mycolumn.relations
+                aliased = mycolumn.aliased
                 if not isinstance(relations, list):
-                    self.queri = self.queri.outerjoin(relations,aliased=True)    
+                    self.queri = self.queri.outerjoin(relations, aliased=aliased)
                 else:
                     for relation in relations:
                         if isinstance(relation, list):
-                            self.queri = self.queri.outerjoin(*relation, aliased=True)
+                            self.queri = self.queri.outerjoin(*relation, aliased=aliased)
                         else:
-                            self.queri = self.queri.outerjoin(*relations, aliased=True)
+                            self.queri = self.queri.outerjoin(*relations, aliased=aliased)
                             break
             except TypeError, (error):
                 log.error('Column %s has not specified joins validly:%s' % (column, error))                                                               
@@ -525,7 +531,6 @@ class DistroSearch(Search):
 
 class DistroTreeSearch(Search): pass
 
-
 class KeySearch(Search):
     search_table = []
 
@@ -556,6 +561,8 @@ class SystemActivitySearch(Search):
     def __init__(self, activity):
         self.queri = activity
 
+class DistroTreeActivitySearch(Search):
+    search_table = []
 
 class DistroActivitySearch(Search):
     search_table = []
@@ -1238,6 +1245,32 @@ class GroupActivity(SystemObject):
                            'Old Value' : MyColumn(col_type='string', column=model.Activity.old_value),
                            'New Value' : MyColumn(col_type='string', column=model.Activity.new_value),
                          }
+
+class DistroTreeActivity(SystemObject):
+    search = DistroTreeActivitySearch
+    searchable_columns = {'DistroTree/Arch': MyColumn(col_type='string',
+                                                  column=model.Arch.arch,
+                                                  relations=['object', 'arch'],
+                                                  aliased=False),
+                          'DistroTree/Variant': MyColumn(col_type='string',
+                                                    column=model.DistroTree.variant,
+                                                    relations='object',
+                                                    aliased=False),
+                          'DistroTree/Distro Name': MyColumn(col_type='string',
+                                                        column=model.Distro.name,
+                                                        relations=['object',
+                                                                   'distro'],
+                                                        aliased=False),
+                          'Via': MyColumn(col_type='string',
+                                     column=model.Activity.service),
+                          'Property': MyColumn(col_type='string',
+                                          column=model.Activity.field_name),
+                          'Action': MyColumn(col_type='string',
+                                        column=model.Activity.action),
+                          'Old Value': MyColumn(col_type='string',
+                                           column=model.Activity.old_value),
+                          'New Value': MyColumn(col_type='string',
+                                           column=model.Activity.new_value),}
 
 
 class DistroActivity(SystemObject):
