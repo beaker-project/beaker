@@ -83,9 +83,6 @@ class TestRecipesDataGrid(SeleniumTestCase):
         self.check_column_sort(3)
 
     def test_can_sort_by_system(self):
-        # It would be nice to be able to do this, but it's way too hard with
-        # the new RecipeResource db structure introduced for bug 655009 :-(
-        raise SkipTest('no longer supported')
         self.check_column_sort(4)
 
     def test_can_sort_by_status(self):
