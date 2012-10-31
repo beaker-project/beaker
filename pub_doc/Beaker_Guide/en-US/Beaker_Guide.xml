@@ -10,6 +10,7 @@
 	<xi:include href="Installation_Guide.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 	<xi:include href="User_Guide.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 	<xi:include href="Admin_Guide.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<xi:include href="Glossary.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 	<!-- <xi:include href="FAQ.xml" xmlns:xi="http://www.w3.org/2001/XInclude" /> -->
 </book>
 
