@@ -11,31 +11,13 @@ from contextlib import contextmanager
 import urllib
 import urllib2
 from bkr.labcontroller.config import get_conf
+from bkr.common.helpers import (atomically_replaced_file, makedirs_ignore,
+        siphon, unlink_ignore)
 
 logger = logging.getLogger(__name__)
 
 def get_tftp_root():
     return get_conf().get('TFTP_ROOT', '/var/lib/tftpboot')
-
-# Would be nice if Python did this for us: http://bugs.python.org/issue8604
-@contextmanager
-def atomically_replaced_file(dest_path, mode=0644):
-    (fd, temp_path) = tempfile.mkstemp(prefix=os.path.basename(dest_path),
-            dir=os.path.dirname(dest_path))
-    try:
-        f = os.fdopen(fd, 'w')
-        yield f
-        f.flush()
-        os.fchmod(fd, mode)
-        os.rename(temp_path, dest_path)
-    except:
-        # Clean up the temp file, but suppress any exception if the cleaning fails
-        try:
-            os.unlink(temp_path)
-        finally:
-            pass
-        # Now re-raise the original exception
-        raise
 
 def atomic_link(source, dest):
     temp_path = tempfile.mktemp(prefix=os.path.basename(dest),
@@ -66,34 +48,6 @@ def atomic_symlink(source, dest):
             pass
         # Now re-raise the original exception
         raise
-
-def siphon(src, dest):
-    while True:
-        chunk = src.read(4096)
-        if not chunk:
-            break
-        dest.write(chunk)
-
-def unlink_ignore(path):
-    """
-    Unlinks the given path, but succeeds if it doesn't exist.
-    """
-    try:
-        os.unlink(path)
-    except OSError, e:
-        if e.errno != errno.ENOENT:
-            raise
-
-def makedirs_ignore(path, mode):
-    """
-    Creates the given directory (and any parents), but succeeds if it already
-    exists.
-    """
-    try:
-        os.makedirs(path, mode)
-    except OSError, e:
-        if e.errno != errno.EEXIST:
-            raise
 
 def write_ignore(path, content):
     """
