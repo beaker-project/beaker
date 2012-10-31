@@ -2,7 +2,7 @@ import re
 import shutil
 from tito.common import debug, run_command
 from tito.tagger import VersionTagger
-from tito.builder import UpstreamBuilder
+from tito.builder import Builder, UpstreamBuilder
 
 class BeakerVersionTagger(VersionTagger):
     """
@@ -52,11 +52,22 @@ BAD_TAGS = [
 
 class BeakerBuilder(UpstreamBuilder):
 
+    # So much hackery... tito's Builders have a weird inheritance hierarchy
+
     def tgz(self):
-        super(BeakerBuilder, self).tgz()
-        shutil.copy('%s/%s' % (self.rpmbuild_sourcedir, self.tgz_filename),
-                self.rpmbuild_basedir)
-        print 'Wrote: %s/%s' % (self.rpmbuild_basedir, self.tgz_filename)
+        if self.test:
+            Builder.tgz(self)
+        else:
+            UpstreamBuilder.tgz(self)
+            shutil.copy('%s/%s' % (self.rpmbuild_sourcedir, self.tgz_filename),
+                    self.rpmbuild_basedir)
+            print 'Wrote: %s/%s' % (self.rpmbuild_basedir, self.tgz_filename)
+
+    def _setup_test_specfile(self):
+        if self.test:
+            Builder._setup_test_specfile(self)
+        else:
+            UpstreamBuilder._setup_test_specfile(self)
 
     def patch_upstream(self):
         commits = run_command('git rev-list --reverse %s..%s -- .'
