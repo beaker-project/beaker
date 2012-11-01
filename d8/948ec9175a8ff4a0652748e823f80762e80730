@@ -1,0 +1,9 @@
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+2: Nick Coghlan <ncoghlan@redhat.com>
+Verified+1: Nick Coghlan <ncoghlan@redhat.com>
+Code-Review+1: Qixiang Wan <qwan@redhat.com>
+Submitted-by: Qixiang Wan <qwan@redhat.com>
+Submitted-at: Thu, 01 Nov 2012 02:10:14 -0400
+Reviewed-on: http://gerrit.beaker-project.org/1439
+Project: beaker
+Branch: refs/heads/develop
