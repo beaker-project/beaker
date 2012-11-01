@@ -4,6 +4,7 @@ import urlparse
 import tempfile
 import re
 import pkg_resources
+import pipes
 import jinja2
 import xmltramp
 import crypt
@@ -981,6 +982,63 @@ mysillypackage
             ''', self.system)
         k = recipe.rendered_kickstart.kickstart
         self.assert_('export BEAKER="%s"' % get_server_base() in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=691442
+    def test_beaker_whiteboard(self):
+        # This test checks that the job and recipe whiteboards are made
+        # available in the test environments via the kickstart templates
+        whiteboard = '''
+            This
+            Is
+            A
+            Multi-line
+            Whiteboard
+            Entry
+            With "embedded double quotes"
+            And 'embedded single quotes'
+        '''
+        recipe_xml = '''
+            <job>
+                <whiteboard>Job: %s</whiteboard>
+                <recipeSet>
+                    <recipe whiteboard="Recipe: %s">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''' % (whiteboard, whiteboard.replace('"', "&quot;"))
+        # The XML processing normalises whitespace for the job level
+        # whiteboard element, but only replaces the line breaks with
+        # spaces for the recipe level whiteboard attribute
+        # This test just checks for that currently expected behaviour
+        # without passing too much judgment on its sanity...
+        job_lines = (line.strip() for line in whiteboard.splitlines())
+        job_entry = "Job: " + " ".join(line for line in job_lines if line)
+        recipe_entry = ("Recipe: " +
+                        " ".join(line for line in whiteboard.splitlines()))
+        recipe = self.provision_recipe(recipe_xml, self.system)
+        recipe_whiteboard = recipe.whiteboard
+        self.assertEqual(recipe_whiteboard, recipe_entry)
+        job_whiteboard = recipe.recipeset.job.whiteboard
+        self.assertEqual(job_whiteboard, job_entry)
+        recipe_quoted = pipes.quote(recipe_entry)
+        job_quoted = pipes.quote(job_entry)
+        ks = recipe.rendered_kickstart.kickstart
+        self.assert_('export BEAKER_JOB_WHITEBOARD=%s'
+                           % job_quoted in ks, ks)
+        self.assert_('export BEAKER_RECIPE_WHITEBOARD=%s'
+                           % recipe_quoted in ks, ks)
+        self.assert_('setenv BEAKER_JOB_WHITEBOARD %s'
+                           % job_quoted in ks, ks)
+        self.assert_('setenv BEAKER_RECIPE_WHITEBOARD %s'
+                           % recipe_quoted in ks, ks)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=834147
     def test_ftp_no_http(self):

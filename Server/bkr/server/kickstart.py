@@ -4,6 +4,7 @@ import re
 import urlparse
 import logging
 import netaddr
+import pipes # For pipes.quote, since it isn't available in shlex until 3.3
 from sqlalchemy.orm.exc import NoResultFound
 from turbogears import identity, config
 from turbogears.controllers import expose
@@ -85,6 +86,7 @@ template_env.filters.update({
     'dictsplit': dictsplit,
     'urljoin': urlparse.urljoin,
     'parsed_url': urlparse.urlparse,
+    'shell_quoted': pipes.quote,
 })
 
 def is_arch(distro_tree, *arch_names):
@@ -142,6 +144,8 @@ def generate_kickstart(install_options, distro_tree, system, user,
     # they do something foolish/naughty.
     restricted_context = {
         'kernel_options_post': install_options.kernel_options_post_str,
+        'recipe_whiteboard': recipe.whiteboard,
+        'job_whiteboard': recipe.recipeset.job.whiteboard,
     }
     restricted_context.update(install_options.ks_meta)
     # XXX find a better place to set this, perhaps from the kickstart templates
