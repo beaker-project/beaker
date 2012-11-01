@@ -1,13 +1,39 @@
 #!/bin/sh
 set -e
+
 if [ "$power_mode" == interrupt ] ; then
     power_mode=diag
 fi
-curr_state=$(ipmitool -H "$power_address" -U "$power_user" -P "$power_pass" power status)
-if [ "$curr_state" == "Chassis Power is on" -a "$power_mode" == "on" ]; then
-    exit 0
+
+target_mode="Chassis Power is $power_mode"
+
+know_target_mode() {
+    [ "$power_mode" == "on" -o "$power_mode" == "off" ]
+}
+
+get_current_mode() {
+    current_mode=$(ipmitool -H "$power_address" -U "$power_user" -P "$power_pass" power status)
+}
+
+in_target_mode() {
+    get_current_mode
+    [ "$current_mode" == "$target_mode" ]
+}
+
+
+if know_target_mode && in_target_mode ; then
+        exit 0
 fi
-if [ "$curr_state" == "Chassis Power is off" -a "$power_mode" == "off" ]; then
-    exit 0
-fi
+
 ipmitool -v -H "$power_address" -U "$power_user" -P "$power_pass" power "$power_mode"
+
+if know_target_mode ; then
+    for i in $(seq 20) ; do
+        if in_target_mode ; then
+            exit 0
+        fi
+        sleep 1
+    done
+    echo "Timed out waiting for $target_mode (Status: $current_mode)" >&2
+    exit 1
+fi
