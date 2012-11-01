@@ -1,0 +1,136 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+]>
+  <glossary>
+    <glossdiv><title>B</title>
+      <glossentry><glossterm>Beaker Server</glossterm>
+      <glossdef>
+        <para>
+          Comprised of two main parts, the web UI and the scheduler. The web UI
+          is the main interface for Beaker users. The scheduler is responsible
+          for processing job workflows and assigning to recipes,
+          eventually culminating in the provisioning of systems via the
+          lab controller.
+        </para>
+      </glossdef>
+    </glossentry>
+   </glossdiv>
+   <glossdiv><title>D</title>
+     <glossentry><glossterm>Distro</glossterm>
+       <glossdef>
+         <para>
+           In Beaker, a distro represents an OS major + minor version. Unlike
+           a distro tree, it says nothing about the arch or variant
+           e.g. RHEL-6.2.
+         </para>
+       </glossdef>
+     </glossentry>
+     <glossentry><glossterm>Distro Tree</glossterm>
+       <glossdef>
+         <para>
+           A distro tree is what is installed onto a system.
+           It is a combination of distro, variant and arch e.g.
+           RHEL-6.2 Server x86_64.
+         </para>
+       </glossdef>
+     </glossentry>
+   </glossdiv>
+   <glossdiv><title>J</title>
+     <glossentry><glossterm>Job</glossterm>
+       <glossdef>
+         <para>
+           The highest unit of work in Beaker,
+           it is a container for one or more recipe sets that are
+           run independently of each other.
+         </para>
+       </glossdef>
+     </glossentry>
+   </glossdiv>
+   <glossdiv><title>L</title>
+     <glossentry><glossterm>Lab Controller</glossterm>
+       <glossdef>
+         <para>
+           Main conduit of communication between systems and the beaker
+           server. Main responsibilities include provisioning of systems,
+           monitoring of systems via the external watchdog, transfer of
+           system logs, reporting of recipe task results, and importing
+           distros.
+         </para>
+       </glossdef>
+     </glossentry>
+   </glossdiv>
+   <glossdiv><title>R</title>
+     <glossentry><glossterm>Recipe Set</glossterm>
+       <glossdef>
+         <para>
+           A recipe set is contained within a job and can contain
+           one or more recipes. Any recipes within the same recipe set
+           are run in parallel with each other.
+           This is needed for multihost recipes.
+         </para>
+       </glossdef>
+     </glossentry>
+     <glossentry><glossterm>Recipe</glossterm>
+       <glossdef>
+         <para>
+           A recipe is contained within a recipe set. A recipe is a
+           unit of work, comprising an ordered sequence of recipe tasks
+           that are run on a system.
+         </para>
+       </glossdef>
+     </glossentry>
+     <glossentry><glossterm>Recipe Task</glossterm>
+       <glossdef>
+         <para>
+           A recipe task is contained within a recipe and is the smallest
+           unit of work in Beaker. A recipe task runs a specific
+           task, the results of which are reported to the beaker server.
+         </para>
+       </glossdef>
+     </glossentry>
+    </glossdiv>
+    <glossdiv><title>S</title>
+      <glossentry><glossterm>System</glossterm>
+        <glossdef>
+          <para>
+            These make up Beaker's inventory, and are the systems on which
+            recipes are run. They may not necesarily be a bare metal machine,
+            but could be a guest on a hypervisor.
+          </para>
+        </glossdef>
+      </glossentry>
+    </glossdiv>
+    <glossdiv><title>T</title>
+     <glossentry><glossterm>Task</glossterm>
+       <glossdef>
+         <para>
+           A task is designed to be run on a system, for the purposes
+           of running some arbitrary code written by the task's author.
+           A task is uploaded to Beaker as an RPM and is run as a recipe
+           task (that is to say, a recipe task is an instance of a task).
+         </para>
+       </glossdef>
+     </glossentry>
+     <glossentry><glossterm>Test Harness</glossterm>
+       <glossdef>
+         <para>
+           The test harness is the software that manages the running of recipe
+           tasks on the system. It installs the tasks, creates the
+           environment in which they need to run, executes them in order,
+           reports the results backs to the server and uploads the logs
+           to the lab controller.
+         </para>
+       </glossdef>
+     </glossentry>
+    </glossdiv>
+    <glossdiv><title>W</title>
+     <glossentry><glossterm>Workflow</glossterm>
+       <glossdef>
+         <para>
+           A workflow is used to describe job templates for running jobs of a particular
+           nature.
+         </para>
+       </glossdef>
+     </glossentry>
+    </glossdiv>
+  </glossary>
