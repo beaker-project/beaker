@@ -41,6 +41,7 @@ class SnippetExtension(jinja2.ext.Extension):
         return node
 
 template_env = jinja2.sandbox.SandboxedEnvironment(
+        cache_size=0, # https://bugzilla.redhat.com/show_bug.cgi?id=862235
         loader=jinja2.ChoiceLoader([
             jinja2.FileSystemLoader('/etc/beaker'),
             jinja2.PackageLoader('bkr.server', ''),
