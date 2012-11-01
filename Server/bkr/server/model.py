@@ -5980,8 +5980,8 @@ class Task(MappedObject):
                     description = self.description,
                     repo = '%s' % self.repo,
                     max_time = self.avg_time,
-                    destructive = self.destructive or False,
-                    nda = self.nda or False,
+                    destructive = self.destructive,
+                    nda = self.nda,
                     creation_date = '%s' % self.creation_date,
                     update_date = '%s' % self.update_date,
                     owner = self.owner,
@@ -6002,10 +6002,16 @@ class Task(MappedObject):
         task = lxml.etree.Element('task',
                                   name=self.name,
                                   creation_date=str(self.creation_date),
-                                  destructive=str(self.destructive or False).lower(),
-                                  nda=str(self.nda or False).lower(),
                                   version=str(self.version),
                                   )
+
+        # 'destructive' and 'nda' field could be NULL if it's missing from
+        # testinfo.desc. To satisfy the Relax NG schema, such attributes
+        # should be omitted. So only set these attributes when they're present.
+        optional_attrs = ['destructive', 'nda']
+        for attr in optional_attrs:
+            if getattr(self, attr) is not None:
+                task.set(attr, str(getattr(self, attr)).lower())
 
         desc =  lxml.etree.Element('description')
         desc.text =u'%s' % self.description

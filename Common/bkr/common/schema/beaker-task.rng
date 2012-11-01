@@ -20,19 +20,23 @@
             This is the datetime when the task was initially created
           </a:documentation>
         </attribute>
-        <attribute name="destructive" >
-          <data type="boolean"/>
-          <a:documentation xml:lang="en">
-            A destructive task is one that destroys data on the machine
-          </a:documentation>
-        </attribute>
-        <attribute name="nda">
-          <data type="boolean"/>
-          <a:documentation xml:lang="en">
-            This is to inform whether or not the task is subject to
-            a non disclosure agreement
-          </a:documentation>
-        </attribute>
+        <optional>
+          <attribute name="destructive" >
+            <data type="boolean"/>
+            <a:documentation xml:lang="en">
+              A destructive task is one that destroys data on the machine
+            </a:documentation>
+          </attribute>
+        </optional>
+        <optional>
+          <attribute name="nda">
+            <data type="boolean"/>
+            <a:documentation xml:lang="en">
+              This is to inform whether or not the task is subject to
+              a non disclosure agreement
+            </a:documentation>
+          </attribute>
+        </optional>
         <attribute name="version">
           <a:documentation xml:lang="en">
             The current version of the task. The tracking of this
