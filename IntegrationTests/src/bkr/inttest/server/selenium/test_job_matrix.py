@@ -18,7 +18,6 @@ import logging
 import time
 import tempfile
 from turbogears.database import session
-from selenium.webdriver.support.ui import WebDriverWait
 from bkr.server.model import TaskResult
 from bkr.inttest.server.webdriver_utils import login, is_text_present, delete_and_confirm
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
