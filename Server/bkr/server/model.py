@@ -3348,8 +3348,19 @@ class Log(MappedObject):
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
+    @staticmethod
+    def _normalized_path(path):
+        """
+        We need to normalize the `path` attribute *before* storing it, so that 
+        we don't end up with duplicate rows that point to equivalent filesystem 
+        paths (bug 865265).
+        Also by convention we use '/' rather than empty string to mean "no 
+        subdirectory". It's all a bit weird...
+        """
+        return re.sub(r'/+', '/', path or '') or '/'
+
     @classmethod
-    def lazy_create(cls, **kwargs):
+    def lazy_create(cls, path=None, **kwargs):
         """
         Unlike the "real" lazy_create above, we can't rely on unique
         constraints here because 'path' and 'filename' are TEXT columns and
@@ -3358,9 +3369,10 @@ class Log(MappedObject):
         So we just use a query-then-insert approach. There is a race window
         between querying and inserting, but it's about the best we can do.
         """
-        item = cls.query.filter_by(**kwargs).first()
+        item = cls.query.filter_by(path=cls._normalized_path(path),
+                **kwargs).first()
         if item is None:
-            item = cls(**kwargs)
+            item = cls(path=path, **kwargs)
             session.flush()
         return item
 
@@ -3368,10 +3380,15 @@ class Log(MappedObject):
                  server=None, basepath=None, parent=None):
         super(Log, self).__init__()
         self.parent = parent
-        self.path = path
+        self.path = self._normalized_path(path)
         self.filename = filename
         self.server = server
         self.basepath = basepath
+
+    def __repr__(self):
+        return '%s(path=%r, filename=%r, server=%r, basepath=%r)' % (
+                self.__class__.__name__, self.path, self.filename,
+                self.server, self.basepath)
 
     def result(self):
         return self.parent.result

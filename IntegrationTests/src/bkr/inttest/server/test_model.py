@@ -10,7 +10,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
         Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
-        GuestRecipe, GuestResource, Recipe
+        GuestRecipe, GuestResource, Recipe, LogRecipe
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup
@@ -1410,6 +1410,26 @@ class GuestResourceTest(unittest.TestCase):
         first_job.cancel()
         self.assertEquals(GuestResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:00'))
+
+
+class LogRecipeTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+        self.recipe = data_setup.create_recipe()
+        self.recipe.logs[:] = []
+        data_setup.create_job_for_recipes([self.recipe])
+
+    def tearDown(self):
+        session.rollback()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=865265
+    def test_path_is_normalized(self):
+        lr1 = LogRecipe.lazy_create(path=u'/', filename='dummy.log',
+                parent=self.recipe)
+        lr2 = LogRecipe.lazy_create(path=u'', filename='dummy.log',
+                parent=self.recipe)
+        self.assert_(lr1 is lr2, (lr1, lr2))
 
 
 class TaskPackageTest(unittest.TestCase):
