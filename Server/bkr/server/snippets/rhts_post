@@ -65,7 +65,11 @@ fi
 {% if yum %}
 # Install Yum
 pushd /root
+{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
 /usr/bin/wget -N http://{{ lab_controller.fqdn }}/beaker/{{ yum }}
+{% else %}
+curl -R http://{{ lab_controller.fqdn }}/beaker/{{ yum }} -o {{ yum }}
+{% endif %}
 /bin/rpm -Uvh {{ yum }}
 popd
 {% endif %}
@@ -171,5 +175,9 @@ useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82
 {% endif %}
 {% if recipe %}
 # Check in with Beaker Server, let it know our hostname
+{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
 wget -O - http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$(hostname -f)
+{% else %}
+curl http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$(hostname -f)
+{% endif %}
 {% endif %}

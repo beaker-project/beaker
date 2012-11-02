@@ -1,3 +1,7 @@
 {% if system %}
+{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
 wget -O - http://{{ lab_controller.fqdn }}:8000/nopxe/{{ system.fqdn }}
+{% else %}
+curl http://{{ lab_controller.fqdn }}:8000/nopxe/{{ system.fqdn }}
+{% endif %}
 {% endif %}

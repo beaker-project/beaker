@@ -77,7 +77,7 @@ python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstar
 
 %post --log=/dev/console
 set -x
-wget -O - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
+curl http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
 echo @RECIPEID@ > /root/RECIPE.TXT
 
 # If netboot_method= is found in /proc/cmdline record it to /root
@@ -88,8 +88,8 @@ fi
 
 # Enable post-install boot notification
 
-wget -O /usr/local/sbin/anamon "http://lab.test-kickstart.invalid/beaker/anamon"
-wget -O /etc/rc.d/init.d/anamon "http://lab.test-kickstart.invalid/beaker/anamon.init"
+curl -R "http://lab.test-kickstart.invalid/beaker/anamon" -o /usr/local/sbin/anamon
+curl -R "http://lab.test-kickstart.invalid/beaker/anamon.init" -o /etc/rc.d/init.d/anamon
 
 chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
 test -d /selinux && restorecon /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
@@ -257,7 +257,7 @@ setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
 # Check in with Beaker Server, let it know our hostname
-wget -O - http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$(hostname -f)
+curl http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$(hostname -f)
 # no snippet data for Fedora_post
 # no snippet data for system_post
 %end
