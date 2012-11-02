@@ -25,9 +25,20 @@ class JobListTest(unittest.TestCase):
         self.assert_(len(out[0]) == 1, out)
         out = run_client(['bkr', 'job-list', '--owner', 'foobar'])
         self.assert_(self.jobs[0].t_id not in out, out)
+        out = run_client(['bkr', 'job-list', '--owner', self.users[0].user_name, '--min-id', \
+                              '{0}'.format(self.jobs[0].id), '--max-id', '{0}'.format(self.jobs[0].id)])
+        self.assert_(self.jobs[0].t_id in out and self.jobs[1].t_id not in out)
 
     def test_list_jobs_by_whiteboard(self):
         out = run_client(['bkr', 'job-list', '--whiteboard', self.jobs[0].whiteboard])
         self.assert_(self.jobs[0].t_id in out, out)
         out = run_client(['bkr', 'job-list', '--whiteboard', 'foobar'])
         self.assert_(self.jobs[0].t_id not in out, out)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=816490
+    def test_list_jobs_by_jid(self):
+        out = run_client(['bkr', 'job-list', '--min-id', '{0}'.format(self.jobs[1].id)])
+        self.assert_(self.jobs[1].t_id in out and self.jobs[0].t_id not in out)
+
+        out = run_client(['bkr', 'job-list', '--max-id', '{0}'.format(self.jobs[0].id)])
+        self.assert_(self.jobs[0].t_id in out and self.jobs[1].t_id not in out)

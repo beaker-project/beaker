@@ -211,13 +211,26 @@ class Jobs(RPCRoot):
                 Job whiteboard
             'limit'
                 Integer limit to number of jobs returned.
+            'minid'
+                Min JobID of the jobs to search
+            'maxid'
+                Maximum Job ID of the jobs to search
 
         Returns a two-element array. The first element is an array of JobIDs
         of the form ``'J:123'``, suitable to be passed to the
         :meth:`jobs.delete_jobs` method. The second element is a human-readable
         count of the number of Jobs matched. Does not return deleted jobs.
         """
+
+        # if  min/max/both IDs have been specified, filter it right here
+        minid = filters.get('minid', None)
+        maxid = filters.get('maxid', None)
         jobs = session.query(Job)
+        if minid:
+            jobs = jobs.filter(Job.id >= minid)
+        if maxid:
+            jobs = jobs.filter(Job.id <= maxid)
+
         tags = filters.get('tags', None)
         complete_days = filters.get('daysComplete', None)
         family = filters.get('family', None)
