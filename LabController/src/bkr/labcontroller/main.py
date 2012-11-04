@@ -113,7 +113,6 @@ class XMLRPCRequestHandler(DocXMLRPCServer.DocXMLRPCRequestHandler):
             self.wfile.flush()
             self.connection.shutdown(1)
 
-            
 class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
                            XMLRPCServer):
     allow_reuse_address = True
@@ -133,15 +132,16 @@ class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
             raise
         logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
         return result
-        
 
-def daemon_shutdown(*args, **kwargs):
-    login.stop()
-    raise ShutdownException()
 
 def main_loop(conf=None, foreground=False):
     """infinite daemon loop"""
+    login = None
 
+    def daemon_shutdown(*args):
+        if login:
+            login.stop()
+        raise ShutdownException()
     # define custom signal handlers
     signal.signal(signal.SIGTERM, daemon_shutdown)
 
@@ -187,7 +187,7 @@ def main_loop(conf=None, foreground=False):
 
 def main():
     parser = OptionParser()
-    parser.add_option("-c", "--config", 
+    parser.add_option("-c", "--config",
                       help="Full path to config file to use")
     parser.add_option("-f", "--foreground", default=False, action="store_true",
                       help="run in foreground (do not spawn a daemon)")
@@ -202,14 +202,13 @@ def main():
     pid_file = opts.pid_file
     if pid_file is None:
         pid_file = conf.get("PROXY_PID_FILE", "/var/run/beaker-lab-controller/beaker-proxy.pid")
-     
     if opts.foreground:
         main_loop(conf=conf, foreground=True)
     else:
-        daemonize(main_loop, 
+        daemonize(main_loop,
                   daemon_pid_file=pid_file,
                   daemon_start_dir="/",
-                  conf=conf, 
+                  conf=conf,
                   foreground=False)
 
 if __name__ == '__main__':
