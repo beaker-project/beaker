@@ -7,12 +7,14 @@ rpm-build
 *.bz2
 Harness/build
 Server/build
+Server/build.out
 Server/devdata.sqlite
 Server/setup.py
 Common/bkr/__init__.py
 Common/build
 Common/setup.py
 Client/build
+Client/build.out
 Client/setup.py
 Client/doc/bkr-*.rst
 LabController/build
