@@ -369,20 +369,20 @@
                                 </section>
                                 <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Jobs-Job_Submission-Job_workflow_details">
                                   <title>Job workflow details</title>
-                                    <para>There are various XML entities in a Job workflow. You may wish to look at what some of these may be by looking at <xref linkend="User_Guide-Getting_Started-Process-Beaker_Interface-Jobs-Job_Submission-Cloning_an_Existing_Job"></xref>Each Job has a root node called the <application>job</application> element: 
+                                    <para>There are various XML entities in the job definitions created for a workflow. Each job has a root node called the <application>job</application> element:
                                       <screen>&lt;job&gt;
 &lt;/job&gt;
                                       </screen>
                                     </para>
-                                    <para>A direct child is the <application>whiteboard</application>. The content is normally a mnemonic piece of text describing the Job: </para>
+                                    <para>A direct child is the <application>whiteboard</application>. The content is normally a mnemonic piece of text describing the job: </para>
                                     <screen>&lt;job&gt;
 &lt;whiteboard&gt;
         Apache 2.2 test
 &lt;/whiteboard&gt;
 &lt;/ob&gt;
 </screen>
-                                    <para>The next tag in the <application>recipeSet</application> tag (which describes a Recipe Set. See Section 5.4, “Recipes” for details). A Job workflow can have one or more<application>recipeSet</application>. All Recipes within a Recipe Set are run simultaneously, whereas multiple Recipe Sets are run in no predetermined order. This should help you decide whether you wish to run tasks in one or many Recipe Set (i.e Multihost tests will require no more than one Recipe Set).  
-                                   </para>
+                                    <para>The next element is the <application>recipeSet</application> (which describes a recipe set. See <xref linkend="User_Guide-Getting_Started-Process-Beaker_Interface-Recipes"></xref> for full details). A job workflow can have one or more of these elements, which contain one or more <application>recipe</application> elements. Whereas tasks within a recipe are run in sequence on a single system, all recipes within a recipe set are run simultaneously on systems controlled by a common lab controller. This makes recipe sets useful for scheduling multihost jobs, where recipes playing different roles (e.g. client, server) run concurrently on separate systems.</para>
+                                    <para>When multiple recipe sets are defined in a single job, they are run in no predetermined order, are not necessarily scheduled concurrently and may run on systems controlled by different lab controllers. The advantage of combining them into one job is that they will report a single overall result (as well as a result for each recipe set) and can be managed (e.g. submitted, cancelled) as a single unit.</para>
                                    <screen>&lt;job&gt;
   &lt;whiteboard&gt;
     Apache 2.2 test
@@ -391,7 +391,7 @@
     &lt;/recipeset&gt;
 &lt;/job&gt;
 </screen>
-                                    <para>Of course a <application>recipeSet</application> element needs one or more recipe children. As mentioned above, <application>Recipes</application> run simultaneously. The <application>recipeSet</application> element can have the following attributes 
+                                    <para>As noted above, the <application>recipeSet</application> element contains <application>recipe</application> elements. Individual recipes can have the following attributes
                                       <itemizedlist>
                                         <listitem>
                                           <para>
@@ -475,17 +475,17 @@
     Apache 2.2 test
   &lt;/whiteboard&gt;
     &lt;recipeset&gt;
-      &lt;ecipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="Lab Controller"&gt;
+      &lt;recipe kernel_options="" kernel_options_post="" ks_meta="" role="None" whiteboard="Lab Controller"&gt;
       &lt;/recipe&gt;
     &lt;/recipeset&gt;
 &lt;/job&gt;
  </screen>
                                    </para>
                                   <note>
-                                    <title>Avoid having many Recipes in one Recipe Set</title>
-                                      <para>Because Recipes are run simultaneously, not one Recipe will commence until all other sibling Recipes are ready. This involves each Recipe reserving a machine, and waiting until every other Recipe has reserved a machine. This can tie up resources and keep them idle for long amounts of time. Try having many Recipe Sets containing few Recipes, rather than the opposite. Of course this only applies to Recipes that do not need to be run simultaneously (i.e not Multihost Jobs) </para>
+                                    <title>Avoid having many recipes in one recipe set</title>
+                                      <para>Because recipes within a recipe set are required to run simultaneously, no recipe will commence execution until all other sibling recipes are ready. This involves each recipe reserving a system, and waiting until every other recipe has also reserved a system. This can tie up resources and keep them idle for long amounts of time. It is thus worth limiting the recipes in each recipeset to only those that actually need to run simultaneously (i.e multihost jobs)</para>
                                   </note>
-                                  <para>Within the <application>recipe</application> tag, you can specify what packages need to be installed on top of anything that comes installed by default. </para>
+                                  <para>Within the <application>recipe</application> element, you can specify what packages need to be installed on top of anything that comes installed by default. </para>
                                   <screen>&lt;job&gt;
   &lt;whiteboard&gt;
     Apache 2.2 test
@@ -504,7 +504,7 @@
     &lt;/recipeSet&gt;
 &lt;/job&gt;
  </screen>
-                                  <para>If you would like you can also specify your own repository that provides extra packages that your Job requires. Use the <application>repo</application>  tag for this. You can use any text you like for the name attribute. </para>
+                                  <para>If you would like you can also specify your own repository that provides extra packages that your job requires. Use the <application>repo</application>  tag for this. You can use any text you like for the name attribute. </para>
                                   <screen>&lt;job&gt;
  &lt;whiteboard&gt;
     Apache 2.2 test
