@@ -29,6 +29,8 @@ from sqlalchemy.orm import aliased
 import datetime
 from lxml import etree
 
+class NotVirtualisable(ValueError): pass
+
 class ElementWrapper(object):
     # Operator translation table
     op_table = { '=' : '__eq__',
@@ -47,8 +49,10 @@ class ElementWrapper(object):
 
         if name in self.subclassDict:
             return self.subclassDict[name]
-        return UnknownElement
-    
+        # As a kindness to the user we treat unrecognised elements like <and/>,
+        # so that valid elements inside the unrecognised one are not ignored.
+        return XmlAnd
+
     def __init__(self, wrappedEl, subclassDict=None):
         self.wrappedEl = wrappedEl
         if self.subclassDict == None:
@@ -71,17 +75,28 @@ class ElementWrapper(object):
         else:
             return child
 
-    def recurse(self, visitor):
-        visitor.visit(self)
-        for child in self:
-            child.recurse(visitor)
-
     def get_xml_attr(self, attr, typeCast, defaultValue):
         attributes = self.wrappedEl.attrib
         if attr in attributes:
             return typeCast(attributes[attr])
         else:
             return defaultValue
+
+    # These are the default behaviours for each element.
+    # Note that unrecognised elements become XmlAnd!
+
+    def filter(self, joins):
+        return (joins, None)
+
+    def filter_lab(self):
+        return None
+
+    def vm_params(self):
+        raise NotVirtualisable()
+
+
+class XmlAnd(ElementWrapper):
+    subclassDict = None
 
     def filter(self, joins):
         queries = []
@@ -94,13 +109,21 @@ class ElementWrapper(object):
             return (joins, None)
         return (joins, and_(*queries))
 
+    def filter_lab(self, query):
+        clauses = []
+        for child in self:
+            clause = child.filter_lab()
+            if clause is not None:
+                clauses.append(clause)
+        if not clauses:
+            return None
+        return and_(*clauses)
 
-class UnknownElement(ElementWrapper):
-    pass
-
-
-class XmlAnd(ElementWrapper):
-    subclassDict = None
+    def vm_params(self):
+        d = {}
+        for child in self:
+            d.update(child.vm_params())
+        return d
 
 
 class XmlOr(ElementWrapper):
@@ -119,6 +142,19 @@ class XmlOr(ElementWrapper):
         if not queries:
             return (joins, None)
         return (joins, or_(*queries))
+
+    def filter_lab(self, query):
+        clauses = []
+        for child in self:
+            clause = child.filter_lab()
+            if clause is not None:
+                clauses.append(clause)
+        if not clauses:
+            return None
+        return or_(*clauses)
+
+    def vm_params(self):
+        raise NotVirtualisable() # too hard!
 
 
 class XmlDistroArch(ElementWrapper):
@@ -197,8 +233,7 @@ class XmlDistroVirt(ElementWrapper):
     """
     This is a noop, since we don't have virt distros anymore.
     """
-    def filter(self, joins):
-        return (joins, None)
+    pass
 
 
 class XmlGroup(ElementWrapper):
@@ -298,13 +333,14 @@ class XmlHostLabController(ElementWrapper):
                  '==' : '__eq__',
                  '!=' : '__ne__'}
     def filter(self, joins):
+        return (joins.join(System.lab_controller), self.filter_lab())
+
+    def filter_lab(self):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         if not value:
-            return (joins, None)
-        joins = joins.join(System.lab_controller)
-        query = getattr(LabController.fqdn, op)(value)
-        return (joins, query)
+            return None
+        return getattr(LabController.fqdn, op)(value)
 
 class XmlDistroLabController(ElementWrapper):
     """
@@ -343,6 +379,16 @@ class XmlHypervisor(ElementWrapper):
             query = getattr(Hypervisor.hypervisor, op)(value)
         return (joins, query)
 
+    def vm_params(self):
+        # XXX 'KVM' is hardcoded here just because that is what RHEV/oVirt
+        # uses, but we should have a better solution
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None) or None
+        if getattr('KVM', op)(value):
+            return {}
+        else:
+            raise NotVirtualisable()
+
 class XmlSystemType(ElementWrapper):
     """
     Pick a system with the correct system type.
@@ -353,6 +399,13 @@ class XmlSystemType(ElementWrapper):
         if value:
             query = System.type == value
         return (joins, query)
+
+    def vm_params(self):
+        value = self.get_xml_attr('value', unicode, None)
+        if value == 'Machine':
+            return {}
+        else:
+            raise NotVirtualisable()
 
 class XmlSystemStatus(ElementWrapper):
     """
@@ -448,6 +501,10 @@ class XmlMemory(ElementWrapper):
         if value:
             query = getattr(System.memory, op)(value)
         return (joins, query)
+
+    def vm_params(self):
+        # XXX add some logic here
+        raise NotVirtualisable()
 
 class XmlSystemOwner(ElementWrapper):
     """
@@ -703,6 +760,15 @@ class XmlArch(ElementWrapper):
                 query = not_(System.arch.contains(arch))
         return (joins, query)
 
+    def vm_params(self):
+        # XXX add some better logic here
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        if getattr('x86_64', op)(value):
+            return {}
+        else:
+            raise NotVirtualisable()
+
 class XmlNumaNodeCount(ElementWrapper):
     """
     Pick a system with the correct number of NUMA nodes.
@@ -748,7 +814,7 @@ class XmlDevice(ElementWrapper):
         return (joins, query)
 
 
-class XmlCpu(ElementWrapper):
+class XmlCpu(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
                     'or': XmlOr,
@@ -766,7 +832,7 @@ class XmlCpu(ElementWrapper):
                    }
 
 
-class XmlSystem(ElementWrapper):
+class XmlSystem(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
                     'or': XmlOr,
@@ -790,7 +856,7 @@ class XmlSystem(ElementWrapper):
                    }
 
 
-class XmlHost(ElementWrapper):
+class XmlHost(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
                     'or': XmlOr,
@@ -811,7 +877,7 @@ class XmlHost(ElementWrapper):
                     'hypervisor': XmlHypervisor, #deprecated
                    }
 
-class XmlDistro(ElementWrapper):
+class XmlDistro(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
                     'or': XmlOr,
@@ -844,6 +910,26 @@ def apply_system_filter(filter, query):
     if clauses:
         query = query.filter(and_(*clauses))
     return query
+
+def apply_lab_controller_filter(filter, query):
+    if isinstance(filter, basestring):
+        filter = XmlHost(etree.fromstring(filter))
+    clauses = []
+    for child in filter:
+        clause = child.filter_lab()
+        if clause is not None:
+            clauses.append(clause)
+    if clauses:
+        query = query.filter(and_(*clauses))
+    return query
+
+def vm_params(filter):
+    if isinstance(filter, basestring):
+        filter = XmlHost(etree.fromstring(filter))
+    params = {}
+    for child in filter:
+        params.update(child.vm_params())
+    return params
 
 def apply_distro_filter(filter, query):
     if isinstance(filter, basestring):

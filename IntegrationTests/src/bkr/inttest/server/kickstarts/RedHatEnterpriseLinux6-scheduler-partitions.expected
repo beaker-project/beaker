@@ -323,6 +323,7 @@ setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
 # Check in with Beaker Server, let it know our hostname
+sync # XXX if this is a RHEV guest, the server will forcibly restart us due to BZ#751854
 curl http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$(hostname -f)
 # no snippet data for RedHatEnterpriseLinux6_post
 # no snippet data for system_post

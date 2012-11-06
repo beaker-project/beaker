@@ -158,3 +158,20 @@ you had any). Then run the following SQL to populate the restored columns:
         INNER JOIN guest_resource ON recipe_resource.id = guest_resource.id
         INNER JOIN system ON recipe_resource.fqdn = system.fqdn
         SET recipe.system_id = system.id;
+
+
+Support virtualization managers
+-------------------------------
+
+Run the following SQL:
+
+    ALTER TABLE recipe
+        ADD COLUMN virt_status
+            ENUM('Possible','Precluded','Succeeded','Skipped','Failed')
+            NOT NULL DEFAULT 'Possible',
+        ADD INDEX (virt_status);
+
+To roll back, run the following SQL:
+
+    ALTER TABLE recipe
+        DROP COLUMN virt_status;

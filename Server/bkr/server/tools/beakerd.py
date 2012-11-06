@@ -24,7 +24,8 @@ __requires__ = ['TurboGears']
 import sys
 import os
 import random
-from bkr.server.bexceptions import BX, CobblerTaskFailedException
+from bkr.server import needpropertyxml
+from bkr.server.bexceptions import BX, VMCreationFailedException
 from bkr.server.model import *
 from bkr.server.util import load_config, log_traceback
 from bkr.server.recipetasks import RecipeTasks
@@ -43,6 +44,7 @@ import signal
 from lockfile import pidlockfile
 from daemon import pidfile
 import threading
+import os
 
 import logging
 
@@ -121,6 +123,7 @@ def new_recipes(*args):
                     except IndexError:
                         # We may already be at the highest priority
                         pass
+                recipe.virt_status = recipe.check_virtualisability()
                 if recipe.systems:
                     recipe.process()
                     log.info("recipe ID %s moved from New to Processed" % recipe.id)
@@ -413,6 +416,78 @@ def queued_recipes(*args):
     log.debug("Exiting queued_recipes routine")
     return True
 
+def virt_recipes(*args):
+    # We limit to labs where the tree is available by NFS because RHEV needs to 
+    # use autofs to grab the images. See VirtManager.start_install.
+    recipes = MachineRecipe.query\
+            .join(Recipe.recipeset)\
+            .join(Recipe.distro_tree, DistroTree.lab_controller_assocs, LabController)\
+            .filter(Recipe.status == TaskStatus.queued)\
+            .filter(Recipe.virt_status == RecipeVirtStatus.possible)\
+            .filter(LabController.disabled == False)\
+            .filter(or_(RecipeSet.lab_controller == None,
+                RecipeSet.lab_controller_id == LabController.id))\
+            .filter(LabControllerDistroTree.url.like(u'nfs://%'))\
+            .order_by(RecipeSet.priority.desc(), Recipe.id.asc())
+    if not recipes.count():
+        return False
+    log.debug("Entering virt_recipes routine")
+    for recipe_id, in recipes.values(Recipe.id.distinct()):
+        session.begin()
+        try:
+            recipe = Recipe.by_id(recipe_id)
+            user = recipe.recipeset.job.owner
+            system_name = "guest_for_recipe_%d" % recipe.id
+
+            # Figure out the "data centers" where we can run the recipe
+            if recipe.recipeset.lab_controller:
+                # First recipe of a recipeSet determines the lab_controller
+                lab_controllers = [recipe.recipeset.lab_controller]
+            else:
+                # NB the same criteria are also expressed above
+                lab_controllers = LabController.query.filter_by(disabled=False, removed=None)
+                lab_controllers = needpropertyxml.apply_lab_controller_filter(
+                        recipe.host_requires, lab_controllers)
+                lab_controllers = [lc for lc in lab_controllers.all()
+                        if recipe.distro_tree.url_in_lab(lc, 'nfs')]
+
+            vm_params = needpropertyxml.vm_params(recipe.host_requires)
+
+            recipe.resource = VirtManager.create_vm_on_any(system_name, lab_controllers)
+            recipe.resource.allocate()
+            recipe.schedule()
+            recipe.createRepo()
+            recipe.recipeset.lab_controller = recipe.resource.lab_controller
+            recipe.systems = []
+            recipe.watchdog = Watchdog()
+            log.info("recipe ID %s moved from Queued to Scheduled by virt_recipes" % recipe.id)
+
+            session.commit()
+        except needpropertyxml.NotVirtualisable:
+            recipe.virt_status = RecipeVirtStatus.precluded
+            session.commit()
+        except VMCreationFailedException:
+            recipe.virt_status = RecipeVirtStatus.skipped
+            session.commit()
+        except exceptions.Exception:
+            log.exception("Failed to commit in virt_recipes")
+            # XXX this bit explodes if the exception was raised in flush
+            if recipe.resource:
+                recipe.resource.release()
+            session.rollback()
+            # As an added precaution, let's try and avoid this recipe in future
+            try:
+                session.begin()
+                Recipe.by_id(recipe_id).virt_status = RecipeVirtStatus.failed
+                session.commit()
+            except exceptions.Exception:
+                log.exception('Further exception setting recipe %s '
+                        'virt status to failed', recipe.id)
+        finally:
+            session.close()
+    log.debug("Exiting virt_recipes routine")
+    return True
+
 def scheduled_recipes(*args):
     """
     if All recipes in a recipeSet are in Scheduled state then move them to
@@ -504,9 +579,13 @@ def metrics_loop(*args, **kwargs):
 def main_recipes_loop(*args, **kwargs):
     while running:
         dead_recipes()
+        if config.get('ovirt.enabled', False):
+            virt = virt_recipes()
+        else:
+            virt = False
         queued = queued_recipes()
         scheduled = scheduled_recipes()
-        if not queued and not scheduled:
+        if not virt and not queued and not scheduled:
             event.wait()
     log.debug("main recipes thread exiting")
 

@@ -51,6 +51,7 @@ BuildRequires:  python-concurrentloghandler
 BuildRequires:  rpm-python
 BuildRequires:  rhts-python
 BuildRequires:  python-netaddr
+BuildRequires:  ovirt-engine-sdk
 %endif
 
 # As above, these client dependencies are needed in build because of sphinx
@@ -106,6 +107,7 @@ Requires:       python-jinja2
 Requires:       python-netaddr
 # Kerberos support was added to requests in 0.13.4
 Requires:       python-requests >= 0.13.4
+Requires:       ovirt-engine-sdk
 %endif
 
 

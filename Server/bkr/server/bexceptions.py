@@ -22,9 +22,5 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 
 from bkr.common.bexceptions import *
 
-class CobblerTaskFailedException(BeakerException):
-    """
-    Raised when a Cobbler task reports failure.
-    NB: this is intentionally distinct from a failure in talking to Cobbler!
-    """
+class VMCreationFailedException(BeakerException):
     pass

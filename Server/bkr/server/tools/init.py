@@ -206,6 +206,19 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
     if ConfigItem.by_name(u'root_password').current_value() is None:
         ConfigItem.by_name(u'root_password').set(u'beaker', user=admin.users[0])
 
+    try:
+        ConfigItem.by_name('default_guest_memory')
+    except NoResultFound:
+        ConfigItem(name='default_guest_memory',
+                description=u"Default memory (MB) for dynamic guest provisioning",
+                numeric=True)
+    try:
+        ConfigItem.by_name('default_guest_disk_size')
+    except NoResultFound:
+        ConfigItem(name='default_guest_disk_size',
+                description=u"Default disk size (GB) for dynamic guest provisioning",
+                numeric=True)
+
     session.commit()
     session.close()
 

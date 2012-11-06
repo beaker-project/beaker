@@ -28,7 +28,7 @@ import socket
 from xmlrpclib import ProtocolError
 import time
 from kid import Element
-from bkr.server.bexceptions import BeakerException, BX, CobblerTaskFailedException
+from bkr.server.bexceptions import BeakerException, BX, VMCreationFailedException
 from bkr.server.enum import DeclEnum
 from bkr.server.helpers import *
 from bkr.server.util import unicode_truncate, absolute_url
@@ -51,7 +51,8 @@ import netaddr
 from bkr.common.helpers import Flock, makedirs_ignore, unlink_ignore
 import subprocess
 from turbogears import identity
-
+from contextlib import contextmanager
+import ovirtsdk.api
 from datetime import timedelta, date, datetime
 from hashlib import md5
 import xml.dom.minidom
@@ -165,7 +166,18 @@ class ResourceType(DeclEnum):
     """Type discriminator for RecipeResource classes."""
     symbols = [
         ('system', u'system', dict()),
+        ('virt',   u'virt',   dict()),
         ('guest',  u'guest',  dict()),
+    ]
+
+class RecipeVirtStatus(DeclEnum):
+
+    symbols = [
+        ('possible',    u'Possible',    dict()),
+        ('precluded',   u'Precluded',   dict()),
+        ('succeeded',   u'Succeeded',   dict()),
+        ('skipped',     u'Skipped',     dict()),
+        ('failed',      u'Failed',      dict()),
     ]
 
 # A netaddr "dialect" for formatting MAC addresses... this is the most common 
@@ -1019,6 +1031,8 @@ recipe_table = Table('recipe',metadata,
         Column('_partitions',UnicodeText()),
         Column('autopick_random', Boolean, default=False),
         Column('log_server', Unicode(255), index=True),
+        Column('virt_status', RecipeVirtStatus.db_type(), index=True,
+                nullable=False, default=RecipeVirtStatus.possible),
         mysql_engine='InnoDB',
 )
 
@@ -1072,6 +1086,17 @@ system_resource_table = Table('system_resource', metadata,
             name='system_resource_system_id_fk'), nullable=False),
     Column('reservation_id', Integer, ForeignKey('reservation.id',
             name='system_resource_reservation_id_fk')),
+    mysql_engine='InnoDB',
+)
+
+virt_resource_table = Table('virt_resource', metadata,
+    Column('id', Integer, ForeignKey('recipe_resource.id',
+            name='virt_resource_id_fk'), primary_key=True),
+    Column('manager_id', Integer, ForeignKey('virt_manager.id',
+            name='virt_resource_manager_id_fk'), nullable=False),
+    Column('system_name', Unicode(2048), nullable=False),
+    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id',
+            name='virt_resource_lab_controller_id_fk'), nullable=False),
     mysql_engine='InnoDB',
 )
 
@@ -1203,6 +1228,16 @@ rendered_kickstart_table = Table('rendered_kickstart', metadata,
     # it means fetch the kickstart from there instead
     Column('kickstart', UnicodeText),
     Column('url', UnicodeText),
+    mysql_engine='InnoDB',
+)
+
+virt_manager_table = Table('virt_manager', metadata,
+    Column('id', Integer, primary_key=True),
+    Column('url', Unicode(255), unique=True),
+    Column('username', Unicode(255)),
+    Column('password', Unicode(255)),
+    Column('disabled', Boolean, nullable=False, default=False, index=True),
+    Column('removed', DateTime, nullable=True, default=None, index=True),
     mysql_engine='InnoDB',
 )
 
@@ -2727,6 +2762,18 @@ class LabController(SystemObject):
         if valid:
             all = cls.query.filter_by(removed=None)
         return [(lc.id, lc.fqdn) for lc in all]
+
+    # XXX this is a bit sad... RHEV data center names must be <40 chars and
+    # cannot contain periods, so we have to munge the fqdn
+    @property
+    def data_center_name(self):
+        return self.fqdn.replace('.', '_')[:40]
+    @classmethod
+    def by_data_center_name(cls, data_center):
+        for lc in cls.query:
+            if lc.data_center_name == data_center:
+                return lc
+        return None
 
 
 class Watchdog(MappedObject):
@@ -5152,6 +5199,11 @@ class Recipe(TaskBase):
                     service=u'Scheduler', action=u'Provision',
                     field_name=u'Distro Tree', old_value=u'',
                     new_value=unicode(self.distro_tree)))
+        elif isinstance(self.resource, VirtResource):
+            self.resource.manager.start_install(self.resource.system_name,
+                    self.distro_tree, install_options.kernel_options_str,
+                    self.resource.lab_controller)
+            self.tasks[0].start()
 
     def cleanup(self):
         log.debug('Removing watchdog and cleaning up for recipe %s', self.id)
@@ -5235,6 +5287,22 @@ class Recipe(TaskBase):
                     system.setAttribute("value", "%s" % recipe.resource.fqdn)
                     role.appendChild(system)
             yield(role)
+
+    def check_virtualisability(self):
+        """
+        Decide whether this recipe can be run as a virt guest
+        """
+        # RHEL3 lacks virtio (XXX hardcoding this here is not great)
+        if self.distro_tree.distro.osversion.osmajor.osmajor == \
+                u'RedHatEnterpriseLinux3':
+            return RecipeVirtStatus.precluded
+        # Can't run VMs in a VM
+        if self.guests:
+            return RecipeVirtStatus.precluded
+        # Multihost testing won't work (for now!)
+        if len(self.recipeset.recipes) > 1:
+            return RecipeVirtStatus.precluded
+        return RecipeVirtStatus.possible
 
 
 class GuestRecipe(Recipe):
@@ -5882,6 +5950,34 @@ class SystemResource(RecipeResource):
                 user=self.recipe.recipeset.job.owner)
 
 
+class VirtResource(RecipeResource):
+    """
+    For a MachineRecipe which is running on a virtual guest managed by 
+    a hypervisor attached to Beaker.
+    """
+
+    def __init__(self, manager, system_name, lab_controller):
+        self.manager = manager
+        self.system_name = system_name
+        self.lab_controller = lab_controller
+
+    @property
+    def link(self):
+        return self.fqdn # just text, not a link
+
+    def install_options(self, distro_tree):
+        return global_install_options().combined_with(
+                distro_tree.install_options())
+
+    def allocate(self):
+        pass
+
+    def release(self):
+        log.debug('Releasing virt guest %s for recipe %s',
+                self.system_name, self.recipe.id)
+        self.manager.destroy_vm(self.system_name)
+
+
 class GuestResource(RecipeResource):
     """
     For a GuestRecipe which is running on a guest associated with a parent 
@@ -6255,12 +6351,14 @@ class ConfigItem(MappedObject):
     def values(self):
         return self.value_class.query.filter(self.value_class.config_item_id == self.id)
 
-    def current_value(self):
+    def current_value(self, default=None):
         v = self.values().\
             filter(and_(self.value_class.valid_from <= datetime.utcnow(), self.value_class.config_item_id == self.id)).\
             order_by(self.value_class.valid_from.desc()).first()
         if v:
             return v.value
+        else:
+            return default
 
     def next_value(self):
         return self.values().filter(self.value_class.valid_from > datetime.utcnow()).\
@@ -6294,6 +6392,108 @@ class ConfigValueInt(MappedObject):
         self.user = user
         if valid_from:
             self.valid_from = valid_from
+
+class VirtManager(MappedObject):
+
+    def __repr__(self):
+        return '%s(id=%r, url=%r)' % (self.__class__.__name__, self.id, self.url)
+
+    @contextmanager
+    def api(self):
+        api = ovirtsdk.api.API(url=self.url, username=self.username, password=self.password,
+                # XXX add some means to specify SSL CA cert
+                insecure=True)
+        try:
+            yield api
+        finally:
+            api.disconnect()
+
+    @classmethod
+    def create_vm_on_any(cls, *args, **kwargs):
+        for manager in cls.query.filter_by(disabled=False, removed=None):
+            try:
+                log.debug('Trying to create VM with args %r %r on %r', args, kwargs, manager)
+                return manager.create_vm(*args, **kwargs)
+            except VMCreationFailedException:
+                continue
+        raise VMCreationFailedException('Unable to create VM on any manager')
+
+    def create_vm(self, name, lab_controllers):
+        from ovirtsdk.xml.params import VM, Template, NIC, Network, Disk, StorageDomains
+        # Default of 1GB memory and 20GB disk
+        memory = ConfigItem.by_name('default_guest_memory').current_value(1024) * 1024**2
+        disk_size = ConfigItem.by_name('default_guest_disk_size').current_value(20) * 1024**3
+        # Try to create the VM on every cluster that is in an acceptable data center
+        with self.api() as rh:
+            cluster_query = ' or '.join('datacenter.name=%s' % lc.data_center_name
+                    for lc in lab_controllers)
+            for cluster in rh.clusters.list(cluster_query):
+                vm = None
+                try:
+                    vm_definition = VM(name=name, memory=memory, cluster=cluster,
+                            type_='virtio26', template=Template(name='Blank'))
+                    vm = rh.vms.add(vm_definition)
+                    nic = NIC(name='eth0', interface='virtio', network=Network(name='rhevm'))
+                    vm.nics.add(nic)
+                    sd_query = ' or '.join('datacenter=%s' % lc.data_center_name
+                            for lc in lab_controllers)
+                    storage_domains = rh.storagedomains.list(sd_query)
+                    disk = Disk(storage_domains=StorageDomains(storage_domain=storage_domains),
+                            size=disk_size, type_='data', interface='virtio', format='cow',
+                            bootable=True)
+                    vm.disks.add(disk)
+
+                    # Wait up to twenty seconds(!) for the disk image to be created
+                    for _ in range(20):
+                        if rh.vms.get(name).status.state != 'image_locked':
+                            break
+                        time.sleep(1)
+                    state = rh.vms.get(name).status.state
+                    if state == 'image_locked':
+                        raise ValueError('VM %s state %s', name, state)
+
+                    dc_name = rh.datacenters.get(id=cluster.data_center.id).name
+                    return VirtResource(manager=self, system_name=name,
+                            lab_controller=LabController.by_data_center_name(dc_name))
+                except Exception:
+                    log.exception("Failed to create VM %r on %r cluster %r",
+                            name, self, cluster.name)
+                    if vm is not None:
+                        try:
+                            vm.delete()
+                        except Exception:
+                            pass
+                    continue
+            raise VMCreationFailedException(
+                    'No clusters on %r successfully created VM %s' % (self, name))
+
+    def start_install(self, name, distro_tree, kernel_options, lab_controller):
+        from ovirtsdk.xml.params import OperatingSystem, Action, VM
+        # RHEV can only handle a local path to kernel/initrd, so we rely on autofs for now :-(
+        # XXX when this constraint is lifted, fix beakerd.virt_recipes too
+        location = distro_tree.url_in_lab(lab_controller, 'nfs', required=True)
+        kernel = distro_tree.image_by_type(ImageType.kernel, KernelType.by_name(u'default'))
+        initrd = distro_tree.image_by_type(ImageType.initrd, KernelType.by_name(u'default'))
+        local_path = location.replace('nfs://', '/net/', 1).replace(':/', '/', 1)
+        kernel_path = os.path.join(local_path, kernel.path)
+        initrd_path = os.path.join(local_path, initrd.path)
+        log.debug(u'Starting VM %s installing %s', name, distro_tree)
+        with self.api() as rh:
+            a = Action(vm=VM(os=OperatingSystem(kernel=kernel_path,
+                    initrd=initrd_path, cmdline=kernel_options)))
+            rh.vms.get(name).start(action=a)
+
+    def destroy_vm(self, name):
+        try:
+            with self.api() as rh:
+                vm = rh.vms.get(name)
+                if vm is not None:
+                    log.debug('Stopping %s', self.system_name)
+                    vm.stop()
+                    log.debug('Deleting %s', self.system_name)
+                    vm.delete()
+        except Exception, e:
+            log.exception(e) # and discard
 
 # set up mappers between identity tables and classes
 Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
@@ -6680,6 +6880,12 @@ mapper(SystemResource, system_resource_table, inherits=RecipeResource,
             'system': relation(System),
             'reservation': relation(Reservation),
         })
+mapper(VirtResource, virt_resource_table, inherits=RecipeResource,
+        polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=ResourceType.virt,
+        properties={
+            'manager': relation(VirtManager),
+            'lab_controller': relation(LabController),
+        })
 mapper(GuestResource, guest_resource_table, inherits=RecipeResource,
         polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=ResourceType.guest)
 
@@ -6735,6 +6941,8 @@ mapper(ConfigValueString, config_value_string_table,
        properties = {'config_item': relation(ConfigItem, uselist=False),
                      'user': relation(User)}
       )
+mapper(VirtManager, virt_manager_table)
+
 
 ## Static list of device_classes -- used by master.kid
 global _device_classes
