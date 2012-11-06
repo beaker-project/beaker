@@ -6488,9 +6488,9 @@ class VirtManager(MappedObject):
             with self.api() as rh:
                 vm = rh.vms.get(name)
                 if vm is not None:
-                    log.debug('Stopping %s', self.system_name)
+                    log.debug('Stopping %s on %r', name, self)
                     vm.stop()
-                    log.debug('Deleting %s', self.system_name)
+                    log.debug('Deleting %s on %r', name, self)
                     vm.delete()
         except Exception, e:
             log.exception(e) # and discard
