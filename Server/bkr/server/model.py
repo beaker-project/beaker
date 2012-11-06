@@ -5984,8 +5984,11 @@ class VirtResource(RecipeResource):
         return self.fqdn # just text, not a link
 
     def install_options(self, distro_tree):
-        return global_install_options().combined_with(
-                distro_tree.install_options())
+        # 'postreboot' is added as a hack for RHEV guests: they do not reboot
+        # properly when the installation finishes, see RHBZ#751854
+        return global_install_options()\
+                .combined_with(distro_tree.install_options())\
+                .combined_with(InstallOptions({'postreboot': None}, {}, {}))
 
     def allocate(self, manager, lab_controllers):
         self.mac_address = self._lowest_free_mac()

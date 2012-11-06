@@ -66,7 +66,7 @@ def with_transaction(func):
 
 class DummyVirtManager(object):
     def __enter__(self):
-        pass
+        return self
     def __exit__(self, exc_type, exc_value, exc_tb):
         pass
     def create_vm(self, name, lab_controllers, mac_address):
