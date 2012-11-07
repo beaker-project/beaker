@@ -433,58 +433,57 @@ def virt_recipes(*args):
         return False
     log.debug("Entering virt_recipes routine")
     for recipe_id, in recipes.values(Recipe.id.distinct()):
-        session.begin()
-        try:
-            recipe = Recipe.by_id(recipe_id)
-            user = recipe.recipeset.job.owner
-            system_name = "guest_for_recipe_%d" % recipe.id
-
-            # Figure out the "data centers" where we can run the recipe
-            if recipe.recipeset.lab_controller:
-                # First recipe of a recipeSet determines the lab_controller
-                lab_controllers = [recipe.recipeset.lab_controller]
-            else:
-                # NB the same criteria are also expressed above
-                lab_controllers = LabController.query.filter_by(disabled=False, removed=None)
-                lab_controllers = needpropertyxml.apply_lab_controller_filter(
-                        recipe.host_requires, lab_controllers)
-                lab_controllers = [lc for lc in lab_controllers.all()
-                        if recipe.distro_tree.url_in_lab(lc, 'nfs')]
-
-            vm_params = needpropertyxml.vm_params(recipe.host_requires)
-
-            recipe.resource = VirtManager.create_vm_on_any(system_name, lab_controllers)
-            recipe.resource.allocate()
-            recipe.schedule()
-            recipe.createRepo()
-            recipe.recipeset.lab_controller = recipe.resource.lab_controller
-            recipe.systems = []
-            recipe.watchdog = Watchdog()
-            log.info("recipe ID %s moved from Queued to Scheduled by virt_recipes" % recipe.id)
-
-            session.commit()
-        except needpropertyxml.NotVirtualisable:
-            recipe.virt_status = RecipeVirtStatus.precluded
-            session.commit()
-        except VMCreationFailedException:
-            recipe.virt_status = RecipeVirtStatus.skipped
-            session.commit()
-        except exceptions.Exception:
-            log.exception("Failed to commit in virt_recipes")
-            # XXX this bit explodes if the exception was raised in flush
-            if recipe.resource:
-                recipe.resource.release()
-            session.rollback()
-            # As an added precaution, let's try and avoid this recipe in future
+        with VirtManager() as manager:
+            system_name = "guest_for_recipe_%d" % recipe_id
+            session.begin()
             try:
-                session.begin()
-                Recipe.by_id(recipe_id).virt_status = RecipeVirtStatus.failed
+                recipe = Recipe.by_id(recipe_id)
+                user = recipe.recipeset.job.owner
+
+                # Figure out the "data centers" where we can run the recipe
+                if recipe.recipeset.lab_controller:
+                    # First recipe of a recipeSet determines the lab_controller
+                    lab_controllers = [recipe.recipeset.lab_controller]
+                else:
+                    # NB the same criteria are also expressed above
+                    lab_controllers = LabController.query.filter_by(disabled=False, removed=None)
+                    lab_controllers = needpropertyxml.apply_lab_controller_filter(
+                            recipe.host_requires, lab_controllers)
+                    lab_controllers = [lc for lc in lab_controllers.all()
+                            if recipe.distro_tree.url_in_lab(lc, 'nfs')]
+
+                vm_params = needpropertyxml.vm_params(recipe.host_requires)
+
+                recipe.resource = VirtResource(system_name=system_name)
+                recipe.resource.allocate(manager, lab_controllers)
+                recipe.schedule()
+                recipe.createRepo()
+                recipe.recipeset.lab_controller = recipe.resource.lab_controller
+                recipe.systems = []
+                recipe.watchdog = Watchdog()
+                log.info("recipe ID %s moved from Queued to Scheduled by virt_recipes" % recipe.id)
+
                 session.commit()
-            except exceptions.Exception:
-                log.exception('Further exception setting recipe %s '
-                        'virt status to failed', recipe.id)
-        finally:
-            session.close()
+            except needpropertyxml.NotVirtualisable:
+                recipe.virt_status = RecipeVirtStatus.precluded
+                session.commit()
+            except VMCreationFailedException:
+                recipe.virt_status = RecipeVirtStatus.skipped
+                session.commit()
+            except Exception:
+                log.exception("Failed to commit in virt_recipes")
+                session.rollback()
+                try:
+                    # Don't leak the vm if it was created
+                    manager.destroy_vm(system_name)
+                    # As an added precaution, let's try and avoid this recipe in future
+                    session.begin()
+                    Recipe.by_id(recipe_id).virt_status = RecipeVirtStatus.failed
+                    session.commit()
+                except Exception:
+                    log.exception('Exception in exception handler :-(')
+            finally:
+                session.close()
     log.debug("Exiting virt_recipes routine")
     return True
 

@@ -218,8 +218,8 @@ class Recipes(RPCRoot):
         # XXX hack for RHEV guests: they do not reboot properly when the
         # installation finishes, see BZ#751854
         if isinstance(recipe.resource, VirtResource):
-            with recipe.resource.manager.api() as rh:
-                vm = rh.vms.get(recipe.resource.system_name)
+            with VirtManager() as manager:
+                vm = manager.api.vms.get(recipe.resource.system_name)
                 vm.stop()
                 vm.start()
 
