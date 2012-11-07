@@ -1,110 +1,19 @@
-﻿<?xml version='1.0'?>
-<!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
-]>
-<section id="User_Guide-Getting_Started-Process-Workflow-Workflow_XML">
-                <title>Workflow XML</title>
-                  <para>A workflow is a model to represent real work for further assessment. More abstractly, a workflow is a pattern of activity enabled by a systematic organizatio information  flows, into a work process that can be documented and learned. Workflows are designed to achieve processing intents of some sort, such as information processing.      </para>
-                      <section id="User_Guide-Getting_Started-Process-Workflow-Workflow_XML-XML_Syntax">
-                        <title>XML Syntax</title>
-                      <para>You can now specify Beaker jobs using an xml file that will be workflow agnostic. This allows users a more consistent, maintainable ways of storing and submitting jobs. You can now specify and save entire jobs, including many recipes and recipesets in them, in xml files and save them as regression testsuites and such.
-                        </para>
-                        <para>
-                        All xml tags above are pretty self explanatory. One of the biggest advantages of using xml for your jobs is not having to use different workflows for different types of tests.
-                       </para>
-                        <para>
-                        Below is a list of XML elements for Beaker: 
-                          <itemizedlist>
-                            <listitem>
-                              <para>&lt;job&gt; : It's the root element of any Beaker job definition. Has no attributes.
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;workflow&gt;   : The name of the workflow. Has no attributes.
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;package&gt;  : Package names to be installed
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;whiteboard&gt; : A whiteboard string of anything descriptive about the job. Has no attributes.
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;recipeSet&gt;  :  Set of recipes, has multiple recipe child nodes. Has no attributes.
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;recipe&gt;     : Test recipe itself. Has attributes of testrepo, whiteboard, bootargs .
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;Packages&gt;   : Root element of pacakge definition
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;hostRequires&gt;     : Set host properties here.
-                              </para>
-                            <itemizedlist>
-                                <listitem><para>&lt;hostlabcontroller&gt; : Name of the lab controller</para> </listitem>
-                            </itemizedlist>
-                            <itemizedlist>
-                                <listitem><para>&lt;hypervisor&gt; : Type of hypervisor that the recipe will run on. i.e 'kvm', '</para> </listitem>
-                            </itemizedlist>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;distroRequires&gt; : Set properties of the distribution you'd like to install here.
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para> &lt;kickstart&gt;        : Pass in your custom kickstart with this element.
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para> &lt;ks_appends&gt;        : You can have multiple ks_append entried and it can be %pre, %packages, %post etc. It will use the base kickstart and add to it</para>
-			      <para>&lt;ks_appends&gt;&lt;ks_append&gt;&lt;![CDATA[
-  %post
-  do something special
-  ]]&gt;&lt;/ks_append&gt;&lt;/ks_appends&gt;</para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;accesskey&gt;        : Specify the accesskey for certain systems here, if you need to.
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para> &lt;partition&gt;        : Root element of partition definition
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;name&gt;             : name of the partition. If you are intending the partition to be used as partition , then just give the mountpoint, such as /mnt/myblockdevice . If you'd rather have the spaces used for LVM , then give a logical volume name, for example, mylogvol . 
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;type&gt;             : This is either part, for partition , or lvm , for logical volume.
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;size&gt;             : Size of the partition in Gigabytes.
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;test&gt;             : Specify the tests to run. Has attributes testrole and name . Can have the params child elements.
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;params&gt;          : Root element for parameters to be passed to the test.
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;param&gt;           : It has name and value attributes with for setting name and value of the environmental variables respectively.
-                              </para>
-                            </listitem>
-                            <listitem>
-                              <para>&lt;guestrecipe&gt;      : This is a pseudo-recipe for virtual machine guests. Can have almost everything &lt;recipe&gt; can have. You can specify distroProperties, installPackage, etc. here. The attributes of this element are vitally important. First attribute is, guestname, which is the name you'd like to give to the guest. You can omit guestname, in which case Beaker will assign the hostname of the guest as the name of the guest. The second attribute is guestargs , which is identical to arguments that are given to virtinstall program, except for -lvm or -part argument which indicates if the guest is to be installed on blockdevice or lvm volume respectively.
-                              </para>
-                            </listitem>
-                          </itemizedlist>
-                        </para>
-                    </section>
-                </section>
+<?xml version='1.0'?> <!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook
+XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+]> <section id="User_Guide-Getting_Started-Process-Workflow-Workflow_XML">
+<title>Job XML</title> 
+<para>You can specify Beaker jobs using an XML file. This allows users a
+more consistent, maintainable way of storing and submitting jobs. You
+can specify and save entire jobs, including many recipes and recipesets
+in them in XML files and save them as regression test suites and such. 
+</para>
+
+<para>
+The various elements along with their attributes and the values they can
+take are described in the RELAX NG schema described in the file <ulink
+url='http://beaker-project.org/schema/beaker-job.rng'>beaker-job.rng</ulink>. See
+also <xref linkend="User_Guide-Getting_Started-Process-Beaker_Interface-Jobs-Job_Submission-Job_workflow_details"/>.
+</para> 
+
+</section>
                 

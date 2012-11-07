@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='UTF-8' ?>
+<?xml version='1.0' encoding='UTF-8' ?>
 <!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
 ]>
 <chapter id="Installation">
@@ -369,7 +369,7 @@ exec beaker-pxemenu --quiet
          It should return a list of labcontrollers configured in Beaker. 
       </para>
       <para>
-        To create a simple Job workflow, the beaker client comes with the command<command>bkr workflow-simple</command> . This simple Job workflow will create the XML for you from various options passed in a the shell prompt, and submit this to the Beaker server. To see all the options that can be passed to the   <command> workflow-simple,</command> use the following command: 
+        To create a simple Job workflow, the beaker client comes with the command <command>bkr workflow-simple</command> . This simple Job workflow will create the XML for you from various options passed at the shell prompt, and submit this to the Beaker server. To see all the options that can be passed during invocation of <command>workflow-simple</command>, use the following command: 
         <screen>
           $ bkr workflow-simple --help
         </screen>

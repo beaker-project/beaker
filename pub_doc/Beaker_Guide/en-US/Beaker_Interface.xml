@@ -349,7 +349,7 @@
                               <para>There are two ways of submitting a Job through the web app.They are outlined below. </para>
                                 <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Jobs-Job_Submission-Submitting_a_New_Job">
                                   <title>Submitting a New Job</title>
-                                    <para>Once you have created an XML Job workflow, you able able to submit it as a new Job. To do this, go to the<application>Scheduler &gt; New Job</application>. Click <application>Browse</application> to select your XML file, and then hit the<application> Submit Data</application> button. The next page shown gives you an opportunity to check/edit your XML before queueing it as a Job by pressing the <application>Queue </application>button.
+                                    <para>Once you have created an XML Job workflow, you are able to submit it as a new Job. To do this, go to the<application>Scheduler &gt; New Job</application>. Click <application>Browse</application> to select your XML file, and then hit the<application> Submit Data</application> button. The next page shown gives you an opportunity to check/edit your XML before queueing it as a Job by pressing the <application>Queue </application>button.
                                     </para>
                                 </section>
                                 <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Jobs-Job_Submission-Cloning_an_Existing_Job">

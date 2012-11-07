@@ -1,9 +1,9 @@
-﻿<?xml version='1.0'?>
+<?xml version='1.0'?>
 <!DOCTYPE section PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
 ]>
 
                     <section id="User_Guide-Getting_Started-Process-Tests-Writing_and_Running_Multihosts_Tests">
-                      <title>Writing and Running Multihosts Tasks</title>
+                      <title>Writing and Running Multihost Tasks</title>
                       <para>All of the examples so far have run on a single host. Beaker has support for tasks that run on multiple hosts, e.g. for testing the interactions of a client and a server. 
                         </para>
                         <para>When a multihost task is run in the lab, a machine will be allocated to each role in the test. Each machine has its own recipe. 

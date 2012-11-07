@@ -10,11 +10,26 @@
     <element name="job">
       <interleave>
         <optional>
-          <attribute name="retention_tag"/>
+          <attribute name="retention_tag">
+          <a:documentation xml:lang="en">
+            Specifies the data retention policy for the job. See http://your-beaker-server/retentiontag/
+            for the possible values. Some of these tags may require a
+            product to be specified (see below).
+            </a:documentation>
+          </attribute>
         </optional>
         <optional>
-          <attribute name="product"/>
-        </optional>
+          <attribute name="product">
+          <a:documentation xml:lang="en">
+            Specifies the product with which this job is associated.
+            The product names are customized to suit a beaker
+            deployment and hence there there are no standard or default
+            product names shipped with Beaker. Note that this
+            specification is meaningful only for retention tagging purposes (see
+            above). 
+          </a:documentation>
+          </attribute>
+       </optional>
         <optional>
           <ref name="notify"/>
         </optional>
@@ -29,13 +44,25 @@
         <oneOrMore>
           <element name="recipeSet">
             <a:documentation xml:lang="en">
-              A recipeset defines one or more recipes which are to be run in 
-              parallel. Define multiple recipes within a recipeset for 
-              multihost testing. Otherwise, define only one recipe within the 
+              A recipeset defines one or more recipes which are to be run in
+              parallel. Define multiple recipes within a recipeset for
+              multihost testing. Otherwise, define only one recipe within the
               recipeset.
             </a:documentation>
             <optional>
-              <attribute name="priority"/>
+              <attribute name="priority">
+              <a:documentation xml:lang="en">
+                Sets the scheduling priority of this job. Possible values are low,
+                medium, normal, high and urgent.
+              </a:documentation>
+              <choice>
+                <value>low</value>
+                <value>medium</value>
+                <value>normal</value>
+                <value>high</value>
+                <value>urgent</value>
+              </choice>
+              </attribute>
             </optional>
             <oneOrMore>
               <ref name="recipe"/>
@@ -48,7 +75,7 @@
   <define name="notify">
     <element name="notify">
       <a:documentation xml:lang="en">
-        This element is a container for configurating notifications that this 
+        This element is a container for configuring notifications that this
         job has finished running.
       </a:documentation>
       <zeroOrMore>
@@ -66,8 +93,8 @@
       <a:documentation xml:lang="en">
         A recipe is a sequence of tasks which are run on a single system,
         in parallel with any other recipes in the same recipeset.
-        The system is always provisioned with an operating system at the start 
-        of each recipe. Options for provisioning are contained within this 
+        The system is always provisioned with an operating system at the start
+        of each recipe. Options for provisioning are contained within this
         element.
       </a:documentation>
       <interleave>
@@ -88,16 +115,38 @@
     <!-- stuff which is common to both <recipe/> and <guestrecipe/> -->
     <interleave>
       <optional>
-        <attribute name="kernel_options"/>
+        <attribute name="kernel_options">
+        <a:documentation xml:lang="en">
+          Additional kernel options to be passed to Anaconda during installation.
+        </a:documentation>
+        </attribute>
       </optional>
       <optional>
-        <attribute name="kernel_options_post"/>
+        <attribute name="kernel_options_post">
+        <a:documentation xml:lang="en">
+          Additional kernel options to be passed to Anaconda after installation.
+        </a:documentation>
+        </attribute>
       </optional>
       <optional>
-        <attribute name="ks_meta"/>
+        <attribute name="ks_meta">
+        <a:documentation xml:lang="en">
+          Additional kickstart metadata variables.
+        </a:documentation>
+        </attribute>
       </optional>
       <optional>
-        <attribute name="role"/>
+        <attribute name="role">
+        <a:documentation xml:lang="en">
+          If a role is specified, an environment variable of the same
+          name will be created on each of the hosts the test runs. The value
+          of the environment variable will be set to a space-separated
+          list of all the host names in that role. If there are multiple
+          roles, there will an environment variable for each of them
+          present on all the hosts the test runs. Useful for multihost
+          tests (see the role attribute for the task element).
+        </a:documentation>
+        </attribute>
       </optional>
       <optional>
         <attribute name="whiteboard">
@@ -111,7 +160,16 @@
         <ref name="autopick"/>
       </optional>
       <optional>
-        <element name="kickstart"><text/></element>
+        <element name="kickstart">
+        <a:documentation xml:lang="en">
+          You can specify a custom kickstart template here. This template should be a
+          valid Jinja2 template. Review the existing kickstart templates to get
+          an idea of what you can specify here. Beaker will add extra
+          "defaults" based on the system options specified in the recipe
+          such as the architecture and distro.
+        </a:documentation>
+        <text/>
+        </element>
       </optional>
       <optional>
         <ref name="watchdog"/>
@@ -127,15 +185,15 @@
       </optional>
       <element name="distroRequires">
         <a:documentation xml:lang="en">
-          This element is a container for expressing contraints on the 
-          operating system distribution which will be selected and 
+          This element is a container for expressing constraints on the
+          operating system distribution which will be selected and
           provisioned at the start of this recipe.
         </a:documentation>
         <zeroOrMore><ref name="distroreq"/></zeroOrMore>
       </element>
       <element name="hostRequires">
         <a:documentation xml:lang="en">
-          This element is a container for expressing contraints on the 
+          This element is a container for expressing constraints on the
           system which will be selected to run this recipe.
         </a:documentation>
         <zeroOrMore><ref name="hostreq"/></zeroOrMore>
@@ -165,6 +223,11 @@
     <element name="watchdog">
       <optional>
         <attribute name="panic">
+        <a:documentation xml:lang="en">
+          If the value is set to 'ignore', jobs which output panics to the console
+          are not aborted. If absent, such jobs will be aborted by the
+          watchdog. The default value is None.
+        </a:documentation>
           <choice>
             <value>ignore</value>
             <value>None</value>
@@ -175,22 +238,36 @@
   </define>
   <define name="ks_appends">
     <element name="ks_appends">
-     <zeroOrMore>
-       <element name="ks_append"><text/></element>
-     </zeroOrMore>
-    </element>
-  </define> 
-  <define name="packages">
-    <element name="packages">
       <zeroOrMore>
-        <element name="package">
-          <attribute name="name"/>
+       <element name="ks_append">
+        <a:documentation xml:lang="en">
+          You can specify additional kickstart commands to add to the base kickstart file.
+        </a:documentation>
+        <text/>
         </element>
       </zeroOrMore>
     </element>
   </define>
+  <define name="packages">
+    <element name="packages">
+        <a:documentation xml:lang="en">
+          This element is a container for specifying additional packages
+          to be installed for this recipe. These packages are appended
+          to the existing default set of packages.
+        </a:documentation>
+        <zeroOrMore>
+          <element name="package">
+          <attribute name="name"/>
+          </element>
+        </zeroOrMore>
+    </element>
+  </define>
   <define name="repos">
     <element name="repos">
+      <a:documentation xml:lang="en">
+        This element is a container for defining additional
+        repositories. These are also available during installation.
+      </a:documentation>
       <zeroOrMore>
         <element name="repo">
           <attribute name="name"/>
@@ -206,18 +283,31 @@
           <optional>
             <attribute name="fs">
               <a:documentation xml:lang="en">
-                Type of filesystem to be created on this partition. Defaults to 
+                Type of filesystem to be created on this partition. Defaults to
                 'ext3' if not specified.
               </a:documentation>
               <text/>
             </attribute>
           </optional>
-          <attribute name="name"/>
+          <attribute name="name">
+            <a:documentation xml:lang="en">
+              Mount point without the initial slash. Eg: 'mnt/test'.
+            </a:documentation>
+          <text/>
+          </attribute>
           <optional>
-            <attribute name="type"/>
+            <attribute name="type">
+             <a:documentation xml:lang="en">
+               part = Partition, lvm = LVM volume
+              </a:documentation>
+            <text/>
+           </attribute>
           </optional>
           <attribute name="size">
             <data type="integer"/>
+            <a:documentation xml:lang="en">
+            Partition size in GB.
+            </a:documentation>
           </attribute>
         </element>
       </zeroOrMore>
@@ -225,14 +315,32 @@
   </define>
   <define name="task">
     <element name="task">
-      <attribute name="name"/>
+      <attribute name="name">
+            <a:documentation xml:lang="en">
+              Name of the task. Should be a valid name from the Task Library.
+            </a:documentation>
+      </attribute>
       <optional>
-        <attribute name="role"/>
+        <attribute name="role">
+            <a:documentation xml:lang="en">
+              If the task is standalone, specify STANDALONE. If this is
+              a multihost task, then either specify CLIENTS or
+              SERVERS. If it is not relevant, simply omit. This
+              sets up an environment variable of the same name as
+              specified in the role (Also, see the role attribute in
+              the recipe element).
+            </a:documentation>
+        </attribute>
       </optional>
       <optional>
         <element name="params">
           <zeroOrMore>
             <element name="param">
+              <a:documentation xml:lang="en">
+                You can specify additional parameters in name=value formats
+                for the task. These parameters are set in the
+                environment when the task is executed.
+              </a:documentation>
               <attribute name="name"/>
               <attribute name="value"/>
             </element>
@@ -402,10 +510,17 @@
         <attribute name="value" />
       </element>
       <element name="cpu">
-       <zeroOrMore><ref name="cpureq"/></zeroOrMore>
+        <a:documentation xml:lang="en">
+          Specify the type of CPU required for this job.
+        </a:documentation>
+        <zeroOrMore><ref name="cpureq"/></zeroOrMore>
       </element>
       <element name="system">
-       <zeroOrMore><ref name="systemreq"/></zeroOrMore>
+        <a:documentation xml:lang="en">
+          Specify the system required for this task. If you have any
+          specific requirements for the system, you must specify it here.
+        </a:documentation>
+        <zeroOrMore><ref name="systemreq"/></zeroOrMore>
       </element>
     </choice>
   </define>
@@ -463,7 +578,7 @@
    </choice>
   </define>
   <define name="systemreq">
-   <choice>
+  <choice>
     <element name="and">
       <zeroOrMore><ref name="systemreq"/></zeroOrMore>
     </element>
@@ -564,20 +679,20 @@
   </define>
   <define name="equality_op">
    <attribute name="op">
-    <choice>
-        <value>!=</value>
-        <value>like</value>
-        <value>==</value>
-        <value>=</value>
-    </choice>
+     <choice>
+       <value>!=</value>
+       <value>like</value>
+       <value>==</value>
+       <value>=</value>
+     </choice>
    </attribute>
   </define>
   <define name="boolean_value">
    <attribute name="value">
     <choice>
-        <data type="boolean"/>
-        <value>TRUE</value>
-        <value>FALSE</value>
+      <data type="boolean"/>
+      <value>TRUE</value>
+      <value>FALSE</value>
     </choice>
    </attribute>
   </define>
