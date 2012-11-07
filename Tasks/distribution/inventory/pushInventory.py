@@ -217,7 +217,6 @@ def legacy_inventory(inv):
     data['NR_IB'] = 0
 
     data['ARCH'] = inv['Arch'][0]
-    data['CPUSPEED'] = int(inv['Cpu']['speed'])
     data['CPUFAMILY'] = "%s" % inv['Cpu']['family']
     data['CPUVENDOR'] = inv['Cpu']['vendor']
     data['CPUMODEL'] = inv['Cpu']['modelName']
@@ -321,30 +320,30 @@ def read_inventory():
                   )
     elif arch in ["ppc", "ppc64"]:
         cpu = dict(vendor     = "IBM",
-                   model      = str(procCpu.tags['machine']),
+                   model      = 0,
                    modelName  = str(procCpu.tags['cpu']),
-                   speed      = str(procCpu.tags['clock']),
+                   speed      = float(re.findall('\d+.+\d+', procCpu.tags['clock'])[0]),
                    processors = int(procCpu.nr_cpus),
-                   cores      = None,
-                   sockets    = None,
+                   cores      = 0,
+                   sockets    = 0,
                    CpuFlags   = flags,
-                   family     = str(procCpu.tags['revision']),
-                   stepping   = None,
+                   family     = 0,
+                   stepping   = 0,
                  )
     elif arch in ["s390", "s390x"]:
         for cpuflag in procCpu.tags['features'].split(" "):
             flags.append(cpuflag)
         proc = dict([tuple(s.strip() for s in kv.split('=')) for kv in procCpu.tags['processor 0'].split(',')])
         cpu = dict(vendor     = str(procCpu.tags['vendor_id']),
-                   model      = str(proc['machine']),
-                   modelName  = None,
+                   model      = 0,
+                   modelName  = str(proc['machine']),
                    processors = int(procCpu.tags['# processors']),
-                   cores      = None,
-                   sockets    = None,
+                   cores      = 0,
+                   sockets    = 0,
                    CpuFlags   = flags,
-                   family     = None,
-                   speed      = None,
-                   stepping   = None,
+                   family     = 0,
+                   speed      = 0,
+                   stepping   = 0,
                   )
     elif arch == "ia64":
         for cpuflag in procCpu.tags['features'].split(","):
@@ -358,7 +357,7 @@ def read_inventory():
                    sockets    = int(procCpu.nr_sockets),
                    CpuFlags   = flags,
                    family     = int(smoltCpu['model_rev']),
-                   stepping   = None,
+                   stepping   = 0,
                   )
 
     data['Cpu'] = cpu
