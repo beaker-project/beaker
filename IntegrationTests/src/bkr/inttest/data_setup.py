@@ -25,6 +25,7 @@ import itertools
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session
+from bkr.server import model
 from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
@@ -33,7 +34,8 @@ from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arc
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
         LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
         SystemGroup, DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
-        LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, GuestResource
+        LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, \
+        GuestResource, VirtResource
 
 log = logging.getLogger(__name__)
 
@@ -406,7 +408,8 @@ def mark_job_complete(job, finish_time=None, **kwargs):
             recipe.resource.reservation.finish_time = finish_time
             recipe.finish_time = finish_time
 
-def mark_recipe_waiting(recipe, start_time=None, system=None, **kwargs):
+def mark_recipe_waiting(recipe, start_time=None, system=None,
+        lab_controller=None, virt=False, **kwargs):
     if start_time is None:
         start_time = datetime.datetime.utcnow()
     recipe.process()
@@ -414,12 +417,22 @@ def mark_recipe_waiting(recipe, start_time=None, system=None, **kwargs):
     recipe.schedule()
     if not recipe.resource:
         if isinstance(recipe, MachineRecipe):
-            if not system:
-                system = create_system(arch=recipe.arch)
-            recipe.resource = SystemResource(system=system)
-            recipe.resource.allocate()
-            recipe.resource.reservation.start_time = start_time
-            recipe.recipeset.lab_controller = system.lab_controller
+            if virt:
+                recipe.resource = VirtResource(
+                        system_name=u'testdata_recipe_%s' % recipe.id)
+                if not lab_controller:
+                    lab_controller = LabController.query.first()
+                recipe.recipeset.lab_controller = lab_controller
+                with model.VirtManager() as manager:
+                    recipe.resource.allocate(manager, [lab_controller])
+            else:
+                if not system:
+                    system = create_system(arch=recipe.arch,
+                            lab_controller=lab_controller)
+                recipe.resource = SystemResource(system=system)
+                recipe.resource.allocate()
+                recipe.resource.reservation.start_time = start_time
+                recipe.recipeset.lab_controller = system.lab_controller
         elif isinstance(recipe, GuestRecipe):
             recipe.resource = GuestResource()
             recipe.resource.allocate()

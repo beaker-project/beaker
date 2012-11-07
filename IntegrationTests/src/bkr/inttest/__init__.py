@@ -64,6 +64,18 @@ def with_transaction(func):
             func(*args, **kwargs)
     return _decorated
 
+class DummyVirtManager(object):
+    def __enter__(self):
+        pass
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        pass
+    def create_vm(self, name, lab_controllers, mac_address):
+        pass
+    def destroy_vm(self, name):
+        pass
+    def start_install(self, name, distro_tree, kernel_options, lab_controller):
+        pass
+
 def check_listen(port):
     """
     Returns True iff any process on the system is listening
