@@ -214,15 +214,33 @@ class Recipes(RPCRoot):
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
 
         recipe.resource.fqdn = fqdn
+        return True
 
-        # XXX hack for RHEV guests: they do not reboot properly when the
-        # installation finishes, see BZ#751854
-        if isinstance(recipe.resource, VirtResource):
-            with recipe.resource.manager.api() as rh:
-                vm = rh.vms.get(recipe.resource.system_name)
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def postreboot(self, recipe_id=None):
+        # Backwards compat only, delete this after 0.10:
+        # the recipe_id arg used to be hostname
+        try:
+            int(recipe_id)
+        except ValueError:
+            system = System.by_fqdn(recipe_id, identity.current.user)
+            system.action_power('reboot', service=u'XMLRPC', delay=30)
+            return system.fqdn
+
+        try:
+            recipe = Recipe.by_id(int(recipe_id))
+        except (InvalidRequestError, NoResultFound, ValueError):
+            raise BX(_('Invalid recipe ID %s') % recipe_id)
+        if isinstance(recipe.resource, SystemResource):
+            recipe.resource.system.action_power('reboot',
+                    service=u'XMLRPC', delay=30)
+        elif isinstance(recipe.resource, VirtResource):
+            # XXX this should also be delayed 30 seconds but there is no way
+            with VirtManager() as manager:
+                vm = manager.api.vms.get(recipe.resource.system_name)
                 vm.stop()
                 vm.start()
-
         return True
 
     @cherrypy.expose

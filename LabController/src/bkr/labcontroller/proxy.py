@@ -567,15 +567,11 @@ class Proxy(ProxyHelper):
         ''' Called from %post section to remove netboot entry '''
         return self.hub.systems.clear_netboot(system_name)
 
-    def postreboot(self, hostname):
+    def postreboot(self, recipe_id):
         # XXX would be nice if we could limit this so that systems could only
-        # reboot themselves, instead of accepting any arbitrary hostname
-        logger.debug('postreboot %s', hostname)
-        return self.hub.systems.power('reboot', hostname, False,
-                # force=True because we are not the system's user
-                True,
-                # delay 30 seconds so that Anaconda can unmount filesystems
-                30)
+        # reboot themselves, instead of accepting any arbitrary recipe id
+        logger.debug('postreboot %s', recipe_id)
+        return self.hub.recipes.postreboot(recipe_id)
 
     def power(self, hostname, action):
         # XXX this should also be authenticated and

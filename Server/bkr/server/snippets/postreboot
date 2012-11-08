@@ -1,10 +1,10 @@
-{% if system and postreboot is defined %}
+{% if postreboot is defined %}
 %post
-sync
+sync # XXX if this is a RHEV guest, the server will forcibly restart us due to BZ#751854
 {% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
-wget -O - http://{{ lab_controller.fqdn }}:8000/postreboot/{{ system.fqdn }}
+wget -O - http://{{ lab_controller.fqdn }}:8000/postreboot/{{ recipe.id }}
 {% else %}
-curl http://{{ lab_controller.fqdn }}:8000/postreboot/{{ system.fqdn }}
+curl http://{{ lab_controller.fqdn }}:8000/postreboot/{{ recipe.id }}
 {% endif %}
 sync
 {{ end }}

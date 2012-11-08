@@ -8,12 +8,14 @@ import pipes
 import jinja2
 import xmltramp
 import crypt
+from bkr.server import model
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
         CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch
 from bkr.server.kickstart import template_env
 from bkr.server.jobs import Jobs
 from bkr.server.jobxml import XmlJob
-from bkr.inttest import data_setup, get_server_base, with_transaction
+from bkr.inttest import data_setup, get_server_base, with_transaction, \
+        DummyVirtManager
 
 def compare_expected(name, recipe_id, actual):
     expected = pkg_resources.resource_string('bkr.inttest',
@@ -69,6 +71,8 @@ EOF
                     'snippets/per_system/packages/bz728410-system-with-packages':
                         'special-weird-driver-package\n',
                 })])
+        cls.orig_VirtManager = model.VirtManager
+        model.VirtManager = DummyVirtManager
 
         cls.lab_controller = data_setup.create_labcontroller(
                 fqdn=u'lab.test-kickstart.invalid')
@@ -250,14 +254,19 @@ EOF
 
     @classmethod
     def tearDownClass(cls):
+        model.VirtManager = cls.orig_VirtManager
         template_env.loader = cls.orig_template_loader
 
-    def provision_recipe(self, xml, system):
+    def provision_recipe(self, xml, system=None, virt=False):
+        """
+        Pass either system, or virt=True.
+        """
         xmljob = XmlJob(xmltramp.parse(xml))
         job = Jobs().process_xmljob(xmljob, self.user)
         recipe = job.recipesets[0].recipes[0]
         session.flush()
-        data_setup.mark_recipe_waiting(recipe, system=system)
+        data_setup.mark_recipe_waiting(recipe, system=system,
+                virt=virt, lab_controller=self.lab_controller)
         recipe.provision()
         return recipe
 
@@ -1217,3 +1226,24 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
             ''', system)
         k = recipe.rendered_kickstart.kickstart
         self.assert_('special-weird-driver-package' in k.splitlines(), k)
+
+    def test_postreboot_for_rhev_guests(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', virt=True)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_(('curl http://lab.test-kickstart.invalid:8000/postreboot/%s'
+                % recipe.id) in k.splitlines(), k)

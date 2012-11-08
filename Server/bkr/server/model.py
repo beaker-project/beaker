@@ -51,7 +51,6 @@ import netaddr
 from bkr.common.helpers import Flock, makedirs_ignore, unlink_ignore
 import subprocess
 from turbogears import identity
-from contextlib import contextmanager
 import ovirtsdk.api
 from datetime import timedelta, date, datetime
 from hashlib import md5
@@ -1092,11 +1091,10 @@ system_resource_table = Table('system_resource', metadata,
 virt_resource_table = Table('virt_resource', metadata,
     Column('id', Integer, ForeignKey('recipe_resource.id',
             name='virt_resource_id_fk'), primary_key=True),
-    Column('manager_id', Integer, ForeignKey('virt_manager.id',
-            name='virt_resource_manager_id_fk'), nullable=False),
     Column('system_name', Unicode(2048), nullable=False),
     Column('lab_controller_id', Integer, ForeignKey('lab_controller.id',
-            name='virt_resource_lab_controller_id_fk'), nullable=False),
+            name='virt_resource_lab_controller_id_fk')),
+    Column('mac_address', MACAddress(), index=True, default=None),
     mysql_engine='InnoDB',
 )
 
@@ -1228,16 +1226,6 @@ rendered_kickstart_table = Table('rendered_kickstart', metadata,
     # it means fetch the kickstart from there instead
     Column('kickstart', UnicodeText),
     Column('url', UnicodeText),
-    mysql_engine='InnoDB',
-)
-
-virt_manager_table = Table('virt_manager', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('url', Unicode(255), unique=True),
-    Column('username', Unicode(255)),
-    Column('password', Unicode(255)),
-    Column('disabled', Boolean, nullable=False, default=False, index=True),
-    Column('removed', DateTime, nullable=True, default=None, index=True),
     mysql_engine='InnoDB',
 )
 
@@ -5200,9 +5188,10 @@ class Recipe(TaskBase):
                     field_name=u'Distro Tree', old_value=u'',
                     new_value=unicode(self.distro_tree)))
         elif isinstance(self.resource, VirtResource):
-            self.resource.manager.start_install(self.resource.system_name,
-                    self.distro_tree, install_options.kernel_options_str,
-                    self.resource.lab_controller)
+            with VirtManager() as manager:
+                manager.start_install(self.resource.system_name,
+                        self.distro_tree, install_options.kernel_options_str,
+                        self.resource.lab_controller)
             self.tasks[0].start()
 
     def cleanup(self):
@@ -5909,6 +5898,36 @@ class RecipeResource(MappedObject):
     def __unicode__(self):
         return unicode(self.fqdn)
 
+    @staticmethod
+    def _lowest_free_mac():
+        base_addr = netaddr.EUI(get('beaker.base_mac_addr', '52:54:00:00:00:00'))
+        session.flush()
+        # These subqueries gives all MAC addresses in use right now
+        guest_mac_query = session.query(GuestResource.mac_address.label('mac_address'))\
+                .filter(GuestResource.mac_address != None)\
+                .join(RecipeResource.recipe)\
+                .filter(not_(Recipe.status.in_([s for s in TaskStatus if s.finished])))
+        virt_mac_query = session.query(VirtResource.mac_address.label('mac_address'))\
+                .filter(VirtResource.mac_address != None)\
+                .join(RecipeResource.recipe)\
+                .filter(not_(Recipe.status.in_([s for s in TaskStatus if s.finished])))
+        # This trickery finds "gaps" of unused MAC addresses by filtering for MAC
+        # addresses where address + 1 is not in use.
+        # We union with base address - 1 to find any gap at the start.
+        # Note that this relies on the MACAddress type being represented as
+        # BIGINT in the database, which lets us do arithmetic on it.
+        left_side = union(guest_mac_query, virt_mac_query,
+                select([int(base_addr) - 1])).alias('left_side')
+        right_side = union(guest_mac_query, virt_mac_query).alias('right_side')
+        free_addr = session.scalar(select([left_side.c.mac_address + 1],
+                from_obj=left_side.outerjoin(right_side,
+                    onclause=left_side.c.mac_address + 1 == right_side.c.mac_address))\
+                .where(right_side.c.mac_address == None)\
+                .order_by(left_side.c.mac_address).limit(1))
+        # The type of (left_side.c.mac_address + 1) comes out as Integer
+        # instead of MACAddress, I think it's a sqlalchemy bug :-(
+        return netaddr.EUI(free_addr, dialect=_mac_unix)
+
 class SystemResource(RecipeResource):
     """
     For a recipe which is running on a Beaker system.
@@ -5956,26 +5975,38 @@ class VirtResource(RecipeResource):
     a hypervisor attached to Beaker.
     """
 
-    def __init__(self, manager, system_name, lab_controller):
-        self.manager = manager
+    def __init__(self, system_name):
+        super(VirtResource, self).__init__()
         self.system_name = system_name
-        self.lab_controller = lab_controller
 
     @property
     def link(self):
         return self.fqdn # just text, not a link
 
     def install_options(self, distro_tree):
-        return global_install_options().combined_with(
-                distro_tree.install_options())
+        # 'postreboot' is added as a hack for RHEV guests: they do not reboot
+        # properly when the installation finishes, see RHBZ#751854
+        return global_install_options()\
+                .combined_with(distro_tree.install_options())\
+                .combined_with(InstallOptions({'postreboot': None}, {}, {}))
 
-    def allocate(self):
-        pass
+    def allocate(self, manager, lab_controllers):
+        self.mac_address = self._lowest_free_mac()
+        log.debug('Creating vm with MAC address %s for recipe %s',
+                self.mac_address, self.recipe.id)
+        self.lab_controller = manager.create_vm(self.system_name,
+                lab_controllers, self.mac_address)
 
     def release(self):
-        log.debug('Releasing virt guest %s for recipe %s',
-                self.system_name, self.recipe.id)
-        self.manager.destroy_vm(self.system_name)
+        try:
+            log.debug('Releasing vm %s for recipe %s',
+                    self.system_name, self.recipe.id)
+            with VirtManager() as manager:
+                manager.destroy_vm(self.system_name)
+        except Exception, e:
+            log.exception('Failed to destroy vm %s, leaked!',
+                    self.system_name)
+            # suppress exception, nothing more we can do now
 
 
 class GuestResource(RecipeResource):
@@ -5996,34 +6027,9 @@ class GuestResource(RecipeResource):
         return global_install_options().combined_with(
                 distro_tree.install_options())
 
-    @staticmethod
-    def _lowest_free_mac():
-        base_addr = netaddr.EUI(get('beaker.base_mac_addr', '52:54:00:00:00:00'))
-        session.flush()
-        # This subquery gives all MAC addresses in use right now
-        mac_addrs_query = session.query(GuestResource.mac_address.label('mac_address'))\
-                .filter(GuestResource.mac_address != None)\
-                .join(GuestResource.recipe)\
-                .filter(not_(Recipe.status.in_([s for s in TaskStatus if s.finished])))
-        # This trickery finds "gaps" of unused MAC addresses by filtering for MAC
-        # addresses where address + 1 is not in use.
-        # We union with base address - 1 to find any gap at the start.
-        # Note that this relies on the MACAddress type being represented as
-        # BIGINT in the database, which lets us do arithmetic on it.
-        left_side = union(mac_addrs_query, select([int(base_addr) - 1])).alias('left_side')
-        right_side = mac_addrs_query.subquery('right_side')
-        free_addr = session.scalar(select([left_side.c.mac_address + 1],
-                from_obj=left_side.outerjoin(right_side,
-                    onclause=left_side.c.mac_address + 1 == right_side.c.mac_address))\
-                .where(right_side.c.mac_address == None)\
-                .order_by(left_side.c.mac_address).limit(1))
-        # The type of (left_side.c.mac_address + 1) comes out as Integer
-        # instead of MACAddress, I think it's a sqlalchemy bug :-(
-        return netaddr.EUI(free_addr, dialect=_mac_unix)
-
     def allocate(self):
         self.mac_address = self._lowest_free_mac()
-        log.debug('Allocating MAC address %s for recipe %s', self.mac_address, self.recipe.id)
+        log.debug('Allocated MAC address %s for recipe %s', self.mac_address, self.recipe.id)
 
     def release(self):
         pass
@@ -6393,81 +6399,76 @@ class ConfigValueInt(MappedObject):
         if valid_from:
             self.valid_from = valid_from
 
-class VirtManager(MappedObject):
+class VirtManager(object):
 
-    def __repr__(self):
-        return '%s(id=%r, url=%r)' % (self.__class__.__name__, self.id, self.url)
+    def __init__(self):
+        self.api = None
 
-    @contextmanager
-    def api(self):
-        api = ovirtsdk.api.API(url=self.url, username=self.username, password=self.password,
+    def __enter__(self):
+        self.api = ovirtsdk.api.API(url=get('ovirt.api_url'),
+                username=get('ovirt.username'), password=get('ovirt.password'),
                 # XXX add some means to specify SSL CA cert
                 insecure=True)
-        try:
-            yield api
-        finally:
-            api.disconnect()
+        return self
 
-    @classmethod
-    def create_vm_on_any(cls, *args, **kwargs):
-        for manager in cls.query.filter_by(disabled=False, removed=None):
-            try:
-                log.debug('Trying to create VM with args %r %r on %r', args, kwargs, manager)
-                return manager.create_vm(*args, **kwargs)
-            except VMCreationFailedException:
-                continue
-        raise VMCreationFailedException('Unable to create VM on any manager')
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.api, api = None, self.api
+        api.disconnect()
 
-    def create_vm(self, name, lab_controllers):
-        from ovirtsdk.xml.params import VM, Template, NIC, Network, Disk, StorageDomains
+    def create_vm(self, name, lab_controllers, mac_address):
+        if self.api is None:
+            raise RuntimeError('Context manager was not entered')
+        from ovirtsdk.xml.params import VM, Template, NIC, Network, Disk, \
+                StorageDomains, MAC
         # Default of 1GB memory and 20GB disk
         memory = ConfigItem.by_name('default_guest_memory').current_value(1024) * 1024**2
         disk_size = ConfigItem.by_name('default_guest_disk_size').current_value(20) * 1024**3
         # Try to create the VM on every cluster that is in an acceptable data center
-        with self.api() as rh:
-            cluster_query = ' or '.join('datacenter.name=%s' % lc.data_center_name
-                    for lc in lab_controllers)
-            for cluster in rh.clusters.list(cluster_query):
-                vm = None
-                try:
-                    vm_definition = VM(name=name, memory=memory, cluster=cluster,
-                            type_='virtio26', template=Template(name='Blank'))
-                    vm = rh.vms.add(vm_definition)
-                    nic = NIC(name='eth0', interface='virtio', network=Network(name='rhevm'))
-                    vm.nics.add(nic)
-                    sd_query = ' or '.join('datacenter=%s' % lc.data_center_name
-                            for lc in lab_controllers)
-                    storage_domains = rh.storagedomains.list(sd_query)
-                    disk = Disk(storage_domains=StorageDomains(storage_domain=storage_domains),
-                            size=disk_size, type_='data', interface='virtio', format='cow',
-                            bootable=True)
-                    vm.disks.add(disk)
+        cluster_query = ' or '.join('datacenter.name=%s' % lc.data_center_name
+                for lc in lab_controllers)
+        for cluster in self.api.clusters.list(cluster_query):
+            log.debug('Trying to create vm %s on cluster %s', name, cluster.name)
+            vm = None
+            try:
+                vm_definition = VM(name=name, memory=memory, cluster=cluster,
+                        type_='virtio26', template=Template(name='Blank'))
+                vm = self.api.vms.add(vm_definition)
+                nic = NIC(name='eth0', interface='virtio', network=Network(name='rhevm'),
+                        mac=MAC(address=str(mac_address)))
+                vm.nics.add(nic)
+                sd_query = ' or '.join('datacenter=%s' % lc.data_center_name
+                        for lc in lab_controllers)
+                storage_domains = self.api.storagedomains.list(sd_query)
+                disk = Disk(storage_domains=StorageDomains(storage_domain=storage_domains),
+                        size=disk_size, type_='data', interface='virtio', format='cow',
+                        bootable=True)
+                vm.disks.add(disk)
 
-                    # Wait up to twenty seconds(!) for the disk image to be created
-                    for _ in range(20):
-                        if rh.vms.get(name).status.state != 'image_locked':
-                            break
-                        time.sleep(1)
-                    state = rh.vms.get(name).status.state
-                    if state == 'image_locked':
-                        raise ValueError('VM %s state %s', name, state)
+                # Wait up to twenty seconds(!) for the disk image to be created
+                for _ in range(20):
+                    if self.api.vms.get(name).status.state != 'image_locked':
+                        break
+                    time.sleep(1)
+                state = self.api.vms.get(name).status.state
+                if state == 'image_locked':
+                    raise ValueError('VM %s state %s', name, state)
 
-                    dc_name = rh.datacenters.get(id=cluster.data_center.id).name
-                    return VirtResource(manager=self, system_name=name,
-                            lab_controller=LabController.by_data_center_name(dc_name))
-                except Exception:
-                    log.exception("Failed to create VM %r on %r cluster %r",
-                            name, self, cluster.name)
-                    if vm is not None:
-                        try:
-                            vm.delete()
-                        except Exception:
-                            pass
-                    continue
-            raise VMCreationFailedException(
-                    'No clusters on %r successfully created VM %s' % (self, name))
+                dc_name = self.api.datacenters.get(id=cluster.data_center.id).name
+                return LabController.by_data_center_name(dc_name)
+            except Exception:
+                log.exception("Failed to create VM %r on %r cluster %r",
+                        name, self, cluster.name)
+                if vm is not None:
+                    try:
+                        vm.delete()
+                    except Exception:
+                        pass
+                continue
+        raise VMCreationFailedException('No clusters successfully created VM %s' % name)
 
     def start_install(self, name, distro_tree, kernel_options, lab_controller):
+        if self.api is None:
+            raise RuntimeError('Context manager was not entered')
         from ovirtsdk.xml.params import OperatingSystem, Action, VM
         # RHEV can only handle a local path to kernel/initrd, so we rely on autofs for now :-(
         # XXX when this constraint is lifted, fix beakerd.virt_recipes too
@@ -6478,22 +6479,19 @@ class VirtManager(MappedObject):
         kernel_path = os.path.join(local_path, kernel.path)
         initrd_path = os.path.join(local_path, initrd.path)
         log.debug(u'Starting VM %s installing %s', name, distro_tree)
-        with self.api() as rh:
-            a = Action(vm=VM(os=OperatingSystem(kernel=kernel_path,
-                    initrd=initrd_path, cmdline=kernel_options)))
-            rh.vms.get(name).start(action=a)
+        a = Action(vm=VM(os=OperatingSystem(kernel=kernel_path,
+                initrd=initrd_path, cmdline=kernel_options)))
+        self.api.vms.get(name).start(action=a)
 
     def destroy_vm(self, name):
-        try:
-            with self.api() as rh:
-                vm = rh.vms.get(name)
-                if vm is not None:
-                    log.debug('Stopping %s on %r', name, self)
-                    vm.stop()
-                    log.debug('Deleting %s on %r', name, self)
-                    vm.delete()
-        except Exception, e:
-            log.exception(e) # and discard
+        if self.api is None:
+            raise RuntimeError('Context manager was not entered')
+        vm = self.api.vms.get(name)
+        if vm is not None:
+            log.debug('Stopping %s on %r', name, self)
+            vm.stop()
+            log.debug('Deleting %s on %r', name, self)
+            vm.delete()
 
 # set up mappers between identity tables and classes
 Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
@@ -6883,7 +6881,6 @@ mapper(SystemResource, system_resource_table, inherits=RecipeResource,
 mapper(VirtResource, virt_resource_table, inherits=RecipeResource,
         polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=ResourceType.virt,
         properties={
-            'manager': relation(VirtManager),
             'lab_controller': relation(LabController),
         })
 mapper(GuestResource, guest_resource_table, inherits=RecipeResource,
@@ -6941,7 +6938,6 @@ mapper(ConfigValueString, config_value_string_table,
        properties = {'config_item': relation(ConfigItem, uselist=False),
                      'user': relation(User)}
       )
-mapper(VirtManager, virt_manager_table)
 
 
 ## Static list of device_classes -- used by master.kid

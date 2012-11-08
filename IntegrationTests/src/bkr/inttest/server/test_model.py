@@ -6,14 +6,16 @@ import lxml.etree
 import email
 from turbogears.database import session
 from bkr.server.installopts import InstallOptions
+from bkr.server import model
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
         Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
-        GuestRecipe, GuestResource, Recipe, LogRecipe
+        GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
+        VirtResource
 from sqlalchemy.sql import not_
 import netaddr
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DummyVirtManager
 from nose.plugins.skip import SkipTest
 
 class SchemaSanityTest(unittest.TestCase):
@@ -1372,20 +1374,27 @@ class GuestRecipeTest(unittest.TestCase):
         self.assert_('http_location="http://something/somewhere"' in guestxml, guestxml)
 
 
-class GuestResourceTest(unittest.TestCase):
+class MACAddressAllocationTest(unittest.TestCase):
 
     def setUp(self):
+        self.orig_VirtManager = model.VirtManager
+        model.VirtManager = DummyVirtManager
         session.begin()
-        # Other tests might have left behind running GuestRecipes, let's cancel them all
-        for guestrecipe in GuestRecipe.query.filter(not_(Recipe.status.in_(
-                [s for s in TaskStatus if s.finished]))):
+        # Other tests might have left behind running recipes using MAC
+        # addresses, let's cancel them all
+        running = Recipe.query.filter(not_(Recipe.status.in_(
+                [s for s in TaskStatus if s.finished])))
+        for guestrecipe in running.join(Recipe.resource.of_type(GuestResource)):
             guestrecipe.cancel()
+        for virtrecipe in running.join(Recipe.resource.of_type(VirtResource)):
+            virtrecipe.cancel()
 
     def tearDown(self):
-        session.commit()
+        model.VirtManager = self.orig_VirtManager
+        session.rollback()
 
     def test_lowest_free_mac_none_in_use(self):
-        self.assertEquals(GuestResource._lowest_free_mac(),
+        self.assertEquals(RecipeResource._lowest_free_mac(),
                 netaddr.EUI('52:54:00:00:00:00'))
 
     def test_lowest_free_mac_one_in_use(self):
@@ -1393,7 +1402,7 @@ class GuestResourceTest(unittest.TestCase):
         data_setup.mark_job_running(job)
         self.assertEquals(job.recipesets[0].recipes[0].guests[0].resource.mac_address,
                     netaddr.EUI('52:54:00:00:00:00'))
-        self.assertEquals(GuestResource._lowest_free_mac(),
+        self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:01'))
 
     def test_lowest_free_mac_gap_at_start(self):
@@ -1405,12 +1414,28 @@ class GuestResourceTest(unittest.TestCase):
         data_setup.mark_job_running(second_job)
         self.assertEquals(second_job.recipesets[0].recipes[0].guests[0].resource.mac_address,
                     netaddr.EUI('52:54:00:00:00:01'))
-        self.assertEquals(GuestResource._lowest_free_mac(),
+        self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:02'))
         first_job.cancel()
-        self.assertEquals(GuestResource._lowest_free_mac(),
+        self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:00'))
 
+    def test_virt_and_guest_resources(self):
+        # One GuestResource ...
+        first_job = data_setup.create_job(num_guestrecipes=1)
+        data_setup.mark_job_running(first_job)
+        self.assertEquals(first_job.recipesets[0].recipes[0].guests[0].resource.mac_address,
+                    netaddr.EUI('52:54:00:00:00:00'))
+        # ... and one VirtResource
+        second_job = data_setup.create_job()
+        data_setup.mark_recipe_running(second_job.recipesets[0].recipes[0], virt=True)
+        self.assertEquals(second_job.recipesets[0].recipes[0].resource.mac_address,
+                    netaddr.EUI('52:54:00:00:00:01'))
+        self.assertEquals(RecipeResource._lowest_free_mac(),
+                    netaddr.EUI('52:54:00:00:00:02'))
+        first_job.cancel()
+        self.assertEquals(RecipeResource._lowest_free_mac(),
+                    netaddr.EUI('52:54:00:00:00:00'))
 
 class LogRecipeTest(unittest.TestCase):
 
