@@ -129,20 +129,20 @@ def main():
         if bug.bug_status in ('NEW', 'ASSIGNED') and \
                 any(change['status'] != 'ABANDONED' for change in bug_changes):
             if all(change['status'] == 'MERGED' for change in bug_changes):
-                problem('Bug should be ON_DEV')
-            else:
                 problem('Bug should be MODIFIED')
-        elif bug.bug_status == 'MODIFIED' and \
+            else:
+                problem('Bug should be POST')
+        elif bug.bug_status == 'POST' and \
                 not any(change['status'] == 'NEW' for change in bug_changes):
             if bug_changes and all(change['status'] == 'MERGED' for change in bug_changes):
-                problem('Bug should be ON_DEV')
+                problem('Bug should be MODIFIED')
             else:
                 problem('Bug should be ASSIGNED')
-        elif bug.bug_status in ('ON_DEV', 'ON_QA', 'VERIFIED', 'RELEASE_PENDING', 'POST', 'CLOSED'):
+        elif bug.bug_status in ('MODIFIED', 'ON_DEV', 'ON_QA', 'VERIFIED', 'RELEASE_PENDING', 'CLOSED'):
             if not bug_changes:
                 problem('Bug should be ASSIGNED')
             elif not all(change['status'] in ('ABANDONED', 'MERGED') for change in bug_changes):
-                problem('Bug should be MODIFIED')
+                problem('Bug should be POST')
         if options.release and bug.target_milestone != '%s.0' % options.release:
             problem('Bug target milestone should be %s.0' % options.release)
         for change in bug_changes:
