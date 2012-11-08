@@ -3,22 +3,14 @@ export BEAKER="{{ absolute_url('/', labdomain=True) }}"
 {% if config.get('beaker.reservation_policy_url') %}
 export BEAKER_RESERVATION_POLICY_URL="{{ config.get('beaker.reservation_policy_url') }}"
 {% endif %}
-{% if job_whiteboard %}
 export BEAKER_JOB_WHITEBOARD={{ job_whiteboard|shell_quoted }}
-{% endif %}
-{% if recipe_whiteboard %}
 export BEAKER_RECIPE_WHITEBOARD={{ recipe_whiteboard|shell_quoted }}
-{% endif %}
 EOF
 cat <<"EOF" >/etc/profile.d/beaker.csh
 setenv BEAKER "{{ absolute_url('/', labdomain=True) }}"
 {% if config.get('beaker.reservation_policy_url') %}
 setenv BEAKER_RESERVATION_POLICY_URL "{{ config.get('beaker.reservation_policy_url') }}"
 {% endif %}
-{% if job_whiteboard %}
 setenv BEAKER_JOB_WHITEBOARD {{ job_whiteboard|shell_quoted }}
-{% endif %}
-{% if recipe_whiteboard %}
 setenv BEAKER_RECIPE_WHITEBOARD {{ recipe_whiteboard|shell_quoted }}
-{% endif %}
 EOF
