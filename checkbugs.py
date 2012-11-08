@@ -143,6 +143,8 @@ def main():
                 problem('Bug should be ASSIGNED')
             elif not all(change['status'] in ('ABANDONED', 'MERGED') for change in bug_changes):
                 problem('Bug should be MODIFIED')
+        if options.release and bug.target_milestone != '%s.0' % options.release:
+            problem('Bug target milestone should be %s.0' % options.release)
         for change in bug_changes:
             if change['status'] == 'MERGED':
                 sha = change['currentPatchSet']['revision']
@@ -150,6 +152,16 @@ def main():
                     problem('Commit %s not reachable from HEAD' % sha)
 
         print
+
+    if options.release:
+        # check for bugs which have target milestone set but aren't approved for the release
+        target_bugs = get_bugs('%s.0' % options.release, None)
+        approved_bug_ids = set(b.bug_id for b in bugs)
+        for unapproved in [b for b in target_bugs if b.bug_id not in approved_bug_ids]:
+            print 'Bug %-13d %-17s %-10s <%s>' % (unapproved.bug_id, unapproved.bug_status,
+                    abbrev_user(unapproved.assigned_to), unapproved.url)
+            problem('Bug target milestone is set, but bug is not approved')
+            print
 
 if __name__ == '__main__':
     main()
