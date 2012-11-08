@@ -35,5 +35,5 @@ class TestGroups(WebDriverTestCase):
         login(b, user=self.user.user_name, password='password')
         b.get(get_server_base() + 'groups/mine')
         b.find_element_by_link_text('System count: 1').click()
-        self.assert_(is_text_present(b, 'Systems for group %s' % self.group.group_name))
+        self.assert_(is_text_present(b, 'Systems in Group %s' % self.group.group_name))
         self.assert_(is_text_present(b, self.system.fqdn))
