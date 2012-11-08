@@ -56,11 +56,11 @@
                 medium, normal, high and urgent.
               </a:documentation>
               <choice>
-                <value>low</value>
-                <value>medium</value>
-                <value>normal</value>
-                <value>high</value>
-                <value>urgent</value>
+                <value>Low</value>
+                <value>Medium</value>
+                <value>Normal</value>
+                <value>High</value>
+                <value>Urgent</value>
               </choice>
               </attribute>
             </optional>
