@@ -6484,12 +6484,16 @@ class VirtManager(object):
         self.api.vms.get(name).start(action=a)
 
     def destroy_vm(self, name):
+        from ovirtsdk.infrastructure.errors import RequestError
         if self.api is None:
             raise RuntimeError('Context manager was not entered')
         vm = self.api.vms.get(name)
         if vm is not None:
-            log.debug('Stopping %s on %r', name, self)
-            vm.stop()
+            try:
+                log.debug('Stopping %s on %r', name, self)
+                vm.stop()
+            except RequestError:
+                pass # probably not running for some reason
             log.debug('Deleting %s on %r', name, self)
             vm.delete()
 
