@@ -139,15 +139,23 @@ def generate_kickstart(install_options, distro_tree, system, user,
     elif system:
         lab_controller = system.lab_controller
     else:
-        lab_controller = None
+        raise ValueError("Must specify either a system or a recipe")
 
     # User-supplied templates don't get access to our model objects, in case
     # they do something foolish/naughty.
+    recipe_whiteboard = job_whiteboard = ''
+    if recipe:
+        if recipe.whiteboard:
+            recipe_whiteboard = recipe.whiteboard
+        if recipe.recipeset.job.whiteboard:
+            job_whiteboard = recipe.recipeset.job.whiteboard
+
     restricted_context = {
         'kernel_options_post': install_options.kernel_options_post_str,
-        'recipe_whiteboard': recipe.whiteboard,
-        'job_whiteboard': recipe.recipeset.job.whiteboard,
+        'recipe_whiteboard': recipe_whiteboard,
+        'job_whiteboard': job_whiteboard,
     }
+
     restricted_context.update(install_options.ks_meta)
     # XXX find a better place to set this, perhaps from the kickstart templates
     if distro_tree.distro.osversion.osmajor.osmajor == 'RedHatEnterpriseLinux7' \
@@ -167,16 +175,20 @@ def generate_kickstart(install_options, distro_tree, system, user,
         'ks_appends': ks_appends or [],
     })
 
+    snippet_locations = []
+    if system:
+         snippet_locations.append(
+             'snippets/per_system/%%s/%s' % system.fqdn)
+    snippet_locations.extend([
+        'snippets/per_lab/%%s/%s' % lab_controller.fqdn,
+        'snippets/per_osversion/%%s/%s' % distro_tree.distro.osversion,
+        'snippets/per_osmajor/%%s/%s' % distro_tree.distro.osversion.osmajor,
+        'snippets/%s',
+    ])
+
     def snippet(name):
         template = None
-        candidates = [
-            'snippets/per_lab/%s/%s' % (name, lab_controller.fqdn),
-            'snippets/per_osversion/%s/%s' % (name, distro_tree.distro.osversion),
-            'snippets/per_osmajor/%s/%s' % (name, distro_tree.distro.osversion.osmajor),
-            'snippets/%s' % name,
-        ]
-        if system:
-            candidates.insert(0, 'snippets/per_system/%s/%s' % (name, system.fqdn))
+        candidates = [location % name for location in snippet_locations]
         for candidate in candidates:
             try:
                 template = template_env.get_template(candidate)

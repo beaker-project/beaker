@@ -11,7 +11,7 @@ import crypt
 from bkr.server import model
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
         CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch
-from bkr.server.kickstart import template_env
+from bkr.server.kickstart import template_env, generate_kickstart
 from bkr.server.jobs import Jobs
 from bkr.server.jobxml import XmlJob
 from bkr.inttest import data_setup, get_server_base, with_transaction, \
@@ -993,7 +993,7 @@ mysillypackage
         self.assert_('export BEAKER="%s"' % get_server_base() in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=691442
-    def test_beaker_whiteboard(self):
+    def test_whiteboards(self):
         # This test checks that the job and recipe whiteboards are made
         # available in the test environments via the kickstart templates
         whiteboard = '''
@@ -1048,6 +1048,54 @@ mysillypackage
                            % job_quoted in ks, ks)
         self.assert_('setenv BEAKER_RECIPE_WHITEBOARD %s'
                            % recipe_quoted in ks, ks)
+
+    def test_no_whiteboards(self):
+        # This test checks that everything works as expected with no
+        # recipe whiteboard defined and an empty job whiteboard
+        recipe_xml = '''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            '''
+        recipe = self.provision_recipe(recipe_xml, self.system)
+        self.assertEqual(recipe.whiteboard, None)
+        self.assertEqual(recipe.recipeset.job.whiteboard, "")
+        ks = recipe.rendered_kickstart.kickstart
+        self.assert_("export BEAKER_JOB_WHITEBOARD=''" in ks, ks)
+        self.assert_("export BEAKER_RECIPE_WHITEBOARD=''" in ks, ks)
+        self.assert_("setenv BEAKER_JOB_WHITEBOARD ''" in ks, ks)
+        self.assert_("setenv BEAKER_RECIPE_WHITEBOARD ''" in ks, ks)
+
+    def test_no_recipe(self):
+        # This test checks that everything works as expected with no
+        # recipe defined at all (which can happen when systems are
+        # switched to manual mode instead of automatic)
+        tree = self.rhel62_server_x86_64
+        ks = generate_kickstart(self.system.install_options(tree),
+                                tree, self.system, None).kickstart
+        self.assert_("export BEAKER_JOB_WHITEBOARD=''" in ks, ks)
+        self.assert_("export BEAKER_RECIPE_WHITEBOARD=''" in ks, ks)
+        self.assert_("setenv BEAKER_JOB_WHITEBOARD ''" in ks, ks)
+        self.assert_("setenv BEAKER_RECIPE_WHITEBOARD ''" in ks, ks)
+
+    def test_no_system_or_recipe(self):
+        # We need one or the other in order to find the lab controller
+        tree = self.rhel62_server_x86_64
+        self.assertRaises(ValueError, generate_kickstart,
+                          self.system.install_options(tree),
+                          tree, None, None)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=834147
     def test_ftp_no_http(self):
