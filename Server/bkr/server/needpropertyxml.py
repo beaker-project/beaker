@@ -721,8 +721,8 @@ class XmlCpuFlag(ElementWrapper):
     """
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
-        equal = op == '__ne__' and '__equal__' or op
-        value = self.get_xml_attr('value', int, None)
+        equal = op == '__ne__' and '__eq__' or op
+        value = self.get_xml_attr('value', unicode, None)
         query = None
         if value:
             joins = joins.join(System.cpu)
