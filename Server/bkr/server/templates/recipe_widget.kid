@@ -167,7 +167,9 @@ $(document).ready(function() {
   </tr>
   <tr py:if="recipe.systems">
    <td class="title"><b>Possible Systems</b></td>
-   <td class="value" colspan="8">${len(recipe.systems)}</td>
+   <td class="value" colspan="8">
+     ${recipe_systems}
+  </td>
   </tr>
   <tr>
    <td colspan="9">
