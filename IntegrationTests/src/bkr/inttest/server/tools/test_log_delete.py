@@ -1,4 +1,5 @@
 import unittest, datetime, os, errno, shutil
+from nose.plugins.skip import SkipTest
 import tempfile
 import subprocess
 import sys
@@ -7,10 +8,15 @@ from bkr.inttest import data_setup, with_transaction, Process
 from bkr.server.tools import log_delete
 from turbogears.database import session
 
-# It makes our tests simpler here if they only need to worry about deleting 
-# logs which they themselves have created, rather than ones which might have 
-# been left behind from earlier tests in the run.
 def setUpModule():
+    try:
+        import kerberos
+    except ImportError:
+        raise SkipTest('kerberos module not available, but log-delete requires it')
+
+    # It makes our tests simpler here if they only need to worry about deleting 
+    # logs which they themselves have created, rather than ones which might have 
+    # been left behind from earlier tests in the run.
     for job, _ in Job.expired_logs():
         job.delete()
 
