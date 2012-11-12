@@ -190,6 +190,9 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
     def get_arches(self):
         """ Return a list of arches
         """
+        specific_arches = self.options.arch
+        if specific_arches:
+            return specific_arches
         return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
                       and x, [arch for arch in self.arches])
 
@@ -541,12 +544,18 @@ sources = Workstation/source/SRPMS
     def get_arches(self, variant):
         """ Return a list of arches for variant
         """
+        specific_arches = self.options.arch
+        if specific_arches:
+            return specific_arches
         return self.parser.get('variant-%s' %
                                           variant, 'arches').split(',')
 
     def get_variants(self):
         """ Return a list of variants
         """
+        specific_variants = self.options.variant
+        if specific_variants:
+            return specific_variants
         return self.parser.get('product', 'variants').split(',')
 
     def find_repos(self, repo_base, rpath, variant, arch):
@@ -647,6 +656,10 @@ class TreeInfoBase(object):
                 ])
 
         '''
+        options.arch = check_and_return_arches(self.__class__.__name__,
+                                              options.arch, False)
+        options.variant = check_and_return_variants(self.__class__.__name__,
+                                                    options.variant, False)
         self.options = options
         self.scheduler = SchedulerProxy(options)
         self.tree = dict()
@@ -1558,6 +1571,12 @@ class NakedTree(Importer):
         return True
 
     def process(self, urls, options, repos=[]):
+        options.variant = check_and_return_variants(self.__class__.__name__,
+                                                    options.variant,
+                                                    False)
+        options.arch = check_and_return_arches(self.__class__.__name__,
+                                               options.arch,
+                                               False)
         self.scheduler = SchedulerProxy(options)
         self.tree = dict()
 
@@ -1613,6 +1632,18 @@ def Build(url, options=None):
             logging.debug("\tImporter %s does not match", cls.__name__)
     raise BX('No valid importer found for %s' % url)
 
+def check_and_return_arches(class_name, arches, allow_multiple):
+    if len(arches) > 1 and not allow_multiple:
+        raise BX('Multiple values for arch are incompatible with '
+                 '%s import' % class_name)
+    return arches[0]
+
+def check_and_return_variants(class_name, variants, allow_multiple):
+    if len(variants) > 1 and not allow_multiple:
+        raise BX('Multiple values for variant are incompatible with '
+                '%s import' % class_name)
+    return variants[0]
+
 def main():
     usage = "usage: %prog [options] distro_url [distro_url] [distro_url]"
     description = """Imports distro(s) from the given distro_url.  Valid distro_urls are nfs://, http:// and ftp://.  A primary distro_url of either http:// or ftp:// must be specified. In order for an import to succeed a .treeinfo or a .composeinfo must be present at the distro_url or you can do what is called a "naked" import if you specify the following arguments: --family, --version, --name, --arch, --kernel, --initrd. Only one tree can be imported at a time when doing a naked import."""
@@ -1645,8 +1676,9 @@ def main():
                       default=None,
                       help="Specify family")
     parser.add_option("--variant",
+                      action='append',
                       default=None,
-                      help="Specify variant")
+                      help="Specify variant. Multiple values are valid when importing a compose >=RHEL7")
     parser.add_option("--version",
                       default=None,
                       help="Specify version")
@@ -1663,6 +1695,10 @@ def main():
                       default=None,
                       type=float,
                       help="Specify build time")
+    parser.add_option("--arch",
+                      action='append',
+                      default=None,
+                      help="Specify arch. Multiple values are valid when importing a compose")
     group = OptionGroup(parser, "Naked Tree Options",
                        "These options only apply when importing without a .treeinfo or .composeinfo")
     group.add_option("--kernel",
@@ -1671,9 +1707,6 @@ def main():
     group.add_option("--initrd",
                       default=None,
                       help="Specify path to initrd (relative to distro_url)")
-    group.add_option("--arch",
-                      default=None,
-                      help="Specify arch")
     parser.add_option_group(group)
                       
     (opts, urls) = parser.parse_args()
