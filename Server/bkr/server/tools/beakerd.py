@@ -468,6 +468,9 @@ def virt_recipes(*args):
                 recipe.virt_status = RecipeVirtStatus.precluded
                 session.commit()
             except VMCreationFailedException:
+                session.rollback()
+                # Skip this recipe in future
+                session.begin()
                 recipe.virt_status = RecipeVirtStatus.skipped
                 session.commit()
             except Exception:
