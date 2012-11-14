@@ -3,7 +3,8 @@ import requests
 from datetime import datetime, timedelta
 from turbogears.database import session
 from bkr.inttest.server.selenium import XmlRpcTestCase, WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, delete_and_confirm
+from bkr.inttest.server.webdriver_utils import login, delete_and_confirm, \
+        wait_for_animation
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import LabControllerDistroTree
 
@@ -149,10 +150,8 @@ class DistroTreesFilterXmlRpcTest(XmlRpcTestCase):
 
 class DistroTreeSearch(WebDriverTestCase):
 
-
-    @classmethod
-    def teardownClass(cls):
-        cls.browser.quit()
+    def tearDown(self):
+        self.browser.quit()
 
     @classmethod
     @with_transaction
@@ -167,7 +166,7 @@ class DistroTreeSearch(WebDriverTestCase):
         cls.distro_one = data_setup.create_distro(name=cls.distro_one_name,
             osmajor=cls.distro_one_osmajor, osminor = cls.distro_one_osminor,
             tags =cls.distro_one_tag)
-        data_setup.create_distro_tree(distro=cls.distro_one,
+        cls.distro_tree_one = data_setup.create_distro_tree(distro=cls.distro_one,
             variant=cls.distro_one_variant)
         # Two days in the future
         cls.distro_two_name = data_setup.unique_name(u'nametest%s')
@@ -176,8 +175,8 @@ class DistroTreeSearch(WebDriverTestCase):
 
         cls.distro_two = data_setup.create_distro(name=cls.distro_two_name,
             osmajor=cls.distro_two_osmajor, osminor = cls.distro_two_osminor,)
-        dt2 = data_setup.create_distro_tree(distro=cls.distro_two)
-        dt2.date_created = datetime.utcnow() + timedelta(days=2)
+        cls.distro_tree_two = data_setup.create_distro_tree(distro=cls.distro_two)
+        cls.distro_tree_two.date_created = datetime.utcnow() + timedelta(days=2)
 
         cls.distro_three_name = data_setup.unique_name(u'nametest%s')
         cls.distro_three_osmajor = u'osmajortest3'
@@ -185,21 +184,24 @@ class DistroTreeSearch(WebDriverTestCase):
 
         cls.distro_three = data_setup.create_distro(name=cls.distro_three_name,
             osmajor=cls.distro_three_osmajor, osminor = cls.distro_three_osminor,)
-        data_setup.create_distro_tree(distro=cls.distro_three)
+        cls.distro_tree_three = data_setup.create_distro_tree(distro=cls.distro_three)
 
-        cls.browser = cls.get_browser()
+    def setUp(self):
+        self.browser = self.get_browser()
 
+    def check_search_results(self, present, absent):
+        for distro_tree in absent:
+            self.browser.find_element_by_xpath('//table[@id="widget" and '
+                    'not(.//td[1]/a/text()="%s")]' % distro_tree.id)
+        for distro_tree in present:
+            self.browser.find_element_by_xpath('//table[@id="widget" and '
+                    './/td[1]/a/text()="%s"]' % distro_tree.id)
 
-    def test_search_distrotree(self):
+    def test_search_by_name(self):
         b = self.browser
-
-
-        """
-        Name -> is -> distro_three_name
-        START
-        """
         b.get(get_server_base() + 'distrotrees')
         b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='search_0_table']/"
             "option[@value='Name']").click()
         b.find_element_by_xpath("//select[@id='search_0_operation']/"
@@ -208,20 +210,14 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('%s' % self.distro_three_name)
         b.find_element_by_name('Search').click()
-        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
-                % self.distro_three.name)
-        distro_search_result_1 = \
-            b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_one.name not in distro_search_result_1)
-        self.assert_(self.distro_two.name not in distro_search_result_1)
-        """
-        END
-        """
-    
-        """
-        OSMajor -> is -> osmajortest1
-        START
-        """
+        self.check_search_results(present=[self.distro_tree_three],
+                absent=[self.distro_tree_one, self.distro_tree_two])
+
+    def test_search_by_osmajor(self):
+        b = self.browser
+        b.get(get_server_base() + 'distrotrees')
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='search_0_table']/"
             "option[@value='OSMajor']").click()
         b.find_element_by_xpath("//select[@id='search_0_operation']/"
@@ -230,20 +226,14 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('%s' % self.distro_one_osmajor)
         b.find_element_by_name('Search').click()
-        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
-                % self.distro_one.name)
-        distro_search_result_2 = \
-            b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_two.name not in distro_search_result_2)
-        self.assert_(self.distro_three.name not in distro_search_result_2)
-        """
-        END
-        """
+        self.check_search_results(present=[self.distro_tree_one],
+                absent=[self.distro_tree_two, self.distro_tree_three])
 
-        """
-        OSMinor -> is -> 1
-        START
-        """
+    def test_search_by_osminor(self):
+        b = self.browser
+        b.get(get_server_base() + 'distrotrees')
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='search_0_table']/"
             "option[@value='OSMinor']").click()
         b.find_element_by_xpath("//select[@id='search_0_operation']/"
@@ -252,19 +242,14 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('1')
         b.find_element_by_name('Search').click()
-        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
-                % self.distro_one.name)
-        distro_search_result_3 = \
-            b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_two.name not in distro_search_result_3)
-        self.assert_(self.distro_three.name not in distro_search_result_3)
-        """
-        END
-        """
-        """
-        Variant -> is -> distro_one
-        START
-        """
+        self.check_search_results(present=[self.distro_tree_one],
+                absent=[self.distro_tree_two, self.distro_tree_three])
+
+    def test_search_by_variant(self):
+        b = self.browser
+        b.get(get_server_base() + 'distrotrees')
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='search_0_table']/"
             "option[@value='Variant']").click()
         b.find_element_by_xpath("//select[@id='search_0_operation']/"
@@ -273,19 +258,14 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('%s' % self.distro_one_variant)
         b.find_element_by_name('Search').click()
-        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
-                % self.distro_one.name)
-        distro_search_result_4 = \
-            b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_two.name not in distro_search_result_4)
-        self.assert_(self.distro_three.name not in distro_search_result_4)
-        """
-        END
-        """
-        """
-        Created -> after -> future
-        START
-        """
+        self.check_search_results(present=[self.distro_tree_one],
+                absent=[self.distro_tree_two, self.distro_tree_three])
+
+    def test_search_by_created(self):
+        b = self.browser
+        b.get(get_server_base() + 'distrotrees')
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='search_0_table']/"
             "option[@value='Created']").click()
         b.find_element_by_xpath("//select[@id='search_0_operation']/"
@@ -296,19 +276,14 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys(now_and_1_string)
         b.find_element_by_name('Search').click()
-        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
-                % self.distro_two.name)
-        distro_search_result_5 = \
-            b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_one.name not in distro_search_result_5)
-        self.assert_(self.distro_three.name not in distro_search_result_5)
-        """
-        END
-        """
-        """
-        Tag -> is -> distro_one
-        START
-        """
+        self.check_search_results(present=[self.distro_tree_two],
+                absent=[self.distro_tree_one, self.distro_tree_three])
+
+    def test_search_by_tag(self):
+        b = self.browser
+        b.get(get_server_base() + 'distrotrees')
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='search_0_table']/"
             "option[@value='Tag']").click()
         b.find_element_by_xpath("//select[@id='search_0_operation']/"
@@ -316,12 +291,5 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath("//select[@id='search_0_value']/"
             "option[@value='%s']" % self.distro_one_tag[0]).click()
         b.find_element_by_name('Search').click()
-        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
-                % self.distro_one.name)
-        distro_search_result_6 = \
-            b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_two.name not in distro_search_result_6)
-        self.assert_(self.distro_three.name not in distro_search_result_6)
-        """
-        END
-        """
+        self.check_search_results(present=[self.distro_tree_one],
+                absent=[self.distro_tree_two, self.distro_tree_three])

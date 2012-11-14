@@ -2,7 +2,8 @@
 from datetime import datetime, timedelta
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import get_server_base, is_text_present
+from bkr.inttest.server.webdriver_utils import get_server_base, is_text_present, \
+        wait_for_animation
 from bkr.inttest import data_setup, with_transaction
 from turbogears.database import session
 
@@ -46,7 +47,8 @@ class Search(WebDriverTestCase):
             tags =cls.distro_three_tags)
         data_setup.create_distro_tree(distro=cls.distro_three)
 
-        cls.browser = cls.get_browser()
+    def setUp(self):
+        self.browser = self.get_browser()
 
     def test_correct_items_count(self):
         with session.begin():
@@ -68,66 +70,53 @@ class Search(WebDriverTestCase):
         b.find_element_by_name('search').click()
         self.assert_(is_text_present(b, 'Items found: 1'))
 
-    def test_distro_search(self):
+    def check_search_results(self, present, absent):
+        for distro in absent:
+            self.browser.find_element_by_xpath('//table[@id="widget" and '
+                    'not(.//td[1]/a/text()="%s")]' % distro.id)
+        for distro in present:
+            self.browser.find_element_by_xpath('//table[@id="widget" and '
+                    './/td[1]/a/text()="%s"]' % distro.id)
+
+    def test_simple_search(self):
         b = self.browser
-        """
-        SimpleSearch
-        START
-        """
         b.get(get_server_base() + 'distros')
         b.find_element_by_name('simplesearch').send_keys(self.distro_one.name)
         b.find_element_by_name('search').click()
-        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
-                % self.distro_one.name)
-        distro_search_result = \
-            b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_two.name not in distro_search_result)
-        self.assert_(self.distro_three.name not in distro_search_result)
-        """
-        END
-        """
-        """
-        OSMajor -> is -> osmajortest1
-        START
-        """
+        self.check_search_results(present=[self.distro_one],
+                absent=[self.distro_two, self.distro_three])
+
+    def test_search_by_osmajor(self):
+        b = self.browser
         b.get(get_server_base() + 'distros')
         b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='OSMajor']").click()
         b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is']").click()
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys('osmajortest1')
         b.find_element_by_name('Search').click()
-        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
-                % self.distro_one.name)
-        distro_search_result = \
-            b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_two.name not in distro_search_result)
-        self.assert_(self.distro_three.name not in distro_search_result)
-        """
-        END
-        """
-        """
-        OSMinor -> is -> 1
-        START
-        """
+        self.check_search_results(present=[self.distro_one],
+                absent=[self.distro_two, self.distro_three])
+
+    def test_search_by_osminor(self):
+        b = self.browser
+        b.get(get_server_base() + 'distros')
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='OSMinor']").click()
         b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is']").click()
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys('1')
         b.find_element_by_name('Search').click()
-        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
-                % self.distro_one.name)
-        distro_search_result = \
-            b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_two.name not in distro_search_result)
-        self.assert_(self.distro_three.name not in distro_search_result)
-        """
-        END
-        """
-        """
-        Created -> after -> future
-        START
-        """
+        self.check_search_results(present=[self.distro_one],
+                absent=[self.distro_two, self.distro_three])
+
+    def test_search_by_created(self):
+        b = self.browser
+        b.get(get_server_base() + 'distros')
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='Created']").click()
         b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='after']").click()
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
@@ -135,19 +124,11 @@ class Search(WebDriverTestCase):
         now_and_1_string = now_and_1.strftime('%Y-%m-%d')
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys(now_and_1_string)
         b.find_element_by_name('Search').click()
-        b.find_element_by_xpath('//table[@id="widget"]//td/a[text()="%s"]'
-                % self.distro_one.name)
-        distro_search_result = \
-            b.find_element_by_xpath('//table[@id="widget"]').text
-        self.assert_(self.distro_two.name not in distro_search_result)
-        self.assert_(self.distro_three.name not in distro_search_result)
-        """
-        END
-        """
+        self.check_search_results(present=[self.distro_one],
+                absent=[self.distro_two, self.distro_three])
 
-    @classmethod
-    def teardownClass(cls):
-        cls.browser.quit()
+    def tearDown(self):
+        self.browser.quit()
 
 
 class SearchOptionsTest(WebDriverTestCase):

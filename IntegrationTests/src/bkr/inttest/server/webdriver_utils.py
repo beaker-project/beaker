@@ -1,7 +1,8 @@
 
 from __future__ import absolute_import
 
-from selenium.webdriver.support.ui import Select
+import json
+from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium import webdriver
 from bkr.inttest import data_setup, get_server_base
 
@@ -60,3 +61,11 @@ def search_for_system(browser, system):
             .select_by_visible_text('is')
     browser.find_element_by_name('systemsearch-0.value').send_keys(system.fqdn)
     browser.find_element_by_name('systemsearch').submit()
+
+def wait_for_animation(browser, selector):
+    """
+    Waits until jQuery animations have finished for the given jQuery selector.
+    """
+    WebDriverWait(browser, 10).until(lambda browser: browser.execute_script(
+            'return jQuery(%s).is(":animated")' % json.dumps(selector))
+            == False)
