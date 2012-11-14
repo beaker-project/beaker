@@ -4884,8 +4884,6 @@ class Recipe(TaskBase):
         """
         for task in self.tasks:
             task._queue()
-        for guestrecipe in getattr(self, 'guests', []):
-            guestrecipe._queue()
 
     def process(self):
         """
@@ -4906,8 +4904,6 @@ class Recipe(TaskBase):
         """
         for task in self.tasks:
             task._process()
-        for guestrecipe in getattr(self, 'guests', []):
-            guestrecipe._process()
 
     def _link_rpms(self, dst):
         """

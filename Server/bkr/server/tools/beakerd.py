@@ -127,6 +127,8 @@ def new_recipes(*args):
                 if recipe.systems:
                     recipe.process()
                     log.info("recipe ID %s moved from New to Processed" % recipe.id)
+                    for guestrecipe in recipe.guests:
+                        guestrecipe.process()
                 else:
                     log.info("recipe ID %s moved from New to Aborted" % recipe.id)
                     recipe.recipeset.abort(u'Recipe ID %s does not match any systems' % recipe.id)
@@ -156,6 +158,8 @@ def processed_recipesets(*args):
                 recipe = recipeset.machine_recipes.next()
                 recipe.queue()
                 log.info("recipe ID %s moved from Processed to Queued", recipe.id)
+                for guestrecipe in recipe.guests:
+                    guestrecipe.queue()
             else:
                 # Find all the lab controllers that this recipeset may run.
                 rsl_controllers = set(LabController.query\
@@ -243,6 +247,8 @@ def processed_recipesets(*args):
                         # Set status to Queued 
                         log.info("recipe: %s moved from Processed to Queued" % recipe.id)
                         recipe.queue()
+                        for guestrecipe in recipe.guests:
+                            guestrecipe.queue()
                     else:
                         # Set status to Aborted 
                         log.info("recipe ID %s moved from Processed to Aborted" % recipe.id)
