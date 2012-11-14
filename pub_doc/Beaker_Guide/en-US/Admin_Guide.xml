@@ -664,5 +664,49 @@ action.</para>
 
 </section>
 
+<section id="Administration-oVirt">
+
+<title>Integration with oVirt Engine and RHEV-M</title>
+
+<para>Beaker can optionally be configured to use oVirt Engine (or the 
+equivalent Red Hat Enterprise Virtualization Manager product) to create virtual 
+machines on demand for running recipes. Version 3.0 or higher of the product is 
+required.</para>
+
+<para>To enable oVirt integration, you must configure the API endpoint and 
+credentials in <filename>/etc/beaker/server.cfg</filename>:
+<screen>
+# Enable oVirt integration, for running recipes on dynamically created guests
+ovirt.enabled = True
+ovirt.api_url = 'https://manager.example.com:8443/api'
+ovirt.username = 'admin@internal'
+ovirt.password = 'example'
+</screen></para>
+
+<para>When oVirt integration is enabled, Beaker will attempt to create a new 
+virtual machine for each recipe when it is scheduled. If the oVirt Engine is 
+over capacity, or if creating the virtual machine fails for any other reason, 
+Beaker will fall back to using the regular hardware pool for that recipe. 
+Recipes with hardware requirements in <literal>&lt;hostRequires/&gt;</literal> 
+which cannot be satisfied by a virtual machine are excluded from this 
+process.</para>
+
+<para>For Beaker’s purposes, each data center in oVirt must correspond to 
+a Beaker lab. The data center name should match the Beaker lab controller’s 
+FQDN. To meet oVirt’s naming constraints for data centers, periods in the FQDN 
+should be replaced with underscores and the name truncated to 40 characters. 
+For example, if your Beaker lab controller’s FQDN is <systemitem 
+class="fqdomainname">lab.beaker.engineering.mylocation.example.com</systemitem>, 
+the corresponding oVirt data center should be named 
+<literal>lab_beaker_engineering_mylocation_exampl</literal>. Beaker will ignore 
+data centers whose name does not correspond to a lab controller.</para>
+
+<para>The default memory and disk size allocated to virtual machines is 
+controlled by the <literal>default_guest_memory</literal> and 
+<literal>default_guest_disk_size</literal> settings (see <xref 
+linkend="Administration-Interface-Configuration" />).</para>
+
+</section>
+
     </chapter>
 <!-- vim: set sw=2 : -->
