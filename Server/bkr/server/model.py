@@ -6434,7 +6434,11 @@ class VirtManager(object):
                 vm.nics.add(nic)
                 sd_query = ' or '.join('datacenter=%s' % lc.data_center_name
                         for lc in lab_controllers)
-                storage_domains = self.api.storagedomains.list(sd_query)
+                storage_domain_name = get('ovirt.storage_domain')
+                if storage_domain_name:
+                    storage_domains = [self.api.storagedomains.get(storage_domain_name)]
+                else:
+                    storage_domains = self.api.storagedomains.list(sd_query)
                 disk = Disk(storage_domains=StorageDomains(storage_domain=storage_domains),
                         size=disk_size, type_='data', interface='virtio', format='cow',
                         bootable=True)
