@@ -1,3 +1,9 @@
+Before proceeding with this upgrade, ensure that you have a CSV file to re-create
+your Virtual system records in case you need to roll back. If you don't already
+have one, use Beaker’s CSV export feature. If you don't have any Virtual system
+records, ignore this step.
+
+
 Bug 835367: running createrepo all the time is inefficient
 ----------------------------------------------------------
 
@@ -75,11 +81,6 @@ tables, then run the following SQL to populate them:
 
 New tables recipe_resource, system_resource, guest_resource (bug 655009)
 ------------------------------------------------------------------------
-
-Before proceeding with this step, ensure that you have a CSV file to re-create
-your Virtual system records in case you need to roll back. If you don't already
-have one, use Beaker’s CSV export feature. If you don't have any Virtual system
-records, ignore this step.
 
 First run beaker-init to create the new tables, and then run the following SQL
 to populate them:
