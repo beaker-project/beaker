@@ -1,0 +1,7 @@
+Code-Review+2: Raymond Mancy <rmancy@redhat.com>
+Verified+1: Raymond Mancy <rmancy@redhat.com>
+Submitted-by: Raymond Mancy <rmancy@redhat.com>
+Submitted-at: Mon, 19 Nov 2012 06:41:56 -0500
+Reviewed-on: http://gerrit.beaker-project.org/1504
+Project: beaker
+Branch: refs/heads/release-0.10
