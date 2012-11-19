@@ -4928,7 +4928,9 @@ class Recipe(TaskBase):
         try:
             os.makedirs(directory)
         except OSError:
-            #thrown when dir already exists (could happen in a race)
+            # This can happen when beakerd.virt_recipes() creates a repo
+            # but the subsequent virt provisioning fails and the recipe
+            # falls back to being queued on a regular system
             if not os.path.isdir(directory):
                 #something else must have gone wrong
                 raise
