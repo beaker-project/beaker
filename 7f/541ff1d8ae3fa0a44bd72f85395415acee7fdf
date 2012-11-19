@@ -1,0 +1,8 @@
+Change-Id: I7f541ff1d8ae3fa0a44bd72f85395415acee7fdf
+Verified+1: Raymond Mancy <rmancy@redhat.com>
+Code-Review+2: Amit Saha <asaha@redhat.com>
+Submitted-by: Raymond Mancy <rmancy@redhat.com>
+Submitted-at: Sun, 18 Nov 2012 22:34:57 -0500
+Reviewed-on: http://gerrit.beaker-project.org/1503
+Project: beaker
+Branch: refs/heads/release-0.10
