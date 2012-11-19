@@ -15,8 +15,8 @@
 %endif
 
 Name:           beaker
-Version:        0.9.4
-Release:        2%{?dist}
+Version:        0.10.1
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -368,6 +368,71 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Mon Nov 19 2012 Raymond Mancy <rmancy@redhat.com> 0.10.1-1
+- 863180 [RFE] add --lab-controller to beaker-import script (bpeck@redhat.com)
+- 860870 Fix the navigation bar URLs for OS Version listing. (asaha@redhat.com)
+- 866552 skip LDAP lookups for usernames containing '/' (dcallagh@redhat.com)
+- 862061 power command fails if machine is in wrong state (bpeck@redhat.com)
+- 864610 remove special handling of Decimal for rdflib (dcallagh@redhat.com)
+- 655009 remove 'Virtual' system type (dcallagh@redhat.com)
+- 655009 add install_done call to register hostname with Beaker
+  (dcallagh@redhat.com)
+- 816490 Support for search by min and max Job ID in the CLI (asaha@redhat.com)
+- 840734 workflow-xslt: Fix jobxml_parsed variable declarations
+  (davids@redhat.com)
+- 867168 ensure provision commands aren't leaked in case of unhandled exception
+  (dcallagh@redhat.com)
+- 655009 allocate MAC addresses to guests (dcallagh@redhat.com)
+- 598865 Expanded documentation for adding a task (rmancy@redhat.com)
+- 728410 new snippet 'packages' to allow extra packages per system
+  (dcallagh@redhat.com)
+- 869455 only add Jobs to the session once they are fully populated
+  (dcallagh@redhat.com)
+- 584267 Update footer with version number and doc link (rmancy@redhat.com)
+- 835367 run createrepo at task upload time, instead of recipe scheduling time
+  (bpeck@redhat.com)
+- 837709 DistroTree activity search page (rmancy@redhat.com)
+- 607531 Link to a recipe's 'Possible Systems' (rmancy@redhat.com)
+- 691442 Publish whiteboards for reserved systems (ncoghlan@redhat.com)
+- 862970 Report "None" for unknown destructive and nda fields in task details
+  (qwan@redhat.com)
+- 865265 normalize log paths before inserting into the database
+  (dcallagh@redhat.com)
+- 862235 turn off Jinja caching for kickstart templates (dcallagh@redhat.com)
+- 749512 Be explicit that tasks may not have their destructiveness defined.
+  (ncoghlan@redhat.com)
+- 695609 Initial glossary index (rmancy@redhat.com)
+- 674025 Always show task specified by anchor. (asaha@redhat.com)
+- 735054 Use 'curl' instead of 'wget' in RHEL 6+ and Fedora in Kickstarts.
+  (asaha@redhat.com)
+- 839116 Add Systems information in My Groups. (asaha@redhat.com)
+- 860130 Wait for power state change when using ipmitool (ncoghlan@redhat.com)
+- 862518 support for running recipes on RHEV/oVirt guests (dcallagh@redhat.com)
+- 820793 unable to collect inventory from ppc64 system running RH6.3
+  (bpeck@redhat.com)
+- 626292 Improve description of recipeSet XML tag (ncoghlan@redhat.com)
+- 740704 Updates to the Job RNG description. (asaha@redhat.com)
+- 839116 Fix test case for systems view under My Groups (asaha@redhat.com)
+- 740704 Update the priority values in the schema to match the actual allowed
+  ones. (asaha@redhat.com)
+- 691442 Fixes to whiteboard env var definitions (ncoghlan@redhat.com)
+- 874675 update repo URL for Fedora ARM packages (dcallagh@redhat.com)
+- 860870 Look for an element on the loaded page. (asaha@redhat.com)
+
+- /distribution/inventory: acpidump and acpixtract are not needed
+  (dcallagh@redhat.com)
+- /distribution/inventory: add a parameter to show output instead of sending it
+  (dcallagh@redhat.com)
+- /distribution/inventory: capture output of pushInventory.py in case it fails
+  (dcallagh@redhat.com)
+- checkbugs.py: --release option to search by bug flags (dcallagh@redhat.com)
+- simplify Recipe.roles and RecipeTask.roles (dcallagh@redhat.com)
+- expose kickstart URL in job results XML (dcallagh@redhat.com)
+- use postreboot instead of install_done for RHEV reboot hackery
+  (dcallagh@redhat.com)
+- use unpatched tarballs for tito build --test (dcallagh@redhat.com)
+- allow sorting recipes grid by fqdn (dcallagh@redhat.com)
+
 * Thu Oct 04 2012 Dan Callaghan <dcallagh@redhat.com> 0.9.4-2
 - fix DocBook syntax error (dcallagh@redhat.com)
 - fix bash-completion problems in build (dcallagh@redhat.com)
