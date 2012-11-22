@@ -62,12 +62,12 @@ class System_Power(BeakerCommand):
     """Control power for a system"""
     enabled = True
 
-    valid_actions = ('on', 'off', 'reboot')
+    valid_actions = ('on', 'off', 'interrupt', 'reboot')
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <fqdn>" % self.normalized_name
         self.parser.add_option('--action', metavar='ACTION',
-                help='Perform ACTION (on, off, or reboot) [default: %default]')
+                help='Perform ACTION (on, off, interrupt, or reboot) [default: %default]')
         self.parser.add_option('--clear-netboot', action='store_true',
                 help="Clear system's netboot configuration "
                      "before performing action")
