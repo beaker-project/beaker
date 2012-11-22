@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.10.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -368,6 +368,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Thu Nov 22 2012 Raymond Mancy <rmancy@redhat.com> 0.10.1-2
+- 870908 add /tmp/packaging.log to anamon watch list (dcallagh@redhat.com)
+
 * Mon Nov 19 2012 Raymond Mancy <rmancy@redhat.com> 0.10.1-1
 - 863180 [RFE] add --lab-controller to beaker-import script (bpeck@redhat.com)
 - 860870 Fix the navigation bar URLs for OS Version listing. (asaha@redhat.com)
