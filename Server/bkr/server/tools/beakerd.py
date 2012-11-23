@@ -127,6 +127,8 @@ def new_recipes(*args):
                 if recipe.systems:
                     recipe.process()
                     log.info("recipe ID %s moved from New to Processed" % recipe.id)
+                    for guestrecipe in recipe.guests:
+                        guestrecipe.process()
                 else:
                     log.info("recipe ID %s moved from New to Aborted" % recipe.id)
                     recipe.recipeset.abort(u'Recipe ID %s does not match any systems' % recipe.id)
@@ -156,6 +158,8 @@ def processed_recipesets(*args):
                 recipe = recipeset.machine_recipes.next()
                 recipe.queue()
                 log.info("recipe ID %s moved from Processed to Queued", recipe.id)
+                for guestrecipe in recipe.guests:
+                    guestrecipe.queue()
             else:
                 # Find all the lab controllers that this recipeset may run.
                 rsl_controllers = set(LabController.query\
@@ -243,6 +247,8 @@ def processed_recipesets(*args):
                         # Set status to Queued 
                         log.info("recipe: %s moved from Processed to Queued" % recipe.id)
                         recipe.queue()
+                        for guestrecipe in recipe.guests:
+                            guestrecipe.queue()
                     else:
                         # Set status to Aborted 
                         log.info("recipe ID %s moved from Processed to Aborted" % recipe.id)
@@ -433,13 +439,15 @@ def virt_recipes(*args):
         return False
     log.debug("Entering virt_recipes routine")
     for recipe_id, in recipes.values(Recipe.id.distinct()):
-        with VirtManager() as manager:
-            system_name = "guest_for_recipe_%d" % recipe_id
-            session.begin()
-            try:
-                recipe = Recipe.by_id(recipe_id)
-                user = recipe.recipeset.job.owner
-
+        system_name = "guest_for_recipe_%d" % recipe_id
+        session.begin()
+        recipe = Recipe.by_id(recipe_id)
+        try:
+            with VirtManager() as manager:
+                # vm_params is a throwaway var. We only call vm_params()
+                # method to see if we throw NotVirtualisable exception
+                vm_params = needpropertyxml.vm_params(recipe.host_requires)
+                recipe.createRepo()
                 # Figure out the "data centers" where we can run the recipe
                 if recipe.recipeset.lab_controller:
                     # First recipe of a recipeSet determines the lab_controller
@@ -449,43 +457,71 @@ def virt_recipes(*args):
                     lab_controllers = LabController.query.filter_by(disabled=False, removed=None)
                     lab_controllers = needpropertyxml.apply_lab_controller_filter(
                             recipe.host_requires, lab_controllers)
-                    lab_controllers = [lc for lc in lab_controllers.all()
-                            if recipe.distro_tree.url_in_lab(lc, 'nfs')]
 
-                vm_params = needpropertyxml.vm_params(recipe.host_requires)
-
-                recipe.resource = VirtResource(system_name=system_name)
-                recipe.resource.allocate(manager, lab_controllers)
-                recipe.schedule()
-                recipe.createRepo()
-                recipe.recipeset.lab_controller = recipe.resource.lab_controller
+                lab_controllers = [lc for lc in lab_controllers.all()
+                        if recipe.distro_tree.url_in_lab(lc, 'nfs')]
                 recipe.systems = []
                 recipe.watchdog = Watchdog()
-                log.info("recipe ID %s moved from Queued to Scheduled by virt_recipes" % recipe.id)
-
-                session.commit()
-            except needpropertyxml.NotVirtualisable:
-                recipe.virt_status = RecipeVirtStatus.precluded
-                session.commit()
-            except VMCreationFailedException:
-                recipe.virt_status = RecipeVirtStatus.skipped
+                try:
+                    recipe.resource = VirtResource(system_name=system_name)
+                    recipe.resource.allocate(manager, lab_controllers)
+                except VMCreationFailedException:
+                    session.rollback()
+                    session.begin()
+                    recipe = Recipe.by_id(recipe_id)
+                    recipe.virt_status = RecipeVirtStatus.skipped
+                    session.commit()
+                    break
+                recipe.recipeset.lab_controller = recipe.resource.lab_controller
+                recipe.schedule()
+                try:
+                    _scheduled_recipe_actions(recipe)
+                except BX:
+                    session.rollback()
+                    break
+            log.info("recipe ID %s moved from Queued to Scheduled by virt_recipes" % recipe.id)
+            recipe.provision()
+            session.commit()
+        except needpropertyxml.NotVirtualisable:
+            session.rollback()
+            session.begin()
+            recipe.virt_status = RecipeVirtStatus.precluded
+            session.commit()
+        except Exception, e: # This will get ovirt RequestErrors from recipe.provision()
+            log.exception("Failed to provision in virt_recipes")
+            session.rollback()
+            try:
+                # Don't leak the vm if it was created
+                with VirtManager() as manager:
+                    manager.destroy_vm(system_name)
+                # As an added precaution, let's try and avoid this recipe in future
+                session.begin()
+                recipe = Recipe.by_id(recipe_id)
+                recipe.virt_status = RecipeVirtStatus.failed
                 session.commit()
             except Exception:
-                log.exception("Failed to commit in virt_recipes")
-                session.rollback()
-                try:
-                    # Don't leak the vm if it was created
-                    manager.destroy_vm(system_name)
-                    # As an added precaution, let's try and avoid this recipe in future
-                    session.begin()
-                    Recipe.by_id(recipe_id).virt_status = RecipeVirtStatus.failed
-                    session.commit()
-                except Exception:
-                    log.exception('Exception in exception handler :-(')
-            finally:
-                session.close()
+                log.exception('Exception in exception handler :-(')
+        finally:
+            session.close() 
     log.debug("Exiting virt_recipes routine")
     return True
+
+def _scheduled_recipe_actions(recipe):
+    if recipe.status != TaskStatus.scheduled:
+        raise BX(_(u'Task should be in scheduled state but is not'))
+    recipe.waiting()
+
+    repo_fail = []
+    if not recipe.harness_repo():
+        repo_fail.append(u'harness')
+    if not recipe.task_repo():
+        repo_fail.append(u'task')
+
+    if repo_fail:
+        repo_fail_msg ='Failed to find repo for %s' % ','.join(repo_fail)
+        log.error(repo_fail_msg)
+        recipe.recipeset.abort(repo_fail_msg)
+        raise BX(_(unicode(repo_fail_msg)))
 
 def scheduled_recipes(*args):
     """
@@ -504,23 +540,11 @@ def scheduled_recipes(*args):
             recipeset = RecipeSet.by_id(rs_id)
             # Go through each recipe in the recipeSet
             for recipe in recipeset.recipes:
-                # If one of the recipes gets aborted then don't try and run
-                if recipe.status != TaskStatus.scheduled:
+ 		# If one of the recipes gets aborted then don't try and run
+                try:
+                    _scheduled_recipe_actions(recipe)
+                except BX:
                     break
-                recipe.waiting()
-
-                repo_fail = []
-                if not recipe.harness_repo():
-                    repo_fail.append(u'harness')
-                if not recipe.task_repo():
-                    repo_fail.append(u'task')
-
-                if repo_fail:
-                    repo_fail_msg ='Failed to find repo for %s' % ','.join(repo_fail)
-                    log.error(repo_fail_msg)
-                    recipe.recipeset.abort(repo_fail_msg)
-                    break
-
                 try:
                     recipe.provision()
                 except Exception, e:

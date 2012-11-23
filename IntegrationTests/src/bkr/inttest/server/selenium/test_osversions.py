@@ -17,4 +17,4 @@ class OSVersionsTest(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'osversions')
         b.find_element_by_link_text('L').click()
-        self.assertEqual('OS Versions', b.title)
+        self.assert_(b.find_elements_by_link_text('LinuxLinux1.1'))

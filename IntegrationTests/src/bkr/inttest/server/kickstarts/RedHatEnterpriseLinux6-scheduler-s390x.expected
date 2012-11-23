@@ -261,9 +261,13 @@ chkconfig --level 345 rhts-compat on
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
 cat <<"EOF" >/etc/profile.d/beaker.sh
 export BEAKER="@BEAKER@"
+export BEAKER_JOB_WHITEBOARD=''
+export BEAKER_RECIPE_WHITEBOARD=''
 EOF
 cat <<"EOF" >/etc/profile.d/beaker.csh
 setenv BEAKER "@BEAKER@"
+setenv BEAKER_JOB_WHITEBOARD ''
+setenv BEAKER_RECIPE_WHITEBOARD ''
 EOF
 
 cat << EOF > /etc/profile.d/rh-env.sh

@@ -187,6 +187,7 @@ def anamon_loop():
     package_logs.append(WatchedFile("/mnt/sysimage/tmp/install.log", "tmp+install.log"))
     package_logs.append(WatchedFile("/mnt/sysimage/root/upgrade.log", "upgrade.log"))
     package_logs.append(WatchedFile("/mnt/sysimage/tmp/upgrade.log", "tmp+upgrade.log"))
+    package_logs.append(WatchedFile("/tmp/packaging.log", "packaging.log"))
 
     # Monitor for bootloader configuration changes
     bootloader_cfgs = list()

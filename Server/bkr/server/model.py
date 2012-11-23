@@ -4884,8 +4884,6 @@ class Recipe(TaskBase):
         """
         for task in self.tasks:
             task._queue()
-        for guestrecipe in getattr(self, 'guests', []):
-            guestrecipe._queue()
 
     def process(self):
         """
@@ -4906,8 +4904,6 @@ class Recipe(TaskBase):
         """
         for task in self.tasks:
             task._process()
-        for guestrecipe in getattr(self, 'guests', []):
-            guestrecipe._process()
 
     def _link_rpms(self, dst):
         """
@@ -4932,7 +4928,9 @@ class Recipe(TaskBase):
         try:
             os.makedirs(directory)
         except OSError:
-            #thrown when dir already exists (could happen in a race)
+            # This can happen when beakerd.virt_recipes() creates a repo
+            # but the subsequent virt provisioning fails and the recipe
+            # falls back to being queued on a regular system
             if not os.path.isdir(directory):
                 #something else must have gone wrong
                 raise
@@ -6438,7 +6436,11 @@ class VirtManager(object):
                 vm.nics.add(nic)
                 sd_query = ' or '.join('datacenter=%s' % lc.data_center_name
                         for lc in lab_controllers)
-                storage_domains = self.api.storagedomains.list(sd_query)
+                storage_domain_name = get('ovirt.storage_domain')
+                if storage_domain_name:
+                    storage_domains = [self.api.storagedomains.get(storage_domain_name)]
+                else:
+                    storage_domains = self.api.storagedomains.list(sd_query)
                 disk = Disk(storage_domains=StorageDomains(storage_domain=storage_domains),
                         size=disk_size, type_='data', interface='virtio', format='cow',
                         bootable=True)
@@ -6484,12 +6486,16 @@ class VirtManager(object):
         self.api.vms.get(name).start(action=a)
 
     def destroy_vm(self, name):
+        from ovirtsdk.infrastructure.errors import RequestError
         if self.api is None:
             raise RuntimeError('Context manager was not entered')
         vm = self.api.vms.get(name)
         if vm is not None:
-            log.debug('Stopping %s on %r', name, self)
-            vm.stop()
+            try:
+                log.debug('Stopping %s on %r', name, self)
+                vm.stop()
+            except RequestError:
+                pass # probably not running for some reason
             log.debug('Deleting %s on %r', name, self)
             vm.delete()
 

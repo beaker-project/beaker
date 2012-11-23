@@ -21,7 +21,7 @@ repo --name=myupdates --mirrorlist=https://mirrors.fedoraproject.org/metalink?re
 {% endif %}
 {% if distro_tree is arch('armhfp') %}
 # Fedora17 Arm needs an additional repo in order to install.
-repo --name=ges-arm --baseurl="http://intranet.ges.redhat.com/es/arm/yum/ges/f17-arm/armhfp/os/Packages/"
+repo --name=xpfa --baseurl="http://dmarlin.fedorapeople.org/yum/f17/arm/os/Packages/"
 {% endif %}
 
 {#

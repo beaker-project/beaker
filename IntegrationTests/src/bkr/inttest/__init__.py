@@ -41,10 +41,16 @@ os.chdir('/tmp')
 import turbogears.testutil
 os.chdir(orig_cwd)
 
-# workaround for weird sqlalchemy-0.4 bug :-S
-# http://markmail.org/message/rnnzdebfzrjt3kmi
-from sqlalchemy.orm.dynamic import DynamicAttributeImpl
-DynamicAttributeImpl.accepts_scalar_loader = False
+# workaround for delayed log formatting in nose
+# https://groups.google.com/forum/?fromgroups=#!topic/nose-users/5uZVDfDf1ZI
+orig_LogRecord = logging.LogRecord
+class EagerFormattedLogRecord(orig_LogRecord):
+    def __init__(self, *args, **kwargs):
+        orig_LogRecord.__init__(self, *args, **kwargs)
+        if self.args:
+            self.msg = self.msg % self.args
+            self.args = None
+logging.LogRecord = EagerFormattedLogRecord
 
 log = logging.getLogger(__name__)
 
