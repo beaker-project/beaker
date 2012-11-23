@@ -24,7 +24,7 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
                     system=data_setup.create_system(lab_controller=self.lc))
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         result = self.server.recipes.by_log_server(self.lc.fqdn)
-        self.assertEquals(result, [])
+        self.assertEqual(result, [])
 
     def test_install_done_updates_resource_fqdn(self):
         with session.begin():
@@ -36,7 +36,26 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
             data_setup.mark_recipe_running(recipe)
             data_setup.mark_recipe_waiting(guestrecipe)
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
-        self.server.recipes.install_done(guestrecipe.id, 'theguestname')
+        fqdn = 'theguestname'
+        result = self.server.recipes.install_done(guestrecipe.id, fqdn)
+        self.assertEqual(result, fqdn)
         with session.begin():
             session.expire(guestrecipe.resource)
-            self.assertEquals(guestrecipe.resource.fqdn, 'theguestname')
+            self.assertEqual(guestrecipe.resource.fqdn, fqdn)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=879146
+    def test_install_done_preserves_system_resource_fqdn(self):
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree()
+            recipe = data_setup.create_recipe(distro_tree=distro_tree)
+            system = data_setup.create_system(lab_controller=self.lc)
+            initial_fqdn = system.fqdn
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_waiting(recipe, system=system)
+            self.assertEqual(recipe.resource.fqdn, initial_fqdn)
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        result = self.server.recipes.install_done(recipe.id, 'somename')
+        self.assertEqual(result, initial_fqdn)
+        with session.begin():
+            session.expire(recipe.resource)
+            self.assertEqual(recipe.resource.fqdn, initial_fqdn)

@@ -203,6 +203,9 @@ class Recipes(RPCRoot):
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def install_done(self, recipe_id=None, fqdn=None):
+        """
+        Report completion of installation with current FQDN
+        """
         if not recipe_id:
             raise BX(_("No recipe id provided!"))
         if not fqdn:
@@ -213,8 +216,16 @@ class Recipes(RPCRoot):
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
 
-        recipe.resource.fqdn = fqdn
-        return True
+        # We don't want to change an existing FQDN, just set it
+        # if it hasn't been set already (see BZ#879146)
+        configured = recipe.resource.fqdn
+        if configured is None:
+            recipe.resource.fqdn = configured = fqdn
+        elif configured != fqdn:
+            # We use eager formatting here to make this easier to test
+            log.info("Configured FQDN (%s) != reported FQDN (%s) in R:%s" %
+                     (configured, fqdn, recipe_id))
+        return configured
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
