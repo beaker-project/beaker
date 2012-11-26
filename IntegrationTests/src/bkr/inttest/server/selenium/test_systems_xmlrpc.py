@@ -216,7 +216,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.release(system.fqdn)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('System is not reserved' in e.faultString)
+            self.assert_('System %s is not currently reserved' % system.fqdn in e.faultString)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=820779
     def test_release_action_leaveon(self):
