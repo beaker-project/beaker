@@ -152,6 +152,7 @@ Requires:	python-xmltramp
 Requires:       python-krbV
 Requires:       python-concurrentloghandler
 Requires:       python-gevent >= 1.0
+Requires:       python-daemon
 
 %package lab-controller-addDistro
 Summary:        addDistro scripts for Lab Controller

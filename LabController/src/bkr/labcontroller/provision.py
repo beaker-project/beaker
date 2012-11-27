@@ -6,22 +6,20 @@ import logging
 import time
 import random
 import signal
+import daemon
+from daemon import pidfile
 from optparse import OptionParser
 import pkg_resources
 import subprocess
-import gevent, gevent.hub, gevent.socket, gevent.event
-from kobo.process import daemonize
+import gevent, gevent.hub, gevent.socket, gevent.event, gevent.monkey
 from kobo.exceptions import ShutdownException
 from bkr.log import add_stderr_logger
 from bkr.labcontroller.utils import add_rotating_file_logger
-from bkr.labcontroller.async import MonitoredSubprocess
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.labcontroller.proxy import ProxyHelper
 from bkr.labcontroller import netboot
 
 logger = logging.getLogger(__name__)
-
-shutting_down = gevent.event.Event()
 
 class CommandQueuePoller(ProxyHelper):
 
@@ -184,6 +182,7 @@ def handle_clear_netboot(command):
         netboot.clear_armlinux(fqdn)
 
 def handle_power(command):
+    from bkr.labcontroller.async import MonitoredSubprocess
     script = find_power_script(command['power']['type'])
     env = build_power_env(command)
     # We try the command up to 5 times, because some power commands
@@ -222,10 +221,13 @@ def shutdown_handler(signum, frame):
     shutting_down.set()
 
 def main_loop(poller=None, conf=None, foreground=False):
+    global shutting_down
+    shutting_down = gevent.event.Event()
+    gevent.monkey.patch_all(thread=False)
+
     # define custom signal handlers
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
-
     # set up logging
     log_level_string = conf.get("PROVISION_LOG_LEVEL") or conf["LOG_LEVEL"]
     log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
@@ -253,21 +255,17 @@ def main_loop(poller=None, conf=None, foreground=False):
 
 def main():
     parser = OptionParser()
-    parser.add_option("-c", "--config", 
+    parser.add_option("-c", "--config",
                       help="Full path to config file to use")
     parser.add_option("-f", "--foreground", default=False, action="store_true",
                       help="run in foreground (do not spawn a daemon)")
     parser.add_option("-p", "--pid-file",
                       help="specify a pid file")
     (opts, args) = parser.parse_args()
-
-    import gevent.monkey
-    gevent.monkey.patch_all(thread=False)
-
     if opts.config:
         load_conf(opts.config)
-    conf = get_conf()
 
+    conf = get_conf()
     pid_file = opts.pid_file
     if pid_file is None:
         pid_file = conf.get("PROVISION_PID_FILE", "/var/run/beaker-lab-controller/beaker-provision.pid")
@@ -281,8 +279,9 @@ def main():
     if opts.foreground:
         main_loop(poller=poller, conf=conf, foreground=True)
     else:
-        daemonize(main_loop, daemon_pid_file=pid_file, daemon_start_dir="/",
-                poller=poller, conf=conf, foreground=False)
+        with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
+                pid_file, acquire_timeout=0)):
+            main_loop(poller=poller, conf=conf, foreground=False)
 
 if __name__ == '__main__':
     main()

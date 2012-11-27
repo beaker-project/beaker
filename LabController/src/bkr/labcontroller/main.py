@@ -3,8 +3,9 @@ import os
 import time
 import sys
 import signal
+import daemon
+from daemon import pidfile
 from optparse import OptionParser
-from threading import Thread
 
 from datetime import datetime
 
@@ -18,7 +19,6 @@ from bkr.labcontroller.proxy import Proxy
 from bkr.labcontroller.config import get_conf, load_conf
 from bkr.labcontroller.utils import add_rotating_file_logger
 from kobo.exceptions import ShutdownException
-from kobo.process import daemonize
 from kobo.tback import Traceback, set_except_hook
 from bkr.log import add_stderr_logger
 import logging
@@ -205,11 +205,9 @@ def main():
     if opts.foreground:
         main_loop(conf=conf, foreground=True)
     else:
-        daemonize(main_loop,
-                  daemon_pid_file=pid_file,
-                  daemon_start_dir="/",
-                  conf=conf,
-                  foreground=False)
+        with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
+                pid_file, acquire_timeout=0)):
+            main_loop(conf=conf, foreground=False)
 
 if __name__ == '__main__':
     main()
