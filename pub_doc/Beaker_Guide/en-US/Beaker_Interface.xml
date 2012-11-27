@@ -1040,25 +1040,6 @@ drwxr-x--- 24 root root 12288 Jun  2 14:57 ..
                       </mediaobject>
                       </section>
                     </section>
-                    <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Groups">
-                    <title>Groups</title>
-                    <para>To have one or more <application>Users</application> grouped together, Beaker uses <application>Groups</application>. Systems can belong to one or more Groups. </para>
-                    <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Groups-Adding_a_Group">
-                    <title>Adding a Group</title>
-                    <para>Groups can only be created by a User in the <application>Admin Group</application>. To add a new Group go to <application>Admin->Groups</application> and click the <application>Add( + )</application> link at the bottom left. You'll then be prompted to enter a <application>Display Name</application> and a <application>Group Name</application>. The former is the name that users of Beaker will see, and the latter is the name used internally. It's fine to have these names the same, or different. </para>
-                    </section>
-                    <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Groups-Editing_a_Group">
-                    <title>Editing a Group</title>
-                    <para>To edit Group go to <application>Admin->Groups</application> and click on the name of the Group you wish to edit. From here you can add Users, Systems, Permisions as well as the
-                      Display Name and Group Name of the Group</para>
-                    </section>
-
-                      <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Groups-Group_Activity">
-                        <title>Group Activity</title>
-                          <para>To search through the historical activity of all Groups, navigate to <application>Activity&gt;Groups</application> at the top of the page. The default search is <application>contains</application> on the <application>Property</application> attribute. 
-                          </para>
-                      </section>
-                    </section>
                     <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Preferences">
                         <title>User Preferences</title>
                         <para>The preferences page allows the user to configure their email address, SSH public keys and root password for provisioned systems.</para>
