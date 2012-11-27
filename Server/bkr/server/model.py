@@ -1069,7 +1069,7 @@ system_recipe_map = Table('system_recipe_map', metadata,
 )
 
 recipe_resource_table = Table('recipe_resource', metadata,
-    Column('id', Integer, primary_key=True),
+    Column('id', Integer, primary_key=True, autoincrement=True),
     Column('recipe_id', Integer, ForeignKey('recipe.id',
         name='recipe_resource_recipe_id_fk',
         onupdate='CASCADE', ondelete='CASCADE'),
