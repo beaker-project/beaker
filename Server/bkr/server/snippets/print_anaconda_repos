@@ -8,6 +8,10 @@ repo --name=beaker-{{ repo.repo_id }} --cost=100 --baseurl={{ repo_base|urljoin(
 {% endif %}
 {% if customrepos %}
 {% for repo in customrepos %}
+{% if '$' in repo.path %}
+# skipping {{ repo.repo_id }},{{ repo.path }} which contains a yum variable
+{% else %}
 repo --name={{repo.repo_id }} --cost=100 --baseurl={{ repo.path }}
+{% endif %}
 {% endfor %}
 {% endif %}

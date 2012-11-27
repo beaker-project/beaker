@@ -971,6 +971,33 @@ mysillypackage
         self.assert_('/etc/yum.repos.d/beaker-debug.repo' not in k, k)
         self.assert_('/etc/yum.repos.d/beaker-optional-x86_64-debug.repo' not in k, k)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=869758
+    def test_repo_url_containing_yum_variable(self):
+        # Anaconda can't substitute yum variables like $releasever, so to avoid
+        # breakages we don't pass it any repo URLs containing $
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <repos>
+                            <repo name="custom" url="http://example.com/$releasever/"/>
+                        </repos>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('repo --name=custom' not in k, k)
+        self.assert_('# skipping custom' in k, k)
+
     def test_beaker_url(self):
         recipe = self.provision_recipe('''
             <job>
