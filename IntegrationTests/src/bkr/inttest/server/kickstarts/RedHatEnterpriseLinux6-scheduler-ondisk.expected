@@ -40,8 +40,8 @@ zerombr
 clearpart --drives /dev/sda --all --initlabel
 
 
-part /boot --fstype ext3 --size 200 --recommended --asprimary --ondisk=/dev/sda
-part / --fstype ext3 --size 1024 --grow --ondisk=/dev/sda
+part /boot --size 200 --recommended --asprimary --ondisk=/dev/sda
+part / --size 1024 --grow --ondisk=/dev/sda
 part swap --recommended --ondisk=/dev/sda
 
 # no snippet data for RedHatEnterpriseLinux6
