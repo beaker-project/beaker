@@ -1295,3 +1295,31 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
         k = recipe.rendered_kickstart.kickstart
         self.assert_(('curl http://lab.test-kickstart.invalid:8000/postreboot/%s'
                 % recipe.id) in k.splitlines(), k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=865680
+    def test_linkdelay(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="linkdelay=20">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('''
+for cfg in /etc/sysconfig/network-scripts/ifcfg-* ; do
+    if [ "$(basename "$cfg")" != "ifcfg-lo" ] ; then
+        echo "LINKDELAY=20" >>$cfg
+    fi
+done
+'''
+                in k, k)
