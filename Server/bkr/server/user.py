@@ -200,7 +200,9 @@ class Users(AdminPage):
         for system in System.query.filter(System.user==user):
             msg = ''
             try:
-                system.unreserve(service=method, user=user)
+                reservation = system.open_reservation
+                system.unreserve(reservation=reservation,
+                    service=method, user=user)
             except BX, error_msg:
                 msg = 'Error: %s Action: %s' % (error_msg,system.release_action)
                 system.activity.append(SystemActivity(identity.current.user, method, '%s' % system.release_action, 'Return', '', msg))

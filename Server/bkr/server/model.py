@@ -976,6 +976,7 @@ reservation_table = Table('reservation', metadata,
             default=datetime.utcnow),
         Column('finish_time', DateTime, index=True),
         # type = 'manual' or 'recipe'
+        # XXX Use Enum types
         Column('type', Unicode(30), index=True, nullable=False),
         mysql_engine='InnoDB',
 )
@@ -1871,6 +1872,15 @@ class System(SystemObject):
         else:
             return System.query.filter(System.arch.any(Arch.arch == arch))
 
+    def unreserve_manually_reserved(self, *args, **kw):
+        open_reservation = self.open_reservation
+        if not open_reservation:
+            raise BX(_(u'System %s is not currently reserved' % self.fqdn))
+        reservation_type = open_reservation.type
+        if reservation_type != 'manual':
+            raise BX(_(u'Cannot release %s. Was not manually reserved' % self.fqdn))
+        self.unreserve(reservation=open_reservation, *args, **kw)
+
     def excluded_families(self):
         """
         massage excluded_osmajor for Checkbox values
@@ -2465,7 +2475,7 @@ class System(SystemObject):
                 self, reservation_type, service, user)
         return reservation
 
-    def unreserve(self, service, user=None):
+    def unreserve(self, service=None, reservation=None, user=None):
         if user is None:
             user = identity.current.user
 
@@ -2477,8 +2487,9 @@ class System(SystemObject):
 
         # Update reservation atomically first, to avoid races
         session.flush()
+        my_reservation_id = reservation.id
         if session.connection(System).execute(reservation_table.update(
-                and_(reservation_table.c.system_id == self.id,
+                and_(reservation_table.c.id == my_reservation_id,
                      reservation_table.c.finish_time == None)),
                 finish_time=datetime.utcnow()).rowcount != 1:
             raise BX(_(u'System does not have an open reservation'))
@@ -5963,9 +5974,13 @@ class SystemResource(RecipeResource):
                 reservation_type=u'recipe')
 
     def release(self):
-        log.debug('Releasing system %s for recipe %s', self.system, self.recipe.id)
+        if self.reservation.finish_time:
+            return
+        log.debug('Releasing system %s for recipe %s',
+            self.system, self.recipe.id)
         self.system.unreserve(service=u'Scheduler',
-                user=self.recipe.recipeset.job.owner)
+            reservation=self.reservation,
+            user=self.recipe.recipeset.job.owner)
 
 
 class VirtResource(RecipeResource):
@@ -6883,7 +6898,7 @@ mapper(SystemResource, system_resource_table, inherits=RecipeResource,
         polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=ResourceType.system,
         properties={
             'system': relation(System),
-            'reservation': relation(Reservation),
+            'reservation': relation(Reservation, uselist=False),
         })
 mapper(VirtResource, virt_resource_table, inherits=RecipeResource,
         polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=ResourceType.virt,

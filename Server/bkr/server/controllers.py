@@ -1064,7 +1064,7 @@ class Root(RPCRoot):
             redirect("/")
         if system.current_user(current_identity):
             try:
-                system.unreserve(service=u'WEBUI')
+                system.unreserve(service=u'WEBUI', reservation=system.open_reservation)
                 flash(_(u'Returned %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to return')

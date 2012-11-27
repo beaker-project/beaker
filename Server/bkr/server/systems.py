@@ -51,7 +51,7 @@ class SystemsController(controllers.Controller):
         .. versionadded:: 0.6
         """
         system = System.by_fqdn(fqdn, identity.current.user)
-        system.unreserve(service=u'XMLRPC')
+        system.unreserve_manually_reserved(service=u'XMLRPC')
         return system.fqdn # because turbogears makes us return something
 
     @expose()
