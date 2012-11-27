@@ -1,0 +1,6 @@
+Remove identity.provider setting from server.cfg (bug 880424)
+-------------------------------------------------------------
+
+Remove the identity.provider setting from /etc/beaker/server.cfg if present.
+The correct value for this setting is supplied by the application configuration
+shipped with Beaker.
