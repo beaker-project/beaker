@@ -35,6 +35,13 @@
        </glossdef>
      </glossentry>
    </glossdiv>
+   <glossdiv><title>F</title>
+     <glossentry><glossterm>FQDN</glossterm>
+       <glossdef>
+         <para>Fully qualified domain name.</para>
+       </glossdef>
+     </glossentry>
+   </glossdiv>
    <glossdiv><title>J</title>
      <glossentry><glossterm>Job</glossterm>
        <glossdef>

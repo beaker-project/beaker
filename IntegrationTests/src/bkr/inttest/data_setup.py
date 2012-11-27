@@ -275,7 +275,8 @@ def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.
             task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.lazy_create(osmajor=osmajor)))
     if requires:
         for require in requires:
-            task.required.append(TaskPackage.lazy_create(package=require))
+            tp = TaskPackage.lazy_create(package=require)
+            task.required.append(tp)
     if runfor:
         for run in runfor:
             task.runfor.append(TaskPackage.lazy_create(package=run))
@@ -356,7 +357,7 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
         retention_tag = RetentionTag.by_tag(u'scratch') # Don't use default, unpredictable
     else:
         retention_tag = RetentionTag.by_tag(retention_tag)
-    
+
     if owner is None:
         owner = create_user()
     if whiteboard is None:
@@ -455,9 +456,9 @@ def mark_recipe_running(recipe, fqdn=None, **kwargs):
         recipe.resource.fqdn = fqdn
     log.debug('Started %s', recipe.tasks[0].t_id)
 
-def mark_job_running(job):
+def mark_job_running(job, **kw):
     for recipe in job.all_recipes:
-        mark_recipe_running(recipe)
+        mark_recipe_running(recipe, **kw)
 
 def mark_job_queued(job):
     for recipe in job.all_recipes:

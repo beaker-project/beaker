@@ -47,6 +47,7 @@ autopart
 @development-libs
 @development-tools
 @server-platform-devel
+emacs
 expect
 gcc
 libxml2-python
@@ -56,11 +57,10 @@ ntp
 procmail
 pyOpenSSL
 redhat-lsb
-wget
-emacs
 sendmail
 unifdef
 vim-enhanced
+wget
 # no snippet data for packages
 %end
 

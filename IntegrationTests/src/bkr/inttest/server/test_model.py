@@ -213,6 +213,21 @@ class TestJob(unittest.TestCase):
         job.cc.append(u'asdf')
         data_setup.mark_job_complete(job)
 
+    def test_stopping_completed_job_doesnt_unreserve_system(self):
+        system = data_setup.create_system()
+        admin  = data_setup.create_admin()
+        job = data_setup.create_job(owner=admin)
+        data_setup.mark_job_complete(job, system=system)
+        # Start a new job, cancel the previously completed job
+        job2 = data_setup.create_job()
+        data_setup.mark_job_running(job2, system=system)
+        session.flush()
+        job.cancel()
+        # Test that the previous cancel did not end
+        # the current reservation
+        self.assert_(system.open_reservation is not None)
+
+
 class DistroTreeByFilterTest(unittest.TestCase):
 
     def setUp(self):

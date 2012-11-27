@@ -15,7 +15,7 @@
 %endif
 
 Name:           beaker
-Version:        0.10.2
+Version:        0.10.4
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -368,6 +368,15 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Tue Nov 27 2012 Raymond Mancy <rmancy@redhat.com> 0.10.4-1
+- 877029 Produce unique package list for a recipes package deps
+  (rmancy@redhat.com)
+- 879184 Fix for 'stealing' systems from currently running recipes
+  (rmancy@redhat.com)
+
+* Fri Nov 23 2012 Raymond Mancy <rmancy@redhat.com> 0.10.3-1
+- 879146 Don't change existing FQDN in install_done (ncoghlan@redhat.com)
+
 * Thu Nov 22 2012 Raymond Mancy <rmancy@redhat.com> 0.10.2-1
 - Hotfix versions now bump the z in x.y.z
 
