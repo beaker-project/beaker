@@ -40,7 +40,9 @@ def compare_expected(name, recipe_id, actual):
         actual_temp = tempfile.NamedTemporaryFile(prefix='beaker-kickstart-test-',
                 suffix='-actual', delete=False)
         actual_temp.write(actual)
-        raise AssertionError('diff -u %s %s' % (expected_path, actual_temp.name))
+        raise AssertionError('actual kickstart does not match expected\n'
+                'diff -u %s %s\nmv %s %s' % (expected_path, actual_temp.name,
+                actual_temp.name, expected_path))
 
 class KickstartTest(unittest.TestCase):
 
