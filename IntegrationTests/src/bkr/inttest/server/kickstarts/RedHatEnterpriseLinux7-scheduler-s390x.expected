@@ -151,7 +151,7 @@ fi
 
 
 #Add Task Repo
-cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
 name=beaker-tasks
 baseurl=@REPOS@@RECIPEID@
@@ -161,7 +161,7 @@ EOF
 
 
 # Add Harness Repo
-cat << EOF >/etc/yum.repos.d/beaker-harness.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=beaker-harness
 baseurl=@HARNESS@RedHatEnterpriseLinux7/
@@ -170,7 +170,7 @@ gpgcheck=0
 EOF
 
 # Add distro and custom Repos
-cat << EOF >/etc/yum.repos.d/beaker-repos_Server-optional.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_Server-optional.repo
 [beaker-repos_Server-optional]
 name=beaker-repos_Server-optional
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/os
@@ -178,7 +178,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-repos_debug_Server.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_debug_Server.repo
 [beaker-repos_debug_Server]
 name=beaker-repos_debug_Server
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/debuginfo
@@ -186,7 +186,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-repos_debug_Server_optional.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_debug_Server_optional.repo
 [beaker-repos_debug_Server_optional]
 name=beaker-repos_debug_Server_optional
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/debuginfo
@@ -194,7 +194,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-repos_Server.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_Server.repo
 [beaker-repos_Server]
 name=beaker-repos_Server
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/
