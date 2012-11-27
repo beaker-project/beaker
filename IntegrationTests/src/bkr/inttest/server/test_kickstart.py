@@ -1275,6 +1275,33 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
         k = recipe.rendered_kickstart.kickstart
         self.assert_('special-weird-driver-package' in k.splitlines(), k)
 
+    def test_packages_arent_duplicated(self):
+        system = data_setup.create_system(fqdn=u'testForPackageDuplication',
+                arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        task1 = data_setup.create_task(requires=['requires1'])
+        task2 = data_setup.create_task(requires=['requires1'])
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="%s" />
+                        <task name="%s" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''' % (task1.name, task2.name), system)
+        k = recipe.rendered_kickstart.kickstart
+        kickstart_lines = k.splitlines()
+        self.assert_(kickstart_lines.count('requires1') == 1)
+
     def test_postreboot_for_rhev_guests(self):
         recipe = self.provision_recipe('''
             <job>

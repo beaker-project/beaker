@@ -275,7 +275,8 @@ def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.
             task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.lazy_create(osmajor=osmajor)))
     if requires:
         for require in requires:
-            task.required.append(TaskPackage.lazy_create(package=require))
+            tp = TaskPackage.lazy_create(package=require)
+            task.required.append(tp)
     if runfor:
         for run in runfor:
             task.runfor.append(TaskPackage.lazy_create(package=run))

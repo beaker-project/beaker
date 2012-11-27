@@ -4789,11 +4789,12 @@ class Recipe(TaskBase):
     def _get_packages(self):
         """ return all packages for all tests
         """
-        packages = []
-        for task in self.tasks:
-            packages.extend(task.task.required)
-        packages.extend(self.custom_packages)
-        return packages
+        packages = set()
+        packages.update(TaskPackage.query
+                .select_from(RecipeTask).join(Task, Task.required)
+                .filter(RecipeTask.recipe == self))
+        packages.update(self.custom_packages)
+        return sorted(packages)
 
     packages = property(_get_packages)
 
