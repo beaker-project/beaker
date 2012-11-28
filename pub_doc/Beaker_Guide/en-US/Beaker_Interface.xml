@@ -842,137 +842,499 @@
                       <title>Tasks</title>
                         <para>Tasks are the lowest unit in the Job hierarchy, and running a Task is the primary purpose of running a Job. There purpose is to run one or more commands, and then collect the results of those commands in a way that other entities can access them. You can run as many or as few Tasks in a Job as you like. </para>
                         <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Tasks-Creating_a_Task">
-                          <title>Creating a Task</title>
-                            <para>To create Tasks the <application>rhts-devel</application> package will need to be installed. From your terminal, type: </para>
-                            <screen>$ yum install rhts-devel</screen>
-                            <para>Now make a new directory from where you will create the test. Then <application>cd</application> into the newly created folder and run the following: </para>
-                            <screen>$ rhts-create-new-test
-$ ls -l
-Makefile  PURPOSE  runtest.sh
-                            </screen>
-                            <para>Below is a rundown of the files created and how to use them </para>
-                            <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Tasks-Creating_a_Task-runtest_sh">
-                              <title>runtest.sh</title>
-                                <para>
-                              The core of each Beaker test is a <application>runtest.sh</application>  shell script. It performs the testing (or delegates the work by invoking another script or executable) and reports the results. Either write the code that performs the test in the <application>runtest.sh</application> shell script or have runtest.sh execute another program that does the bulk of the work in perhaps another language. Choose a language appropriate to the job (and with which you are familiar): testing of a library could be written in C, parsing of text streams could be done in Perl, and GUI scripting in Python. Languages can be mixed and matched as appropriate within a single test - the <application>runtest.sh</application> script can call other code as necessary. Aim for correctness and readability: remember that others may have to debug this code if a test is flawed. Here is the example<application> runtest.sh</application>: 
-                              </para>
-                              <screen>#!/bin/sh
-# Copyright (c) 2006  All rights reserved. This copyrighted
-# material  is made available to anyone wishing to use, modify, copy, or
-# redistribute it subject to the terms and conditions of the GNU General
-# Public License v.2.
+                          <title>Creating a Task</title> <para>A Beaker
+task consists of three primary files: <filename>PURPOSE</filename>, <filename>runtest.sh</filename> and
+a <filename>Makefile</filename>. There can be other files as needed for the task.
+<filename>PURPOSE</filename> is a text file that describes the task in
+some detail. There is no restriction on the length of the
+description. The core of each Beaker task is the
+<filename>runtest.sh</filename> shell script. It performs the testing
+(or delegates the work by invoking another script or executable) and
+reports the results. You may either write all the code that performs the
+test in the <filename>runtest.sh</filename> script or, when appropriate,
+call an external executable that does the bulk of the work. This
+external executable can be in any other language as long as it is
+appropriately executed from the <filename>runtest.sh</filename>
+script. This script uses <application>BeakerLib</application> functions to setup, start, stop and
+cleanup after the task has been run. Once you have written your test in
+this script, you can either run it locally (when appropriate) or package
+it as an RPM package and upload it to Beaker. The
+<filename>Makefile</filename> defines targets to carry out these and
+other related functions.</para>
+ 
+<para> The <command>beaker-wizard</command> utility provides a guided
+step by step method to create a task without the need to manually create
+the above files. To get a basic idea of how we can use
+<application>beaker-wizard</application>, we will create a new task
+which will check the support for the ext4 filesystem. If
+you have the <package>beaker-client</package> package installed, you
+should already have <command>beaker-wizard</command> available. You will
+also need to install the <package>rhts-devel</package> package. Create a
+new directory, where we will create the task.
+In most cases, your task will be meant to test a particular
+package. Hence, you should create a directory with the package name if
+that's the case. In this case, we will simply create a directory with
+the name <filename>mytask</filename>. From your terminal, type:
+</para>
+ <screen>
+ $ mkdir mytask
+ $ cd mytask
+ $ beaker-wizard
+</screen>
+<para> You will see a welcome message as follows:</para>
+
+<screen>
+Welcome to The Beaker Wizard!
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+It seems, you're running the beaker-wizard for the first time.
+I'll try to be a little bit more verbose. Should you need
+any help in the future, just try using the "?" character.
+
+
+Bugs or CVE's related to the test
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Supply one or more bug or CVE numbers (e.g. 123456 or 2009-7890). Use
+the '+' sign to add the bugs instead of replacing the current list.
+[None?] 
+
+</screen>
+
+<para> If you are writing this task to write a test related to a
+specific bug, enter the bug number here. In our case, we are not, so
+simply press the return key. The wizard will then proceed to ask you
+several questions regarding the test such as the description, the type
+of test, and others. The wizard gives you choices for the answer wherever
+relevant, but also has a default answer when one is not provided. Either
+enter your own option or press return to accept the default answer:
+</para>
+
+<screen>
+
+Test name
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Use few, well chosen words describing what the test does. Special
+chars will be automatically converted to dashes.
+[a-few-descriptive-words?] ext4-test
+
+What is the type of test?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Possible values: Regression, Performance, Stress, Certification,
+Security, Durations, Interoperability, Standardscompliance,
+Customeracceptance, Releasecriterium, Crasher, Tier1, Tier2, Alpha,
+KernelTier1, KernelTier2, Multihost, MultihostDriver, Install,
+FedoraTier1, FedoraTier2, KernelRTTier1, KernelReporting, Sanity
+Test type must be exactly one from the list above.
+[Sanity?] 
+
+Namespace
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Possible values: distribution, installation, kernel, desktop, tools,
+CoreOS, cluster, rhn, examples, performance, ISV, virt
+Provide a root namespace for the test.
+[CoreOS?] installation
+
+Short description
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Provide a short sentence describing the test.
+[What the test does?] Check whether ext4 filesystem is supported out of the box
+
+Time for test to run
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The time must be in format [1-99][m|h|d] for 1-99 minutes/hours/days
+(e.g. 3m, 2h, 1d)
+[5m?] 
+
+Author's name
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Put your name [middle name] and surname here, abbreviations allowed.
+[Your Name?] Task Author
+
+Author's email
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Email address in lower case letters, dots and dashes. Underscore
+allowed before the "@" only.
+[user@hostname.com?] tauthor@example.com
+
+Ready to create the test, please review
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+/installation/mytask/Sanity/ext4-test
+
+             Namespace : installation
+               Package : mytask
+             Test type : Sanity
+         Relative path : None
+             Test name : ext4-test
+           Description : Check whether ext4 filesystem is supported out of the box
+
+    Bug or CVE numbers : None
+  Prefix the test name : Yes
+  Reproducers to fetch : None
+
+      Run for packages : mytask
+     Required packages : mytask
+         Architectures : All
+              Releases : All
+               Version : 1.0
+                  Time : 5m
+
+              Priority : Normal
+               License : GPLv2
+          Confidential : No
+           Destructive : No
+
+              Skeleton : beakerlib
+                Author : Task Author
+                 Email : tauthor@example.com
+
+Type a few letters from field name to edit or press ENTER to confirm.
+Use the "write" keyword to save current settings as preferences.
+[Everything OK?] 
+</screen>
+
+<para>
+Once you have answered all the questions, the wizard allows you to
+review the answers you have. As you can see,
+<application>beaker-wizard</application> assumed default values for 
+some of the options such as <varname>Run for packages</varname>, <varname>Required
+packages</varname>, <varname>License</varname> and others without asking
+from you. As per the instructions above, you can edit any of these or
+the ones you specified earlier before creating the test. For example, if
+this test is Confidential, you can change it, like so:
+</para>
+
+<screen>
+[Everything OK?] Confi
+
+Confidential
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Possible values: Yes, No
+[No?] Yes
+
+Ready to create the test, please review
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+..
+..
+
+</screen>
+
+<para>
+Once you have changed the value of Confidential, you will again be able
+to review all the options (and change if necessary). Finally, when you
+are satisfied, press the enter key to create the test:
+</para>
+
+<screen>
+Directory Sanity/ext4-test created
+File Sanity/ext4-test/PURPOSE written
+File Sanity/ext4-test/runtest.sh written
+File Sanity/ext4-test/Makefile written
+</screen>
+
+<para> In the <application>Sanity/ext4-test</application> directory, you
+will notice that the three files: <filename>PURPOSE</filename>, <filename>runtest.sh</filename> and a
+<filename>Makefile</filename> have been created. You will see that
+<filename>PURPOSE</filename> will have the test description you
+entered earlier along with the author's details. The
+<filename>runtest.sh</filename> file will have the following
+contents: 
+</para>
+
+<screen>
+#!/bin/bash
+# vim: dict=/usr/share/beakerlib/dictionary.vim cpt=.,w,b,u,t,i,k
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#   runtest.sh of /installation/mytask/Sanity/ext4-test
+#   Description: Check whether ext4 filesystem is supported out of the box
+#   Author: Task Author &lt;tauthor@example.com&gt;
 #
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation, Inc., 
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,USA.
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#   Copyright (c) 2012 Red Hat, Inc. All rights reserved.
+#
+#   This copyrighted material is made available to anyone wishing
+#   to use, modify, copy, or redistribute it subject to the terms
+#   and conditions of the GNU General Public License version 2.
+#
+#   This program is distributed in the hope that it will be
+#   useful, but WITHOUT ANY WARRANTY; without even the implied
+#   warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+#   PURPOSE. See the GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public
+#   License along with this program; if not, write to the Free
+#   Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+#   Boston, MA 02110-1301, USA.
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Author: Your Name &lt;Your Email&gt;</screen>
-                              <para>
-                                The do-my-test.sh is a rather simple test, seen below, just enough to illustrate the required components of a task. 
-                              </para>
-                              <screen>#!/bin/sh
-# simple test example
+# Include Beaker environment
+. /usr/bin/rhts-environment.sh || exit 1 <lineannotation> Import definitions from RHTS </lineannotation>
+. /usr/share/beakerlib/beakerlib.sh || exit 1 <lineannotation> Import definitions from BeakerLib </lineannotation>
 
-ls -al /root/.ssh</screen>
-                              <para>
-                                The exit code from listing the contents of<application> /root/.ssh</application>  will be saved to the <application>$?</application> system variable and based on this,<application> rhts-run-simple-test </application>will report the failure or success of the Task. So the most basic Beaker coding requirements are that a shell script must be sourced <application>(rhts-environment.sh)</application> and the report_result API must be called (this is called in <application>rhts-run-simple-test</application>).The output was sent to <application>$OUTPUTFILE </application>(in <application>rhts-environment.sh</application>). The Beaker API provides the <application>$OUTPUTFILE</application> variable so each test can create a log file to record its activities. When run from the command line, <application>$OUTPUTFILE</application> points to a temporary file in<application> /tmp</application>. When run in a test lab environment, the logs are stored in a central location. The report_result method is always called to inform the Beaker API of the success or failure of the test. 
-                              </para>
-                            </section>
-                            <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Tasks-Creating_a_Task-Makefile">
-                              <title>Makefile </title>
-                              <para>A standard Beaker Makefile coordinates many aspects of developing and running a Beaker test: 
-                                <itemizedlist>
-                                  <listitem>
-                                    <para>compiling test executables. 
-                                    </para>
-                                  </listitem>
-                                  <listitem>
-                                    <para>packaging test files into a single RPM. 
-                                    </para>
-                                  </listitem>
-                                  <listitem>
-                                    <para>downloading external source files for use in the test. 
-                                    </para>
-                                  </listitem>
-                                  <listitem>
-                                    <para>collect test files into a known location for execution. 
-                                    </para>
-                                  </listitem>
-                                  <listitem>
-                                    <para>running tests 
-                                    </para>
-                                  </listitem>
-                                </itemizedlist>
-                              </para>
-                              <para>
-                              A sample Makefile is copied into the local directory when rhts-create-new-test tool is invoked (or can be found a<application>t /usr/share/doc/rhts-devel-2.6/Makefile.template</application>). The Makefile sets up certain targets and defines variables necessary for test execution and reporting. It is best to use this example when writing a new test, copying and modifying it as necessary. So for example, in order to have an executable compiled by the Makefile, the following two lines were changed. 
-                              </para>
-                              <screen>
-                    BUILT_FILES=do-my-test
-                    FILES=$(METADATA) runtest.sh Makefile PURPOSE do-my-test.c
-                              </screen>
-                              <para>
-                              When <application>make run</application> is typed, the Makefile will compile<application> do-my-test.cintodo-my-test</application>  and run runtest.sh, which will then execute <application>do-my-test</application>. You do not have to enter anything in the <application>BUILT_FILES</application>  directive if you are not compiling an executable. Also be sure to fill in the following section: 
-                              </para>
-                              <screen># The toplevel namespace within which the test lives.
-# FIXME: You will need to change this:
-TOPLEVEL_NAMESPACE=
+PACKAGE="mytask" 
 
-# The name of the package under test:
-# FIXME: you wil need to change this:
-PACKAGE_NAME=
+rlJournalStart
+    rlPhaseStartSetup
+        rlAssertRpm $PACKAGE
+        rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
+        rlRun "pushd $TmpDir"
+    rlPhaseEnd
 
-# The path of the test below the package:
-# FIXME: you wil need to change this:
-RELATIVE_PATH=</screen>
-                              <para>
-                              Those three place holders will be used to determine how your Task is named in Beaker, and also how it's mounted on a test System. It will be called /<application>TOPLEVEL_NAMESPACE/PACKAGE_NAME/RELATIVE_PATH</application> and it will be mounted the same in the <application>/mnt/tests</application> directory on a test System. 
-                              </para>
-                            </section>
-                            <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Tasks-Creating_a_Task-Purpose">
-                              <title>PURPOSE</title>
-                                <para>The test code directory contains a plain text file called<application>PURPOSE</application> which explains what the test addresses along with any other information useful for troubleshooting or understanding it better. The <application>PURPOSE</application> file has no minimum or maximum length but should provide useful information. For example:  </para>
-                                <screen>$ cat PURPOSE
-This trivial test compiles a .c file, runs the resulting code, and checks
-that the output is as expected.
+    rlPhaseStartTest
+        rlRun "touch foo" 0 "Creating the foo test file"
+        rlAssertExists "foo"
+        rlRun "ls -l foo" 0 "Listing the foo test file"
+    rlPhaseEnd
 
-It is intended as a simple example of how to write a test that
-compiles source code to a binary and reports a single result
-using rhts-run-simple-test
+    rlPhaseStartCleanup
+        rlRun "popd"
+        rlRun "rm -r $TmpDir" 0 "Removing tmp directory"
+    rlPhaseEnd
+rlJournalPrintText
+rlJournalEnd
 
-It can also be used as a primitive smoketest for the compiler.</screen>
-                            </section>
-                            <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Tasks-Creating_a_Task-Packaging">
-                            <title>Packaging</title>
-                              <para>Before we can add a new Task to Beaker we need to package it. Firstly, you're able to run the task locally (if it makes sense) to ensure that the task operates as expected. If you would like to run the task locally: </para>
-                              <screen>
-<application>$ make run</application>
-chmod a+x ./runtest.sh
+</screen>
+
+<para>
+The GPLv2 license header in the beginning is default for a task. You can
+change the license to something more appropriate for your
+needs during the task creation. <application>beaker-wizard</application> will try to find a
+license header corresponding to the specified license and if it is not present
+will insert a default text where you can insert the appropriate header
+information and copyright notice. Please consult the
+<application>beaker-wizard</application> man page for details on how you
+can add your own license text using a preference file. </para>
+
+<para>
+The package for which this task is defined is declared in the
+<varname>PACKAGE</varname> variable. We will simply delete this line since
+this task is not for testing a package. Every beaker test must begin with 
+<function>rlJournalStart</function>. This initializes the
+journalling functionality so that the logging mechanism is initialized so
+that your test results can be saved. The functionality of a test is
+divided into three stages: setup, start and cleanup indicated by the
+<function>rlPhaseStartSetup</function>, <function>rlPhaseStartTest </function> and
+<function>rlPhaseStartCleanup</function> functions
+respectively. The setup phase first checks if the package which we want
+to test is available and then creates a temporary directory and moves
+there so that all the test actvities are performed in that
+directory. The <function>rlPhaseStartTest</function> and its
+corresponding <function>rlPhaseEnd</function>, encloses the core
+test logic. Here, as you can see, the test is checking whether an empty
+file has been created successfully or not. We will replace these lines
+to include our own logic to check for the presence of ext4 support. The
+cleanup phase is used to cleanup the working directory created for the
+test and change back to the original working directory. For our task, we
+don't need this. The modified
+<filename>runtest.sh</filename> file looks like:
+</para>
+
+<screen>
+#!/bin/bash
+# vim: dict=/usr/share/beakerlib/dictionary.vim cpt=.,w,b,u,t,i,k
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#   runtest.sh of /installation/mytask/Sanity/ext4-test
+#   Description: Check whether ext4 filesystem is supported out of the box
+#   Author: Task Author &lt;tauthor@example.com&gt;
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#   Copyright (c) 2012 Red Hat, Inc. All rights reserved.
+#
+#   This copyrighted material is made available to anyone wishing
+#   to use, modify, copy, or redistribute it subject to the terms
+#   and conditions of the GNU General Public License version 2.
+#
+#   This program is distributed in the hope that it will be
+#   useful, but WITHOUT ANY WARRANTY; without even the implied
+#   warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+#   PURPOSE. See the GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public
+#   License along with this program; if not, write to the Free
+#   Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+#   Boston, MA 02110-1301, USA.
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Include Beaker environment
+. /usr/bin/rhts-environment.sh || exit 1
+. /usr/share/beakerlib/beakerlib.sh || exit 1
+
+rlJournalStart
+    rlPhaseStartTest
+        rlRun "cat /proc/filesystems | grep 'ext4'" 0 "Check if ext4 is supported"
+    rlPhaseEnd
+rlJournalPrintText
+rlJournalEnd
+</screen>
+
+<para> 
+You can now run this test locally to see if everything is correctly
+working using <command>make run</command>:
+</para>
+
+<screen>
+# make run
+test -x runtest.sh || chmod a+x runtest.sh
 ./runtest.sh
-/tmp/simple_test/do-my-test.sh
-Running ./do-my-test.sh  As root: 
-total 48
-drwx------  2 root root  4096 Dec 15 08:41 .
-drwxr-x--- 24 root root 12288 Jun  2 14:57 ..
--rw-------  1 root root   415 Dec 13 19:12 authorized_keys
--rw-r--r--  1 root root  8630 May 25 09:42 known_hosts
-...finished running ./do-my-test.sh, exit code=0
-/// result: PASS
-   Log: /tmp/tmp.c24401</screen>
-                              <para>Once you're happy it works as expected, you can run the following: </para>
-                              <note>
-                                <title>Tagging</title>
-                                <para>
-                                If you wish to, and your Task is revisioned with git or CVS, you can increase the version of the package with the following command: 
-                                </para>
-                                <para>$ make tag</para>
-                              </note>
-                            </section>
-                        </section>
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: [   LOG    ] :: Test
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+        ext4
+:: [   PASS   ] :: Check if ext4 is supported
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: [   LOG    ] :: TEST PROTOCOL
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:: [   LOG    ] :: Test run ID   : oCNr6jM
+:: [   LOG    ] :: Package       : unknown
+:: [   LOG    ] :: Test started  : 2012-11-07 02:58:07 EST
+:: [   LOG    ] :: Test finished : 2012-11-07 02:58:07 EST
+:: [   LOG    ] :: Test name     : /installation/mytask/Sanity/ext4-test
+:: [   LOG    ] :: Distro:       : Red Hat Enterprise Linux Server release 6.3 (Santiago)
+:: [   LOG    ] :: Hostname      : hostname.example.com
+:: [   LOG    ] :: Architecture  : x86_64
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: [   LOG    ] :: Test description
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+PURPOSE of /installation/mytask/Sanity/ext4-test
+Description: Check whether ext4 filesystem is supported out of the box
+Author: Task Author &lt;tauthor@example.com&gt;
+
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: [   LOG    ] :: Test
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:: [   PASS   ] :: Check if ext4 is supported
+:: [   LOG    ] :: Duration: 0s
+:: [   LOG    ] :: Assertions: 1 good, 0 bad
+:: [   PASS   ] :: RESULT: Test
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:: [   LOG    ] :: /installation/mytask/Sanity/ext4-test
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+:: [   LOG    ] :: Phases: 1 good, 0 bad
+:: [   PASS   ] :: RESULT: /installation/mytask/Sanity/ext4-test
+:: [02:58:07] ::  JOURNAL XML: /tmp/beakerlib-oCNr6jM/journal.xml
+:: [02:58:07] ::  JOURNAL TXT: /tmp/beakerlib-oCNr6jM/journal.txt
+</screen>
+<para>
+
+As you can see, the test passes with the logs saved in the above
+files. Before we can upload this task to Beaker, we will have to package
+this is an RPM. Both these steps can be accomplished via <command>make
+bkradd</command> (assuming you have set your beaker client configuration
+successfully). If you do not see any errors here, then you should see
+that this task has been uploaded to the task library
+<ulink url="http://your-beaker-root/tasks/"></ulink>.
+</para> <para> To learn more about the functions used to write the test,
+please see the BeakerLib documentation <ulink
+url="https://fedorahosted.org/beakerlib/wiki/Manual">here</ulink>. You
+can learn more about <application>beaker-wizard</application> from
+its <ulink url="http://beaker-project.org/man/beaker-wizard.html"><command>man
+page</command></ulink>. 
+</para> 
+
+</section>
+
+<section
+id="User_Guide-Getting_Started-Process-Beaker_Interface-Tasks-Running_a_Test">
+<title>Running the Test</title> <para> Once the task is available in the
+<application>Task Library</application>, you have to write a job
+description (XML file) to
+run this test on a system provisioned in Beaker. A sample job description
+that runs this task would be as follows: </para>
+
+<screen>
+&lt;job&gt;
+  &lt;whiteboard&gt;
+    ext4 test
+  &lt;/whiteboard&gt;
+  &lt;recipeSet&gt;
+    &lt;recipe&gt;
+
+      &lt;distroRequires&gt;
+        &lt;distro_arch op="=" value="x86_64" /&gt;
+      &lt;/distroRequires&gt;
+
+      &lt;hostRequires&gt;
+        &lt;system_type value="Machine"/&gt;
+      &lt;/hostRequires&gt;
+
+      &lt;task name="/installation/mytask/Sanity/ext4-test" role="STANDALONE"/&gt;
+
+    &lt;/recipe&gt;
+  &lt;/recipeSet&gt;
+&lt;/job&gt;
+
+</screen>
+
+<para>
+You can then submit the job as described in <xref
+linkend="User_Guide-Getting_Started-Process-Workflow-Submitting_and_Reviewing_a_Job_Workflow"></xref>. After
+the job has completed, you can access the logs as described in <xref
+linkend="User_Guide-Getting_Started-Process-Beaker_Interface-Jobs-Job_Submission-Job_Results"></xref>. You
+will see that on success, the <filename>TESTOUT.log</filename>
+file will contain the same log as when it was run locally. You can also
+obtain the logs using the <ulink
+url="http://beaker-project.org/man/bkr-job-logs.html">command line
+client</ulink>. In some cases, in addition to the log files you may also want to retrieve some files
+from the test system. For example, in this case you may want to examine the contents
+of <filename>/proc/filesystems</filename> on the system that run the
+test. This can be done using the <application>Beakerlib</application>
+function <command>rlFileSubmit</command>.
+</para> 
+
+<para> The overall workflow of creating a task for a test,
+submitting a job to run the test and accessing the test results can
+be represented by <xref
+linkend="Administration-Chronological_Overview"></xref>.  </para>
+</section> 
+
+<section id="User_Guide-Getting_Started-Process-Beaker_Interface-Tasks-Updating_a_Task">
+<title>Updating a Task</title>
+<para>
+To upload newer versions of your task, you will need to update the
+<varname>VERSION</varname> variable in your
+<filename>Makefile</filename>, else Beaker will not add it saying that
+its already present in the task library.
+</para>
+<note> 
+<title>Version Control for your Tests</title>
+<para>If you plan to work on revisions of your test in future, it is a
+good idea to initialize a repository in your task directory
+(i.e. <filename>mytask</filename> in this case). If you are using
+<application>git</application>, for example, you can create a tag for your task
+using <command>make tag</command> and <command>make bkradd</command>
+will automatically use the most recent tag for adding versioning information to
+your task and hence you don't have to change the
+<varname>VERSION</varname> variable in the <filename>Makefile</filename> yourself.
+</para> 
+</note>
+</section>
+
+<section
+id="User_Guide-Getting_Started-Process-Beaker_Interface-Tasks-Makefile">
+<title>Makefile</title> <para> As you have seen so far, we have used the
+<filename>Makefile</filename> to run a test locally and also
+building and uploading the RPM to Beaker. The details can be found at
+<xref
+linkend="User_Guide-Getting_Started-Process-Beaker_Makefile"></xref>.
+</para>
+
+</section>
+
                         <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Tasks-Task_Searching">
                         <title>Task Searching</title>
                         <para>To search for a Task, go to <application>Scheduler>Task</application> Library at the top of the page. The default search is on the <application>Name</application>  property, with the <application>contains</application> operator. See Section 5.1.1, “System Searching” for search details. </para>
@@ -982,9 +1344,9 @@ drwxr-x--- 24 root root 12288 Jun  2 14:57 ..
                         <section id="User_Guide-Getting_Started-Process-Beaker_Interface-Tasks-Adding_a_New_Task">
                           <title>Adding a new task</title>
                           <para>
-                            To add a task it will need to be packaged as an RPM. This requires creating a Makefile (See
-                            <xref linkend="User_Guide-Getting_Started-Process-Beaker_Makefile"></xref>).
-                            Once you have your task RPM, click <guimenu>Scheduler>New Task</guimenu> from the main menu bar.
+                            If you already have a task packaged as an
+                            RPM, click
+                            <menuchoice><guimenu>Scheduler</guimenu> <guimenuitem>New Task</guimenuitem></menuchoice> from the main menu bar.
                             You will need to click on <guilabel>Browse</guilabel> to locate your task, and then add it
                             with the <guilabel>Submit Data</guilabel> button.
                             See the beaker client <ulink url="http://beaker-project.org/man/bkr-task-add.html">man page</ulink>
