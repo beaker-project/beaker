@@ -1,0 +1,7 @@
+{% if linkdelay %}
+for cfg in /etc/sysconfig/network-scripts/ifcfg-* ; do
+    if [ "$(basename "$cfg")" != "ifcfg-lo" ] ; then
+        echo "LINKDELAY={{ linkdelay }}" >>$cfg
+    fi
+done
+{% endif %}

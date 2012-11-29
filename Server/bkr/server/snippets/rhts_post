@@ -13,6 +13,7 @@ fi
 # Enable post-install boot notification
 {% snippet 'post_anamon' %}
 {% snippet 'readahead_sysconfig' %}
+{% snippet 'linkdelay' %}
 
 {#
 ## Turn on ntpd
