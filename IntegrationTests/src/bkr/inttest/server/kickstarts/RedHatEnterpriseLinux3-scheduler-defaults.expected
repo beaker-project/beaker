@@ -153,7 +153,7 @@ pushd /root
 popd
 
 #Add Task Repo
-cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
 name=beaker-tasks
 baseurl=@REPOS@@RECIPEID@
@@ -163,7 +163,7 @@ EOF
 
 
 # Add Harness Repo
-cat << EOF >/etc/yum.repos.d/beaker-harness.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=beaker-harness
 baseurl=@HARNESS@RedHatEnterpriseLinux3/
@@ -172,7 +172,7 @@ gpgcheck=0
 EOF
 
 # Add distro and custom Repos
-cat << EOF >/etc/yum.repos.d/beaker-repo-debug-AS-x86_64.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repo-debug-AS-x86_64.repo
 [beaker-repo-debug-AS-x86_64]
 name=beaker-repo-debug-AS-x86_64
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-3/U9/AS/x86_64/repo-debug-AS-x86_64
@@ -180,7 +180,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-repo-AS-x86_64.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repo-AS-x86_64.repo
 [beaker-repo-AS-x86_64]
 name=beaker-repo-AS-x86_64
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-3/U9/AS/x86_64/repo-AS-x86_64
@@ -188,7 +188,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-repo-srpm-AS-x86_64.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repo-srpm-AS-x86_64.repo
 [beaker-repo-srpm-AS-x86_64]
 name=beaker-repo-srpm-AS-x86_64
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-3/U9/AS/x86_64/repo-srpm-AS-x86_64

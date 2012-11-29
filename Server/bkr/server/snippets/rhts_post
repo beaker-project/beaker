@@ -78,7 +78,7 @@ popd
 #Add Task Repo
 {% if taskrepo %}
 {% set reponame, repourl = taskrepo.split(',', 1) %}
-cat << EOF >/etc/yum.repos.d/{{ reponame }}.repo
+cat <<"EOF" >/etc/yum.repos.d/{{ reponame }}.repo
 [{{ reponame }}]
 name={{ reponame }}
 baseurl={{ repourl }}
@@ -91,7 +91,7 @@ EOF
 # Add Harness Repo
 {% if harnessrepo %}
 {% set reponame, repourl = harnessrepo.split(',', 1) %}
-cat << EOF >/etc/yum.repos.d/{{ reponame }}.repo
+cat <<"EOF" >/etc/yum.repos.d/{{ reponame }}.repo
 [{{ reponame }}]
 name={{ reponame }}
 baseurl={{ repourl }}

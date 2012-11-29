@@ -152,7 +152,7 @@ fi
 
 
 #Add Task Repo
-cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
 name=beaker-tasks
 baseurl=@REPOS@@RECIPEID@
@@ -162,7 +162,7 @@ EOF
 
 
 # Add Harness Repo
-cat << EOF >/etc/yum.repos.d/beaker-harness.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=beaker-harness
 baseurl=@HARNESS@RedHatEnterpriseLinux6/
@@ -171,7 +171,7 @@ gpgcheck=0
 EOF
 
 # Add distro and custom Repos
-cat << EOF >/etc/yum.repos.d/beaker-HighAvailability.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-HighAvailability.repo
 [beaker-HighAvailability]
 name=beaker-HighAvailability
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/HighAvailability
@@ -179,7 +179,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-LoadBalancer.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-LoadBalancer.repo
 [beaker-LoadBalancer]
 name=beaker-LoadBalancer
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/LoadBalancer
@@ -187,7 +187,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-optional-x86_64-os.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-optional-x86_64-os.repo
 [beaker-optional-x86_64-os]
 name=beaker-optional-x86_64-os
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/os
@@ -195,7 +195,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-ResilientStorage.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-ResilientStorage.repo
 [beaker-ResilientStorage]
 name=beaker-ResilientStorage
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ResilientStorage
@@ -203,7 +203,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-ScalableFileSystem.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-ScalableFileSystem.repo
 [beaker-ScalableFileSystem]
 name=beaker-ScalableFileSystem
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ScalableFileSystem
@@ -211,7 +211,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-debug.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-debug.repo
 [beaker-debug]
 name=beaker-debug
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/debug
@@ -219,7 +219,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-optional-x86_64-debug.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-optional-x86_64-debug.repo
 [beaker-optional-x86_64-debug]
 name=beaker-optional-x86_64-debug
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/debug
@@ -227,7 +227,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-Server.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-Server.repo
 [beaker-Server]
 name=beaker-Server
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/Server

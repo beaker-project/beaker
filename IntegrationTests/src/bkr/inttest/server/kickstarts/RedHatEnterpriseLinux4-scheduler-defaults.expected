@@ -148,7 +148,7 @@ pushd /root
 popd
 
 #Add Task Repo
-cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
 name=beaker-tasks
 baseurl=@REPOS@@RECIPEID@
@@ -158,7 +158,7 @@ EOF
 
 
 # Add Harness Repo
-cat << EOF >/etc/yum.repos.d/beaker-harness.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=beaker-harness
 baseurl=@HARNESS@RedHatEnterpriseLinux4/
@@ -167,7 +167,7 @@ gpgcheck=0
 EOF
 
 # Add distro and custom Repos
-cat << EOF >/etc/yum.repos.d/beaker-AS.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-AS.repo
 [beaker-AS]
 name=beaker-AS
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-4/U9/AS/x86_64/repo-AS-x86_64

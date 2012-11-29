@@ -152,7 +152,7 @@ fi
 
 
 #Add Task Repo
-cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
 name=beaker-tasks
 baseurl=@REPOS@@RECIPEID@
@@ -162,7 +162,7 @@ EOF
 
 
 # Add Harness Repo
-cat << EOF >/etc/yum.repos.d/beaker-harness.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=beaker-harness
 baseurl=@HARNESS@RedHatEnterpriseLinux7/
@@ -171,7 +171,7 @@ gpgcheck=0
 EOF
 
 # Add distro and custom Repos
-cat << EOF >/etc/yum.repos.d/beaker-repos_addons_ScalableFileSystem.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_addons_ScalableFileSystem.repo
 [beaker-repos_addons_ScalableFileSystem]
 name=beaker-repos_addons_ScalableFileSystem
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/addons/ScalableFileSystem
@@ -179,7 +179,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-repos_Workstation-optional.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_Workstation-optional.repo
 [beaker-repos_Workstation-optional]
 name=beaker-repos_Workstation-optional
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/os
@@ -187,7 +187,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-repos_debug_Workstation.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_debug_Workstation.repo
 [beaker-repos_debug_Workstation]
 name=beaker-repos_debug_Workstation
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/debuginfo
@@ -195,7 +195,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-repos_debug_Workstation_optional.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_debug_Workstation_optional.repo
 [beaker-repos_debug_Workstation_optional]
 name=beaker-repos_debug_Workstation_optional
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/debuginfo
@@ -203,7 +203,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-repos_Workstation.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_Workstation.repo
 [beaker-repos_Workstation]
 name=beaker-repos_Workstation
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/

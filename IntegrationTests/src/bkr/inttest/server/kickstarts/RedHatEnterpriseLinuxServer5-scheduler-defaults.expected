@@ -146,7 +146,7 @@ fi
 
 
 #Add Task Repo
-cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
 name=beaker-tasks
 baseurl=@REPOS@@RECIPEID@
@@ -156,7 +156,7 @@ EOF
 
 
 # Add Harness Repo
-cat << EOF >/etc/yum.repos.d/beaker-harness.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=beaker-harness
 baseurl=@HARNESS@RedHatEnterpriseLinuxServer5/
@@ -165,7 +165,7 @@ gpgcheck=0
 EOF
 
 # Add distro and custom Repos
-cat << EOF >/etc/yum.repos.d/beaker-Cluster.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-Cluster.repo
 [beaker-Cluster]
 name=beaker-Cluster
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-5-Server/U8/x86_64/os/Cluster
@@ -173,7 +173,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-ClusterStorage.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-ClusterStorage.repo
 [beaker-ClusterStorage]
 name=beaker-ClusterStorage
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-5-Server/U8/x86_64/os/ClusterStorage
@@ -181,7 +181,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-VT.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-VT.repo
 [beaker-VT]
 name=beaker-VT
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-5-Server/U8/x86_64/os/VT
@@ -189,7 +189,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-debug.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-debug.repo
 [beaker-debug]
 name=beaker-debug
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-5-Server/U8/x86_64/debug
@@ -197,7 +197,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-Server.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-Server.repo
 [beaker-Server]
 name=beaker-Server
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-5-Server/U8/x86_64/os/Server
