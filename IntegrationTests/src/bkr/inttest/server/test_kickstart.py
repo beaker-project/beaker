@@ -764,12 +764,12 @@ EOF
             </job>
             ''', self.system)
         self.assert_('''
-part /boot --fstype ext3 --size 200 --recommended --asprimary
-part / --fstype ext3 --size 1024 --grow
+part /boot --size 200 --recommended --asprimary
+part / --size 1024 --grow
 part swap --recommended
 part pv.001 --size=25605
 volgroup TestVolume001 pv.001
-logvol /butter --fstype btrfs --name=butter --vgname=TestVolume001 --size=25600
+logvol /butter --name=butter --vgname=TestVolume001 --size=25600 --fstype btrfs
 '''
                 in recipe.rendered_kickstart.kickstart,
                 recipe.rendered_kickstart.kickstart)
@@ -1173,8 +1173,35 @@ mysillypackage
             </job>
             ''', self.system)
         self.assert_('''
-part /boot --fstype ext3 --size 200 --recommended --asprimary
-part / --fstype btrfs --size 1024 --grow
+part /boot --size 200 --recommended --asprimary
+part / --size 1024 --grow --fstype btrfs
+part swap --recommended
+
+'''
+                in recipe.rendered_kickstart.kickstart,
+                recipe.rendered_kickstart.kickstart)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=865679
+    def test_fstype(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="fstype=ext4">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assert_('''
+part /boot --size 200 --recommended --asprimary --fstype ext4
+part / --size 1024 --grow --fstype ext4
 part swap --recommended
 
 '''

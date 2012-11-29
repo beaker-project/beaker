@@ -40,10 +40,10 @@ zerombr
 clearpart --all --initlabel
 
 
-part /boot --fstype ext3 --size 200 --recommended --asprimary
-part / --fstype ext3 --size 1024 --grow
+part /boot --size 200 --recommended --asprimary
+part / --size 1024 --grow
 part swap --recommended
-part /home --fstype ext4 --size=5120
+part /home --size=5120 --fstype ext4
 
 # no snippet data for RedHatEnterpriseLinux6
 # no snippet data for system

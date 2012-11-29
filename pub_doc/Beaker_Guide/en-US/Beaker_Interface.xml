@@ -454,6 +454,9 @@
                                              <listitem>
                                               <para><application>rootfstype</application> Specifies root filesystem type</para>
                                              </listitem>
+                                             <listitem>
+                                              <para><application>fstype</application> Specifies filesystem type for all volumes</para>
+                                             </listitem>
                                             </itemizedlist>
                                           </para>
                                         </listitem>
