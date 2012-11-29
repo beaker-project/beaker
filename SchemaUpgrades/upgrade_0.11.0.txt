@@ -4,3 +4,15 @@ Remove identity.provider setting from server.cfg (bug 880424)
 Remove the identity.provider setting from /etc/beaker/server.cfg if present.
 The correct value for this setting is supplied by the application configuration
 shipped with Beaker.
+
+
+Ensure recipe.recipe_set_id and recipe_set.job_id are not NULLable (bug 881563)
+-------------------------------------------------------------------------------
+
+If your Beaker database was created prior to version 0.6.14, these two columns
+might erroneously permit NULL values. Run the following SQL to correct them:
+
+    ALTER TABLE recipe
+        MODIFY recipe_set_id INT NOT NULL;
+    ALTER TABLE recipe_set
+        MODIFY job_id INT NOT NULL;
