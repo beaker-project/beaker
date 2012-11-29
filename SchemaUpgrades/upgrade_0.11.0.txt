@@ -16,3 +16,38 @@ might erroneously permit NULL values. Run the following SQL to correct them:
         MODIFY recipe_set_id INT NOT NULL;
     ALTER TABLE recipe_set
         MODIFY job_id INT NOT NULL;
+
+
+Clean up orphaned rendered_kickstart rows (bug 872001)
+------------------------------------------------------
+
+Run the following SQL, to update the foreign key for
+recipe.rendered_kickstart_id:
+
+    ALTER TABLE recipe
+        DROP FOREIGN KEY recipe_ibfk_4; -- rendered_kickstart_id fk
+    ALTER TABLE recipe
+        ADD CONSTRAINT recipe_rendered_kickstart_id_fk
+        FOREIGN KEY (rendered_kickstart_id)
+        REFERENCES rendered_kickstart (id)
+        ON DELETE SET NULL;
+
+Then run the following SQL to delete rows from rendered_kickstart which are
+associated with deleted recipes:
+
+    DELETE FROM rendered_kickstart
+    USING rendered_kickstart
+        INNER JOIN recipe ON recipe.rendered_kickstart_id = rendered_kickstart.id
+        INNER JOIN recipe_set ON recipe_set.id = recipe.recipe_set_id
+        INNER JOIN job ON job.id = recipe_set.job_id
+    WHERE job.deleted IS NOT NULL;
+
+To roll back the foreign key change, run the following SQL. There is no
+rollback for the row deletions.
+
+    ALTER TABLE recipe
+        DROP FOREIGN KEY recipe_rendered_kickstart_id_fk;
+    ALTER TABLE recipe
+        ADD CONSTRAINT recipe_rendered_kickstart_id_fk
+        FOREIGN KEY (rendered_kickstart_id)
+        REFERENCES rendered_kickstart (id);
