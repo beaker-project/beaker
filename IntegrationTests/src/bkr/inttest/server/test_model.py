@@ -949,6 +949,29 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         self.assert_(excluded not in systems)
         self.assert_(included in systems)
 
+    def test_cpu_flags(self):
+        excluded = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        excluded.cpu = Cpu(processors=1, flags=[u'ssse3', 'pae'])
+        included = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        included.cpu = Cpu(processors=1, flags=[u'ssse3', 'vmx'])
+        session.flush()
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <cpu><flag value="vmx" /></cpu>
+            </hostRequires>
+            """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <cpu><flag op="!=" value="pae" /></cpu>
+            </hostRequires>
+            """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
+
     def test_or_lab_controller(self):
         lc1 = data_setup.create_labcontroller(fqdn=u'lab1')
         lc2 = data_setup.create_labcontroller(fqdn=u'lab2')
