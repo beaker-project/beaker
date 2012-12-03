@@ -389,6 +389,7 @@ def queued_recipes(*args):
                 log.debug("System : %s recipe: %s no longer has access. removing" % (system, 
                                                                                      recipe.id))
                 recipe.systems.remove(system)
+                session.commit()
                 continue
 
             recipe.resource = SystemResource(system=system)

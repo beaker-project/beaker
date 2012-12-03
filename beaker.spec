@@ -15,7 +15,7 @@
 %endif
 
 Name:           beaker
-Version:        0.10.4
+Version:        0.10.5
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -368,6 +368,21 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Mon Dec 03 2012 Dan Callaghan <dcallagh@redhat.com> 0.10.5-1
+- 880852 need to commit in "recipe no longer has access" code path
+  (dcallagh@redhat.com)
+- 880440 Fall back to config files if 'hostname -f' is dodgy
+  (ncoghlan@redhat.com)
+- 882740 fix 0.10 schema upgrade notes for guest recipes which are not
+  scheduled (dcallagh@redhat.com)
+- 882742 fix DetachedInstanceError in log-delete exception handler
+  (dcallagh@redhat.com)
+- tests: wait for search bar animations to finish (dcallagh@redhat.com)
+- docs: new section for admin parts of web UI (dcallagh@redhat.com)
+- docs: admin guide for oVirt integration (dcallagh@redhat.com)
+- make %%packages order predictable, fix tests (dcallagh@redhat.com)
+- make autoincrement=True explicit for recipe_resource.id (dcallagh@redhat.com)
+
 * Tue Nov 27 2012 Raymond Mancy <rmancy@redhat.com> 0.10.4-1
 - 877029 Produce unique package list for a recipes package deps
   (rmancy@redhat.com)
