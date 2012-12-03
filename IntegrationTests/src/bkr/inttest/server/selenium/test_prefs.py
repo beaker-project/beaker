@@ -23,6 +23,22 @@ class UserPrefs(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
+    def test_modifying_beaker_password(self):
+        b = self.browser
+        pass_field = b.find_element_by_name("password")
+        pass_field.clear()
+        pass_field.send_keys('AlbiDoubleyou')
+        b.find_element_by_id('UserPrefs').submit()
+        self.assert_(is_text_present(b, 'Beaker password changed'))
+
+        # Test that we can login with new creds
+        # If we can't make the prefs page, we are not logged in
+        logout(b)
+        login(b, user=self.user.user_name, password='AlbiDoubleyou')
+        self.browser.get(get_server_base() + 'prefs')
+        self.assertEquals(b.find_element_by_xpath('//head/title').text,
+            'User Prefs')
+
     def test_modifying_email(self):
         current_user_email = self.user.email_address
         b = self.browser

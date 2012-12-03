@@ -11,7 +11,7 @@ class Preferences(RPCRoot):
 
     exposed = True
     delete_link = DeleteLinkWidgetForm()
-
+    beaker_password = widgets.PasswordField(name='password', label='Beaker Password')
     root_password = widgets.TextField(name='_root_password', label='Root Password')
     rootpw_expiry = widgets.TextField(name='rootpw_expiry',
                                       label='Root Password Expiry',
@@ -20,7 +20,7 @@ class Preferences(RPCRoot):
                                    validator=beaker_validators.CheckUniqueEmail())
     prefs_form   = widgets.TableForm(
         'UserPrefs',
-        fields = [email, root_password, rootpw_expiry],
+        fields = [email, beaker_password, root_password, rootpw_expiry],
         action = 'save',
         submit_text = _(u'Change'),
     )
@@ -70,9 +70,25 @@ class Preferences(RPCRoot):
     @validate(form=prefs_form)
     def save(self, *args, **kw):
         email = kw.get('email_address', None)
+        beaker_password = kw.get('password', None)
         root_password = kw.get('_root_password', None)
         changes = []
- 
+
+        def _do_password_change(password):
+            identity.current.user.password = password
+            changes.append(u'Beaker password changed')
+
+        if kw['password'] != identity.current.user.password:
+            check_change_password = getattr(identity.current_provider,
+                'can_change_password', None)
+            if check_change_password:
+                if check_change_password(identity.current.user.user_name):
+                    _do_password_change(kw['password'])
+                else:
+                    changes.append(u'Cannot change password')
+            else:
+                _do_password_change(kw['password'])
+
         if email and email != identity.current.user.email_address:
             changes.append("Email address changed")
             identity.current.user.email_address = email
