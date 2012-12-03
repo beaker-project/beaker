@@ -380,6 +380,57 @@ class TestBeakerd(unittest.TestCase):
             self.assertEqual(system.command_queue[1].action, 'configure_netboot')
             self.assertEqual(system.command_queue[2].action, 'clear_logs')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=880852
+    def test_recipe_no_longer_has_access(self):
+        with session.begin():
+            group = data_setup.create_group()
+            job_owner = data_setup.create_user()
+            job_owner.groups.append(group)
+            system1 = data_setup.create_system(shared=True,
+                    fqdn='no_longer_has_access1',
+                    lab_controller=self.lab_controller)
+            system1.groups.append(group)
+            system2 = data_setup.create_system(shared=True,
+                    fqdn='no_longer_has_access2',
+                    lab_controller=self.lab_controller)
+            distro_tree = data_setup.create_distro_tree()
+            job = data_setup.create_job(owner=job_owner, distro_tree=distro_tree)
+            job.recipesets[0].recipes[0]._host_requires = u"""
+                <hostRequires>
+                    <or>
+                        <hostname op="=" value="no_longer_has_access1" />
+                        <hostname op="=" value="no_longer_has_access2" />
+                    </or>
+                </hostRequires>
+                """
+        beakerd.new_recipes()
+        beakerd.processed_recipesets()
+        with session.begin():
+            job = Job.query.get(job.id)
+            system1 = System.query.get(system1.id)
+            system2 = System.query.get(system2.id)
+            self.assertEqual(job.status, TaskStatus.queued)
+            candidate_systems = job.recipesets[0].recipes[0].systems
+            self.assertEqual(candidate_systems, [system1, system2])
+            # now remove access to system1
+            system1.groups[:] = [data_setup.create_group()]
+        # first iteration: "recipe no longer has access"
+        beakerd.queued_recipes()
+        with session.begin():
+            job = Job.query.get(job.id)
+            system2 = System.query.get(system2.id)
+            self.assertEqual(job.status, TaskStatus.queued)
+            candidate_systems = job.recipesets[0].recipes[0].systems
+            self.assertEqual(candidate_systems, [system2])
+        # second iteration: system2 is picked instead
+        beakerd.queued_recipes()
+        with session.begin():
+            job = Job.query.get(job.id)
+            system2 = System.query.get(system2.id)
+            self.assertEqual(job.status, TaskStatus.scheduled)
+            picked_system = job.recipesets[0].recipes[0].resource.system
+            self.assertEqual(picked_system, system2)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=826379
     def test_recipe_install_options_can_remove_system_options(self):
         with session.begin():
