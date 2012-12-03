@@ -484,9 +484,7 @@
           have at least one matching device. If operator is !=, selects systems
           which have no matching devices.
         </a:documentation>
-        <optional>
           <ref name="equality_op" />
-        </optional>
         <oneOrMore>
           <choice>
             <attribute name="type" />
@@ -658,12 +656,11 @@
    </choice>
   </define>
   <define name="req">
-    <optional>
       <ref name="op"/>
-    </optional>
     <attribute name="value" />
   </define>
   <define name="op">
+   <optional>
     <attribute name="op">
       <choice>
         <value>!=</value>
@@ -676,16 +673,19 @@
         <value>&gt;</value>
       </choice>
     </attribute>
+   </optional>
   </define>
   <define name="equality_op">
-   <attribute name="op">
-     <choice>
-       <value>!=</value>
-       <value>like</value>
-       <value>==</value>
-       <value>=</value>
-     </choice>
-   </attribute>
+   <optional>
+    <attribute name="op">
+      <choice>
+        <value>!=</value>
+        <value>like</value>
+        <value>==</value>
+        <value>=</value>
+      </choice>
+    </attribute>
+   </optional>
   </define>
   <define name="boolean_value">
    <attribute name="value">
