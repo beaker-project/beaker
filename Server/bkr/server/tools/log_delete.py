@@ -77,9 +77,10 @@ def log_delete(print_logs=False, dry=False, limit=None):
             else:
                 session.close()
         except Exception, e:
-            session.close()
             logger.exception('Exception while deleting logs for %s', job.t_id)
             failed = True
+            # session needs to be open for job.t_id in the log message above
+            session.close()
             continue
     return 1 if failed else 0
 
