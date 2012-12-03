@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.10.5
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -368,6 +368,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Mon Dec 03 2012 Dan Callaghan <dcallagh@redhat.com> 0.10.5-2
+- 882740 one more fix for guest recipes in 0.10 schema upgrade notes
+  (dcallagh@redhat.com)
+
 * Mon Dec 03 2012 Dan Callaghan <dcallagh@redhat.com> 0.10.5-1
 - 880852 need to commit in "recipe no longer has access" code path
   (dcallagh@redhat.com)
