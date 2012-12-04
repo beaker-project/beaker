@@ -855,7 +855,7 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         session.flush()
         systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
-                <cpu><speed op="&gt;=" value="1500" /></cpu>
+                <cpu><speed op="&gt;=" value="1500.0" /></cpu>
             </hostRequires>
             """))
         self.assert_(excluded not in systems)
