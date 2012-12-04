@@ -1536,7 +1536,7 @@ class User(MappedObject):
         if self._root_password:
             return self._root_password
         else:
-            pw = ConfigItem.by_name('root_password').current_value()
+            pw = ConfigItem.by_name(u'root_password').current_value()
             if pw:
                 salt = ''.join([random.choice(string.digits + string.ascii_letters)
                                 for i in range(8)])
@@ -1548,7 +1548,7 @@ class User(MappedObject):
     def rootpw_expiry(self):
         if not self._root_password:
             return
-        validity = ConfigItem.by_name('root_password_validity').current_value()
+        validity = ConfigItem.by_name(u'root_password_validity').current_value()
         if validity:
             return self.rootpw_changed + timedelta(days=validity)
 
@@ -3270,7 +3270,7 @@ class DistroTreeActivity(Activity):
 
 class CommandActivity(Activity):
     def __init__(self, user, service, action, status, callback=None):
-        Activity.__init__(self, user, service, action, 'Command', '', '')
+        Activity.__init__(self, user, service, action, u'Command', u'', u'')
         self.status = status
         self.callback = callback
 
@@ -3403,7 +3403,7 @@ class Log(MappedObject):
         Also by convention we use '/' rather than empty string to mean "no 
         subdirectory". It's all a bit weird...
         """
-        return re.sub(r'/+', '/', path or '') or '/'
+        return re.sub(r'/+', '/', path or u'') or u'/'
 
     @classmethod
     def lazy_create(cls, path=None, **kwargs):
