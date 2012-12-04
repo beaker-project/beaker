@@ -2782,9 +2782,16 @@ class Watchdog(MappedObject):
 
     @classmethod
     def by_status(cls, labcontroller=None, status="active"):
-        """ return a list of all watchdog entries that are either active 
-            or expired for this lab controller
-            All recipes in a recipeset have to expire.
+        """
+        Returns a list of all watchdog entries that are either active or 
+        expired for this lab controller.
+
+        A recipe is only returned as "expired" if all the recipes in the recipe 
+        set have expired. Similarly, a recipe is returned as "active" so long 
+        as any recipe in the recipe set is still active. Some tasks rely on 
+        this behaviour. In particular, the host recipe in virt testing will 
+        finish while its guests are still running, but we want to keep 
+        monitoring the host's console log in case of a panic.
         """
         query = cls.query.join(Watchdog.recipe, Recipe.recipeset)
         if labcontroller:
