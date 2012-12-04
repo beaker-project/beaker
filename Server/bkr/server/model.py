@@ -4802,7 +4802,7 @@ class Recipe(TaskBase):
         """
         packages = []
         packages.extend(TaskPackage.query
-                .select_from(RecipeTask).join(Task, Task.required)
+                .select_from(RecipeTask).join(Task).join(Task.required)
                 .filter(RecipeTask.recipe == self)
                 .order_by(TaskPackage.package).distinct())
         packages.extend(self.custom_packages)
