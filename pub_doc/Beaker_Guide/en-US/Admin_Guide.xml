@@ -429,6 +429,15 @@ these if necessary.</para>
       so that they can log in using SSH key authentication.</para>
     </listitem>
   </varlistentry>
+  <varlistentry>
+    <term><filename>timezone</filename></term>
+    <listitem>
+      <para>Provides the <command>timezone</command> kickstart command. The 
+      default timezone is <literal>America/New_York</literal>. Administrators 
+      may wish to customise this on a per-lab basis to match the local timezone 
+      of the lab.</para>
+    </listitem>
+  </varlistentry>
 </variablelist>
 
 <para>The following snippets have no default template, and will be empty unless 

@@ -45,8 +45,7 @@ selinux {{ selinux|default('--enforcing') }}
 skipx
 {% endif %}
 
-# System timezone
-timezone {{ timezone|default('America/New_York') }}
+{% snippet 'timezone' %}
 # Install OS instead of upgrade
 install
 

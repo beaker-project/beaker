@@ -42,8 +42,7 @@ rootpw --iscrypted {{ password|default(user.root_password, True) }}
 # Do not configure the X Window System
 skipx
 {% endif %}
-# System timezone
-timezone {{ timezone|default('America/New_York') }}
+{% snippet 'timezone' %}
 # Install OS instead of upgrade
 install
 
