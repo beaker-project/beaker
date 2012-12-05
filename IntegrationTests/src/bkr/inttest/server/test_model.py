@@ -1369,14 +1369,14 @@ class RecipeTest(unittest.TestCase):
         dt = data_setup.create_distro_tree()
         lc = data_setup.create_labcontroller()
         systems = [
-            data_setup.create_system(fqdn='server.roles_to_xml', lab_controller=lc),
-            data_setup.create_system(fqdn='clientone.roles_to_xml', lab_controller=lc),
-            data_setup.create_system(fqdn='clienttwo.roles_to_xml', lab_controller=lc),
+            data_setup.create_system(fqdn=u'server.roles_to_xml', lab_controller=lc),
+            data_setup.create_system(fqdn=u'clientone.roles_to_xml', lab_controller=lc),
+            data_setup.create_system(fqdn=u'clienttwo.roles_to_xml', lab_controller=lc),
         ]
         job = data_setup.create_job_for_recipes([
-            data_setup.create_recipe(distro_tree=dt, role='SERVER'),
-            data_setup.create_recipe(distro_tree=dt, role='CLIENTONE'),
-            data_setup.create_recipe(distro_tree=dt, role='CLIENTTWO'),
+            data_setup.create_recipe(distro_tree=dt, role=u'SERVER'),
+            data_setup.create_recipe(distro_tree=dt, role=u'CLIENTONE'),
+            data_setup.create_recipe(distro_tree=dt, role=u'CLIENTTWO'),
         ])
         for i in range(3):
             data_setup.mark_recipe_complete(job.recipesets[0].recipes[i], system=systems[i])
@@ -1488,9 +1488,9 @@ class LogRecipeTest(unittest.TestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=865265
     def test_path_is_normalized(self):
-        lr1 = LogRecipe.lazy_create(path=u'/', filename='dummy.log',
+        lr1 = LogRecipe.lazy_create(path=u'/', filename=u'dummy.log',
                 parent=self.recipe)
-        lr2 = LogRecipe.lazy_create(path=u'', filename='dummy.log',
+        lr2 = LogRecipe.lazy_create(path=u'', filename=u'dummy.log',
                 parent=self.recipe)
         self.assert_(lr1 is lr2, (lr1, lr2))
 

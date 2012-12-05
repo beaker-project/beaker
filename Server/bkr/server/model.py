@@ -1536,7 +1536,7 @@ class User(MappedObject):
         if self._root_password:
             return self._root_password
         else:
-            pw = ConfigItem.by_name('root_password').current_value()
+            pw = ConfigItem.by_name(u'root_password').current_value()
             if pw:
                 salt = ''.join([random.choice(string.digits + string.ascii_letters)
                                 for i in range(8)])
@@ -1548,7 +1548,7 @@ class User(MappedObject):
     def rootpw_expiry(self):
         if not self._root_password:
             return
-        validity = ConfigItem.by_name('root_password_validity').current_value()
+        validity = ConfigItem.by_name(u'root_password_validity').current_value()
         if validity:
             return self.rootpw_changed + timedelta(days=validity)
 
@@ -2782,9 +2782,16 @@ class Watchdog(MappedObject):
 
     @classmethod
     def by_status(cls, labcontroller=None, status="active"):
-        """ return a list of all watchdog entries that are either active 
-            or expired for this lab controller
-            All recipes in a recipeset have to expire.
+        """
+        Returns a list of all watchdog entries that are either active or 
+        expired for this lab controller.
+
+        A recipe is only returned as "expired" if all the recipes in the recipe 
+        set have expired. Similarly, a recipe is returned as "active" so long 
+        as any recipe in the recipe set is still active. Some tasks rely on 
+        this behaviour. In particular, the host recipe in virt testing will 
+        finish while its guests are still running, but we want to keep 
+        monitoring the host's console log in case of a panic.
         """
         query = cls.query.join(Watchdog.recipe, Recipe.recipeset)
         if labcontroller:
@@ -3270,7 +3277,7 @@ class DistroTreeActivity(Activity):
 
 class CommandActivity(Activity):
     def __init__(self, user, service, action, status, callback=None):
-        Activity.__init__(self, user, service, action, 'Command', '', '')
+        Activity.__init__(self, user, service, action, u'Command', u'', u'')
         self.status = status
         self.callback = callback
 
@@ -3403,7 +3410,7 @@ class Log(MappedObject):
         Also by convention we use '/' rather than empty string to mean "no 
         subdirectory". It's all a bit weird...
         """
-        return re.sub(r'/+', '/', path or '') or '/'
+        return re.sub(r'/+', '/', path or u'') or u'/'
 
     @classmethod
     def lazy_create(cls, path=None, **kwargs):
@@ -4802,7 +4809,7 @@ class Recipe(TaskBase):
         """
         packages = []
         packages.extend(TaskPackage.query
-                .select_from(RecipeTask).join(Task, Task.required)
+                .select_from(RecipeTask).join(Task).join(Task.required)
                 .filter(RecipeTask.recipe == self)
                 .order_by(TaskPackage.package).distinct())
         packages.extend(self.custom_packages)

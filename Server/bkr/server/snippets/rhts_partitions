@@ -52,7 +52,7 @@ part swap --recommended
 {% if fstype %}
 {% set myfstype = fstype %}
 {% else %}
-{% set myfstype = %}
+{% set myfstype = None %}
 {% endif %}
 {% if partition|length > 3 %}
 {% set myfstype = partition[3] %}

@@ -1131,7 +1131,7 @@ mysillypackage
         ftp_lc = data_setup.create_labcontroller()
         system = data_setup.create_system(arch=u'x86_64', lab_controller=ftp_lc)
         self.rhel62_server_x86_64.lab_controller_assocs.append(
-                LabControllerDistroTree(lab_controller=ftp_lc, url='ftp://something/'))
+                LabControllerDistroTree(lab_controller=ftp_lc, url=u'ftp://something/'))
         session.flush()
         recipe = self.provision_recipe('''
             <job>
@@ -1335,8 +1335,8 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
         system = data_setup.create_system(fqdn=u'testForPackageDuplication',
                 arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
-        task1 = data_setup.create_task(requires=['requires1'])
-        task2 = data_setup.create_task(requires=['requires1'])
+        task1 = data_setup.create_task(requires=[u'requires1'])
+        task2 = data_setup.create_task(requires=[u'requires1'])
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>

@@ -244,7 +244,7 @@ def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.
     if path is None:
         path = u'/mnt/tests/%s' % name
     if description is None:
-        description = unique_name('description%s')
+        description = unique_name(u'description%s')
     if uploader is None:
         uploader = create_user(user_name=u'task-uploader%s' % name.replace('/', '-'))
     if owner is None:
@@ -452,7 +452,7 @@ def mark_recipe_running(recipe, fqdn=None, **kwargs):
     recipe.tasks[0].start()
     if isinstance(recipe, GuestRecipe):
         if not fqdn:
-            fqdn = unique_name('guest_fqdn_%s')
+            fqdn = unique_name(u'guest_fqdn_%s')
         recipe.resource.fqdn = fqdn
     log.debug('Started %s', recipe.tasks[0].t_id)
 
