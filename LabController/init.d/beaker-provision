@@ -15,8 +15,18 @@ prog="beaker-provision"
 PIDFILE=/var/run/beaker-lab-controller/${prog}.pid
 LOCKFILE=/var/lock/subsys/$prog
 
+check_pidfile() {
+    status -p $PIDFILE $prog >& /dev/null
+    ret=$?
+    if [ "$ret" -eq 1 ]; then
+        # remove stale pidfile
+        rm -f -- "$PIDFILE"
+    fi
+}
+
 start() {
     echo -n $"Starting $prog: "
+    check_pidfile
     daemon --pidfile $PIDFILE $prog
     RETVAL=$?
     echo

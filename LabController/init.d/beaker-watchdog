@@ -19,8 +19,18 @@ PIDFILE=/var/run/beaker-lab-controller/${prog}.pid
 LOCKFILE=/var/lock/subsys/$prog
 RUN_AS=apache
 
+check_pidfile() {
+    status -p $PIDFILE $prog >& /dev/null
+    ret=$?
+    if [ "$ret" -eq 1 ]; then
+        # remove stale pidfile
+        rm -f -- "$PIDFILE"
+    fi
+}
+
 start() {
     echo -n $"Starting $prog: "
+    check_pidfile
     daemon --pidfile $PIDFILE --user $RUN_AS $prog
     RETVAL=$?
     echo
@@ -32,7 +42,7 @@ start() {
 
 stop() {
     echo -n $"Stopping $prog: "
-    killproc $prog
+    killproc -p $PIDFILE $prog
     RETVAL=$?
     echo 
     rm -f $LOCKFILE
