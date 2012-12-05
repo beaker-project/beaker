@@ -1542,7 +1542,7 @@ class RecipeWidget(CompoundWidget):
     def update_params(self, d):
         super(RecipeWidget, self).update_params(d)
         d['recipe_systems'] = \
-            make_link(url('/recipes/systems?recipe_id=%d' % d['recipe'].id),
+            make_link(url('../recipes/systems?recipe_id=%d' % d['recipe'].id),
             d['recipe'].dyn_systems.count())
 
 class ProductWidget(SingleSelectField, RPC):
