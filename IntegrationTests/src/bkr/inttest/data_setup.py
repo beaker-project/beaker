@@ -148,7 +148,7 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
     if arches:
         osversion.arches = arches
     if not name:
-        name = unique_name(u'DAN6.9-%s')
+        name = unique_name(u'%s.%s-%%s' % (osmajor, osminor))
     distro = Distro.lazy_create(name=name, osversion=osversion)
     if tags:
         distro.tags.extend(tags)

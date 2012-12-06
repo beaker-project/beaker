@@ -55,6 +55,8 @@ Beaker's inventory.
 
 .. automethod:: systems.history
 
+.. automethod:: systems.get_osmajor_arches
+
 
 Distros and distro trees
 ------------------------
