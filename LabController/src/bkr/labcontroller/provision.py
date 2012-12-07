@@ -145,41 +145,14 @@ def handle_clear_logs(conf, command):
         f.truncate()
 
 def handle_configure_netboot(command):
-    netboot.fetch_images(command['netboot']['distro_tree_id'],
-            command['netboot']['kernel_url'],
-            command['netboot']['initrd_url'], command['fqdn'])
-    fqdn = command['fqdn']
-    arch = set(command['arch'])
-    ko = command['netboot']['kernel_options']
-    if 'i386' in arch or 'x86_64' in arch:
-        netboot.configure_pxelinux(fqdn, ko)
-        netboot.configure_efigrub(fqdn, ko)
-    if 's390' in arch or 's390x' in arch:
-        netboot.configure_zpxe(fqdn, ko)
-    if 'ppc' in arch or 'ppc64' in arch:
-        netboot.configure_yaboot(fqdn, ko)
-        netboot.configure_efigrub(fqdn, ko)
-    if 'ia64' in arch:
-        netboot.configure_elilo(fqdn, ko)
-    if 'armhfp' in arch:
-        netboot.configure_armlinux(fqdn, ko)
+    netboot.configure_all(command['fqdn'], command['arch'],
+                          command['netboot']['distro_tree_id'],
+                          command['netboot']['kernel_url'],
+                          command['netboot']['initrd_url'],
+                          command['netboot']['kernel_options'])
 
 def handle_clear_netboot(command):
-    fqdn = command['fqdn']
-    arch = set(command['arch'])
-    netboot.clear_images(command['fqdn'])
-    if 'i386' in arch or 'x86_64' in arch:
-        netboot.clear_pxelinux(fqdn)
-        netboot.clear_efigrub(fqdn)
-    if 's390' in arch or 's390x' in arch:
-        netboot.clear_zpxe(fqdn)
-    if 'ppc' in arch or 'ppc64' in arch:
-        netboot.clear_yaboot(fqdn)
-        netboot.clear_efigrub(fqdn)
-    if 'ia64' in arch:
-        netboot.clear_elilo(fqdn)
-    if 'armhfp' in arch:
-        netboot.clear_armlinux(fqdn)
+    netboot.clear_all(command['fqdn'])
 
 def handle_power(command):
     from bkr.labcontroller.async import MonitoredSubprocess
