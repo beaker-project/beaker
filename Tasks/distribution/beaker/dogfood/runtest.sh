@@ -16,7 +16,11 @@
 # Author: Dan Callaghan <dcallagh@redhat.com>
 
 rhts-run-simple-test $TEST/beakerd_stop "/sbin/service beakerd stop"
-rhts-run-simple-test $TEST/yum_install "yum install -y beaker-integration-tests$VERSION"
+if [[ "$SOURCE" == "git" ]] ; then
+    rhts-run-simple-test $TEST/yum_install_git "yum install -y /tmp/tito/noarch/beaker-integration-tests-*.rpm"
+else
+    rhts-run-simple-test $TEST/yum_install "yum install -y beaker-integration-tests$VERSION"
+fi
 rhts-run-simple-test $TEST/update_config "./update-config.sh"
 rhts-run-simple-test $TEST/httpd_reload "/sbin/service httpd reload"
 rhts-run-simple-test $TEST "nosetests -v $NOSEARGS"
