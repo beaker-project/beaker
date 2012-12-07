@@ -1,0 +1,349 @@
+% Installation Guide
+
+Installation
+============
+
+The installation guide will teach you how to install Beaker into your
+system.
+
+Install Beaker
+==============
+
+To install Beaker packages (and dependencies) you'll need to get the
+repo file then copy it to your */etc/yum.repos.d/* directory.
+
+There are two main repos. One containing packages needed for installing
+the Beaker server and required components, another for packages needed
+to run the Beaker client. Basic tasks needed by Beaker can also be found
+[here](http://repos.fedorapeople.org/repos/beaker/tasks). You can find
+the repo directory [here](http://repos.fedorapeople.org/repos/beaker/).
+Please download the repo file that suits your requirements.
+
+Install the dependencies.
+
+    $ yum -y install rpm-build python-devel TurboGears python-TurboMail
+    $ yum -y install mod_wsgi python-decorator python-tgexpandingformwidget python-xmltramp
+
+Install Beaker server.
+
+    $ yum install beaker-server 
+
+Install DB
+----------
+
+Beaker uses the [sqlalchemy](http://www.sqlalchemy.org/) database
+library, which supports a large number of databases (including MySQL,
+PostgreSQL, SQLite, Oracle, and Microsoft SQL Server) provided that a
+suitable client driver is installed. However Beaker is only tested
+against MySQL, so it is recommended to use that.
+
+For this tutorial, we will use MySQL. First, make sure MySQL server is
+installed, and configure the daemon to run at startup.
+
+    $ yum install -y mysql-server MySQL-python
+    $ chkconfig mysqld on
+
+For Unicode support in Beaker, it is recommended to configure MySQL to
+store strings as UTF-8. This is controlled by the `character-set-server`
+option in `/etc/my.cnf`:
+
+    [mysqld]
+    ...
+    character-set-server=utf8
+
+Now start the MySQL server:
+
+    $ service mysqld start
+
+Create a database, and grant access to a user. You can put the database
+on the local machine, or on a remote machine.
+
+    $ echo "create database <db_name> ;" | mysql
+    $ echo "create user <user_name> ;" | mysql
+    $ echo "grant all on <db_name>.* to <user_name> IDENTIFIED BY <password>;"| mysql
+
+<div class='admonition'>
+**Note**
+
+You will need to ensure that the details entered for the \<db\_name\>,
+\<user\_name\>, and \<password\> are correctly reproduced in the value for the
+`sqlalchemy.dburi` key in `/etc/beaker/server.cfg`
+i.e, `sqlalchemy.dburi`=
+"mysql://\<user\_name\>:\<password\>@\<hostname\>/\<db\_name\>?charset=utf8"
+
+</div>
+
+Now let's initialise our DB with tables. We'll also create an admin
+account called *admin* with password *testing*, and email
+*root@localhost*.
+
+        $ beaker-init -u admin -p testing -e root@localhost
+
+Start Beaker
+------------
+
+We are now ready to start the Beaker service. Make sure you have the
+following line in your /etc/httpd/conf.d/wsgi.conf and that it is
+uncommented.
+
+           LoadModule wsgi_module modules/mod_wsgi.so
+
+First make sure apache is on and configured to run on startup.
+
+          $ sudo chkconfig httpd on
+          $ sudo /sbin/service httpd start
+
+We need to switch SELinux off.
+
+          $ setenforce 0
+
+Due to permission issues, we need to delete the log file before we start
+Beaker for the first time. Otherwise Beaker will not run properly.
+
+           $ sudo rm /var/log/beaker/server*.log
+           $ sudo rm /var/log/beaker/server*.lock
+
+Start Beaker and configure it to run on startup.
+
+           $ sudo chkconfig beakerd on
+           $ sudo /sbin/service beakerd start
+
+To make sure Beaker is running go to
+[](http://BeakerServer.example.com/bkr/) in your browser.
+
+### Add Lab Controller details ###
+One more step that we need to do is add the Lab Controller that we are
+yet to [setup](#setup-lab-controller). Log in at
+[](http://BeakerServer.example.com/bkr/labcontrollers/new). Use the
+username and password above from the `beaker-init` command. The new lab
+controller form requires the following fields:
+
+-   *FQDN*: This is the fully qualified domain name of the lab controller.
+
+-   *Username*: This is the login name that the lab controller will use to
+    login to beaker. Because this is a machine account we recommend
+    prepending it with host/, so for example
+    host/lab\_controller.example.com
+
+-   *Password*: This is the password that goes along with the username,
+    again we will use : *testing*
+
+-   *Lab Controller Email Address*: All user accounts require a unique
+    email address, you can use root@FQDN of lab controller.
+
+Save the form and we are done with the Inventory side for now.
+
+Setup Lab Controller
+====================
+
+Beaker uses Lab Controllers to manage the Systems in it's inventory.Open
+a terminal window on the system you will be running the Lab Controller
+on. This can be a seperate system than the one running the Beaker
+server.
+
+Install Lab Controller
+----------------------
+
+If you have not installed the beaker repo on the Lab Controller, they
+will need to be isntalled as per the [instructions](#install-beaker).
+Then install the lab controller package:
+
+    $ sudo yum install beaker-lab-controller
+
+Configure Lab Controller
+------------------------
+
+Settings for the lab controller daemons are in
+`/etc/beaker/labcontroller.conf`. At a minimum you will need to change
+the following settings:
+
+-   `HUB_URL`: The URL of your Beaker server *without the trailing
+    slash*. If the lab controller and server are the same machine then
+    the default value `http://localhost/bkr` is adequate.
+
+-   `USERNAME`, `PASSWORD`: The username and password which the lab
+    controller will use when logging in to Beaker. This is the username
+    and password you picked when [creating the lab controller](#add-lab-controller-details).
+
+Turn on httpd:
+
+    $ sudo chkconfig httpd on
+    $ sudo service httpd start
+
+Turn on tftp:
+
+    $ sudo chkconfig xinetd on
+    $ sudo chkconfig tftp on
+    $ sudo service xinetd start
+
+You can also use dnsmasq or any other TFTP server implementation. If
+your TFTP server is configured to use a root directory other than the
+default `/var/lib/tftpboot` you will need to set the `TFTP_ROOT` option
+in `/etc/beaker/labcontroller.conf`.
+
+The `beaker-proxy` daemon handles XML-RPC requests from within the lab and
+proxies them to the server.
+
+    $ sudo chkconfig beaker-proxy on
+    $ sudo service beaker-proxy start
+
+The `beaker-watchdog` daemon monitors systems and aborts their recipes if
+they panic or exceed the time limit.
+
+    $ sudo chkconfig beaker-watchdog on
+    $ sudo service beaker-watchdog start
+
+The `beaker-provision` daemon writes netboot configuration files in the
+TFTP root directory and runs fence commands to reboot systems.
+
+    $ sudo chkconfig beaker-provision on
+    $ sudo service beaker-provision start
+
+Import Distros
+--------------
+
+The next step is to import some distros using the `beaker-import`
+command on the lab controller. For each distro you would like to make
+available in Beaker, run `beaker-import` and pass all the URLs under
+which the distro is available. For example:
+
+    $ beaker-import http://mymirror.example.com/pub/fedora/linux/releases/17/Fedora/ \
+            ftp://mymirror.example.com/pub/fedora/linux/releases/17/Fedora/ \
+            nfs://mymirror.example.com:/pub/fedora/linux/releases/17/Fedora/
+
+Check that the distros were added successfully by going to
+[](https://BeakerServer.example.com/bkr/distros).
+
+<div class='admonition'>
+**Note**
+
+After successfully importing distros, you will need to create server
+side repos to serve the distro specific rpms needed to install lab
+machines. You will need to run the following on the beaker server:
+
+    $ beaker-repo-update
+
+</div>
+
+Automate Jobs for New Distros
+-----------------------------
+
+Whenever we [import distros](#import-distros), we have the ability
+to run automated jobs on these newly imported distros. To do this we
+need to install the beaker-lab-controller-addDistro package.
+
+    $ sudo yum install beaker-lab-controller-addDistro
+
+You can now place a script into the `/var/lib/beaker/addDistro.d`
+directory, that will be run each time a distro is imported.
+
+By default, `/var/lib/beaker/addDistro.d/updateDistro` is installed,
+which schedules a Beaker job to test installation of the new distro and
+tags it with `STABLE` if the job completes without error. Use this as a
+guide for creating more specific jobs that you might find useful.
+
+Configure Lab PXE Menu
+----------------------
+
+Beaker includes a command, `beaker-pxemenu`, which can optionally be
+used to generate a PXE boot menu containing the distros in Beaker. Users
+in the lab can then perform manual installations by selecting a distro
+from the menu. The menu is written to `pxelinux.cfg/beaker_menu` in the
+TFTP root directory.
+
+You can limit the menu to only contain distros tagged in Beaker with a
+certain tag, by passing the `--tag` option to `beaker-pxemenu`. By
+default, all distros which are available in the lab are included in the
+PXE menu.
+
+> **Note**
+>
+> If you have configured a non-default TFTP root directory in
+> `/etc/beaker/labcontroller.conf`, be sure to pass that same directory
+> in the `--tftp-root` option to `beaker-pxemenu`.
+
+If using the PXE menu, you should configure `pxelinux.cfg/default` to
+boot from local disk by default, with an option to load the menu. For
+example:
+
+    default local
+    prompt 1
+    timeout 200
+
+    say ***********************************************
+    say Press ENTER to boot from local disk
+    say Type "menu" at boot prompt to view install menu
+    say ***********************************************
+
+    label local
+        localboot 0
+
+    label menu
+        kernel menu.c32
+        append pxelinux.cfg/beaker_menu
+
+If your site imports distros into Beaker infrequently, you may prefer to
+run `beaker-pxemenu` after importing new distros. Otherwise, you can
+create a cron job to periodically update the PXE menu:
+
+    #!/bin/sh
+    exec beaker-pxemenu --quiet
+
+Beaker Client
+=============
+
+You'll then need to configure how your Beaker client authenticates with
+the Beaker server. You can use either password authentication, or
+kerberos authentication. For password add the following:
+
+              AUTH_METHOD = "password"
+              USERNAME = "username"
+              PASSWORD = "password"
+
+If instead kerberos authentication is preferred:
+
+              AUTH_METHOD = "krbv"
+              KRB_REALM = "krb_realm"
+
+To verify it is working properly:
+
+              $ bkr list-labcontrollers
+
+It should return a list of labcontrollers configured in Beaker.
+
+To create a simple Job workflow, the beaker client comes with the
+command `bkr workflow-simple` . This simple Job workflow will create the
+XML for you from various options passed at the shell prompt, and submit
+this to the Beaker server. To see all the options that can be passed
+during invocation of `workflow-simple`, use the following command:
+
+              $ bkr workflow-simple --help
+
+A common set of paramaters that may be passed to the workflow-simple
+options would be the following:
+
+             $ bkr workflow-simple --username=<user> --password=<passwd> --dryrun
+                  --arch=<arch> --distro=<distro_name> --task=<task_name>
+                  --type=<TYPE> --whiteboard=<whiteboard_name> --debug > my_job.xml
+
+To submit an existing Job workflow:
+
+            bkr job-submit job_xml
+
+If succesful, you will be shown the Job ID and the progress of your Job.
+
+To watch a Job:
+
+            $ bkr job-watch J:job_id
+
+To cancel a Job you have created:
+
+           $ bkr job-cancel J:job_id
+
+To show all Tasks available for a given distro:
+
+           $ bkr task-list distro
+
+To add a Task:
+
+            $ bkr task-add task_rpm
