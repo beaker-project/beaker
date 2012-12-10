@@ -114,6 +114,19 @@ and corrective action.
         INNER JOIN recipe_resource ON recipe_resource.recipe_id = recipe.id
             AND recipe_resource.type = 'guest';
 
+    -- set guest recipes back to Queued, if their host is Queued
+    DELETE FROM watchdog
+        USING watchdog
+        INNER JOIN recipe ON watchdog.recipe_id = recipe.id
+        INNER JOIN machine_guest_map ON machine_guest_map.guest_recipe_id = recipe.id
+        INNER JOIN recipe parent ON machine_guest_map.machine_recipe_id = parent.id
+        WHERE parent.status = 'Queued' AND recipe.status != parent.status;
+    UPDATE recipe
+        INNER JOIN machine_guest_map ON machine_guest_map.guest_recipe_id = recipe.id
+        INNER JOIN recipe parent ON machine_guest_map.machine_recipe_id = parent.id
+        SET recipe.status = 'Queued'
+        WHERE parent.status = 'Queued' AND recipe.status != parent.status;
+
     ALTER TABLE recipe
         DROP FOREIGN KEY recipe_ibfk_4, -- system_id FK
         DROP COLUMN system_id,
