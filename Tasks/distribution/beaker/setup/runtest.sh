@@ -21,17 +21,23 @@
 
 function BuildBeaker ()
 {
-    rlRun "yum install -y TurboGears python-setuptools-devel python-devel"
-    rlRun "git clone git://git.fedorahosted.org/beaker"
+    rlRun "git clone git://git.beaker-project.org/beaker"
     rlRun "pushd beaker"
+    if [[ -n "$BEAKER_GIT_REMOTE" ]] ; then
+        rlRun "git fetch $BEAKER_GIT_REMOTE ${BEAKER_GIT_REF:-master} && git checkout FETCH_HEAD"
+    else
+        rlRun "git checkout ${BEAKER_GIT_REF:-master}"
+    fi
+    rlRun "yum-builddep -y ./beaker.spec"
+    rlRun "yum -y install tito"
     rlRun "tito build --rpm --test"
     rlRun "popd"
 }
 
 function InstallInventory_git()
 {
-    BuildBeaker
-    rlRun "yum install --nogpg -y  /tmp/tito/RPMS/noarch/beaker-server-*.rpm"
+    [[ ! -d /tmp/tito/noarch ]] && BuildBeaker
+    rlRun "yum install --nogpg -y /tmp/tito/noarch/{beaker-[0-9]*,beaker-server-*}.rpm"
 }
 
 function InstallInventory_repo()
@@ -41,8 +47,8 @@ function InstallInventory_repo()
 
 function InstallLabController_git()
 {
-    BuildBeaker
-    rlRun "yum install --nogpg -y /tmp/tito/RPMS/noarch/beaker-lab-controller-*.rpm"
+    [[ ! -d /tmp/tito/noarch ]] && BuildBeaker
+    rlRun "yum install --nogpg -y /tmp/tito/noarch/{beaker-[0-9]*,beaker-lab-controller-*}.rpm"
 }
 
 function InstallLabController_repo()
