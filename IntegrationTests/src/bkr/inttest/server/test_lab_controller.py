@@ -41,14 +41,14 @@ class TestLabController(unittest.TestCase):
             controller = Jobs()
             session.flush()
             self.job = controller.process_xmljob(xmljob, user)
-        beakerd.new_recipes()
-        beakerd.processed_recipesets()
+        beakerd.process_new_recipes()
+        beakerd.queue_processed_recipesets()
         
 
     def test_disable_lab_controller(self):
         with session.begin():
             LabController.by_name(self.lc_fqdn).disabled = True
-        beakerd.queued_recipes()
+        beakerd.schedule_queued_recipes()
         with session.begin():
             recipeset = RecipeSet.by_id(self.job.recipesets[0].id)
             self.assertEquals(recipeset.status, TaskStatus.queued)
@@ -56,7 +56,7 @@ class TestLabController(unittest.TestCase):
     def test_enable_lab_controller(self):
         with session.begin():
             LabController.by_name(self.lc_fqdn).disabled = False
-        beakerd.queued_recipes()
+        beakerd.schedule_queued_recipes()
         with session.begin():
             recipeset = RecipeSet.by_id(self.job.recipesets[0].id)
             self.assertEquals(recipeset.status, TaskStatus.scheduled)

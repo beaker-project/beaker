@@ -5120,6 +5120,8 @@ class Recipe(TaskBase):
             metrics.increment('counters.recipes_%s' % self.status.name)
 
     def provision(self):
+        if not self.harness_repo():
+            raise ValueError('Failed to find repo for harness')
         from bkr.server.kickstart import generate_kickstart
         install_options = self.resource.install_options(self.distro_tree)\
                 .combined_with(self.generated_install_options())\
