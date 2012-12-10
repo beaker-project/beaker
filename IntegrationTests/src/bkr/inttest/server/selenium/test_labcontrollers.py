@@ -360,10 +360,10 @@ class TestPowerFailures(XmlRpcTestCase):
                 </hostRequires>
                 """ % system.fqdn)
 
-        beakerd.new_recipes()
-        beakerd.processed_recipesets()
-        beakerd.queued_recipes()
-        beakerd.scheduled_recipes()
+        beakerd.process_new_recipes()
+        beakerd.queue_processed_recipesets()
+        beakerd.schedule_queued_recipes()
+        beakerd.provision_scheduled_recipesets()
 
         with session.begin():
             job = Job.query.get(job.id)
@@ -392,10 +392,10 @@ class TestPowerFailures(XmlRpcTestCase):
                 </hostRequires>
                 """ % system.fqdn)
 
-        beakerd.new_recipes()
-        beakerd.processed_recipesets()
-        beakerd.queued_recipes()
-        beakerd.scheduled_recipes()
+        beakerd.process_new_recipes()
+        beakerd.queue_processed_recipesets()
+        beakerd.schedule_queued_recipes()
+        beakerd.provision_scheduled_recipesets()
 
         with session.begin():
             job = Job.query.get(job.id)

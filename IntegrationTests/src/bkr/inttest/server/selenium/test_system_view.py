@@ -122,9 +122,9 @@ class SystemViewTest(SeleniumTestCase):
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % self.system.fqdn)
             job_id = job.id
-        beakerd.new_recipes()
-        beakerd.processed_recipesets()
-        beakerd.queued_recipes()
+        beakerd.process_new_recipes()
+        beakerd.queue_processed_recipesets()
+        beakerd.schedule_queued_recipes()
         self.go_to_system_view()
         sel.click('link=(Current Job)')
         sel.wait_for_page_to_load('30000')
