@@ -13,7 +13,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
-        VirtResource, OSMajor, OSMajorInstallOptions
+        VirtResource, OSMajor, OSMajorInstallOptions, Watchdog
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -349,6 +349,26 @@ class DistroTreeByFilterTest(unittest.TestCase):
             """ % lc.fqdn).all()
         self.assert_(excluded not in distro_trees)
         self.assert_(included in distro_trees)
+
+class WatchdogTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    def test_not_active_watchdog_is_not_active(self):
+        r1 = data_setup.create_recipe()
+        r2 = data_setup.create_recipe()
+        job = data_setup.create_job_for_recipes([r1, r2])
+        data_setup.mark_recipe_waiting(r1)
+        data_setup.mark_recipe_running(r2)
+        session.flush()
+        active_watchdogs = Watchdog.by_status()
+        self.assert_(r1.watchdog not in active_watchdogs)
+        self.assert_(r2.watchdog in active_watchdogs)
+
 
 class DistroTreeTest(unittest.TestCase):
 
