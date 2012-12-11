@@ -8,7 +8,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
         Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
-        GuestRecipe
+        GuestRecipe, Watchdog
 from bkr.inttest import data_setup
 from nose.plugins.skip import SkipTest
 
@@ -310,6 +310,29 @@ class DistroTreeByFilterTest(unittest.TestCase):
             """ % lc.fqdn).all()
         self.assert_(excluded not in distro_trees)
         self.assert_(included in distro_trees)
+
+class WatchdogTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    def test_not_active_watchdog_is_not_active(self):
+        distro_tree = data_setup.create_distro_tree()
+        r1 = data_setup.create_recipe(distro_tree=distro_tree)
+        r2 = data_setup.create_recipe(distro_tree=distro_tree)
+        job = data_setup.create_job_for_recipes([r1, r2])
+        session.add(job)
+        session.flush()
+        data_setup.mark_recipe_waiting(r1, job.owner)
+        data_setup.mark_recipe_running(r2, job.owner)
+        session.flush()
+        active_watchdogs = Watchdog.by_status()
+        self.assert_(r1.watchdog not in active_watchdogs)
+        self.assert_(r2.watchdog in active_watchdogs)
+
 
 class DistroTreeTest(unittest.TestCase):
 

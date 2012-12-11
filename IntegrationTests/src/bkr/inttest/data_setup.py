@@ -342,6 +342,22 @@ def create_completed_job(**kwargs):
     mark_job_complete(job, **kwargs)
     return job
 
+def mark_recipe_waiting(recipe, user):
+    recipe.process()
+    recipe.queue()
+    recipe.schedule()
+    recipe.system = create_system(owner=user)
+    recipe.system.reserve(service=u'testdata', user=user,
+        reservation_type=u'recipe', recipe=recipe)
+    recipe.watchdog = Watchdog(system=recipe.system)
+    recipe.waiting()
+
+def mark_recipe_running(recipe, user):
+    mark_recipe_waiting(recipe,user)
+    first_rt = recipe.tasks[0]
+    first_rt.start()
+    log.debug('Started %s', first_rt.t_id)
+
 def mark_recipe_complete(recipe, result=TaskResult.pass_, system=None,
         start_time=None, finish_time=None, **kwargs):
     assert result in TaskResult
