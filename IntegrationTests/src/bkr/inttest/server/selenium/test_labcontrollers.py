@@ -7,10 +7,9 @@ from bkr.inttest.server.webdriver_utils import login, is_activity_row_present
 from bkr.inttest import data_setup, get_server_base
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
         System, SystemStatus, TaskStatus, CommandActivity, CommandStatus, \
-        KernelType
+        KernelType, LabController
 from bkr.server.tools import beakerd
 from bkr.inttest.server.selenium.test_activity import is_activity_row_present
-from bkr.server.model import LabController
 
 
 class LabControllerViewTest(WebDriverTestCase):
@@ -302,6 +301,26 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             session.refresh(command)
             self.assertEquals(command.status, CommandStatus.failed)
+
+    def test_add_completed_command(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lc)
+            fqdn = system.fqdn
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        queued = self.server.labcontrollers.get_queued_command_details()
+        self.assertEquals(len(queued), 0, queued)
+        expected = u'Arbitrary command!'
+        self.server.labcontrollers.add_completed_command(fqdn, expected)
+        queued = self.server.labcontrollers.get_queued_command_details()
+        self.assertEquals(len(queued), 0, queued)
+        with session.begin():
+            completed = list(CommandActivity.query
+                             .join(CommandActivity.system)
+                             .filter(System.fqdn == fqdn))
+            self.assertEquals(len(completed), 1, completed)
+            self.assertEquals(completed[0].action, expected)
+
+
 
 class TestPowerFailures(XmlRpcTestCase):
 

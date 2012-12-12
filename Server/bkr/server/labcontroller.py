@@ -376,6 +376,22 @@ class LabControllers(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.in_group('lab_controller'))
+    def add_completed_command(self, fqdn, action):
+        # Reports completion of a command that was executed
+        # synchronously by the lab controller
+        user = identity.current.user
+        system = System.by_fqdn(fqdn, user)
+        cmd = CommandActivity(user=user,
+                              service=u"XMLRPC",
+                              action=action,
+                              status=CommandStatus.completed)
+        system.command_queue.append(cmd)
+        session.flush() # Populates cmd.system (needed for next call)
+        cmd.log_to_system_history()
+        return True
+
+    @cherrypy.expose
+    @identity.require(identity.in_group('lab_controller'))
     def mark_command_failed(self, command_id, message=None):
         lab_controller = identity.current.user.lab_controller
         cmd = CommandActivity.query.get(command_id)
