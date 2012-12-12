@@ -16,7 +16,7 @@
 
 Name:           beaker
 Version:        0.9.2
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -349,6 +349,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Wed Dec 12 2012 Raymond Mancy <rmancy@redhat.com> 0.9.2-4
+- 883668 Ensure watchdogs with NULL kill_time are not reported as active
+  (rmancy@redhat.com)
+
 * Wed Aug 29 2012 Bill Peck <bpeck@redhat.com> 0.9.2-3
 - Fix for log-delete to send trailing slashes. (bpeck@redhat.com)
 
