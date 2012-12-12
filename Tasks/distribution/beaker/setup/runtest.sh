@@ -36,7 +36,6 @@ function BuildBeaker ()
 
 function InstallInventory_git()
 {
-    [[ ! -d /tmp/tito/noarch ]] && BuildBeaker
     rlRun "yum install --nogpg -y /tmp/tito/noarch/{beaker-[0-9]*,beaker-server-*}.rpm"
 }
 
@@ -47,7 +46,6 @@ function InstallInventory_repo()
 
 function InstallLabController_git()
 {
-    [[ ! -d /tmp/tito/noarch ]] && BuildBeaker
     rlRun "yum install --nogpg -y /tmp/tito/noarch/{beaker-[0-9]*,beaker-lab-controller-*}.rpm"
 }
 
@@ -241,6 +239,7 @@ if $(echo $CLIENTS | grep -q $HOSTNAME); then
     rlLog "RUnning as Lab Controller using Inventory: ${SERVERS}"
     TEST="$TEST/lab_controller"
     SERVER=$(echo $SERVERS | awk '{print $1}')
+    [[ $SOURCE == "_git" ]] && BuildBeaker
     LabController
     exit 0
 fi
@@ -248,6 +247,7 @@ fi
 if $(echo $SERVERS | grep -q $HOSTNAME); then
     rlLog "Running as Inventory using Lab Controllers: ${CLIENTS}"
     TEST="$TEST/inventory"
+    [[ $SOURCE == "_git" ]] && BuildBeaker
     Inventory
     exit 0
 fi
@@ -257,6 +257,7 @@ if [ -z "$SERVERS" -o -z "$CLIENTS" ]; then
     CLIENTS=$STANDALONE
     SERVERS=$STANDALONE
     SERVER=$(echo $SERVERS | awk '{print $1}')
+    [[ $SOURCE == "_git" ]] && BuildBeaker
     TEST="$TEST/lab_controller" LabController &
     sleep 120
     TEST="$TEST/inventory" Inventory
