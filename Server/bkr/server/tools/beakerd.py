@@ -79,6 +79,11 @@ def get_parser():
 
     return parser
 
+def _virt_enabled():
+    return config.get('ovirt.enabled', False)
+
+def _virt_possible(recipe):
+    return _virt_enabled() and recipe.virt_status == RecipeVirtStatus.possible
 
 def process_new_recipes(*args):
     recipes = MachineRecipe.query.filter(Recipe.status == TaskStatus.new)
@@ -138,7 +143,7 @@ def process_new_recipe(recipe_id):
             # We may already be at the highest priority
             pass
     recipe.virt_status = recipe.check_virtualisability()
-    if not recipe.systems:
+    if not recipe.systems and not _virt_possible(recipe):
         log.info("recipe ID %s moved from New to Aborted" % recipe.id)
         recipe.recipeset.abort(u'Recipe ID %s does not match any systems' % recipe.id)
         return
@@ -270,19 +275,15 @@ def queue_processed_recipeset(recipeset_id):
             recipe.recipeset.abort(u'Recipe ID %s does not match any systems' % recipe.id)
 
 def abort_dead_recipes(*args):
-    recipes = MachineRecipe.query\
-                    .outerjoin(Recipe.distro_tree)\
-                    .filter(
-                         or_(
-                         and_(Recipe.status==TaskStatus.queued,
-                              not_(Recipe.systems.any()),
-                             ),
-                         and_(Recipe.status==TaskStatus.queued,
-                              not_(DistroTree.lab_controller_assocs.any()),
-                             ),
-                            )
-                           )
-
+    filters = [not_(DistroTree.lab_controller_assocs.any())]
+    if _virt_enabled():
+        filters.append(and_(not_(Recipe.systems.any()),
+                Recipe.virt_status != RecipeVirtStatus.possible))
+    else:
+        filters.append(not_(Recipe.systems.any()))
+    recipes = MachineRecipe.query.outerjoin(Recipe.distro_tree)\
+            .filter(Recipe.status == TaskStatus.queued)\
+            .filter(or_(*filters))
     if not recipes.count():
         return False
     log.debug("Entering abort_dead_recipes")
@@ -592,7 +593,7 @@ def metrics_loop(*args, **kwargs):
 def main_recipes_loop(*args, **kwargs):
     while running:
         abort_dead_recipes()
-        if config.get('ovirt.enabled', False):
+        if _virt_enabled():
             virt = provision_virt_recipes()
         else:
             virt = False
