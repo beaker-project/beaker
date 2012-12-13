@@ -473,22 +473,20 @@ class Bootloader(collections.namedtuple("Bootloader",
     def __repr__(self):
         return "Bootloader(%r)" % self.name
 
-BOOTLOADER_NAMES = [
-  "pxelinux",
-  "efigrub",
-  "zpxe",
-  "yaboot",
-  "elilo",
-  "armlinux",
-]
-def _bootloader_entry(name):
-    glb = globals()
-    configure = glb["configure_" + name]
-    clear = glb["clear_" + name]
-    return name, Bootloader(name, configure, clear, set())
+BOOTLOADERS = {}
 
-BOOTLOADERS = dict(_bootloader_entry(name) for name in BOOTLOADER_NAMES)
-BOOTLOADERS["zpxe"].arches.update(["s390", "s390x"])
+def add_bootloader(name, configure, clear, arches=None):
+    """Register bootloader configuration and clear functions"""
+    if arches is None:
+        arches = set()
+    BOOTLOADERS[name] = Bootloader(name, configure, clear, arches)
+
+add_bootloader("pxelinux", configure_pxelinux, clear_pxelinux)
+add_bootloader("efigrub", configure_efigrub, clear_efigrub)
+add_bootloader("yaboot", configure_yaboot, clear_yaboot)
+add_bootloader("elilo", configure_elilo, clear_elilo)
+add_bootloader("armlinux", configure_armlinux, clear_armlinux)
+add_bootloader("zpxe", configure_zpxe, clear_zpxe, set(["s390", "s390x"]))
 
 def configure_all(fqdn, arch, distro_tree_id,
                   kernel_url, initrd_url, kernel_options):
