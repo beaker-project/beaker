@@ -539,7 +539,8 @@ class Proxy(ProxyHelper):
         This is a little ugly.. but better than putting this logic in
         kickstart
         """
-        logger.debug("install_start")
+        _debug_id = "(unspecified recipe)" if recipe_id is None else recipe_id
+        logger.debug("install_start %s", _debug_id)
         # extend watchdog by 3 hours 60 * 60 * 3
         kill_time = 10800
         # look up system recipe based on hostname...
