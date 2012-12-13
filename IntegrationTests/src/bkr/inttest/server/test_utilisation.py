@@ -2,8 +2,9 @@
 import unittest
 import datetime
 from turbogears.database import session
-from bkr.server.model import SystemStatus, SystemStatusDuration
-from bkr.server.utilisation import system_utilisation
+from bkr.server.model import SystemStatus, SystemStatusDuration, System
+from bkr.server.utilisation import system_utilisation, \
+        system_utilisation_counts
 from bkr.inttest import data_setup
 
 class SystemUtilisationTest(unittest.TestCase):
@@ -95,3 +96,31 @@ class SystemUtilisationTest(unittest.TestCase):
         self.assertEqual(u['idle_removed'], datetime.timedelta(days=2))
         self.assertEqual(sum((v for k, v in u.iteritems()), datetime.timedelta(0)),
                 datetime.timedelta(days=4))
+
+    def test_counts(self):
+        lc = data_setup.create_labcontroller()
+        manual_system = data_setup.create_system(lab_controller=lc)
+        data_setup.create_manual_reservation(manual_system,
+                start=datetime.datetime(2012, 1, 1, 0, 0, 0))
+        recipe_system = data_setup.create_system(lab_controller=lc)
+        data_setup.mark_recipe_running(
+                data_setup.create_job().recipesets[0].recipes[0],
+                system=recipe_system)
+        idle_manual_system = data_setup.create_system(lab_controller=lc,
+                status=SystemStatus.manual)
+        idle_automated_system = data_setup.create_system(lab_controller=lc,
+                status=SystemStatus.automated)
+        idle_broken_system = data_setup.create_system(lab_controller=lc,
+                status=SystemStatus.broken)
+        idle_removed_system = data_setup.create_system(lab_controller=lc,
+                status=SystemStatus.removed)
+        session.flush()
+
+        counts = system_utilisation_counts(System.query.filter(
+                System.lab_controller == lc))
+        self.assertEqual(counts['recipe'], 1)
+        self.assertEqual(counts['manual'], 1)
+        self.assertEqual(counts['idle_manual'], 1)
+        self.assertEqual(counts['idle_automated'], 1)
+        self.assertEqual(counts['idle_broken'], 1)
+        self.assertEqual(counts['idle_removed'], 1)

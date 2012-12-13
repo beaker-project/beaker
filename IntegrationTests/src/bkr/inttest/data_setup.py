@@ -487,7 +487,7 @@ def playback_job_results(job, xmljob):
             for k, xmltask in enumerate(xmlrecipe.iter_tasks()):
                 playback_task_results(job.recipesets[i].recipes[j].tasks[k], xmltask)
 
-def create_manual_reservation(system, start, finish, user=None):
+def create_manual_reservation(system, start, finish=None, user=None):
     if user is None:
         user = create_user()
     system.reservations.append(Reservation(start_time=start,
@@ -497,11 +497,12 @@ def create_manual_reservation(system, start, finish, user=None):
             old_value=u'', new_value=user.user_name)
     activity.created = start
     system.activity.append(activity)
-    activity = SystemActivity(user=user,
-            service=u'WEBUI', action=u'Returned', field_name=u'User',
-            old_value=user.user_name, new_value=u'')
-    activity.created = finish
-    system.activity.append(activity)
+    if finish:
+        activity = SystemActivity(user=user,
+                service=u'WEBUI', action=u'Returned', field_name=u'User',
+                old_value=user.user_name, new_value=u'')
+        activity.created = finish
+        system.activity.append(activity)
 
 def create_test_env(type):#FIXME not yet using different types
     """

@@ -24,7 +24,7 @@ __requires__ = ['TurboGears']
 import sys
 import os
 import random
-from bkr.server import needpropertyxml
+from bkr.server import needpropertyxml, utilisation
 from bkr.server.bexceptions import BX, VMCreationFailedException
 from bkr.server.model import *
 from bkr.server.util import load_config, log_traceback
@@ -560,6 +560,18 @@ def recipe_count_metrics():
     for status, count in query:
         metrics.measure('gauges.recipes_%s' % status.name, count)
 
+def system_count_metrics():
+    all = System.query
+    for state, count in utilisation.system_utilisation_counts(all).iteritems():
+        if state != 'idle_removed':
+            metrics.measure('gauges.systems_%s.total' % state, count)
+    shared = System.query.filter(System.private == False)\
+            .filter(System.shared == True)\
+            .filter(System.group_assocs == None)
+    for state, count in utilisation.system_utilisation_counts(shared).iteritems():
+        if state != 'idle_removed':
+            metrics.measure('gauges.systems_%s.shared' % state, count)
+
 # These functions are run in separate threads, so we want to log any uncaught 
 # exceptions instead of letting them be written to stderr and lost to the ether
 
@@ -582,11 +594,11 @@ def metrics_loop(*args, **kwargs):
     while running:
         try:
             start = time.time()
-            log.debug('Sending recipe count metrics')
             recipe_count_metrics()
+            system_count_metrics()
         except Exception:
             log.exception('Exception in metrics loop')
-        time.sleep(max(10.0 + start - time.time(), 5.0))
+        time.sleep(max(30.0 + start - time.time(), 5.0))
 
 @log_traceback(log)
 def main_recipes_loop(*args, **kwargs):
