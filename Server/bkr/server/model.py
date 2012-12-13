@@ -3426,12 +3426,13 @@ class Log(MappedObject):
                 **kwargs).first()
         if item is None:
             item = cls(path=path, **kwargs)
+            session.add(item)
             session.flush()
         return item
 
     def __init__(self, path=None, filename=None,
                  server=None, basepath=None, parent=None):
-        super(Log, self).__init__()
+        # Intentionally not chaining to super(), to avoid session.add(self)
         self.parent = parent
         self.path = self._normalized_path(path)
         self.filename = filename
@@ -5391,6 +5392,10 @@ class RecipeTask(TaskBase):
     result_types = ['pass_','warn','fail','panic']
     stop_types = ['stop','abort','cancel']
 
+    def __init__(self, task):
+        # Intentionally not chaining to super(), to avoid session.add(self)
+        self.task = task
+
     def delete(self): 
         self.logs = []
         for r in self.results:
@@ -5769,6 +5774,12 @@ class RecipeTaskParam(MappedObject):
     """
     Parameters for task execution.
     """
+
+    def __init__(self, name, value):
+        # Intentionally not chaining to super(), to avoid session.add(self)
+        self.name = name
+        self.value = value
+
     def to_xml(self):
         param = xmldoc.createElement("param")
         param.setAttribute("name", "%s" % self.name)
@@ -5832,6 +5843,16 @@ class RecipeTaskResult(TaskBase):
     """
     Each task can report multiple results
     """
+
+    def __init__(self, recipetask=None, path=None, result=None,
+            score=None, log=None):
+        # Intentionally not chaining to super(), to avoid session.add(self)
+        self.recipetask = recipetask
+        self.path = path
+        self.result = result
+        self.score = score
+        self.log = log
+
     def filepath(self):
         """
         Return file path for this result
@@ -6889,7 +6910,8 @@ mapper(Recipe, recipe_table,
                                       backref='recipes'),
                       'repos':relation(RecipeRepo),
                       'rpms':relation(RecipeRpm, backref='recipe'),
-                      'logs':relation(LogRecipe, backref='parent', cascade='delete, delete-orphan'),
+                      'logs':relation(LogRecipe, backref='parent',
+                            cascade='all, delete-orphan'),
                       'custom_packages':relation(TaskPackage,
                                         secondary=task_packages_custom_map),
                       'ks_appends':relation(RecipeKSAppend),
@@ -6932,8 +6954,9 @@ mapper(RecipeTask, recipe_task_table,
                       'params':relation(RecipeTaskParam),
                       'bugzillas':relation(RecipeTaskBugzilla, 
                                            backref='recipetask'),
-                      'task':relation(Task, uselist=False, backref='runs'),
-                      'logs':relation(LogRecipeTask, backref='parent', cascade='delete, delete-orphan'),
+                      'task':relation(Task, uselist=False),
+                      'logs':relation(LogRecipeTask, backref='parent',
+                            cascade='all, delete-orphan'),
                       'watchdog':relation(Watchdog, uselist=False),
                      }
       )
@@ -6945,7 +6968,7 @@ mapper(RecipeTaskBugzilla, recipe_task_bugzilla_table)
 mapper(RecipeTaskRpm, recipe_task_rpm_table)
 mapper(RecipeTaskResult, recipe_task_result_table,
         properties = {'logs':relation(LogRecipeTaskResult, backref='parent',
-                           cascade='delete, delete-orphan'),
+                           cascade='all, delete-orphan'),
                      }
       )
 mapper(RenderedKickstart, rendered_kickstart_table)

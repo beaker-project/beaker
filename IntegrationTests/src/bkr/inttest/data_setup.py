@@ -369,8 +369,9 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
             priority=TaskPriority.default_priority())
     recipe_set.recipes.extend(recipes)
     job.recipesets.append(recipe_set)
-    log.debug('Created %s', job.t_id)
+    session.add(job)
     session.flush()
+    log.debug('Created %s', job.t_id)
     return job
 
 def create_job(num_recipes=1, num_guestrecipes=0, whiteboard=None,
