@@ -2,9 +2,9 @@
 import unittest
 import datetime
 from turbogears.database import session
-from bkr.server.model import SystemStatus, SystemStatusDuration, System
+from bkr.server.model import SystemStatus, SystemStatusDuration, System, Arch
 from bkr.server.utilisation import system_utilisation, \
-        system_utilisation_counts
+        system_utilisation_counts, system_utilisation_counts_by_group
 from bkr.inttest import data_setup
 
 class SystemUtilisationTest(unittest.TestCase):
@@ -124,3 +124,28 @@ class SystemUtilisationTest(unittest.TestCase):
         self.assertEqual(counts['idle_automated'], 1)
         self.assertEqual(counts['idle_broken'], 1)
         self.assertEqual(counts['idle_removed'], 1)
+
+    def test_grouped_counts(self):
+        lc = data_setup.create_labcontroller()
+        manual_ia64_system = data_setup.create_system(lab_controller=lc,
+                arch='ia64')
+        data_setup.create_manual_reservation(manual_ia64_system,
+                start=datetime.datetime(2012, 1, 1, 0, 0, 0))
+        manual_ppc_system = data_setup.create_system(lab_controller=lc,
+                arch='ppc')
+        data_setup.create_manual_reservation(manual_ppc_system,
+                start=datetime.datetime(2012, 1, 1, 0, 0, 0))
+        recipe_ia64_system = data_setup.create_system(lab_controller=lc,
+                arch='ia64')
+        data_setup.mark_recipe_running(
+                data_setup.create_job().recipesets[0].recipes[0],
+                system=recipe_ia64_system)
+        session.flush()
+
+        counts = system_utilisation_counts_by_group(Arch.arch,
+                System.query.join(System.arch)
+                .filter(System.lab_controller == lc))
+        print counts
+        self.assertEqual(counts['ia64']['recipe'], 1)
+        self.assertEqual(counts['ia64']['manual'], 1)
+        self.assertEqual(counts['ppc']['manual'], 1)

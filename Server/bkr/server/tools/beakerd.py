@@ -560,17 +560,30 @@ def recipe_count_metrics():
     for status, count in query:
         metrics.measure('gauges.recipes_%s' % status.name, count)
 
+def _system_count_metrics_for_query(name, query):
+    counts = utilisation.system_utilisation_counts(query)
+    for state, count in counts.iteritems():
+        if state != 'idle_removed':
+            metrics.measure('gauges.systems_%s.%s' % (state, name), count)
+
+def _system_count_metrics_for_query_grouped(name, grouping, query):
+    group_counts = utilisation.system_utilisation_counts_by_group(grouping, query)
+    for group, counts in group_counts.iteritems():
+        for state, count in counts.iteritems():
+            if state != 'idle_removed':
+                metrics.measure('gauges.systems_%s.%s.%s' % (state, name,
+                        group.replace('.', '_')), count)
+
 def system_count_metrics():
-    all = System.query
-    for state, count in utilisation.system_utilisation_counts(all).iteritems():
-        if state != 'idle_removed':
-            metrics.measure('gauges.systems_%s.total' % state, count)
-    shared = System.query.filter(System.private == False)\
-            .filter(System.shared == True)\
-            .filter(System.group_assocs == None)
-    for state, count in utilisation.system_utilisation_counts(shared).iteritems():
-        if state != 'idle_removed':
-            metrics.measure('gauges.systems_%s.shared' % state, count)
+    _system_count_metrics_for_query('all', System.query)
+    _system_count_metrics_for_query('shared', System.query
+            .filter(System.private == False)
+            .filter(System.shared == True)
+            .filter(System.group_assocs == None))
+    _system_count_metrics_for_query_grouped('by_arch', Arch.arch,
+            System.query.join(System.arch))
+    _system_count_metrics_for_query_grouped('by_lab', LabController.fqdn,
+            System.query.join(System.lab_controller))
 
 # These functions are run in separate threads, so we want to log any uncaught 
 # exceptions instead of letting them be written to stderr and lost to the ether
