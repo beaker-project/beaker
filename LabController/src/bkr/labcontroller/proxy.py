@@ -12,12 +12,13 @@ import re
 import shutil
 import tempfile
 import xmlrpclib
+import subprocess
 from cStringIO import StringIO
 from socket import gethostname
 from threading import Thread, Event
 
 import kobo.conf
-from kobo.client import HubProxy 
+from kobo.client import HubProxy
 from kobo.exceptions import ShutdownException
 from kobo.xmlrpc import retry_request_decorator, CookieTransport, \
         SafeCookieTransport
@@ -564,9 +565,12 @@ class Proxy(ProxyHelper):
             return True
         return False
 
-    def clear_netboot(self, system_name):
+    def clear_netboot(self, fqdn):
         ''' Called from %post section to remove netboot entry '''
-        return self.hub.systems.clear_netboot(system_name)
+        logger.debug('clear_netboot %s', fqdn)
+        subprocess.check_call(["sudo", "/usr/bin/beaker-clear-netboot", fqdn])
+        logger.debug('clear_netboot %s completed', fqdn)
+        return self.hub.labcontrollers.add_completed_command(fqdn, "clear_netboot")
 
     def postreboot(self, recipe_id):
         # XXX would be nice if we could limit this so that systems could only

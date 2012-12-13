@@ -14,6 +14,8 @@
 %bcond_with inttests
 %endif
 
+# Note: While some parts of this file use "%{name}, "beaker" is still
+# hardcoded in a lot of places, both here and in the source code
 Name:           beaker
 Version:        0.10.5
 Release:        2%{?dist}
@@ -349,6 +351,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/%{name}-provision
 %{_bindir}/%{name}-pxemenu
 %{_bindir}/%{name}-expire-distros
+%{_bindir}/%{name}-clear-netboot
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %attr(-,apache,root) %dir %{_datadir}/bkr
 %attr(-,apache,root) %{_datadir}/bkr/lab-controller
@@ -361,6 +364,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_sysconfdir}/init.d/%{name}-transfer
 %{_sysconfdir}/init.d/%{name}-provision
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
+%attr(0640,root,root) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)

@@ -157,6 +157,9 @@ def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
                 raise
         clean_image_cache()
 
+def have_images(fqdn):
+    return os.path.exists(os.path.join(get_tftp_root(), 'images', fqdn))
+
 def clear_images(fqdn):
     """Removes kernel and initrd images (images will remain in image cache)"""
     images_dir = os.path.join(get_tftp_root(), 'images', fqdn)
