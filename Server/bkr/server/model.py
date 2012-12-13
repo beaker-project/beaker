@@ -2281,16 +2281,19 @@ class System(SystemObject):
                                              Arch.id==arch.id))
         return excluded
 
-    def distro_trees(self):
+    def distro_trees(self, only_in_lab=True):
         """
         List of distro trees that support this system
         """
-        return DistroTree.query\
+        query = DistroTree.query\
                 .join(DistroTree.distro, Distro.osversion, OSVersion.osmajor)\
-                .options(contains_eager(DistroTree.distro, Distro.osversion, OSVersion.osmajor))\
-                .filter(DistroTree.lab_controller_assocs.any(
-                    LabControllerDistroTree.lab_controller == self.lab_controller))\
-                .filter(DistroTree.arch_id.in_([a.id for a in self.arch]))\
+                .options(contains_eager(DistroTree.distro, Distro.osversion, OSVersion.osmajor))
+        if only_in_lab:
+            query = query.filter(DistroTree.lab_controller_assocs.any(
+                    LabControllerDistroTree.lab_controller == self.lab_controller))
+        else:
+            query = query.filter(DistroTree.lab_controller_assocs.any())
+        query = query.filter(DistroTree.arch_id.in_([a.id for a in self.arch]))\
                 .filter(not_(OSMajor.excluded_osmajors.any(and_(
                     ExcludeOSMajor.system == self,
                     ExcludeOSMajor.arch_id == DistroTree.arch_id))
@@ -2299,6 +2302,7 @@ class System(SystemObject):
                     ExcludeOSVersion.system == self,
                     ExcludeOSVersion.arch_id == DistroTree.arch_id))
                     .correlate(distro_tree_table)))
+        return query
 
     def action_release(self, service=u'Scheduler'):
         # Attempt to remove Netboot entry and turn off machine

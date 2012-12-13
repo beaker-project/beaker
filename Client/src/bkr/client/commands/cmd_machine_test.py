@@ -85,7 +85,7 @@ class Machine_Test(BeakerWorkflow):
             default=False,
             help="Run Inventory task as well"
         )
-        self.parser.usage = "%%prog %s [options]" % self.normalized_name
+        self.parser.usage = "%%prog %s [options] --machine=FQDN" % self.normalized_name
 
     def run(self, *args, **kwargs):
         username = kwargs.get("username", None)
@@ -104,39 +104,32 @@ class Machine_Test(BeakerWorkflow):
             kwargs['task'].append('/distribution/inventory')
 
         if not machine:
-            sys.stderr.write("No Machine Specified\n")
-            sys.exit(1)
+            self.parser.error('Use --machine to specify machine to be tested')
 
         if not kwargs.get("whiteboard"):
             kwargs["whiteboard"] = "Test %s" % machine
 
-        if not families:
-            if not kwargs.get("tag"):
-                kwargs['tag'].append(u'Active')
-            try:
-                families = self.getOsMajors(*args, **kwargs)
-            except:
-                families = ['RedHatEnterpriseLinux3',
-                            'RedHatEnterpriseLinux4',
-                            'RedHatEnterpriseLinuxClient5',
-                            'RedHatEnterpriseLinuxServer5',
-                            'RedHatEnterpriseLinux6',
-                           ]
+        # If family is specified on command line just do it.
+        if kwargs['family']:
+            if not kwargs['arches']:
+                self.parser.error("If family is specified you must specify arches as well")
+            families = dict((family, [arch for arch in kwargs['arches']]) for family in kwargs['family'])
+        else:
+            families = self.getSystemOsMajorArches(*args, **kwargs)
 
         # Create Job
         job = BeakerJob(*args, **kwargs)
 
-        for family in families:
+        for family, arches in families.items():
             kwargs['family'] = family
             # Start with install task
             requestedTasks = [dict(name='/distribution/install', arches=[])]
 
             # get all tasks requested
             requestedTasks.extend(self.getTasks(*args, **kwargs))
+            # If arch is specified on command line limit to just those. (if they match)
             if kwargs['arches']:
-                arches = set(kwargs['arches']).intersection(set(self.getArches(family=family)))
-            else:
-               arches = self.getArches(family=family)
+                arches = set(kwargs['arches']).intersection(set(arches))
             for arch in arches:
                 recipeTemplate =  BeakerRecipe()
                 # Add Distro Requirements

@@ -302,6 +302,16 @@ class BeakerWorkflow(BeakerCommand):
             self.set_hub(username, password)
         return self.hub.distros.get_osmajors(tags)
 
+    def getSystemOsMajorArches(self, *args, **kwargs):
+        """ Get all OsMajors/arches that apply to this system, optionally filter by tag """
+        username = kwargs.get("username", None)
+        password = kwargs.get("password", None)
+        fqdn = kwargs.get("machine", '')
+        tags = kwargs.get("tag", [])
+        if not hasattr(self,'hub'):
+            self.set_hub(username, password)
+        return self.hub.systems.get_osmajor_arches(fqdn, tags)
+
     def getFamily(self, *args, **kwargs):
         """ Get the family/osmajor for a particular distro """
         username = kwargs.get("username", None)
