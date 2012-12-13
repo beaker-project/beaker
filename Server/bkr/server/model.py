@@ -998,7 +998,8 @@ recipe_table = Table('recipe',metadata,
                 ForeignKey('recipe_set.id'), nullable=False),
         Column('distro_tree_id', Integer,
                 ForeignKey('distro_tree.id')),
-        Column('rendered_kickstart_id', Integer, ForeignKey('rendered_kickstart.id')),
+        Column('rendered_kickstart_id', Integer, ForeignKey('rendered_kickstart.id',
+                name='recipe_rendered_kickstart_id_fk', ondelete='SET NULL')),
         Column('result', TaskResult.db_type(), nullable=False,
                 default=TaskResult.new),
         Column('status', TaskStatus.db_type(), nullable=False,
@@ -4675,6 +4676,9 @@ class Recipe(TaskBase):
         How we delete a Recipe.
         """
         self.logs = []
+        if self.rendered_kickstart:
+            session.delete(self.rendered_kickstart)
+            self.rendered_kickstart = None
         for task in self.tasks:
             task.delete()
 
@@ -6080,6 +6084,11 @@ class GuestResource(RecipeResource):
         pass
 
 class RenderedKickstart(MappedObject):
+
+    def __repr__(self):
+        return '%s(id=%r, kickstart=%s, url=%r)' % (self.__class__.__name__,
+                self.id, '<%s chars>' % len(self.kickstart)
+                if self.kickstart is not None else 'None', self.url)
 
     @property
     def link(self):

@@ -3,7 +3,8 @@ from nose.plugins.skip import SkipTest
 import tempfile
 import subprocess
 import sys
-from bkr.server.model import LogRecipe, TaskBase, Job
+from sqlalchemy.orm.exc import NoResultFound
+from bkr.server.model import LogRecipe, TaskBase, Job, Recipe, RenderedKickstart
 from bkr.inttest import data_setup, with_transaction, Process
 from bkr.server.tools import log_delete
 from turbogears.database import session
@@ -135,6 +136,17 @@ class LogDelete(unittest.TestCase):
         log_delete.log_delete()
         self._assert_logs_not_in_db(Job.by_id(self.job_to_delete.id))
         self.check_dir_not_there(dir)
+
+    def test_rendered_kickstart_is_deleted(self):
+        with session.begin():
+            self.job_to_delete.to_delete = datetime.datetime.utcnow()
+            recipe = self.job_to_delete.recipesets[0].recipes[0]
+            ks = RenderedKickstart(kickstart=u'This is not a real kickstart.')
+            recipe.rendered_kickstart = ks
+        log_delete.log_delete()
+        with session.begin():
+            self.assertEqual(Recipe.by_id(recipe.id).rendered_kickstart, None)
+            self.assertRaises(NoResultFound, RenderedKickstart.by_id, ks.id)
 
 class RemoteLogDeletionTest(unittest.TestCase):
 
