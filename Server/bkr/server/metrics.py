@@ -38,7 +38,6 @@ def increment(name):
     if not config.get('carbon.address'):
         return
     carbon = get_carbon()
-    log.debug('increment %s', name)
     carbon.send(name, 1, int(time.time()))
 
 def measure(name, value):
@@ -47,5 +46,4 @@ def measure(name, value):
     if not isinstance(value, (long, int, float)):
         raise TypeError('value %r should be a number' % value)
     carbon = get_carbon()
-    log.debug('%s = %s', name, value)
     carbon.send(name, value, int(time.time()))
