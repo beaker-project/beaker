@@ -365,7 +365,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_sysconfdir}/init.d/%{name}-transfer
 %{_sysconfdir}/init.d/%{name}-provision
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
-%attr(0640,root,root) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
+%attr(0440,root,root) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)
