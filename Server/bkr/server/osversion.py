@@ -36,7 +36,6 @@ class OSVersions(AdminPage):
 
     osmajor_form = widgets.TableForm(
         fields      = [id, alias],
-        action      = "edit osmajor",
         submit_text = _(u"Edit OSMajor"),
     )
 
@@ -72,7 +71,7 @@ class OSVersions(AdminPage):
                     options = None)
 
     @identity.require(identity.in_group("admin"))
-    @expose(template="bkr.server.templates.form")
+    @expose(template="bkr.server.templates.osmajor")
     def edit_osmajor(self, id=None, *args, **kw):
         try:
             osmajor = OSMajor.by_id(id)
@@ -80,8 +79,7 @@ class OSVersions(AdminPage):
             flash(_(u"Invalid OSMajor ID %s" % id))
             redirect(".")
         return dict(title   = "OSMajor",
-                    value   = dict(id     = osmajor.id,
-                                   alias  = osmajor.alias),
+                    value   = osmajor,
                     form    = self.osmajor_form,
                     action  = "./save_osmajor",
                     options = None)
@@ -101,6 +99,24 @@ class OSVersions(AdminPage):
         else:
             flash(_(u"No Changes for %s" % osmajor))
         redirect(".")
+
+    @identity.require(identity.in_group('admin'))
+    @expose()
+    def save_osmajor_installopts(self, osmajor_id=None, installopts=None):
+        try:
+            osmajor = OSMajor.by_id(osmajor_id)
+        except InvalidRequestError:
+            flash(_(u"Invalid OSMajor ID %s" % id))
+            redirect(".")
+        for arch, options in installopts.iteritems():
+            # arch=None means applied to all arches
+            io = OSMajorInstallOptions.lazy_create(osmajor=osmajor,
+                    arch=Arch.by_name(arch) if arch else None)
+            io.ks_meta = options['ks_meta']
+            io.kernel_options = options['kernel_options']
+            io.kernel_options_post = options['kernel_options_post']
+        flash(_(u'Install options saved for %s') % osmajor)
+        redirect('.')
 
     @identity.require(identity.in_group("admin"))
     @expose()
