@@ -1,6 +1,7 @@
 
 import datetime
-from sqlalchemy.sql import and_, or_
+from collections import defaultdict
+from sqlalchemy.sql import and_, or_, func
 from turbogears.database import session
 from bkr.server.model import System, SystemStatusDuration, Reservation
 
@@ -45,4 +46,35 @@ def system_utilisation(system, start, end):
     # reporting period
     update_status_durations_in_period(retval, status_durations,
             prev_finish, end)
+    return retval
+
+def system_utilisation_counts(systems):
+    """
+    Similar to the above except returns counts of systems based on the current 
+    state, rather than historical data about particular systems.
+    """
+    retval = dict((k, 0) for k in
+            ['recipe', 'manual', 'idle_automated', 'idle_manual',
+             'idle_broken', 'idle_removed'])
+    query = systems.outerjoin(System.open_reservation)\
+            .with_entities(func.coalesce(Reservation.type,
+                func.concat('idle_', func.lower(System.status))),
+                func.count(System.id))\
+            .group_by(1)
+    for state, count in query:
+        retval[state] = count
+    return retval
+
+def system_utilisation_counts_by_group(grouping, systems):
+    retval = defaultdict(lambda: dict((k, 0) for k in
+            ['recipe', 'manual', 'idle_automated', 'idle_manual',
+             'idle_broken', 'idle_removed']))
+    query = systems.outerjoin(System.open_reservation)\
+            .with_entities(grouping,
+                func.coalesce(Reservation.type,
+                func.concat('idle_', func.lower(System.status))),
+                func.count(System.id))\
+            .group_by(1, 2)
+    for group, state, count in query:
+        retval[group][state] = count
     return retval

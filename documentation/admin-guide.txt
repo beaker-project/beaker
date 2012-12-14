@@ -529,6 +529,24 @@ performance of your Beaker system. These URLs could be used as the basis for
 a dashboard or given to users. The URLs assume the default metric name prefix 
 `beaker.` with a Graphite instance at `graphite.example.com`.
 
+Utilisation of all systems
+  :     http://graphite.example.com/render/?width=1024&height=400
+            &areaMode=stacked
+            &target=beaker.gauges.systems_idle_automated.total
+            &target=beaker.gauges.systems_idle_broken.total
+            &target=beaker.gauges.systems_idle_manual.total
+            &target=beaker.gauges.systems_manual.total
+            &target=beaker.gauges.systems_recipe.total
+
+Utilisation of shared systems
+  :     http://graphite.example.com/render/?width=1024&height=400
+            &areaMode=stacked
+            &target=beaker.gauges.systems_idle_automated.shared
+            &target=beaker.gauges.systems_idle_broken.shared
+            &target=beaker.gauges.systems_idle_manual.shared
+            &target=beaker.gauges.systems_manual.shared
+            &target=beaker.gauges.systems_recipe.shared
+
 Recipe queue
   :     http://graphite.example.com/render/?width=1024&height=400
             &areaMode=stacked
