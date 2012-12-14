@@ -24,6 +24,7 @@ from bkr.server.installopts import InstallOptions, global_install_options
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
 from sqlalchemy.util import OrderedDict
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.ext.declarative import declarative_base
 import socket
 from xmlrpclib import ProtocolError
 import time
@@ -59,6 +60,29 @@ from xml.dom.minidom import Node, parseString
 
 import logging
 log = logging.getLogger(__name__)
+
+def decl_base_constructor(self, **kwargs):
+    """
+    This is a cut and paste from sqlalchemy.ext.declarative._declarative_constructor
+    however we are copying it here to ensure behaviour does not
+    change and chain up the MRO.
+    DeclBase should be used in the following manner
+    DecalrativeClass(DeclBase, MappedObject) and in this
+    way we avoid adding to the session in MappedObject.__init__.
+
+    Once MappedObject.__init__ no longer calls session.add(), this
+    can be removed.
+    """
+    cls_ = type(self)
+    for k in kwargs:
+        if not hasattr(cls_, k):
+            raise TypeError(
+                "%r is an invalid keyword argument for %s" %
+                (k, cls_.__name__))
+        setattr(self, k, kwargs[k])
+
+DeclBase = declarative_base(constructor=decl_base_constructor,
+                            metadata=metadata)
 
 class TaskStatus(DeclEnum):
 
@@ -6589,6 +6613,20 @@ class VirtManager(object):
                 pass # probably not running for some reason
             log.debug('Deleting %s on %r', name, self)
             vm.delete()
+
+
+class ExternalReport(DeclBase, MappedObject):
+
+    __tablename__ = 'external_reports'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(Unicode(100), unique=True, nullable=False)
+    url = Column(Unicode(200), unique=True, nullable=False)
+    description = Column(Unicode(1000), default=None)
+
+    def __init__(self, *args, **kw):
+        super(ExternalReport, self).__init__(*args, **kw)
+
 
 # set up mappers between identity tables and classes
 Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)

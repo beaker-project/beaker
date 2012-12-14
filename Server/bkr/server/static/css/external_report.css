@@ -1,0 +1,15 @@
+div.external-report {
+  margin: 1em 3em;
+  display: inline-block;
+  width: 30em;
+  word-wrap: break-word;
+  vertical-align: top;
+}
+
+.offset {
+    margin: 1em 3em;
+}
+
+span.url {
+  font-weight:bold;
+}

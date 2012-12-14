@@ -1328,9 +1328,13 @@ adjusting the `TESTVERSION` in the task's `Makefile` (see
 #### Reports
 
 Beaker offers a few different reports. They can be accessed from the
-Reports menu at the top of the page. The Reserve report will give
-reservation details of Systems that are currently in use. The other
-report offered is the Matrix report.
+Reports menu at the top of the page.
+
+##### External Reports
+
+In some instances it may be preferential to provide Beaker related reports
+external to the Beaker server itself. If your administrator has configured any
+links to such reports, they will be displayed here.
 
 ##### Matrix Report
 

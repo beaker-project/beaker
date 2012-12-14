@@ -120,6 +120,7 @@ from bkr.server.reports import Reports
                     <li><a href="${tg.url('/csv')}">CSV</a></li>
                     <li><a href="${tg.url('/tasks/executed')}">Executed</a></li>
                     <li><a href="${tg.url('/reports/utilisation_graph')}">Utilisation Graph</a></li>
+                    <li><a href="${tg.url('/reports/external')}">External</a></li>
                     <li py:for="controller in Reports.extension_controllers" py:replace="controller.menu_item" />
                     <li class="last">
                         <img class="corner_left" alt="" src="${tg.url('/static/images/corner_left.png')}"/>
