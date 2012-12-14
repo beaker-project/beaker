@@ -32,11 +32,18 @@ function BuildBeaker ()
     rlRun "yum -y install tito"
     rlRun "tito build --rpm --test"
     rlRun "popd"
+    rlRun "createrepo /tmp/tito/noarch/"
+    cat >/etc/yum.repos.d/tito.repo <<"EOF"
+[tito]
+name=tito
+baseurl=file:///tmp/tito/noarch/
+EOF
+    rlAssert0 "Created yum repo config for /tmp/tito/noarch/" $?
 }
 
 function InstallInventory_git()
 {
-    rlRun "yum install --nogpg -y /tmp/tito/noarch/{beaker-[0-9]*,beaker-server-*}.rpm"
+    rlRun "yum install --nogpg -y beaker-server"
 }
 
 function InstallInventory_repo()
@@ -46,7 +53,7 @@ function InstallInventory_repo()
 
 function InstallLabController_git()
 {
-    rlRun "yum install --nogpg -y /tmp/tito/noarch/{beaker-[0-9]*,beaker-lab-controller-*}.rpm"
+    rlRun "yum install --nogpg -y beaker-lab-controller beaker-lab-controller-addDistro"
 }
 
 function InstallLabController_repo()
