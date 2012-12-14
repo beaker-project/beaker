@@ -145,6 +145,7 @@ Requires:       yum-utils
 Requires:       fence-agents
 Requires:       ipmitool
 Requires:       telnet
+Requires:       sudo
 Requires:       python-cpio
 Requires:	%{name} = %{version}-%{release}
 Requires:       kobo >= 0.3.2
