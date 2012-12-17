@@ -1,0 +1,7 @@
+This directory contains SQL queries which can be used to extract useful 
+statistics from Beaker's database directly, using an external reporting tool 
+such as JasperReports.
+
+These SQL queries are tested in bkr.inttest.server.test_reporting_queries to 
+make sure there are no schema changes which unwittingly break the query or 
+affect its accuracy.
