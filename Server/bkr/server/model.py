@@ -1114,6 +1114,10 @@ recipe_resource_table = Table('recipe_resource', metadata,
         nullable=False, unique=True),
     Column('type', ResourceType.db_type(), nullable=False),
     Column('fqdn', Unicode(255), default=None),
+    Column('rebooted', DateTime, nullable=True, default=None),
+    Column('install_started', DateTime, nullable=True, default=None),
+    Column('install_finished', DateTime, nullable=True, default=None),
+    Column('postinstall_finished', DateTime, nullable=True, default=None),
     mysql_engine='InnoDB',
 )
 
@@ -5408,6 +5412,10 @@ class Recipe(TaskBase):
             return RecipeVirtStatus.precluded
         return RecipeVirtStatus.possible
 
+    @property
+    def first_task(self):
+        return self.dyn_tasks.order_by(RecipeTask.id).first()
+
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
@@ -6658,7 +6666,6 @@ class ExternalReport(DeclBase, MappedObject):
     def __init__(self, *args, **kw):
         super(ExternalReport, self).__init__(*args, **kw)
 
-
 # set up mappers between identity tables and classes
 Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
 KernelType.mapper = mapper(KernelType, kernel_type_table)
@@ -7024,6 +7031,7 @@ mapper(Recipe, recipe_table,
                                          secondaryjoin=system_table.c.id==system_recipe_map.c.system_id,
                       ),
                       'tasks':relation(RecipeTask, backref='recipe'),
+                      'dyn_tasks': relation(RecipeTask, lazy='dynamic'),
                       'tags':relation(RecipeTag, 
                                       secondary=recipe_tag_map,
                                       backref='recipes'),
@@ -7044,7 +7052,7 @@ mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
                                         secondary=machine_guest_map)})
 
 mapper(RecipeResource, recipe_resource_table,
-        polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=None)
+        polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=None,)
 mapper(SystemResource, system_resource_table, inherits=RecipeResource,
         polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=ResourceType.system,
         properties={
@@ -7136,4 +7144,6 @@ def auto_cmd_handler(command, new_status):
     if new_status in (CommandStatus.failed, CommandStatus.aborted):
         recipe.abort("Command %s failed" % command.id)
     elif command.action == u'reboot':
-        recipe.tasks[0].start()
+        recipe.resource.rebooted = datetime.utcnow()
+        first_task = recipe.first_task
+        first_task.start()

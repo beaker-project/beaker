@@ -175,6 +175,7 @@ def main_loop(conf=None, foreground=False):
     server.register_get_function(proxy.clear_netboot, 'nopxe')
     server.register_get_function(proxy.install_start)
     server.register_get_function(proxy.install_done)
+    server.register_get_function(proxy.postinstall_done)
     server.register_get_function(proxy.postreboot)
     try:
         server.serve_forever()

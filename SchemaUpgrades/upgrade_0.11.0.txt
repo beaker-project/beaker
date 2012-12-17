@@ -1,3 +1,21 @@
+Add new columns to recipe resource table
+----------------------------------------
+
+    ALTER TABLE recipe_resource 
+        ADD COLUMN rebooted datetime DEFAULT NULL AFTER fqdn,
+        ADD COLUMN install_started datetime DEFAULT NULL AFTER rebooted,
+        ADD COLUMN install_finished datetime DEFAULT NULL AFTER install_started,
+        ADD COLUMN postinstall_finished datetime DEFAULT NULL AFTER install_finished;
+
+To roll-back:
+
+    ALTER TABLE recipe_resource
+        DROP COLUMN rebooted,
+        DROP COLUMN install_started,
+        DROP COLUMN install_finished,
+        DROP COLUMN postinstall_finished;
+
+
 Remove identity.provider setting from server.cfg (bug 880424)
 -------------------------------------------------------------
 
