@@ -52,6 +52,7 @@ from bkr.common.helpers import Flock, makedirs_ignore, unlink_ignore
 import subprocess
 from turbogears import identity
 import ovirtsdk.api
+from collections import defaultdict
 from datetime import timedelta, date, datetime
 from hashlib import md5
 import xml.dom.minidom
@@ -4893,6 +4894,36 @@ class Recipe(TaskBase):
                 partitions.append('%s:%s:%s' % (name, type, size))
         return ';'.join(partitions)
     partitionsKSMeta = property(_partitionsKSMeta)
+
+    @classmethod
+    def get_queue_stats(cls, recipes=None):
+        """Returns a dictionary of status:count pairs for active recipes"""
+        if recipes is None:
+            recipes = cls.query
+        active_statuses = [s for s in TaskStatus if not s.finished]
+        query = (recipes.group_by(Recipe.status)
+                  .having(Recipe.status.in_(active_statuses))
+                  .values(Recipe.status, func.count(Recipe.id)))
+        result = dict((status.name, 0) for status in active_statuses)
+        result.update((status.name, count) for status, count in query)
+        return result
+
+    @classmethod
+    def get_queue_stats_by_group(cls, grouping, recipes=None):
+        if recipes is None:
+            recipes = cls.query
+        active_statuses = [s for s in TaskStatus if not s.finished]
+        query = (recipes.with_entities(grouping,
+                                       Recipe.status,
+                                       func.count(Recipe.id))
+                 .group_by(grouping, Recipe.status)
+                 .having(Recipe.status.in_(active_statuses)))
+        def init_group_stats():
+            return dict((status.name, 0) for status in active_statuses)
+        result = defaultdict(init_group_stats)
+        for group, status, count in query:
+            result[group][status.name] = count
+        return result
 
     def queue(self):
         """

@@ -1387,6 +1387,71 @@ class RecipeTest(unittest.TestCase):
                 '<role value="SERVER"><system value="server.roles_to_xml"/></role>'
                 '</roles>' in xml, xml)
 
+    def _create_demo_recipes(self, arch, num_recipes, whiteboard):
+        dt = data_setup.create_distro_tree(arch=arch)
+        recipes = [data_setup.create_recipe(dt, whiteboard=whiteboard)
+                                                for i in range(num_recipes)]
+        data_setup.create_job_for_recipes(recipes)
+        session.flush()
+        return recipes
+
+    def _advance_recipe_states(self, recipes):
+        # Advance some of the recipes through their state machine
+        recipes[3].abort()
+        for i in range(3):
+            recipes[i].process()
+        for i in range(2):
+            recipes[i].queue()
+        recipes[0].schedule()
+        return {u'new': len(recipes)-4,  u'processed': 1, u'queued': 1,
+                u'scheduled': 1, u'waiting': 0, u'running': 0}
+
+
+    def test_get_queue_stats(self):
+        expected_stats = {u'new': 0,  u'processed': 0, u'queued': 0,
+                          u'scheduled': 0, u'waiting': 0, u'running': 0}
+        whiteboard = "test_get_queue_stats"
+        def _get_queue_stats():
+            return Recipe.get_queue_stats(Recipe.query.filter(
+                                            Recipe.whiteboard==whiteboard))
+        # Add some recipes
+        recipes = self._create_demo_recipes('x86_64', 5, whiteboard)
+        expected_stats[u'new'] = len(recipes)
+        stats = _get_queue_stats()
+        self.assertEqual(stats, expected_stats)
+        # Advance recipe states
+        expected_stats = self._advance_recipe_states(recipes)
+        stats = _get_queue_stats()
+        self.assertEqual(stats, expected_stats)
+
+    def test_get_queue_stats_by_arch(self):
+        expected_arches = 's390x x86_64 ppc'.split()
+        default_stats = {u'new': 0,  u'processed': 0, u'queued': 0,
+                         u'scheduled': 0, u'waiting': 0, u'running': 0}
+        expected_stats = dict((arch, default_stats.copy())
+                                     for arch in expected_arches)
+        whiteboard = "test_get_queue_stats_by_arch"
+        def _get_queue_stats():
+            return Recipe.get_queue_stats_by_group(Arch.arch,
+                           Recipe.query.filter(Recipe.whiteboard==whiteboard)
+                                       .join(DistroTree).join(Arch))
+        # Add some recipes
+        trees = []
+        s390x = self._create_demo_recipes('s390x', 2, whiteboard)
+        expected_stats['s390x'][u'new'] = len(s390x)
+        ppc = self._create_demo_recipes('ppc', 3, whiteboard)
+        expected_stats['ppc'][u'new'] = len(ppc)
+        x86_64 = self._create_demo_recipes('x86_64', 5, whiteboard)
+        expected_stats['x86_64'][u'new'] = len(x86_64)
+        stats = _get_queue_stats()
+        for arch in expected_arches:
+            self.assertEqual(stats[arch], expected_stats[arch])
+        # Advance x86_64 recipe states
+        expected_stats['x86_64'] = self._advance_recipe_states(x86_64)
+        stats = _get_queue_stats()
+        for arch in expected_arches:
+            self.assertEqual(stats[arch], expected_stats[arch])
+
 class GuestRecipeTest(unittest.TestCase):
 
     def setUp(self):
