@@ -2,6 +2,8 @@
 
 import xml.dom.minidom
 import re, errno, sys, os
+import optparse
+from optparse import OptionGroup
 from kobo.client import ClientCommand
 import kobo.conf
 
@@ -67,195 +69,37 @@ class BeakerWorkflow(BeakerCommand):
     def options(self):
         """ Default options that all Workflows use """
 
+        # General options related to the operation of bkr
         self.parser.add_option(
-            "--prettyxml",
-            action="callback", 
-            callback=prettyxml,
-            default=False,
-            help="print the xml in pretty format",
+            "--dry-run", "--dryrun",
+            default=False, action="store_true", dest="dryrun",
+            help="Don't submit job to scheduler",
         )
         self.parser.add_option(
             "--debug",
             default=False,
             action="store_true",
-            help="print the jobxml that it would submit",
+            help="Print generated job XML",
         )
         self.parser.add_option(
-            "--dryrun",
+            "--pretty-xml", "--prettyxml",
+            action="callback", 
+            callback=prettyxml,
             default=False,
-            action="store_true",
-            help="Don't submit job to scheduler",
-        )
-        self.parser.add_option(
-            "--arch",
-            action="append",
-            dest="arches",
-            default=[],
-            help="Include this Arch in job",
-        )
-        self.parser.add_option(
-            "--distro",
-            help="Use this Distro for job",
-        )
-        self.parser.add_option(
-            "--family",
-            help="Pick latest distro of this family for job",
-        )
-        self.parser.add_option(
-            "--variant",
-            help="Pick distro with this variant for job",
-        )
-        self.parser.add_option(
-            "--machine",
-            help="Require this machine for job",
-        )
-        self.parser.add_option(
-            "--package",
-            action="append",
-            default=[],
-            help="Include tests for Package in job",
-        )
-        self.parser.add_option(
-            "--tag",
-            action="append",
-            default=[],
-            help="Pick latest distro matching this tag for job",
-        )
-        self.parser.add_option(
-            "--retention_tag",
-            default="Scratch",
-            help="Specify data retention policy for this job, defaults to Scratch",
-        )
-        self.parser.add_option(
-            "--repo",
-            action="append",
-            default=[],
-            help="Include this repo in job",
-        )
-        self.parser.add_option(
-            "--task",
-            action="append",
-            default=[],
-            help="Include this task in job",
-        )
-        self.parser.add_option(
-            "--taskparam",
-            action="append",
-            default=[],
-            help="Set task params 'name=value'",
-        )
-        self.parser.add_option(
-            "--type",
-            action="append",
-            default=None,
-            help="Include tasks of this type in job",
-        )
-        self.parser.add_option(
-            "--systype",
-            default=None,
-            help="Specify the System Type (Machine, Laptop, etc..)",
-        )
-        self.parser.add_option(
-            "--hostrequire",
-            action="append",
-            default=[],
-            help="Specify a system that matches this require Example: hostlabcontroller=lab.example.com ",
-        )
-        self.parser.add_option(
-            "--keyvalue",
-            action="append",
-            default=[],
-            help="Specify a system that matches this key/value Example: NETWORK=e1000 ",
-        )
-        self.parser.add_option(
-            "--whiteboard",
-            default="",
-            help="Set the whiteboard for this job",
+            help="Pretty-print generated job XML with indentation",
         )
         self.parser.add_option(
             "--wait",
             default=False,
             action="store_true",
-            help="wait on job completion",
+            help="Wait on job completion",
         )
         self.parser.add_option(
-            "--nowait",
+            "--no-wait", "--nowait",
             default=False,
             action="store_false",
             dest="wait",
-            help="Do not wait on job completion [Default]",
-        )
-        self.parser.add_option(
-            "--clients",
-            default=None,
-            type=int,
-            help="Specify how many client hosts to be involved in multihost test",
-        )
-        self.parser.add_option(
-            "--servers",
-            default=None,
-            type=int,
-            help="Specify how many server hosts to be involved in multihost test",
-        )
-        self.parser.add_option(
-            "--install",
-            default=[],
-            action="append",
-            help="Specify Package to install, this will add /distribution/pkginstall.",
-        )
-        self.parser.add_option(
-            "--cc",
-            default=[],
-            action="append",
-            help="Specify additional email addresses to notify",
-        )
-        self.parser.add_option(
-            "--kdump",
-            default=False,
-            action="store_true",
-            help="Turn on kdump.",
-        )
-        self.parser.add_option(
-            "--ndump",
-            default=False,
-            action="store_true",
-            help="Turn on ndnc.",
-        )
-        self.parser.add_option(
-            "--method",
-            default="nfs",
-            help="Installation source method (nfs/http) (optional)"
-        )
-        self.parser.add_option(
-            "--priority",
-            default="Normal",
-            help="Set the priority to this (Low,Medium,Normal,High,Urgent) (optional)"
-        )
-        self.parser.add_option(
-            "--ks-meta",
-            default=None,
-            help="kickstart meta arguments to supply (optional)"
-        )
-        self.parser.add_option(
-            "--kernel_options",
-            default=None,
-            help="Boot arguments to supply (optional)"
-        )
-        self.parser.add_option(
-            "--kernel_options_post",
-            default=None,
-            help="Boot arguments to supply post install (optional)"
-        )
-        self.parser.add_option(
-            "--product",
-            default=None,
-            help="This should be a unique identifierf or a product"
-        )
-        self.parser.add_option(
-            "--random",
-            default=False,
-            action="store_true",
-            help="Pick systems randomly (default is owned, in group, other)"
+            help="Do not wait on job completion [default]",
         )
         self.parser.add_option(
             "--quiet",
@@ -263,19 +107,207 @@ class BeakerWorkflow(BeakerCommand):
             action="store_true",
             help="Be quiet, don't print warnings",
         )
-        self.parser.add_option(
+
+        distro_options = OptionGroup(self.parser,
+                'Options for selecting distro tree(s)')
+        distro_options.add_option(
+            "--family",
+            help="Use latest distro of this family for job",
+        )
+        distro_options.add_option(
+            "--tag",
+            action="append",
+            default=[],
+            help="Use latest distro having this tag for job",
+        )
+        distro_options.add_option(
+            "--distro",
+            help="Use named distro for job",
+        )
+        distro_options.add_option(
+            "--variant",
+            help="Use only VARIANT in job",
+        )
+        distro_options.add_option(
+            "--arch",
+            action="append",
+            dest="arches",
+            default=[],
+            help="Use only ARCH in job",
+        )
+        self.parser.add_option_group(distro_options)
+
+        system_options = OptionGroup(self.parser,
+                'Options for selecting system(s)')
+        system_options.add_option(
+            "--machine", metavar="FQDN",
+            help="Require this machine for job",
+        )
+        system_options.add_option(
+            "--systype", metavar="TYPE",
+            default=None,
+            help="Require system of TYPE for job (Machine, Laptop, ..) [default: Machine]",
+        )
+        system_options.add_option(
+            "--hostrequire", metavar='"TAG OPERATOR VALUE"',
+            action="append",
+            default=[],
+            help="Additional <hostRequires/> for job (example: labcontroller=lab.example.com)",
+        )
+        system_options.add_option(
+            "--keyvalue", metavar='"KEY OPERATOR VALUE"',
+            action="append",
+            default=[],
+            help="Require system with matching legacy key-value (example: NETWORK=e1000)",
+        )
+        system_options.add_option(
+            "--random",
+            default=False,
+            action="store_true",
+            help="Pick systems randomly (default is owned, in group, other)"
+        )
+        self.parser.add_option_group(system_options)
+
+        task_options = OptionGroup(self.parser, 'Options for selecting tasks')
+        task_options.add_option(
+            "--task",
+            action="append",
+            default=[],
+            help="Include named task in job",
+        )
+        task_options.add_option(
+            "--package",
+            action="append",
+            default=[],
+            help="Include all tasks for PACKAGE in job",
+        )
+        task_options.add_option(
+            "--task-type", metavar="TYPE",
+            action="append", dest="type",
+            default=[],
+            help="Include all tasks of TYPE in job",
+        )
+        task_options.add_option(
+            "--install", metavar="PACKAGE",
+            default=[],
+            action="append",
+            help="Install PACKAGE using /distribution/pkginstall",
+        )
+        task_options.add_option(
+            "--kdump",
+            default=False,
+            action="store_true",
+            help="Enable kdump using /kernel/networking/kdump",
+        )
+        task_options.add_option(
+            "--ndump",
+            default=False,
+            action="store_true",
+            help="Enable ndnc using /kernel/networking/ndnc",
+        )
+        task_options.add_option(
             "--suppress-install-task",
             dest="suppress_install_task",
             action="store_true",
             default=False,
-            help="/distribution/install won't be added to recipe"
+            help="Omit /distribution/install which is included by default",
         )
-        self.parser.add_option(
+        # for compat only
+        task_options.add_option("--type", action="append",
+                help=optparse.SUPPRESS_HELP)
+        self.parser.add_option_group(task_options)
+
+        job_options = OptionGroup(self.parser, 'Options for job configuration')
+        job_options.add_option(
+            "--whiteboard",
+            default="",
+            help="Set the whiteboard for this job",
+        )
+        job_options.add_option(
+            "--taskparam", metavar="NAME=VALUE",
+            action="append",
+            default=[],
+            help="Set parameter NAME=VALUE for every task in job",
+        )
+        job_options.add_option(
+            "--repo", metavar="URL",
+            action="append",
+            default=[],
+            help="Include this repo in job",
+        )
+        job_options.add_option(
             "--ignore-panic",
             default=False,
             action="store_true",
-            help="Tell the watchdog to not abort jobs that output panics on the serial console.",
+            help="Do not abort job if panic message appears on serial console",
         )
+        job_options.add_option(
+            "--cc",
+            default=[],
+            action="append",
+            help="Notify additional e-mail address on job completion",
+        )
+        job_options.add_option(
+            "--priority",
+            default="Normal",
+            help="Request PRIORITY for job (Low, Medium, Normal, High, Urgent) [default: %default]"
+        )
+        job_options.add_option(
+            "--retention-tag", metavar="TAG",
+            default="Scratch",
+            help="Specify data retention policy for this job [default: %default]",
+        )
+        job_options.add_option(
+            "--product",
+            default=None,
+            help="Associate job with PRODUCT for data retention purposes"
+        )
+        # for compat only
+        job_options.add_option("--retention_tag", help=optparse.SUPPRESS_HELP)
+        self.parser.add_option_group(job_options)
+
+        installation_options = OptionGroup(self.parser, 'Options for installation')
+        installation_options.add_option(
+            "--method",
+            default="nfs",
+            help="Installation source method (nfs, http, ftp) [default: %default]",
+        )
+        installation_options.add_option(
+            "--ks-meta", metavar="OPTIONS",
+            default=None,
+            help="Pass kickstart metadata OPTIONS when generating kickstart",
+        )
+        installation_options.add_option(
+            "--kernel-options", metavar="OPTIONS",
+            default=None,
+            help="Pass OPTIONS to kernel during installation",
+        )
+        installation_options.add_option(
+            "--kernel-options-post", metavar="OPTIONS",
+            default=None,
+            help="Pass OPTIONS to kernel after installation",
+        )
+        # for compat only
+        installation_options.add_option("--kernel_options",
+                help=optparse.SUPPRESS_HELP)
+        installation_options.add_option("--kernel_options_post",
+                help=optparse.SUPPRESS_HELP)
+        self.parser.add_option_group(installation_options)
+
+        multihost_options = OptionGroup(self.parser, 'Options for multi-host testing')
+        multihost_options.add_option(
+            "--clients", metavar="NUMBER",
+            default=None,
+            type=int,
+            help="Include NUMBER client hosts in multi-host test",
+        )
+        multihost_options.add_option(
+            "--servers", metavar="NUMBER",
+            default=None,
+            type=int,
+            help="Include NUMBER server hosts in multi-host test",
+        )
+        self.parser.add_option_group(multihost_options)
 
     def getArches(self, *args, **kwargs):
         """ Get all arches that apply to either this distro or family/osmajor """
