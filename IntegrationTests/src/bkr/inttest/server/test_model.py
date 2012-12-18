@@ -12,7 +12,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
-        VirtResource
+        VirtResource, OSMajor, OSMajorInstallOptions
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -72,6 +72,9 @@ class TestSystem(unittest.TestCase):
 
     def test_install_options_override(self):
         distro_tree = data_setup.create_distro_tree()
+        osmajor = distro_tree.distro.osversion.osmajor
+        OSMajorInstallOptions(osmajor=osmajor, arch=distro_tree.arch,
+                kernel_options='serial')
         system = data_setup.create_system()
         system.provisions[distro_tree.arch] = Provision(arch=distro_tree.arch,
                 kernel_options='console=ttyS0 ksdevice=eth0 vnc')
@@ -79,9 +82,11 @@ class TestSystem(unittest.TestCase):
                 InstallOptions.from_strings('', u'ksdevice=eth1 !vnc', ''))
         # ksdevice should be overriden but console should be inherited
         # noverifyssl comes from server-test.cfg
+        # serial comes from the osmajor
         # vnc should be removed
         self.assertEqual(opts.kernel_options,
-                dict(console='ttyS0', ksdevice='eth1', noverifyssl=None))
+                dict(console='ttyS0', ksdevice='eth1', noverifyssl=None,
+                     serial=None))
 
     def test_mark_broken_updates_history(self):
         system = data_setup.create_system(status = SystemStatus.automated)
@@ -1321,6 +1326,34 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(with_e1000 in systems)
         self.assert_(with_tg3 in systems)
+
+class OSMajorTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    def test_arches(self):
+        data_setup.create_distro_tree(osmajor=u'TestingTheArches6', arch=u'ia64')
+        data_setup.create_distro_tree(osmajor=u'TestingTheArches6', arch=u'ppc64')
+        session.flush()
+        arches = OSMajor.by_name(u'TestingTheArches6').arches()
+        self.assertEquals(set(['ia64', 'ppc64']),
+                set(arch.arch for arch in arches))
+
+    def test_install_options(self):
+        o = OSMajor.lazy_create(osmajor=u'BlueShoeLinux6')
+        ia64 = Arch.lazy_create(arch=u'ia64')
+        OSMajorInstallOptions(osmajor=o, arch=None, ks_meta=u'one=two')
+        OSMajorInstallOptions(osmajor=o, arch=ia64, kernel_options=u'serial')
+        session.flush()
+        self.assertEquals(set(o.install_options_by_arch.keys()),
+                set([None, ia64]), o.install_options_by_arch)
+        self.assertEquals(o.install_options_by_arch[None].ks_meta, u'one=two')
+        self.assertEquals(o.install_options_by_arch[ia64].kernel_options,
+                u'serial')
 
 class UserTest(unittest.TestCase):
 

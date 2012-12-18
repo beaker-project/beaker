@@ -593,6 +593,18 @@ osmajor_table = Table('osmajor', metadata,
     mysql_engine='InnoDB',
 )
 
+osmajor_install_options_table = Table('osmajor_install_options', metadata,
+    Column('id', Integer, autoincrement=True,
+        nullable=False, primary_key=True),
+    Column('osmajor_id', Integer, ForeignKey('osmajor.id',
+        onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('arch_id', Integer, ForeignKey('arch.id'), nullable=True),
+    Column('ks_meta', String(1024)),
+    Column('kernel_options', String(1024)),
+    Column('kernel_options_post', String(1024)),
+    mysql_engine='InnoDB',
+)
+
 osversion_table = Table('osversion', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -1900,7 +1912,19 @@ class System(SystemObject):
         Return install options based on distro selected.
         Inherit options from Arch -> Family -> Update
         """
+        osmajor = distro_tree.distro.osversion.osmajor
         result = global_install_options()
+        # arch=None means apply to all arches
+        if None in osmajor.install_options_by_arch:
+            op = osmajor.install_options_by_arch[None]
+            op_opts = InstallOptions.from_strings(op.ks_meta, op.kernel_options,
+                    op.kernel_options_post)
+            result = result.combined_with(op_opts)
+        if distro_tree.arch in osmajor.install_options_by_arch:
+            opa = osmajor.install_options_by_arch[distro_tree.arch]
+            opa_opts = InstallOptions.from_strings(opa.ks_meta, opa.kernel_options,
+                    opa.kernel_options_post)
+            result = result.combined_with(opa_opts)
         result = result.combined_with(distro_tree.install_options())
         if distro_tree.arch in self.provisions:
             pa = self.provisions[distro_tree.arch]
@@ -2701,6 +2725,13 @@ class OSMajor(MappedObject):
 
     def __repr__(self):
         return '%s' % self.osmajor
+
+    def arches(self):
+        return Arch.query.distinct().join(DistroTree).join(Distro)\
+                .join(OSVersion).filter(OSVersion.osmajor == self)
+
+
+class OSMajorInstallOptions(MappedObject): pass
 
 
 class OSVersion(MappedObject):
@@ -6672,9 +6703,15 @@ mapper(OSVersion, osversion_table,
                      'arches':relation(Arch,secondary=osversion_arch_map),
                     }
       )
-mapper(OSMajor, osmajor_table,
-       properties = {'osminor':relation(OSVersion,
-                                     order_by=[osversion_table.c.osminor])})
+mapper(OSMajor, osmajor_table, properties={
+    'osminor': relation(OSVersion, order_by=[osversion_table.c.osminor]),
+    'install_options_by_arch': relation(OSMajorInstallOptions,
+        collection_class=attribute_mapped_collection('arch'),
+        backref='osmajor', cascade='all, delete-orphan'),
+})
+mapper(OSMajorInstallOptions, osmajor_install_options_table, properties={
+    'arch': relation(Arch),
+})
 mapper(LabInfo, labinfo_table)
 mapper(Watchdog, watchdog_table,
        properties = {'recipetask':relation(RecipeTask, uselist=False),
