@@ -15,8 +15,8 @@
 %endif
 
 Name:           beaker
-Version:        0.10.5
-Release:        2%{?dist}
+Version:        0.10.6
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -368,6 +368,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Thu Dec 20 2012 Dan Callaghan <dcallagh@redhat.com> 0.10.6-1
+- 880440 Fix fallback logic for FQDN determination (ncoghlan@redhat.com)
+
 * Mon Dec 03 2012 Dan Callaghan <dcallagh@redhat.com> 0.10.5-2
 - 882740 one more fix for guest recipes in 0.10 schema upgrade notes
   (dcallagh@redhat.com)
