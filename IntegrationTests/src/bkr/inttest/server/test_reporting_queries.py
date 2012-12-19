@@ -23,6 +23,60 @@ class ReportingQueryTest(unittest.TestCase):
         sql = pkg_resources.resource_string('bkr.server', 'reporting-queries/%s.sql' % name)
         return session.connection(System).execute(sql)
 
+    def test_install_duration_count_by_resource(self):
+        system_recipe = data_setup.create_recipe()
+        guest_recipe = data_setup.create_guestrecipe(host=system_recipe)
+        virt_recipe = data_setup.create_recipe()
+        virt_recipe2 = data_setup.create_recipe()
+        job = data_setup.create_job_for_recipes([guest_recipe, virt_recipe,
+            system_recipe, virt_recipe2])
+
+        data_setup.mark_recipe_complete(virt_recipe, virt=True)
+        data_setup.mark_recipe_complete(virt_recipe2, virt=True)
+        data_setup.mark_recipe_complete(guest_recipe)
+        data_setup.mark_recipe_complete(system_recipe)
+
+        system_recipe2 = data_setup.create_recipe()
+        guest_recipe2 = data_setup.create_guestrecipe(host=system_recipe2)
+        job2 = data_setup.create_job_for_recipes([system_recipe2, guest_recipe2])
+        data_setup.mark_recipe_complete(system_recipe2, system = system_recipe.resource.system)
+        data_setup.mark_recipe_complete(guest_recipe2)
+
+        one_hour = datetime.timedelta(hours=1)
+        two_hours = datetime.timedelta(hours=2)
+        three_hours = datetime.timedelta(hours=3)
+
+        virt_recipe.resource.install_finished = virt_recipe.resource.install_started + one_hour
+        virt_recipe2.resource.install_finished = virt_recipe2.resource.install_started + two_hours
+
+        guest_recipe.resource.install_finished = guest_recipe.resource.install_started + two_hours
+        guest_recipe2.resource.install_finished = guest_recipe2.resource.install_started + three_hours
+
+        system_recipe.resource.install_finished = system_recipe.resource.install_started + one_hour
+        system_recipe2.resource.install_finished = system_recipe2.resource.install_started + three_hours
+        session.flush()
+
+        rows = self.execute_reporting_query('install-duration-count-by-resource')
+        all_rows = rows.fetchall()
+        guest_rows = [row for row in all_rows if row.fqdn == 'All Guest']
+        virt_rows = [row for row in all_rows if row.fqdn == 'All Virt']
+        system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
+
+        self.assertEquals(len(virt_rows), 1, virt_rows)
+        self.assertEquals(virt_rows[0].min_install_time, one_hour)
+        self.assertEquals(virt_rows[0].max_install_time, two_hours)
+        self.assertEquals(virt_rows[0].avg_install_time, (one_hour + two_hours) / 2)
+
+        self.assertEquals(len(guest_rows), 1, guest_rows)
+        self.assertEquals(guest_rows[0].min_install_time, two_hours)
+        self.assertEquals(guest_rows[0].max_install_time, three_hours)
+        self.assertEquals(guest_rows[0].avg_install_time, (two_hours + three_hours) / 2)
+
+        self.assertEquals(len(system_rows), 1, system_rows)
+        self.assertEquals(system_rows[0].min_install_time, one_hour)
+        self.assertEquals(system_rows[0].max_install_time, three_hours)
+        self.assertEquals(system_rows[0].avg_install_time, (one_hour + three_hours) / 2)
+
     def test_resource_install_failures(self):
         system_recipe = data_setup.create_recipe()
         guest_recipe = data_setup.create_guestrecipe(host=system_recipe)

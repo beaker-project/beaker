@@ -469,7 +469,7 @@ def mark_job_waiting(job):
 def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
     if not only:
         mark_recipe_waiting(recipe, **kwargs)
-    recipe.resource.install_start = datetime.datetime.utcnow()
+    recipe.resource.install_started = datetime.datetime.utcnow()
     recipe.tasks[0].start()
     if isinstance(recipe, GuestRecipe):
         if not fqdn:
