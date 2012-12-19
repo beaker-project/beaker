@@ -6649,6 +6649,7 @@ class VirtManager(object):
 class ExternalReport(DeclBase, MappedObject):
 
     __tablename__ = 'external_reports'
+    __table_args__ = {'mysql_engine':'InnoDB'}
 
     id = Column(Integer, primary_key=True)
     name = Column(Unicode(100), unique=True, nullable=False)
