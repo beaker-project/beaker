@@ -4,7 +4,7 @@ import pkg_resources
 import datetime
 from decimal import Decimal
 from turbogears.database import session
-from bkr.server.model import System, RecipeTask, Cpu, SystemStatus
+from bkr.server.model import System, RecipeTask, Cpu, SystemStatus, SystemActivity
 from bkr.inttest import data_setup
 
 class ReportingQueryTest(unittest.TestCase):
@@ -156,3 +156,24 @@ class ReportingQueryTest(unittest.TestCase):
                 if row.fqdn == system.fqdn]
         self.assertEquals(row.age_days, 100)
         self.assertEquals(row.recipe_count, 5)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=741960
+    def test_system_breakages(self):
+        system = data_setup.create_system()
+        data_setup.create_system_status_history(system, [
+            (SystemStatus.automated, datetime.datetime(2012, 10, 1,  0, 0)),
+            (SystemStatus.broken,    datetime.datetime(2012, 10, 5,  0, 0)),
+            (SystemStatus.automated, datetime.datetime(2012, 10, 5,  8, 0)),
+            (SystemStatus.broken,    datetime.datetime(2012, 10, 10, 0, 0)),
+        ])
+        for _ in range(3):
+            system.activity.append(SystemActivity(user=data_setup.create_user(),
+                    created=datetime.datetime(2012, 10, 15, 0, 0),
+                    service=u'testdata', action=u'Reported problem',
+                    field_name=u'Status', old_value=None,
+                    new_value=u'Why does it always b0rk?'))
+        session.flush()
+        row, = [row for row in self.execute_reporting_query('system-breakages')
+                if row.fqdn == system.fqdn]
+        self.assertEquals(row.breakage_count, 2)
+        self.assertEquals(row.problem_report_count, 3)
