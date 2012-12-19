@@ -77,6 +77,21 @@ python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstar
 (
 PATH=/usr/bin:$PATH
 set -x
+# Check in with Beaker Server, let it know our hostname, and
+# record our install time.
+REPORTED_FQDN=$(hostname -f)
+if [ -z "$REPORTED_FQDN" -o "$REPORTED_FQDN" == localhost -o "$REPORTED_FQDN" == localhost.* ] ; then
+    # hostname -f is the most future-proof approach, but it isn't always reliable
+    if [ -f /etc/hostname ] ; then
+        # Preferred fallback if the OS is recent enough to provide it
+        REPORTED_FQDN=$(cat /etc/hostname)
+    elif [ grep -q ^HOSTNAME= /etc/sysconfig/network ] ; then
+        # Last resort fallback to try to report something sensible
+        REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
+    fi
+fi
+wget -O - http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN
+
 wget -O - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
 echo @RECIPEID@ > /root/RECIPE.TXT
 
@@ -281,19 +296,8 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
-# Check in with Beaker Server, let it know our hostname
-REPORTED_FQDN=$(hostname -f)
-if [ -z "$REPORTED_FQDN" -o "$REPORTED_FQDN" == localhost -o "$REPORTED_FQDN" == localhost.* ] ; then
-    # hostname -f is the most future-proof approach, but it isn't always reliable
-    if [ -f /etc/hostname ] ; then
-        # Preferred fallback if the OS is recent enough to provide it
-        REPORTED_FQDN=$(cat /etc/hostname)
-    elif [ grep -q ^HOSTNAME= /etc/sysconfig/network ] ; then
-        # Last resort fallback to try to report something sensible
-        REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
-    fi
-fi
-wget -O - http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN
+# Check in with Beaker Server, record our postinstall time.
+wget -O - http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
 # no snippet data for RedHatEnterpriseLinux3_post
 # no snippet data for system_post
 ) 2>&1 | /usr/bin/tee /dev/console
