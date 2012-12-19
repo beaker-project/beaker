@@ -4,20 +4,69 @@ import pkg_resources
 import datetime
 from decimal import Decimal
 from turbogears.database import session
+from bkr.server import model
 from bkr.server.model import System, RecipeTask, Cpu, SystemStatus, SystemActivity
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, DummyVirtManager
 
 class ReportingQueryTest(unittest.TestCase):
 
     def setUp(self):
+        self.orig_VirtManager = model.VirtManager
+        model.VirtManager = DummyVirtManager
         session.begin()
 
     def tearDown(self):
+        model.VirtManager = self.orig_VirtManager
         session.rollback()
 
     def execute_reporting_query(self, name):
         sql = pkg_resources.resource_string('bkr.server', 'reporting-queries/%s.sql' % name)
         return session.connection(System).execute(sql)
+
+    def test_resource_install_failures(self):
+        system_recipe = data_setup.create_recipe()
+        guest_recipe = data_setup.create_guestrecipe(host=system_recipe)
+        virt_recipe = data_setup.create_recipe()
+        job = data_setup.create_job_for_recipes([guest_recipe, virt_recipe, system_recipe])
+
+        data_setup.mark_recipe_running(virt_recipe, virt=True)
+        data_setup.mark_recipe_running(system_recipe)
+        data_setup.mark_recipe_running(guest_recipe)
+        session.flush()
+
+        # Test we don't count runinng recipes
+        rows = self.execute_reporting_query('install-failure-count-by-resource')
+        all_rows = [row for row in rows]
+        guest_rows = [row for row in all_rows if row.fqdn == 'All Guest']
+        virt_rows = [row for row in all_rows if row.fqdn == 'All Virt']
+        system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
+
+        self.assertEquals(len(virt_rows), 1, virt_rows)
+        self.assertEquals(virt_rows[0].failed_recipes, 0)
+
+        self.assertEquals(len(guest_rows), 1, guest_rows)
+        self.assertEquals(guest_rows[0].failed_recipes, 0)
+
+        self.assertEquals(len(system_rows), 1, system_rows)
+        self.assertEquals(system_rows[0].failed_recipes, 0)
+
+        # Test completed recipes
+        data_setup.mark_job_complete(job, only=True)
+        session.flush()
+        rows = self.execute_reporting_query('install-failure-count-by-resource')
+        all_rows = [row for row in rows]
+        guest_rows = [row for row in all_rows if row.fqdn == 'All Guest']
+        virt_rows = [row for row in all_rows if row.fqdn == 'All Virt']
+        system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
+
+        self.assertEquals(len(virt_rows), 1, virt_rows)
+        self.assertEquals(virt_rows[0].failed_recipes, 1)
+
+        self.assertEquals(len(guest_rows), 1, guest_rows)
+        self.assertEquals(guest_rows[0].failed_recipes, 1)
+
+        self.assertEquals(len(system_rows), 1, system_rows)
+        self.assertEquals(system_rows[0].failed_recipes, 1)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=877264
     def test_machine_hours(self):
