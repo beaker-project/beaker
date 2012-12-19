@@ -199,7 +199,7 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
     system = System(fqdn=fqdn,type=type, owner=owner,
                 status=status, **kw)
     if date_added is not None:
-        system.date_added = datetime.date(*map(int, date_added.split('-')))
+        system.date_added = date_added
     system.shared = shared
     system.arch.append(Arch.by_name(arch))
     configure_system_power(system)

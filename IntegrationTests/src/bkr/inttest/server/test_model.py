@@ -1,5 +1,6 @@
 import sys
 import time
+import datetime
 import unittest
 import pkg_resources
 import lxml.etree
@@ -589,10 +590,10 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
     def test_system_added(self):
         excluded = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc, status=SystemStatus.manual,
-                date_added='2011-09-01')
+                date_added=datetime.datetime(2011, 9, 1, 0, 0, 0))
         included = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc, status=SystemStatus.automated,
-                date_added='2012-09-01')
+                date_added=datetime.datetime(2012, 9, 1, 0, 0, 0))
         session.flush()
         systems = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
