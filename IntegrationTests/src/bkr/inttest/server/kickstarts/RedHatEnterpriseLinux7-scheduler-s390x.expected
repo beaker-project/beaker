@@ -289,12 +289,12 @@ setenv BUILDURL http://download.test-kickstart.invalid
 EOF
 # Check in with Beaker Server, let it know our hostname
 REPORTED_FQDN=$(hostname -f)
-if [ -z "$REPORTED_FQDN" -o "$REPORTED_FQDN" == localhost -o "$REPORTED_FQDN" == localhost.* ] ; then
+if [[ -z "$REPORTED_FQDN" || $REPORTED_FQDN == localhost || $REPORTED_FQDN == localhost.* ]] ; then
     # hostname -f is the most future-proof approach, but it isn't always reliable
     if [ -f /etc/hostname ] ; then
         # Preferred fallback if the OS is recent enough to provide it
         REPORTED_FQDN=$(cat /etc/hostname)
-    elif [ grep -q ^HOSTNAME= /etc/sysconfig/network ] ; then
+    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
         # Last resort fallback to try to report something sensible
         REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
     fi
