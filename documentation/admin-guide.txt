@@ -532,11 +532,11 @@ a dashboard or given to users. The URLs assume the default metric name prefix
 Utilisation of all systems
   :     http://graphite.example.com/render/?width=1024&height=400
             &areaMode=stacked
-            &target=beaker.gauges.systems_idle_automated.total
-            &target=beaker.gauges.systems_idle_broken.total
-            &target=beaker.gauges.systems_idle_manual.total
-            &target=beaker.gauges.systems_manual.total
-            &target=beaker.gauges.systems_recipe.total
+            &target=beaker.gauges.systems_idle_automated.all
+            &target=beaker.gauges.systems_idle_broken.all
+            &target=beaker.gauges.systems_idle_manual.all
+            &target=beaker.gauges.systems_manual.all
+            &target=beaker.gauges.systems_recipe.all
 
 Utilisation of shared systems
   :     http://graphite.example.com/render/?width=1024&height=400
