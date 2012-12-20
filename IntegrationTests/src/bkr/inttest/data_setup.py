@@ -35,7 +35,7 @@ from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arc
         LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
         SystemGroup, DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
         LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, \
-        GuestResource, VirtResource
+        GuestResource, VirtResource, SystemStatusDuration
 
 log = logging.getLogger(__name__)
 
@@ -235,6 +235,19 @@ def create_system_activity(user=None, **kw):
     activity = SystemActivity(user, u'WEBUI', u'Changed', u'Loaned To',
             unique_name(u'random_%s'), user.user_name)
     return activity
+
+def create_system_status_history(system, statuses):
+    """ For *statuses* pass a list of tuples of (status, start_time). """
+    ssd = SystemStatusDuration(status=statuses[0][0], start_time=statuses[0][1])
+    for status, start_time in statuses[1:]:
+        ssd.finish_time = start_time
+        system.status_durations.append(ssd)
+        ssd = SystemStatusDuration(status=status, start_time=start_time)
+    ssd.finish_time = datetime.datetime.utcnow()
+    system.status_durations.append(ssd)
+    # last one should be its current status
+    system.status_durations.append(SystemStatusDuration(status=system.status,
+            start_time=ssd.finish_time))
 
 def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.0-1',
         uploader=None, owner=None, priority=u'Manual', valid=None, path=None, 
