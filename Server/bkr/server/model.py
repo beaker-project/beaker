@@ -1919,8 +1919,9 @@ class System(SystemObject):
         if not open_reservation:
             raise BX(_(u'System %s is not currently reserved' % self.fqdn))
         reservation_type = open_reservation.type
-        if reservation_type != 'manual':
-            raise BX(_(u'Cannot release %s. Was not manually reserved' % self.fqdn))
+        if reservation_type == 'recipe':
+            recipe_id = open_reservation.recipe.id
+            raise BX(_(u'Currently running R:%s' % recipe_id))
         self.unreserve(reservation=open_reservation, *args, **kw)
 
     def excluded_families(self):

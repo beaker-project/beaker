@@ -2138,9 +2138,10 @@ the System.
 <div class='admonition'>
 **Returning a System**
 
-After provisioning a System, you can manually return it by going to
-the above mentioned System details page, clicking on the Return link
-in the Current User field.
+After provisioning a system, you can manually return it by going to
+the above mentioned system details page, clicking on the "Return" link
+in the "Current User" field. However this is only allowed if the
+system was provisioned manually (i.e not via a recipe)
 
 </div>
 

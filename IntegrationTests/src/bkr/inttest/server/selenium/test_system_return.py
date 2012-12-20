@@ -1,7 +1,30 @@
 from turbogears.database import session
 from bkr.server.model import SystemStatus
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest import data_setup, with_transaction, get_server_base
+from bkr.inttest.server.webdriver_utils import login, is_text_present
+
+
+class SystemReturnTestWD(WebDriverTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_running(self.recipe)
+        self.browser = self.get_browser()
+
+    def tearDown(self):
+        self.browser.quit()
+
+    def test_cannot_return_running_recipe(self):
+        b = self.browser
+        system = self.recipe.resource.system
+        login(b)
+        b.get(get_server_base() + 'view/%s' % system.fqdn)
+        b.find_element_by_link_text('(Return)').click()
+        self.assertEquals(b.find_element_by_css_selector('.flash').text,
+            "Failed to return %s: u'Currently running R:%s'" % (system.fqdn, self.recipe.id))
 
 
 class SystemReturnTest(SeleniumTestCase):
