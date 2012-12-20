@@ -405,10 +405,11 @@ def create_completed_job(**kwargs):
     return job
 
 def mark_recipe_complete(recipe, result=TaskResult.pass_,
-        finish_time=None, **kwargs):
+        finish_time=None, only=False, **kwargs):
     assert result in TaskResult
     finish_time = finish_time or datetime.datetime.utcnow()
-    mark_recipe_running(recipe, **kwargs)
+    if not only:
+        mark_recipe_running(recipe, **kwargs)
     for recipe_task in recipe.tasks:
         rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
         recipe_task.finish_time = finish_time
@@ -465,8 +466,9 @@ def mark_job_waiting(job):
         for recipe in recipeset.recipes:
             mark_recipe_waiting(recipe)
 
-def mark_recipe_running(recipe, fqdn=None, **kwargs):
-    mark_recipe_waiting(recipe, **kwargs)
+def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
+    if not only:
+        mark_recipe_waiting(recipe, **kwargs)
     recipe.resource.install_start = datetime.datetime.utcnow()
     recipe.tasks[0].start()
     if isinstance(recipe, GuestRecipe):
