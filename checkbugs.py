@@ -79,14 +79,25 @@ def abbrev_user(user):
     if user.endswith('@redhat.com'):
         return user[:-len('@redhat.com')]
 
+def _git_call(*args):
+    command = ['git']
+    command.extend(args)
+    p = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate()
+    if p.returncode != 0:
+        raise RuntimeError("Git call failed: %s" % stderr)
+    return stdout
+
 _revlist = None
-def git_commit_reachable(sha):
+def build_git_revlist():
     global _revlist
-    if not _revlist:
-        p = subprocess.Popen(['git', 'rev-list', 'HEAD'], stdout=subprocess.PIPE)
-        stdout, _ = p.communicate()
-        assert p.returncode == 0, p.returncode
-        _revlist = stdout.splitlines()
+    git_status = _git_call('status')
+    if "branch is behind" in git_status:
+        raise RuntimeError("Git clone is not up to date")
+    _revlist = _git_call('rev-list', 'HEAD').splitlines()
+
+def git_commit_reachable(sha):
     return sha in _revlist
 
 def problem(message):
@@ -102,16 +113,27 @@ def main():
             help='Check bugs slated for MILESTONE')
     parser.add_option('-r', '--release', metavar='RELEASE',
             help='Check bugs approved for RELEASE (using flags)')
+    parser.add_option('-q', '--quiet', action="store_false",
+            dest="verbose", default=True,
+            help='Only display problem reports')
     options, args = parser.parse_args()
     if not options.milestone and not options.release:
         parser.error('Specify a milestone or release')
 
+    if options.verbose:
+        print "Building git revision list for HEAD"
+    build_git_revlist()
+    if options.verbose:
+        print "Retrieving bug list from Bugzilla"
     bugs = get_bugs(options.milestone, options.release)
+    if options.verbose:
+        print "Retrieving code review details from Gerrit"
     changes = get_gerrit_changes(bug.bug_id for bug in bugs)
 
     for bug in sorted(bugs, key=lambda b: (b.assigned_to, b.bug_id)):
-        print 'Bug %-13d %-17s %-10s <%s>' % (bug.bug_id, bug.bug_status,
-                abbrev_user(bug.assigned_to), bug.url)
+        if options.verbose:
+            print 'Bug %-13d %-17s %-10s <%s>' % (bug.bug_id, bug.bug_status,
+                    abbrev_user(bug.assigned_to), bug.url)
         bug_changes = list(changes_for_bug(changes, bug.bug_id))
 
         # print out summary of changes
@@ -121,47 +143,52 @@ def main():
                     for a in patch_set.get('approvals', []) if a['type'] == 'VRIF'))) or 0
             reviewed = max(chain([None], (int(a['value'])
                     for a in patch_set.get('approvals', []) if a['type'] == 'CRVW'))) or 0
-            print '    Change %-6s %-17s %-10s <%s>' % (change['number'],
-                    '%s (%d/%d)' % (change['status'], verified, reviewed),
-                    abbrev_user(change['owner']['email']), change['url'])
+            if options.verbose:
+                print '    Change %-6s %-17s %-10s <%s>' % (change['number'],
+                        '%s (%d/%d)' % (change['status'], verified, reviewed),
+                        abbrev_user(change['owner']['email']), change['url'])
 
         # check for inconsistencies
         if bug.bug_status in ('NEW', 'ASSIGNED') and \
                 any(change['status'] != 'ABANDONED' for change in bug_changes):
             if all(change['status'] == 'MERGED' for change in bug_changes):
-                problem('Bug should be MODIFIED')
+                problem('Bug %s should be MODIFIED, not %s' % (bug.bug_id, bug.bug_status))
             else:
-                problem('Bug should be POST')
+                problem('Bug %s should be POST, not %s' % (bug.bug_id, bug.bug_status))
         elif bug.bug_status == 'POST' and \
                 not any(change['status'] == 'NEW' for change in bug_changes):
             if bug_changes and all(change['status'] == 'MERGED' for change in bug_changes):
-                problem('Bug should be MODIFIED')
+                problem('Bug %s should be MODIFIED, not %s' % (bug.bug_id, bug.bug_status))
             else:
-                problem('Bug should be ASSIGNED')
+                problem('Bug %s should be ASSIGNED, not %s' % (bug.bug_id, bug.bug_status))
         elif bug.bug_status in ('MODIFIED', 'ON_DEV', 'ON_QA', 'VERIFIED', 'RELEASE_PENDING', 'CLOSED'):
             if not bug_changes:
-                problem('Bug should be ASSIGNED')
+                problem('Bug %s should be ASSIGNED, not %s' % (bug.bug_id, bug.bug_status))
             elif not all(change['status'] in ('ABANDONED', 'MERGED') for change in bug_changes):
-                problem('Bug should be POST')
+                problem('Bug %s should be POST, not %s' % (bug.bug_id, bug.bug_status))
         if options.release and bug.target_milestone != options.release:
-            problem('Bug target milestone should be %s' % options.release)
+            if bug.get_flag_status("hss_hot_fix") != "+":
+                problem('Bug %s target milestone should be %s, not %s' %
+                                (bug.bug_id, options.release, bug.target_milestone))
+            elif bug.target_milestone == "---":
+                problem('Bug %s target milestone should be set for hotfix release' %
+                            (bug.bug_id,))
         for change in bug_changes:
-            if change['status'] == 'MERGED':
+            if change['status'] == 'MERGED' and change['project'] == 'beaker':
                 sha = change['currentPatchSet']['revision']
                 if not git_commit_reachable(sha):
-                    problem('Commit %s not reachable from HEAD' % sha)
+                    problem('Bug %s: Commit %s is not reachable from HEAD' % (bug.bug_id, sha))
 
-        print
+        if options.verbose:
+            print
 
     if options.release:
         # check for bugs which have target milestone set but aren't approved for the release
         target_bugs = get_bugs(options.release, None)
         approved_bug_ids = set(b.bug_id for b in bugs)
         for unapproved in [b for b in target_bugs if b.bug_id not in approved_bug_ids]:
-            print 'Bug %-13d %-17s %-10s <%s>' % (unapproved.bug_id, unapproved.bug_status,
-                    abbrev_user(unapproved.assigned_to), unapproved.url)
-            problem('Bug target milestone is set, but bug is not approved')
-            print
+            problem('Bug %s target milestone is set, but bug is not approved' %
+                            (unapproved.bug_id,))
 
 if __name__ == '__main__':
     main()
