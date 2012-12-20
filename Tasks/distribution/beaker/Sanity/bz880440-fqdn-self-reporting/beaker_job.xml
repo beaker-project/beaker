@@ -1,0 +1,178 @@
+<job retention_tag="Scratch">
+	<whiteboard>Self-reported FQDN and IP address</whiteboard>
+	<recipeSet priority="Normal">
+		<recipe ks_meta="method=nfs" whiteboard="RedHatEnterpriseLinuxServer5  i386">
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="RedHatEnterpriseLinuxServer5"/>
+					<distro_method op="=" value="nfs"/>
+					<distro_tag op="=" value="STABLE"/>
+					<distro_arch op="=" value="i386"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<labcontroller value="affected-lc.example.com"/>
+			</hostRequires>
+			<repos/>
+			<partitions/>
+			<task name="/distribution/install" role="STANDALONE">
+				<params/>
+			</task>
+			<task name="/distribution/beaker/Sanity/bz880440-fqdn-self-reporting" role="STANDALONE">
+				<params/>
+			</task>
+			<ks_appends>
+				<ks_append>
+%post
+hostname -f > /tmp/bz880440_ks_post_FQDN.txt
+hostname -i > /tmp/bz880440_ks_post_IP.txt
+echo $HOSTNAME > /tmp/bz880440_ks_post_HOSTNAME.txt
+tail -n1 /etc/hosts | sed 's/[^[:space:]]*[[:space:]]*\([^[:space:]]*\).*/\1/' > /tmp/bz880440_ks_post_parsed_host.txt
+grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d= > /tmp/bz880440_ks_post_sysconfig_network.txt
+cp /etc/hostname /tmp/bz880440_ks_post_etc_hostname.txt
+cp /etc/hosts /tmp/bz880440_ks_post_etc_hosts.txt
+cp /tmp/bz880440_ks_post_FQDN.txt /tmp/bz880440_ks_post_corrected_FQDN.txt
+if [[ -z "$KS_POST_FQDN" || $KS_POST_FQDN == localhost || $KS_POST_FQDN == localhost.* ]] ; then
+    if [ -f /etc/hostname ] ; then
+        cp /tmp/bz880440_ks_post_etc_hostname.txt /tmp/bz880440_ks_post_corrected_FQDN.txt
+    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
+        cp /tmp/bz880440_ks_post_sysconfig_network.txt /tmp/bz880440_ks_post_corrected_FQDN.txt
+    fi
+fi
+				</ks_append>
+			</ks_appends>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Normal">
+		<recipe ks_meta="method=nfs" whiteboard="RedHatEnterpriseLinuxServer5  ia64">
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="RedHatEnterpriseLinuxServer5"/>
+					<distro_method op="=" value="nfs"/>
+					<distro_tag op="=" value="STABLE"/>
+					<distro_arch op="=" value="ia64"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<labcontroller value="affected-lc.example.com"/>
+			</hostRequires>
+			<repos/>
+			<partitions/>
+			<task name="/distribution/install" role="STANDALONE">
+				<params/>
+			</task>
+			<task name="/distribution/beaker/Sanity/bz880440-fqdn-self-reporting" role="STANDALONE">
+				<params/>
+			</task>
+			<ks_appends>
+				<ks_append>
+%post
+hostname -f > /tmp/bz880440_ks_post_FQDN.txt
+hostname -i > /tmp/bz880440_ks_post_IP.txt
+echo $HOSTNAME > /tmp/bz880440_ks_post_HOSTNAME.txt
+tail -n1 /etc/hosts | sed 's/[^[:space:]]*[[:space:]]*\([^[:space:]]*\).*/\1/' > /tmp/bz880440_ks_post_parsed_host.txt
+grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d= > /tmp/bz880440_ks_post_sysconfig_network.txt
+cp /etc/hostname /tmp/bz880440_ks_post_etc_hostname.txt
+cp /etc/hosts /tmp/bz880440_ks_post_etc_hosts.txt
+cp /tmp/bz880440_ks_post_FQDN.txt /tmp/bz880440_ks_post_corrected_FQDN.txt
+if [[ -z "$KS_POST_FQDN" || $KS_POST_FQDN == localhost || $KS_POST_FQDN == localhost.* ]] ; then
+    if [ -f /etc/hostname ] ; then
+        cp /tmp/bz880440_ks_post_etc_hostname.txt /tmp/bz880440_ks_post_corrected_FQDN.txt
+    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
+        cp /tmp/bz880440_ks_post_sysconfig_network.txt /tmp/bz880440_ks_post_corrected_FQDN.txt
+    else
+        rlFail "No fallback available to correct self-reported FQDN"
+    fi
+fi
+				</ks_append>
+			</ks_appends>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Normal">
+		<recipe ks_meta="method=nfs" whiteboard="RedHatEnterpriseLinuxServer5  ppc64">
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="RedHatEnterpriseLinuxServer5"/>
+					<distro_method op="=" value="nfs"/>
+					<distro_tag op="=" value="STABLE"/>
+					<distro_arch op="=" value="ppc64"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<labcontroller value="affected-lc.example.com"/>
+			</hostRequires>
+			<repos/>
+			<partitions/>
+			<task name="/distribution/install" role="STANDALONE">
+				<params/>
+			</task>
+			<task name="/distribution/beaker/Sanity/bz880440-fqdn-self-reporting" role="STANDALONE">
+				<params/>
+			</task>
+			<ks_appends>
+				<ks_append>
+%post
+hostname -f > /tmp/bz880440_ks_post_FQDN.txt
+hostname -i > /tmp/bz880440_ks_post_IP.txt
+echo $HOSTNAME > /tmp/bz880440_ks_post_HOSTNAME.txt
+tail -n1 /etc/hosts | sed 's/[^[:space:]]*[[:space:]]*\([^[:space:]]*\).*/\1/' > /tmp/bz880440_ks_post_parsed_host.txt
+grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d= > /tmp/bz880440_ks_post_sysconfig_network.txt
+cp /etc/hostname /tmp/bz880440_ks_post_etc_hostname.txt
+cp /etc/hosts /tmp/bz880440_ks_post_etc_hosts.txt
+cp /tmp/bz880440_ks_post_FQDN.txt /tmp/bz880440_ks_post_corrected_FQDN.txt
+if [[ -z "$KS_POST_FQDN" || $KS_POST_FQDN == localhost || $KS_POST_FQDN == localhost.* ]] ; then
+    if [ -f /etc/hostname ] ; then
+        cp /tmp/bz880440_ks_post_etc_hostname.txt /tmp/bz880440_ks_post_corrected_FQDN.txt
+    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
+        cp /tmp/bz880440_ks_post_sysconfig_network.txt /tmp/bz880440_ks_post_corrected_FQDN.txt
+    fi
+fi
+				</ks_append>
+			</ks_appends>
+		</recipe>
+	</recipeSet>
+	<recipeSet priority="Normal">
+		<recipe ks_meta="method=nfs" whiteboard="RedHatEnterpriseLinux3  i386">
+			<distroRequires>
+				<and>
+					<distro_family op="=" value="RedHatEnterpriseLinux3"/>
+					<distro_method op="=" value="nfs"/>
+					<distro_tag op="=" value="STABLE"/>
+					<distro_arch op="=" value="i386"/>
+				</and>
+			</distroRequires>
+			<hostRequires>
+				<labcontroller value="affected-lc.example.com"/>
+			</hostRequires>
+			<repos/>
+			<partitions/>
+			<task name="/distribution/install" role="STANDALONE">
+				<params/>
+			</task>
+			<task name="/distribution/beaker/Sanity/bz880440-fqdn-self-reporting" role="STANDALONE">
+				<params/>
+			</task>
+			<ks_appends>
+				<ks_append>
+%post
+hostname -f > /tmp/bz880440_ks_post_FQDN.txt
+hostname -i > /tmp/bz880440_ks_post_IP.txt
+echo $HOSTNAME > /tmp/bz880440_ks_post_HOSTNAME.txt
+tail -n1 /etc/hosts | sed 's/[^[:space:]]*[[:space:]]*\([^[:space:]]*\).*/\1/' > /tmp/bz880440_ks_post_parsed_host.txt
+grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d= > /tmp/bz880440_ks_post_sysconfig_network.txt
+cp /etc/hostname /tmp/bz880440_ks_post_etc_hostname.txt
+cp /etc/hosts /tmp/bz880440_ks_post_etc_hosts.txt
+cp /tmp/bz880440_ks_post_FQDN.txt /tmp/bz880440_ks_post_corrected_FQDN.txt
+if [[ -z "$KS_POST_FQDN" || $KS_POST_FQDN == localhost || $KS_POST_FQDN == localhost.* ]] ; then
+    if [ -f /etc/hostname ] ; then
+        cp /tmp/bz880440_ks_post_etc_hostname.txt /tmp/bz880440_ks_post_corrected_FQDN.txt
+    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
+        cp /tmp/bz880440_ks_post_sysconfig_network.txt /tmp/bz880440_ks_post_corrected_FQDN.txt
+    fi
+fi
+				</ks_append>
+			</ks_appends>
+		</recipe>
+	</recipeSet>
+</job>
+
