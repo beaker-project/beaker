@@ -2846,10 +2846,16 @@ class Watchdog(MappedObject):
     """
 
     @classmethod
+    def by_system(cls, system):
+        """ Find a watchdog based on the system name
+        """
+        return cls.query.filter_by(system=system).one()
+
+    @classmethod
     def by_status(cls, labcontroller=None, status="active"):
         """
-        Returns a list of all watchdog entries that are either active or 
-        expired for this lab controller.
+        Returns a list of all watchdog entries that are either active
+        or expired for this lab controller.
 
         A recipe is only returned as "expired" if all the recipes in the recipe 
         set have expired. Similarly, a recipe is returned as "active" so long 
@@ -2858,30 +2864,25 @@ class Watchdog(MappedObject):
         finish while its guests are still running, but we want to keep 
         monitoring the host's console log in case of a panic.
         """
-        query = cls.query.join(Watchdog.recipe, Recipe.recipeset)
-        if labcontroller:
-            query = query.filter(RecipeSet.lab_controller == labcontroller)
+        select_recipe_set_id = session.query(RecipeSet.id). \
+            join(Recipe).join(Watchdog).group_by(RecipeSet.id)
+        if status == 'active':
+            watchdog_clause = func.max(Watchdog.kill_time) > datetime.utcnow()
+        elif status =='expired':
+            watchdog_clause = func.max(Watchdog.kill_time) < datetime.utcnow()
+        else:
+            return None
 
-        REMAP_STATUS = {
-            "active"  : dict(
-                               op = "__gt__",
-                              fop = "max",
-                            ),
-            "expired" : dict(
-                               op = "__le__",
-                              fop = "min",
-                            ),
-        }
-        op = REMAP_STATUS.get(status, None)['op']
-        fop = REMAP_STATUS.get(status, None)['fop']
-        query = query.filter(RecipeSet.id.in_(
-                select([recipe_set_table.c.id],
-                    from_obj=[watchdog_table.join(recipe_table).join(recipe_set_table)])
-                .group_by(RecipeSet.id)
-                .having(getattr(func, fop)(
-                    getattr(Watchdog.kill_time, op)(datetime.utcnow())))
-                ))
-        return query
+        recipe_set_in_watchdog = RecipeSet.id.in_(
+            select_recipe_set_id.having(watchdog_clause))
+
+        if labcontroller is None:
+            my_filter = and_(Watchdog.kill_time != None, recipe_set_in_watchdog)
+        else:
+            my_filter = and_(RecipeSet.lab_controller==labcontroller,
+                Watchdog.kill_time != None, recipe_set_in_watchdog)
+        return cls.query.join(Watchdog.recipe, Recipe.recipeset).filter(my_filter)
+
 
 class LabInfo(SystemObject):
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
