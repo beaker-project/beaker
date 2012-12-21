@@ -5,7 +5,8 @@ import datetime
 from decimal import Decimal
 from turbogears.database import session
 from bkr.server import model
-from bkr.server.model import System, RecipeTask, Cpu, SystemStatus, SystemActivity
+from bkr.server.model import System, RecipeTask, Cpu, SystemStatus, \
+    SystemActivity, TaskPriority, RecipeSetActivity
 from bkr.inttest import data_setup, DummyVirtManager
 
 class ReportingQueryTest(unittest.TestCase):
@@ -164,6 +165,37 @@ class ReportingQueryTest(unittest.TestCase):
         long_task_row, = [row for row in rows if row.task == long_task.name]
         self.assertEquals(long_task_row.executions, 1)
         self.assertEquals(long_task_row.avg_duration, Decimal('10.0'))
+
+    def test_job_priority_changes(self):
+        user1 = data_setup.create_user()
+        user2 = data_setup.create_user()
+        job1 = data_setup.create_job(owner=user1)
+        job2 = data_setup.create_job(owner=user1)
+        job3 = data_setup.create_job(owner=user2)
+        job4 = data_setup.create_job(owner=user2)
+
+        for j in [job1, job2, job3]:
+            for rs in j.recipesets:
+                activity = RecipeSetActivity(j.owner,
+                                             'TEST',
+                                             'Changed',
+                                             'Priority',
+                                             rs.priority.value,
+                                             TaskPriority.high)
+                activity.created = datetime.datetime(year=2012,
+                                                     month=10,
+                                                     day=10)
+                rs.activity.append(activity)
+        session.flush()
+
+        rows = self.execute_reporting_query('job-priority-changes-by-user')
+        all_rows = rows.fetchall()
+        user1_rows = [row for row in all_rows if row.user_name == user1.user_name]
+        user2_rows = [row for row in all_rows if row.user_name == user2.user_name]
+
+        self.assertTrue(user1_rows[0].number_of_jobs_changed, 2)
+        self.assertTrue(user2_rows[0].number_of_jobs_changed, 1)
+
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=193142
     def test_systems_by_cpu_type(self):
