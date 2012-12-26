@@ -719,6 +719,12 @@ class XmlCpuFlag(ElementWrapper):
     """
     Filter systems based on System.cpu.flags
     """
+
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 'like' : 'like',
+                 '!=' : '__ne__'}
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         equal = op == '__ne__' and '__eq__' or op
@@ -727,10 +733,10 @@ class XmlCpuFlag(ElementWrapper):
         if value:
             joins = joins.join(System.cpu)
             query = getattr(CpuFlag.flag, equal)(value)
-            if op == '__eq__':
-                query = Cpu.flags.any(query)
-            else:
+            if op == '__ne__':
                 query = not_(Cpu.flags.any(query))
+            else:
+                query = Cpu.flags.any(query)
         return (joins, query)
 
 class XmlArch(ElementWrapper):
