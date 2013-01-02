@@ -211,9 +211,6 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
-        if not recipe.resource.rebooted:
-            raise BX(_(u'Cannot start R:%s, resource has not been rebooted'
-                % recipe.id))
         recipe.resource.install_started = datetime.utcnow()
 
         # extend watchdog by 3 hours 60 * 60 * 3
