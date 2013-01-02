@@ -23,38 +23,16 @@ game server) and run these tasks on any number of machines of any
 specification located anywhere in the world, and provide a simple
 interface from where they can review the outcome of these tasks.
 
-Getting Started
-===============
+# Beaker Interface
 
-This section gets you started using Beaker. There are three basic steps
-that a user needs to know before using Beaker.
-
--   *Installation*: See
-    the [installation guide](./installation-guide.html)
-    for instructions.
-
--   *Process*: comprises of description of procedures, workflows,
-    componenets, architecture, test cases, etc.
-
--   *Checklist*: It's a list of steps in the workflow in order to have
-    accurate test results.
-
-Process
--------
-
-This section has a detailed description of all the components and
-procedures involved in Beaker Test Environment.
-
-### Beaker Interface
-
-#### Systems
+## Systems
 
 Beaker provides an inventory of Systems(These could be a physical
 machine,laptop,virtual guest, or resource) attached to lab controllers.
 Systems can be added, removed, have details changed, and be provisioned
 amongst other things.
 
-##### System Searching
+### System Searching
 
 System searches are conducted by clicking on one of the items of the
 "System" menu at the top of the page.
@@ -114,7 +92,7 @@ to "My Systems"
 
 </div>
 
-##### Adding a System
+### Adding a System
 
 To add a System, go to any System search page, and click on the "Add(+)"
 link on the bottom left. You must be logged in to do this. After filling
@@ -180,7 +158,7 @@ details.
             </recipeSet>
     </job>
 
-##### Adding a Driver Disk
+### Adding a Driver Disk
 
 Some systems may need a driver disk to be able to install certain
 releases. In order to use a driver disk you need to host the driver disk
@@ -218,7 +196,7 @@ need to tell Beaker which families the driver disk is needed for.
         ![Adding a driver disk entry for
         RHEL6.](./images/guide/initrd-driverdisk2.png)
 
-##### System Details Tabs
+### System Details Tabs
 
 After finding a System in the search page, clicking on the System name
 will show the System details. To change these details, you must be
@@ -291,7 +269,7 @@ logged in as either the owner of the System, or an admin.
 
     17. *MAC Address*: The MAC address of the network device.
 
-##### System Activity
+### System Activity
 
 To search through the historical activity of all Systems, navigate to
 "Activity\>Systems" at the top of the page. The default search is
@@ -304,23 +282,24 @@ To search the history of a specific System, look for 'History'
 in the [system details tabs](#system-details-tabs)
 
 </div>
-##### Distros
+
+### Distros
 
 Beaker can keep a record of Distros that are available to install on
 Systems in its Inventory.
 
-###### Distro Searching
+#### Distro Searching
 
 The find a particular Distro, click "Distros\>All". The default search is
 on the Distro's name, with a "contains" clause
 
-###### Distro Activity
+#### Distro Activity
 
 To search through the historical activity of all Distros, navigate to
 "Activity\>Distros" at the top of the page. The default search is "contains"
 on the "Property" attribute.
 
-##### Jobs
+### Jobs
 
 The purpose of a Job is to provide an encapsulation of Tasks. It is to
 provide a single point of submission of these Tasks, and a single point
@@ -333,12 +312,12 @@ alter its Recipe Set's priorities (you can only lower the priority level
 if you are not in the admin group). Adjusting this priority upwards will
 change which Recipe Set is run sooner, and vice a versa.
 
-###### Job Workflow
+#### Job Workflow
 
 To create a simple Job workflow, see the bkr workflow-simple command
 in [beaker client](./installation-guide.html#beaker-client)
 
-###### Job Searching
+#### Job Searching
 
 To search for a Job, navigate to "Scheduler\>Jobs" at the top of the page.
 To look up the "Job ID", enter a number in the search box and press the
@@ -354,12 +333,12 @@ respectively.
 
 </div>
 
-###### Job Submission
+#### Job Submission
 
 There are two ways of submitting a Job through the web app.They are
 outlined below.
 
-####### Submitting a New Job
+##### Submitting a New Job
 
 Once you have created an XML Job workflow, you are able to submit it as
 a new "Job". To do this, go to the "Scheduler \> New Job". Click "Browse" to
@@ -367,7 +346,7 @@ select your XML file, and then hit the "Submit Data" button. The next page
 shown gives you an opportunity to check/edit your XML before queueing it
 as a Job by pressing the "Queue" button.
 
-####### Cloning an existing Job
+##### Cloning an existing Job
 
 Cloning a Job means to take a Job that has already been run on the
 System, and re-submit it. To do this you first need to be on the [job
@@ -387,7 +366,7 @@ Job and resubmit it!
 
 </div>
 
-####### Job workflow details
+##### Job workflow details
 
 There are various XML entities in the job definitions created for a
 workflow. Each job has a root node called the job element:
@@ -747,7 +726,7 @@ further information on how Beaker processes kickstarts and how to
 utilize their templating language, see the [admin
 guide](./admin-guide.html#customizing-kickstarts).
 
-####### Job Results
+##### Job Results
 
 The whole purpose of Jobs is to view the output of the Job, and more to
 the point, Tasks that ran within the Job. To do this, you must first go
@@ -825,14 +804,14 @@ particular Job, try the ["Matrix Report"](#matrix-report).
 
 </div>
 
-#### Recipes
+## Recipes
 
 Recipes are contained within a Job (although indirectly, as directly
 they are contained in a recipe set) and are themselves a container for
 Tasks. There can be more than one Recipe per Job. The purpose of a
 Recipe is to group a set of Tasks into a single logical unit.
 
-##### Recipe Searching
+### Recipe Searching
 
 The Recipe search is accessed through the "Scheduler" at the top of the
 page, and clicking on the "Recipe" menu item.
@@ -851,12 +830,13 @@ display Recipes that have a status of running,queued, and completed
 respectively.
 
 </div>
-##### Recipe Actions
+
+### Recipe Actions
 
 At any time you may wish to cancel the Recipe, you may press the "Cancel"
 link that is placed under the "Action" column.
 
-#### Tasks
+## Tasks
 
 Tasks are the lowest unit in the Job hierarchy, and running a Task is
 the primary purpose of running a Job. There purpose is to run one or
@@ -864,7 +844,7 @@ more commands, and then collect the results of those commands in a way
 that other entities can access them. You can run as many or as few Tasks
 in a Job as you like.
 
-##### Creating a Task
+### Creating a Task
 
 A Beaker task consists of three primary files: `PURPOSE`, `runtest.sh`
 and a `Makefile`. There can be other files as needed for the task.
@@ -1229,7 +1209,7 @@ BeakerLib documentation
 more about `beaker-wizard` from its [`man
 page`](http://beaker-project.org/man/beaker-wizard.html).
 
-##### Running the Test
+### Running the Test
 
 Once the task is available in the "Task Library", you have to write a job
 description (XML file) to run this test on a system provisioned in
@@ -1272,7 +1252,7 @@ The overall workflow of creating a task for a test, submitting a job to
 run the test and accessing the test results can be represented by this
 [overview](./admin-guide.html#chronological-overview)
 
-##### Updating a Task
+### Updating a Task
 
 To upload newer versions of your task, you will need to update the
 `VERSION` variable in your `Makefile`, else Beaker will not add it
@@ -1291,7 +1271,7 @@ and hence you don't have to change the `VERSION` variable in the
 
 </div>
 
-##### Makefile
+### Makefile
 
 As you have seen so far, we have used the `Makefile` to run a test
 locally and also building and uploading the RPM to Beaker. The details
@@ -1325,18 +1305,18 @@ task RPM will need to be higher. This can be achieved by running
 adjusting the `TESTVERSION` in the task's `Makefile` (see
 [TESTVERSION](#testversion)).
 
-#### Reports
+## Reports
 
 Beaker offers a few different reports. They can be accessed from the
 Reports menu at the top of the page.
 
-##### External Reports
+### External Reports
 
 In some instances it may be preferential to provide Beaker related reports
 external to the Beaker server itself. If your administrator has configured any
 links to such reports, they will be displayed here.
 
-##### Matrix Report
+### Matrix Report
 
 The "Matrix" report gives a user an overall picture of results for any
 given Job, or number of Jobs combined. It shows a matrix of Tasks run
@@ -1383,7 +1363,7 @@ page. See ["Task Searching"](#task-searching) for further details.
 ![Viewing the result of one or more Jobs via the Matrix
 report](./images/guide/report_matrix_results.png)
 
-#### User Preferences
+## User Preferences
 
 The preferences page allows the user to configure their email address,
 SSH public keys and root password for provisioned systems.
@@ -1405,14 +1385,14 @@ SSH public keys (e.g. the contents of `~/.ssh/id_rsa.pub`) may be added
 to a users account. These will be added to the `authorized_keys` file
 for the root user on provisioned hosts.
 
-### Beaker Makefile
+# Beaker Makefile
 
 This guide provide in depth information for the required and optional
 Makefile variables in an Beaker test. A sample Makefile is copied into
 the local directory when rhts-create-new-test tool is invoked (or can be
 found at `/usr/share/doc/beaker-devel-x.y/Makefile.template `).
 
-#### PACKAGE NAME
+## `PACKAGE_NAME`
 
     # The name of the package under test:
         PACKAGE_NAME=gcc
@@ -1424,7 +1404,7 @@ to the primary package used by the third party application. For example,
 if you are writing a Beaker test to test a web application based on CGI,
 set PACKAGE\_NAME to perl.
 
-#### TOPLEVEL NAMESPACE
+## `TOPLEVEL_NAMESPACE`
 
     # The toplevel namespace within which the test lives.
         TOPLEVEL_NAMESPACE=CoreOS
@@ -1485,7 +1465,7 @@ valid accepted namespaces.
     you are getting hang of Beaker or to place simple examples to help
     others.
 
-#### RELATIVE PATH
+## `RELATIVE_PATH`
 
                        # The path of the test below the package:
                          RELATIVE_PATH=example-compilation 
@@ -1495,7 +1475,7 @@ containing the `runtest.sh`, as listed in the `RELATIVE_PATH` file of
 the `Makefile`. If the test needs to move around, store this somewhere with
 `DIR=pwd` or use `pushd` and `popd`.
 
-#### TESTVERSION
+## `TESTVERSION`
 
                    # Version of the Test. Used with make tag.
                     export TESTVERSION=1.0
@@ -1518,7 +1498,7 @@ characters. The version should be incremented each time a change is made
 to the `Makefile` or test files and a RPM is created from these files to
 be publicly consumed in a test review or submission to a lab scheduler.
 
-#### TEST
+## `TEST`
 
                       # The compiled namespace of the test.
                       export TEST=$(TOPLEVEL_NAMESPACE)/$(PACKAGE_NAME)/$(RELATIVE_PATH)
@@ -1526,13 +1506,13 @@ be publicly consumed in a test review or submission to a lab scheduler.
 This variable defines the path to a test. This path should also be the
 same in source control.
 
-#### BUILT\_FILES
+## `BUILT_FILES`
 
     BUILT_FILES=hello-world
 
 List the files that need to be compiled to be used in the test.
 
-#### FILES=\$(METADATA)
+## FILES
 
                FILES=$(METADATA) runtest.sh Makefile PURPOSE hello-world.c \
                          verify-hello-world-output.sh
@@ -1541,7 +1521,7 @@ List all of the files needed to run the test to insure that there are no
 packaging errors when the test is built binaries should be pulled in via
 BUILT\_FILES.
 
-#### Targets
+## Targets
 
 Each test must supply a run target which allows an implementation of the
 framework to invoke `make run`. It is usually best to have this as the
@@ -1632,7 +1612,7 @@ the `TESTSERVER` variable to be defined. It builds an RPM of the test (if
 necessary) and uploads the test package to a test lab controller where
 it can be used to schedule tests.
 
-#### \$(METADATA)
+## `$(METADATA)`
 
 Following is an example of the `METADATA` section needed to execute a
 basic test. Following subsections will comment briefly on the values
@@ -1651,7 +1631,7 @@ enhance test reporting and execution.
         @echo "RunFor:       $(PACKAGE_NAME)" >> $(METADATA)  # add any other packages for which your test ought to run here
         @echo "Requires:     $(PACKAGE_NAME)" >> $(METADATA)  # add any other requirements for the script to run here
 
-#### Owner
+## Owner
 
 Owner: (optional) is the person responsible for this test. Initially for
 Beaker, this will be whoever committed the test to Subversion. A naming
@@ -1659,7 +1639,7 @@ policy may have to be introduced as the project develops. Acceptable
 values are a subset of the set of valid email addresses, requiring the
 form: "Owner: human readable name \<username@domain\>".
 
-#### Name
+## Name
 
 `Name`:(required) It is assumed that any result-reporting framework will
 organize all available tests into a hierarchical namespace, using
@@ -1671,7 +1651,7 @@ used in source control too. Since some implementations will want to use
 the file system to store results, make sure to only use characters that
 are usable within a file system path.
 
-#### Description
+## Description
 
 `Description `(required) must contain exactly one string.
 
@@ -1681,7 +1661,7 @@ For example:
     Description: This test tries to exploit the recent security issue for large pix map files.
     Description: This test tries to panic the kernel by creating thousands of processes.
 
-#### TestTime
+## TestTime
 
 Every `Makefile` must contain exactly one `TestTime` value. It represent the
 upper limit of time that the `runtest.sh` script should execute before
@@ -1709,7 +1689,7 @@ For example:
     TestTime: 1m   # 1 minute
     TestTime: 2h   # 2 hours
 
-#### Requires
+## Requires
 
 `Requires` one or more. This field indicates the packages that are
 required to be installed on the test machine for the test to work. The
@@ -1755,7 +1735,7 @@ When writing a multihost test involving multiple roles client(s) and
 server(s), the union of the requirements for all of the roles must be
 listed here.
 
-#### RhtsRequires
+## RhtsRequires
 
 `RhtsRequires` one or more. This field indicates the other beaker tests
 that are required to be installed on the test machine for the test to
@@ -1769,7 +1749,7 @@ For example:
 
     @echo "RhtsRequires:     test(/distribution/rhts/common)" >> $(METADATA)
 
-#### RunFor
+## RunFor
 
 `RunFor` allows for the specification of the packages which are relevant
 for the test. This field is the hook to be used for locating tests by
@@ -1787,7 +1767,7 @@ be listed here.
 This field is optional; and can occur multiple times within the
 metadata. The value should be a space-separated list of package names.
 
-#### Releases
+## Releases
 
 Some tests are only applicable to certain distribution releases. For
 example, a kernel bug may only be applicable to RHEL3 which contains the
@@ -1838,9 +1818,9 @@ possible.
             @echo "Priority:        Normal" >> $(METADATA)
             ...
 
-### Workflow
+# Workflow
 
-#### Submitting and Reviewing a Job
+## Submitting and Reviewing a Job
 
 To submit a Job you must create a Job description. This is an XML file
 containing the tasks you want to run, as well as special environment
@@ -1865,7 +1845,7 @@ the UI](#submitting-a-new-job)
 Once Submitted you can view the progress of the Job by going to the [job
 search page](#job-searching).Once your Job is Completed, see the [job results page](#job-results).
 
-#### Job XML
+## Job XML
 
 You can specify Beaker jobs using an XML file. This allows users a more
 consistent, maintainable way of storing and submitting jobs. You can
@@ -1877,7 +1857,7 @@ take are described in the RELAX NG schema described in the file
 [beaker-job.rng](http://beaker-project.org/schema/beaker-job.rng). See
 also the section on [job workflow details](#job-workflow-details).
 
-#### Virtualization Workflow
+## Virtualization Workflow
 
 Virtualization workflow is designed to take advantage all Beaker offers
 to be used for virtualization testing. The audience of this tutorial is
@@ -1976,7 +1956,7 @@ pass to virt-install program with the following exceptions:
         will be /var/lib/xen/images/\${guestname}.img . For lvm-based
         and block-device based guest, this option MUST be provided.
 
-##### KVM vs XEN GUESTS
+### KVM vs XEN GUESTS
 
 Starting with RHEL 5.4, both xen and kvm hypervisors are shipped with
 the distro. To handle this situation, guest install tests take an extra
@@ -1988,7 +1968,7 @@ and then installs the guests. There can only be one hypervisor at work
 at one moment, and hence the installation test expects them all to be
 either kvm or xen guest, but not a mix of both.
 
-##### Dynamic Partitioning/IVM
+### Dynamic Partitioning/IVM
 
 *Telling Beaker to create partitions/lvm*.\
 On Beaker, each machine has its own kickstart for each OS family it
@@ -2034,7 +2014,7 @@ and specify it in your xml file. Syntax of the partition tags is below:
         specified partitions/volumes and lets users manage custom
         partitions thru its own scripts.
 
-###### Dynamic Partitioning from Your Workflow
+#### Dynamic Partitioning from Your Workflow
 
 If you are using a different workflow and would like to add dynamic
 partitioning capability, you can do it by utilizing addPartition() call
@@ -2050,7 +2030,7 @@ to the recipe object. An example can be :
          # create an lvm but change the default fs from ext3 to ext4.
          rec.addPartition(name='mylvm4ext4', type='lvm', fs='ext4dev', size=5)
 
-##### Helper Programs Installed with Virtinstall
+### Helper Programs Installed with Virtinstall
 
 Virtinstall test also installs a few scripts that can later on be
 utilized in the tests. These are completely non-vital scripts, provided
@@ -2120,14 +2100,14 @@ only for convenience to the testers.
 
 -   Returns: 0 on success , or 1 if it encounters an error.
 
-#### Provisioning a system
+## Provisioning a system
 
 If you would like to use one of these System you will need to provision
 it. Provisioning a System means to have the system loaded with an
 Operating System and reserved for the user. There are a couple of ways
 of doing this, which are outlined below.
 
-##### Provision by System
+### Provision by System
 
 Go to the System details page (see Section 5.1.3, “System Details Tabs”)
 of a System that is free (see Section 5.1.1, “System Searching”) and
@@ -2147,7 +2127,7 @@ system was provisioned manually (i.e not via a recipe)
 
 ![Provision by System](./images/guide/system_provision_by_system.png)
 
-##### Provision by Distro
+### Provision by Distro
 
 Go to the [distro search page](#distro-searching) and
 search for a Distro you would like to provision onto a System. Once you
@@ -2182,7 +2162,7 @@ you will be presented with a form with the following fields:
 Pressing the "Queue Job" button will submit this provisioning as a Job and
 redirect us to the details of the newly created Job.
 
-##### Reserve Workflow
+### Reserve Workflow
 
 The Reserve Workflow page is accessed from the top menu by going
 to "Scheduler \> Reserve". The Reserve Workflow process allows the ability to
@@ -2231,9 +2211,9 @@ explained.
 Once you are ready you can provision your System with your selected
 Distro by pressing "Queue Job".
 
-### Tests
+# Tests
 
-#### Test Architecture Considerations
+## Test Architecture Considerations
 
 If you want your test to be smart, that intelligence must be in the
 test; the Beaker API can help. A test running in an automated
@@ -2307,7 +2287,7 @@ activities.
 -   It is easier to investigate and fix a failed test than a test that
     always passes (which it should not be).
 
-#### Writing and Running Multihost Tasks
+## Writing and Running Multihost Tasks
 
 All of the examples so far have run on a single host. Beaker has support
 for tasks that run on multiple hosts, e.g. for testing the interactions
@@ -2509,7 +2489,7 @@ desired machine(s) haven't been set in N seconds, then the script will
 exit with a non-zero return code. In case of success it'll exit with
 code 0 .
 
-##### Synchronization Commands
+### Synchronization Commands
 
 Synchronization of machines within a multihost test is performed using
 per-host state strings managed on the Beaker server. Each machine's
@@ -2528,7 +2508,7 @@ the script until all of the listed hosts are in the given state.
 Unfortunately, there is currently no good way to run these commands in
 the standalone helper environment.
 
-###### Example of a runtest.sh for a multihost test
+#### Example of a runtest.sh for a multihost test
 
     #!/bin/sh
     # Source the common test script helpers
@@ -2593,7 +2573,7 @@ the standalone helper environment.
     report_result "${TEST}" "${result}" 0
     exit 0
 
-###### Tuning up multihost tests
+#### Tuning up multihost tests
 
 Multihost tests can be easily tuned up outside Beaker using following
 code snippet based on \$JOBID variable (which is set when running in
@@ -2618,7 +2598,7 @@ rhts-sync-block) you will be asked for supplying actual state of the
 client/server by keyboard (usually just confirm readiness by hitting
 Enter). That's it! :-)
 
-#### Reporting Results
+## Reporting Results
 
 The philosophy of Beaker is that the engineers operating the system will
 want to quickly survey large numbers of tests, and thus the report
@@ -2715,7 +2695,7 @@ As a general Beaker rule of thumb, a FAIL anywhere within the result
 subtree of the test will lead to the result for the overall test being a
 FAIL.
 
-##### Logging Tips
+### Logging Tips
 
 Indicate failure-causing conditions in the log clearly, with "FAIL" in
 upper case to make it easier to grep for.
@@ -2757,7 +2737,7 @@ final line was reached; for example:
 
                  echo "***** End of runtest.sh *****"
 
-##### Passing Parameters to Tasks
+### Passing Parameters to Tasks
 
 When you need a test to perform different steps in some specific
 situations there is an option available through Simple Workflow command
@@ -2774,7 +2754,7 @@ And then make use of the passed parameter inside the runtest.sh script:
 
             if [[ TEST_PARAM_PAR1 == 1 ]] ; then do something; fi
 
-#### Test writing tips
+## Test writing tips
 
 *Reboot count*.\
 Sometimes it can be useful to ascertain how many times the system has
@@ -2782,7 +2762,7 @@ rebooted. To do this, you can use the environment variable `REBOOTCOUNT`.
 Each time the reserved machine is rebooted, `REBOOTCOUNT` will be
 incremented by one.
 
-##### Using the startup\_test function
+### Using the startup\_test function
 
 The startup\_test function can be used to provide a primitive smoketest
 of a program, by setting a shell variable named result. You will need to
@@ -2835,8 +2815,7 @@ this case the startup\_test function requires it.
 We report the result, using the special result shell variable set by
 startup\_test
 
-Checklist Discussed
--------------------
+## Checklist Discussed
 
 ### Quality of code
 
