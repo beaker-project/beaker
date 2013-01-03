@@ -6663,7 +6663,7 @@ class ExternalReport(DeclBase, MappedObject):
 
     id = Column(Integer, primary_key=True)
     name = Column(Unicode(100), unique=True, nullable=False)
-    url = Column(Unicode(200), unique=True, nullable=False)
+    url = Column(Unicode(10000), nullable=False)
     description = Column(Unicode(1000), default=None)
 
     def __init__(self, *args, **kw):
