@@ -694,3 +694,75 @@ class TestBeakerd(unittest.TestCase):
             for x in range(5,3):
                 self.assertEqual(job.recipesets[x].recipes[0].status,
                                  TaskStatus.queued)
+
+class FakeMetrics():
+    def __init__(self):
+        self.calls = []
+    def measure(self, *args):
+        self.calls.append(args)
+
+class TestBeakerdMetrics(unittest.TestCase):
+
+    def setUp(self):
+        self.original_metrics = beakerd.metrics
+        beakerd.metrics = FakeMetrics()
+        session.begin()
+
+    def tearDown(self):
+        session.rollback()
+        beakerd.metrics = self.original_metrics
+
+    def test_system_count_metrics(self):
+        gauges = [
+            'gauges.systems_recipe',
+            'gauges.systems_manual',
+            'gauges.systems_idle_broken',
+            'gauges.systems_idle_manual',
+            'gauges.systems_idle_automated',
+        ]
+        categories = [
+            'all',
+            'shared',
+            'by_arch.x86_64',
+            'by_arch.i386',
+            'by_arch.ppc',
+            'by_arch.ppc64',
+            'by_lab.example_invalid_com',
+        ]
+        lc = data_setup.create_labcontroller(fqdn="example.invalid.com")
+        for arch in "i386 x86_64 ppc ppc64".split():
+            data_setup.create_system(lab_controller=lc, arch=arch)
+        session.flush()
+        expected = ["%s.%s" % (g, c) for g in gauges for c in categories]
+        beakerd.system_count_metrics()
+        # We may get extra stats if some systems are defined in the test DB
+        actual = [name for name, value in beakerd.metrics.calls]
+        self.assertTrue(set(actual) >= set(expected), actual)
+
+    def test_recipe_count_metrics(self):
+        gauges = [
+            'gauges.recipes_scheduled',
+            'gauges.recipes_running',
+            'gauges.recipes_waiting',
+            'gauges.recipes_processed',
+            'gauges.recipes_new',
+            'gauges.recipes_queued',
+        ]
+        categories = [
+            'all',
+            'dynamic_virt_possible',
+            'by_arch.x86_64',
+            'by_arch.i386',
+            'by_arch.ppc',
+            'by_arch.ppc64',
+        ]
+        expected = ["%s.%s" % (g, c) for g in gauges for c in categories]
+        for arch in "i386 x86_64 ppc ppc64".split():
+            dt = data_setup.create_distro_tree(arch=arch)
+            recipe = data_setup.create_recipe(dt)
+            data_setup.create_job_for_recipes([recipe])
+        session.flush()
+        beakerd.recipe_count_metrics()
+        # We may get extra stats if some recipes are defined in the test DB
+        actual = [name for name, value in beakerd.metrics.calls]
+        self.assertTrue(set(actual) >= set(expected), actual)
