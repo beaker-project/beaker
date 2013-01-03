@@ -14,7 +14,7 @@ class ExternalReportsController(RPCRoot):
                      attrs={'maxlength': 100},
                      validator=validators.NotEmpty())
     url = TextField(name='url', label=_(u'URL'),
-                    attrs={'maxlength': 200},
+                    attrs={'maxlength': 10000},
                     validator=validators.NotEmpty())
     description = TextArea(name='description',
                           label=_(u'Description'),
