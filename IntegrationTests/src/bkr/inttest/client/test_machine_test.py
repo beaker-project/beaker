@@ -51,8 +51,7 @@ class MachineTestTest(unittest.TestCase):
                 ExcludeOSMajor(arch=Arch.by_name(u'x86_64'),
                     osmajor=OSMajor.by_name(u'RedHatEnterpriseLinux3')),
             ])
-        out = run_client(['bkr', 'machine-test', '--machine', system.fqdn,
-                '--tag', 'STABLE'])
+        out = run_client(['bkr', 'machine-test', '--machine', system.fqdn])
         self.assert_(out.startswith('Submitted:'), out)
         with session.begin():
             new_job = Job.query.order_by(Job.id.desc()).first()
