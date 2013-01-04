@@ -997,6 +997,13 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(excluded not in systems)
         self.assert_(included in systems)
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <cpu><flag op="like" value="%vmx%" /></cpu>
+            </hostRequires>
+            """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
 
     def test_or_lab_controller(self):
         lc1 = data_setup.create_labcontroller(fqdn=u'lab1')
