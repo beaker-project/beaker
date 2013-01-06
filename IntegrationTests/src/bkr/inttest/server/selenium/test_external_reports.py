@@ -22,13 +22,13 @@ class ExternalReportTest(WebDriverTestCase):
             'External Reports')
         self.assertEquals(b.find_element_by_class_name('flash').text, 'New Report saved')
         # Check the following element exists
-        b.find_element_by_xpath("//div[@class='external-report']/h3[text()='New Report']")
+        b.find_element_by_xpath("//div[@class='external-report']/h3/a[text()='New Report']")
 
     def test_can_delete(self):
         b = self.browser
         login(b)
         self._insert(b, 'ToDelete', 'http://unique1', 'UniqueDescription1')
-        delete_link =  b.find_element_by_xpath("//div[@class='external-report']/form[preceding-sibling::h3[text()='ToDelete']]/a[text()='Delete ( - )']")
+        delete_link =  b.find_element_by_xpath("//div[@class='external-report']/form[preceding-sibling::h3/a[text()='ToDelete']]/a[text()='Delete ( - )']")
         delete_link.click()
         b.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
         page_text = b.find_element_by_xpath('//body').text
@@ -42,8 +42,8 @@ class ExternalReportTest(WebDriverTestCase):
         b = self.browser
         login(b)
         self._insert(b, 'Report1', 'http://blag.com', '')
-        edit_link =  b.find_element_by_xpath("//div[@class='external-report']/a[text()='Edit' and preceding-sibling::h3[text()='Report1']]")
+        edit_link =  b.find_element_by_xpath("//div[@class='external-report']/a[text()='Edit' and preceding-sibling::h3/a[text()='Report1']]")
         edit_link.click()
         b.find_element_by_name('description').send_keys('A description')
         b.find_element_by_id('form').submit()
-        b.find_element_by_xpath("//div[@class='external-report']/p[normalize-space(text())='A description' and preceding-sibling::h3[text()='Report1']]")
+        b.find_element_by_xpath("//div[@class='external-report']/p[normalize-space(text())='A description' and preceding-sibling::h3/a[text()='Report1']]")
