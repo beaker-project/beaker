@@ -6,7 +6,7 @@ from sqlalchemy import and_
 from turbogears import expose, identity, controllers
 from bkr.server.bexceptions import BX
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
-        OSMajor, DistroTag, Arch
+        OSMajor, DistroTag, Arch, Distro
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.xmlrpccontroller import RPCRoot
