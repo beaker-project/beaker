@@ -24,6 +24,47 @@ class ReportingQueryTest(unittest.TestCase):
         sql = pkg_resources.resource_string('bkr.server', 'reporting-queries/%s.sql' % name)
         return session.connection(System).execute(sql)
 
+    def test_wait_duration_count_by_resource(self):
+        system_recipe = data_setup.create_recipe()
+        virt_recipe = data_setup.create_recipe()
+        virt_recipe2 = data_setup.create_recipe()
+        job = data_setup.create_job_for_recipes([virt_recipe,
+            virt_recipe2, system_recipe])
+
+        data_setup.mark_recipe_complete(virt_recipe, virt=True)
+        data_setup.mark_recipe_complete(virt_recipe2, virt=True)
+        data_setup.mark_recipe_complete(system_recipe)
+
+        system_recipe2 = data_setup.create_recipe()
+        data_setup.create_job_for_recipes([system_recipe2])
+        data_setup.mark_recipe_complete(system_recipe2, system=system_recipe.resource.system)
+
+        one_hour = datetime.timedelta(hours=1)
+        two_hours = datetime.timedelta(hours=2)
+        three_hours = datetime.timedelta(hours=3)
+
+        virt_recipe.resource.recipe.start_time = virt_recipe.resource.recipe.recipeset.queue_time + one_hour
+        virt_recipe2.resource.recipe.start_time = virt_recipe2.resource.recipe.recipeset.queue_time + two_hours
+
+        system_recipe.resource.recipe.start_time = system_recipe.resource.recipe.recipeset.queue_time + one_hour
+        system_recipe2.resource.recipe.start_time = system_recipe2.resource.recipe.recipeset.queue_time + three_hours
+        session.flush()
+
+        rows = self.execute_reporting_query('wait-duration-by-resource')
+        all_rows = rows.fetchall()
+        virt_rows = [row for row in all_rows if row.fqdn == 'All oVirt']
+        system_rows = [row for row in all_rows if row.fqdn in (system_recipe.resource.fqdn, system_recipe2.resource.fqdn)]
+
+        self.assertEquals(len(virt_rows), 1, virt_rows)
+        self.assertEquals(virt_rows[0].min_wait_time, one_hour)
+        self.assertEquals(virt_rows[0].max_wait_time, two_hours)
+        self.assertEquals(virt_rows[0].avg_wait_time, (one_hour + two_hours) / 2)
+
+        self.assertEquals(len(system_rows), 1, system_rows)
+        self.assertEquals(system_rows[0].min_wait_time, one_hour)
+        self.assertEquals(system_rows[0].max_wait_time, three_hours)
+        self.assertEquals(system_rows[0].avg_wait_time, (one_hour + three_hours) / 2)
+
     def test_install_duration_count_by_resource(self):
         system_recipe = data_setup.create_recipe()
         guest_recipe = data_setup.create_guestrecipe(host=system_recipe)
