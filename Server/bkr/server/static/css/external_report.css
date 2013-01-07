@@ -1,5 +1,5 @@
 div.external-report {
-  margin: 1em 3em;
+  margin: 1em 1.5em;
   display: inline-block;
   width: 30em;
   word-wrap: break-word;
@@ -7,7 +7,7 @@ div.external-report {
 }
 
 .offset {
-    margin: 1em 3em;
+    margin: 1em 1.5em;
 }
 
 span.url {
