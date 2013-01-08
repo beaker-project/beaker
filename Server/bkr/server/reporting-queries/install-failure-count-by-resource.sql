@@ -8,7 +8,7 @@
 -- against 'install_started'.
 
 (SELECT
-   'All Virt' AS fqdn,
+   'All oVirt' AS fqdn,
     COUNT(vr.id) AS failed_recipes
 FROM
     recipe_resource AS rr
