@@ -1,0 +1,8 @@
+Change-Id: Ifdd3d9b71845426427efcf0b4d0f312be176b39e
+Code-Review+2: Dan Callaghan <dcallagh@redhat.com>
+Verified+1: Raymond Mancy <rmancy@redhat.com>
+Submitted-by: Raymond Mancy <rmancy@redhat.com>
+Submitted-at: Tue, 08 Jan 2013 01:28:59 -0500
+Reviewed-on: http://gerrit.beaker-project.org/1615
+Project: beaker
+Branch: refs/heads/release-0.11
