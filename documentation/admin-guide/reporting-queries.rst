@@ -3,7 +3,7 @@ Reporting from the Beaker database
 
 Beaker's `integration with Graphite <#integration-with-graphite>`_ can
 provide useful insights into the real-time health and performance of
-your Beaker installation. However, for reporting on historical trends
+your Beaker installation. However, for more in-depth analysis
 you may prefer to use an external query/reporting tool to extract data
 directly from Beaker's database.
 
@@ -15,11 +15,27 @@ can `browse the queries online in Beaker's
 git <http://git.beaker-project.org/cgit/beaker/tree/Server/bkr/server/reporting-queries>`_
 (be sure to select the correct branch for your version of Beaker). These
 queries are "supported" in the sense that they are tested by Beaker's
-test suite, and if the queries are changed in future releases this will
-be called out in the release notes.
+test suite, and if the queries require changes in future releases this will
+be called out in the release notes. Advance warning will also be provided
+for any such changes on the `beaker-devel mailing list`_.
 
-Beware that Beaker's database schema is subject to change in future
-releases, so if your external reporting tool uses any queries other than
-the supported ones described above then you must examine the schema
-upgrade instructions for every release and ensure the reporting tool's
-queries are updated as necessary.
+.. _beaker-devel mailing list: https://lists.fedorahosted.org/mailman/listinfo/beaker-devel
+
+These queries are intended to provide guidance for "interesting questions"
+that a business intelligence system connected to Beaker may want to answer.
+They can be tweaked to use different statistical functions, query different
+date ranges, adapt filtering rules from another supported query,
+parameterised in a reporting tool, etc.
+
+As noted above, Beaker's database schema is subject to change in future
+releases. If your external reporting queries stray beyond the schema
+assumptions captured in the supported queries, then your queries may break
+without notice when upgrading to a new Beaker release. If this occurs, you
+must then examine the detailed schema upgrade notes for that release and
+ensure the reporting tool's queries are updated as necessary. 
+
+Suggestions for additional supported queries are welcome, and may be filed
+as enhancement requests for the `Beaker community project`_ in Red Hat's
+Bugzilla instance. 
+
+.. _Beaker community project: https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker
