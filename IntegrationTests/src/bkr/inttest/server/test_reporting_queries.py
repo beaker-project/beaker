@@ -98,7 +98,7 @@ class ReportingQueryTest(unittest.TestCase):
         system_recipe2.resource.install_finished = system_recipe2.resource.install_started + three_hours
         session.flush()
 
-        rows = self.execute_reporting_query('install-duration-count-by-resource')
+        rows = self.execute_reporting_query('install-duration-by-resource')
         all_rows = rows.fetchall()
         guest_rows = [row for row in all_rows if row.fqdn == 'All Guest']
         virt_rows = [row for row in all_rows if row.fqdn == 'All Virt']
