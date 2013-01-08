@@ -26,7 +26,7 @@ FROM
 UNION
 
 (SELECT
-    'All Virt' AS fqdn,
+    'All oVirt' AS fqdn,
     SEC_TO_TIME(AVG(TIME_TO_SEC(TIMEDIFF(rr.install_finished, rr.install_started)))) AS avg_install_time,
     MIN(TIMEDIFF(rr.install_finished, rr.install_started)) AS min_install_time,
     MAX(TIMEDIFF(rr.install_finished, rr.install_started)) AS max_install_time

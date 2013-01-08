@@ -98,10 +98,10 @@ class ReportingQueryTest(unittest.TestCase):
         system_recipe2.resource.install_finished = system_recipe2.resource.install_started + three_hours
         session.flush()
 
-        rows = self.execute_reporting_query('install-duration-count-by-resource')
+        rows = self.execute_reporting_query('install-duration-by-resource')
         all_rows = rows.fetchall()
         guest_rows = [row for row in all_rows if row.fqdn == 'All Guest']
-        virt_rows = [row for row in all_rows if row.fqdn == 'All Virt']
+        virt_rows = [row for row in all_rows if row.fqdn == 'All oVirt']
         system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
 
         self.assertEquals(len(virt_rows), 1, virt_rows)
@@ -134,7 +134,7 @@ class ReportingQueryTest(unittest.TestCase):
         rows = self.execute_reporting_query('install-failure-count-by-resource')
         all_rows = [row for row in rows]
         guest_rows = [row for row in all_rows if row.fqdn == 'All Guest']
-        virt_rows = [row for row in all_rows if row.fqdn == 'All Virt']
+        virt_rows = [row for row in all_rows if row.fqdn == 'All oVirt']
         system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
 
         self.assertEquals(len(virt_rows), 1, virt_rows)
@@ -152,7 +152,7 @@ class ReportingQueryTest(unittest.TestCase):
         rows = self.execute_reporting_query('install-failure-count-by-resource')
         all_rows = [row for row in rows]
         guest_rows = [row for row in all_rows if row.fqdn == 'All Guest']
-        virt_rows = [row for row in all_rows if row.fqdn == 'All Virt']
+        virt_rows = [row for row in all_rows if row.fqdn == 'All oVirt']
         system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
 
         self.assertEquals(len(virt_rows), 1, virt_rows)
