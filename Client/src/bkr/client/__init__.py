@@ -118,7 +118,7 @@ class BeakerWorkflow(BeakerCommand):
             "--tag",
             action="append",
             default=[],
-            help="Use latest distro having this tag for job",
+            help="Use latest distro tagged with TAG [default: STABLE]",
         )
         distro_options.add_option(
             "--distro",
@@ -329,7 +329,7 @@ class BeakerWorkflow(BeakerCommand):
         """ Get all OsMajors, optionally filter by tag """ 
         username = kwargs.get("username", None)
         password = kwargs.get("password", None)
-        tags = kwargs.get("tag", [])
+        tags = kwargs.get("tag", []) or ['STABLE']
         if not hasattr(self,'hub'):
             self.set_hub(username, password)
         return self.hub.distros.get_osmajors(tags)
@@ -339,7 +339,7 @@ class BeakerWorkflow(BeakerCommand):
         username = kwargs.get("username", None)
         password = kwargs.get("password", None)
         fqdn = kwargs.get("machine", '')
-        tags = kwargs.get("tag", [])
+        tags = kwargs.get("tag", []) or ['STABLE']
         if not hasattr(self,'hub'):
             self.set_hub(username, password)
         return self.hub.systems.get_osmajor_arches(fqdn, tags)
@@ -567,7 +567,7 @@ class BeakerRecipeBase(BeakerBase):
         ks_meta = kwargs.get("ks_meta", "")
         kernel_options = kwargs.get("kernel_options", '')
         kernel_options_post = kwargs.get("kernel_options_post", '')
-        tags = kwargs.get("tag", [])
+        tags = kwargs.get("tag", []) or ['STABLE']
         systype = kwargs.get("systype", None)
         machine = kwargs.get("machine", None)
         keyvalues = kwargs.get("keyvalue", [])
@@ -580,11 +580,17 @@ class BeakerRecipeBase(BeakerBase):
             distroName.setAttribute('op', '=')
             distroName.setAttribute('value', '%s' % distro)
             self.addDistroRequires(distroName)
-        if family:
-            distroFamily = self.doc.createElement('distro_family')
-            distroFamily.setAttribute('op', '=')
-            distroFamily.setAttribute('value', '%s' % family)
-            self.addDistroRequires(distroFamily)
+        else:
+            if family:
+                distroFamily = self.doc.createElement('distro_family')
+                distroFamily.setAttribute('op', '=')
+                distroFamily.setAttribute('value', '%s' % family)
+                self.addDistroRequires(distroFamily)
+            for tag in tags:
+                distroTag = self.doc.createElement('distro_tag')
+                distroTag.setAttribute('op', '=')
+                distroTag.setAttribute('value', '%s' % tag)
+                self.addDistroRequires(distroTag)
         if variant:
             distroVariant = self.doc.createElement('distro_variant')
             distroVariant.setAttribute('op', '=')
@@ -608,18 +614,6 @@ class BeakerRecipeBase(BeakerBase):
             myrepo.setAttribute('name', 'myrepo_%s' % i)
             myrepo.setAttribute('url', '%s' % repo)
             self.addRepo(myrepo)
-        for tag in tags:
-            distroTag = self.doc.createElement('distro_tag')
-            distroTag.setAttribute('op', '=')
-            distroTag.setAttribute('value', '%s' % tag)
-            self.addDistroRequires(distroTag)
-        # If no tag is asked for default to distros tagged as STABLE
-        # But only if we didn't ask for a specific distro
-        if not tags and not distro:
-            distroTag = self.doc.createElement('distro_tag')
-            distroTag.setAttribute('op', '=')
-            distroTag.setAttribute('value', 'STABLE')
-            self.addDistroRequires(distroTag)
         if systype:
             systemType = self.doc.createElement('system_type')
             systemType.setAttribute('op', '=')

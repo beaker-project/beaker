@@ -199,6 +199,15 @@ TFTP root directory and runs fence commands to reboot systems.
     $ sudo chkconfig beaker-provision on
     $ sudo service beaker-provision start
 
+Beaker installs a configuration file into `/etc/sudoers.d` so that
+beaker-proxy (running as apache) can clear the TFTP netboot files for
+specific servers (owned by root). To ensure that Beaker lab controllers
+read this directory, the following command must be enabled in
+`/etc/sudoers` (it is enabled by default in RHEL 6):
+
+    #includedir /etc/sudoers.d
+
+
 Import Distros
 --------------
 

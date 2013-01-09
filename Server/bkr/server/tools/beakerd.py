@@ -571,7 +571,7 @@ def _recipe_count_metrics_for_query_grouped(name, grouping, query):
 def recipe_count_metrics():
     _recipe_count_metrics_for_query('all')
     _recipe_count_metrics_for_query('dynamic_virt_possible',
-            Recipe.filter(Recipe.virt_status == RecipeVirtStatus.possible))
+            Recipe.query.filter(Recipe.virt_status == RecipeVirtStatus.possible))
     _recipe_count_metrics_for_query_grouped('by_arch', Arch.arch,
                                    Recipe.query.join(DistroTree).join(Arch))
 

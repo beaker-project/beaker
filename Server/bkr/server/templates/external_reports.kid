@@ -9,9 +9,7 @@
 <h2>$title</h2>
 <div xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#">
   <div py:for="report in value" class='external-report'>
-    <h3>${report.name}</h3>
-    <span class='url'>URL:</span> <a href="${report.url}">${report.url}</a>
-    <h5>Description:</h5>
+    <h3><a href="${report.url}">${report.name}</a></h3>
     <p py:if="report.description">${report.description}</p>
     <p py:if="not report.description" py:strip='1' >No Description</p>
     <span py:if="'admin' in tg.identity.groups" py:strip='1'>

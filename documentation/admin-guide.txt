@@ -550,12 +550,12 @@ Utilisation of shared systems
 Recipe queue
   :     http://graphite.example.com/render/?width=1024&height=400
             &areaMode=stacked
-            &target=beaker.gauges.recipes_new
-            &target=beaker.gauges.recipes_processed
-            &target=beaker.gauges.recipes_queued
-            &target=beaker.gauges.recipes_running
-            &target=beaker.gauges.recipes_scheduled
-            &target=beaker.gauges.recipes_waiting
+            &target=beaker.gauges.recipes_new.all
+            &target=beaker.gauges.recipes_processed.all
+            &target=beaker.gauges.recipes_queued.all
+            &target=beaker.gauges.recipes_running.all
+            &target=beaker.gauges.recipes_scheduled.all
+            &target=beaker.gauges.recipes_waiting.all
 
 Recipe throughput
   :     http://graphite.example.com/render/?width=1024&height=400

@@ -69,3 +69,15 @@ rollback for the row deletions.
         ADD CONSTRAINT recipe_rendered_kickstart_id_fk
         FOREIGN KEY (rendered_kickstart_id)
         REFERENCES rendered_kickstart (id);
+
+
+Ensure beaker-proxy can synchronously clear netboot files (bug 843854)
+----------------------------------------------------------------------
+
+Beaker 0.11 installs a configuration file into /etc/sudoers.d so that
+beaker-proxy (running as apache) can clear the TFTP netboot files for
+specific servers (owned by root). To ensure that Beaker lab controllers
+read this directory, the following command must be enabled in
+`/etc/sudoers` (it is enabled by default in RHEL 6):
+
+    #includedir /etc/sudoers.d
