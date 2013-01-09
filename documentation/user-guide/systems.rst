@@ -189,90 +189,129 @@ need to tell Beaker which families the driver disk is needed for.
 
          Adding a driver disk entry for RHEL6.
 
-.. _system-details-tabs:
-
-System Details Tabs
-~~~~~~~~~~~~~~~~~~~
+System Details
+~~~~~~~~~~~~~~
 
 After finding a System in the search page, clicking on the System name
 will show the System details. To change these details, you must be
 logged in as either the owner of the System, or an admin.
 
--  *System Details*
+-  *System Name*: Unique hostname that identifies the machine, also
+   referred to as fqdn (fully qualified domain name).
 
-   1.  *System Name*: Unique hostname that identifies the machine, also
-       referred to as fqdn (fully qualified domain name).
+-  *Date Checkin*: When the machine was added to the inventory.
 
-   2.  *Date Checkin*: When the machine was added to the inventory.
+-  *Last Checkin*: Last time this machine had its inventory updated
 
-   3.  *Last Checkin*: Last time this machine had its inventory updated
+-  *Lender*: Name of the organisation that has lent this system to
+   beaker's inventory.
 
-   4.  *Lender*: Name of the organisation that has lent this system to
-       beaker's inventory.
+-  *Serial Number*: Serial Number of the machine.
 
-   5.  *Serial Number*: Serial Number of the machine.
+-  *Condition*: This can be one of the following:
 
-   6.  *Condition*: This can be one of the following:
+   -  *Automated*: In a working state, can have jobs run against it.
 
-       -  *Automated*: In a working state, can have jobs run against it.
+   -  *Manual*: In a working state, can not have jobs run against it
+      (designed so people can test machine without having other
+      people's jobs run on it).
 
-       -  *Manual*: In a working state, can not have jobs run against it
-          (designed so people can test machine without having other
-          people's jobs run on it).
+   -  *Broken*: Not in a working state and not available to have
+      jobs run on it.
 
-       -  *Broken*: Not in a working state and not available to have
-          jobs run on it.
+   -  *Removed*: System no longer exists in the inventory.
 
-       -  *Removed*: System no longer exists in the inventory.
+-  *Shared*: Allows others to run jobs against this machine.
 
-   7.  *Shared*: Allows others to run jobs against this machine.
+-  *Secret*: Stops other people from seeing this system in the
+   inventory.
 
-   8.  *Secret*: Stops other people from seeing this system in the
-       inventory.
+-  *Lab Controller*: The Lab controller to which it is connected.
 
-   9.  *Lab Controller*: The Lab controller to which it is connected.
+-  *Type*: This can be one of the following:
 
-   10. *Type*: This can be one of the following:
+   -  *Machine*: A physical machine that does not fit the other
+      categories.
 
-       -  *Machine*: A physical machine that does not fit the other
-          categories.
+   -  *Laptop*: A laptop.
 
-       -  *Laptop*: A laptop.
+   -  *Virtual*: A virtual machine, this is just a placeholder that
+      has a hostname and MAC address that corresponds to a DHCP
+      record.
 
-       -  *Virtual*: A virtual machine, this is just a placeholder that
-          has a hostname and MAC address that corresponds to a DHCP
-          record.
+   -  *Resource*: Something which is not a computer. i.e a monitor.
 
-       -  *Resource*: Something which is not a computer. i.e a monitor.
+   -  *Prototype*: New piece of hardware.
 
-       -  *Prototype*: New piece of hardware.
+-  *Last Modification*: The last time the system details were
+   changed.
 
-   11. *Last Modification*: The last time the system details were
-       changed.
+-  *Vendor*: The brand.
 
-   12. *Vendor*: The brand.
+-  *Model*: The model designation.
 
-   13. *Model*: The model designation.
+-  *Location*: The physical location.
 
-   14. *Location*: The physical location.
+-  *Owner*: The user who currently owns this machine (by default it
+   is the user who added the entry to inventory, but owners can be
+   reassigned)
 
-   15. *Owner*: The user who currently owns this machine (by default it
-       is the user who added the entry to inventory, but owners can be
-       reassigned)
+-  *Loaned To*: The current Loanee. If this field is non empty, the
+   system is only able to be used by the loanee.
 
-   16. *Loaned To*: The current Loanee. If this field is non empty, the
-       system is only able to be used by the loanee.
+-  *MAC Address*: The MAC address of the network device.
 
-   17. *MAC Address*: The MAC address of the network device.
+.. _system-details-tabs:
+
+System Details Tabs
+~~~~~~~~~~~~~~~~~~~
+
+The system page also has a number of tabs with additional information:
+
+Details
+    Shows the details of the System's CPU, as well as Devices attached to the System. 
+Arch(es)
+    Shows the architectures supported by the system. 
+Key/Values
+    Shows further hardware details.
+Groups
+    Shows the groups of which this System is a member.
+Excluded Families
+    Are the list of Distros that this System does not support. 
+Power
+    Allows the powering off/on and rebooting of this System. These options are 
+    only available if you are the current user of this System, in the admin 
+    group or are part of a group that has been given admin rights over the 
+    machine. Also the machine must be "taken".
+Notes
+    Any info about the system that you want others to see and doesn't fit in 
+    anywhere else. If you have admin rights over the system you will be able to add 
+    and delete notes, as well as show previously deleted notes.
+Install Options
+    These are default options which will be used when a system is provisioned. 
+    You can create different options per Arch/Distro combination.
+Provision
+    Allows the user of this System to install a Distro on it. 
+Lab Info
+    Will display practical details of the System like cost, power usage, weight 
+    etc. 
+History
+    Shows the activity on this System for the duration of the systems life as 
+    an inventory item in Beaker. These activites can also be searched. By 
+    default, the simple search does a "contains" search on the Field attribute. 
+    Please see :ref:`system-searching` for details on searching. 
 
 System Activity
 ~~~~~~~~~~~~~~~
 
 To search through the historical activity of all Systems, navigate to
-"Activity>Systems" at the top of the page. The default search is
-"contains" on the "Property" attribute.
+"Activity>Systems" at the top of the page.
 
-.. admonition:: Individual System history
+.. figure:: system_activity_all.png
+   :width: 100%
+   :alt: [screenshot of system activity search]
 
-   To search the history of a specific System, look for 'History' in the 
-   :ref:`system details tabs <system-details-tabs>`.
+   Searching through all Systems' activity
+
+To search the history of a specific system, you can also use the "History" tab 
+on the system page. See :ref:`system-details-tabs`.
