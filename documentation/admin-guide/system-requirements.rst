@@ -17,18 +17,8 @@ Your Beaker server should have:
 
 -  2 or more terabytes tree storage requirement.
 
-.. raw:: html
-
-   <div class='admonition'>
-
-**Note**
-
-If your site already has an existing repository of Red Hat install
-trees, you do not have to meet the tree storage requirement above.
-
-.. raw:: html
-
-   </div>
+.. note:: If your site already has an existing repository of Red Hat install 
+   trees, you do not have to meet the tree storage requirement above.
 
 Your target hosts are required to have:
 
