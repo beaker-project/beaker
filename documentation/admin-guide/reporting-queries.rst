@@ -25,7 +25,7 @@ These queries are intended to provide guidance for "interesting questions"
 that a business intelligence system connected to Beaker may want to answer.
 They can be tweaked to use different statistical functions, query different
 date ranges, adapt filtering rules from another supported query,
-parameterised in a reporting tool, etc.
+parametrized in a reporting tool, etc.
 
 As noted above, Beaker's database schema is subject to change in future
 releases. If your external reporting queries stray beyond the schema

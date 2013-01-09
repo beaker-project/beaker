@@ -85,7 +85,7 @@ valid accepted namespaces.
    by any of the above namespaces
 
 -  *Examples* example tests that illustrate usage and functionality and
-   are not activly maintained. This is a good place to experiment when
+   are not actively maintained. This is a good place to experiment when
    you are getting hang of Beaker or to place simple examples to help
    others.
 
@@ -361,7 +361,7 @@ package group names preceded with an @ sign. Each package or group must
 occur within the distribution tree under test (specifically, it must
 appear in the ``comps.xml`` file).
 
-For exmaple:
+For example:
 
 ::
 
@@ -443,7 +443,7 @@ not execute on a particular release. Otherwise, the release should not
 be restricted so that your test can run on as many different releases as
 possible.
 
--  Valid ``Releases`` arevanything that is a valid Family in Beaker,
+-  Valid ``Releases`` are anything that is a valid Family in Beaker,
    such as:
 
    -  RedHatEnterpriseLinux3
@@ -475,7 +475,7 @@ possible.
           @echo "Priority:        Normal" >> $(METADATA)
           ...
 
-   -  specifiying releases you *don't want* run your test for (using "-"
+   -  specifying releases you *don't want* run your test for (using "-"
       sign before given releases): For example, if you don't want to run
       your test on RHEL3, but the other releases are valid for your
       test, add "Releases: -RedHatEnterpriseLinux3" to your Makefile

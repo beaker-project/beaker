@@ -13,7 +13,7 @@ Your Beaker server should have:
 
 -  4 or more gigabytes of RAM.
 
--  4 or more CPUS running at 2.5Ghz or higher.
+-  4 or more CPUs running at 2.5GHz or higher.
 
 -  2 or more terabytes tree storage requirement.
 

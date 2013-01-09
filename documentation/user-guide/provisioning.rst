@@ -96,7 +96,7 @@ you ("Auto pick System"). If you choose "Show Systems" you will be
 presented with a list of Systems you are able to provision. Ones that
 are available now show the link "Reserve now" beside them. This
 indicates the System is available to be provisioned immediately. If the
-System is currenty in use it will have the link "Queue Reservation"
+System is currently in use it will have the link "Queue Reservation"
 instead. This indicates that the System is currently in use, but can be
 provisioned for a later time.
 

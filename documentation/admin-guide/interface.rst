@@ -23,7 +23,7 @@ these names the same, or different.
 *Editing a Group*.
 To edit a group, go to "Admin -> Groups" and click on the name of the
 group you wish to edit. From here you can add users, systems, and
-permisions to the group, as well as changing its display name and group
+permissions to the group, as well as changing its display name and group
 name.
 
 *Group Activity*.
@@ -34,5 +34,5 @@ Configuration
 -------------
 
 Some Beaker configuration is stored in the database rather than in the
-server config file, and can be changed without restarting Beaker
+server configuration file, and can be changed without restarting Beaker
 services. Go to "Admin -> Configuration" to view and change settings.

@@ -80,7 +80,7 @@ are also available for systems in the shared pool, which are equally
 available to all users of a Beaker installation. To access these metrics,
 replace ``.all`` with ``.shared``.
 
-Each of the system utilitisation gauges is also available broken down by
+Each of the system utilization gauges is also available broken down by
 architecture and by the lab controller that manages that system. For
 example, information on the idle x86_64 machines can be accessed as::
 
@@ -121,7 +121,7 @@ suitable systems, recipes may spend an extended period of time in this
 state.
 
 The ``scheduled`` state indicates that the recipe has been assigned a
-system (or a virtualised resource), but is waiting for other recipes in
+system (or a virtualized resource), but is waiting for other recipes in
 the same recipe set to be assigned a resource.
 
 The ``waiting`` state indicates that the recipe is waiting for the initial
@@ -140,7 +140,7 @@ The number of recipes in ``scheduled`` and ``running`` may exceed the number
 of systems assigned to a recipe (as indicated by the ``systems_recipe``
 gauge) as recipes may be executing on a dynamically created virtual machine.
 
-To observe the utilization of dynamic virtualisation resources, replace
+To observe the utilization of dynamic virtualization resources, replace
 ``.all`` with ``.dynamic_virt_possible``. These metrics show recipes which
 are either still under consideration for creation of a dynamic virtual
 machine, or which have already been assigned one.
@@ -163,7 +163,7 @@ for a dashboard or given to users. The URLs assume the default metric
 name prefix ``beaker.`` with a Graphite instance at
 ``graphite.example.com``.
 
-Utilisation of all systems
+Utilization of all systems
     ::
 
         http://graphite.example.com/render/?width=1024&height=400
@@ -174,7 +174,7 @@ Utilisation of all systems
             &target=beaker.gauges.systems_manual.all
             &target=beaker.gauges.systems_recipe.all
 
-Utilisation of shared systems
+Utilization of shared systems
     ::
 
         http://graphite.example.com/render/?width=1024&height=400

@@ -18,7 +18,7 @@ Matrix Report
 
 The "Matrix" report gives a user an overall picture of results for any
 given Job, or number of Jobs combined. It shows a matrix of Tasks run
-and the Arch that they were run on. The "Reports->Matrix" is accesable
+and the Arch that they were run on. The "Reports->Matrix" is accessible
 from the top menu.
 
 .. figure:: report_matrix.png
@@ -45,7 +45,7 @@ create the report.
 .. admonition:: Displaying reports of any combination of jobs
 
    Displaying the Matrix reports of any Jobs together, is possible when 
-   selecting by "Job ID". Enter in all the relevant "Job ID"s seperate by 
+   selecting by "Job ID". Enter in all the relevant "Job ID"s separate by 
    whitespace or a newline.
 
 .. figure:: report_matrix_generate.png
@@ -56,7 +56,7 @@ create the report.
 
 The generated Matrix report shows the result of each Task with its
 corresponding Arch and Recipe Whiteboard. The points in the matrix
-describe the result of the Task, and how many occurences of that result
+describe the result of the Task, and how many occurrences of that result
 there are. Clicking on these results will take you to the "Executed
 Tasks" page. See :ref:`task-searching` for further
 details.

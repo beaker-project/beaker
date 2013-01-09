@@ -50,7 +50,7 @@ Once you have created an XML Job workflow, you are able to submit it as
 a new "Job". To do this, go to the "Scheduler > New Job". Click "Browse"
 to select your XML file, and then hit the "Submit Data" button. The next
 page shown gives you an opportunity to check/edit your XML before
-queueing it as a Job by pressing the "Queue" button.
+queuing it as a Job by pressing the "Queue" button.
 
 .. _cloning:
 
@@ -133,7 +133,7 @@ Individual recipes can have the following attributes
 
    -  **vnc** Setting this will do a vnc install
 
--  "kerne\_options\_post"
+-  "kernel\_options\_post"
 
 -  "ks\_meta"
 
@@ -397,7 +397,7 @@ assigned to a new environment variable specified by ``name``.
         </recipeSet>
     </job>
 
-By default, the kickstart fed to Anaconda is a generalised kickstart for
+By default, the kickstart fed to Anaconda is a generalized kickstart for
 a specific distro major version. However, there are a couple of ways to
 pass in a customized kickstart.
 

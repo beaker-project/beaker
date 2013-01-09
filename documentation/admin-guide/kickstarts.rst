@@ -5,7 +5,7 @@ When Beaker provisions a system, the Beaker server generates an Anaconda
 kickstart from a template file. Beaker’s kickstart templates are written
 in the Jinja2 templating language. Refer to the `Jinja2
 documentation <http://jinja.pocoo.org/docs/>`_ for details of the
-template syntax and builtin constructs which are available to all
+template syntax and built-in constructs which are available to all
 templates.
 
 Beaker selects a base kickstart template according to the major version
@@ -45,7 +45,7 @@ override these if necessary.
 ``print_anaconda_repos``
     Provides the ``repo`` kickstart commands which tell Anaconda where
     to find the distro tree’s Yum repositories for installation. This
-    includes any custom repos passed in the job xml as well, ie.
+    includes any custom repos passed in the job XML as well, e.g.
     ``<repo name="repo_id" url="http://server/path/to/repo"/>``
 
 ``install_method``
@@ -82,7 +82,7 @@ override these if necessary.
 
 ``rhts_pre``; ``rhts_post``
     Scripts necessary for running a Beaker recipe on the system after it
-    is provisioned. These should never be overriden by the
+    is provisioned. These should never be overridden by the
     administrator.
 
 ``ssh_keys``

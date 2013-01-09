@@ -4,7 +4,7 @@ Systems
 Beaker provides an inventory of Systems(These could be a physical
 machine,laptop,virtual guest, or resource) attached to lab controllers.
 Systems can be added, removed, have details changed, and be provisioned
-amongst other things.
+among other things.
 
 .. _system-searching:
 
@@ -45,8 +45,8 @@ The first column ("Table") is the attribute on which the search is being
 performed; The second ("Operation") is the type of search, and the third
 ("Value") is the actual value to search on. To add another search
 criteria (row), click the "Add(+)" link just below the "Table" column.
-When using more than just one search criteria, the defaul operation
-between the criterias is an SQL AND operation. The operators change
+When using more than just one search criteria, the default operation
+between the criteria is an SQL AND operation. The operators change
 depending on what type of attribute is being searched.
 
 .. admonition:: Wildcards
@@ -95,7 +95,7 @@ The provisioning may take some time.
 
 Once the System has been added, you may want to :ref:`create a
 job <submitting-a-new-job>` with the */distribution/inventory* task
-(this is availble in the task repo) on the machine. The XMl will
+(this is available in the task repo) on the machine. The XML will
 probably look something like this, although substituting the distro and
 system name details.
 
@@ -145,7 +145,7 @@ Adding a Driver Disk
 
 Some systems may need a driver disk to be able to install certain
 releases. In order to use a driver disk you need to host the driver disk
-under the tftp server so that it's available during netboot. You also
+under the TFTP server so that it's available during netboot. You also
 need to tell Beaker which families the driver disk is needed for.
 
 -  First step is to install the driver disk on your lab controller(s).
@@ -197,13 +197,13 @@ will show the System details. To change these details, you must be
 logged in as either the owner of the System, or an admin.
 
 -  *System Name*: Unique hostname that identifies the machine, also
-   referred to as fqdn (fully qualified domain name).
+   referred to as FQDN (fully qualified domain name).
 
 -  *Date Checkin*: When the machine was added to the inventory.
 
 -  *Last Checkin*: Last time this machine had its inventory updated
 
--  *Lender*: Name of the organisation that has lent this system to
+-  *Lender*: Name of the organization that has lent this system to
    beaker's inventory.
 
 -  *Serial Number*: Serial Number of the machine.
@@ -297,7 +297,7 @@ Lab Info
     etc. 
 History
     Shows the activity on this System for the duration of the systems life as 
-    an inventory item in Beaker. These activites can also be searched. By 
+    an inventory item in Beaker. These activities can also be searched. By 
     default, the simple search does a "contains" search on the Field attribute. 
     Please see :ref:`system-searching` for details on searching. 
 

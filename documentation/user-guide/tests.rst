@@ -70,7 +70,7 @@ activities.
    variable to FAIL and only set it to PASS if no errors are detected.
 
 -  Do not initialize a variable to PASS which fails only on a specific
-   error & mdash;what if you missed another error? What if the shell
+   error -- what if you missed another error? What if the shell
    function you called failed to execute?
 
 -  It is easier to investigate and fix a failed test than a test that
@@ -199,7 +199,7 @@ might look like::
         Client
     fi
 
-Let's disect the code. First of, we have Server() and Client() functions
+Let's dissect the code. First of, we have Server() and Client() functions
 which will be executed on SERVERS and CLIENTS machines respectively.
 Then we have an if block to determine if this is running as an beaker
 test, or if it's being run on the test developer's machine(s) to test it
@@ -244,7 +244,7 @@ machines. For example, the below will fail:
 
 This will fail, because the multihost test is the 3rd test on the server
 side and it's the 2nd test on the client side.. To fix this, you can pad
-in dummy testcases on the side that has fewer testcases. There is a
+in dummy test cases on the side that has fewer test cases. There is a
 dummy test that lives in /distribution/utils/dummy for this purpose. So,
 the above can be fixed as:
 
@@ -382,7 +382,7 @@ the beginning of your runtest.sh script.
 
 ::
 
-    # decide if we're runnig on RHTS or in developer mode
+    # decide if we're running on RHTS or in developer mode
     if test -z $JOBID ; then
             echo "Variable JOBID not set, assuming developer mode"
             CLIENTS="client.example.com"
@@ -416,7 +416,7 @@ your responsibility to capture or generate in your script:
 -  a PASS or FAIL and optionally a value indicating a test-specific
    metric, such as a performance figure.
 
--  a debug log of information & mdash;invaluable when troubleshooting an
+-  a debug log of information -- invaluable when troubleshooting an
    unexpected test result. A test can have a single log file and report
    it into the root node of your results tree, or gather multiple logs,
    reporting each within the appropriate child node.
@@ -557,7 +557,7 @@ line interface called --test-params which allows you to pass the
 supplied parameter to runtest.sh where you can access it by
 TEST\_PARAM\_NAME=value.
 
-For example you can launch the single workflow with a commandline like
+For example you can launch the single workflow with a command line like
 this:
 
 ::
@@ -582,7 +582,7 @@ rebooted. To do this, you can use the environment variable
 Using the startup\_test function
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The startup\_test function can be used to provide a primitive smoketest
+The startup\_test function can be used to provide a primitive smoke-test
 of a program, by setting a shell variable named result. You will need to
 use report\_result if you use it. The syntax is:
 
@@ -609,7 +609,7 @@ The function then checks various things:
    missing it causes result to be FAIL, appending the problems to
    OUTPUTFILE
 
--  if any coredumps are detected it causes result to be FAIL
+-  if any core dumps are detected it causes result to be FAIL
 
 Finally, it kills the fake X server. You then need to report the result.
 
@@ -750,13 +750,13 @@ Check the following attributes to ensure the correctness of Packaging:
       -  Bug (lot of tests tests specific bug number, it is not enough
          to have it in test name)
 
-   -  ``Permissions``: File permissions should be set approriately on
+   -  ``Permissions``: File permissions should be set appropriately on
       built packages and verified by running\ ``rpm -qplv`` [package
       name]. For example:
 
       ::
 
-          File permissions should be set approriately on built packages and verified by running rpm -qplv [package name]. For example: 
+          File permissions should be set appropriately on built packages and verified by running rpm -qplv [package name]. For example: 
 
       -  ``runtest.sh`` should be executable by all users
 
@@ -772,7 +772,7 @@ Check the following attributes to ensure the correctness of Packaging:
          [TOPLEVEL\_NAMESPACE] to make sure that the underlying package
          being tested is reporting results in the correct namespace.
 
-      -  The Makefile variables and testnames should also correspond to
+      -  The Makefile variables and test names should also correspond to
          the correct path in source control. For example:
 
          ::

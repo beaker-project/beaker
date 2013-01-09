@@ -248,14 +248,14 @@ preference file.
 The package for which this task is defined is declared in the
 ``PACKAGE`` variable. We will simply delete this line since this task is
 not for testing a package. Every beaker test must begin with
-``rlJournalStart``. This initializes the journalling functionality so
+``rlJournalStart``. This initializes the journaling functionality so
 that the logging mechanism is initialized so that your test results can
 be saved. The functionality of a test is divided into three stages:
 setup, start and cleanup indicated by the ``rlPhaseStartSetup``,
 ``rlPhaseStartTest`` and ``rlPhaseStartCleanup`` functions respectively.
 The setup phase first checks if the package which we want to test is
 available and then creates a temporary directory and moves there so that
-all the test actvities are performed in that directory. The
+all the test activities are performed in that directory. The
 ``rlPhaseStartTest`` and its corresponding ``rlPhaseEnd``, encloses the
 core test logic. Here, as you can see, the test is checking whether an
 empty file has been created successfully or not. We will replace these
