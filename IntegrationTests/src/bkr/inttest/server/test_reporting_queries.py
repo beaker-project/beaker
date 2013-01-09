@@ -120,6 +120,15 @@ class ReportingQueryTest(unittest.TestCase):
         self.assertEquals(system_rows[0].avg_install_time, (one_hour + three_hours) / 2)
 
     def test_resource_install_failures(self):
+
+        # Get existing state to later compare against
+        rows = self.execute_reporting_query('install-failure-count-by-resource')
+        all_rows = [row for row in rows]
+        guest_rows = [row for row in all_rows if row.fqdn == 'All Guest']
+        virt_rows = [row for row in all_rows if row.fqdn == 'All oVirt']
+        existing_failed_guests = guest_rows[0].failed_recipes
+        existing_failed_virt = virt_rows[0].failed_recipes
+
         system_recipe = data_setup.create_recipe()
         guest_recipe = data_setup.create_guestrecipe(host=system_recipe)
         virt_recipe = data_setup.create_recipe()
@@ -133,15 +142,13 @@ class ReportingQueryTest(unittest.TestCase):
         # Test we don't count runinng recipes
         rows = self.execute_reporting_query('install-failure-count-by-resource')
         all_rows = [row for row in rows]
-        guest_rows = [row for row in all_rows if row.fqdn == 'All Guest']
-        virt_rows = [row for row in all_rows if row.fqdn == 'All oVirt']
         system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
 
         self.assertEquals(len(virt_rows), 1, virt_rows)
-        self.assertEquals(virt_rows[0].failed_recipes, 0)
+        self.assertEquals(existing_failed_virt, virt_rows[0].failed_recipes)
 
         self.assertEquals(len(guest_rows), 1, guest_rows)
-        self.assertEquals(guest_rows[0].failed_recipes, 0)
+        self.assertEquals(existing_failed_guests, guest_rows[0].failed_recipes)
 
         self.assertEquals(len(system_rows), 1, system_rows)
         self.assertEquals(system_rows[0].failed_recipes, 0)
@@ -156,10 +163,10 @@ class ReportingQueryTest(unittest.TestCase):
         system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
 
         self.assertEquals(len(virt_rows), 1, virt_rows)
-        self.assertEquals(virt_rows[0].failed_recipes, 1)
+        self.assertEquals(virt_rows[0].failed_recipes, existing_failed_virt + 1)
 
         self.assertEquals(len(guest_rows), 1, guest_rows)
-        self.assertEquals(guest_rows[0].failed_recipes, 1)
+        self.assertEquals(guest_rows[0].failed_recipes, existing_failed_guests + 1)
 
         self.assertEquals(len(system_rows), 1, system_rows)
         self.assertEquals(system_rows[0].failed_recipes, 1)
