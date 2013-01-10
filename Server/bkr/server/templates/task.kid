@@ -86,7 +86,7 @@
         <td class="title"><b>Run For:</b></td>
         <td class="value">
             <span py:for="package in task.runfor">
-                <a href="${tg.url(u'/package/%s' % package)}">${package}</a>
+                ${package}
                 <br/>
             </span>
         </td>
