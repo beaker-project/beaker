@@ -84,6 +84,7 @@ $(METADATA): Makefile
 	@echo "Requires:     python-setuptools-devel" >> $(METADATA)
 	@echo "Requires:     python-devel" >> $(METADATA)
 	@echo "Requires:     TurboGears" >> $(METADATA)
+	@echo "Requires:     yum-utils" >> $(METADATA)
 
 # You may need other fields here; see the documentation
 	rhts-lint $(METADATA)
