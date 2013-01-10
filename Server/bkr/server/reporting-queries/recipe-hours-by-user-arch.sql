@@ -16,9 +16,13 @@ SELECT
     job_owner.user_name AS username,
     distro_tree_arch.arch AS arch,
     SUM(TIMESTAMPDIFF(SECOND,
-            GREATEST(recipe.start_time, '2012-10-01 00:00:00'),
-            LEAST(COALESCE(recipe.finish_time, UTC_TIMESTAMP()),
-                '2012-11-01 00:00:00')))
+            CASE WHEN recipe.start_time < '2012-10-01 00:00:00'
+                THEN '2012-10-01 00:00:00'
+                ELSE recipe.start_time END,
+            CASE WHEN recipe.finish_time IS NULL
+                OR recipe.finish_time > '2012-11-01 00:00:00'
+                THEN '2012-11-01 00:00:00'
+                ELSE recipe.finish_time END))
         / 60 / 60 AS recipe_hours
 FROM recipe
 INNER JOIN machine_recipe ON recipe.id = machine_recipe.id
@@ -37,5 +41,5 @@ WHERE recipe.start_time < '2012-11-01 00:00:00'
     AND (system.id IS NULL OR
         (system.private = 0 AND system.shared = 1
             AND NOT EXISTS (SELECT 1 FROM system_group WHERE system_id = system.id)))
-GROUP BY username, arch
-ORDER BY username, arch;
+GROUP BY job_owner.user_name, distro_tree_arch.arch
+ORDER BY job_owner.user_name, distro_tree_arch.arch;

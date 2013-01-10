@@ -21,9 +21,13 @@ SELECT
     tg_user.user_name AS username,
     system_arch.arch AS arch,
     SUM(TIMESTAMPDIFF(SECOND,
-            GREATEST(reservation.start_time, '2012-10-01 00:00:00'),
-            LEAST(COALESCE(reservation.finish_time, UTC_TIMESTAMP()),
-                '2012-11-01 00:00:00')))
+            CASE WHEN reservation.start_time < '2012-10-01 00:00:00'
+                THEN '2012-10-01 00:00:00'
+                ELSE reservation.start_time END,
+            CASE WHEN reservation.finish_time IS NULL
+                OR reservation.finish_time > '2012-11-01 00:00:00'
+                THEN '2012-11-01 00:00:00'
+                ELSE reservation.finish_time END))
         / 60 / 60 AS machine_hours
 FROM reservation
 INNER JOIN system ON reservation.system_id = system.id
@@ -41,5 +45,5 @@ WHERE reservation.start_time < '2012-11-01 00:00:00'
     -- limit to shared systems with no group restrictions
     AND system.private = 0 AND system.shared = 1
         AND NOT EXISTS (SELECT 1 FROM system_group WHERE system_id = system.id)
-GROUP BY username, arch
-ORDER BY username, arch;
+GROUP BY tg_user.user_name, system_arch.arch
+ORDER BY tg_user.user_name, system_arch.arch;
