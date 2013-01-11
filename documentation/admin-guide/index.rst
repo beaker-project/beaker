@@ -10,6 +10,8 @@ Contents
    architecture
    chronological-overview
    system-requirements
+   installation
+   distro-import
    interface
    kickstarts
    power-commands

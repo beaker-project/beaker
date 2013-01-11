@@ -16,7 +16,7 @@ Job workflow
 ^^^^^^^^^^^^
 
 To create a simple Job workflow, see the bkr workflow-simple command in
-`beaker client <../installation-guide.html#beaker-client>`__.
+:ref:`bkr client <bkr-client>`.
 
 .. _job-searching:
 

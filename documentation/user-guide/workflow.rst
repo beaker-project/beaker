@@ -20,9 +20,8 @@ variables and other options you want to setup for your Job.
    :ref:`system-searching`, :ref:`distro-searching` and :ref:`task-searching` 
    respectively.
 
-To submit the Job, either use the `beaker
-client <../installation-guide.html#beaker-client>`__ or :ref:`submit the job
-via the UI <submitting-a-new-job>`.
+To submit the Job, either use the :ref:`bkr client <bkr-client>` or 
+:ref:`submit the job via the UI <submitting-a-new-job>`.
 
 Once Submitted you can view the progress of the Job by going to the :ref:`job
 search page <job-searching>`. Once your Job is Completed, see the :ref:`job

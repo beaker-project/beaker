@@ -25,6 +25,7 @@ Contents
 --------
 
 .. toctree::
+   bkr-client
    interface
    makefile
    workflow
