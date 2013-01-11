@@ -12,5 +12,5 @@ INNER JOIN system_arch_map ON system_arch_map.system_id = system.id
 INNER JOIN arch ON system_arch_map.arch_id = arch.id
 LEFT OUTER JOIN cpu ON cpu.system_id = system.id
 WHERE system.status != 'Removed'
-GROUP BY arch.id, cpu_cores
-ORDER BY arch.arch, cpu_cores;
+GROUP BY arch.arch, cpu.cores
+ORDER BY arch.arch, cpu.cores;

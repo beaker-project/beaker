@@ -21,11 +21,15 @@ for any such changes on the `beaker-devel mailing list`_.
 
 .. _beaker-devel mailing list: https://lists.fedorahosted.org/mailman/listinfo/beaker-devel
 
+The supported SQL queries are written using the MySQL SQL dialect, and
+automatically tested against MySQL. Accordingly, they may require translation
+in order to be used with tools based on other SQL dialects.
+
 These queries are intended to provide guidance for "interesting questions"
 that a business intelligence system connected to Beaker may want to answer.
 They can be tweaked to use different statistical functions, query different
 date ranges, adapt filtering rules from another supported query,
-parameterised in a reporting tool, etc.
+parametrized in a reporting tool, etc.
 
 As noted above, Beaker's database schema is subject to change in future
 releases. If your external reporting queries stray beyond the schema
