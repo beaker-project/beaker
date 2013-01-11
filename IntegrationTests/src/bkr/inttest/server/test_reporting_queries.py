@@ -1,4 +1,3 @@
-
 import unittest
 import pkg_resources
 import datetime
@@ -24,7 +23,7 @@ class ReportingQueryTest(unittest.TestCase):
         sql = pkg_resources.resource_string('bkr.server', 'reporting-queries/%s.sql' % name)
         return session.connection(System).execute(sql)
 
-    def test_wait_duration_count_by_resource(self):
+    def test_wait_duration_by_resource(self):
         system_recipe = data_setup.create_recipe()
         virt_recipe = data_setup.create_recipe()
         virt_recipe2 = data_setup.create_recipe()
@@ -56,16 +55,16 @@ class ReportingQueryTest(unittest.TestCase):
         system_rows = [row for row in all_rows if row.fqdn in (system_recipe.resource.fqdn, system_recipe2.resource.fqdn)]
 
         self.assertEquals(len(virt_rows), 1, virt_rows)
-        self.assertEquals(virt_rows[0].min_wait_time, one_hour)
-        self.assertEquals(virt_rows[0].max_wait_time, two_hours)
-        self.assertEquals(virt_rows[0].avg_wait_time, (one_hour + two_hours) / 2)
+        self.assertEquals(virt_rows[0].min_wait_hours, 1)
+        self.assertEquals(virt_rows[0].max_wait_hours, 2)
+        self.assertEquals(virt_rows[0].avg_wait_hours, Decimal('1.5'))
 
         self.assertEquals(len(system_rows), 1, system_rows)
-        self.assertEquals(system_rows[0].min_wait_time, one_hour)
-        self.assertEquals(system_rows[0].max_wait_time, three_hours)
-        self.assertEquals(system_rows[0].avg_wait_time, (one_hour + three_hours) / 2)
+        self.assertEquals(system_rows[0].min_wait_hours, 1)
+        self.assertEquals(system_rows[0].max_wait_hours, 3)
+        self.assertEquals(system_rows[0].avg_wait_hours, 2)
 
-    def test_install_duration_count_by_resource(self):
+    def test_install_duration_by_resource(self):
         system_recipe = data_setup.create_recipe()
         guest_recipe = data_setup.create_guestrecipe(host=system_recipe)
         virt_recipe = data_setup.create_recipe()
@@ -105,19 +104,19 @@ class ReportingQueryTest(unittest.TestCase):
         system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
 
         self.assertEquals(len(virt_rows), 1, virt_rows)
-        self.assertEquals(virt_rows[0].min_install_time, one_hour)
-        self.assertEquals(virt_rows[0].max_install_time, two_hours)
-        self.assertEquals(virt_rows[0].avg_install_time, (one_hour + two_hours) / 2)
+        self.assertEquals(virt_rows[0].min_install_hours, 1)
+        self.assertEquals(virt_rows[0].max_install_hours, 2)
+        self.assertEquals(virt_rows[0].avg_install_hours, Decimal('1.5'))
 
         self.assertEquals(len(guest_rows), 1, guest_rows)
-        self.assertEquals(guest_rows[0].min_install_time, two_hours)
-        self.assertEquals(guest_rows[0].max_install_time, three_hours)
-        self.assertEquals(guest_rows[0].avg_install_time, (two_hours + three_hours) / 2)
+        self.assertEquals(guest_rows[0].min_install_hours, 2)
+        self.assertEquals(guest_rows[0].max_install_hours, 3)
+        self.assertEquals(guest_rows[0].avg_install_hours, Decimal('2.5'))
 
         self.assertEquals(len(system_rows), 1, system_rows)
-        self.assertEquals(system_rows[0].min_install_time, one_hour)
-        self.assertEquals(system_rows[0].max_install_time, three_hours)
-        self.assertEquals(system_rows[0].avg_install_time, (one_hour + three_hours) / 2)
+        self.assertEquals(system_rows[0].min_install_hours, 1)
+        self.assertEquals(system_rows[0].max_install_hours, 3)
+        self.assertEquals(system_rows[0].avg_install_hours, Decimal('2.0'))
 
     def test_resource_install_failures(self):
         system_recipe = data_setup.create_recipe()
