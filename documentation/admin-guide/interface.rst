@@ -30,6 +30,8 @@ name.
 To search through the historical activity of all groups, navigate to
 "Activity -> Groups".
 
+.. _admin-configuration:
+
 Configuration
 -------------
 

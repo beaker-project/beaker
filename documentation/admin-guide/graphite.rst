@@ -1,8 +1,10 @@
+.. _graphite:
+
 Integration with Graphite
 =========================
 
 Beaker can optionally be configured to send metrics to the
-`Graphite <http://graphite.wikidot.com/>`_ real-time graphing system.
+`Graphite <http://graphite.wikidot.com/>`__ real-time graphing system.
 Beaker sends metrics via UDP for efficiency, and to avoid impacting the
 performance and reliability of the system, so a version of Graphite with
 UDP listener support is required.

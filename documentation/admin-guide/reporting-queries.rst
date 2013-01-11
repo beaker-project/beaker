@@ -1,11 +1,10 @@
 Reporting from the Beaker database
 ==================================
 
-Beaker's `integration with Graphite <#integration-with-graphite>`_ can
-provide useful insights into the real-time health and performance of
-your Beaker installation. However, for more in-depth analysis
-you may prefer to use an external query/reporting tool to extract data
-directly from Beaker's database.
+Beaker's integration with Graphite can provide useful insights into the 
+real-time health and performance of your Beaker installation (see 
+:ref:`graphite`). However, for more in-depth analysis you may prefer to use an 
+external query/reporting tool to extract data directly from Beaker's database.
 
 Beaker's source includes a number of supported reporting queries which
 may be useful for your Beaker site. They are installed with the
