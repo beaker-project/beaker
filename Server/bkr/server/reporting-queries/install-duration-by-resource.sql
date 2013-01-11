@@ -4,9 +4,9 @@
 
 (SELECT
     rr.fqdn AS fqdn,
-    SEC_TO_TIME(AVG(TIME_TO_SEC(TIMEDIFF(rr.install_finished, rr.install_started)))) AS avg_install_time,
-    MIN(TIMEDIFF(rr.install_finished, rr.install_started)) AS min_install_time,
-    MAX(TIMEDIFF(rr.install_finished, rr.install_started)) AS max_install_time
+    AVG(TIMESTAMPDIFF(SECOND, rr.install_started, rr.install_finished)) / 60 / 60 AS avg_install_hours,
+    MIN(TIMESTAMPDIFF(SECOND, rr.install_started, rr.install_finished)) / 60 / 60 AS min_install_hours,
+    MAX(TIMESTAMPDIFF(SECOND, rr.install_started, rr.install_finished)) / 60 / 60 AS max_install_hours
 FROM
     recipe_resource AS rr
     INNER JOIN system_resource AS sr ON rr.id = sr.id
@@ -16,9 +16,9 @@ UNION
 
 (SELECT
     'All Guest' AS fqdn,
-    SEC_TO_TIME(AVG(TIME_TO_SEC(TIMEDIFF(rr.install_finished, rr.install_started)))) AS avg_install_time,
-    MIN(TIMEDIFF(rr.install_finished,rr.install_started)) AS min_install_time,
-    MAX(TIMEDIFF(rr.install_finished, rr.install_started)) AS max_install_time
+    AVG(TIMESTAMPDIFF(SECOND, rr.install_started, rr.install_finished)) / 60 / 60 AS avg_install_hours,
+    MIN(TIMESTAMPDIFF(SECOND, rr.install_started, rr.install_finished)) / 60 / 60 AS min_install_hours,
+    MAX(TIMESTAMPDIFF(SECOND, rr.install_started, rr.install_finished)) / 60 / 60 AS max_install_hours
 FROM
     recipe_resource AS rr
     INNER JOIN guest_resource AS gr ON gr.id = rr.id)
@@ -27,12 +27,12 @@ UNION
 
 (SELECT
     'All oVirt' AS fqdn,
-    SEC_TO_TIME(AVG(TIME_TO_SEC(TIMEDIFF(rr.install_finished, rr.install_started)))) AS avg_install_time,
-    MIN(TIMEDIFF(rr.install_finished, rr.install_started)) AS min_install_time,
-    MAX(TIMEDIFF(rr.install_finished, rr.install_started)) AS max_install_time
+    AVG(TIMESTAMPDIFF(SECOND, rr.install_started, rr.install_finished)) / 60 / 60 AS avg_install_hours,
+    MIN(TIMESTAMPDIFF(SECOND, rr.install_started, rr.install_finished)) / 60 / 60 AS min_install_hours,
+    MAX(TIMESTAMPDIFF(SECOND, rr.install_started, rr.install_finished)) / 60 / 60 AS max_install_hours
 FROM
     recipe_resource AS rr
     INNER JOIN virt_resource AS vr ON vr.id = rr.id)
 
-ORDER BY min_install_time desc;
+ORDER BY min_install_hours desc;
 
