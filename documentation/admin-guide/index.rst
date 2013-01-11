@@ -17,7 +17,7 @@ Contents
    graphite
    reporting-queries
 
-Scope of Document
+Scope of document
 -----------------
 
 The document is aimed at experienced system administrators with basic

@@ -1,4 +1,4 @@
-Beaker Interface for Administrators
+Beaker interface for administrators
 ===================================
 
 Some functionality in Beaker’s web interface is restricted to

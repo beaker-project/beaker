@@ -1,4 +1,4 @@
-User Preferences
+User preferences
 ----------------
 
 The preferences page allows the user to configure their email address,

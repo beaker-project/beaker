@@ -5,7 +5,7 @@ Workflow
    virtualization-workflow
    provisioning
 
-Submitting and Reviewing a Job
+Submitting and reviewing a job
 ------------------------------
 
 To submit a Job you must create a Job description. This is an XML file

@@ -1,4 +1,4 @@
-System Requirements
+System requirements
 ===================
 
 There are separate system requirements for the Beaker server and target

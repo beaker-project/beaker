@@ -1,4 +1,4 @@
-Customizing Kickstarts
+Customizing kickstarts
 ======================
 
 When Beaker provisions a system, the Beaker server generates an Anaconda
@@ -32,7 +32,7 @@ mechanism for customizing the generated kickstarts with template
 "snippets". Administrators are recommended to use custom snippets where
 necessary, rather than customizing the base templates.
 
-Kickstart Snippets
+Kickstart snippets
 ------------------
 
 Each snippet provides a small unit of functionality within the
@@ -144,7 +144,7 @@ in ``/etc/beaker/snippets/per_system/network/host01.example.com``:
 
     network --device eth1 --bootproto dhcp --onboot yes
 
-Writing Kickstart Templates
+Writing kickstart templates
 ---------------------------
 
 All kickstart metadata variables are exposed as template variables. The

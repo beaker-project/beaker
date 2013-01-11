@@ -1,4 +1,4 @@
-Beaker Architecture
+Beaker architecture
 ===================
 
 Beaker is an automated software testing application that allows users to

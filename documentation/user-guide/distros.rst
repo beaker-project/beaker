@@ -6,13 +6,13 @@ Systems in its Inventory.
 
 .. _distro-searching:
 
-Distro Searching
+Distro searching
 ^^^^^^^^^^^^^^^^
 
 The find a particular Distro, click "Distros>All". The default search is
 on the Distro's name, with a "contains" clause
 
-Distro Activity
+Distro activity
 ^^^^^^^^^^^^^^^
 
 To search through the historical activity of all Distros, navigate to
