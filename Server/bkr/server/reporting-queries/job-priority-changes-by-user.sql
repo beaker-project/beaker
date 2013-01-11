@@ -10,5 +10,6 @@ SELECT tg_user.user_name as user_name, COUNT(DISTINCT job.id) as number_of_jobs_
     WHERE
         activity.created BETWEEN '2012-09-01 00:00:00' AND '2012-11-30 23:59:59'
         AND new_value IN ('High', 'Urgent')
+        AND activity.field_name = 'Priority'
         AND old_value != new_value
     GROUP BY tg_user.user_name;
