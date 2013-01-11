@@ -8,7 +8,7 @@ it. Provisioning a System means to have the system loaded with an
 Operating System and reserved for the user. There are a couple of ways
 of doing this, which are outlined below.
 
-Provision by System
+Provision by system
 ~~~~~~~~~~~~~~~~~~~
 
 Go to the System details page (see Section 5.1.3, “System Details Tabs”)
@@ -32,7 +32,7 @@ the System.
 
 .. _provision-by-distro:
 
-Provision by Distro
+Provision by distro
 ~~~~~~~~~~~~~~~~~~~
 
 Go to the :ref:`distro search page <distro-searching>` and search for a

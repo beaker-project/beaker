@@ -8,7 +8,7 @@ they are contained in a recipe set) and are themselves a container for
 Tasks. There can be more than one Recipe per Job. The purpose of a
 Recipe is to group a set of Tasks into a single logical unit.
 
-Recipe Searching
+Recipe searching
 ~~~~~~~~~~~~~~~~
 
 The Recipe search is accessed through the "Scheduler" at the top of the
@@ -30,7 +30,7 @@ details on searching.
    display Recipes that have a status of running,queued, and completed 
    respectively. 
 
-Recipe Actions
+Recipe actions
 ~~~~~~~~~~~~~~
 
 At any time you may wish to cancel the Recipe, you may press the

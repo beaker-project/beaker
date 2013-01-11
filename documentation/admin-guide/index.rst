@@ -10,6 +10,8 @@ Contents
    architecture
    chronological-overview
    system-requirements
+   installation
+   distro-import
    interface
    kickstarts
    power-commands
@@ -17,7 +19,7 @@ Contents
    graphite
    reporting-queries
 
-Scope of Document
+Scope of document
 -----------------
 
 The document is aimed at experienced system administrators with basic
