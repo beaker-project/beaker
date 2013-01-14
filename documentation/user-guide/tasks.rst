@@ -411,8 +411,8 @@ contents of ``/proc/filesystems`` on the system that run the test. This can be
 done using the Beakerlib function ``rlFileSubmit``.
 
 The overall workflow of creating a task for a test, submitting a job to
-run the test and accessing the test results can be represented by this
-`overview <../admin-guide/chronological-overview.html>`__.
+run the test and accessing the test results are illustrated in 
+:ref:`chronological-overview`.
 
 Updating a task
 ~~~~~~~~~~~~~~~
@@ -452,6 +452,8 @@ on the Link in the "Name" column.
 It's also possible to search on the history of the running of Tasks.
 This is made possible by the "Executed Tasks" search, which is accessed
 by clicking on a task.
+
+.. _adding-tasks:
 
 Adding a new task
 ~~~~~~~~~~~~~~~~~

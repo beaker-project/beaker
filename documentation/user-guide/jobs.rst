@@ -1,3 +1,5 @@
+.. _jobs:
+
 Jobs
 ~~~~
 
@@ -450,8 +452,7 @@ have been specified for that system, arch and distro combination;
 partitions, packages and repos that have been specified in the
 ``recipe`` element; the relevant snippets needed for running the
 harness. For further information on how Beaker processes kickstarts and
-how to utilize their templating language, see the `admin
-guide <../admin-guide/kickstarts.html>`__.
+how to utilize their templating language, see :ref:`kickstarts`.
 
 .. _job-results:
 

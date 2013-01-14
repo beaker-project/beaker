@@ -1,3 +1,5 @@
+.. _chronological-overview:
+
 Chronological overview
 ======================
 

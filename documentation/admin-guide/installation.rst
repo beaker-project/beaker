@@ -203,10 +203,10 @@ Next steps
 ----------
 
 You can now proceed to
-`adding tasks <../user-guide/tasks.html#adding-a-new-task>`_,
+:ref:`adding tasks <adding-tasks>`,
 :ref:`importing distros <importing-distros>`,
-`adding systems <../user-guide/systems.html#adding-a-system>`_, and
-`running jobs <../user-guide/jobs.html>`_.
+:ref:`adding systems <adding-systems>`, and 
+:ref:`running jobs <jobs>`.
 
 There are two special tasks which Beaker relies on for normal operation: 
 ``/distribution/install`` and ``/distribution/reservesys``. You should add 

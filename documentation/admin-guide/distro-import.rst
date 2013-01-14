@@ -20,7 +20,7 @@ from a different set of URLs in each lab. This allows you to import distros
 from the nearest mirror in each lab.
 
 You can check that the distros were added successfully by browsing the Distros 
-page (see `Distros <../user-guide/distros.html>`__).
+page (see :ref:`distros`).
 
 .. note:: The Beaker server stores a local copy of the harness packages under 
    ``/var/www/beaker/harness``, arranged as one Yum repo for every distro 
@@ -43,9 +43,7 @@ schedules a Beaker job to test installation of the new distro and tags it with
 more specific jobs that you might find useful.
 
 .. note:: The ``updateDistro`` script assumes that the Beaker client is 
-   correctly configured on the lab controller. See
-   `Installing and configuring the client 
-   <../user-guide/bkr-client.html#installing-and-configuring-the-client>`_.
+   correctly configured on the lab controller. See :ref:`installing-bkr-client`.
 
 Generating a PXE menu
 ---------------------

@@ -4,6 +4,8 @@
 The ``bkr`` command-line client
 ===============================
 
+.. _installing-bkr-client:
+
 Installing and configuring the client
 -------------------------------------
 

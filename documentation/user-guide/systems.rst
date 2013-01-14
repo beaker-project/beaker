@@ -70,6 +70,8 @@ Columns" link is pressed and the columns checked/unchecked.
    the name of the user currently logged in. Click on this, then down to "My 
    Systems"
 
+.. _adding-systems:
+
 Adding a system
 ~~~~~~~~~~~~~~~
 

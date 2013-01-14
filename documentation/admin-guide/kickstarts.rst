@@ -1,3 +1,5 @@
+.. _kickstarts:
+
 Customizing kickstarts
 ======================
 
