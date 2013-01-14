@@ -307,7 +307,7 @@ def create_tasks(xmljob):
 
 def create_recipe(distro_tree=None, task_list=None,
         task_name=u'/distribution/reservesys', whiteboard=None,
-        server_log=False, role=None, cls=MachineRecipe, **kwargs):
+        role=None, cls=MachineRecipe, **kwargs):
     if not distro_tree:
         distro_tree = create_distro_tree()
     recipe = cls(ttasks=1)
@@ -316,40 +316,12 @@ def create_recipe(distro_tree=None, task_list=None,
     recipe.role = role
     recipe.distro_requires = recipe.distro_tree.to_xml().toxml()
 
-    if not server_log:
-        recipe.logs = [LogRecipe(path=u'recipe_path',filename=u'dummy.txt')]
-    else:
-        recipe.log_server = u'dummy-archive-server'
-        recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/',
-                path=u'recipe_path', filename=u'dummy.txt' )]
-
-    if not server_log:
-        rt_log = lambda: LogRecipeTask(path=u'tasks', filename=u'dummy.txt')
-    else:
-        rt_log = lambda: LogRecipeTask(server=u'http://dummy-archive-server/beaker/',
-                path=u'tasks', filename=u'dummy.txt')
-    if not server_log:
-        rtr_log = lambda: LogRecipeTaskResult(path=u'/', filename=u'result.txt')
-    else:
-        rtr_log = lambda: LogRecipeTaskResult(server=u'http://dummy-archive-server/beaker/',
-                path=u'/', filename=u'result.txt')
-
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
             rt = RecipeTask(task=t)
-            rt.logs = [rt_log()]
-            rtr = RecipeTaskResult(path=t.name + '/passed',
-                    result=TaskResult.pass_)
-            rtr.logs = [rtr_log()]
-            rt.results.append(rtr)
             recipe.tasks.append(rt)
     else:
         rt = RecipeTask(task=create_task(name=task_name))
-        rt.logs = [rt_log()]
-        rtr = RecipeTaskResult(path=task_name + '/passed',
-                result=TaskResult.pass_)
-        rtr.logs = [rtr_log()]
-        rt.results.append(rtr)
         recipe.tasks.append(rt)
     return recipe
 
@@ -405,13 +377,34 @@ def create_completed_job(**kwargs):
     return job
 
 def mark_recipe_complete(recipe, result=TaskResult.pass_,
-        finish_time=None, only=False, **kwargs):
+        finish_time=None, only=False, server_log=False, **kwargs):
     assert result in TaskResult
     finish_time = finish_time or datetime.datetime.utcnow()
     if not only:
         mark_recipe_running(recipe, **kwargs)
+
+    if not server_log:
+        recipe.logs = [LogRecipe(path=u'recipe_path',filename=u'dummy.txt')]
+    else:
+        recipe.log_server = u'dummy-archive-server'
+        recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/',
+                path=u'recipe_path', filename=u'dummy.txt' )]
+
+    if not server_log:
+        rt_log = lambda: LogRecipeTask(path=u'tasks', filename=u'dummy.txt')
+    else:
+        rt_log = lambda: LogRecipeTask(server=u'http://dummy-archive-server/beaker/',
+                path=u'tasks', filename=u'dummy.txt')
+    if not server_log:
+        rtr_log = lambda: LogRecipeTaskResult(path=u'/', filename=u'result.txt')
+    else:
+        rtr_log = lambda: LogRecipeTaskResult(server=u'http://dummy-archive-server/beaker/',
+                path=u'/', filename=u'result.txt')
+
     for recipe_task in recipe.tasks:
         rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
+        rtr.logs = [rtr_log()]
+        recipe_task.logs = [rt_log()]
         recipe_task.finish_time = finish_time
         recipe_task.status = TaskStatus.completed
         recipe_task.results.append(rtr)

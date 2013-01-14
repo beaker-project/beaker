@@ -1,4 +1,4 @@
-Virtualization Workflow
+Virtualization workflow
 -----------------------
 
 Virtualization workflow is designed to take advantage all Beaker offers
@@ -100,20 +100,20 @@ pass to virt-install program with the following exceptions:
       will be /var/lib/xen/images/${guestname}.img . For lvm-based and
       block-device based guest, this option MUST be provided.
 
-KVM vs XEN GUESTS
-~~~~~~~~~~~~~~~~~
+KVM vs. Xen guests
+~~~~~~~~~~~~~~~~~~
 
-Starting with RHEL 5.4, both xen and kvm hypervisors are shipped with
+Starting with RHEL 5.4, both Xen and KVM hypervisors are shipped with
 the distro. To handle this situation, guest install tests take an extra
 argument (-kvm) to identify which type of guests will be installed. By
-default, kernel-xen kernel is installed hence the guests are xen guests.
+default, kernel-xen kernel is installed hence the guests are Xen guests.
 If -kvm is given in the guestargs, then the installation program decides
 that kvm guests are intended to be tested, so boots into the base kernel
 and then installs the guests. There can only be one hypervisor at work
 at one moment, and hence the installation test expects them all to be
 either kvm or xen guest, but not a mix of both.
 
-Dynamic Partitioning/LVM
+Dynamic partitioning/LVM
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 *Telling Beaker to create partitions/lvm*.
@@ -160,7 +160,7 @@ and specify it in your xml file. Syntax of the partition tags is below::
       partitions/volumes and lets users manage custom partitions thru
       its own scripts.
 
-Dynamic Partitioning from Your Workflow
+Dynamic partitioning from your workflow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you are using a different workflow and would like to add dynamic
@@ -179,7 +179,7 @@ to the recipe object. An example can be :
          # create an lvm but change the default fs from ext3 to ext4.
          rec.addPartition(name='mylvm4ext4', type='lvm', fs='ext4dev', size=5)
 
-Helper Programs Installed with Virtinstall
+Helper programs installed with Virtinstall
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Virtinstall test also installs a few scripts that can later on be

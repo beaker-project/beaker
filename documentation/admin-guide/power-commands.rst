@@ -1,4 +1,4 @@
-Customizing Power Commands
+Customizing power commands
 ==========================
 
 When executing a power command (for example, rebooting a system) the

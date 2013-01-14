@@ -1,30 +1,29 @@
-Beaker User Guide
-=================
+User Guide
+==========
 
-Beaker is the name for an automated testing framework proposed for
-Fedora. It allows you to:
 
--  Build tasks.
+Scope of document
+-----------------
 
--  Run tasks on remote systems.
+This document covers interacting with Beaker through the web and command
+line interfaces, as well as covering the steps involved in writing new
+Beaker tasks.
 
--  Run tasks on multiple systems and system variations (i.e arch,
-   operating system, memory size etc).
 
--  Store and display test results in a central location.
+Audience
+--------
 
--  Manage an inventory of systems for running tests on.
+This document is aimed at developers and quality assurance engineers that
+need to work with Beaker, writing, running and interpreting the results
+of Beaker tasks.
 
-Beaker enables users to create any task they would like (from testing
-changes to kernel memory management to installing their favourite OS and
-game server) and run these tasks on any number of machines of any
-specification located anywhere in the world, and provide a simple
-interface from where they can review the outcome of these tasks.
+
 
 Contents
 --------
 
 .. toctree::
+   bkr-client
    interface
    makefile
    workflow

@@ -1,4 +1,4 @@
-Beaker Interface
+Beaker interface
 ================
 
 .. toctree::

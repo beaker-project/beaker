@@ -7,7 +7,7 @@ more commands, and then collect the results of those commands in a way
 that other entities can access them. You can run as many or as few Tasks
 in a Job as you like.
 
-Creating a Task
+Creating a task
 ~~~~~~~~~~~~~~~
 
 A Beaker task consists of three primary files: ``PURPOSE``,
@@ -371,7 +371,7 @@ To learn more about the functions used to write the test, please see the
 more about ``beaker-wizard`` from its
 `man page <http://beaker-project.org/man/beaker-wizard.html>`__.
 
-Running the Test
+Running the task
 ~~~~~~~~~~~~~~~~
 
 Once the task is available in the "Task Library", you have to write a
@@ -411,10 +411,10 @@ contents of ``/proc/filesystems`` on the system that run the test. This can be
 done using the Beakerlib function ``rlFileSubmit``.
 
 The overall workflow of creating a task for a test, submitting a job to
-run the test and accessing the test results can be represented by this
-`overview <../admin-guide/chronological-overview.html>`__.
+run the test and accessing the test results are illustrated in 
+:ref:`chronological-overview`.
 
-Updating a Task
+Updating a task
 ~~~~~~~~~~~~~~~
 
 To upload newer versions of your task, you will need to update the
@@ -438,7 +438,7 @@ locally and also building and uploading the RPM to Beaker. See :ref:`makefile`.
 
 .. _task-searching:
 
-Task Searching
+Task searching
 ~~~~~~~~~~~~~~
 
 To search for a Task, go to "Scheduler>Task" Library at the top of the
@@ -452,6 +452,8 @@ on the Link in the "Name" column.
 It's also possible to search on the history of the running of Tasks.
 This is made possible by the "Executed Tasks" search, which is accessed
 by clicking on a task.
+
+.. _adding-tasks:
 
 Adding a new task
 ~~~~~~~~~~~~~~~~~

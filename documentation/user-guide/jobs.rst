@@ -1,3 +1,5 @@
+.. _jobs:
+
 Jobs
 ~~~~
 
@@ -12,15 +14,15 @@ alter its Recipe Set's priorities (you can only lower the priority level
 if you are not in the admin group). Adjusting this priority upwards will
 change which Recipe Set is run sooner, and vice a versa.
 
-Job Workflow
+Job workflow
 ^^^^^^^^^^^^
 
 To create a simple Job workflow, see the bkr workflow-simple command in
-`beaker client <../installation-guide.html#beaker-client>`__.
+:ref:`bkr client <bkr-client>`.
 
 .. _job-searching:
 
-Job Searching
+Job searching
 ^^^^^^^^^^^^^
 
 To search for a Job, navigate to "Scheduler>Jobs" at the top of the page. To 
@@ -35,7 +37,7 @@ button". See :ref:`system-searching` for further details on searching.
 
 .. _job-submission:
 
-Job Submission
+Job submission
 ^^^^^^^^^^^^^^
 
 There are two ways of submitting a Job through the web app.They are
@@ -43,7 +45,7 @@ outlined below.
 
 .. _submitting-a-new-job:
 
-Submitting a New Job
+Submitting a new job
 ''''''''''''''''''''
 
 Once you have created an XML Job workflow, you are able to submit it as
@@ -54,7 +56,7 @@ queuing it as a Job by pressing the "Queue" button.
 
 .. _cloning:
 
-Cloning an existing Job
+Cloning an existing job
 '''''''''''''''''''''''
 
 Cloning a Job means to take a Job that has already been run on the System, and 
@@ -450,12 +452,11 @@ have been specified for that system, arch and distro combination;
 partitions, packages and repos that have been specified in the
 ``recipe`` element; the relevant snippets needed for running the
 harness. For further information on how Beaker processes kickstarts and
-how to utilize their templating language, see the `admin
-guide <../admin-guide/kickstarts.html>`__.
+how to utilize their templating language, see :ref:`kickstarts`.
 
 .. _job-results:
 
-Job Results
+Job results
 '''''''''''
 
 The whole purpose of Jobs is to view the output of the Job, and more to

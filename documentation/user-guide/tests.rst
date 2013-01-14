@@ -1,7 +1,7 @@
 Tests
 =====
 
-Test Architecture Considerations
+Test architecture considerations
 --------------------------------
 
 If you want your test to be smart, that intelligence must be in the
@@ -76,7 +76,7 @@ activities.
 -  It is easier to investigate and fix a failed test than a test that
    always passes (which it should not be).
 
-Writing and Running Multihost Tasks
+Writing and running multihost tasks
 -----------------------------------
 
 All of the examples so far have run on a single host. Beaker has support
@@ -279,7 +279,7 @@ desired machine(s) haven't been set in N seconds, then the script will
 exit with a non-zero return code. In case of success it'll exit with
 code 0 .
 
-Synchronization Commands
+Synchronization commands
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 Synchronization of machines within a multihost test is performed using
@@ -399,7 +399,7 @@ rhts-sync-block) you will be asked for supplying actual state of the
 client/server by keyboard (usually just confirm readiness by hitting
 Enter). That's it! :-)
 
-Reporting Results
+Reporting results
 -----------------
 
 The philosophy of Beaker is that the engineers operating the system will
@@ -497,7 +497,7 @@ As a general Beaker rule of thumb, a FAIL anywhere within the result
 subtree of the test will lead to the result for the overall test being a
 FAIL.
 
-Logging Tips
+Logging tips
 ~~~~~~~~~~~~
 
 Indicate failure-causing conditions in the log clearly, with "FAIL" in
@@ -548,7 +548,7 @@ final line was reached; for example:
 
                  echo "***** End of runtest.sh *****"
 
-Passing Parameters to Tasks
+Passing parameters to tasks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When you need a test to perform different steps in some specific
@@ -637,7 +637,7 @@ this case the startup\_test function requires it.
 We report the result, using the special result shell variable set by
 startup\_test
 
-Checklist Discussed
+Checklist discussed
 -------------------
 
 Quality of code
@@ -659,7 +659,7 @@ Check for the following:
    peer-reviewed (i.e. by someone else) with knowledge of the given
    domain.
 
-Quality of Logs
+Quality of logs
 ~~~~~~~~~~~~~~~
 
 Check the following attributes to ensure the quality of logs:

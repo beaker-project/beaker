@@ -37,7 +37,7 @@ centers whose name does not correspond to a lab controller.
 
 The default memory and disk size allocated to virtual machines is
 controlled by the ``default_guest_memory`` and
-``default_guest_disk_size`` `settings <#configuration>`_.
+``default_guest_disk_size`` settings (see :ref:`admin-configuration`).
 
 Beaker requires that autofs be enabled and configured to manage ``/net``
 on the hypervisors, so that they can access installer images when

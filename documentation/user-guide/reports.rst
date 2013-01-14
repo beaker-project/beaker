@@ -4,7 +4,7 @@ Reports
 Beaker offers a few different reports. They can be accessed from the
 Reports menu at the top of the page.
 
-External Reports
+External reports
 ~~~~~~~~~~~~~~~~
 
 In some instances it may be preferential to provide Beaker related
@@ -13,7 +13,7 @@ configured any links to such reports, they will be displayed here.
 
 .. _matrix-report:
 
-Matrix Report
+Matrix report
 ~~~~~~~~~~~~~
 
 The "Matrix" report gives a user an overall picture of results for any

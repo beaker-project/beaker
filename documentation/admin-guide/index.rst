@@ -1,5 +1,22 @@
-Beaker Administration Guide
-===========================
+Administration Guide
+====================
+
+
+Scope of document
+-----------------
+
+This document provides a general overview of a complete Beaker installation,
+as well as details on configuring the main Beaker server, individual lab
+controllers, and configuring Beaker's integration with other systems.
+
+
+Audience
+--------
+
+This guide is primarily aimed at experienced Linux system administrators,
+tasked with maintaining a Beaker installation, including administering and
+configuring the main Beaker server or individual lab controllers.
+
 
 Contents
 --------
@@ -10,24 +27,11 @@ Contents
    architecture
    chronological-overview
    system-requirements
+   installation
+   distro-import
    interface
    kickstarts
    power-commands
    ovirt
    graphite
    reporting-queries
-
-Scope of Document
------------------
-
-The document is aimed at experienced system administrators with basic
-understanding of Linux based testing tools. This section provides
-general Beaker overview information. Here you will find descriptions of
-the Beaker components, Beaker architecture, Beaker server and target
-host comparisons, and platform requirements.
-
-Audience
---------
-
-This guide is primarily aimed at those who have to administer and
-configure the Beaker server or lab controllers.

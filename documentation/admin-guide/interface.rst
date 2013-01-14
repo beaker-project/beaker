@@ -1,4 +1,4 @@
-Beaker Interface for Administrators
+Beaker interface for administrators
 ===================================
 
 Some functionality in Beaker’s web interface is restricted to
@@ -29,6 +29,8 @@ name.
 *Group Activity*.
 To search through the historical activity of all groups, navigate to
 "Activity -> Groups".
+
+.. _admin-configuration:
 
 Configuration
 -------------

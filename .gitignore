@@ -21,6 +21,7 @@ LabController/build
 LabController/setup.py
 IntegrationTests/build
 IntegrationTests/setup.py
+documentation/_build
 *.diff
 selenium.log
 /Tasks/distribution/beaker/dogfood/selenium-server-standalone-2.21.0.jar

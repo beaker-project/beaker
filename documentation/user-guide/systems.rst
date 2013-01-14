@@ -8,7 +8,7 @@ among other things.
 
 .. _system-searching:
 
-System Searching
+System searching
 ~~~~~~~~~~~~~~~~
 
 System searches are conducted by clicking on one of the items of the
@@ -70,7 +70,9 @@ Columns" link is pressed and the columns checked/unchecked.
    the name of the user currently logged in. Click on this, then down to "My 
    Systems"
 
-Adding a System
+.. _adding-systems:
+
+Adding a system
 ~~~~~~~~~~~~~~~
 
 To add a System, go to any System search page, and click on the "Add(+)"
@@ -140,7 +142,7 @@ system name details.
             </recipeSet>
     </job>
 
-Adding a Driver Disk
+Adding a driver disk
 ~~~~~~~~~~~~~~~~~~~~
 
 Some systems may need a driver disk to be able to install certain
@@ -189,7 +191,7 @@ need to tell Beaker which families the driver disk is needed for.
 
          Adding a driver disk entry for RHEL6.
 
-System Details
+System details
 ~~~~~~~~~~~~~~
 
 After finding a System in the search page, clicking on the System name
@@ -263,7 +265,7 @@ logged in as either the owner of the System, or an admin.
 
 .. _system-details-tabs:
 
-System Details Tabs
+System details tabs
 ~~~~~~~~~~~~~~~~~~~
 
 The system page also has a number of tabs with additional information:
@@ -301,7 +303,7 @@ History
     default, the simple search does a "contains" search on the Field attribute. 
     Please see :ref:`system-searching` for details on searching. 
 
-System Activity
+System activity
 ~~~~~~~~~~~~~~~
 
 To search through the historical activity of all Systems, navigate to
