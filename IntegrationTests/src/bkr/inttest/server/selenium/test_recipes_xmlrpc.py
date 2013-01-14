@@ -1,6 +1,9 @@
 
+import datetime
 from turbogears.database import session
+from bkr.server.model import TaskStatus, TaskResult
 from bkr.inttest import data_setup
+from bkr.inttest.assertions import assert_datetime_within
 from bkr.inttest.server.selenium import XmlRpcTestCase
 
 class RecipesXmlRpcTest(XmlRpcTestCase):
@@ -59,3 +62,20 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             session.expire(recipe.resource)
             self.assertEqual(recipe.resource.fqdn, initial_fqdn)
+
+    def test_install_start(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lc)
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_running(recipe, system=system)
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        self.server.recipes.install_start(recipe.id)
+        with session.begin():
+            session.expire_all()
+            assert_datetime_within(recipe.watchdog.kill_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow() + datetime.timedelta(hours=3))
+            self.assertEqual(recipe.tasks[0].results[0].result, TaskResult.pass_)
+            self.assertEqual(recipe.tasks[0].results[0].path, u'/start')
+            self.assertEqual(recipe.tasks[0].results[0].log, u'Install Started')

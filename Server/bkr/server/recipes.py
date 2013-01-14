@@ -217,8 +217,12 @@ class Recipes(RPCRoot):
         kill_time = 10800
         # XXX In future releases where 'Provisioning'
         # is a valid recipe state, we will no longer
-        # need to extend the task's watchdog
-        recipe.first_task.extend(kill_time)
+        # need the following block.
+        first_task = recipe.first_task
+        log.debug('Extending watchdog for %s', first_task.t_id)
+        first_task.extend(kill_time)
+        log.debug('Recording /start for %s', first_task.t_id)
+        first_task.pass_(path=u'/start', score=0, summary=u'Install Started')
         return True
 
     @cherrypy.expose
