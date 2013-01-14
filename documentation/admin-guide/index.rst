@@ -1,5 +1,5 @@
-Beaker Administration Guide
-===========================
+Administration Guide
+====================
 
 
 Scope of document

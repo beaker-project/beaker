@@ -1,5 +1,5 @@
-Beaker User Guide
-=================
+User Guide
+==========
 
 
 Scope of document
