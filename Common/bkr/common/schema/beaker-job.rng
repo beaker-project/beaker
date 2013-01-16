@@ -373,6 +373,9 @@
       <element name="or">
         <zeroOrMore><ref name="distroreq"/></zeroOrMore>
       </element>
+      <element name="not">
+        <zeroOrMore><ref name="distroreq"/></zeroOrMore>
+      </element>
       <element name="distro_family">
         <a:documentation xml:lang="en">
           Deprecated.  Use &lt;family&gt; instead.
@@ -436,6 +439,9 @@
         <zeroOrMore><ref name="hostreq"/></zeroOrMore>
       </element>
       <element name="or">
+        <zeroOrMore><ref name="hostreq"/></zeroOrMore>
+      </element>
+      <element name="not">
         <zeroOrMore><ref name="hostreq"/></zeroOrMore>
       </element>
       <element name="host">
@@ -546,6 +552,9 @@
     <element name="or">
       <zeroOrMore><ref name="cpureq"/></zeroOrMore>
     </element>
+    <element name="not">
+      <zeroOrMore><ref name="cpureq"/></zeroOrMore>
+    </element>
     <element name="cores">
       <ref name="op" />
       <attribute name="value" />
@@ -597,6 +606,9 @@
       <zeroOrMore><ref name="systemreq"/></zeroOrMore>
     </element>
     <element name="or">
+      <zeroOrMore><ref name="systemreq"/></zeroOrMore>
+    </element>
+    <element name="not">
       <zeroOrMore><ref name="systemreq"/></zeroOrMore>
     </element>
     <element name="name">

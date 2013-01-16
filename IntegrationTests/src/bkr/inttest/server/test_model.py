@@ -1212,6 +1212,14 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(with_module not in systems)
         self.assert_(without_module in systems)
+        # ... or using <not/> is a saner way to do it:
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <not><key_value key="MODULE" /></not>
+            </hostRequires>
+            """))
+        self.assert_(with_module not in systems)
+        self.assert_(without_module in systems)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=729156
     def test_keyvalue_does_not_cause_duplicate_rows(self):

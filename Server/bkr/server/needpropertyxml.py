@@ -157,6 +157,37 @@ class XmlOr(ElementWrapper):
         raise NotVirtualisable() # too hard!
 
 
+class XmlNot(ElementWrapper):
+    """
+    Combines sub-filters with not_(and_()).
+    """
+    subclassDict = None
+
+    def filter(self, joins):
+        queries = []
+        for child in self:
+            if callable(getattr(child, 'filter', None)):
+                (joins, query) = child.filter(joins)
+                if query is not None:
+                    queries.append(query)
+        if not queries:
+            return (joins, None)
+        return (joins, not_(and_(*queries)))
+
+    def filter_lab(self, query):
+        clauses = []
+        for child in self:
+            clause = child.filter_lab()
+            if clause is not None:
+                clauses.append(clause)
+        if not clauses:
+            return None
+        return not_(and_(*clauses))
+
+    def vm_params(self):
+        raise NotVirtualisable() # too hard!
+
+
 class XmlDistroArch(ElementWrapper):
     """
     Filter distro tree based on Aarch
@@ -824,6 +855,7 @@ class XmlCpu(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
                     'or': XmlOr,
+                    'not': XmlNot,
                     'processors': XmlCpuProcessors,
                     'cores': XmlCpuCores,
                     'family': XmlCpuFamily,
@@ -837,11 +869,11 @@ class XmlCpu(XmlAnd):
                     'flag': XmlCpuFlag,
                    }
 
-
 class XmlSystem(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
                     'or': XmlOr,
+                    'not': XmlNot,
                     'name': XmlHostName,
                     'type': XmlSystemType,
                     'status': XmlSystemStatus,
@@ -866,6 +898,7 @@ class XmlHost(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
                     'or': XmlOr,
+                    'not': XmlNot,
                     'labcontroller': XmlHostLabController,
                     'system': XmlSystem,
                     'cpu': XmlCpu,
@@ -887,6 +920,7 @@ class XmlDistro(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
                     'or': XmlOr,
+                    'not': XmlNot,
                     'arch': XmlDistroArch,
                     'family': XmlDistroFamily,
                     'variant': XmlDistroVariant,
