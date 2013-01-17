@@ -201,7 +201,7 @@ setup(
     package_data={
         'bkr.server.config': ['*.cfg'],
         'bkr.server.templates': ['*.kid'],
-        'bkr.server': ['kickstarts/*', 'snippets/*'],
+        'bkr.server': ['kickstarts/*', 'snippets/*', 'reporting-queries/*'],
     },
     keywords=[
         'turbogears.app',

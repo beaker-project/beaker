@@ -81,3 +81,6 @@ read this directory, the following command must be enabled in
 `/etc/sudoers` (it is enabled by default in RHEL 6):
 
     #includedir /etc/sudoers.d
+
+Note: despite the leading hash character, this really is a command, not a
+comment
