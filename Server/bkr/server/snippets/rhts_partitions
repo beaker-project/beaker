@@ -8,7 +8,7 @@ clearpart --drives {{ ondisk }} --all --initlabel
 clearpart --all --initlabel
 {% endif %}
 
-{% if partitions or ondisk or rootfstype %}
+{% if partitions or ondisk or rootfstype or fstype %}
 
 {#
 ## Arch Specific Boot requirements
@@ -18,17 +18,20 @@ part /boot/efi --fstype vfat --size 200 --recommended
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% elif distro_tree is arch('ppc', 'ppc64') %}
 part None --fstype 'PPC PReP Boot' --size 8
-part /boot --fstype ext3 --size 200 --recommended --asprimary
+part /boot --size 200 --recommended --asprimary
+{%- if fstype %} --fstype {{ fstype }}{% endif %}
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% else %}
-part /boot --fstype ext3 --size 200 --recommended --asprimary
+part /boot --size 200 --recommended --asprimary
+{%- if fstype %} --fstype {{ fstype }}{% endif %}
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% endif %}
 
 {#
 ## Basic root Filesystem plus Swap
 #}
-part / --fstype {{ rootfstype|default('ext3') }} --size 1024 --grow
+part / --size 1024 --grow
+{%- if rootfstype or fstype %} --fstype {{ rootfstype|default(fstype) }}{% endif %}
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 
 part swap --recommended
@@ -46,21 +49,28 @@ part swap --recommended
 {% set partition = _partition|split(':') %}
 {% if partition|length >= 3 %}
 {% set size = partition[2]|int * 1024 %}
-{% if partition|length > 3 %}
-{% set fstype = partition[3] %}
+{% if fstype %}
+{% set myfstype = fstype %}
 {% else %}
-{% set fstype = 'ext3' %}
+{% set myfstype = None %}
+{% endif %}
+{% if partition|length > 3 %}
+{% set myfstype = partition[3] %}
 {% endif %}
 {% set partname = partition[0].lstrip('/') %}
 {% if partition[1] == 'part' %}
-part /{{ partname }} --fstype {{ fstype }} --size={{ size }}
+part /{{ partname }} --size={{ size }}
+{%- if myfstype %} --fstype {{ myfstype }}{% endif %}
+
 {% elif partition[1] == 'lvm' %}
 {% set is_lvm = is_lvm + 1 %}
 {% set lvmname = partname.replace('/', '_') %}
 {% set part_size = size + 5 %}
 part pv.00{{ is_lvm }} --size={{ part_size }}
 volgroup TestVolume00{{ is_lvm }} pv.00{{ is_lvm }}
-logvol /{{ partname }} --fstype {{ fstype }} --name={{ lvmname }} --vgname=TestVolume00{{ is_lvm }} --size={{ size }}
+logvol /{{ partname }} --name={{ lvmname }} --vgname=TestVolume00{{ is_lvm }} --size={{ size }}
+{%- if myfstype %} --fstype {{ myfstype }}{% endif %}
+
 {% endif %}
 {% endif %}
 {% endfor %}

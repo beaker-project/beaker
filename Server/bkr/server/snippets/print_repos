@@ -2,7 +2,7 @@
 {% if repo_base %}
 {% for repo in distro_tree.repos %}
 {% if var('no_%s_repos' % repo.repo_type) is undefined %}
-cat << EOF >/etc/yum.repos.d/beaker-{{ repo.repo_id }}.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-{{ repo.repo_id }}.repo
 [beaker-{{ repo.repo_id }}]
 name=beaker-{{ repo.repo_id }}
 baseurl={{ repo_base|urljoin(repo.path) }}
@@ -15,7 +15,7 @@ EOF
 {% endif %}
 {% if customrepos %}
 {% for repo in customrepos %}
-cat << EOF >/etc/yum.repos.d/{{ repo.repo_id }}.repo
+cat <<"EOF" >/etc/yum.repos.d/{{ repo.repo_id }}.repo
 [{{ repo.repo_id }}]
 name={{ repo.repo_id }}
 baseurl={{ repo.path }}

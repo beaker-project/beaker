@@ -18,6 +18,7 @@ from bkr.server.model import System, Reservation, SystemStatus, SystemType, \
 from bkr.server.util import absolute_url, get_reports_engine
 from bkr.server import search_utility
 from distro import Distros
+from bkr.server.external_reports import ExternalReportsController
 
 import cherrypy
 
@@ -56,6 +57,7 @@ def datetime_from_js(s):
 class Reports(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
+    external = ExternalReportsController()
 
     extension_controllers = []
     for entry_point in pkg_resources.iter_entry_points('bkr.controllers.reports'):

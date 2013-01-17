@@ -12,12 +12,13 @@ import re
 import shutil
 import tempfile
 import xmlrpclib
+import subprocess
 from cStringIO import StringIO
 from socket import gethostname
 from threading import Thread, Event
 
 import kobo.conf
-from kobo.client import HubProxy 
+from kobo.client import HubProxy
 from kobo.exceptions import ShutdownException
 from kobo.xmlrpc import retry_request_decorator, CookieTransport, \
         SafeCookieTransport
@@ -534,38 +535,19 @@ class Proxy(ProxyHelper):
 
 
     def install_start(self, recipe_id=None):
-        """ Called from %pre of the test machine.  We record a start
-        result on the scheduler and extend the watchdog
-        This is a little ugly.. but better than putting this logic in
-        kickstart
+        """ Called from %pre of the test machine.  We call
+        the server's install_start()
         """
-        logger.debug("install_start")
-        # extend watchdog by 3 hours 60 * 60 * 3
-        kill_time = 10800
-        # look up system recipe based on hostname...
-        # get first task
-        recipeset = xmltramp.parse(self.get_my_recipe(
-                dict(recipe_id=recipe_id))).recipeSet
-        try:
-            task = recipeset.recipe.task()
-        except AttributeError:
-            task = recipeset.guestrecipe.task()
-        # Only do this if first task is Running
-        if task['status'] == 'Running':
-            logger.debug("Extending watchdog for task %s", task['id'])
-            self.hub.recipes.tasks.extend(task['id'], kill_time)
-            logger.debug("Recording /start for task %s", task['id'])
-            self.hub.recipes.tasks.result(task['id'],
-                                          'pass_',
-                                          '/start',
-                                          0,
-                                          'Install Started')
-            return True
-        return False
+        _debug_id = "(unspecified recipe)" if recipe_id is None else recipe_id
+        logger.debug("install_start for R:%s" % _debug_id)
+        return self.hub.recipes.install_start(recipe_id)
 
-    def clear_netboot(self, system_name):
+    def clear_netboot(self, fqdn):
         ''' Called from %post section to remove netboot entry '''
-        return self.hub.systems.clear_netboot(system_name)
+        logger.debug('clear_netboot %s', fqdn)
+        subprocess.check_call(["sudo", "/usr/bin/beaker-clear-netboot", fqdn])
+        logger.debug('clear_netboot %s completed', fqdn)
+        return self.hub.labcontrollers.add_completed_command(fqdn, "clear_netboot")
 
     def postreboot(self, recipe_id):
         # XXX would be nice if we could limit this so that systems could only
@@ -584,6 +566,10 @@ class Proxy(ProxyHelper):
     def install_done(self, recipe_id=None, fqdn=None):
         logger.debug("install_done recipe_id=%s fqdn=%s", recipe_id, fqdn)
         return self.hub.recipes.install_done(recipe_id, fqdn)
+
+    def postinstall_done(self, recipe_id=None):
+        logger.debug("postinstall_done recipe_id=%s", recipe_id)
+        return self.hub.recipes.postinstall_done(recipe_id)
 
     def status_watchdog(self, task_id):
         """ Ask the scheduler how many seconds are left on a watchdog for this task

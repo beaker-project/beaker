@@ -764,12 +764,12 @@ EOF
             </job>
             ''', self.system)
         self.assert_('''
-part /boot --fstype ext3 --size 200 --recommended --asprimary
-part / --fstype ext3 --size 1024 --grow
+part /boot --size 200 --recommended --asprimary
+part / --size 1024 --grow
 part swap --recommended
 part pv.001 --size=25605
 volgroup TestVolume001 pv.001
-logvol /butter --fstype btrfs --name=butter --vgname=TestVolume001 --size=25600
+logvol /butter --name=butter --vgname=TestVolume001 --size=25600 --fstype btrfs
 '''
                 in recipe.rendered_kickstart.kickstart,
                 recipe.rendered_kickstart.kickstart)
@@ -973,6 +973,33 @@ mysillypackage
         self.assert_('/etc/yum.repos.d/beaker-debug.repo' not in k, k)
         self.assert_('/etc/yum.repos.d/beaker-optional-x86_64-debug.repo' not in k, k)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=869758
+    def test_repo_url_containing_yum_variable(self):
+        # Anaconda can't substitute yum variables like $releasever, so to avoid
+        # breakages we don't pass it any repo URLs containing $
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <repos>
+                            <repo name="custom" url="http://example.com/$releasever/"/>
+                        </repos>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('repo --name=custom' not in k, k)
+        self.assert_('# skipping custom' in k, k)
+
     def test_beaker_url(self):
         recipe = self.provision_recipe('''
             <job>
@@ -1104,7 +1131,7 @@ mysillypackage
         ftp_lc = data_setup.create_labcontroller()
         system = data_setup.create_system(arch=u'x86_64', lab_controller=ftp_lc)
         self.rhel62_server_x86_64.lab_controller_assocs.append(
-                LabControllerDistroTree(lab_controller=ftp_lc, url='ftp://something/'))
+                LabControllerDistroTree(lab_controller=ftp_lc, url=u'ftp://something/'))
         session.flush()
         recipe = self.provision_recipe('''
             <job>
@@ -1173,8 +1200,35 @@ mysillypackage
             </job>
             ''', self.system)
         self.assert_('''
-part /boot --fstype ext3 --size 200 --recommended --asprimary
-part / --fstype btrfs --size 1024 --grow
+part /boot --size 200 --recommended --asprimary
+part / --size 1024 --grow --fstype btrfs
+part swap --recommended
+
+'''
+                in recipe.rendered_kickstart.kickstart,
+                recipe.rendered_kickstart.kickstart)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=865679
+    def test_fstype(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="fstype=ext4">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assert_('''
+part /boot --size 200 --recommended --asprimary --fstype ext4
+part / --size 1024 --grow --fstype ext4
 part swap --recommended
 
 '''
@@ -1281,8 +1335,8 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
         system = data_setup.create_system(fqdn=u'testForPackageDuplication',
                 arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
-        task1 = data_setup.create_task(requires=['requires1'])
-        task2 = data_setup.create_task(requires=['requires1'])
+        task1 = data_setup.create_task(requires=[u'requires1'])
+        task2 = data_setup.create_task(requires=[u'requires1'])
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
@@ -1324,3 +1378,31 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
         k = recipe.rendered_kickstart.kickstart
         self.assert_(('curl http://lab.test-kickstart.invalid:8000/postreboot/%s'
                 % recipe.id) in k.splitlines(), k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=865680
+    def test_linkdelay(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="linkdelay=20">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('''
+for cfg in /etc/sysconfig/network-scripts/ifcfg-* ; do
+    if [ "$(basename "$cfg")" != "ifcfg-lo" ] ; then
+        echo "LINKDELAY=20" >>$cfg
+    fi
+done
+'''
+                in k, k)

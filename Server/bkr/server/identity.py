@@ -63,6 +63,21 @@ class LdapSqlAlchemyIdentityProvider(SqlAlchemyIdentityProvider):
             user_name, visit_key)
         return SqlAlchemyIdentity(visit_key, user)
 
+    def can_change_password(self, user_name):
+        if self.ldap:
+            ldapcon = ldap.initialize(self.uri)
+            filter = "(uid=%s)" % user_name
+            rc = ldapcon.search(self.basedn, ldap.SCOPE_SUBTREE, filter)
+            objects = ldapcon.result(rc)[1]
+            if len(objects) != 0:
+                # LDAP user. No chance of changing password.
+                return False
+            else:
+                # Assume non LDAP user
+                return True
+        else:
+            return True
+
     def validate_password(self, user, user_name, password):
         '''
         Validates user_name and password against an AD domain.

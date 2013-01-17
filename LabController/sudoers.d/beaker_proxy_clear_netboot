@@ -1,0 +1,4 @@
+# Allow beaker-proxy (running as apache) access to clear
+# netboot config files synchronously
+Defaults!/usr/bin/beaker-clear-netboot !requiretty
+apache ALL=(ALL) NOPASSWD:  /usr/bin/beaker-clear-netboot

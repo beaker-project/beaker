@@ -442,6 +442,13 @@ class NewJobTest(SeleniumTestCase):
                 <whiteboard>job with package</whiteboard>
                 <recipeSet>
                     <recipe>
+                        <guestrecipe guestargs="--kvm" guestname="one">
+                            <distroRequires>
+                                <distro_name op="=" value="BlueShoeLinux5-5" />
+                            </distroRequires>
+                            <hostRequires/>
+                            <task name="/distribution/install" />
+                        </guestrecipe>
                         <packages>
                             <package name="python-lxml" />
                         </packages>

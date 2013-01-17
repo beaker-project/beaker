@@ -40,10 +40,10 @@ zerombr
 clearpart --all --initlabel
 
 
-part /boot --fstype ext3 --size 200 --recommended --asprimary
-part / --fstype ext3 --size 1024 --grow
+part /boot --size 200 --recommended --asprimary
+part / --size 1024 --grow
 part swap --recommended
-part /home --fstype ext4 --size=5120
+part /home --size=5120 --fstype ext4
 
 # no snippet data for RedHatEnterpriseLinux6
 # no snippet data for system
@@ -87,6 +87,21 @@ python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstar
 
 %post --log=/dev/console
 set -x
+# Check in with Beaker Server, let it know our hostname, and
+# record our install time.
+REPORTED_FQDN=$(hostname -f)
+if [[ -z "$REPORTED_FQDN" || $REPORTED_FQDN == localhost || $REPORTED_FQDN == localhost.* ]] ; then
+    # hostname -f is the most future-proof approach, but it isn't always reliable
+    if [ -f /etc/hostname ] ; then
+        # Preferred fallback if the OS is recent enough to provide it
+        REPORTED_FQDN=$(cat /etc/hostname)
+    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
+        # Last resort fallback to try to report something sensible
+        REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
+    fi
+fi
+curl http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN
+
 curl http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
 echo @RECIPEID@ > /root/RECIPE.TXT
 
@@ -158,7 +173,7 @@ fi
 
 
 #Add Task Repo
-cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
 name=beaker-tasks
 baseurl=@REPOS@@RECIPEID@
@@ -168,7 +183,7 @@ EOF
 
 
 # Add Harness Repo
-cat << EOF >/etc/yum.repos.d/beaker-harness.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=beaker-harness
 baseurl=@HARNESS@RedHatEnterpriseLinux6/
@@ -177,7 +192,7 @@ gpgcheck=0
 EOF
 
 # Add distro and custom Repos
-cat << EOF >/etc/yum.repos.d/beaker-HighAvailability.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-HighAvailability.repo
 [beaker-HighAvailability]
 name=beaker-HighAvailability
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/HighAvailability
@@ -185,7 +200,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-LoadBalancer.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-LoadBalancer.repo
 [beaker-LoadBalancer]
 name=beaker-LoadBalancer
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/LoadBalancer
@@ -193,7 +208,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-optional-x86_64-os.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-optional-x86_64-os.repo
 [beaker-optional-x86_64-os]
 name=beaker-optional-x86_64-os
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/os
@@ -201,7 +216,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-ResilientStorage.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-ResilientStorage.repo
 [beaker-ResilientStorage]
 name=beaker-ResilientStorage
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ResilientStorage
@@ -209,7 +224,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-ScalableFileSystem.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-ScalableFileSystem.repo
 [beaker-ScalableFileSystem]
 name=beaker-ScalableFileSystem
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ScalableFileSystem
@@ -217,7 +232,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-debug.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-debug.repo
 [beaker-debug]
 name=beaker-debug
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/debug
@@ -225,7 +240,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-optional-x86_64-debug.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-optional-x86_64-debug.repo
 [beaker-optional-x86_64-debug]
 name=beaker-optional-x86_64-debug
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/debug
@@ -233,7 +248,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-Server.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-Server.repo
 [beaker-Server]
 name=beaker-Server
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/Server
@@ -326,19 +341,8 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
-# Check in with Beaker Server, let it know our hostname
-REPORTED_FQDN=$(hostname -f)
-if [[ -z "$REPORTED_FQDN" || $REPORTED_FQDN == localhost || $REPORTED_FQDN == localhost.* ]] ; then
-    # hostname -f is the most future-proof approach, but it isn't always reliable
-    if [ -f /etc/hostname ] ; then
-        # Preferred fallback if the OS is recent enough to provide it
-        REPORTED_FQDN=$(cat /etc/hostname)
-    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
-        # Last resort fallback to try to report something sensible
-        REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
-    fi
-fi
-curl http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN
+# Check in with Beaker Server, record our postinstall time.
+curl http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
 # no snippet data for RedHatEnterpriseLinux6_post
 # no snippet data for system_post
 

@@ -1,6 +1,7 @@
 import logging
 import os
 import signal
+import unittest
 from urlparse import urlparse, urlunparse
 from bkr.labcontroller.config import load_conf, get_conf
 from turbogears.database import session
@@ -16,13 +17,21 @@ assert os.path.exists(config_file) , 'Config file %s must exist' % config_file
 load_conf(config_file)
 
 processes = []
+proxy_url = None
+
+class LabControllerTestCase(unittest.TestCase):
+
+    def get_proxy_url(self):
+        return proxy_url
 
 def setup_package():
+    global proxy_url
     conf = get_conf()
     if os.path.exists('../.git'):
         with session.begin():
             user = data_setup.create_user(user_name=conf.get('USERNAME').decode('utf8'), password=conf.get('PASSWORD'))
             lc = data_setup.create_labcontroller(fqdn='localhost', user=user)
+    proxy_url = start_proxy()
 
 def start_proxy():
 
@@ -48,6 +57,8 @@ def start_proxy():
         # Just get the last one, it shouldn't matter to us
         lab_controller = lab_controllers_list.pop()
         parsed_url = urlparse(lab_controller)
+        # Make sure that the LC is in the DB
+        data_setup.create_labcontroller(fqdn=parsed_url.hostname)
         parsed_url.port = 8000
         parsed_url.path = '/server'
         return urlunparse(parsed_url)

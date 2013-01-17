@@ -588,8 +588,7 @@ class Jobs(RPCRoot):
             raise BX(_('Invalid task(s): %s') % ', '.join(invalid_tasks))
         for xmltask in xmltasks:
             task = Task.by_name(xmltask.name)
-            recipetask = RecipeTask()
-            recipetask.task = task
+            recipetask = RecipeTask(task=task)
             recipetask.role = xmltask.role
             for xmlparam in xmltask.iter_params():
                 param = RecipeTaskParam( name=xmlparam.name, 

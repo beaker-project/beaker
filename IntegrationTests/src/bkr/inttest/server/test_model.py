@@ -1,5 +1,6 @@
 import sys
 import time
+import datetime
 import unittest
 import pkg_resources
 import lxml.etree
@@ -12,7 +13,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
-        VirtResource
+        VirtResource, OSMajor, OSMajorInstallOptions, Watchdog
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -72,6 +73,9 @@ class TestSystem(unittest.TestCase):
 
     def test_install_options_override(self):
         distro_tree = data_setup.create_distro_tree()
+        osmajor = distro_tree.distro.osversion.osmajor
+        OSMajorInstallOptions(osmajor=osmajor, arch=distro_tree.arch,
+                kernel_options='serial')
         system = data_setup.create_system()
         system.provisions[distro_tree.arch] = Provision(arch=distro_tree.arch,
                 kernel_options='console=ttyS0 ksdevice=eth0 vnc')
@@ -79,9 +83,11 @@ class TestSystem(unittest.TestCase):
                 InstallOptions.from_strings('', u'ksdevice=eth1 !vnc', ''))
         # ksdevice should be overriden but console should be inherited
         # noverifyssl comes from server-test.cfg
+        # serial comes from the osmajor
         # vnc should be removed
         self.assertEqual(opts.kernel_options,
-                dict(console='ttyS0', ksdevice='eth1', noverifyssl=None))
+                dict(console='ttyS0', ksdevice='eth1', noverifyssl=None,
+                     serial=None))
 
     def test_mark_broken_updates_history(self):
         system = data_setup.create_system(status = SystemStatus.automated)
@@ -344,6 +350,26 @@ class DistroTreeByFilterTest(unittest.TestCase):
         self.assert_(excluded not in distro_trees)
         self.assert_(included in distro_trees)
 
+class WatchdogTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    def test_not_active_watchdog_is_not_active(self):
+        r1 = data_setup.create_recipe()
+        r2 = data_setup.create_recipe()
+        job = data_setup.create_job_for_recipes([r1, r2])
+        data_setup.mark_recipe_waiting(r1)
+        data_setup.mark_recipe_running(r2)
+        session.flush()
+        active_watchdogs = Watchdog.by_status()
+        self.assert_(r1.watchdog not in active_watchdogs)
+        self.assert_(r2.watchdog in active_watchdogs)
+
+
 class DistroTreeTest(unittest.TestCase):
 
     def setUp(self):
@@ -584,10 +610,10 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
     def test_system_added(self):
         excluded = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc, status=SystemStatus.manual,
-                date_added='2011-09-01')
+                date_added=datetime.datetime(2011, 9, 1, 0, 0, 0))
         included = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc, status=SystemStatus.automated,
-                date_added='2012-09-01')
+                date_added=datetime.datetime(2012, 9, 1, 0, 0, 0))
         session.flush()
         systems = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
@@ -855,7 +881,7 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         session.flush()
         systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
-                <cpu><speed op="&gt;=" value="1500" /></cpu>
+                <cpu><speed op="&gt;=" value="1500.0" /></cpu>
             </hostRequires>
             """))
         self.assert_(excluded not in systems)
@@ -944,6 +970,29 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <cpu><hyper value="true" /></cpu>
+            </hostRequires>
+            """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
+
+    def test_cpu_flags(self):
+        excluded = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        excluded.cpu = Cpu(processors=1, flags=[u'ssse3', 'pae'])
+        included = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        included.cpu = Cpu(processors=1, flags=[u'ssse3', 'vmx'])
+        session.flush()
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <cpu><flag value="vmx" /></cpu>
+            </hostRequires>
+            """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <cpu><flag op="!=" value="pae" /></cpu>
             </hostRequires>
             """))
         self.assert_(excluded not in systems)
@@ -1299,6 +1348,34 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         self.assert_(with_e1000 in systems)
         self.assert_(with_tg3 in systems)
 
+class OSMajorTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    def test_arches(self):
+        data_setup.create_distro_tree(osmajor=u'TestingTheArches6', arch=u'ia64')
+        data_setup.create_distro_tree(osmajor=u'TestingTheArches6', arch=u'ppc64')
+        session.flush()
+        arches = OSMajor.by_name(u'TestingTheArches6').arches()
+        self.assertEquals(set(['ia64', 'ppc64']),
+                set(arch.arch for arch in arches))
+
+    def test_install_options(self):
+        o = OSMajor.lazy_create(osmajor=u'BlueShoeLinux6')
+        ia64 = Arch.lazy_create(arch=u'ia64')
+        OSMajorInstallOptions(osmajor=o, arch=None, ks_meta=u'one=two')
+        OSMajorInstallOptions(osmajor=o, arch=ia64, kernel_options=u'serial')
+        session.flush()
+        self.assertEquals(set(o.install_options_by_arch.keys()),
+                set([None, ia64]), o.install_options_by_arch)
+        self.assertEquals(o.install_options_by_arch[None].ks_meta, u'one=two')
+        self.assertEquals(o.install_options_by_arch[ia64].kernel_options,
+                u'serial')
+
 class UserTest(unittest.TestCase):
 
     def setUp(self):
@@ -1346,14 +1423,14 @@ class RecipeTest(unittest.TestCase):
         dt = data_setup.create_distro_tree()
         lc = data_setup.create_labcontroller()
         systems = [
-            data_setup.create_system(fqdn='server.roles_to_xml', lab_controller=lc),
-            data_setup.create_system(fqdn='clientone.roles_to_xml', lab_controller=lc),
-            data_setup.create_system(fqdn='clienttwo.roles_to_xml', lab_controller=lc),
+            data_setup.create_system(fqdn=u'server.roles_to_xml', lab_controller=lc),
+            data_setup.create_system(fqdn=u'clientone.roles_to_xml', lab_controller=lc),
+            data_setup.create_system(fqdn=u'clienttwo.roles_to_xml', lab_controller=lc),
         ]
         job = data_setup.create_job_for_recipes([
-            data_setup.create_recipe(distro_tree=dt, role='SERVER'),
-            data_setup.create_recipe(distro_tree=dt, role='CLIENTONE'),
-            data_setup.create_recipe(distro_tree=dt, role='CLIENTTWO'),
+            data_setup.create_recipe(distro_tree=dt, role=u'SERVER'),
+            data_setup.create_recipe(distro_tree=dt, role=u'CLIENTONE'),
+            data_setup.create_recipe(distro_tree=dt, role=u'CLIENTTWO'),
         ])
         for i in range(3):
             data_setup.mark_recipe_complete(job.recipesets[0].recipes[i], system=systems[i])
@@ -1363,6 +1440,71 @@ class RecipeTest(unittest.TestCase):
                 '<role value="CLIENTTWO"><system value="clienttwo.roles_to_xml"/></role>'
                 '<role value="SERVER"><system value="server.roles_to_xml"/></role>'
                 '</roles>' in xml, xml)
+
+    def _create_demo_recipes(self, arch, num_recipes, whiteboard):
+        dt = data_setup.create_distro_tree(arch=arch)
+        recipes = [data_setup.create_recipe(dt, whiteboard=whiteboard)
+                                                for i in range(num_recipes)]
+        data_setup.create_job_for_recipes(recipes)
+        session.flush()
+        return recipes
+
+    def _advance_recipe_states(self, recipes):
+        # Advance some of the recipes through their state machine
+        recipes[3].abort()
+        for i in range(3):
+            recipes[i].process()
+        for i in range(2):
+            recipes[i].queue()
+        recipes[0].schedule()
+        return {u'new': len(recipes)-4,  u'processed': 1, u'queued': 1,
+                u'scheduled': 1, u'waiting': 0, u'running': 0}
+
+
+    def test_get_queue_stats(self):
+        expected_stats = {u'new': 0,  u'processed': 0, u'queued': 0,
+                          u'scheduled': 0, u'waiting': 0, u'running': 0}
+        whiteboard = "test_get_queue_stats"
+        def _get_queue_stats():
+            return Recipe.get_queue_stats(Recipe.query.filter(
+                                            Recipe.whiteboard==whiteboard))
+        # Add some recipes
+        recipes = self._create_demo_recipes('x86_64', 5, whiteboard)
+        expected_stats[u'new'] = len(recipes)
+        stats = _get_queue_stats()
+        self.assertEqual(stats, expected_stats)
+        # Advance recipe states
+        expected_stats = self._advance_recipe_states(recipes)
+        stats = _get_queue_stats()
+        self.assertEqual(stats, expected_stats)
+
+    def test_get_queue_stats_by_arch(self):
+        expected_arches = 's390x x86_64 ppc'.split()
+        default_stats = {u'new': 0,  u'processed': 0, u'queued': 0,
+                         u'scheduled': 0, u'waiting': 0, u'running': 0}
+        expected_stats = dict((arch, default_stats.copy())
+                                     for arch in expected_arches)
+        whiteboard = "test_get_queue_stats_by_arch"
+        def _get_queue_stats():
+            return Recipe.get_queue_stats_by_group(Arch.arch,
+                           Recipe.query.filter(Recipe.whiteboard==whiteboard)
+                                       .join(DistroTree).join(Arch))
+        # Add some recipes
+        trees = []
+        s390x = self._create_demo_recipes('s390x', 2, whiteboard)
+        expected_stats['s390x'][u'new'] = len(s390x)
+        ppc = self._create_demo_recipes('ppc', 3, whiteboard)
+        expected_stats['ppc'][u'new'] = len(ppc)
+        x86_64 = self._create_demo_recipes('x86_64', 5, whiteboard)
+        expected_stats['x86_64'][u'new'] = len(x86_64)
+        stats = _get_queue_stats()
+        for arch in expected_arches:
+            self.assertEqual(stats[arch], expected_stats[arch])
+        # Advance x86_64 recipe states
+        expected_stats['x86_64'] = self._advance_recipe_states(x86_64)
+        stats = _get_queue_stats()
+        for arch in expected_arches:
+            self.assertEqual(stats[arch], expected_stats[arch])
 
 class GuestRecipeTest(unittest.TestCase):
 
@@ -1465,9 +1607,9 @@ class LogRecipeTest(unittest.TestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=865265
     def test_path_is_normalized(self):
-        lr1 = LogRecipe.lazy_create(path=u'/', filename='dummy.log',
+        lr1 = LogRecipe.lazy_create(path=u'/', filename=u'dummy.log',
                 parent=self.recipe)
-        lr2 = LogRecipe.lazy_create(path=u'', filename='dummy.log',
+        lr2 = LogRecipe.lazy_create(path=u'', filename=u'dummy.log',
                 parent=self.recipe)
         self.assert_(lr1 is lr2, (lr1, lr2))
 

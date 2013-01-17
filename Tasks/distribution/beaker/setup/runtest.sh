@@ -21,17 +21,29 @@
 
 function BuildBeaker ()
 {
-    rlRun "yum install -y TurboGears python-setuptools-devel python-devel"
-    rlRun "git clone git://git.fedorahosted.org/beaker"
+    rlRun "git clone git://git.beaker-project.org/beaker"
     rlRun "pushd beaker"
+    if [[ -n "$BEAKER_GIT_REMOTE" ]] ; then
+        rlRun "git fetch $BEAKER_GIT_REMOTE ${BEAKER_GIT_REF:-master} && git checkout FETCH_HEAD"
+    else
+        rlRun "git checkout ${BEAKER_GIT_REF:-master}"
+    fi
+    rlRun "yum-builddep -y ./beaker.spec"
+    rlRun "yum -y install tito"
     rlRun "tito build --rpm --test"
     rlRun "popd"
+    rlRun "createrepo /tmp/tito/noarch/"
+    cat >/etc/yum.repos.d/tito.repo <<"EOF"
+[tito]
+name=tito
+baseurl=file:///tmp/tito/noarch/
+EOF
+    rlAssert0 "Created yum repo config for /tmp/tito/noarch/" $?
 }
 
 function InstallInventory_git()
 {
-    BuildBeaker
-    rlRun "yum install --nogpg -y  /tmp/tito/RPMS/noarch/beaker-server-*.rpm"
+    rlRun "yum install --nogpg -y beaker-server"
 }
 
 function InstallInventory_repo()
@@ -41,8 +53,7 @@ function InstallInventory_repo()
 
 function InstallLabController_git()
 {
-    BuildBeaker
-    rlRun "yum install --nogpg -y /tmp/tito/RPMS/noarch/beaker-lab-controller-*.rpm"
+    rlRun "yum install --nogpg -y beaker-lab-controller beaker-lab-controller-addDistro"
 }
 
 function InstallLabController_repo()
@@ -235,6 +246,7 @@ if $(echo $CLIENTS | grep -q $HOSTNAME); then
     rlLog "RUnning as Lab Controller using Inventory: ${SERVERS}"
     TEST="$TEST/lab_controller"
     SERVER=$(echo $SERVERS | awk '{print $1}')
+    [[ $SOURCE == "_git" ]] && BuildBeaker
     LabController
     exit 0
 fi
@@ -242,6 +254,7 @@ fi
 if $(echo $SERVERS | grep -q $HOSTNAME); then
     rlLog "Running as Inventory using Lab Controllers: ${CLIENTS}"
     TEST="$TEST/inventory"
+    [[ $SOURCE == "_git" ]] && BuildBeaker
     Inventory
     exit 0
 fi
@@ -251,6 +264,7 @@ if [ -z "$SERVERS" -o -z "$CLIENTS" ]; then
     CLIENTS=$STANDALONE
     SERVERS=$STANDALONE
     SERVER=$(echo $SERVERS | awk '{print $1}')
+    [[ $SOURCE == "_git" ]] && BuildBeaker
     TEST="$TEST/lab_controller" LabController &
     sleep 120
     TEST="$TEST/inventory" Inventory

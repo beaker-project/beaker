@@ -232,3 +232,32 @@ class JobSchemaTest(unittest.TestCase, SchemaTest):
                 </recipeSet>
             </job>
             ''')
+
+    def test_optional_op(self):
+        self.assert_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <and>
+                                <family op="=" value="RedHatEnterpriseLinux6"/>
+                                <variant value="Server"/>
+                                <name op="=" value="RedHatEnterpriseLinux-6.3"/>
+                                <arch value="x86_64"/>
+                            </and>
+                        </distroRequires>
+                        <hostRequires>
+                            <device op="=" driver="e1000e" />
+                            <memory value="2048"/>
+                            <cpu>
+                                <and>
+                                    <cores op=">" value="1"/>
+                                    <flag value="sse2"/>
+                                </and>
+                            </cpu>
+                        </hostRequires>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')

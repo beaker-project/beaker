@@ -24,6 +24,7 @@ from bkr.server.installopts import InstallOptions, global_install_options
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
 from sqlalchemy.util import OrderedDict
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.ext.declarative import declarative_base
 import socket
 from xmlrpclib import ProtocolError
 import time
@@ -52,6 +53,7 @@ from bkr.common.helpers import Flock, makedirs_ignore, unlink_ignore
 import subprocess
 from turbogears import identity
 import ovirtsdk.api
+from collections import defaultdict
 from datetime import timedelta, date, datetime
 from hashlib import md5
 import xml.dom.minidom
@@ -59,6 +61,29 @@ from xml.dom.minidom import Node, parseString
 
 import logging
 log = logging.getLogger(__name__)
+
+def decl_base_constructor(self, **kwargs):
+    """
+    This is a cut and paste from sqlalchemy.ext.declarative._declarative_constructor
+    however we are copying it here to ensure behaviour does not
+    change and chain up the MRO.
+    DeclBase should be used in the following manner
+    DecalrativeClass(DeclBase, MappedObject) and in this
+    way we avoid adding to the session in MappedObject.__init__.
+
+    Once MappedObject.__init__ no longer calls session.add(), this
+    can be removed.
+    """
+    cls_ = type(self)
+    for k in kwargs:
+        if not hasattr(cls_, k):
+            raise TypeError(
+                "%r is an invalid keyword argument for %s" %
+                (k, cls_.__name__))
+        setattr(self, k, kwargs[k])
+
+DeclBase = declarative_base(constructor=decl_base_constructor,
+                            metadata=metadata)
 
 class TaskStatus(DeclEnum):
 
@@ -593,6 +618,18 @@ osmajor_table = Table('osmajor', metadata,
     mysql_engine='InnoDB',
 )
 
+osmajor_install_options_table = Table('osmajor_install_options', metadata,
+    Column('id', Integer, autoincrement=True,
+        nullable=False, primary_key=True),
+    Column('osmajor_id', Integer, ForeignKey('osmajor.id',
+        onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
+    Column('arch_id', Integer, ForeignKey('arch.id'), nullable=True),
+    Column('ks_meta', String(1024)),
+    Column('kernel_options', String(1024)),
+    Column('kernel_options_post', String(1024)),
+    mysql_engine='InnoDB',
+)
+
 osversion_table = Table('osversion', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -998,7 +1035,8 @@ recipe_table = Table('recipe',metadata,
                 ForeignKey('recipe_set.id'), nullable=False),
         Column('distro_tree_id', Integer,
                 ForeignKey('distro_tree.id')),
-        Column('rendered_kickstart_id', Integer, ForeignKey('rendered_kickstart.id')),
+        Column('rendered_kickstart_id', Integer, ForeignKey('rendered_kickstart.id',
+                name='recipe_rendered_kickstart_id_fk', ondelete='SET NULL')),
         Column('result', TaskResult.db_type(), nullable=False,
                 default=TaskResult.new),
         Column('status', TaskStatus.db_type(), nullable=False,
@@ -1076,6 +1114,10 @@ recipe_resource_table = Table('recipe_resource', metadata,
         nullable=False, unique=True),
     Column('type', ResourceType.db_type(), nullable=False),
     Column('fqdn', Unicode(255), default=None),
+    Column('rebooted', DateTime, nullable=True, default=None),
+    Column('install_started', DateTime, nullable=True, default=None),
+    Column('install_finished', DateTime, nullable=True, default=None),
+    Column('postinstall_finished', DateTime, nullable=True, default=None),
     mysql_engine='InnoDB',
 )
 
@@ -1536,7 +1578,7 @@ class User(MappedObject):
         if self._root_password:
             return self._root_password
         else:
-            pw = ConfigItem.by_name('root_password').current_value()
+            pw = ConfigItem.by_name(u'root_password').current_value()
             if pw:
                 salt = ''.join([random.choice(string.digits + string.ascii_letters)
                                 for i in range(8)])
@@ -1548,7 +1590,7 @@ class User(MappedObject):
     def rootpw_expiry(self):
         if not self._root_password:
             return
-        validity = ConfigItem.by_name('root_password_validity').current_value()
+        validity = ConfigItem.by_name(u'root_password_validity').current_value()
         if validity:
             return self.rootpw_changed + timedelta(days=validity)
 
@@ -1877,8 +1919,9 @@ class System(SystemObject):
         if not open_reservation:
             raise BX(_(u'System %s is not currently reserved' % self.fqdn))
         reservation_type = open_reservation.type
-        if reservation_type != 'manual':
-            raise BX(_(u'Cannot release %s. Was not manually reserved' % self.fqdn))
+        if reservation_type == 'recipe':
+            recipe_id = open_reservation.recipe.id
+            raise BX(_(u'Currently running R:%s' % recipe_id))
         self.unreserve(reservation=open_reservation, *args, **kw)
 
     def excluded_families(self):
@@ -1899,7 +1942,19 @@ class System(SystemObject):
         Return install options based on distro selected.
         Inherit options from Arch -> Family -> Update
         """
+        osmajor = distro_tree.distro.osversion.osmajor
         result = global_install_options()
+        # arch=None means apply to all arches
+        if None in osmajor.install_options_by_arch:
+            op = osmajor.install_options_by_arch[None]
+            op_opts = InstallOptions.from_strings(op.ks_meta, op.kernel_options,
+                    op.kernel_options_post)
+            result = result.combined_with(op_opts)
+        if distro_tree.arch in osmajor.install_options_by_arch:
+            opa = osmajor.install_options_by_arch[distro_tree.arch]
+            opa_opts = InstallOptions.from_strings(opa.ks_meta, opa.kernel_options,
+                    opa.kernel_options_post)
+            result = result.combined_with(opa_opts)
         result = result.combined_with(distro_tree.install_options())
         if distro_tree.arch in self.provisions:
             pa = self.provisions[distro_tree.arch]
@@ -2280,16 +2335,19 @@ class System(SystemObject):
                                              Arch.id==arch.id))
         return excluded
 
-    def distro_trees(self):
+    def distro_trees(self, only_in_lab=True):
         """
         List of distro trees that support this system
         """
-        return DistroTree.query\
+        query = DistroTree.query\
                 .join(DistroTree.distro, Distro.osversion, OSVersion.osmajor)\
-                .options(contains_eager(DistroTree.distro, Distro.osversion, OSVersion.osmajor))\
-                .filter(DistroTree.lab_controller_assocs.any(
-                    LabControllerDistroTree.lab_controller == self.lab_controller))\
-                .filter(DistroTree.arch_id.in_([a.id for a in self.arch]))\
+                .options(contains_eager(DistroTree.distro, Distro.osversion, OSVersion.osmajor))
+        if only_in_lab:
+            query = query.filter(DistroTree.lab_controller_assocs.any(
+                    LabControllerDistroTree.lab_controller == self.lab_controller))
+        else:
+            query = query.filter(DistroTree.lab_controller_assocs.any())
+        query = query.filter(DistroTree.arch_id.in_([a.id for a in self.arch]))\
                 .filter(not_(OSMajor.excluded_osmajors.any(and_(
                     ExcludeOSMajor.system == self,
                     ExcludeOSMajor.arch_id == DistroTree.arch_id))
@@ -2298,6 +2356,7 @@ class System(SystemObject):
                     ExcludeOSVersion.system == self,
                     ExcludeOSVersion.arch_id == DistroTree.arch_id))
                     .correlate(distro_tree_table)))
+        return query
 
     def action_release(self, service=u'Scheduler'):
         # Attempt to remove Netboot entry and turn off machine
@@ -2697,6 +2756,13 @@ class OSMajor(MappedObject):
     def __repr__(self):
         return '%s' % self.osmajor
 
+    def arches(self):
+        return Arch.query.distinct().join(DistroTree).join(Distro)\
+                .join(OSVersion).filter(OSVersion.osmajor == self)
+
+
+class OSMajorInstallOptions(MappedObject): pass
+
 
 class OSVersion(MappedObject):
     def __init__(self, osmajor, osminor, arches=None):
@@ -2781,35 +2847,43 @@ class Watchdog(MappedObject):
     """
 
     @classmethod
-    def by_status(cls, labcontroller=None, status="active"):
-        """ return a list of all watchdog entries that are either active 
-            or expired for this lab controller
-            All recipes in a recipeset have to expire.
+    def by_system(cls, system):
+        """ Find a watchdog based on the system name
         """
-        query = cls.query.join(Watchdog.recipe, Recipe.recipeset)
-        if labcontroller:
-            query = query.filter(RecipeSet.lab_controller == labcontroller)
+        return cls.query.filter_by(system=system).one()
 
-        REMAP_STATUS = {
-            "active"  : dict(
-                               op = "__gt__",
-                              fop = "max",
-                            ),
-            "expired" : dict(
-                               op = "__le__",
-                              fop = "min",
-                            ),
-        }
-        op = REMAP_STATUS.get(status, None)['op']
-        fop = REMAP_STATUS.get(status, None)['fop']
-        query = query.filter(RecipeSet.id.in_(
-                select([recipe_set_table.c.id],
-                    from_obj=[watchdog_table.join(recipe_table).join(recipe_set_table)])
-                .group_by(RecipeSet.id)
-                .having(getattr(func, fop)(
-                    getattr(Watchdog.kill_time, op)(datetime.utcnow())))
-                ))
-        return query
+    @classmethod
+    def by_status(cls, labcontroller=None, status="active"):
+        """
+        Returns a list of all watchdog entries that are either active
+        or expired for this lab controller.
+
+        A recipe is only returned as "expired" if all the recipes in the recipe 
+        set have expired. Similarly, a recipe is returned as "active" so long 
+        as any recipe in the recipe set is still active. Some tasks rely on 
+        this behaviour. In particular, the host recipe in virt testing will 
+        finish while its guests are still running, but we want to keep 
+        monitoring the host's console log in case of a panic.
+        """
+        select_recipe_set_id = session.query(RecipeSet.id). \
+            join(Recipe).join(Watchdog).group_by(RecipeSet.id)
+        if status == 'active':
+            watchdog_clause = func.max(Watchdog.kill_time) > datetime.utcnow()
+        elif status =='expired':
+            watchdog_clause = func.max(Watchdog.kill_time) < datetime.utcnow()
+        else:
+            return None
+
+        recipe_set_in_watchdog = RecipeSet.id.in_(
+            select_recipe_set_id.having(watchdog_clause))
+
+        if labcontroller is None:
+            my_filter = and_(Watchdog.kill_time != None, recipe_set_in_watchdog)
+        else:
+            my_filter = and_(RecipeSet.lab_controller==labcontroller,
+                Watchdog.kill_time != None, recipe_set_in_watchdog)
+        return cls.query.join(Watchdog.recipe, Recipe.recipeset).filter(my_filter)
+
 
 class LabInfo(SystemObject):
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
@@ -3270,7 +3344,7 @@ class DistroTreeActivity(Activity):
 
 class CommandActivity(Activity):
     def __init__(self, user, service, action, status, callback=None):
-        Activity.__init__(self, user, service, action, 'Command', '', '')
+        Activity.__init__(self, user, service, action, u'Command', u'', u'')
         self.status = status
         self.callback = callback
 
@@ -3403,7 +3477,7 @@ class Log(MappedObject):
         Also by convention we use '/' rather than empty string to mean "no 
         subdirectory". It's all a bit weird...
         """
-        return re.sub(r'/+', '/', path or '') or '/'
+        return re.sub(r'/+', '/', path or u'') or u'/'
 
     @classmethod
     def lazy_create(cls, path=None, **kwargs):
@@ -3419,12 +3493,13 @@ class Log(MappedObject):
                 **kwargs).first()
         if item is None:
             item = cls(path=path, **kwargs)
+            session.add(item)
             session.flush()
         return item
 
     def __init__(self, path=None, filename=None,
                  server=None, basepath=None, parent=None):
-        super(Log, self).__init__()
+        # Intentionally not chaining to super(), to avoid session.add(self)
         self.parent = parent
         self.path = self._normalized_path(path)
         self.filename = filename
@@ -4667,6 +4742,9 @@ class Recipe(TaskBase):
         How we delete a Recipe.
         """
         self.logs = []
+        if self.rendered_kickstart:
+            session.delete(self.rendered_kickstart)
+            self.rendered_kickstart = None
         for task in self.tasks:
             task.delete()
 
@@ -4802,7 +4880,7 @@ class Recipe(TaskBase):
         """
         packages = []
         packages.extend(TaskPackage.query
-                .select_from(RecipeTask).join(Task, Task.required)
+                .select_from(RecipeTask).join(Task).join(Task.required)
                 .filter(RecipeTask.recipe == self)
                 .order_by(TaskPackage.package).distinct())
         packages.extend(self.custom_packages)
@@ -4877,6 +4955,36 @@ class Recipe(TaskBase):
                 partitions.append('%s:%s:%s' % (name, type, size))
         return ';'.join(partitions)
     partitionsKSMeta = property(_partitionsKSMeta)
+
+    @classmethod
+    def get_queue_stats(cls, recipes=None):
+        """Returns a dictionary of status:count pairs for active recipes"""
+        if recipes is None:
+            recipes = cls.query
+        active_statuses = [s for s in TaskStatus if not s.finished]
+        query = (recipes.group_by(Recipe.status)
+                  .having(Recipe.status.in_(active_statuses))
+                  .values(Recipe.status, func.count(Recipe.id)))
+        result = dict((status.name, 0) for status in active_statuses)
+        result.update((status.name, count) for status, count in query)
+        return result
+
+    @classmethod
+    def get_queue_stats_by_group(cls, grouping, recipes=None):
+        if recipes is None:
+            recipes = cls.query
+        active_statuses = [s for s in TaskStatus if not s.finished]
+        query = (recipes.with_entities(grouping,
+                                       Recipe.status,
+                                       func.count(Recipe.id))
+                 .group_by(grouping, Recipe.status)
+                 .having(Recipe.status.in_(active_statuses)))
+        def init_group_stats():
+            return dict((status.name, 0) for status in active_statuses)
+        result = defaultdict(init_group_stats)
+        for group, status, count in query:
+            result[group][status.name] = count
+        return result
 
     def queue(self):
         """
@@ -5113,6 +5221,8 @@ class Recipe(TaskBase):
             metrics.increment('counters.recipes_%s' % self.status.name)
 
     def provision(self):
+        if not self.harness_repo():
+            raise ValueError('Failed to find repo for harness')
         from bkr.server.kickstart import generate_kickstart
         install_options = self.resource.install_options(self.distro_tree)\
                 .combined_with(self.generated_install_options())\
@@ -5304,6 +5414,10 @@ class Recipe(TaskBase):
             return RecipeVirtStatus.precluded
         return RecipeVirtStatus.possible
 
+    @property
+    def first_task(self):
+        return self.dyn_tasks.order_by(RecipeTask.id).first()
+
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
@@ -5381,6 +5495,10 @@ class RecipeTask(TaskBase):
     """
     result_types = ['pass_','warn','fail','panic']
     stop_types = ['stop','abort','cancel']
+
+    def __init__(self, task):
+        # Intentionally not chaining to super(), to avoid session.add(self)
+        self.task = task
 
     def delete(self): 
         self.logs = []
@@ -5760,6 +5878,12 @@ class RecipeTaskParam(MappedObject):
     """
     Parameters for task execution.
     """
+
+    def __init__(self, name, value):
+        # Intentionally not chaining to super(), to avoid session.add(self)
+        self.name = name
+        self.value = value
+
     def to_xml(self):
         param = xmldoc.createElement("param")
         param.setAttribute("name", "%s" % self.name)
@@ -5823,6 +5947,16 @@ class RecipeTaskResult(TaskBase):
     """
     Each task can report multiple results
     """
+
+    def __init__(self, recipetask=None, path=None, result=None,
+            score=None, log=None):
+        # Intentionally not chaining to super(), to avoid session.add(self)
+        self.recipetask = recipetask
+        self.path = path
+        self.result = result
+        self.score = score
+        self.log = log
+
     def filepath(self):
         """
         Return file path for this result
@@ -6050,6 +6184,11 @@ class GuestResource(RecipeResource):
         pass
 
 class RenderedKickstart(MappedObject):
+
+    def __repr__(self):
+        return '%s(id=%r, kickstart=%s, url=%r)' % (self.__class__.__name__,
+                self.id, '<%s chars>' % len(self.kickstart)
+                if self.kickstart is not None else 'None', self.url)
 
     @property
     def link(self):
@@ -6516,6 +6655,20 @@ class VirtManager(object):
             log.debug('Deleting %s on %r', name, self)
             vm.delete()
 
+
+class ExternalReport(DeclBase, MappedObject):
+
+    __tablename__ = 'external_reports'
+    __table_args__ = {'mysql_engine':'InnoDB'}
+
+    id = Column(Integer, primary_key=True)
+    name = Column(Unicode(100), unique=True, nullable=False)
+    url = Column(Unicode(10000), nullable=False)
+    description = Column(Unicode(1000), default=None)
+
+    def __init__(self, *args, **kw):
+        super(ExternalReport, self).__init__(*args, **kw)
+
 # set up mappers between identity tables and classes
 Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
 KernelType.mapper = mapper(KernelType, kernel_type_table)
@@ -6629,9 +6782,15 @@ mapper(OSVersion, osversion_table,
                      'arches':relation(Arch,secondary=osversion_arch_map),
                     }
       )
-mapper(OSMajor, osmajor_table,
-       properties = {'osminor':relation(OSVersion,
-                                     order_by=[osversion_table.c.osminor])})
+mapper(OSMajor, osmajor_table, properties={
+    'osminor': relation(OSVersion, order_by=[osversion_table.c.osminor]),
+    'install_options_by_arch': relation(OSMajorInstallOptions,
+        collection_class=attribute_mapped_collection('arch'),
+        backref='osmajor', cascade='all, delete-orphan'),
+})
+mapper(OSMajorInstallOptions, osmajor_install_options_table, properties={
+    'arch': relation(Arch),
+})
 mapper(LabInfo, labinfo_table)
 mapper(Watchdog, watchdog_table,
        properties = {'recipetask':relation(RecipeTask, uselist=False),
@@ -6875,12 +7034,14 @@ mapper(Recipe, recipe_table,
                                          secondaryjoin=system_table.c.id==system_recipe_map.c.system_id,
                       ),
                       'tasks':relation(RecipeTask, backref='recipe'),
+                      'dyn_tasks': relation(RecipeTask, lazy='dynamic'),
                       'tags':relation(RecipeTag, 
                                       secondary=recipe_tag_map,
                                       backref='recipes'),
                       'repos':relation(RecipeRepo),
                       'rpms':relation(RecipeRpm, backref='recipe'),
-                      'logs':relation(LogRecipe, backref='parent', cascade='delete, delete-orphan'),
+                      'logs':relation(LogRecipe, backref='parent',
+                            cascade='all, delete-orphan'),
                       'custom_packages':relation(TaskPackage,
                                         secondary=task_packages_custom_map),
                       'ks_appends':relation(RecipeKSAppend),
@@ -6894,7 +7055,7 @@ mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
                                         secondary=machine_guest_map)})
 
 mapper(RecipeResource, recipe_resource_table,
-        polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=None)
+        polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=None,)
 mapper(SystemResource, system_resource_table, inherits=RecipeResource,
         polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=ResourceType.system,
         properties={
@@ -6923,8 +7084,9 @@ mapper(RecipeTask, recipe_task_table,
                       'params':relation(RecipeTaskParam),
                       'bugzillas':relation(RecipeTaskBugzilla, 
                                            backref='recipetask'),
-                      'task':relation(Task, uselist=False, backref='runs'),
-                      'logs':relation(LogRecipeTask, backref='parent', cascade='delete, delete-orphan'),
+                      'task':relation(Task, uselist=False),
+                      'logs':relation(LogRecipeTask, backref='parent',
+                            cascade='all, delete-orphan'),
                       'watchdog':relation(Watchdog, uselist=False),
                      }
       )
@@ -6936,7 +7098,7 @@ mapper(RecipeTaskBugzilla, recipe_task_bugzilla_table)
 mapper(RecipeTaskRpm, recipe_task_rpm_table)
 mapper(RecipeTaskResult, recipe_task_result_table,
         properties = {'logs':relation(LogRecipeTaskResult, backref='parent',
-                           cascade='delete, delete-orphan'),
+                           cascade='all, delete-orphan'),
                      }
       )
 mapper(RenderedKickstart, rendered_kickstart_table)
@@ -6985,4 +7147,6 @@ def auto_cmd_handler(command, new_status):
     if new_status in (CommandStatus.failed, CommandStatus.aborted):
         recipe.abort("Command %s failed" % command.id)
     elif command.action == u'reboot':
-        recipe.tasks[0].start()
+        recipe.resource.rebooted = datetime.utcnow()
+        first_task = recipe.first_task
+        first_task.start()

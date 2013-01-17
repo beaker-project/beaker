@@ -5,11 +5,13 @@ import datetime
 from sqlalchemy import and_
 from turbogears import expose, identity, controllers
 from bkr.server.bexceptions import BX
-from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree
+from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
+        OSMajor, DistroTag, Arch, Distro
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.xmlrpccontroller import RPCRoot
 from turbogears.database import session
+import cherrypy
 
 log = logging.getLogger(__name__)
 
@@ -254,6 +256,27 @@ class SystemsController(controllers.Controller):
                      field_name=a.field_name, old_value=a.old_value,
                      new_value=a.new_value)
                 for a in activities]
+
+    @cherrypy.expose()
+    @identity.require(identity.not_anonymous())
+    def get_osmajor_arches(self, fqdn, tags=None):
+        """
+        Returns a dict of all distro families with a list of arches that apply for system.
+        If *tags* is given, limits to distros with at least one of the given tags.
+
+        {"RedHatEnterpriseLinux3": ["i386", "x86_64"],}
+
+        .. versionadded:: 0.11.0
+        """
+        system = System.by_fqdn(fqdn, identity.current.user)
+        query = system.distro_trees(only_in_lab=False)
+        if tags:
+            query = query.filter(Distro._tags.any(DistroTag.tag.in_(tags)))
+        query = query.join(DistroTree.arch).distinct()
+        result = {}
+        for osmajor, arch in query.values(OSMajor.osmajor, Arch.arch):
+            result.setdefault(osmajor, []).append(arch)
+        return result
 
 # for sphinx
 systems = SystemsController

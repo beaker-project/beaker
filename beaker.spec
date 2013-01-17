@@ -14,8 +14,10 @@
 %bcond_with inttests
 %endif
 
+# Note: While some parts of this file use "%{name}, "beaker" is still
+# hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.10.6
+Version:        0.11.0
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -143,6 +145,7 @@ Requires:       yum-utils
 Requires:       fence-agents
 Requires:       ipmitool
 Requires:       telnet
+Requires:       sudo
 Requires:       python-cpio
 Requires:	%{name} = %{version}-%{release}
 Requires:       kobo >= 0.3.2
@@ -152,6 +155,7 @@ Requires:	python-xmltramp
 Requires:       python-krbV
 Requires:       python-concurrentloghandler
 Requires:       python-gevent >= 1.0
+Requires:       python-daemon
 
 %package lab-controller-addDistro
 Summary:        addDistro scripts for Lab Controller
@@ -348,6 +352,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/%{name}-provision
 %{_bindir}/%{name}-pxemenu
 %{_bindir}/%{name}-expire-distros
+%{_bindir}/%{name}-clear-netboot
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %attr(-,apache,root) %dir %{_datadir}/bkr
 %attr(-,apache,root) %{_datadir}/bkr/lab-controller
@@ -360,6 +365,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_sysconfdir}/init.d/%{name}-transfer
 %{_sysconfdir}/init.d/%{name}-provision
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
+%attr(0440,root,root) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)
@@ -368,6 +374,76 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Mon Jan 14 2013 Nick Coghlan <ncoghlan@redhat.com> 0.11.0-1
+- 875535 fix typos in CPU flag filter (dcallagh@redhat.com)
+- 880424 identity.provider should not be set in server config
+  (dcallagh@redhat.com)
+- 865679 fstype kickstart metadata (dcallagh@redhat.com)
+- 865680 linkdelay kickstart metadata variable, for adding LINKDELAY to ifcfg-*
+  (dcallagh@redhat.com)
+- 869758 exclude repo URLs containing $ from Anaconda (dcallagh@redhat.com)
+- 880039 escape shell metachars when writing to /etc/yum.repos.d
+  (dcallagh@redhat.com)
+- 813574 Lab controller daemons now use python-daemon (dcallagh@redhat.com)
+- 881563 upgrade notes to ensure recipe.recipe_set_id and recipe_set.job_id are
+  not NULLable (dcallagh@redhat.com)
+- 876582 Allow default timezone to be set at each lab (bpeck@redhat.com)
+- 865676 Users can now change their passwords (if applicable)
+  (rmancy@redhat.com)
+- 880899 Declare 'op' attribute as optional (qwan@redhat.com)
+- 883214 CPU speed value should be float type in filtering (qwan@redhat.com)
+- 872428 Documentation for creating a simple task. (asaha@redhat.com)
+- 876752 bkr machine-test should filter out excluded families
+  (dcallagh@redhat.com)
+- 880853 clean up transaction handling and exception handling in beakerd
+  (dcallagh@redhat.com)
+- 885554 if oVirt is enabled, don't abort recipes with no candidate systems
+  (dcallagh@redhat.com)
+- 869455 *really* ensure Jobs are not added to the session until fully
+  populated (dcallagh@redhat.com)
+- 872001 delete rendered_kickstart rows when recipes are deleted
+  (dcallagh@redhat.com)
+- 839583 send system utilisation metrics (dcallagh@redhat.com)
+- 695986 send system utilisation metrics broken down by arch and lab
+  (dcallagh@redhat.com)
+- 843854 Clear netboot config files synchronously in %%post
+  (ncoghlan@redhat.com)
+- 877264 query for reporting user machine hours (dcallagh@redhat.com)
+- 877272 query for reporting task durations (dcallagh@redhat.com)
+- 873714 per-osmajor install options (dcallagh@redhat.com)
+- 883606 External Reports page (rmancy@redhat.com)
+- 193142 queries for system reporting (dcallagh@redhat.com)
+- 584783 Report recipe statistics to Graphite (ncoghlan@redhat.com)
+- 741960 queries for system breakages (dcallagh@redhat.com)
+- 591656 Record installation progress of recipe (rmancy@redhat.com)
+- 883668 Ensure watchdogs with NULL kill_time are not reported as active
+  (rmancy@redhat.com)
+- 591656 SQL query for reporting resource install failures (rmancy@redhat.com)
+- 591656 SQL reporting query for the duration of an installation
+  (rmancy@redhat.com)
+- 888673 Do not allow the 'Return' of a system via the WebUI if it's running a
+  recipe (rmancy@redhat.com)
+- 877274 SQL query for reporting job priority bump by user (rmancy@redhat.com)
+- 591656 Measure time between recipe_set enqueue and recipe start
+  (rmancy@redhat.com)
+- docs: Restructured and updated (Migrated to Sphinx/reStructuredText)
+- docs: add missing system content from components.xml (dcallagh@redhat.com)
+- docs: merge Installation Guide into Admin and User Guides
+  (dcallagh@redhat.com)
+- docs: describe supported queries concept in admin guide
+  (dcallagh@redhat.com)
+- docs: describe Graphite integration in admin guide
+  (dcallagh@redhat.com)
+- docs: autofs is needed on RHEV hypervisors (dcallagh@redhat.com)
+- Emit most bootloader config files for every arch (ncoghlan@redhat.com)
+- fix rhts_partitions syntax error with Jinja 2.6 (dcallagh@redhat.com)
+- Include recipe ID in install_start log message (ncoghlan@redhat.com)
+- Make bootloader configuration less magical (ncoghlan@redhat.com)
+- Link to possible systems broken when the Server is installed in a sub-
+  directory. (asaha@redhat.com)
+- clean up bkr workflow usage message (dcallagh@redhat.com)
+- fix a bunch of Unicode type warnings (dcallagh@redhat.com)
+- two-argument .join() is not accepted in sqlalchemy 0.7 (dcallagh@redhat.com)
 * Thu Dec 20 2012 Dan Callaghan <dcallagh@redhat.com> 0.10.6-1
 - 880440 Fix fallback logic for FQDN determination (ncoghlan@redhat.com)
 

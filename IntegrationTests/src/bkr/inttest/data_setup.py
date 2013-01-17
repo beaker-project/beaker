@@ -35,7 +35,7 @@ from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arc
         LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
         SystemGroup, DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
         LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, \
-        GuestResource, VirtResource
+        GuestResource, VirtResource, SystemStatusDuration
 
 log = logging.getLogger(__name__)
 
@@ -148,7 +148,7 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
     if arches:
         osversion.arches = arches
     if not name:
-        name = unique_name(u'DAN6.9-%s')
+        name = unique_name(u'%s.%s-%%s' % (osmajor, osminor))
     distro = Distro.lazy_create(name=name, osversion=osversion)
     if tags:
         distro.tags.extend(tags)
@@ -199,7 +199,7 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
     system = System(fqdn=fqdn,type=type, owner=owner,
                 status=status, **kw)
     if date_added is not None:
-        system.date_added = datetime.date(*map(int, date_added.split('-')))
+        system.date_added = date_added
     system.shared = shared
     system.arch.append(Arch.by_name(arch))
     configure_system_power(system)
@@ -236,6 +236,19 @@ def create_system_activity(user=None, **kw):
             unique_name(u'random_%s'), user.user_name)
     return activity
 
+def create_system_status_history(system, statuses):
+    """ For *statuses* pass a list of tuples of (status, start_time). """
+    ssd = SystemStatusDuration(status=statuses[0][0], start_time=statuses[0][1])
+    for status, start_time in statuses[1:]:
+        ssd.finish_time = start_time
+        system.status_durations.append(ssd)
+        ssd = SystemStatusDuration(status=status, start_time=start_time)
+    ssd.finish_time = datetime.datetime.utcnow()
+    system.status_durations.append(ssd)
+    # last one should be its current status
+    system.status_durations.append(SystemStatusDuration(status=system.status,
+            start_time=ssd.finish_time))
+
 def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.0-1',
         uploader=None, owner=None, priority=u'Manual', valid=None, path=None, 
         description=None, requires=None, runfor=None, type=None):
@@ -244,7 +257,7 @@ def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.
     if path is None:
         path = u'/mnt/tests/%s' % name
     if description is None:
-        description = unique_name('description%s')
+        description = unique_name(u'description%s')
     if uploader is None:
         uploader = create_user(user_name=u'task-uploader%s' % name.replace('/', '-'))
     if owner is None:
@@ -294,7 +307,7 @@ def create_tasks(xmljob):
 
 def create_recipe(distro_tree=None, task_list=None,
         task_name=u'/distribution/reservesys', whiteboard=None,
-        server_log=False, role=None, cls=MachineRecipe, **kwargs):
+        role=None, cls=MachineRecipe, **kwargs):
     if not distro_tree:
         distro_tree = create_distro_tree()
     recipe = cls(ttasks=1)
@@ -303,40 +316,12 @@ def create_recipe(distro_tree=None, task_list=None,
     recipe.role = role
     recipe.distro_requires = recipe.distro_tree.to_xml().toxml()
 
-    if not server_log:
-        recipe.logs = [LogRecipe(path=u'recipe_path',filename=u'dummy.txt')]
-    else:
-        recipe.log_server = u'dummy-archive-server'
-        recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/',
-                path=u'recipe_path', filename=u'dummy.txt' )]
-
-    if not server_log:
-        rt_log = lambda: LogRecipeTask(path=u'tasks', filename=u'dummy.txt')
-    else:
-        rt_log = lambda: LogRecipeTask(server=u'http://dummy-archive-server/beaker/',
-                path=u'tasks', filename=u'dummy.txt')
-    if not server_log:
-        rtr_log = lambda: LogRecipeTaskResult(path=u'/', filename=u'result.txt')
-    else:
-        rtr_log = lambda: LogRecipeTaskResult(server=u'http://dummy-archive-server/beaker/',
-                path=u'/', filename=u'result.txt')
-
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
             rt = RecipeTask(task=t)
-            rt.logs = [rt_log()]
-            rtr = RecipeTaskResult(path=t.name + '/passed',
-                    result=TaskResult.pass_)
-            rtr.logs = [rtr_log()]
-            rt.results.append(rtr)
             recipe.tasks.append(rt)
     else:
         rt = RecipeTask(task=create_task(name=task_name))
-        rt.logs = [rt_log()]
-        rtr = RecipeTaskResult(path=task_name + '/passed',
-                result=TaskResult.pass_)
-        rtr.logs = [rtr_log()]
-        rt.results.append(rtr)
         recipe.tasks.append(rt)
     return recipe
 
@@ -369,8 +354,9 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
             priority=TaskPriority.default_priority())
     recipe_set.recipes.extend(recipes)
     job.recipesets.append(recipe_set)
-    log.debug('Created %s', job.t_id)
+    session.add(job)
     session.flush()
+    log.debug('Created %s', job.t_id)
     return job
 
 def create_job(num_recipes=1, num_guestrecipes=0, whiteboard=None,
@@ -391,14 +377,39 @@ def create_completed_job(**kwargs):
     return job
 
 def mark_recipe_complete(recipe, result=TaskResult.pass_,
-        finish_time=None, **kwargs):
+        finish_time=None, only=False, server_log=False, **kwargs):
     assert result in TaskResult
-    mark_recipe_running(recipe, **kwargs)
+    finish_time = finish_time or datetime.datetime.utcnow()
+    if not only:
+        mark_recipe_running(recipe, **kwargs)
+
+    if not server_log:
+        recipe.logs = [LogRecipe(path=u'recipe_path',filename=u'dummy.txt')]
+    else:
+        recipe.log_server = u'dummy-archive-server'
+        recipe.logs = [LogRecipe(server=u'http://dummy-archive-server/beaker/',
+                path=u'recipe_path', filename=u'dummy.txt' )]
+
+    if not server_log:
+        rt_log = lambda: LogRecipeTask(path=u'tasks', filename=u'dummy.txt')
+    else:
+        rt_log = lambda: LogRecipeTask(server=u'http://dummy-archive-server/beaker/',
+                path=u'tasks', filename=u'dummy.txt')
+    if not server_log:
+        rtr_log = lambda: LogRecipeTaskResult(path=u'/', filename=u'result.txt')
+    else:
+        rtr_log = lambda: LogRecipeTaskResult(server=u'http://dummy-archive-server/beaker/',
+                path=u'/', filename=u'result.txt')
+
     for recipe_task in recipe.tasks:
         rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
-        recipe_task.finish_time = finish_time or datetime.datetime.utcnow()
+        rtr.logs = [rtr_log()]
+        recipe_task.logs = [rt_log()]
+        recipe_task.finish_time = finish_time
         recipe_task.status = TaskStatus.completed
         recipe_task.results.append(rtr)
+    recipe.resource.install_done = finish_time
+    recipe.resource.postinstall_done = finish_time
     recipe.update_status()
     log.debug('Marked %s as complete with result %s', recipe.t_id, result)
 
@@ -440,6 +451,7 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
     recipe.start_time = start_time
     recipe.watchdog = Watchdog()
     recipe.waiting()
+    recipe.resource.rebooted = start_time
     log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.resource.fqdn)
 
 def mark_job_waiting(job):
@@ -447,12 +459,14 @@ def mark_job_waiting(job):
         for recipe in recipeset.recipes:
             mark_recipe_waiting(recipe)
 
-def mark_recipe_running(recipe, fqdn=None, **kwargs):
-    mark_recipe_waiting(recipe, **kwargs)
+def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
+    if not only:
+        mark_recipe_waiting(recipe, **kwargs)
+    recipe.resource.install_started = datetime.datetime.utcnow()
     recipe.tasks[0].start()
     if isinstance(recipe, GuestRecipe):
         if not fqdn:
-            fqdn = unique_name('guest_fqdn_%s')
+            fqdn = unique_name(u'guest_fqdn_%s')
         recipe.resource.fqdn = fqdn
     log.debug('Started %s', recipe.tasks[0].t_id)
 
@@ -487,7 +501,7 @@ def playback_job_results(job, xmljob):
             for k, xmltask in enumerate(xmlrecipe.iter_tasks()):
                 playback_task_results(job.recipesets[i].recipes[j].tasks[k], xmltask)
 
-def create_manual_reservation(system, start, finish, user=None):
+def create_manual_reservation(system, start, finish=None, user=None):
     if user is None:
         user = create_user()
     system.reservations.append(Reservation(start_time=start,
@@ -497,11 +511,12 @@ def create_manual_reservation(system, start, finish, user=None):
             old_value=u'', new_value=user.user_name)
     activity.created = start
     system.activity.append(activity)
-    activity = SystemActivity(user=user,
-            service=u'WEBUI', action=u'Returned', field_name=u'User',
-            old_value=user.user_name, new_value=u'')
-    activity.created = finish
-    system.activity.append(activity)
+    if finish:
+        activity = SystemActivity(user=user,
+                service=u'WEBUI', action=u'Returned', field_name=u'User',
+                old_value=user.user_name, new_value=u'')
+        activity.created = finish
+        system.activity.append(activity)
 
 def create_test_env(type):#FIXME not yet using different types
     """

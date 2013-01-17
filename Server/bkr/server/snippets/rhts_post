@@ -1,4 +1,24 @@
 set -x
+# Check in with Beaker Server, let it know our hostname, and
+# record our install time.
+REPORTED_FQDN=$(hostname -f)
+{# Note that the last string comparison relies on bash prefix matching, not globbing #}
+if [[ -z "$REPORTED_FQDN" || $REPORTED_FQDN == localhost || $REPORTED_FQDN == localhost.* ]] ; then
+    # hostname -f is the most future-proof approach, but it isn't always reliable
+    if [ -f /etc/hostname ] ; then
+        # Preferred fallback if the OS is recent enough to provide it
+        REPORTED_FQDN=$(cat /etc/hostname)
+    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
+        # Last resort fallback to try to report something sensible
+        REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
+    fi
+fi
+{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
+wget -O - http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$REPORTED_FQDN
+{% else %}
+curl http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$REPORTED_FQDN
+{% endif %}
+
 {% snippet 'clear_netboot' %}
 {% if recipe %}
 echo {{ recipe.id }} > /root/RECIPE.TXT
@@ -13,6 +33,7 @@ fi
 # Enable post-install boot notification
 {% snippet 'post_anamon' %}
 {% snippet 'readahead_sysconfig' %}
+{% snippet 'linkdelay' %}
 
 {#
 ## Turn on ntpd
@@ -77,7 +98,7 @@ popd
 #Add Task Repo
 {% if taskrepo %}
 {% set reponame, repourl = taskrepo.split(',', 1) %}
-cat << EOF >/etc/yum.repos.d/{{ reponame }}.repo
+cat <<"EOF" >/etc/yum.repos.d/{{ reponame }}.repo
 [{{ reponame }}]
 name={{ reponame }}
 baseurl={{ repourl }}
@@ -90,7 +111,7 @@ EOF
 # Add Harness Repo
 {% if harnessrepo %}
 {% set reponame, repourl = harnessrepo.split(',', 1) %}
-cat << EOF >/etc/yum.repos.d/{{ reponame }}.repo
+cat <<"EOF" >/etc/yum.repos.d/{{ reponame }}.repo
 [{{ reponame }}]
 name={{ reponame }}
 baseurl={{ repourl }}
@@ -174,22 +195,10 @@ useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82
 {% snippet 'mvebu' %}
 {% endif %}
 {% if recipe %}
-# Check in with Beaker Server, let it know our hostname
-REPORTED_FQDN=$(hostname -f)
-{# Note that the string comparisons below rely on bash prefix matching, not globbing #}
-if [[ -z "$REPORTED_FQDN" || $REPORTED_FQDN == localhost || $REPORTED_FQDN == localhost.* ]] ; then
-    # hostname -f is the most future-proof approach, but it isn't always reliable
-    if [ -f /etc/hostname ] ; then
-        # Preferred fallback if the OS is recent enough to provide it
-        REPORTED_FQDN=$(cat /etc/hostname)
-    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
-        # Last resort fallback to try to report something sensible
-        REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
-    fi
-fi
+# Check in with Beaker Server, record our postinstall time.
 {% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
-wget -O - http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$REPORTED_FQDN
+wget -O - http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}
 {% else %}
-curl http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$REPORTED_FQDN
+curl http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}
 {% endif %}
 {% endif %}

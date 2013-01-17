@@ -58,11 +58,11 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
     #Setup User account
     if user_name:
         if password:
-            user = User(user_name=user_name.encode('utf8'), password=password.encode('utf8'))
+            user = User(user_name=user_name.decode('utf8'), password=password.decode('utf8'))
             if user_display_name:
-                user.display_name = user_display_name.encode('utf8')
+                user.display_name = user_display_name.decode('utf8')
             if user_email_address:
-                user.email_address = user_email_address.encode('utf8')
+                user.email_address = user_email_address.decode('utf8')
             admin.users.append(user)
         else:
             print "Password must be provided with username"
@@ -207,15 +207,15 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         ConfigItem.by_name(u'root_password').set(u'beaker', user=admin.users[0])
 
     try:
-        ConfigItem.by_name('default_guest_memory')
+        ConfigItem.by_name(u'default_guest_memory')
     except NoResultFound:
-        ConfigItem(name='default_guest_memory',
+        ConfigItem(name=u'default_guest_memory',
                 description=u"Default memory (MB) for dynamic guest provisioning",
                 numeric=True)
     try:
-        ConfigItem.by_name('default_guest_disk_size')
+        ConfigItem.by_name(u'default_guest_disk_size')
     except NoResultFound:
-        ConfigItem(name='default_guest_disk_size',
+        ConfigItem(name=u'default_guest_disk_size',
                 description=u"Default disk size (GB) for dynamic guest provisioning",
                 numeric=True)
 

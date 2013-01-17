@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
+from datetime import datetime
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config, url
 from turbogears import identity, redirect
@@ -202,6 +202,45 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
+    def install_start(self, recipe_id=None):
+        """
+        Report comencement of provisioning of a recipe's resource, extend
+        first task's watchdog, and report 'Install Started' against it.
+        """
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_("Invalid Recipe ID %s" % recipe_id))
+        recipe.resource.install_started = datetime.utcnow()
+
+        # extend watchdog by 3 hours 60 * 60 * 3
+        kill_time = 10800
+        # XXX In future releases where 'Provisioning'
+        # is a valid recipe state, we will no longer
+        # need the following block.
+        first_task = recipe.first_task
+        log.debug('Extending watchdog for %s', first_task.t_id)
+        first_task.extend(kill_time)
+        log.debug('Recording /start for %s', first_task.t_id)
+        first_task.pass_(path=u'/start', score=0, summary=u'Install Started')
+        return True
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def postinstall_done(self, recipe_id=None):
+        """
+        Report completion of postinstallation
+        """
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError, e:
+            raise BX(_(u'Invalid Recipe ID %s' % recipe_id))
+        recipe.resource.postinstall_finished = datetime.utcnow()
+        return True
+
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
     def install_done(self, recipe_id=None, fqdn=None):
         """
         Report completion of installation with current FQDN
@@ -216,6 +255,7 @@ class Recipes(RPCRoot):
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
 
+        recipe.resource.install_finished = datetime.utcnow()
         # We don't want to change an existing FQDN, just set it
         # if it hasn't been set already (see BZ#879146)
         configured = recipe.resource.fqdn

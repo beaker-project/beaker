@@ -80,6 +80,21 @@ python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstar
 
 %post --log=/dev/console
 set -x
+# Check in with Beaker Server, let it know our hostname, and
+# record our install time.
+REPORTED_FQDN=$(hostname -f)
+if [[ -z "$REPORTED_FQDN" || $REPORTED_FQDN == localhost || $REPORTED_FQDN == localhost.* ]] ; then
+    # hostname -f is the most future-proof approach, but it isn't always reliable
+    if [ -f /etc/hostname ] ; then
+        # Preferred fallback if the OS is recent enough to provide it
+        REPORTED_FQDN=$(cat /etc/hostname)
+    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
+        # Last resort fallback to try to report something sensible
+        REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
+    fi
+fi
+curl http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN
+
 curl http://lab.test-kickstart.invalid:8000/nopxe/test02.test-kickstart.invalid
 echo @RECIPEID@ > /root/RECIPE.TXT
 
@@ -151,7 +166,7 @@ fi
 
 
 #Add Task Repo
-cat << EOF >/etc/yum.repos.d/beaker-tasks.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
 name=beaker-tasks
 baseurl=@REPOS@@RECIPEID@
@@ -161,7 +176,7 @@ EOF
 
 
 # Add Harness Repo
-cat << EOF >/etc/yum.repos.d/beaker-harness.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=beaker-harness
 baseurl=@HARNESS@RedHatEnterpriseLinux7/
@@ -170,7 +185,7 @@ gpgcheck=0
 EOF
 
 # Add distro and custom Repos
-cat << EOF >/etc/yum.repos.d/beaker-repos_Server-optional.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_Server-optional.repo
 [beaker-repos_Server-optional]
 name=beaker-repos_Server-optional
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/os
@@ -178,7 +193,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-repos_debug_Server.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_debug_Server.repo
 [beaker-repos_debug_Server]
 name=beaker-repos_debug_Server
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/debuginfo
@@ -186,7 +201,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-repos_debug_Server_optional.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_debug_Server_optional.repo
 [beaker-repos_debug_Server_optional]
 name=beaker-repos_debug_Server_optional
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server-optional/s390x/debuginfo
@@ -194,7 +209,7 @@ enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
-cat << EOF >/etc/yum.repos.d/beaker-repos_Server.repo
+cat <<"EOF" >/etc/yum.repos.d/beaker-repos_Server.repo
 [beaker-repos_Server]
 name=beaker-repos_Server
 baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/
@@ -287,19 +302,8 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
-# Check in with Beaker Server, let it know our hostname
-REPORTED_FQDN=$(hostname -f)
-if [[ -z "$REPORTED_FQDN" || $REPORTED_FQDN == localhost || $REPORTED_FQDN == localhost.* ]] ; then
-    # hostname -f is the most future-proof approach, but it isn't always reliable
-    if [ -f /etc/hostname ] ; then
-        # Preferred fallback if the OS is recent enough to provide it
-        REPORTED_FQDN=$(cat /etc/hostname)
-    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
-        # Last resort fallback to try to report something sensible
-        REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
-    fi
-fi
-curl http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN
+# Check in with Beaker Server, record our postinstall time.
+curl http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
 # no snippet data for RedHatEnterpriseLinux7_post
 # no snippet data for system_post
 %end

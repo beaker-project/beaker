@@ -7,10 +7,9 @@ from bkr.inttest.server.webdriver_utils import login, is_activity_row_present
 from bkr.inttest import data_setup, get_server_base
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
         System, SystemStatus, TaskStatus, CommandActivity, CommandStatus, \
-        KernelType
+        KernelType, LabController
 from bkr.server.tools import beakerd
 from bkr.inttest.server.selenium.test_activity import is_activity_row_present
-from bkr.server.model import LabController
 
 
 class LabControllerViewTest(WebDriverTestCase):
@@ -303,6 +302,26 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
             session.refresh(command)
             self.assertEquals(command.status, CommandStatus.failed)
 
+    def test_add_completed_command(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lc)
+            fqdn = system.fqdn
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        queued = self.server.labcontrollers.get_queued_command_details()
+        self.assertEquals(len(queued), 0, queued)
+        expected = u'Arbitrary command!'
+        self.server.labcontrollers.add_completed_command(fqdn, expected)
+        queued = self.server.labcontrollers.get_queued_command_details()
+        self.assertEquals(len(queued), 0, queued)
+        with session.begin():
+            completed = list(CommandActivity.query
+                             .join(CommandActivity.system)
+                             .filter(System.fqdn == fqdn))
+            self.assertEquals(len(completed), 1, completed)
+            self.assertEquals(completed[0].action, expected)
+
+
+
 class TestPowerFailures(XmlRpcTestCase):
 
     def setUp(self):
@@ -360,10 +379,10 @@ class TestPowerFailures(XmlRpcTestCase):
                 </hostRequires>
                 """ % system.fqdn)
 
-        beakerd.new_recipes()
-        beakerd.processed_recipesets()
-        beakerd.queued_recipes()
-        beakerd.scheduled_recipes()
+        beakerd.process_new_recipes()
+        beakerd.queue_processed_recipesets()
+        beakerd.schedule_queued_recipes()
+        beakerd.provision_scheduled_recipesets()
 
         with session.begin():
             job = Job.query.get(job.id)
@@ -392,10 +411,10 @@ class TestPowerFailures(XmlRpcTestCase):
                 </hostRequires>
                 """ % system.fqdn)
 
-        beakerd.new_recipes()
-        beakerd.processed_recipesets()
-        beakerd.queued_recipes()
-        beakerd.scheduled_recipes()
+        beakerd.process_new_recipes()
+        beakerd.queue_processed_recipesets()
+        beakerd.schedule_queued_recipes()
+        beakerd.provision_scheduled_recipesets()
 
         with session.begin():
             job = Job.query.get(job.id)
