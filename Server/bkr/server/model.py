@@ -5895,6 +5895,12 @@ class RecipeRepo(MappedObject):
     """
     Custom repos 
     """
+
+    def __init__(self, name, url):
+        # Intentionally not chaining to super(), to avoid session.add(self)
+        self.name = name
+        self.url = url
+
     def to_xml(self):
         repo = xmldoc.createElement("repo")
         repo.setAttribute("name", "%s" % self.name)
@@ -5906,6 +5912,11 @@ class RecipeKSAppend(MappedObject):
     """
     Kickstart appends
     """
+
+    def __init__(self, ks_append):
+        # Intentionally not chaining to super(), to avoid session.add(self)
+        self.ks_append = ks_append
+
     def to_xml(self):
         ks_append = xmldoc.createElement("ks_append")
         text = xmldoc.createCDATASection('%s' % self.ks_append)
