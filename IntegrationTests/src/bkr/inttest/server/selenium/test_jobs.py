@@ -430,28 +430,48 @@ class NewJobTest(SeleniumTestCase):
         self.assertEqual(sel.get_title(), 'My Jobs')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=869455
-    def test_doesnt_barf_on_package(self):
+    # https://bugzilla.redhat.com/show_bug.cgi?id=896622
+    def test_recipe_not_added_to_session_too_early(self):
         self.login()
         sel = self.selenium
         sel.open('')
         sel.click('link=New Job')
         sel.wait_for_page_to_load('30000')
         xml_file = tempfile.NamedTemporaryFile()
+        # These bugs are triggered by related entites of Recipe (ks_appends, 
+        # repos, and packages) pulling the recipe into the session too early. 
+        # So our test job XML has one of each on the recipe and its 
+        # guestrecipe, to cover all cases.
         xml_file.write('''<?xml version="1.0" encoding="utf-8"?>
             <job>
                 <whiteboard>job with package</whiteboard>
                 <recipeSet>
                     <recipe>
                         <guestrecipe guestargs="--kvm" guestname="one">
+                            <ks_appends>
+                                <ks_append>append1</ks_append>
+                            </ks_appends>
+                            <packages>
+                                <package name="package1" />
+                            </packages>
+                            <repos>
+                                <repo name="repo1" url="http://example.com/" />
+                            </repos>
                             <distroRequires>
                                 <distro_name op="=" value="BlueShoeLinux5-5" />
                             </distroRequires>
                             <hostRequires/>
                             <task name="/distribution/install" />
                         </guestrecipe>
+                        <ks_appends>
+                            <ks_append>append2</ks_append>
+                        </ks_appends>
                         <packages>
-                            <package name="python-lxml" />
+                            <package name="package2" />
                         </packages>
+                        <repos>
+                            <repo name="repo2" url="http://example.com/" />
+                        </repos>
                         <distroRequires>
                             <distro_name op="=" value="BlueShoeLinux5-5" />
                         </distroRequires>
