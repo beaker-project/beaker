@@ -47,6 +47,29 @@ underneath it.
 You can edit or delete a report by clicking the respective link below each 
 report.
 
+OS versions
+-----------
+
+The "OS Versions" page shows a list of the major and minor versions of every 
+distro that has been imported into Beaker. Select :menuselection:`Admin --> OS 
+Versions` from the menu.
+
+To edit a particular OS major version, click its name in the first column. From 
+this page you can edit the following details:
+
+Alias
+    If set, the alias can be used to refer to this OS major version in the 
+    ``Releases`` field of task metadata (see :ref:`testinfo-releases`). This is 
+    intended mainly as a compatibility mechanism for older tasks which use an 
+    obsolete name in the ``Releases`` field (for example ``RHEL3`` instead of 
+    ``RedHatEnterpriseLinux3``).
+
+Install Options
+    Like install options for systems (see :ref:`system-details-tabs`), these 
+    are the default options when provisioning a distro from this major version.
+    Options may be set for all arches or for each arch individually. Options at 
+    this level are overridden by any options set at the distro tree level.
+
 .. _admin-configuration:
 
 Configuration
