@@ -47,6 +47,8 @@ underneath it.
 You can edit or delete a report by clicking the respective link below each 
 report.
 
+.. _admin-os-versions:
+
 OS versions
 -----------
 
