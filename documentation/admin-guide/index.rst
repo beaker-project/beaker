@@ -35,3 +35,4 @@ Contents
    ovirt
    graphite
    reporting-queries
+   how-do-i
