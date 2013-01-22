@@ -28,6 +28,25 @@ permissions to the group, as well as changing its display name and group name.
 To search through the historical activity of all groups, select 
 :menuselection:`Activity --> Groups` from the menu.
 
+External reports
+----------------
+
+If you are using external tools to produce reports about your Beaker site (for 
+example, using Beaker's :ref:`Graphite integration <graphite>` or a business 
+intelligence tool), you can link to the reports from the "External Reports" 
+page in Beaker. Select :menuselection:`Reports --> External` from the menu.
+
+This page displays a grid of links to external reports. When you are logged in 
+as an administrator you can also modify the external report links from this 
+page.
+
+To add a new report, click :guilabel:`Add Report ( + )` at the bottom of the 
+page and fill in the report's name, URL, and a short description to appear 
+underneath it.
+
+You can edit or delete a report by clicking the respective link below each 
+report.
+
 .. _admin-configuration:
 
 Configuration
