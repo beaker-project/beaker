@@ -117,6 +117,11 @@ class Machine_Test(BeakerWorkflow):
         else:
             families = self.getSystemOsMajorArches(*args, **kwargs)
 
+        # Exit early
+        if not families:
+            print >>sys.stderr, 'Could not find an appropriate distro to provision system with.'
+            sys.exit(1)
+
         # Create Job
         job = BeakerJob(*args, **kwargs)
 
