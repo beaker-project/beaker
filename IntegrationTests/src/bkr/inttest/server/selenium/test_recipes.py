@@ -139,6 +139,7 @@ class TestRecipeView(WebDriverTestCase):
 
     def test_recipe_systems(self):
         with session.begin():
+            self.system.user = self.user
             queued_job = data_setup.create_job(owner=self.user,
                     distro_tree=self.distro_tree)
             data_setup.mark_job_queued(queued_job)
@@ -151,6 +152,8 @@ class TestRecipeView(WebDriverTestCase):
 
         # Make sure our system link is there
         b.find_element_by_link_text(self.system.fqdn)
+        # Make sure out user link is there
+        b.find_element_by_link_text(self.system.user.user_name)
         # Make sure we only have one system against our recipe
         system_rows = b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr')
         self.assert_(len(system_rows) == 1)
