@@ -101,7 +101,9 @@
         <zeroOrMore>
           <element name="guestrecipe">
             <interleave>
-              <attribute name="guestname" />
+              <optional>
+                <attribute name="guestname" />
+              </optional>
               <attribute name="guestargs" />
               <ref name="recipe_contents" />
             </interleave>

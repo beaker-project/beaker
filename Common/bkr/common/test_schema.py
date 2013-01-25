@@ -184,6 +184,28 @@ class JobSchemaTest(unittest.TestCase, SchemaTest):
             </job>
             ''')
 
+    def test_optional_guestname(self):
+        self.assert_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <guestrecipe guestargs="--lol">
+                            <distroRequires>
+                                <distro_name op="=" value="BlueShoeLinux5-5"/>
+                            </distroRequires>
+                            <hostRequires/>
+                            <task name="/distribution/install" role="STANDALONE"/>
+                        </guestrecipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5"/>
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+
     def test_hostRequires_not_optional(self):
         self.assert_not_valid('''
             <job>

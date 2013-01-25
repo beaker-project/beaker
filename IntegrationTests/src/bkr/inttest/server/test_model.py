@@ -1537,6 +1537,18 @@ class GuestRecipeTest(unittest.TestCase):
         self.assert_('nfs_location="nfs://something:/somewhere"' in guestxml, guestxml)
         self.assert_('http_location="http://something/somewhere"' in guestxml, guestxml)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=691666
+    def test_guestname(self):
+        job_1 = data_setup.create_job(num_guestrecipes=1)
+        guest_recipe_1 = job_1.recipesets[0].recipes[0].guests[0]
+        job_2 = data_setup.create_job(num_guestrecipes=1, guestname="blueguest")
+        guest_recipe_2 = job_2.recipesets[0].recipes[0].guests[0]
+        session.flush()
+
+        guestxml_1 = guest_recipe_1.to_xml().toxml()
+        guestxml_2 = guest_recipe_2.to_xml().toxml()
+        self.assert_('guestname=""' in guestxml_1, guestxml_1)
+        self.assert_('guestname="blueguest"' in guestxml_2, guestxml_2)
 
 class MACAddressAllocationTest(unittest.TestCase):
 

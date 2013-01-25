@@ -325,8 +325,9 @@ def create_recipe(distro_tree=None, task_list=None,
         recipe.tasks.append(rt)
     return recipe
 
-def create_guestrecipe(host, **kwargs):
+def create_guestrecipe(host, guestname=None, **kwargs):
     guestrecipe = create_recipe(cls=GuestRecipe, **kwargs)
+    guestrecipe.guestname = guestname
     host.guests.append(guestrecipe)
     return guestrecipe
 

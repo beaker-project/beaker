@@ -5465,7 +5465,7 @@ class GuestRecipe(Recipe):
     systemtype = 'Virtual'
     def to_xml(self, clone=False, from_recipeset=False, from_machine=False):
         recipe = xmldoc.createElement("guestrecipe")
-        recipe.setAttribute("guestname", "%s" % self.guestname)
+        recipe.setAttribute("guestname", "%s" % (self.guestname or ""))
         recipe.setAttribute("guestargs", "%s" % self.guestargs)
         if self.resource and self.resource.mac_address and not clone:
             recipe.setAttribute("mac_address", "%s" % self.resource.mac_address)
