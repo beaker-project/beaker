@@ -13,7 +13,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
-        VirtResource, OSMajor, OSMajorInstallOptions, Watchdog
+        VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -1539,12 +1539,10 @@ class MACAddressAllocationTest(unittest.TestCase):
         session.begin()
         # Other tests might have left behind running recipes using MAC
         # addresses, let's cancel them all
-        running = Recipe.query.filter(not_(Recipe.status.in_(
+        running = RecipeSet.query.filter(not_(RecipeSet.status.in_(
                 [s for s in TaskStatus if s.finished])))
-        for guestrecipe in running.join(Recipe.resource.of_type(GuestResource)):
-            guestrecipe.cancel()
-        for virtrecipe in running.join(Recipe.resource.of_type(VirtResource)):
-            virtrecipe.cancel()
+        for rs in running:
+            rs.cancel()
 
     def tearDown(self):
         model.VirtManager = self.orig_VirtManager
