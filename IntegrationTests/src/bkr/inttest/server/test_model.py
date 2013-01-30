@@ -1594,6 +1594,21 @@ class MACAddressAllocationTest(unittest.TestCase):
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:00'))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=903893#c12
+    def test_guestrecipe_complete_but_recipeset_incomplete(self):
+        job = data_setup.create_job(num_guestrecipes=1)
+        data_setup.mark_job_running(job)
+        self.assertEquals(job.recipesets[0].recipes[0].guests[0].resource.mac_address,
+                    netaddr.EUI('52:54:00:00:00:00'))
+        data_setup.mark_recipe_complete(job.recipesets[0].recipes[0].guests[0], only=True)
+        # host recipe may still be running reservesys or some other task, 
+        # even after the guest recipe is finished...
+        self.assertEquals(job.recipesets[0].recipes[0].status, TaskStatus.running)
+        self.assertEquals(job.recipesets[0].status, TaskStatus.running)
+        # ... so we mustn't re-use the MAC address yet
+        self.assertEquals(RecipeResource._lowest_free_mac(),
+                    netaddr.EUI('52:54:00:00:00:01'))
+
 class LogRecipeTest(unittest.TestCase):
 
     def setUp(self):
