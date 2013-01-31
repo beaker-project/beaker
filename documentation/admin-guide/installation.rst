@@ -2,7 +2,7 @@ Installation
 ============
 
 Pre-built Beaker packages are available from the `Download 
-</beaker-project.org/download.html>`_ section of Beaker's web site. 
+<../../download.html>`_ section of Beaker's web site. 
 There are two main repos. One containing packages needed for installing
 the Beaker server and required components, another for packages needed
 to run the Beaker client. Download the repo file that suits your requirements 

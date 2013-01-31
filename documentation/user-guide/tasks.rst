@@ -369,7 +369,7 @@ To learn more about the functions used to write the test, please see the
 `BeakerLib documentation 
 <https://fedorahosted.org/beakerlib/wiki/Manual>`_. You can learn
 more about ``beaker-wizard`` from its
-`man page <http://beaker-project.org/man/beaker-wizard.html>`__.
+`man page <../../man/beaker-wizard.html>`__.
 
 Running the task
 ~~~~~~~~~~~~~~~~
@@ -404,7 +404,7 @@ You can then :ref:`submit the job <job-submission>`. After the job
 has completed, you can access the logs as described in :ref:`job-results`.
 You will see that on success, the ``TESTOUT.log``
 file will contain the same log as when it was run locally. You can also obtain 
-the logs using the `bkr job-logs <../man/bkr-job-logs.html>`_ command. In some 
+the logs using the `bkr job-logs <../../man/bkr-job-logs.html>`_ command. In some 
 cases, in addition to the log files you may also want to retrieve some files 
 from the test system. For example, in this case you may want to examine the 
 contents of ``/proc/filesystems`` on the system that run the test. This can be 
@@ -462,7 +462,7 @@ If you already have a task packaged as an RPM, click "Scheduler>New
 Task" from the main menu bar. You will need to click on "Browse" to
 locate your task, and then add it with the "Submit Data" button. See the
 beaker client `man
-page <http://beaker-project.org/man/bkr-task-add.html>`__ for how to do
+page <../../man/bkr-task-add.html>`__ for how to do
 this via the beaker client.
 
 If you are trying to update an existing task, the version of the new
