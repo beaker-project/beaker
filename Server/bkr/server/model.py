@@ -6655,14 +6655,26 @@ class VirtManager(object):
                         bootable=True)
                 vm.disks.add(disk)
 
-                # Wait up to twenty seconds(!) for the disk image to be created
+                # Wait up to twenty seconds(!) for the disk image to be created.
+                # Check both the vm state and disk state, image creation may not
+                # lock the vms. That should be a RHEV issue, but it doesn't hurt
+                # to check both of them by us.
                 for _ in range(20):
-                    if self.api.vms.get(name).status.state != 'image_locked':
+                    vm = self.api.vms.get(name)
+                    vm_state = vm.status.state
+                    # create disk with param 'name' doesn't work in RHEV 3.0, so just
+                    # find the first disk of the vm as we only attached one to it
+                    disk_state = vm.disks.list()[0].status.state
+                    if vm_state == 'down' and disk_state == "ok":
                         break
                     time.sleep(1)
-                state = self.api.vms.get(name).status.state
-                if state == 'image_locked':
-                    raise ValueError('VM %s state %s', name, state)
+                vm = self.api.vms.get(name)
+                vm_state = vm.status.state
+                disk_state = vm.disks.list()[0].status.state
+                if vm_state != 'down':
+                    raise ValueError("VM %s's state: %s", name, vm_state)
+                if disk_state != 'ok':
+                    raise ValueError("VM %s's disk state: %s", name, disk_state)
 
                 dc_name = self.api.datacenters.get(id=cluster.data_center.id).name
                 return LabController.by_data_center_name(dc_name)
