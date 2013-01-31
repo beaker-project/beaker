@@ -6103,12 +6103,12 @@ class RecipeResource(MappedObject):
         # These subqueries gives all MAC addresses in use right now
         guest_mac_query = session.query(GuestResource.mac_address.label('mac_address'))\
                 .filter(GuestResource.mac_address != None)\
-                .join(RecipeResource.recipe)\
-                .filter(not_(Recipe.status.in_([s for s in TaskStatus if s.finished])))
+                .join(RecipeResource.recipe).join(Recipe.recipeset)\
+                .filter(not_(RecipeSet.status.in_([s for s in TaskStatus if s.finished])))
         virt_mac_query = session.query(VirtResource.mac_address.label('mac_address'))\
                 .filter(VirtResource.mac_address != None)\
-                .join(RecipeResource.recipe)\
-                .filter(not_(Recipe.status.in_([s for s in TaskStatus if s.finished])))
+                .join(RecipeResource.recipe).join(Recipe.recipeset)\
+                .filter(not_(RecipeSet.status.in_([s for s in TaskStatus if s.finished])))
         # This trickery finds "gaps" of unused MAC addresses by filtering for MAC
         # addresses where address + 1 is not in use.
         # We union with base address - 1 to find any gap at the start.

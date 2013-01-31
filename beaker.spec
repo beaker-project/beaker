@@ -17,7 +17,7 @@
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.11.1
+Version:        0.11.2
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -374,6 +374,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Wed Jan 30 2013 Dan Callaghan <dcallagh@redhat.com> 0.11.2-1
+- 903893 only reuse MAC addresses once the entire recipe set is finished
+  (dcallagh@redhat.com)
+
 * Mon Jan 21 2013 Dan Callaghan <dcallagh@redhat.com> 0.11.1-1
 - 896622 ensure Jobs are not added to the session until fully populated 
   (dcallagh@redhat.com)

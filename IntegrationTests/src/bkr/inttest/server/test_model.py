@@ -13,7 +13,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
-        VirtResource, OSMajor, OSMajorInstallOptions, Watchdog
+        VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -1558,12 +1558,10 @@ class MACAddressAllocationTest(unittest.TestCase):
         session.begin()
         # Other tests might have left behind running recipes using MAC
         # addresses, let's cancel them all
-        running = Recipe.query.filter(not_(Recipe.status.in_(
+        running = RecipeSet.query.filter(not_(RecipeSet.status.in_(
                 [s for s in TaskStatus if s.finished])))
-        for guestrecipe in running.join(Recipe.resource.of_type(GuestResource)):
-            guestrecipe.cancel()
-        for virtrecipe in running.join(Recipe.resource.of_type(VirtResource)):
-            virtrecipe.cancel()
+        for rs in running:
+            rs.cancel()
 
     def tearDown(self):
         model.VirtManager = self.orig_VirtManager
@@ -1612,6 +1610,21 @@ class MACAddressAllocationTest(unittest.TestCase):
         first_job.cancel()
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:00'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=903893#c12
+    def test_guestrecipe_complete_but_recipeset_incomplete(self):
+        job = data_setup.create_job(num_guestrecipes=1)
+        data_setup.mark_job_running(job)
+        self.assertEquals(job.recipesets[0].recipes[0].guests[0].resource.mac_address,
+                    netaddr.EUI('52:54:00:00:00:00'))
+        data_setup.mark_recipe_complete(job.recipesets[0].recipes[0].guests[0], only=True)
+        # host recipe may still be running reservesys or some other task, 
+        # even after the guest recipe is finished...
+        self.assertEquals(job.recipesets[0].recipes[0].status, TaskStatus.running)
+        self.assertEquals(job.recipesets[0].status, TaskStatus.running)
+        # ... so we mustn't re-use the MAC address yet
+        self.assertEquals(RecipeResource._lowest_free_mac(),
+                    netaddr.EUI('52:54:00:00:00:01'))
 
 class LogRecipeTest(unittest.TestCase):
 

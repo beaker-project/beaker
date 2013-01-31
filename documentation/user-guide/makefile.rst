@@ -433,6 +433,8 @@ be listed here.
 This field is optional; and can occur multiple times within the
 metadata. The value should be a space-separated list of package names.
 
+.. _testinfo-releases:
+
 Releases
 --------
 

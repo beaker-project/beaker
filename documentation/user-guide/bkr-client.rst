@@ -10,7 +10,7 @@ Installing and configuring the client
 -------------------------------------
 
 Pre-built Beaker packages are available from the `Download 
-</beaker-project.org/download.html>`_ section of Beaker's web site. Download 
+<../../download.html>`_ section of Beaker's web site. Download 
 the repo file that suits your requirements and copy it to ``/etc/yum.repos.d``.
 
 Install the ``beaker-client`` package::
@@ -48,7 +48,7 @@ Using the client
 ----------------
 
 For full details about the ``bkr`` client and its subcommands, refer to the 
-`Beaker client man pages <../man/>`_. A summary of some common commands is 
+`Beaker client man pages <../../man/>`_. A summary of some common commands is 
 given below.
 
 To create a simple Job workflow, the beaker client comes with the
