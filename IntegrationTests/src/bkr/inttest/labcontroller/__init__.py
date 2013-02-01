@@ -17,27 +17,26 @@ assert os.path.exists(config_file) , 'Config file %s must exist' % config_file
 load_conf(config_file)
 
 processes = []
-proxy_url = None
+lc_fqdn = None
 
 class LabControllerTestCase(unittest.TestCase):
 
+    def get_lc_fqdn(self):
+        return lc_fqdn
+
     def get_proxy_url(self):
-        return proxy_url
+        return 'http://%s:8000/' % lc_fqdn
 
 def setup_package():
-    global proxy_url
+    global lc_fqdn
     conf = get_conf()
-    if os.path.exists('../.git'):
+
+    if 'BEAKER_LABCONTROLLER_HOSTNAME' not in os.environ:
+        # Let's start the proxy server if we don't
+        # have a real one
         with session.begin():
             user = data_setup.create_user(user_name=conf.get('USERNAME').decode('utf8'), password=conf.get('PASSWORD'))
             lc = data_setup.create_labcontroller(fqdn='localhost', user=user)
-    proxy_url = start_proxy()
-
-def start_proxy():
-
-    if 'LAB_CONTROLLER_BASE_URL' not in os.environ:
-        # Let's start the proxy server if we don't
-        # have a real one
         p = Process('beaker-proxy',
                     args=['python', '../LabController/src/bkr/labcontroller/main.py',
                           '-c', config_file, '-f'],
@@ -49,19 +48,16 @@ def start_proxy():
         except:
             p.stop()
             raise
-        return 'http://localhost:8000/server'
+        lc_fqdn = 'localhost'
     else:
         # We have been passed a space seperated list of LCs
-        lab_controllers = os.environ.get('LAB_CONTROLLER_BASE_URL')
+        lab_controllers = os.environ.get('BEAKER_LABCONTROLLER_HOSTNAME')
         lab_controllers_list = lab_controllers.split()
         # Just get the last one, it shouldn't matter to us
         lab_controller = lab_controllers_list.pop()
-        parsed_url = urlparse(lab_controller)
         # Make sure that the LC is in the DB
-        data_setup.create_labcontroller(fqdn=parsed_url.hostname)
-        parsed_url.port = 8000
-        parsed_url.path = '/server'
-        return urlunparse(parsed_url)
+        data_setup.create_labcontroller(fqdn=lab_controller)
+        lc_fqdn = lab_controller
 
 def teardown_package():
     for process in processes:
