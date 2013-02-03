@@ -50,7 +50,6 @@ See also
 from bkr.client import BeakerCommand
 from optparse import OptionValueError
 
-
 class Watchdog_Extend(BeakerCommand):
     """Extend Task's Watchdog"""
     enabled = True
@@ -69,6 +68,9 @@ class Watchdog_Extend(BeakerCommand):
         username = kwargs.pop("username", None)
         password = kwargs.pop("password", None)
         extend_by = kwargs.pop("by", None)
+
+        if not args:
+            self.parser.error('Please specify one or more task ids.')
 
         self.set_hub(username, password)
         for task_id in args:
