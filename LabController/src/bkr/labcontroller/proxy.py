@@ -301,47 +301,46 @@ class Watchdog(ProxyHelper):
         return transfered
 
     def transfer_recipe_logs(self, recipe_id):
-        """ If Cache is turned on then move the recipes logs to there final place
+        """ If Cache is turned on then move the recipes logs to their final place
         """
-        if self.conf.get("ARCHIVE_SERVER", None):
-            tmpdir = tempfile.mkdtemp(dir=self.basepath)
-            try:
-                # Move logs to tmp directory layout
-                mylogs = self.hub.recipes.files(recipe_id)
-                trlogs = []
-                for mylog in mylogs:
+        tmpdir = tempfile.mkdtemp(dir=self.basepath)
+        try:
+            # Move logs to tmp directory layout
+            mylogs = self.hub.recipes.files(recipe_id)
+            trlogs = []
+            for mylog in mylogs:
+                mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
+                mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
+                                          mylog['path'], mylog['filename'])
+                if os.path.exists(mysrc):
+                    if not os.path.exists(os.path.dirname(mydst)):
+                        os.makedirs(os.path.dirname(mydst))
+                    try:
+                        os.link(mysrc,mydst)
+                        trlogs.append(mylog)
+                    except OSError, e:
+                        logger.error('unable to hardlink %s to %s, %s', mysrc, mydst, e)
+                        return
+                else:
+                        logger.warn('file missing: %s', mysrc)
+            # rsync the logs to their new home
+            rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
+            logger.debug("rsync rc=%s", rc)
+            if rc == 0:
+                # if the logs have been transferred then tell the server the new location
+                self.hub.recipes.change_files(recipe_id, self.conf.get("ARCHIVE_SERVER"),
+                                                         self.conf.get("ARCHIVE_BASEPATH"))
+                for mylog in trlogs:
                     mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                    mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
-                                              mylog['path'], mylog['filename'])
-                    if os.path.exists(mysrc):
-                        if not os.path.exists(os.path.dirname(mydst)):
-                            os.makedirs(os.path.dirname(mydst))
-                        try:
-                            os.link(mysrc,mydst)
-                            trlogs.append(mylog)
-                        except OSError, e:
-                            logger.error('unable to hardlink %s to %s, %s', mysrc, mydst, e)
-                            return
-                    else:
-                            logger.warn('file missing: %s', mysrc)
-                # rsync the logs to there new home
-                rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
-                logger.debug("rsync rc=%s", rc)
-                if rc == 0:
-                    # if the logs have been transfered then tell the server the new location
-                    self.hub.recipes.change_files(recipe_id, self.conf.get("ARCHIVE_SERVER"),
-                                                             self.conf.get("ARCHIVE_BASEPATH"))
-                    for mylog in trlogs:
-                        mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                        self.rm(mysrc)
-                        try:
-                            self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
-                        except OSError:
-                            # Its ok if it fails, dir may not be empty yet
-                            pass
-            finally:
-                # get rid of our tmpdir.
-                shutil.rmtree(tmpdir)
+                    self.rm(mysrc)
+                    try:
+                        self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
+                    except OSError:
+                        # It's ok if it fails, dir may not be empty yet
+                        pass
+        finally:
+            # get rid of our tmpdir.
+            shutil.rmtree(tmpdir)
 
     def rm(self, src):
         """ remove src
