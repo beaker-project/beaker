@@ -31,7 +31,6 @@ from bkr.server.helpers import *
 from bkr.server.recipetasks import RecipeTasks
 from bkr.server.controller_utilities import _custom_status, _custom_result
 from socket import gethostname
-from bkr.upload import Uploader
 import exceptions
 import time
 import urlparse
@@ -63,8 +62,6 @@ class Recipes(RPCRoot):
 
     recipe_widget = RecipeWidget()
     recipe_tasks_widget = RecipeTasksWidget()
-
-    upload = Uploader(config.get("basepath.logs", "/var/www/beaker/logs"))
 
     log_types = dict(R = LogRecipe,
                      T = LogRecipeTask,
@@ -160,29 +157,6 @@ class Recipes(RPCRoot):
         mylog.server = server
         mylog.basepath = basepath
         return True
-
-    @cherrypy.expose
-    @identity.require(identity.not_anonymous())
-    def upload_file(self, recipe_id, path, filename, size, md5sum, offset, data):
-        """
-        upload to recipe in pieces 
-        """
-        try:
-            recipe = Recipe.by_id(recipe_id)
-        except InvalidRequestError:
-            raise BX(_('Invalid recipe ID: %s' % recipe_id))
-
-        # Add the log to the DB if it hasn't been recorded yet.
-        LogRecipe.lazy_create(parent=recipe,
-                              path=path,
-                              filename=filename,
-                             )
-        return self.upload.uploadFile("%s/%s" % (recipe.filepath, path), 
-                                      filename, 
-                                      size, 
-                                      md5sum, 
-                                      offset, 
-                                      data)
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

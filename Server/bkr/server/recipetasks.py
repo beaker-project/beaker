@@ -24,7 +24,6 @@ from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bexceptions import *
-from bkr.upload import Uploader
 import urlparse
 #from turbogears.scheduler import add_interval_task
 
@@ -36,8 +35,6 @@ import string
 class RecipeTasks(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
-
-    upload = Uploader(config.get("basepath.logs", "/var/www/beaker/logs"))
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
@@ -62,30 +59,6 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def upload_file(self, task_id, path, filename, size, md5sum, offset, data):
-        """
-        upload to task in pieces
-        """
-        try:
-            recipetask = RecipeTask.by_id(task_id)
-        except InvalidRequestError:
-            raise BX(_('Invalid task ID: %s' % task_id))
-
-        # Add the log to the DB if it hasn't been recorded yet.
-        LogRecipeTask.lazy_create(parent=recipetask,
-                                  path=path, 
-                                  filename=filename,
-                                 )
-
-        return self.upload.uploadFile("%s/%s" % (recipetask.filepath,path),
-                                      filename,
-                                      size,
-                                      md5sum,
-                                      offset,
-                                      data)
-
-    @cherrypy.expose
-    @identity.require(identity.not_anonymous())
     def register_result_file(self, server, result_id, path, filename, basepath):
         """
         register file and return path to store
@@ -104,29 +77,6 @@ class RecipeTasks(RPCRoot):
         result.recipetask.recipe.log_server = urlparse.urlparse(server)[1]
         return '%s' % result.filepath
 
-    @cherrypy.expose
-    @identity.require(identity.not_anonymous())
-    def result_upload_file(self, result_id, path, filename, size, md5sum, offset, data):
-        """
-        upload to result in pieces
-        """
-        try:
-            result = RecipeTaskResult.by_id(result_id)
-        except InvalidRequestError:
-            raise BX(_('Invalid result ID: %s' % result_id))
-
-        # Add the log to the DB if it hasn't been recorded yet.
-        LogRecipeTaskResult.lazy_create(parent=result,
-                                        path=path, 
-                                        filename=filename,
-                                       )
-
-        return self.upload.uploadFile("%s/%s" % (result.filepath,path),
-                                      filename,
-                                      size,
-                                      md5sum,
-                                      offset,
-                                      data)
 
     @cherrypy.expose
     def watchdogs(self, status='active',lc=None):

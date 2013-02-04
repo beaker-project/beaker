@@ -36,23 +36,3 @@ class LogUploadXmlRpcTest(XmlRpcTestCase):
             self.assertEquals(self.recipe.logs[0].path, u'/')
             self.assertEquals(self.recipe.logs[0].filename, u'log.txt')
             self.assertEquals(self.recipe.logs[0].server, u'http://elsewhere/log.txt')
-
-    def test_upload_recipe_log(self):
-        chunk = '0123456789'
-        chunk_b64 = base64.b64encode(chunk)
-        chunk_md5 = hashlib.md5(chunk).hexdigest()
-        self.server.auth.login_password(self.lc.user.user_name, 'logmein')
-        self.server.recipes.upload_file(self.recipe.id, '/', 'log.txt',
-                10, chunk_md5, 0, chunk_b64)
-        with session.begin():
-            session.refresh(self.recipe)
-            self.assertEquals(len(self.recipe.logs), 1, self.recipe.logs)
-            self.assertEquals(self.recipe.logs[0].path, u'/')
-            self.assertEquals(self.recipe.logs[0].filename, u'log.txt')
-        self.server.recipes.upload_file(self.recipe.id, '/', 'log.txt',
-                20, chunk_md5, 10, chunk_b64)
-        with session.begin():
-            session.refresh(self.recipe)
-            self.assertEquals(len(self.recipe.logs), 1, self.recipe.logs)
-            self.assertEquals(self.recipe.logs[0].path, u'/')
-            self.assertEquals(self.recipe.logs[0].filename, u'log.txt')

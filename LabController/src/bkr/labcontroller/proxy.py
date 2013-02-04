@@ -66,11 +66,8 @@ class ProxyHelper(object):
         self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
                 transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
         self.log_base_url = "http://%s/beaker/logs" % self.conf.get("SERVER", gethostname())
-        self.basepath = None
-        self.upload = None
-        if self.conf.get("CACHE", False):
-            self.basepath = self.conf.get("CACHEPATH", "/var/www/beaker/logs")
-            self.upload = Uploader('%s' % self.basepath).uploadFile
+        self.basepath = self.conf.get("CACHEPATH", "/var/www/beaker/logs")
+        self.upload = Uploader('%s' % self.basepath).uploadFile
 
     def recipe_upload_file(self, 
                          recipe_id, 
@@ -94,25 +91,13 @@ class ProxyHelper(object):
         """
         logger.debug("recipe_upload_file recipe_id:%s name:%s offset:%s size:%s",
                 recipe_id, name, offset, size)
-        if self.conf.get("CACHE",False):
-            if int(offset) == 0:
-                self.hub.recipes.register_file('%s/recipes/%s/' % (self.log_base_url, recipe_id),
-                                                                  recipe_id, path, name,
-                                               '%s/recipes/%s/' % (self.basepath, recipe_id))
-            return self.upload('/recipes/%s/%s' % (recipe_id, path), 
-                               name, 
-                               size, 
-                               md5sum, 
-                               offset, 
-                               data)
-        else:
-            return self.hub.recipes.upload_file(recipe_id,
-                                                path, 
-                                                name, 
-                                                size, 
-                                                md5sum, 
-                                                offset, 
-                                                data)
+        if int(offset) == 0:
+            self.hub.recipes.register_file(
+                    '%s/recipes/%s/' % (self.log_base_url, recipe_id),
+                    recipe_id, path, name,
+                    '%s/recipes/%s/' % (self.basepath, recipe_id))
+        return self.upload('/recipes/%s/%s' % (recipe_id, path),
+                name, size, md5sum, offset, data)
 
     def task_result(self, 
                     task_id, 
@@ -318,7 +303,7 @@ class Watchdog(ProxyHelper):
     def transfer_recipe_logs(self, recipe_id):
         """ If Cache is turned on then move the recipes logs to there final place
         """
-        if self.conf.get("CACHE",False):
+        if self.conf.get("ARCHIVE_SERVER", None):
             tmpdir = tempfile.mkdtemp(dir=self.basepath)
             try:
                 # Move logs to tmp directory layout
@@ -504,26 +489,13 @@ class Proxy(ProxyHelper):
         """
         logger.debug("task_upload_file task_id:%s name:%s offset:%s size:%s",
                 task_id, name, offset, size)
-        if self.conf.get("CACHE",False):
-            if int(offset) == 0:
-                self.hub.recipes.tasks.register_file('%s/tasks/%s/' % (self.log_base_url, task_id), 
-                                                     task_id, path, name, 
-                                                     '%s/tasks/%s/' % (self.basepath, task_id))
-
-            return self.upload('/tasks/%s/%s' % (task_id, path), 
-                               name, 
-                               size, 
-                               md5sum, 
-                               offset, 
-                               data)
-        else:
-            return self.hub.recipes.tasks.upload_file(task_id, 
-                                                      path, 
-                                                      name, 
-                                                      size, 
-                                                      md5sum, 
-                                                      offset, 
-                                                      data)
+        if int(offset) == 0:
+            self.hub.recipes.tasks.register_file(
+                    '%s/tasks/%s/' % (self.log_base_url, task_id),
+                    task_id, path, name,
+                    '%s/tasks/%s/' % (self.basepath, task_id))
+        return self.upload('/tasks/%s/%s' % (task_id, path),
+                name, size, md5sum, offset, data)
 
     def task_start(self,
                    task_id,
@@ -609,27 +581,13 @@ class Proxy(ProxyHelper):
         """
         logger.debug("result_upload_file result_id:%s name:%s offset:%s size:%s",
                 result_id, name, offset, size)
-        if self.conf.get("CACHE",False):
-            if int(offset) == 0:
-                self.hub.recipes.tasks.register_result_file('%s/results/%s/' % (self.log_base_url,result_id),
-                                                            result_id, path, name,
-                                                            '%s/results/%s/' % (self.basepath, 
-                                                                               result_id))
-
-            return self.upload('/results/%s/%s' % (result_id, path), 
-                               name, 
-                               size, 
-                               md5sum, 
-                               offset, 
-                               data)
-        else:
-            return self.hub.recipes.tasks.result_upload_file(result_id, 
-                                                             path, 
-                                                             name, 
-                                                             size, 
-                                                             md5sum, 
-                                                             offset, 
-                                                             data)
+        if int(offset) == 0:
+            self.hub.recipes.tasks.register_result_file(
+                    '%s/results/%s/' % (self.log_base_url, result_id),
+                    result_id, path, name,
+                    '%s/results/%s/' % (self.basepath, result_id))
+        return self.upload('/results/%s/%s' % (result_id, path),
+                name, size, md5sum, offset, data)
 
     def push(self, fqdn, inventory):
         """ Push inventory data to Scheduler

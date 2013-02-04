@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import signal
 import unittest
 from urlparse import urlparse, urlunparse
@@ -58,6 +59,12 @@ def setup_package():
         # Make sure that the LC is in the DB
         data_setup.create_labcontroller(fqdn=lab_controller)
         lc_fqdn = lab_controller
+
+    # Clear out any existing job logs, so that they are registered correctly 
+    # when first created.
+    # If we've been passed a remote hostname for the LC, we assume it's been 
+    # freshly provisioned and the dir will already be empty.
+    shutil.rmtree(conf.get('CACHEPATH'), ignore_errors=True)
 
 def teardown_package():
     for process in processes:
