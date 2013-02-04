@@ -811,3 +811,17 @@ class TestBeakerdMetrics(unittest.TestCase):
         self.assertEqual(set(actual), set(expected))
         for k, v in actual.iteritems():
             self.assertEqual((k, v), (k, expected[k]))
+        # Processing the recipes should set their virt status correctly
+        for category in categories:
+            new = 'gauges.recipes_new.%s' % category
+            processed = 'gauges.recipes_processed.%s' % category
+            if category != 'dynamic_virt_possible':
+                expected[new], expected[processed] = 0, expected[new]
+            else:
+                # Currently, only x86_64 will be a virt candidate
+                expected[new], expected[processed] = 0, 1
+        for recipe in recipes:
+            beakerd.process_new_recipe(recipe.id)
+        beakerd.metrics.calls[:] = []
+        beakerd.recipe_count_metrics()
+        actual = dict(beakerd.metrics.calls)
