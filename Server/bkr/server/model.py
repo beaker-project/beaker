@@ -5428,6 +5428,10 @@ class MachineRecipe(Recipe):
         """
         Decide whether this recipe can be run as a virt guest
         """
+        # oVirt is i386/x86_64 only but Beaker's own support
+        # is currently only for x86_64
+        if self.distro_tree.arch.arch != u'x86_64':
+            return RecipeVirtStatus.precluded
         # RHEL3 lacks virtio (XXX hardcoding this here is not great)
         if self.distro_tree.distro.osversion.osmajor.osmajor == \
                 u'RedHatEnterpriseLinux3':
