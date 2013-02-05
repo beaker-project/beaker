@@ -6638,7 +6638,7 @@ class VirtManager(object):
             vm = None
             try:
                 vm_definition = VM(name=name, memory=memory, cluster=cluster,
-                        type_='virtio26', template=Template(name='Blank'))
+                        type_='server', template=Template(name='Blank'))
                 vm = self.api.vms.add(vm_definition)
                 nic = NIC(name='eth0', interface='virtio', network=Network(name='rhevm'),
                         mac=MAC(address=str(mac_address)))
