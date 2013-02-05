@@ -18,7 +18,6 @@ if not config_file:
         sys.stderr.write("%s is deprecated for config, please use %s instead\n" % (old_conf, user_conf))
     elif os.path.exists('/etc/beaker/client.conf'):
         config_file = "/etc/beaker/client.conf"
-        sys.stderr.write("%s not found, using %s\n" % (user_conf, config_file))
     else:
         pass
 
