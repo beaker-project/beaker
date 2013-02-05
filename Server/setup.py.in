@@ -1,4 +1,10 @@
+# pkg_resources.requires() does not work if multiple versions are installed in 
+# parallel. This semi-supported hack using __requires__ is the workaround.
+# http://bugs.python.org/setuptools/issue139
+# (EPEL6 has python-sphinx = 0.6 and python-sphinx10 = 1.0)
+__requires__ = ['Sphinx >= 1.0.4']
 import pkg_resources
+
 from setuptools import setup, find_packages
 import glob
 import re
@@ -14,7 +20,6 @@ from distutils.dep_util import newer
 from setuptools.command.install import install as _install
 from setuptools.command.install_lib import install_lib as _install_lib
 
-pkg_resources.require('Sphinx >= 1.0.4')
 from sphinx.setup_command import BuildDoc
 
 execfile(os.path.join("bkr/server", "release.py"))
