@@ -702,8 +702,6 @@ class Workflow_XSLT(BeakerCommand):
     def run(self, *args, **kwargs):
 
         dryrun = kwargs.get('dryrun', False)
-        username = kwargs.get('username', None)
-        password = kwargs.get('password', None)
         jobxml = kwargs.get('jobxml', None)
         profile = kwargs.get('profile', None)
         wait = kwargs.get('wait', None)
@@ -748,7 +746,7 @@ class Workflow_XSLT(BeakerCommand):
             print "** Sending job to Beaker ...",
             sys.stdout.flush()
 
-            self.set_hub(username, password)
+            self.set_hub(**kwargs)
             submitted_jobs = []
             failed = False
 

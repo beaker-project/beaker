@@ -86,19 +86,25 @@ Common options
 
 These options are applicable to all :program:`bkr` subcommands.
 
+.. option:: --hub <url>
+
+   Connect to the Beaker server at the given URL. This overrides the 
+   ``HUB_URL`` setting from the configuration file. The URL should not include 
+   a trailing slash.
+
 .. option:: --username <username>
 
-   When using password authentication, authenticate as <username>. The username 
-   may also be specified in the configuration file.
+   Authenticate using password authentication, with <username>. If a password 
+   is not given using :option:`--password`, the user is prompted for the 
+   password on stdin.
 
-   This option is not applicable when using Kerberos authentication.
+   This option overrides the authentication type specified in the configuration 
+   file, forcing password authentication to be used.
 
 .. option:: --password <password>
 
-   When using password authentication, authenticate using <password>. The password 
-   may also be specified in the configuration file.
-
-   This option is not applicable when using Kerberos authentication.
+   Authenticate using <password>. This option is only applicable when 
+   :option:`--username` is also passed.
 
 .. _workflow-options:
 

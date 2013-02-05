@@ -74,11 +74,9 @@ class Job_Results(BeakerCommand):
     def run(self, *args, **kwargs):
         self.check_taskspec_args(args)
 
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         prettyxml   = kwargs.pop("prettyxml", None)
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         for task in args:
             myxml = self.hub.taskactions.to_xml(task)
             if prettyxml:

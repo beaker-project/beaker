@@ -63,12 +63,9 @@ class Task_Add(BeakerCommand):
 
 
     def run(self, *args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
-
         tasks = args
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         failed = False
         for task in tasks:
             task_name = os.path.basename(task)

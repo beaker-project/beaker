@@ -132,8 +132,6 @@ class Distros_List(BeakerCommand):
 
 
     def run(self, *args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         filter = dict( limit    = kwargs.pop("limit", None),
                        name     = kwargs.pop("name", None),
                        family   = kwargs.pop("family", None),
@@ -142,7 +140,7 @@ class Distros_List(BeakerCommand):
                      )
         format = kwargs['format']
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         distros = self.hub.distros.filter(filter)
         if format == 'json':
             print json.dumps(distros, indent=4)

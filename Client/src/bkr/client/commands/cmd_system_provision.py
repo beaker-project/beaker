@@ -131,9 +131,6 @@ class System_Provision(BeakerCommand):
         self.parser.set_defaults(reboot=True)
 
     def run(self, *args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
-
         if len(args) != 1:
             self.parser.error('Exactly one system fqdn must be given')
         fqdn = args[0]
@@ -152,7 +149,7 @@ class System_Provision(BeakerCommand):
         else:
             kickstart = None
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         self.hub.systems.provision(fqdn, kwargs['distro_tree'],
                 kwargs['ks_meta'], kwargs['kernel_options'],
                 kwargs['kernel_options_post'], kickstart, kwargs['reboot'])

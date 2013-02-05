@@ -74,12 +74,10 @@ class Distros_Edit_Version(BeakerCommand):
         if len(args) < 1:
             self.parser.error("Please specify a version")
 
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         name = kwargs.pop("name", None)
         version = str(args[0])
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         distros = self.hub.distros.edit_version(name, version)
         print "Updated the following distros with Version: %s" % version
         print "------------------------------------------------------"

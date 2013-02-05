@@ -77,9 +77,6 @@ class System_Power(BeakerCommand):
         self.parser.set_defaults(action='reboot', force=False)
 
     def run(self, *args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
-
         if len(args) != 1:
             self.parser.error('Exactly one system fqdn must be given')
         fqdn = args[0]
@@ -88,6 +85,6 @@ class System_Power(BeakerCommand):
             self.parser.error('Power action must be one of: %r'
                     % (self.valid_actions,))
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         self.hub.systems.power(kwargs['action'], fqdn,
                 kwargs['clear_netboot'], kwargs['force'])

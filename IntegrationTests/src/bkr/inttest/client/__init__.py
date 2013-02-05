@@ -8,11 +8,14 @@ from bkr.inttest import get_server_base, data_setup
 log = logging.getLogger(__name__)
 
 def create_client_config(username=data_setup.ADMIN_USER,
-    password=data_setup.ADMIN_PASSWORD, qpid_broker='localhost',qpid_krb=False):
+    password=data_setup.ADMIN_PASSWORD, hub_url=None,
+    qpid_broker='localhost',qpid_krb=False):
+    if hub_url is None:
+        hub_url = get_server_base()
     config = tempfile.NamedTemporaryFile(prefix='bkr-inttest-client-conf-')
     config.write('\n'.join([
         # Kobo wigs out if HUB_URL ends with a trailing slash, not sure why..
-        'HUB_URL = "%s"' % get_server_base().rstrip('/'),
+        'HUB_URL = "%s"' % hub_url.rstrip('/'),
         'AUTH_METHOD = "password"',
         'USERNAME = "%s"' % username,
         'PASSWORD = "%s"' % password,
