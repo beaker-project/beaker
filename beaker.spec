@@ -326,7 +326,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %files client
 %defattr(-,root,root,-)
-%config(noreplace) %{_sysconfdir}/beaker/client.conf
+%doc Client/client.conf.example
 %{python_sitelib}/bkr/client/
 %{python_sitelib}/bkr.client-%{version}-*
 %{python_sitelib}/bkr.client-%{version}-py%{pyver}.egg-info/
