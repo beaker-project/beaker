@@ -63,6 +63,12 @@ class WSGIApplication(object):
                     endpoint=(self.proxy_http, 'post_watchdog')),
             Rule('/recipes/<recipe_id>/tasks/<task_id>/results/', methods=['POST'],
                     endpoint=(self.proxy_http, 'post_result')),
+            Rule('/recipes/<recipe_id>/logs/<path:path>', methods=['PUT'],
+                    endpoint=(self.proxy_http, 'put_recipe_log')),
+            Rule('/recipes/<recipe_id>/tasks/<task_id>/logs/<path:path>',
+                    methods=['PUT'], endpoint=(self.proxy_http, 'put_task_log')),
+            Rule('/recipes/<recipe_id>/tasks/<task_id>/results/<result_id>/logs/<path:path>',
+                    methods=['PUT'], endpoint=(self.proxy_http, 'put_result_log')),
         ])
 
     @Request.application

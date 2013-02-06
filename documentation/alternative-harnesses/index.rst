@@ -50,3 +50,14 @@ the request body must be given as HTML form data
         Use the log uploading mechanism to record test output.
    :status 201: New result recorded.
    :status 400: Bad parameters given.
+
+.. http:put::
+   /recipes/(recipe_id)/logs/(path:path)
+   /recipes/(recipe_id)/tasks/(task_id)/logs/(path:path)
+   /recipes/(recipe_id)/tasks/(task_id)/results/(result_id)/logs/(path:path)
+
+   Stores a log file.
+
+   :status 204: The log file was updated.
+
+   Use the :mailheader:`Content-Range` header to upload part of a file.

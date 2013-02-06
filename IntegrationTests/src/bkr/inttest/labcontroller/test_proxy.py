@@ -218,7 +218,7 @@ class PostrebootTest(LabControllerTestCase):
             session.expire_all()
             self.assertEqual(self.system.command_queue[0].action, 'reboot')
 
-class FileUploadTest(LabControllerTestCase):
+class LogUploadTest(LabControllerTestCase):
 
     def setUp(self):
         with session.begin():
@@ -226,7 +226,7 @@ class FileUploadTest(LabControllerTestCase):
             data_setup.create_job_for_recipes([self.recipe])
             data_setup.mark_recipe_running(self.recipe)
 
-    def test_recipe_file(self):
+    def test_xmlrpc_recipe_log(self):
         s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 0,
                 b64encode('a' * 10))
@@ -247,7 +247,30 @@ class FileUploadTest(LabControllerTestCase):
                     open(os.path.join(local_log_dir, 'recipe-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
 
-    def test_recipetask_file(self):
+    def test_PUT_recipe_log(self):
+        upload_url = '%srecipes/%s/logs/PUT-recipe-log' % (self.get_proxy_url(),
+                self.recipe.id)
+        response = requests.put(upload_url, data='a' * 10)
+        self.assertEquals(response.status_code, 204)
+        local_log_dir = '%s/recipes/%s/' % (get_conf().get('CACHEPATH'), self.recipe.id)
+        with session.begin():
+            self.assertEquals(self.recipe.logs[0].path, '/')
+            self.assertEquals(self.recipe.logs[0].filename, 'PUT-recipe-log')
+            self.assertEquals(self.recipe.logs[0].server,
+                    'http://localhost/beaker/logs/recipes/%s/' % self.recipe.id)
+            self.assertEquals(self.recipe.logs[0].basepath, local_log_dir)
+            self.assertEquals(
+                    open(os.path.join(local_log_dir, 'PUT-recipe-log'), 'r').read(),
+                    'aaaaaaaaaa')
+        response = requests.put(upload_url, data='b' * 10,
+                headers={'Content-Range': 'bytes 10-19/20'})
+        self.assertEquals(response.status_code, 204)
+        with session.begin():
+            self.assertEquals(
+                    open(os.path.join(local_log_dir, 'PUT-recipe-log'), 'r').read(),
+                    'aaaaaaaaaabbbbbbbbbb')
+
+    def test_xmlrpc_task_log(self):
         with session.begin():
             task = self.recipe.tasks[0]
         s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
@@ -270,7 +293,32 @@ class FileUploadTest(LabControllerTestCase):
                     open(os.path.join(local_log_dir, 'task-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
 
-    def test_recipetaskresult_file(self):
+    def test_PUT_task_log(self):
+        with session.begin():
+            task = self.recipe.tasks[0]
+        upload_url = '%srecipes/%s/tasks/%s/logs/PUT-task-log' % (self.get_proxy_url(),
+                self.recipe.id, task.id)
+        response = requests.put(upload_url, data='a' * 10)
+        self.assertEquals(response.status_code, 204)
+        local_log_dir = '%s/tasks/%s/' % (get_conf().get('CACHEPATH'), task.id)
+        with session.begin():
+            self.assertEquals(task.logs[0].path, '/')
+            self.assertEquals(task.logs[0].filename, 'PUT-task-log')
+            self.assertEquals(task.logs[0].server,
+                    'http://localhost/beaker/logs/tasks/%s/' % task.id)
+            self.assertEquals(task.logs[0].basepath, local_log_dir)
+            self.assertEquals(
+                    open(os.path.join(local_log_dir, 'PUT-task-log'), 'r').read(),
+                    'aaaaaaaaaa')
+        response = requests.put(upload_url, data='b' * 10,
+                headers={'Content-Range': 'bytes 10-19/20'})
+        self.assertEquals(response.status_code, 204)
+        with session.begin():
+            self.assertEquals(
+                    open(os.path.join(local_log_dir, 'PUT-task-log'), 'r').read(),
+                    'aaaaaaaaaabbbbbbbbbb')
+
+    def test_xmlrpc_result_log(self):
         with session.begin():
             self.recipe.tasks[0].pass_('', 0, 'Pass')
             result = self.recipe.tasks[0].results[0]
@@ -292,4 +340,31 @@ class FileUploadTest(LabControllerTestCase):
         with session.begin():
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'result-log'), 'r').read(),
+                    'aaaaaaaaaabbbbbbbbbb')
+
+    def test_PUT_result_log(self):
+        with session.begin():
+            task = self.recipe.tasks[0]
+            task.pass_('', 0, 'Pass')
+            result = self.recipe.tasks[0].results[0]
+        upload_url = '%srecipes/%s/tasks/%s/results/%s/logs/PUT-result-log' % (
+                self.get_proxy_url(), self.recipe.id, task.id, result.id)
+        response = requests.put(upload_url, data='a' * 10)
+        self.assertEquals(response.status_code, 204)
+        local_log_dir = '%s/results/%s/' % (get_conf().get('CACHEPATH'), result.id)
+        with session.begin():
+            self.assertEquals(result.logs[0].path, '/')
+            self.assertEquals(result.logs[0].filename, 'PUT-result-log')
+            self.assertEquals(result.logs[0].server,
+                    'http://localhost/beaker/logs/results/%s/' % result.id)
+            self.assertEquals(result.logs[0].basepath, local_log_dir)
+            self.assertEquals(
+                    open(os.path.join(local_log_dir, 'PUT-result-log'), 'r').read(),
+                    'aaaaaaaaaa')
+        response = requests.put(upload_url, data='b' * 10,
+                headers={'Content-Range': 'bytes 10-19/20'})
+        self.assertEquals(response.status_code, 204)
+        with session.begin():
+            self.assertEquals(
+                    open(os.path.join(local_log_dir, 'PUT-result-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')

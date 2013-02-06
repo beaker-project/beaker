@@ -19,24 +19,20 @@ from threading import Thread, Event
 from werkzeug.wrappers import Response
 from werkzeug.exceptions import BadRequest, NotAcceptable
 from werkzeug.utils import redirect
+from werkzeug.http import parse_content_range_header
 import kobo.conf
 from kobo.client import HubProxy
 from kobo.exceptions import ShutdownException
 from kobo.xmlrpc import retry_request_decorator, CookieTransport, \
         SafeCookieTransport
 from bkr.labcontroller.config import get_conf
+from bkr.labcontroller.log_storage import LogStorage
 from kobo.process import kill_process_group
-from bkr.upload import Uploader
 import utils
 try:
     from subprocess import check_output
 except ImportError:
     from utils import check_output
-
-try:
-    from hashlib import md5 as md5_constructor
-except ImportError:
-    from md5 import new as md5_constructor
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +63,9 @@ class ProxyHelper(object):
             TransportClass = retry_request_decorator(CookieTransport)
         self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
                 transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
-        self.log_base_url = "http://%s/beaker/logs" % self.conf.get("SERVER", gethostname())
-        self.basepath = self.conf.get("CACHEPATH", "/var/www/beaker/logs")
-        self.upload = Uploader('%s' % self.basepath).uploadFile
+        self.log_storage = LogStorage(self.conf.get("CACHEPATH"),
+                "http://%s/beaker/logs" % self.conf.get("SERVER", gethostname()),
+                self.hub)
 
     def recipe_upload_file(self, 
                          recipe_id, 
@@ -89,17 +85,13 @@ class ProxyHelper(object):
             Files can be uploaded in chunks, if so the md5 and the size 
             describe the chunk rather than the whole file.  The offset
             indicates where the chunk belongs
-            the special offset -1 is used to indicate the final chunk
         """
+        # Originally offset=-1 had special meaning, but that was unused
         logger.debug("recipe_upload_file recipe_id:%s name:%s offset:%s size:%s",
                 recipe_id, name, offset, size)
-        if int(offset) == 0:
-            self.hub.recipes.register_file(
-                    '%s/recipes/%s/' % (self.log_base_url, recipe_id),
-                    recipe_id, path, name,
-                    '%s/recipes/%s/' % (self.basepath, recipe_id))
-        return self.upload('/recipes/%s/%s' % (recipe_id, path),
-                name, size, md5sum, offset, data)
+        with self.log_storage.recipe(recipe_id, os.path.join(path, name)) as log_file:
+            log_file.update_chunk(base64.decodestring(data), int(offset or 0))
+        return True
 
     def task_result(self, 
                     task_id, 
@@ -264,16 +256,8 @@ class WatchFile(object):
             elif size < self.blocksize and where == now:
                 return False
             else:
-                self.where = now
-                data = base64.encodestring(line)
-                md5sum = md5_constructor(line).hexdigest()
-                self.proxy.recipe_upload_file(self.watchdog['recipe_id'],
-                                             "/",
-                                             self.filename,
-                                             size,
-                                             md5sum,
-                                             where,
-                                             data)
+                with self.proxy.log_storage.recipe(self.watchdog['recipe_id'], self.filename) as log_file:
+                    log_file.update_chunk(line, now)
                 return True
         return False
 
@@ -305,7 +289,7 @@ class Watchdog(ProxyHelper):
     def transfer_recipe_logs(self, recipe_id):
         """ If Cache is turned on then move the recipes logs to their final place
         """
-        tmpdir = tempfile.mkdtemp(dir=self.basepath)
+        tmpdir = tempfile.mkdtemp(dir=self.conf.get("CACHEPATH"))
         try:
             # Move logs to tmp directory layout
             mylogs = self.hub.recipes.files(recipe_id)
@@ -454,9 +438,7 @@ class Monitor(ProxyHelper):
         self.watchdog = watchdog
         self.conf = obj.conf
         self.hub = obj.hub
-        self.upload = obj.upload
-        self.basepath = obj.basepath
-        self.log_base_url = obj.log_base_url
+        self.log_storage = obj.log_storage
         logger.info("Initialize monitor for system: %s", self.watchdog['system'])
         self.console_watch = WatchFile(
                 "%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),
@@ -486,17 +468,13 @@ class Proxy(ProxyHelper):
             Files can be uploaded in chunks, if so the md5 and the size 
             describe the chunk rather than the whole file.  The offset
             indicates where the chunk belongs
-            the special offset -1 is used to indicate the final chunk
         """
+        # Originally offset=-1 had special meaning, but that was unused
         logger.debug("task_upload_file task_id:%s name:%s offset:%s size:%s",
                 task_id, name, offset, size)
-        if int(offset) == 0:
-            self.hub.recipes.tasks.register_file(
-                    '%s/tasks/%s/' % (self.log_base_url, task_id),
-                    task_id, path, name,
-                    '%s/tasks/%s/' % (self.basepath, task_id))
-        return self.upload('/tasks/%s/%s' % (task_id, path),
-                name, size, md5sum, offset, data)
+        with self.log_storage.task(task_id, os.path.join(path, name)) as log_file:
+            log_file.update_chunk(base64.decodestring(data), int(offset or 0))
+        return True
 
     def task_start(self,
                    task_id,
@@ -578,17 +556,13 @@ class Proxy(ProxyHelper):
             Files can be uploaded in chunks, if so the md5 and the size 
             describe the chunk rather than the whole file.  The offset
             indicates where the chunk belongs
-            the special offset -1 is used to indicate the final chunk
         """
+        # Originally offset=-1 had special meaning, but that was unused
         logger.debug("result_upload_file result_id:%s name:%s offset:%s size:%s",
                 result_id, name, offset, size)
-        if int(offset) == 0:
-            self.hub.recipes.tasks.register_result_file(
-                    '%s/results/%s/' % (self.log_base_url, result_id),
-                    result_id, path, name,
-                    '%s/results/%s/' % (self.basepath, result_id))
-        return self.upload('/results/%s/%s' % (result_id, path),
-                name, size, md5sum, offset, data)
+        with self.log_storage.result(result_id, os.path.join(path, name)) as log_file:
+            log_file.update_chunk(base64.decodestring(data), int(offset or 0))
+        return True
 
     def push(self, fqdn, inventory):
         """ Push inventory data to Scheduler
@@ -676,3 +650,39 @@ class ProxyHTTP(object):
             raise BadRequest('Invalid "seconds" parameter %r' % req.form['seconds'])
         self.hub.recipes.extend(recipe_id, seconds)
         return Response(status=204)
+
+    # XXX should do streaming here, so that clients can send
+    # big files without chunking
+
+    def _put_log(self, log_file, req):
+        if not req.content_length:
+            raise BadRequest('Missing "Content-Length" header')
+        content_range = parse_content_range_header(req.headers.get('Content-Range'))
+        if content_range:
+            # a few sanity checks
+            if req.content_length != (content_range.stop - content_range.start):
+                raise BadRequest('Content length does not match range length')
+            if content_range.length and content_range.length < content_range.stop:
+                raise BadRequest('Total length is smaller than range end')
+        with log_file:
+            if content_range:
+                if content_range.length: # length may be '*' meaning unspecified
+                    log_file.truncate(content_range.length)
+                log_file.update_chunk(req.data, content_range.start)
+            else:
+                # no Content-Range, therefore the request is the whole file
+                log_file.truncate(req.content_length)
+                log_file.update_chunk(req.data, 0)
+        return Response(status=204)
+
+    def put_recipe_log(self, req, recipe_id, path):
+        log_file = self.log_storage.recipe(recipe_id, path)
+        return self._put_log(log_file, req)
+
+    def put_task_log(self, req, recipe_id, task_id, path):
+        log_file = self.log_storage.task(task_id, path)
+        return self._put_log(log_file, req)
+
+    def put_result_log(self, req, recipe_id, task_id, result_id, path):
+        log_file = self.log_storage.result(result_id, path)
+        return self._put_log(log_file, req)
