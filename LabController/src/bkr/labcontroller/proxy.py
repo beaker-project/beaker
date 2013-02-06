@@ -17,7 +17,8 @@ from cStringIO import StringIO
 from socket import gethostname
 from threading import Thread, Event
 from werkzeug.wrappers import Response
-from werkzeug.exceptions import NotAcceptable
+from werkzeug.exceptions import BadRequest, NotAcceptable
+from werkzeug.utils import redirect
 import kobo.conf
 from kobo.client import HubProxy
 from kobo.exceptions import ShutdownException
@@ -647,3 +648,21 @@ class ProxyHTTP(object):
             raise NotAcceptable()
         return Response(self.hub.recipes.to_xml(recipe_id),
                 content_type='application/xml')
+
+    _result_types = { # maps from public API names to internal Beaker names
+        'pass': 'pass_',
+        'warn': 'warn',
+        'fail': 'fail',
+    }
+    def post_result(self, req, recipe_id, task_id):
+        if 'result' not in req.form:
+            raise BadRequest('Missing "result" parameter')
+        result = req.form['result'].lower()
+        if result not in self._result_types:
+            raise BadRequest('Unknown result type %r' % req.form['result'])
+        result_id = self.hub.recipes.tasks.result(task_id,
+                self._result_types[result],
+                req.form.get('path'), req.form.get('score'),
+                req.form.get('message'))
+        return redirect('/recipes/%s/tasks/%s/results/%s' % (
+                recipe_id, task_id, result_id), code=201)
