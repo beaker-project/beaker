@@ -5356,6 +5356,26 @@ class Recipe(TaskBase):
 #                    subtask_id_list = ["T:%s" % t.id for t in self.tasks],
                    )
 
+    def extend(self, kill_time):
+        """
+        Extend the watchdog by kill_time seconds
+        """
+        if not self.watchdog:
+            raise BX(_('No watchdog exists for recipe %s' % self.id))
+        self.watchdog.kill_time = datetime.utcnow() + timedelta(
+                                                              seconds=kill_time)
+        return self.status_watchdog()
+
+    def status_watchdog(self):
+        """
+        Return the number of seconds left on the current watchdog if it exists.
+        """
+        if self.watchdog:
+            delta = self.watchdog.kill_time - datetime.utcnow()
+            return delta.seconds + (86400 * delta.days)
+        else:
+            return False
+
     @property
     def all_tasks(self):
         """
@@ -5756,21 +5776,13 @@ class RecipeTask(TaskBase):
         """
         Extend the watchdog by kill_time seconds
         """
-        if not self.recipe.watchdog:
-            raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
-        self.recipe.watchdog.kill_time = datetime.utcnow() + timedelta(
-                                                              seconds=kill_time)
-        return self.status_watchdog()
+        return self.recipe.extend(kill_time)
 
     def status_watchdog(self):
         """
         Return the number of seconds left on the current watchdog if it exists.
         """
-        if self.recipe.watchdog:
-            delta = self.recipe.watchdog.kill_time - datetime.utcnow()
-            return delta.seconds + (86400 * delta.days)
-        else:
-            return False
+        return self.recipe.status_watchdog()
 
     def stop(self, *args, **kwargs):
         """

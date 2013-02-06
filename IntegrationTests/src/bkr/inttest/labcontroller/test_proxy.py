@@ -1,5 +1,6 @@
 
 import os, os.path
+import datetime
 from base64 import b64encode
 import xmlrpclib
 import lxml.etree
@@ -9,6 +10,7 @@ from nose.plugins.skip import SkipTest
 from bkr.server.model import session, TaskResult
 from bkr.labcontroller.config import get_conf
 from bkr.inttest import data_setup
+from bkr.inttest.assertions import assert_datetime_within
 from bkr.inttest.labcontroller import LabControllerTestCase
 
 class GetRecipeTest(LabControllerTestCase):
@@ -93,6 +95,34 @@ class TaskResultTest(LabControllerTestCase):
         response = requests.post(results_url, data=dict(result='Eggplant'),
                 allow_redirects=False)
         self.assertEquals(response.status_code, 400)
+
+class ExtendWatchdogTest(LabControllerTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_running(self.recipe)
+
+    def test_xmlrpc_extend_watchdog(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        result_id = s.extend_watchdog(self.recipe.tasks[0].id, 600)
+        with session.begin():
+            session.expire_all()
+            assert_datetime_within(self.recipe.watchdog.kill_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=600))
+
+    def test_POST_watchdog(self):
+        watchdog_url = '%srecipes/%s/watchdog' % (self.get_proxy_url(),
+                self.recipe.id)
+        response = requests.post(watchdog_url, data=dict(seconds=600))
+        self.assertEquals(response.status_code, 204)
+        with session.begin():
+            session.expire_all()
+            assert_datetime_within(self.recipe.watchdog.kill_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=600))
 
 class ClearNetbootTest(LabControllerTestCase):
 

@@ -666,3 +666,13 @@ class ProxyHTTP(object):
                 req.form.get('message'))
         return redirect('/recipes/%s/tasks/%s/results/%s' % (
                 recipe_id, task_id, result_id), code=201)
+
+    def post_watchdog(self, req, recipe_id):
+        if 'seconds' not in req.form:
+            raise BadRequest('Missing "seconds" parameter')
+        try:
+            seconds = int(req.form['seconds'])
+        except ValueError:
+            raise BadRequest('Invalid "seconds" parameter %r' % req.form['seconds'])
+        self.hub.recipes.extend(recipe_id, seconds)
+        return Response(status=204)

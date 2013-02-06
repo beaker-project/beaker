@@ -24,6 +24,14 @@ the request body must be given as HTML form data
    Returns recipe details. Response is in Beaker job results XML format, with 
    :mimetype:`application/xml` content type.
 
+.. http:post:: /recipes/(recipe_id)/watchdog
+
+   Extends the watchdog for a recipe.
+
+   :form seconds: The watchdog kill time is updated to be this many seconds 
+        from now.
+   :status 204: The watchdog was updated.
+
 .. http:post:: /recipes/(recipe_id)/tasks/(task_id)/results/
 
    Records a task result. Returns a :http:statuscode:`201` response with a 
