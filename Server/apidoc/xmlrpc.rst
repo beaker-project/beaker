@@ -142,6 +142,14 @@ Running jobs
 .. automethod:: taskactions.stop
 
 
+User Preferences
+----------------
+
+.. currentmodule:: bkr.server.preferences
+
+.. automethod:: prefs.update
+
+
 General Beaker information
 --------------------------
 
