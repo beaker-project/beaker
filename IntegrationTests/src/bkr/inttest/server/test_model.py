@@ -1467,14 +1467,6 @@ class CheckDynamicVirtTest(unittest.TestCase):
                          RecipeVirtStatus.precluded, msg)
 
     # Virtualisation checks added due to https://bugzilla.redhat.com/show_bug.cgi?id=902659
-    def test_virt_precluded_rhel_3(self):
-        for arch in [u"i386", u"x86_64"]:
-            dt = data_setup.create_distro_tree(arch=arch,
-                                            osmajor=u'RedHatEnterpriseLinux3')
-            recipe = data_setup.create_recipe(dt)
-            data_setup.create_job_for_recipes([recipe])
-            self.assertVirtPrecluded(recipe, "RHEL 3 %s did not preclude virt" % arch)
-
     def test_virt_precluded_guest_recipes(self):
         for arch in [u"i386", u"x86_64"]:
             dt = data_setup.create_distro_tree(arch=arch)

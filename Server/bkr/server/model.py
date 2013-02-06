@@ -5473,10 +5473,6 @@ class MachineRecipe(Recipe):
         # oVirt is i386/x86_64 only
         if self.distro_tree.arch.arch not in [u'i386', u'x86_64']:
             return RecipeVirtStatus.precluded
-        # RHEL3 lacks virtio (XXX hardcoding this here is not great)
-        if self.distro_tree.distro.osversion.osmajor.osmajor == \
-                u'RedHatEnterpriseLinux3':
-            return RecipeVirtStatus.precluded
         # Can't run VMs in a VM
         if self.guests:
             return RecipeVirtStatus.precluded
@@ -6211,8 +6207,13 @@ class VirtResource(RecipeResource):
         self.mac_address = self._lowest_free_mac()
         log.debug('Creating vm with MAC address %s for recipe %s',
                 self.mac_address, self.recipe.id)
+
+        virtio_possible = True
+        if self.recipe.distro_tree.distro.osversion.osmajor.osmajor == "RedHatEnterpriseLinux3":
+            virtio_possible = False
+
         self.lab_controller = manager.create_vm(self.system_name,
-                lab_controllers, self.mac_address)
+                lab_controllers, self.mac_address, virtio_possible)
 
     def release(self):
         try:
@@ -6637,7 +6638,7 @@ class VirtManager(object):
         self.api, api = None, self.api
         api.disconnect()
 
-    def create_vm(self, name, lab_controllers, mac_address):
+    def create_vm(self, name, lab_controllers, mac_address, virtio_possible=True):
         if self.api is None:
             raise RuntimeError('Context manager was not entered')
         from ovirtsdk.xml.params import VM, Template, NIC, Network, Disk, \
@@ -6645,6 +6646,15 @@ class VirtManager(object):
         # Default of 1GB memory and 20GB disk
         memory = ConfigItem.by_name('default_guest_memory').current_value(1024) * 1024**2
         disk_size = ConfigItem.by_name('default_guest_disk_size').current_value(20) * 1024**3
+
+        if virtio_possible:
+            nic_interface = "virtio"
+            disk_interface = "virtio"
+        else:
+            # use emulated interface
+            nic_interface = "rtl8139"
+            disk_interface = "ide"
+
         # Try to create the VM on every cluster that is in an acceptable data center
         cluster_query = ' or '.join('datacenter.name=%s' % lc.data_center_name
                 for lc in lab_controllers)
@@ -6655,7 +6665,7 @@ class VirtManager(object):
                 vm_definition = VM(name=name, memory=memory, cluster=cluster,
                         type_='server', template=Template(name='Blank'))
                 vm = self.api.vms.add(vm_definition)
-                nic = NIC(name='eth0', interface='virtio', network=Network(name='rhevm'),
+                nic = NIC(name='eth0', interface=nic_interface, network=Network(name='rhevm'),
                         mac=MAC(address=str(mac_address)))
                 vm.nics.add(nic)
                 sd_query = ' or '.join('datacenter=%s' % lc.data_center_name
@@ -6666,7 +6676,7 @@ class VirtManager(object):
                 else:
                     storage_domains = self.api.storagedomains.list(sd_query)
                 disk = Disk(storage_domains=StorageDomains(storage_domain=storage_domains),
-                        size=disk_size, type_='data', interface='virtio', format='cow',
+                        size=disk_size, type_='data', interface=disk_interface, format='cow',
                         bootable=True)
                 vm.disks.add(disk)
 
