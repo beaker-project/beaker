@@ -1,3 +1,4 @@
+import cherrypy
 from datetime import datetime
 from turbogears import widgets, expose, identity, validators, \
 	error_handler, validate, flash, redirect
@@ -6,6 +7,10 @@ from bkr.server.model import ConfigItem, SSHPubKey
 from bkr.server import validators as beaker_validators
 from bkr.server.widgets import BeakerDataGrid, DeleteLinkWidgetForm
 from bkr.server.xmlrpccontroller import RPCRoot
+
+from bexceptions import *
+
+__all__ = ['Preferences']
 
 class Preferences(RPCRoot):
 
@@ -108,6 +113,25 @@ class Preferences(RPCRoot):
             flash(_(u', '.join(changes)))
         redirect('.')
 
+    #XMLRPC method for updating user preferences
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    @validate(validators=dict(email_address=beaker_validators.CheckUniqueEmail()))
+    def update(self, email_address=None, tg_errors=None):
+        """
+        Update user preferences
+
+        :param email_address: email address
+        :type email_address: string
+        """
+        if tg_errors:
+            raise BeakerException(', '.join(str(item) for item in tg_errors.values()))
+        if email_address:
+            if email_address == identity.current.user.email_address:
+                raise BeakerException("Email address not changed: new address is same as before")
+            else:
+                identity.current.user.email_address = email_address
+
     @expose()
     @identity.require(identity.not_anonymous())
     def ssh_key_remove(self, *args, **kw):
@@ -138,3 +162,6 @@ class Preferences(RPCRoot):
         user.sshpubkeys.append(k)
         flash(_(u"SSH public key added"))
         redirect('.')
+
+# for sphinx
+prefs = Preferences
