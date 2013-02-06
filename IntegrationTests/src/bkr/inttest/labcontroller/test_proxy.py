@@ -2,12 +2,45 @@
 import os, os.path
 from base64 import b64encode
 import xmlrpclib
+import lxml.etree
 import requests
 from nose.plugins.skip import SkipTest
 from bkr.server.model import session
 from bkr.labcontroller.config import get_conf
 from bkr.inttest import data_setup
 from bkr.inttest.labcontroller import LabControllerTestCase
+
+class GetRecipeTest(LabControllerTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_running(self.recipe)
+
+    def check_recipe_xml(self, xml):
+        root = lxml.etree.fromstring(xml)
+        self.assertEquals(root.tag, 'job')
+        self.assertEquals(root.find('./recipeSet/recipe').get('id'),
+                str(self.recipe.id))
+        # add more assertions here...
+
+    def test_xmlrpc_get_my_recipe(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        recipe_xml = s.get_my_recipe({'recipe_id': self.recipe.id})
+        self.check_recipe_xml(recipe_xml)
+
+    def test_GET_recipe(self):
+        url = '%srecipes/%s/' % (self.get_proxy_url(), self.recipe.id)
+        response = requests.get(url, headers={'Accept': 'application/xml'})
+        response.raise_for_status()
+        self.assertEquals(response.headers['Content-Type'], 'application/xml')
+        self.check_recipe_xml(response.content)
+        # should work without the Accept header as well
+        response = requests.get(url)
+        response.raise_for_status()
+        self.assertEquals(response.headers['Content-Type'], 'application/xml')
+        self.check_recipe_xml(response.content)
 
 class ClearNetbootTest(LabControllerTestCase):
 

@@ -14,7 +14,7 @@ from werkzeug.routing import Map as RoutingMap, Rule
 from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed, BadRequest
 import gevent, gevent.pool, gevent.wsgi, gevent.event, gevent.monkey
 from bkr.common.helpers import RepeatTimer
-from bkr.labcontroller.proxy import Proxy
+from bkr.labcontroller.proxy import Proxy, ProxyHTTP
 from bkr.labcontroller.config import get_conf, load_conf
 from bkr.labcontroller.utils import add_rotating_file_logger
 from bkr.log import add_stderr_logger
@@ -43,6 +43,7 @@ class WSGIApplication(object):
 
     def __init__(self, proxy):
         self.proxy = proxy
+        self.proxy_http = ProxyHTTP(proxy)
         self.xmlrpc_dispatcher = XMLRPCDispatcher()
         self.xmlrpc_dispatcher.register_instance(proxy)
         self.url_map = RoutingMap([
@@ -55,6 +56,9 @@ class WSGIApplication(object):
             Rule('/postinstall_done/<recipe_id>',
                     endpoint=(self.proxy, 'postinstall_done')),
             Rule('/postreboot/<recipe_id>', endpoint=(self.proxy, 'postreboot')),
+            # harness API:
+            Rule('/recipes/<recipe_id>/', methods=['GET'],
+                    endpoint=(self.proxy_http, 'get_recipe')),
         ])
 
     @Request.application

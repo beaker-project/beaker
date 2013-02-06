@@ -16,7 +16,8 @@ import subprocess
 from cStringIO import StringIO
 from socket import gethostname
 from threading import Thread, Event
-
+from werkzeug.wrappers import Response
+from werkzeug.exceptions import NotAcceptable
 import kobo.conf
 from kobo.client import HubProxy
 from kobo.exceptions import ShutdownException
@@ -634,3 +635,15 @@ class Proxy(ProxyHelper):
         """
         # TODO tie this in to installation tracking when that is implemented
         return self.hub.labcontrollers.get_last_netboot_for_system(fqdn)
+
+class ProxyHTTP(object):
+
+    def __init__(self, proxy):
+        self.hub = proxy.hub
+        self.log_storage = proxy.log_storage
+
+    def get_recipe(self, req, recipe_id):
+        if req.accept_mimetypes and 'application/xml' not in req.accept_mimetypes:
+            raise NotAcceptable()
+        return Response(self.hub.recipes.to_xml(recipe_id),
+                content_type='application/xml')
