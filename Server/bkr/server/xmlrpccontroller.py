@@ -6,7 +6,7 @@ import cherrypy, cherrypy.config
 import turbogears
 from turbogears import controllers
 from turbogears.database import session
-from turbogears.identity.exceptions import IdentityFailure
+from turbogears.identity.exceptions import IdentityFailure, get_identity_errors
 
 log = logging.getLogger(__name__)
 
@@ -58,8 +58,8 @@ class RPCRoot(controllers.Controller):
             # IdentityFailure constructor fiddles with the response code,
             # so let's set it back
             cherrypy.response.status = 200
-            response = xmlrpclib.dumps(xmlrpclib.Fault(1,
-                    '%s: Please log in first' % e.__class__))
+            identity_errors = get_identity_errors()
+            response = xmlrpclib.dumps(xmlrpclib.Fault(1,"%s: %s" % (e.__class__,','.join(identity_errors))))
         except xmlrpclib.Fault, fault:
             session.rollback()
             log.exception('Error handling XML-RPC method')
