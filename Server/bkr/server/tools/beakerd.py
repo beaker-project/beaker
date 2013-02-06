@@ -489,9 +489,6 @@ def provision_virt_recipes(*args):
 
 def provision_virt_recipe(system_name, recipe_id):
     recipe = Recipe.by_id(recipe_id)
-    # vm_params is a throwaway var. We only call vm_params()
-    # method to see if we throw NotVirtualisable exception
-    vm_params = needpropertyxml.vm_params(recipe.host_requires)
     recipe.createRepo()
     # Figure out the "data centers" where we can run the recipe
     if recipe.recipeset.lab_controller:
@@ -558,11 +555,11 @@ def provision_scheduled_recipeset(recipeset_id):
 
 # Recipe queue
 def _recipe_count_metrics_for_query(name, query=None):
-    for status, count in Recipe.get_queue_stats(query).items():
+    for status, count in MachineRecipe.get_queue_stats(query).items():
         metrics.measure('gauges.recipes_%s.%s' % (status, name), count)
 
 def _recipe_count_metrics_for_query_grouped(name, grouping, query):
-    group_counts = Recipe.get_queue_stats_by_group(grouping, query)
+    group_counts = MachineRecipe.get_queue_stats_by_group(grouping, query)
     for group, counts in group_counts.iteritems():
         for status, count in counts.iteritems():
             metrics.measure('gauges.recipes_%s.%s.%s' %
@@ -570,10 +567,14 @@ def _recipe_count_metrics_for_query_grouped(name, grouping, query):
 
 def recipe_count_metrics():
     _recipe_count_metrics_for_query('all')
-    _recipe_count_metrics_for_query('dynamic_virt_possible',
-            Recipe.query.filter(Recipe.virt_status == RecipeVirtStatus.possible))
-    _recipe_count_metrics_for_query_grouped('by_arch', Arch.arch,
-                                   Recipe.query.join(DistroTree).join(Arch))
+    _recipe_count_metrics_for_query(
+            'dynamic_virt_possible',
+            MachineRecipe.query.filter(
+                MachineRecipe.virt_status == RecipeVirtStatus.possible)
+            )
+    _recipe_count_metrics_for_query_grouped(
+            'by_arch', Arch.arch,
+            MachineRecipe.query.join(DistroTree).join(Arch))
 
 
 # System utilisation
