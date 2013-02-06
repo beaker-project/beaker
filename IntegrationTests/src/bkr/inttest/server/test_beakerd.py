@@ -818,8 +818,8 @@ class TestBeakerdMetrics(unittest.TestCase):
             if category != 'dynamic_virt_possible':
                 expected[new], expected[processed] = 0, expected[new]
             else:
-                # Currently, only x86_64 will be a virt candidate
-                expected[new], expected[processed] = 0, 1
+                # Possible virt candidates: i386, x86_64
+                expected[new], expected[processed] = 0, 2
         for recipe in recipes:
             beakerd.process_new_recipe(recipe.id)
         beakerd.metrics.calls[:] = []
