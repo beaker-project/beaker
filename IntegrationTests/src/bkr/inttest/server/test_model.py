@@ -1468,48 +1468,53 @@ class CheckDynamicVirtTest(unittest.TestCase):
 
     # Virtualisation checks added due to https://bugzilla.redhat.com/show_bug.cgi?id=902659
     def test_virt_precluded_rhel_3(self):
-        dt = data_setup.create_distro_tree(arch=u'x86_64',
-                                           osmajor=u'RedHatEnterpriseLinux3')
-        recipe = data_setup.create_recipe(dt)
-        data_setup.create_job_for_recipes([recipe])
-        self.assertVirtPrecluded(recipe, "RHEL 3 did not preclude virt")
+        for arch in [u"i386", u"x86_64"]:
+            dt = data_setup.create_distro_tree(arch=arch,
+                                            osmajor=u'RedHatEnterpriseLinux3')
+            recipe = data_setup.create_recipe(dt)
+            data_setup.create_job_for_recipes([recipe])
+            self.assertVirtPrecluded(recipe, "RHEL 3 %s did not preclude virt" % arch)
 
     def test_virt_precluded_guest_recipes(self):
-        dt = data_setup.create_distro_tree(arch=u'x86_64')
-        job = data_setup.create_job(num_guestrecipes=1, distro_tree=dt)
-        recipe = job.recipesets[0].recipes[0]
-        self.assertVirtPrecluded(recipe, "Guest recipe did not preclude virt")
+        for arch in [u"i386", u"x86_64"]:
+            dt = data_setup.create_distro_tree(arch=arch)
+            job = data_setup.create_job(num_guestrecipes=1, distro_tree=dt)
+            recipe = job.recipesets[0].recipes[0]
+            self.assertVirtPrecluded(recipe, "Guest recipe did not preclude virt")
 
     def test_virt_precluded_multihost(self):
-        dt = data_setup.create_distro_tree(arch=u'x86_64')
-        recipe1 = data_setup.create_recipe(dt)
-        recipe2 = data_setup.create_recipe(dt)
-        data_setup.create_job_for_recipes([recipe1, recipe2])
-        self.assertVirtPrecluded(recipe1,
-                                 "Multihost recipeset did not preclude virt")
-        self.assertVirtPrecluded(recipe2,
-                                 "Multihost recipeset did not preclude virt")
+        for arch in [u"i386", u"x86_64"]:
+            dt = data_setup.create_distro_tree(arch=arch)
+            recipe1 = data_setup.create_recipe(dt)
+            recipe2 = data_setup.create_recipe(dt)
+            data_setup.create_job_for_recipes([recipe1, recipe2])
+            self.assertVirtPrecluded(recipe1,
+                                    "Multihost recipeset did not preclude virt")
+            self.assertVirtPrecluded(recipe2,
+                                    "Multihost recipeset did not preclude virt")
 
     def test_virt_precluded_host_requires(self):
-        dt = data_setup.create_distro_tree(arch=u'x86_64')
-        recipe = data_setup.create_recipe(dt)
-        recipe.host_requires = u"""
-            <hostRequires>
-                <system_type op="=" value="Prototype" />
-            </hostRequires>
-        """
-        data_setup.create_job_for_recipes([recipe])
-        self.assertVirtPrecluded(recipe, "Host requires did not preclude virt")
+        for arch in [u"i386", u"x86_64"]:
+            dt = data_setup.create_distro_tree(arch=arch)
+            recipe = data_setup.create_recipe(dt)
+            recipe.host_requires = u"""
+                <hostRequires>
+                    <system_type op="=" value="Prototype" />
+                </hostRequires>
+            """
+            data_setup.create_job_for_recipes([recipe])
+            self.assertVirtPrecluded(recipe, "Host requires did not preclude virt")
 
     # Additional virt check due to https://bugzilla.redhat.com/show_bug.cgi?id=907307
-    def test_virt_possible_x86_64(self):
-        dt = data_setup.create_distro_tree(arch=u'x86_64')
-        recipe = data_setup.create_recipe(dt)
-        data_setup.create_job_for_recipes([recipe])
-        self.assertVirtPossible(recipe, "virt precluded for x86_64")
+    def test_virt_possible_arch(self):
+        for arch in [u"i386", u"x86_64"]:
+            dt = data_setup.create_distro_tree(arch=arch)
+            recipe = data_setup.create_recipe(dt)
+            data_setup.create_job_for_recipes([recipe])
+            self.assertVirtPossible(recipe, "virt precluded for %s" % arch)
 
     def test_virt_precluded_unsupported_arch(self):
-        for arch in [u"i386", u"ppc", u"ppc64", u"s390", u"s390x"]:
+        for arch in [u"ppc", u"ppc64", u"s390", u"s390x"]:
             dt = data_setup.create_distro_tree(arch=arch)
             recipe = data_setup.create_recipe(dt)
             data_setup.create_job_for_recipes([recipe])

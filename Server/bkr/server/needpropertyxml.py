@@ -770,7 +770,7 @@ class XmlArch(ElementWrapper):
         # XXX add some better logic here
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        if getattr('x86_64', op)(value):
+        if getattr('i386', op)(value) or getattr('x86_64', op)(value):
             return {}
         else:
             raise NotVirtualisable()
