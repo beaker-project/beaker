@@ -9,7 +9,7 @@ All URLs are given relative to the base URL of the Beaker server.
 System inventory information
 ----------------------------
 
-.. object::
+.. http:get::
    /
    /available/
    /free/
@@ -84,23 +84,20 @@ System inventory information
 
    .. versionadded:: 0.6
 
-.. object:: /view/{FQDN}
+.. http:get:: /view/(fqdn)
 
-   Provides detailed information about a system. *{FQDN}* is the system's 
-   fully-qualified domain name.
+   Provides detailed information about a system.
 
-   .. object:: tg_format
+   :param fqdn: The system's fully-qualified domain name.
+   :queryparam tg_format: Desired format for the system information. Must be 
+      *html*, *rdfxml*, *turtle*, or absent.
 
-      Desired format for the system information. Must be *html*, *rdfxml*, 
-      *turtle*, or absent.
-
-      When this parameter is absent or set to *html*, Beaker will return the 
-      system information in HTML suitable for human consumption in a browser.
-
-      When set to *rdfxml* or *turtle*, an `RDF`_ description of the system is 
-      returned (serialized as `RDF/XML`_ or `Turtle`_, respectively). For 
-      a detailed description of the RDF schema used, refer to 
-      :file:`Common/bkr/common/schema/beaker-inventory.ttl`.
+   When the *tg_format* parameter is absent or set to *html*, Beaker will 
+   return the system information in HTML suitable for human consumption in 
+   a browser. When set to *rdfxml* or *turtle*, an `RDF`_ description of the 
+   system is returned (serialized as `RDF/XML`_ or `Turtle`_, respectively). 
+   For a detailed description of the RDF schema used, refer to 
+   :file:`Common/bkr/common/schema/beaker-inventory.ttl`.
 
    .. versionadded:: 0.6
     
