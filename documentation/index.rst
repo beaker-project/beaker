@@ -14,4 +14,5 @@ In addition to the guides below, you can learn more about Beaker on the
 
    user-guide/index
    admin-guide/index
+   whats-new/index
    glossary

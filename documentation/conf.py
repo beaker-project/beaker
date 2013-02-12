@@ -22,4 +22,6 @@ latex_documents = [
    u'Red Hat, Inc.', 'manual'),
 ]
 
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {'http://docs.python.org/': None,
+                       'http://beaker-project.org/dev': None,
+                      }
