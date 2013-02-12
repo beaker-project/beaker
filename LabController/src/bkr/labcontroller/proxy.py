@@ -641,6 +641,29 @@ class ProxyHTTP(object):
         return redirect('/recipes/%s/tasks/%s/results/%s' % (
                 recipe_id, task_id, result_id), code=201)
 
+    def post_task_status(self, req, recipe_id, task_id):
+        if 'status' not in req.form:
+            raise BadRequest('Missing "status" parameter')
+        status = req.form['status'].lower()
+        if status not in ['running', 'completed', 'aborted']:
+            raise BadRequest('Unknown status %r' % req.form['status'])
+        try:
+            if status == 'running':
+                self.hub.recipes.tasks.start(task_id)
+            elif status == 'completed':
+                self.hub.recipes.tasks.stop(task_id, 'stop')
+            elif status == 'aborted':
+                self.hub.recipes.tasks.stop(task_id, 'abort',
+                        req.form.get('message'))
+            return Response(status=204)
+        except xmlrpclib.Fault, fault:
+            # XXX need to find a less fragile way to do this
+            if 'Cannot restart finished task' in fault.faultString:
+                return Response(status=409, response=fault.faultString,
+                        content_type='text/plain')
+            else:
+                raise
+
     def post_watchdog(self, req, recipe_id):
         if 'seconds' not in req.form:
             raise BadRequest('Missing "seconds" parameter')

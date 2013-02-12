@@ -7,7 +7,7 @@ import lxml.etree
 import urlparse
 import requests
 from nose.plugins.skip import SkipTest
-from bkr.server.model import session, TaskResult
+from bkr.server.model import session, TaskResult, TaskStatus
 from bkr.labcontroller.config import get_conf
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import assert_datetime_within
@@ -95,6 +95,82 @@ class TaskResultTest(LabControllerTestCase):
         response = requests.post(results_url, data=dict(result='Eggplant'),
                 allow_redirects=False)
         self.assertEquals(response.status_code, 400)
+
+class TaskStatusTest(LabControllerTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.recipe = data_setup.create_recipe(task_list=[
+                    data_setup.create_task(), data_setup.create_task()])
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_running(self.recipe)
+
+    def test_xmlrpc_task_start(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s.task_start(self.recipe.tasks[0].id)
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[0]
+            self.assertEquals(task.status, TaskStatus.running)
+
+    def test_xmlrpc_task_stop(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s.task_stop(self.recipe.tasks[0].id, 'stop')
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[0]
+            self.assertEquals(task.status, TaskStatus.completed)
+
+    def test_xmlrpc_task_abort(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s.task_stop(self.recipe.tasks[0].id, 'abort', 'fooed the bar up')
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[0]
+            self.assertEquals(task.status, TaskStatus.aborted)
+            self.assertEquals(task.results[-1].log, u'fooed the bar up')
+
+    def test_POST_task_status(self):
+        status_url = '%srecipes/%s/tasks/%s/status' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(status_url, data=dict(status='Running'))
+        self.assertEquals(response.status_code, 204)
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[0]
+            self.assertEquals(task.status, TaskStatus.running)
+        response = requests.post(status_url, data=dict(status='Completed'))
+        self.assertEquals(response.status_code, 204)
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[0]
+            self.assertEquals(task.status, TaskStatus.completed)
+
+    def test_POST_task_abort(self):
+        status_url = '%srecipes/%s/tasks/%s/status' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(status_url, data=dict(status='Aborted',
+                message='fooed the bar up'))
+        self.assertEquals(response.status_code, 204)
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[0]
+            self.assertEquals(task.status, TaskStatus.aborted)
+            self.assertEquals(task.results[-1].log, u'fooed the bar up')
+
+    def test_POST_missing_status(self):
+        status_url = '%srecipes/%s/tasks/%s/status' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(status_url, data=dict(asdf='lol'))
+        self.assertEquals(response.status_code, 400)
+
+    def test_POST_invalid_transition(self):
+        status_url = '%srecipes/%s/tasks/%s/status' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(status_url, data=dict(status='Completed'))
+        self.assertEquals(response.status_code, 204)
+        response = requests.post(status_url, data=dict(status='Running'))
+        self.assertEquals(response.status_code, 409)
 
 class ExtendWatchdogTest(LabControllerTestCase):
 

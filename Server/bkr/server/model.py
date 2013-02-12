@@ -5757,6 +5757,8 @@ class RecipeTask(TaskBase):
          of what the tasks default time is.  This should be defined in number
          of seconds
         """
+        if self.is_finished():
+            raise BX(_('Cannot restart finished task'))
         if not self.recipe.watchdog:
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         if not self.start_time:

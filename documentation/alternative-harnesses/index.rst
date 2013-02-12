@@ -32,6 +32,23 @@ the request body must be given as HTML form data
         from now.
    :status 204: The watchdog was updated.
 
+.. http:post:: /recipes/(recipe_id)/tasks/(task_id)/status
+
+   Updates the status of a task.
+
+   :form status: The new status. Must be *Running*, *Completed*, or *Aborted*.
+   :status 204: The task status was updated.
+   :status 400: Bad parameters given.
+   :status 409: Requested state transition is invalid.
+
+   Tasks in Beaker always start out having the *New* status. Once a task is 
+   *Running*, its status may only change to *Completed*, meaning that the task 
+   has completed execution, or *Aborted*, meaning that the task's execution did 
+   not complete (or never began) because of some unexpected condition. Once 
+   a task is *Completed* or *Aborted* its status may not be changed. Attempting 
+   to change the status in a way that violates these rules will result in 
+   a :http:statuscode:`409` response.
+
 .. http:post:: /recipes/(recipe_id)/tasks/(task_id)/results/
 
    Records a task result. Returns a :http:statuscode:`201` response with a 
