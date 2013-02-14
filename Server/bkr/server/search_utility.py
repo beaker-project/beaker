@@ -99,6 +99,10 @@ class DeviceColumn(MyColumn):
             kw['relations'] = 'devices'
         super(DeviceColumn,self).__init__(**kw)        
 
+class DiskColumn(MyColumn):
+    def __init__(self, **kwargs):
+        kwargs.setdefault('relations', ['disks'])
+        super(DiskColumn, self).__init__(**kwargs)
 
 class AliasedColumn(MyColumn):
 
@@ -1481,3 +1485,25 @@ class Device(SystemObject):
     
         ids = [r.id for r in query]  
         return not_(model.system_table.c.id.in_(ids))   
+
+class Disk(SystemObject):
+    display_name = 'Disk'
+    searchable_columns = {
+        'Model': DiskColumn(col_type='string', column=model.Disk.model),
+        'Size': DiskColumn(col_type='numeric', column=model.Disk.size),
+        'SectorSize': DiskColumn(col_type='numeric', column=model.Disk.sector_size),
+        'PhysicalSectorSize': DiskColumn(col_type='numeric',
+            column=model.Disk.phys_sector_size),
+    }
+
+    # This is the special case for "is not" which is applied on 
+    # one-to-many related entities...
+    @classmethod
+    def _is_not_filter(cls, col, val):
+        if not val:
+            return or_(col != None, col != val)
+        return not_(model.System.disks.any(col == val))
+    model_is_not_filter = _is_not_filter
+    size_is_not_filter = _is_not_filter
+    sectorsize_is_not_filter = _is_not_filter
+    physicalsectorsize_is_not_filter = _is_not_filter

@@ -14,7 +14,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
-        RecipeVirtStatus, MachineRecipe, GuestRecipe
+        RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -1363,6 +1363,59 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(with_e1000 in systems)
         self.assert_(with_tg3 in systems)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=766919
+    def test_filtering_by_disk(self):
+        small_disk = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        small_disk.disks[:] = [Disk(size=8000000000,
+                sector_size=512, phys_sector_size=512)]
+        big_disk = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        big_disk.disks[:] = [Disk(size=2000000000000,
+                sector_size=4096, phys_sector_size=4096)]
+        two_disks = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        two_disks.disks[:] = [
+                Disk(size=500000000000, sector_size=512, phys_sector_size=512),
+                Disk(size=8000000000, sector_size=4096, phys_sector_size=4096)]
+        session.flush()
+
+        # criteria inside the same <disk/> element apply to a single disk
+        # and are AND'ed by default
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <disk>
+                    <size op="&gt;" value="10000000000" />
+                    <phys_sector_size op="=" value="4096" />
+                </disk>
+            </hostRequires>
+            """))
+        self.assert_(small_disk not in systems)
+        self.assert_(big_disk in systems)
+        self.assert_(two_disks not in systems)
+
+        # separate <disk/> elements can match separate disks
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <disk><size op="&gt;" value="10000000000" /></disk>
+                <disk><phys_sector_size op="=" value="4096" /></disk>
+            </hostRequires>
+            """))
+        self.assert_(small_disk not in systems)
+        self.assert_(big_disk in systems)
+        self.assert_(two_disks in systems)
+
+        # <not/> combined with a negative filter can be used to filter against 
+        # all disks (e.g. "give me systems with only 512-byte-sector disks")
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <not><disk><sector_size op="!=" value="512" /></disk></not>
+            </hostRequires>
+            """))
+        self.assert_(small_disk in systems)
+        self.assert_(big_disk not in systems)
+        self.assert_(two_disks not in systems)
 
 class OSMajorTest(unittest.TestCase):
 

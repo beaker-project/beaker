@@ -520,6 +520,13 @@
           </choice>
         </oneOrMore>
       </element>
+      <element name="disk">
+        <a:documentation xml:lang="en">
+          Selects systems by disk. A system will match this filter if any of 
+          its disks matches the criteria in this element.
+        </a:documentation>
+        <oneOrMore><ref name="diskreq" /></oneOrMore>
+      </element>
       <element name="group">
         <ref name="equality_op" />
         <attribute name="value" />
@@ -599,6 +606,42 @@
       <attribute name="value" />
     </element>
    </choice>
+  </define>
+  <define name="diskreq">
+    <choice>
+      <element name="and">
+        <zeroOrMore><ref name="diskreq"/></zeroOrMore>
+      </element>
+      <element name="or">
+        <zeroOrMore><ref name="diskreq"/></zeroOrMore>
+      </element>
+      <element name="not">
+        <zeroOrMore><ref name="diskreq"/></zeroOrMore>
+      </element>
+      <element name="model">
+        <ref name="equality_op" />
+        <attribute name="value" />
+      </element>
+      <element name="size">
+        <a:documentation xml:lang="en">Size of the disk in bytes.</a:documentation>
+        <ref name="op" />
+        <attribute name="value" />
+      </element>
+      <element name="sector_size">
+        <a:documentation xml:lang="en">
+          Logical sector size of the disk in bytes. Modern hard disks with 
+          large sector sizes may emulate a 512-byte sector size in firmware for 
+          compatibility reasons.
+        </a:documentation>
+        <ref name="op" />
+        <attribute name="value" />
+      </element>
+      <element name="phys_sector_size">
+        <a:documentation xml:lang="en">Physical sector size of the disk in bytes.</a:documentation>
+        <ref name="op" />
+        <attribute name="value" />
+      </element>
+    </choice>
   </define>
   <define name="systemreq">
   <choice>

@@ -851,6 +851,64 @@ class XmlDevice(ElementWrapper):
         return (joins, query)
 
 
+# N.B. these XmlDisk* filters do not work outside of a <disk/> element!
+
+class XmlDiskModel(ElementWrapper):
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 'like' : 'like',
+                 '!=' : '__ne__'}
+    def filter_disk(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        if value:
+            return getattr(Disk.model, op)(value)
+        return None
+
+class XmlDiskSize(ElementWrapper):
+    def filter_disk(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        if value:
+            return getattr(Disk.size, op)(value)
+        return None
+
+class XmlDiskSectorSize(ElementWrapper):
+    def filter_disk(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        if value:
+            return getattr(Disk.phys_sector_size, op)(value)
+        return None
+
+class XmlDiskPhysSectorSize(ElementWrapper):
+    def filter_disk(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        if value:
+            return getattr(Disk.phys_sector_size, op)(value)
+        return None
+
+class XmlDisk(ElementWrapper):
+    subclassDict = {
+        'model': XmlDiskModel,
+        'size': XmlDiskSize,
+        'sector_size': XmlDiskSectorSize,
+        'phys_sector_size': XmlDiskPhysSectorSize,
+    }
+
+    def filter(self, joins):
+        clauses = []
+        for child in self:
+            if callable(getattr(child, 'filter_disk', None)):
+                clause = child.filter_disk()
+                if clause is not None:
+                    clauses.append(clause)
+        if not clauses:
+            return (joins, System.disks.any())
+        return (joins, System.disks.any(and_(*clauses)))
+
+
 class XmlCpu(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
@@ -903,6 +961,7 @@ class XmlHost(XmlAnd):
                     'system': XmlSystem,
                     'cpu': XmlCpu,
                     'device': XmlDevice,
+                    'disk': XmlDisk,
                     'group': XmlGroup,
                     'key_value': XmlKeyValue,
                     'auto_prov': XmlAutoProv,
