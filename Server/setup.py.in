@@ -234,6 +234,7 @@ setup(
             'beaker-check = bkr.server.tools.check_beaker:main',
             'beaker-cleanup-visits = bkr.server.tools.cleanup_visits:main',
             'beaker-repo-update = bkr.server.tools.repo_update:main',
+            'beaker-cleanup-recipes = bkr.server.tools.cleanup_unfinished_recipesets:main'
         ),
     }
     )
