@@ -23,6 +23,48 @@ class TestBeakerd(unittest.TestCase):
             data_setup.create_system(lab_controller=self.lab_controller,
                     shared=True)
 
+    def test_schedule_bad_recipes_dont_fail_all(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lab_controller)
+            r1 = data_setup.create_recipe()
+            r2 = data_setup.create_recipe()
+            j1 = data_setup.create_job_for_recipes([r1,r2])
+            r1.systems[:] = [system]
+            r2.systems[:] = [system]
+
+        r1.process()
+        r1.queue()
+        r2.process()
+        r2.queue()
+        aborted_recipes = [r1,r2]
+        scheduled_recipes = []
+        original_sqr = beakerd.schedule_queued_recipe
+        # Need to pass by ref
+        abort_ = [False]
+        def mock_sqr(recipe_id):
+            if abort_[0] is True:
+                raise Exception('ouch')
+            else:
+                abort_[0] = True
+            original_sqr(recipe_id)
+            scheduled_recipes = aborted_recipes.pop(
+                aborted_recipes.index(Recipe.by_id(recipe_id)))
+
+        try:
+            beakerd.schedule_queued_recipe = mock_sqr
+            beakerd.schedule_queued_recipes()
+        finally:
+            beakerd.schedule_queued_recipe = original_sqr
+
+        for a in aborted_recipes:
+            a = Recipe.by_id(a.id)
+            a.recipeset.job.update_status()
+            self.assertEqual(a.status, TaskStatus.aborted)
+        for s in scheduled_recipes:
+            s = Recipe.by_id(s.id)
+            s.recipeset.job.update_status()
+            self.assertEquals(s.status, TaskStatus.scheduled)
+
     def test_just_in_time_systems(self):
        # Expected behaviour of this test is (as of 0.11.3) the following:
        # When scheduled_queued_recipes() is called it retrieves spare_recipe

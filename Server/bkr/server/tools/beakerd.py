@@ -29,7 +29,9 @@ import sys
 import os
 import random
 from bkr.server import needpropertyxml, utilisation
-from bkr.server.bexceptions import BX, VMCreationFailedException
+from bkr.server.bexceptions import BX, VMCreationFailedException, \
+    StaleTaskStatusException, InsufficientSystemPermissions, \
+    StaleSystemUserException
 from bkr.server.model import *
 from bkr.server.util import load_config, log_traceback
 from bkr.server.recipetasks import RecipeTasks
@@ -381,9 +383,30 @@ def schedule_queued_recipes(*args):
             try:
                 schedule_queued_recipe(recipe_id)
                 session.commit()
+            except (StaleSystemUserException, InsufficientSystemPermissions,
+                 StaleTaskStatusException), e:
+                # Either
+                # System user has changed before
+                # system allocation
+                # or
+                # System permissions have changed before
+                # system allocation
+                # or
+                # Something has moved our status on from queued
+                # already.
+                log.warn(str(e))
+                session.rollback()
             except Exception, e:
                 log.exception('Error in schedule_queued_recipe(%s)', recipe_id)
                 session.rollback()
+                session.begin(nested=True)
+                try:
+                    recipe=MachineRecipe.by_id(recipe_id)
+                    recipe.recipeset.abort("Aborted in schedule_queued_recipe: %s" % e)
+                    session.commit()
+                except Exception, e:
+                    log.exception("Error during error handling in schedule_queued_recipe: %s" % e)
+                    session.rollback()
         log.debug("Exiting schedule_queued_recipes")
         return True
     finally:

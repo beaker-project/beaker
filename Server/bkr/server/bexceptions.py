@@ -25,9 +25,28 @@ from bkr.common.bexceptions import *
 class VMCreationFailedException(BeakerException):
     pass
 
+
 class StaleTaskStatusException(ValueError):
     """
     Raised when attempting to update the status of a task which was changed 
     concurrently by another transaction.
+    """
+    pass
+
+
+class StaleSystemUserException(BX):
+    """
+    Raised when attempting to update the user of a system, whilst
+    the system user has already changed from what was expected.
+
+    """
+    pass
+
+
+class InsufficientSystemPermissions(BX):
+    """
+    Raised when systems permissions available to a
+    user are not sufficient.
+
     """
     pass

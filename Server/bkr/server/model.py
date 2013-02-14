@@ -30,7 +30,8 @@ from xmlrpclib import ProtocolError
 import time
 from kid import Element
 from bkr.server.bexceptions import BeakerException, BX, \
-        VMCreationFailedException, StaleTaskStatusException
+        VMCreationFailedException, StaleTaskStatusException, \
+        InsufficientSystemPermissions, StaleSystemUserException
 from bkr.server.enum import DeclEnum
 from bkr.server.helpers import *
 from bkr.server.util import unicode_truncate, absolute_url
@@ -2658,18 +2659,19 @@ class System(SystemObject):
         if user is None:
             user = identity.current.user
         if self.user is not None and self.user == user:
-            raise BX(_(u'User %s has already reserved system %s')
-                    % (user, self))
+            raise StaleSystemUserException(_(u'User %s has already reserved '
+                'system %s') % (user, self))
         if not self.can_share(user):
-            raise BX(_(u'User %s cannot reserve system %s')
-                    % (user, self))
+            raise InsufficientSystemPermissions(_(u'User %s cannot '
+                'reserve system %s') % (user, self))
         # Atomic operation to reserve the system
         session.flush()
         if session.connection(System).execute(system_table.update(
                 and_(system_table.c.id == self.id,
                      system_table.c.user_id == None)),
                 user_id=user.user_id).rowcount != 1:
-            raise BX(_(u'System %r is already reserved') % self)
+            raise StaleSystemUserException(_(u'System %r is already '
+                'reserved') % self)
         self.user = user # do it here too, so that the ORM is aware
         reservation = Reservation(user=user, type=reservation_type)
         self.reservations.append(reservation)
