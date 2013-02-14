@@ -1,10 +1,12 @@
 import unittest, datetime, os, threading
+import bkr
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
         Provision
 import sqlalchemy.orm
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
-from turbogears.database import session
+from turbogears.database import session, get_engine
 import xmltramp
 from bkr.server.jobxml import XmlJob
 from bkr.inttest import data_setup
@@ -20,6 +22,95 @@ class TestBeakerd(unittest.TestCase):
             self.lab_controller = data_setup.create_labcontroller()
             data_setup.create_system(lab_controller=self.lab_controller,
                     shared=True)
+
+    def test_just_in_time_systems(self):
+       # Expected behaviour of this test is (as of 0.11.3) the following:
+       # When scheduled_queued_recipes() is called it retrieves spare_recipe
+       # and r4 as candidate recipes (r2 and r3 are not considered because none of their
+       # candidate systems are free).
+       # During looping in scheduled_queued_recipes(), we complete
+       # holds_deadlocking_resource_recipe, so that its resource (systemB)
+       # is eligible to be the first candidate resource for
+       # r4 (a candidate as it was released in between sessions, and
+       # the first because it is owned by the creator of r4). r4 would
+       # then be assigned this system and fail the assertion.
+
+       # With this patch candidate systems cannot change once scheduled_queued_recipes()
+       # is entered.
+        with session.begin():
+            user = data_setup.create_user()
+            systemA = data_setup.create_system(lab_controller=self.lab_controller)
+            # This gives systemB priority
+            systemB = data_setup.create_system(owner=user, lab_controller=self.lab_controller)
+            system_decoy = data_setup.create_system(lab_controller=self.lab_controller)
+            system_spare = data_setup.create_system(lab_controller=self.lab_controller)
+
+            holds_deadlocking_resource_recipe = data_setup.create_recipe()
+            spare_recipe = data_setup.create_recipe()
+            r1 = data_setup.create_recipe()
+            r2 = data_setup.create_recipe()
+            r3 = data_setup.create_recipe()
+            r4 = data_setup.create_recipe()
+
+            data_setup.create_job_for_recipes([holds_deadlocking_resource_recipe])
+            data_setup.create_job_for_recipes([spare_recipe])
+            j1 = data_setup.create_job_for_recipes([r1,r2])
+            j2 = data_setup.create_job_for_recipes([r3,r4], owner=user)
+
+            spare_recipe.systems[:] = [system_spare]
+            r2.systems[:] = [systemB]
+            r3.systems[:] = [systemA]
+            r4.systems[:] = [systemB, system_decoy]
+
+        # We need this to be the case so that we release
+        # our resource at the correct time
+        assert spare_recipe.id < r4.id
+
+        data_setup.mark_recipe_running(holds_deadlocking_resource_recipe,
+            system=systemB)
+        data_setup.mark_recipe_running(r1, system=systemA)
+
+        spare_recipe.process()
+        spare_recipe.queue()
+
+        r2.process()
+        r2.queue()
+        r3.process()
+        r3.queue()
+        r4.process()
+        r4.queue()
+
+        engine = get_engine()
+        SessionFactory = sessionmaker(bind=engine)
+        session1 = SessionFactory()
+
+        original_sqr = beakerd.schedule_queued_recipe
+        def mock_sqr(recipe_id):
+            if recipe_id == spare_recipe.id:
+                # We need to now release System B
+                # to make sure it is not picked up
+                complete_me = session1.query(Recipe).filter(Recipe.id ==
+                    holds_deadlocking_resource_recipe.id).one()
+                orig_session = bkr.server.model.session
+                bkr.server.model.session = session1
+                data_setup.mark_recipe_complete(complete_me, only=True)
+                session1.commit()
+                bkr.server.model.session = orig_session
+            else:
+                pass
+            original_sqr(recipe_id)
+
+        try:
+            beakerd.schedule_queued_recipe = mock_sqr
+            beakerd.schedule_queued_recipes()
+        finally:
+            beakerd.schedule_queued_recipe = original_sqr
+        r4 = Recipe.by_id(r4.id)
+        r4.recipeset.job.update_status()
+        self.assertTrue(r4.status, TaskStatus.scheduled)
+        # This asserts that systemB was not found in the schedule_queued_recipe
+        # loop. If it was it would have been picked due to owner priority
+        self.assertEquals(r4.resource.system.fqdn, system_decoy.fqdn)
 
     def test_loaned_machine_can_be_scheduled(self):
         with session.begin():

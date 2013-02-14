@@ -342,50 +342,53 @@ def abort_dead_recipe(recipe_id):
         recipe.recipeset.abort(msg)
 
 def schedule_queued_recipes(*args):
-    recipes = MachineRecipe.query\
-                    .join(Recipe.recipeset, RecipeSet.job)\
-                    .join(Recipe.systems)\
-                    .join(Recipe.distro_tree)\
-                    .join(DistroTree.lab_controller_assocs,
-                        (LabController, and_(
-                            LabControllerDistroTree.lab_controller_id == LabController.id,
-                            System.lab_controller_id == LabController.id)))\
-                    .filter(
-                         and_(Recipe.status==TaskStatus.queued,
-                              System.user==None,
-                              System.status==SystemStatus.automated,
-                              LabController.disabled==False,
-                              or_(
-                                  RecipeSet.lab_controller==None,
-                                  RecipeSet.lab_controller_id==System.lab_controller_id,
-                                 ),
-                              or_(
-                                  System.loan_id==None,
-                                  System.loan_id==Job.owner_id,
-                                 ),
-                             )
-                           )
-    # Order recipes by priority.
-    # FIXME Add secondary order by number of matched systems.
-    if True:
-        recipes = recipes.order_by(RecipeSet.priority.desc())
-    # order recipes by id
-    recipes = recipes.order_by(MachineRecipe.id)
-    if not recipes.count():
-        return False
-    log.debug("Entering schedule_queued_recipes")
-    for recipe_id, in recipes.values(MachineRecipe.id.distinct()):
-        session.begin()
-        try:
-            schedule_queued_recipe(recipe_id)
-            session.commit()
-        except Exception, e:
-            log.exception('Error in schedule_queued_recipe(%s)', recipe_id)
-            session.rollback()
-        finally:
-            session.close()
-    log.debug("Exiting schedule_queued_recipes")
-    return True
+    session.begin()
+    try:
+        recipes = MachineRecipe.query\
+                        .join(Recipe.recipeset, RecipeSet.job)\
+                        .join(Recipe.systems)\
+                        .join(Recipe.distro_tree)\
+                        .join(DistroTree.lab_controller_assocs,
+                            (LabController, and_(
+                                LabControllerDistroTree.lab_controller_id == LabController.id,
+                                System.lab_controller_id == LabController.id)))\
+                        .filter(
+                             and_(Recipe.status==TaskStatus.queued,
+                                  System.user==None,
+                                  System.status==SystemStatus.automated,
+                                  LabController.disabled==False,
+                                  or_(
+                                      RecipeSet.lab_controller==None,
+                                      RecipeSet.lab_controller_id==System.lab_controller_id,
+                                     ),
+                                  or_(
+                                      System.loan_id==None,
+                                      System.loan_id==Job.owner_id,
+                                     ),
+                                 )
+                               )
+        # Order recipes by priority.
+        # FIXME Add secondary order by number of matched systems.
+        if True:
+            recipes = recipes.order_by(RecipeSet.priority.desc())
+        # order recipes by id
+        recipes = recipes.order_by(MachineRecipe.id)
+        if not recipes.count():
+            return False
+        log.debug("Entering schedule_queued_recipes")
+        for recipe_id, in recipes.values(MachineRecipe.id.distinct()):
+            session.begin(nested=True)
+            try:
+                schedule_queued_recipe(recipe_id)
+                session.commit()
+            except Exception, e:
+                log.exception('Error in schedule_queued_recipe(%s)', recipe_id)
+                session.rollback()
+        log.debug("Exiting schedule_queued_recipes")
+        return True
+    finally:
+        session.commit()
+        session.close()
 
 def schedule_queued_recipe(recipe_id):
     recipe = MachineRecipe.by_id(recipe_id)
