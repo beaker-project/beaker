@@ -17,7 +17,7 @@
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.11.2
+Version:        0.11.3
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -299,6 +299,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/product-update
 %{_bindir}/beaker-repo-update
 %{_bindir}/%{name}-cleanup-visits
+%{_bindir}/%{name}-cleanup-recipes
 %{_sysconfdir}/init.d/%{name}d
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %attr(0755,root,root)%{_bindir}/%{name}d
@@ -374,6 +375,14 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Fri Feb 08 2013 Raymond Mancy <rmancy@redhat.com> 0.11.3-1
+- 907297 Pass full principal when creating a kerberos AP_REQ
+  (rmancy@redhat.com)
+- 902659 Improve accuracy of beakerd metrics reporting (ncoghlan@redhat.com)
+- 907307 Only try oVirt for x86_64 recipes (ncoghlan@redhat.com)
+- 903442 Script to cleanup recipes that have been affected by BZ#807237
+  (rmancy@redhat.com)
+
 * Wed Jan 30 2013 Dan Callaghan <dcallagh@redhat.com> 0.11.2-1
 - 903893 only reuse MAC addresses once the entire recipe set is finished
   (dcallagh@redhat.com)

@@ -13,7 +13,8 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
-        VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet
+        VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
+        RecipeVirtStatus, MachineRecipe, GuestRecipe
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -1441,6 +1442,82 @@ class RecipeTest(unittest.TestCase):
                 '<role value="SERVER"><system value="server.roles_to_xml"/></role>'
                 '</roles>' in xml, xml)
 
+
+class CheckDynamicVirtTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    def assertVirtPossible(self, recipe, msg):
+        self.assertEqual(recipe.check_virtualisability(),
+                         RecipeVirtStatus.possible, msg)
+
+    def assertVirtPrecluded(self, recipe, msg):
+        self.assertEqual(recipe.check_virtualisability(),
+                         RecipeVirtStatus.precluded, msg)
+
+    # Virtualisation checks added due to https://bugzilla.redhat.com/show_bug.cgi?id=902659
+    def test_virt_precluded_rhel_3(self):
+        dt = data_setup.create_distro_tree(arch=u'x86_64',
+                                           osmajor=u'RedHatEnterpriseLinux3')
+        recipe = data_setup.create_recipe(dt)
+        data_setup.create_job_for_recipes([recipe])
+        self.assertVirtPrecluded(recipe, "RHEL 3 did not preclude virt")
+
+    def test_virt_precluded_guest_recipes(self):
+        dt = data_setup.create_distro_tree(arch=u'x86_64')
+        job = data_setup.create_job(num_guestrecipes=1, distro_tree=dt)
+        recipe = job.recipesets[0].recipes[0]
+        self.assertVirtPrecluded(recipe, "Guest recipe did not preclude virt")
+
+    def test_virt_precluded_multihost(self):
+        dt = data_setup.create_distro_tree(arch=u'x86_64')
+        recipe1 = data_setup.create_recipe(dt)
+        recipe2 = data_setup.create_recipe(dt)
+        data_setup.create_job_for_recipes([recipe1, recipe2])
+        self.assertVirtPrecluded(recipe1,
+                                 "Multihost recipeset did not preclude virt")
+        self.assertVirtPrecluded(recipe2,
+                                 "Multihost recipeset did not preclude virt")
+
+    def test_virt_precluded_host_requires(self):
+        dt = data_setup.create_distro_tree(arch=u'x86_64')
+        recipe = data_setup.create_recipe(dt)
+        recipe.host_requires = u"""
+            <hostRequires>
+                <system_type op="=" value="Prototype" />
+            </hostRequires>
+        """
+        data_setup.create_job_for_recipes([recipe])
+        self.assertVirtPrecluded(recipe, "Host requires did not preclude virt")
+
+    # Additional virt check due to https://bugzilla.redhat.com/show_bug.cgi?id=907307
+    def test_virt_possible_x86_64(self):
+        dt = data_setup.create_distro_tree(arch=u'x86_64')
+        recipe = data_setup.create_recipe(dt)
+        data_setup.create_job_for_recipes([recipe])
+        self.assertVirtPossible(recipe, "virt precluded for x86_64")
+
+    def test_virt_precluded_unsupported_arch(self):
+        for arch in [u"i386", u"ppc", u"ppc64", u"s390", u"s390x"]:
+            dt = data_setup.create_distro_tree(arch=arch)
+            recipe = data_setup.create_recipe(dt)
+            data_setup.create_job_for_recipes([recipe])
+            msg = "%s did not preclude virt" % arch
+            self.assertVirtPrecluded(recipe, msg)
+
+
+class MachineRecipeTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
     def _create_demo_recipes(self, arch, num_recipes, whiteboard):
         dt = data_setup.create_distro_tree(arch=arch)
         recipes = [data_setup.create_recipe(dt, whiteboard=whiteboard)
@@ -1460,51 +1537,53 @@ class RecipeTest(unittest.TestCase):
         return {u'new': len(recipes)-4,  u'processed': 1, u'queued': 1,
                 u'scheduled': 1, u'waiting': 0, u'running': 0}
 
-
     def test_get_queue_stats(self):
         expected_stats = {u'new': 0,  u'processed': 0, u'queued': 0,
                           u'scheduled': 0, u'waiting': 0, u'running': 0}
-        whiteboard = "test_get_queue_stats"
+        whiteboard = u'test_get_queue_stats'
         def _get_queue_stats():
-            return Recipe.get_queue_stats(Recipe.query.filter(
-                                            Recipe.whiteboard==whiteboard))
+            cls = MachineRecipe
+            return cls.get_queue_stats(cls.query.filter(
+                                       cls.whiteboard == whiteboard))
         # Add some recipes
         recipes = self._create_demo_recipes('x86_64', 5, whiteboard)
         expected_stats[u'new'] = len(recipes)
-        stats = _get_queue_stats()
-        self.assertEqual(stats, expected_stats)
+        self.assertEqual(_get_queue_stats(), expected_stats)
         # Advance recipe states
         expected_stats = self._advance_recipe_states(recipes)
-        stats = _get_queue_stats()
-        self.assertEqual(stats, expected_stats)
+        self.assertEqual(_get_queue_stats(), expected_stats)
 
     def test_get_queue_stats_by_arch(self):
-        expected_arches = 's390x x86_64 ppc'.split()
+        expected_arches = u's390x x86_64 ppc'.split()
         default_stats = {u'new': 0,  u'processed': 0, u'queued': 0,
                          u'scheduled': 0, u'waiting': 0, u'running': 0}
         expected_stats = dict((arch, default_stats.copy())
                                      for arch in expected_arches)
-        whiteboard = "test_get_queue_stats_by_arch"
+        whiteboard = u'test_get_queue_stats_by_arch'
         def _get_queue_stats():
-            return Recipe.get_queue_stats_by_group(Arch.arch,
-                           Recipe.query.filter(Recipe.whiteboard==whiteboard)
-                                       .join(DistroTree).join(Arch))
+            cls = MachineRecipe
+            return cls.get_queue_stats_by_group(Arch.arch,
+                           cls.query.filter(cls.whiteboard == whiteboard)
+                                    .join(DistroTree).join(Arch))
+        def _check_queue_stats(expected_stats):
+            stats = _get_queue_stats()
+            for arch in expected_arches:
+                self.assertEqual(stats[arch], expected_stats[arch])
         # Add some recipes
         trees = []
-        s390x = self._create_demo_recipes('s390x', 2, whiteboard)
-        expected_stats['s390x'][u'new'] = len(s390x)
+        s390x = self._create_demo_recipes(u's390x', 2, whiteboard)
+        expected_stats[u's390x'][u'new'] = len(s390x)
         ppc = self._create_demo_recipes('ppc', 3, whiteboard)
-        expected_stats['ppc'][u'new'] = len(ppc)
+        expected_stats[u'ppc'][u'new'] = len(ppc)
         x86_64 = self._create_demo_recipes('x86_64', 5, whiteboard)
-        expected_stats['x86_64'][u'new'] = len(x86_64)
-        stats = _get_queue_stats()
-        for arch in expected_arches:
-            self.assertEqual(stats[arch], expected_stats[arch])
+        expected_stats[u'x86_64'][u'new'] = len(x86_64)
+        # Check we get the expected answers
+        _check_queue_stats(expected_stats)
         # Advance x86_64 recipe states
-        expected_stats['x86_64'] = self._advance_recipe_states(x86_64)
-        stats = _get_queue_stats()
-        for arch in expected_arches:
-            self.assertEqual(stats[arch], expected_stats[arch])
+        expected_stats[u'x86_64'] = self._advance_recipe_states(x86_64)
+        # Check we get the expected answers
+        _check_queue_stats(expected_stats)
+
 
 class GuestRecipeTest(unittest.TestCase):
 

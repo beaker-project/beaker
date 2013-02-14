@@ -27,32 +27,15 @@ class AuthManager:
             self.primary_principal = self.ccache.principal()
         if self.keytab: self.reinit()
 
-    def get_encoded_request(self, hub=None, service=None, realm=None):
-        #This has been copied from kobo-client and slightly modified 
-        def get_server_principal(hub, service=None, realm=None):
-            """Convert hub url to kerberos principal."""
-            if realm is None:
-                # guess realm: last two parts from hostname
-                realm = ".".join(hub.split(".")[-2:]).upper()
-            if service is None:
-                service = "HTTP"
-            return '%s/%s@%s' % (service, hub, realm)
-        if not hub:
-            hub = socket.gethostname()
-        sprinc = krbV.Principal(name=get_server_principal(hub, service=service, realm=realm), context=self.context)
-
+    def get_encoded_request(self, full_principal):
+        sprinc = krbV.Principal(name=full_principal, context=self.context)
         ac = krbV.AuthContext(context=self.context)
         ac.flags = krbV.KRB5_AUTH_CONTEXT_DO_SEQUENCE | krbV.KRB5_AUTH_CONTEXT_DO_TIME
         ac.rcache = self.context.default_rcache()
 
         # create and encode the authentication request
-        try:
-            ac, req = self.context.mk_req(server=sprinc, client=self.primary_principal, auth_context=ac, ccache=self.ccache, options=krbV.AP_OPTS_MUTUAL_REQUIRED)
-        except krbV.Krb5Error, ex:
-            if getattr(ex, "err_code", None) == -1765328377:
-                ex.message += ". Make sure you correctly set KRB_REALM (current value: %s)." % realm
-                ex.args = (ex.err_code, ex.message)
-            raise ex
+        ac, req = self.context.mk_req(server=sprinc, client=self.primary_principal,
+            auth_context=ac, ccache=self.ccache, options=krbV.AP_OPTS_MUTUAL_REQUIRED)
         return base64.encodestring(req)
 
     def reinit(self):

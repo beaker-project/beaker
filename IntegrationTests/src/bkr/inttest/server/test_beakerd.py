@@ -3,6 +3,7 @@ from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, LabController, \
         Provision
 import sqlalchemy.orm
+from sqlalchemy.sql import not_
 from turbogears.database import session
 import xmltramp
 from bkr.server.jobxml import XmlJob
@@ -707,6 +708,15 @@ class TestBeakerdMetrics(unittest.TestCase):
         self.original_metrics = beakerd.metrics
         beakerd.metrics = FakeMetrics()
         session.begin()
+        # Other tests might have left behind systems and running recipes,
+        # so we remove or cancel them all so they don't pollute our metrics
+        systems = System.query.filter(System.status != SystemStatus.removed)
+        for system in systems:
+            system.status = SystemStatus.removed
+        running = Recipe.query.filter(not_(Recipe.status.in_(
+                [s for s in TaskStatus if s.finished])))
+        for rs in running:
+            rs.cancel()
 
     def tearDown(self):
         session.rollback()
@@ -727,17 +737,43 @@ class TestBeakerdMetrics(unittest.TestCase):
             'by_arch.i386',
             'by_arch.ppc',
             'by_arch.ppc64',
-            'by_lab.example_invalid_com',
+            'by_lab.checkmetrics_invalid_com',
         ]
-        lc = data_setup.create_labcontroller(fqdn="example.invalid.com")
-        for arch in "i386 x86_64 ppc ppc64".split():
+        lc = data_setup.create_labcontroller(fqdn=u"checkmetrics.invalid.com")
+        expected = dict(("%s.%s" % (g, c), 0)
+                            for g in gauges for c in categories)
+        for arch in u"i386 x86_64 ppc ppc64".split():
             data_setup.create_system(lab_controller=lc, arch=arch)
+            data_setup.create_system(lab_controller=lc, arch=arch,
+                                     status=SystemStatus.removed)
+            categories = ['all', 'shared', 'by_lab.checkmetrics_invalid_com',
+                          'by_arch.%s' % arch]
+            for category in categories:
+                key = 'gauges.systems_idle_automated.%s' % category
+                expected[key] += 1
+        # Ensure the test can cope with other systems showing
+        # up as "idle_removed" in the metrics.
+        lc = data_setup.create_labcontroller(fqdn=u"emptylab.invalid.com")
+        data_setup.create_system(lab_controller=lc,
+                                  status=SystemStatus.removed)
         session.flush()
-        expected = ["%s.%s" % (g, c) for g in gauges for c in categories]
         beakerd.system_count_metrics()
-        # We may get extra stats if some systems are defined in the test DB
-        actual = [name for name, value in beakerd.metrics.calls]
-        self.assertTrue(set(actual) >= set(expected), actual)
+        # We need to split out unknown lab metrics, which we may inherit
+        # from other tests which left systems in the database
+        all_labs = {}
+        known_metrics = {}
+        other_labs = {}
+        for k, v in beakerd.metrics.calls:
+            all_labs[k] = v
+            if k in expected:
+                known_metrics[k] = v
+            else:
+                other_labs[k] = v
+        self.assertEqual(set(known_metrics), set(expected))
+        for k, v in known_metrics.iteritems():
+            self.assertEqual((k, v), (k, expected[k]))
+        for k, v in other_labs.iteritems():
+            self.assertEqual((k, v), (k, 0))
 
     def test_recipe_count_metrics(self):
         gauges = [
@@ -756,13 +792,36 @@ class TestBeakerdMetrics(unittest.TestCase):
             'by_arch.ppc',
             'by_arch.ppc64',
         ]
-        expected = ["%s.%s" % (g, c) for g in gauges for c in categories]
-        for arch in "i386 x86_64 ppc ppc64".split():
+        expected = dict(("%s.%s" % (g, c), 0)
+                            for g in gauges for c in categories)
+        recipes = []
+        for arch in u"i386 x86_64 ppc ppc64".split():
             dt = data_setup.create_distro_tree(arch=arch)
-            recipe = data_setup.create_recipe(dt)
-            data_setup.create_job_for_recipes([recipe])
+            job = data_setup.create_job(num_guestrecipes=1, distro_tree=dt)
+            recipe = job.recipesets[0].recipes[0]
+            recipes.append(recipe)
+            categories = ['all', 'dynamic_virt_possible',
+                          'by_arch.%s' % arch]
+            for category in categories:
+                key = 'gauges.recipes_new.%s' % category
+                expected[key] += 1
         session.flush()
         beakerd.recipe_count_metrics()
-        # We may get extra stats if some recipes are defined in the test DB
-        actual = [name for name, value in beakerd.metrics.calls]
-        self.assertTrue(set(actual) >= set(expected), actual)
+        actual = dict(beakerd.metrics.calls)
+        self.assertEqual(set(actual), set(expected))
+        for k, v in actual.iteritems():
+            self.assertEqual((k, v), (k, expected[k]))
+        # Processing the recipes should set their virt status correctly
+        for category in categories:
+            new = 'gauges.recipes_new.%s' % category
+            processed = 'gauges.recipes_processed.%s' % category
+            if category != 'dynamic_virt_possible':
+                expected[new], expected[processed] = 0, expected[new]
+            else:
+                # Currently, only x86_64 will be a virt candidate
+                expected[new], expected[processed] = 0, 1
+        for recipe in recipes:
+            beakerd.process_new_recipe(recipe.id)
+        beakerd.metrics.calls[:] = []
+        beakerd.recipe_count_metrics()
+        actual = dict(beakerd.metrics.calls)

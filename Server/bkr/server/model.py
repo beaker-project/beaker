@@ -3081,6 +3081,7 @@ class DistroTree(MappedObject):
 
     @classmethod
     def by_filter(cls, filter):
+        # Delayed import to avoid circular dependency
         from bkr.server.needpropertyxml import apply_distro_filter
         # Limit to distro trees which exist in at least one lab
         query = cls.query.filter(DistroTree.lab_controller_assocs.any())
@@ -3125,6 +3126,7 @@ class DistroTree(MappedObject):
         return distro_requires
 
     def systems_filter(self, user, filter, only_in_lab=False):
+        # Delayed import to avoid circular dependency
         from bkr.server.needpropertyxml import apply_system_filter
         systems = System.query
         systems = apply_system_filter(filter, systems)
@@ -4956,36 +4958,6 @@ class Recipe(TaskBase):
         return ';'.join(partitions)
     partitionsKSMeta = property(_partitionsKSMeta)
 
-    @classmethod
-    def get_queue_stats(cls, recipes=None):
-        """Returns a dictionary of status:count pairs for active recipes"""
-        if recipes is None:
-            recipes = cls.query
-        active_statuses = [s for s in TaskStatus if not s.finished]
-        query = (recipes.group_by(Recipe.status)
-                  .having(Recipe.status.in_(active_statuses))
-                  .values(Recipe.status, func.count(Recipe.id)))
-        result = dict((status.name, 0) for status in active_statuses)
-        result.update((status.name, count) for status, count in query)
-        return result
-
-    @classmethod
-    def get_queue_stats_by_group(cls, grouping, recipes=None):
-        if recipes is None:
-            recipes = cls.query
-        active_statuses = [s for s in TaskStatus if not s.finished]
-        query = (recipes.with_entities(grouping,
-                                       Recipe.status,
-                                       func.count(Recipe.id))
-                 .group_by(grouping, Recipe.status)
-                 .having(Recipe.status.in_(active_statuses)))
-        def init_group_stats():
-            return dict((status.name, 0) for status in active_statuses)
-        result = defaultdict(init_group_stats)
-        for group, status, count in query:
-            result[group][status.name] = count
-        return result
-
     def queue(self):
         """
         Move from Processed -> Queued
@@ -5398,22 +5370,6 @@ class Recipe(TaskBase):
                     role.appendChild(system)
             yield(role)
 
-    def check_virtualisability(self):
-        """
-        Decide whether this recipe can be run as a virt guest
-        """
-        # RHEL3 lacks virtio (XXX hardcoding this here is not great)
-        if self.distro_tree.distro.osversion.osmajor.osmajor == \
-                u'RedHatEnterpriseLinux3':
-            return RecipeVirtStatus.precluded
-        # Can't run VMs in a VM
-        if self.guests:
-            return RecipeVirtStatus.precluded
-        # Multihost testing won't work (for now!)
-        if len(self.recipeset.recipes) > 1:
-            return RecipeVirtStatus.precluded
-        return RecipeVirtStatus.possible
-
     @property
     def first_task(self):
         return self.dyn_tasks.order_by(RecipeTask.id).first()
@@ -5467,6 +5423,66 @@ class MachineRecipe(Recipe):
         for guest in self.guests:
             recipe.appendChild(guest.to_xml(clone, from_machine=True))
         return Recipe.to_xml(self, recipe, clone, from_recipeset)
+
+    def check_virtualisability(self):
+        """
+        Decide whether this recipe can be run as a virt guest
+        """
+        # oVirt is i386/x86_64 only but Beaker's own support
+        # is currently only for x86_64
+        if self.distro_tree.arch.arch != u'x86_64':
+            return RecipeVirtStatus.precluded
+        # RHEL3 lacks virtio (XXX hardcoding this here is not great)
+        if self.distro_tree.distro.osversion.osmajor.osmajor == \
+                u'RedHatEnterpriseLinux3':
+            return RecipeVirtStatus.precluded
+        # Can't run VMs in a VM
+        if self.guests:
+            return RecipeVirtStatus.precluded
+        # Multihost testing won't work (for now!)
+        if len(self.recipeset.recipes) > 1:
+            return RecipeVirtStatus.precluded
+        # Check we can translate any host requirements into VM params
+        # Delayed import to avoid circular dependency
+        from bkr.server.needpropertyxml import vm_params, NotVirtualisable
+        try:
+            vm_params(self.host_requires)
+        except NotVirtualisable:
+            return RecipeVirtStatus.precluded
+        # Checks all passed, so dynamic virt should be attempted
+        return RecipeVirtStatus.possible
+
+    @classmethod
+    def get_queue_stats(cls, recipes=None):
+        """Returns a dictionary of status:count pairs for active recipes"""
+        if recipes is None:
+            recipes = cls.query
+        active_statuses = [s for s in TaskStatus if not s.finished]
+        query = (recipes.group_by(cls.status)
+                  .having(cls.status.in_(active_statuses))
+                  .values(cls.status, func.count(cls.id)))
+        result = dict((status.name, 0) for status in active_statuses)
+        result.update((status.name, count) for status, count in query)
+        return result
+
+    @classmethod
+    def get_queue_stats_by_group(cls, grouping, recipes=None):
+        """Returns a mapping from named groups to dictionaries of status:count pairs for active recipes
+        """
+        if recipes is None:
+            recipes = cls.query
+        active_statuses = [s for s in TaskStatus if not s.finished]
+        query = (recipes.with_entities(grouping,
+                                       cls.status,
+                                       func.count(cls.id))
+                 .group_by(grouping, cls.status)
+                 .having(cls.status.in_(active_statuses)))
+        def init_group_stats():
+            return dict((status.name, 0) for status in active_statuses)
+        result = defaultdict(init_group_stats)
+        for group, status, count in query:
+            result[group][status.name] = count
+        return result
 
     def _get_distro_requires(self):
         return self._distro_requires
