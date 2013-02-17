@@ -103,7 +103,7 @@ import xmlrpclib
 from xml.dom.minidom import Document, parseString
 
 class Task_List(BeakerCommand):
-    """List tasks available for distro"""
+    """List tasks in Beaker's task library"""
     enabled = True
 
     def options(self):
