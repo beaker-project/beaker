@@ -1,3 +1,5 @@
+.. _install-guide:
+
 Installation
 ============
 
@@ -213,3 +215,33 @@ There are two special tasks which Beaker relies on for normal operation:
 these to your Beaker installation before attempting to run jobs. You can build 
 the tasks from source by cloning Beaker's git repository, or fetch a pre-built 
 version of the tasks from http://beaker-project.org/tasks/.
+
+.. _sync-tasks:
+
+You can also copy *all* the tasks from another Beaker instance using the
+``beaker-sync-tasks`` tool (distributed as a part of the
+``beaker-server`` package and first available with the 0.12
+release). If there are tasks having the same name in the `destination`
+Beaker instance, they will be overwritten.
+
+For example:
+::
+
+    $ beaker-sync-tasks --source=http://server1.com --destination=http://server2.com --kerberos
+
+It is also possible to use your password to authenticate to the
+destination server, like so:
+
+::
+
+    $ beaker-sync-tasks --source=http://server1.com --destination=http://server2.com --username <username>
+    Password:
+
+By default, the script asks for your approval before beginning the
+task upload. If that is not suitable for your purpose, you may specify
+a ``--force`` switch (with kerberos authentication) so that the script
+may run without any user intervention:
+
+::
+
+    $ beaker-sync-tasks --source=http://server1.com --destination=http://server2.com --kerberos --force

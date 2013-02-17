@@ -110,6 +110,7 @@ Requires:       python-netaddr
 # Kerberos support was added to requests in 0.13.4
 Requires:       python-requests >= 0.13.4
 Requires:       ovirt-engine-sdk
+Requires:  	kobo-client >= 0.3
 %endif
 
 
