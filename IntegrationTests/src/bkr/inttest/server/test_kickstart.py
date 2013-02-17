@@ -520,6 +520,33 @@ EOF
         compare_expected('RedHatEnterpriseLinux7-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_rhel7_repos(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <repos>
+                            <repo name="custom"
+                            url="http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux7/"/>
+                        </repos>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux7/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
     def test_rhel7_s390x(self):
         recipe = self.provision_recipe('''
             <job>
