@@ -75,7 +75,7 @@ class DummyVirtManager(object):
         return self
     def __exit__(self, exc_type, exc_value, exc_tb):
         pass
-    def create_vm(self, name, lab_controllers, mac_address):
+    def create_vm(self, name, lab_controllers, mac_address, virtio_possible):
         pass
     def destroy_vm(self, name):
         pass
