@@ -223,6 +223,10 @@ class BeakerWorkflow(BeakerCommand):
 
         job_options = OptionGroup(self.parser, 'Options for job configuration')
         job_options.add_option(
+             "--job-group",
+             help="Associate a group to this job"
+        )
+        job_options.add_option(
             "--whiteboard",
             default="",
             help="Set the whiteboard for this job",
@@ -491,6 +495,8 @@ class BeakerJob(BeakerBase):
             self.node.setAttribute('retention_tag', kwargs.get('retention_tag'))
         if kwargs.get('product'):
             self.node.setAttribute('product', kwargs.get('product'))
+        if kwargs.get('job_group'):
+            self.node.setAttribute('group', kwargs.get('job_group'))
 
     def addRecipeSet(self, recipeSet=None):
         """ properly add a recipeSet to this job """

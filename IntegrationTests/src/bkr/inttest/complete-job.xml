@@ -1,4 +1,4 @@
-<job product="the_product" retention_tag="audit">
+<job group="somegroup" product="the_product" retention_tag="audit">
     <notify>
         <cc>
             dan@example.com

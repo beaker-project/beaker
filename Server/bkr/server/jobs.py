@@ -480,11 +480,20 @@ class Jobs(RPCRoot):
 
         if user.rootpw_expired:
             raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
-
+        group_name =  xmljob.get_xml_attr('group', unicode, None)
+        group = None
+        if group_name:
+            try:
+                group = Group.by_name(group_name)
+            except NoResultFound, e:
+                raise ValueError('%s is not a valid group' % group_name)
+            if group not in user.groups:
+                raise BX(_(u'You are not a member of the %s group' % group_name))
         job_retention = xmljob.get_xml_attr('retention_tag',unicode,None)
         job_product = xmljob.get_xml_attr('product',unicode,None)
         tag, product = self._process_job_tag_product(retention_tag=job_retention, product=job_product)
-        job = Job(whiteboard=unicode(xmljob.whiteboard), ttasks=0, owner=user)
+        job = Job(whiteboard=unicode(xmljob.whiteboard), ttasks=0, owner=user,
+            group=group)
         job.product = product
         job.retention_tag = tag
         email_validator = validators.Email(not_empty=True)

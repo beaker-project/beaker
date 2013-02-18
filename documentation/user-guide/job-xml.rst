@@ -21,8 +21,12 @@ workflow. Each job has a root node called the job element:
 
 ::
 
-    <job>
+    <job group='product-QA'>
     </job>
+
+This is an optional attribute that indicates the job is being
+submitted on behalf of a particular group.
+It will affect who is able to view and modify elements of the job.
 
 A direct child is the "whiteboard" element. The content is normally a
 mnemonic piece of text describing the job:
