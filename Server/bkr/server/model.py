@@ -6132,6 +6132,7 @@ class RecipeResource(MappedObject):
                 from_obj=left_side.outerjoin(right_side,
                     onclause=left_side.c.mac_address + 1 == right_side.c.mac_address))\
                 .where(right_side.c.mac_address == None)\
+                .where(left_side.c.mac_address + 1 >= int(base_addr))\
                 .order_by(left_side.c.mac_address).limit(1))
         # The type of (left_side.c.mac_address + 1) comes out as Integer
         # instead of MACAddress, I think it's a sqlalchemy bug :-(
