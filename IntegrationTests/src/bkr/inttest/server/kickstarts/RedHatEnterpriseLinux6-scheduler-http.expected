@@ -150,7 +150,7 @@ fi
 if [ -x '/usr/sbin/efibootmgr' ]; then
     BOOT=$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print $2}' | awk -F, '{print $1}')
     EFI=$(/usr/sbin/efibootmgr -v | grep Boot$BOOT | awk '{print $NF}')
-    PXE_SLOT=$(/usr/sbin/efibootmgr -v | grep -Ei '(netboot|pxe)' |cut -c5-8)
+    PXE_SLOT=$(/usr/sbin/efibootmgr -v | grep -Ei '(netboot|pxe)' |head -n 1 |cut -c5-8)
     # If There is no Netboot Entry we can't continue
     # You have to manually setup a Netboot entry first
     # from EFI maint menu.
