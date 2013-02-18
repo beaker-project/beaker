@@ -244,6 +244,18 @@ EOF
             DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
         ]
 
+
+        cls.f18 = data_setup.create_distro(name=u'Fedora-18',
+                osmajor=u'Fedora18', osminor=u'0')
+        cls.f18_x86_64 = data_setup.create_distro_tree(
+                distro=cls.f18, variant=u'Fedora', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/x86_64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-18/GOLD/Fedora/x86_64/os/'])
+        cls.f18_x86_64.repos[:] = [
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+        ]
+
         session.flush()
 
     def setUp(self):
@@ -587,6 +599,34 @@ EOF
             ''', self.system)
         compare_expected('Fedora16-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
+
+    def test_fedora_repos(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <repos>
+                            <repo name="custom"
+                            url="http://repos.fedorapeople.org/repos/beaker/server/Fedora18/"/>
+                        </repos>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/Fedora18/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
+
 
     def test_ignoredisk(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',

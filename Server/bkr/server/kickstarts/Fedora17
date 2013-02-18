@@ -17,7 +17,7 @@ bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} 
 
 {% if distro.osversion.osmajor.osmajor.startswith('Fedora') %}
 {% set releasever = distro.osversion.osmajor.osmajor[6:] %}
-repo --name=myupdates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f{{ releasever }}&arch={{ distro_tree.arch.arch }}
+repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f{{ releasever }}&arch={{ distro_tree.arch.arch }}
 {% endif %}
 {% if distro_tree is arch('armhfp') %}
 # Fedora17 Arm needs an additional repo in order to install.
@@ -55,6 +55,7 @@ skipx
 # Install OS instead of upgrade
 install
 
+{% snippet 'print_anaconda_repos' %}
 {% snippet 'rhts_devices' %}
 {% snippet 'rhts_partitions' %}
 {% snippet 'Fedora' %}
