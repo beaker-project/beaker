@@ -20,6 +20,5 @@ build: $(_SETUP_PY)
 	fi
 
 install:	py-install
-	ln -s bkr-distro-trees-verify.1.gz $(DESTDIR)/usr/share/man/man1/bkr-distros-verify.1.gz
 
 clean:	py-clean

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
+.. _bkr-task-add:
+
 bkr task-add: Upload tasks to Beaker's task library
 ===================================================
 

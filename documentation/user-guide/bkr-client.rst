@@ -48,7 +48,7 @@ Using the client
 ----------------
 
 For full details about the ``bkr`` client and its subcommands, refer to the 
-`Beaker client man pages <../../man/>`_. A summary of some common commands is 
+:ref:`Beaker client man pages <man>`. A summary of some common commands is 
 given below.
 
 To create a simple Job workflow, the beaker client comes with the

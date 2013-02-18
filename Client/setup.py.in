@@ -1,26 +1,9 @@
-# pkg_resources.requires() does not work if multiple versions are installed in 
-# parallel. This semi-supported hack using __requires__ is the workaround.
-# http://bugs.python.org/setuptools/issue139
-# (EPEL6 has python-sphinx = 0.6 and python-sphinx10 = 1.0)
-__requires__ = ['Sphinx >= 1.0.4']
-import pkg_resources
 
 import sys
 import commands
 from glob import glob
 from setuptools import setup, find_packages
 from distutils.command.build import build as _build
-
-class build(_build):
-    sub_commands = _build.sub_commands + [('build_sphinx', lambda self: True)]
-
-from sphinx.setup_command import BuildDoc
-
-class BuildDocWithPath(BuildDoc):
-    def run(self):
-        sys.path.insert(0, self.distribution.get_command_obj('build').build_lib)
-        import bkr # lameness due to namespace packages, I think
-        BuildDoc.run(self)
 
 def bash_completion_dir():
     status, output = commands.getstatusoutput('pkg-config --variable completionsdir bash-completion')
@@ -39,7 +22,6 @@ setup(
 
     data_files = [
         ('/etc/beaker/', ['client.conf']),
-        ('/usr/share/man/man1', glob('build/sphinx/man/*.1')),
         (bash_completion_dir(), ['bash-completion/bkr']),
     ],
 
@@ -48,18 +30,5 @@ setup(
             'bkr = bkr.client.main:main',
             'beaker-wizard = bkr.client.wizard:main',
         ),
-    },
-
-    cmdclass = {
-        'build': build,
-        'build_sphinx': BuildDocWithPath,
-    },
-    command_options={
-        'build_sphinx': {
-            'builder': ('setup.py', 'man'),
-            'version': ('setup.py', '@VERSION@'),
-            'release': ('setup.py', '@VERSION@'),
-            'source_dir': ('setup.py', 'doc'),
-        },
     },
 )
