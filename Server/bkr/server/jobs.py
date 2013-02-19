@@ -273,8 +273,9 @@ class Jobs(RPCRoot):
             jobs = jobs.limit(limit)
 
         jobs = jobs.values(Job.id)
+        
         return_value = ['J:%s' % j[0] for j in jobs]
-        return return_value,'Count: %s' % len(return_value)
+        return return_value
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
