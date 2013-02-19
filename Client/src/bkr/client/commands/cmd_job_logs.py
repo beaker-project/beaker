@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
+.. _bkr-job-logs:
+
 bkr job-logs: Print URLs of Beaker recipe log files
 ===================================================
 
