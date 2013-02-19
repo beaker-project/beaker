@@ -240,6 +240,9 @@ class Jobs(RPCRoot):
         mine = filters.get('mine', None)
         limit = filters.get('limit', None)
 
+        if mine and not identity.not_anonymous():
+            raise BX(_('You should be authenticated to use the --mine filter.'))
+
         if mine and identity.not_anonymous():
             if owner:
                 if type(owner) is list:

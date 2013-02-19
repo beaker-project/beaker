@@ -10,8 +10,9 @@ class JobListTest(unittest.TestCase):
     def setUp(self):
         jobs_to_generate = 2;
         self.products = [data_setup.create_product() for product in range(jobs_to_generate)]
-        self.users = [data_setup.create_user() for user in range(jobs_to_generate)]
+        self.users = [data_setup.create_user(password='mypass') for user in range(jobs_to_generate)]
         self.jobs = [data_setup.create_completed_job(product=self.products[x], owner=self.users[x]) for x in range(jobs_to_generate)]
+        self.client_configs = [create_client_config(username=user.user_name, password='mypass') for user in self.users]
 
     def test_list_jobs_by_product(self):
         out = run_client(['bkr', 'job-list', '--product', self.products[0].name])
@@ -42,3 +43,12 @@ class JobListTest(unittest.TestCase):
 
         out = run_client(['bkr', 'job-list', '--max-id', '{0}'.format(self.jobs[0].id)])
         self.assert_(self.jobs[0].t_id in out and self.jobs[1].t_id not in out)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=907650
+    def test_list_jobs_mine(self):
+        out = run_client(['bkr', 'job-list', '--mine'], config=self.client_configs[0])
+        self.assert_(self.jobs[0].t_id in out and self.jobs[1].t_id not in out, out)
+
+        self.assertRaises(ClientError, run_client, ['bkr', 'job-list', '--mine', \
+                                                        '--username', 'xyz',\
+                                                        '--password','xyz'])
