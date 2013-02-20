@@ -364,6 +364,7 @@ def schedule_queued_recipes(*args):
 def schedule_queued_recipe(recipe_id):
     recipe = MachineRecipe.by_id(recipe_id)
     systems = recipe.dyn_systems\
+               .outerjoin(System.cpu)\
                .join(System.lab_controller)\
                .filter(and_(System.user==None,
                           LabController._distro_trees.any(
@@ -389,9 +390,11 @@ def schedule_queued_recipe(recipe_id):
     # </recipe>
     user = recipe.recipeset.job.owner
     if True: #FIXME if pools are defined add them here in the order requested.
-        systems = systems.order_by(case([(System.owner==user, 1),
-                  (and_(System.owner!=user, System.group_assocs != None), 2)],
-                      else_=3))
+        systems = systems.order_by(
+            case([(System.owner==user, 1),
+                (and_(System.owner!=user, System.group_assocs != None), 1)],
+                else_=3),
+            Cpu.processors == 1) # In mysql this orders single processors last
     if recipe.recipeset.lab_controller:
         # First recipe of a recipeSet determines the lab_controller
         systems = systems.filter(
