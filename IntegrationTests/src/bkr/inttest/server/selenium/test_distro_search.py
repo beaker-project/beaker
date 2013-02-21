@@ -94,7 +94,8 @@ class Search(WebDriverTestCase):
         b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='OSMajor']").click()
         b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is']").click()
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
-        b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys('osmajortest1')
+        # This also tests that whitespace does not foil us
+        b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys('  osmajortest1 ')
         b.find_element_by_name('Search').click()
         self.check_search_results(present=[self.distro_one],
                 absent=[self.distro_two, self.distro_three])

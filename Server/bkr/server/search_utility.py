@@ -358,6 +358,7 @@ class Search(object):
         return cls.get_search_options_worker(search,col_type)
 
     def append_results(self,value,column,operation,**kw): 
+        value = value.strip()
         pre = self.pre_operations(column,operation,value,**kw)
         cls_name = re.sub('Search','',self.__class__.__name__)
         cls = globals()[cls_name]  
@@ -604,6 +605,7 @@ class SystemSearch(Search):
         #inadequate. 
         #If we are looking at the System class and column 'arch' with the 'is not' operation, it will try and get
         # System.arch_is_not_filter
+        value = value.strip()
         underscored_operation = re.sub(' ','_',operation)
         col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
          
