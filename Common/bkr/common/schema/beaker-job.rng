@@ -210,8 +210,22 @@
   </define>
   <define name="autopick">
     <element name="autopick">
+      <a:documentation xml:lang="en">
+        Settings that influence the selection of the system used to run this
+        recipe without imposing strict constraints as 'hostRequires' does.
+      </a:documentation>
       <optional>
         <attribute name="random">
+          <a:documentation xml:lang="en">
+            When set to "true", randomizes the choice of system across all
+            eligible systems. This can help avoid a recipe being repeatedly
+            scheduled on the same system.
+            When omitted or set to "false", the system selection is done
+            according to a default ordering that favours the user's
+            systems, then systems associated with the user's groups and
+            finally systems generally available to all users of the Beaker
+            instance.
+          </a:documentation>
           <choice>
             <data type="boolean"/>
             <value>TRUE</value>
