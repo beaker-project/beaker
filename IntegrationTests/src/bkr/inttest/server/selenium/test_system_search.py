@@ -60,7 +60,8 @@ class SearchColumns(SeleniumTestCase):
         sel.click('advancedsearch')
         sel.select('systemsearch_0_table', 'label=System/SerialNumber')
         sel.select('systemsearch_0_operation', 'label=is')
-        sel.type('systemsearch_0_value', self.system_with_serial.serial)
+        # This also tests that whitespace does not foil us
+        sel.type('systemsearch_0_value', ' %s ' % self.system_with_serial.serial)
         sel.click('customcolumns')
         sel.click('selectnone')
         sel.click('systemsearch_column_System/SerialNumber')
