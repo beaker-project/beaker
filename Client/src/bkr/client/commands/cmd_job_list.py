@@ -62,6 +62,12 @@ Options
 
    Query jobs with a max Job ID of id
 
+.. option:: --format list, --format json
+
+   Display results in the given format. ``list`` lists one Job ID per
+   line and is useful to be fed as input to other command line
+   utilities. The default format is ``json``, which returns the Job
+   IDs as a JSON string and is compact. This is useful for quick human observation.
 
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
@@ -95,6 +101,11 @@ See also
 
 from bkr.client import BeakerCommand
 from optparse import OptionValueError
+
+try:
+    import json
+except ImportError:
+    import simplejson as json
 
 class Job_List(BeakerCommand):
     """List Beaker jobs """
@@ -165,6 +176,13 @@ class Job_List(BeakerCommand):
             help="Max Job ID to look into"
         )
 
+        self.parser.add_option(
+            '--format',
+            type='choice',
+            choices=['list', 'json'],
+            default='json',
+            help='Results display format: list, json [default: %default]',
+        )
 
     def run(self,*args, **kwargs):
         username = kwargs.pop("username", None)
@@ -177,6 +195,7 @@ class Job_List(BeakerCommand):
         whiteboard = kwargs.pop('whiteboard', None)
         mine = kwargs.pop('mine', None)
         limit = kwargs.pop('limit', None)
+        format = kwargs['format']
 
         # Process Job IDs if specified and sanity checking
         minid = kwargs.pop('min_id', None)
@@ -196,8 +215,7 @@ class Job_List(BeakerCommand):
             self.parser.error('Please pass either the completeDays time delta, a tag, product, family, or owner')
 
         self.set_hub(username,password)
-        jobs = []
-        print self.hub.jobs.filter(dict(tag=tag,
+        jobs = self.hub.jobs.filter(dict(tag=tag,
                                         daysComplete=complete_days,
                                         family=family,
                                         product=product,
@@ -207,3 +225,10 @@ class Job_List(BeakerCommand):
                                         minid=minid,
                                         maxid=maxid,
                                         limit=limit))
+        
+        if format == 'list':
+            for job_id in jobs:
+                print job_id
+                
+        if format == 'json':
+            print json.dumps(jobs)
