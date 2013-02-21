@@ -954,7 +954,7 @@ class TreeInfoFedora(TreeInfoBase, Importer):
         if not parser.get('general', 'family').startswith("Fedora"):
             return False
         # Arm uses a different importer because of all the kernel types.
-        if parser.get('general', 'arch') in ['armhfp']:
+        if parser.get('general', 'arch') in ['arm', 'armhfp']:
             return False
         return parser
 
@@ -1004,7 +1004,7 @@ class TreeInfoFedoraArm(TreeInfoFedora, Importer):
         if not parser.get('general', 'family').startswith("Fedora"):
             return False
         # Arm uses a different importer because of all the kernel types.
-        if parser.get('general', 'arch') not in ['armhfp']:
+        if parser.get('general', 'arch') not in ['arm', 'armhfp']:
             return False
         return parser
 
@@ -1359,7 +1359,7 @@ kernel = images/pxeboot/vmlinuz
 	   or parser.get('general', 'family').startswith("CentOS")):
             return False
         # Arm uses a different importer because of all the kernel types.
-        if parser.get('general', 'arch') in ['armhfp']:
+        if parser.get('general', 'arch') in ['arm', 'armhfp']:
             return False
         return parser
 
@@ -1456,7 +1456,7 @@ kernel = images/pxeboot/vmlinuz
 	   or parser.get('general', 'family').startswith("CentOS")):
             return False
         # Arm uses a different importer because of all the kernel types.
-        if parser.get('general', 'arch') not in ['armhfp']:
+        if parser.get('general', 'arch') not in ['arm', 'armhfp']:
             return False
         return parser
 
