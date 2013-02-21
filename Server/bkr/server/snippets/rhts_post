@@ -32,7 +32,9 @@ fi
 
 # Enable post-install boot notification
 {% snippet 'post_anamon' %}
+{% if distro is osmajor('RedHatEnterpriseLinux6', 'RedHatEnterpriseLinuxGrid6') %}
 {% snippet 'readahead_sysconfig' %}
+{% endif %}
 {% snippet 'linkdelay' %}
 
 {#

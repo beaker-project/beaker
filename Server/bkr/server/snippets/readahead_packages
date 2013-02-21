@@ -1,3 +1,0 @@
-# readahead conflicts with auditd, see bug 561486 for detailed explanation.
--readahead
-
