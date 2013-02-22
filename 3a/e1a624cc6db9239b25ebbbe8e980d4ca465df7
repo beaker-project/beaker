@@ -1,0 +1,7 @@
+Verified+1: Raymond Mancy <rmancy@redhat.com>
+Code-Review+2: Nick Coghlan <ncoghlan@redhat.com>
+Submitted-by: Raymond Mancy <rmancy@redhat.com>
+Submitted-at: Thu, 21 Feb 2013 20:23:02 -0500
+Reviewed-on: http://gerrit.beaker-project.org/1741
+Project: beaker
+Branch: refs/heads/develop
