@@ -283,3 +283,41 @@ class JobSchemaTest(unittest.TestCase, SchemaTest):
                 </recipeSet>
             </job>
             ''')
+
+    def test_disk_units(self):
+        # These are all valid units for disk sizes:
+        units = ['bytes', 'B', 'kB', 'KB', 'KiB', 'MB', 'MiB',
+                 'GB', 'GiB', 'TB', 'TiB']
+        for unit in units:
+            self.assert_valid('''
+                <job>
+                    <recipeSet>
+                        <recipe>
+                            <distroRequires/>
+                            <hostRequires>
+                                <disk>
+                                    <size op="&gt;=" value="10" units="%s" />
+                                </disk>
+                            </hostRequires>
+                            <task name="/distribution/install" />
+                        </recipe>
+                    </recipeSet>
+                </job>
+                ''' % unit)
+        # gigaquads are definitely not a valid unit for disk sizes
+        self.assert_not_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires/>
+                        <hostRequires>
+                            <disk>
+                                <size op="&gt;=" value="10" units="gigaquads" />
+                            </disk>
+                        </hostRequires>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''',
+            'Invalid attribute units for element size')

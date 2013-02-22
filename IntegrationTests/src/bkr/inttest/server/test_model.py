@@ -1386,8 +1386,8 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <disk>
-                    <size op="&gt;" value="10000000000" />
-                    <phys_sector_size op="=" value="4096" />
+                    <size op="&gt;" value="10" units="GB" />
+                    <phys_sector_size op="=" value="4" units="KiB" />
                 </disk>
             </hostRequires>
             """))
@@ -1398,8 +1398,8 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         # separate <disk/> elements can match separate disks
         systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
-                <disk><size op="&gt;" value="10000000000" /></disk>
-                <disk><phys_sector_size op="=" value="4096" /></disk>
+                <disk><size op="&gt;" value="10" units="GB" /></disk>
+                <disk><phys_sector_size op="=" value="4" units="KiB" /></disk>
             </hostRequires>
             """))
         self.assert_(small_disk not in systems)

@@ -29,6 +29,23 @@ from sqlalchemy.orm import aliased
 import datetime
 from lxml import etree
 
+# This follows the SI conventions used in disks and networks --
+# *not* applicable to computer memory!
+def bytes_multiplier(units):
+    return {
+        'bytes': 1,
+        'B':     1,
+        'kB':    1000,
+        'KB':    1000,
+        'KiB':   1024,
+        'MB':    1000*1000,
+        'MiB':   1024*1024,
+        'GB':    1000*1000*1000,
+        'GiB':   1024*1024*1024,
+        'TB':    1000*1000*1000*1000,
+        'TiB':   1024*1024*1024*1024,
+    }.get(units)
+
 class NotVirtualisable(ValueError): pass
 
 class ElementWrapper(object):
@@ -869,24 +886,29 @@ class XmlDiskSize(ElementWrapper):
     def filter_disk(self):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
+        units = self.get_xml_attr('units', unicode, 'bytes')
         if value:
-            return getattr(Disk.size, op)(value)
+            return getattr(Disk.size, op)(value * bytes_multiplier(units))
         return None
 
 class XmlDiskSectorSize(ElementWrapper):
     def filter_disk(self):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
+        units = self.get_xml_attr('units', unicode, 'bytes')
         if value:
-            return getattr(Disk.phys_sector_size, op)(value)
+            return getattr(Disk.phys_sector_size, op)(
+                    value * bytes_multiplier(units))
         return None
 
 class XmlDiskPhysSectorSize(ElementWrapper):
     def filter_disk(self):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', int, None)
+        units = self.get_xml_attr('units', unicode, 'bytes')
         if value:
-            return getattr(Disk.phys_sector_size, op)(value)
+            return getattr(Disk.phys_sector_size, op)(
+                    value * bytes_multiplier(units))
         return None
 
 class XmlDisk(ElementWrapper):

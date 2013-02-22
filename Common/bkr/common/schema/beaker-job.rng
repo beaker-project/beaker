@@ -626,6 +626,7 @@
         <a:documentation xml:lang="en">Size of the disk in bytes.</a:documentation>
         <ref name="op" />
         <attribute name="value" />
+        <ref name="bytes_units" />
       </element>
       <element name="sector_size">
         <a:documentation xml:lang="en">
@@ -635,11 +636,13 @@
         </a:documentation>
         <ref name="op" />
         <attribute name="value" />
+        <ref name="bytes_units" />
       </element>
       <element name="phys_sector_size">
         <a:documentation xml:lang="en">Physical sector size of the disk in bytes.</a:documentation>
         <ref name="op" />
         <attribute name="value" />
+        <ref name="bytes_units" />
       </element>
     </choice>
   </define>
@@ -766,5 +769,24 @@
       <value>FALSE</value>
     </choice>
    </attribute>
+  </define>
+  <define name="bytes_units">
+    <optional>
+      <attribute name="units">
+        <choice>
+          <value>bytes</value>
+          <value>B</value>
+          <value>kB</value>
+          <value>KB</value>
+          <value>KiB</value>
+          <value>MB</value>
+          <value>MiB</value>
+          <value>GB</value>
+          <value>GiB</value>
+          <value>TB</value>
+          <value>TiB</value>
+        </choice>
+      </attribute>
+    </optional>
   </define>
 </grammar>
