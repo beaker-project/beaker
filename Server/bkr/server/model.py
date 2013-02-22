@@ -1749,7 +1749,7 @@ class System(SystemObject):
                        model=None, type=SystemType.machine, serial=None, vendor=None,
                        owner=None, lab_controller=None, lender=None,
                        hypervisor=None, loaned=None, memory=None,
-                       kernel_type=None):
+                       kernel_type=None, cpu=None):
         super(System, self).__init__()
         self.fqdn = fqdn
         self.status = status
@@ -1766,7 +1766,8 @@ class System(SystemObject):
         self.loaned = loaned
         self.memory = memory
         self.kernel_type = kernel_type
-    
+        self.cpu = cpu
+
     def to_xml(self, clone=False):
         """ Return xml describing this system """
         fields = dict(
