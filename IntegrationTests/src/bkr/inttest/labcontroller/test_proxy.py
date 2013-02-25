@@ -384,6 +384,9 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'PUT-recipe-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
+        response = requests.get(upload_url)
+        response.raise_for_status()
+        self.assertEquals(response.content, 'aaaaaaaaaabbbbbbbbbb')
 
     def test_xmlrpc_task_log(self):
         with session.begin():
@@ -432,6 +435,9 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'PUT-task-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
+        response = requests.get(upload_url)
+        response.raise_for_status()
+        self.assertEquals(response.content, 'aaaaaaaaaabbbbbbbbbb')
 
     def test_xmlrpc_result_log(self):
         with session.begin():
@@ -483,3 +489,12 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'PUT-result-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
+        response = requests.get(upload_url)
+        response.raise_for_status()
+        self.assertEquals(response.content, 'aaaaaaaaaabbbbbbbbbb')
+
+    def test_GET_nonexistent_log(self):
+        log_url = '%srecipes/%s/logs/notexist' % (
+                self.get_proxy_url(), self.recipe.id)
+        response = requests.get(log_url)
+        self.assertEquals(response.status_code, 404)

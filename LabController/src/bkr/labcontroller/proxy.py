@@ -17,9 +17,10 @@ from cStringIO import StringIO
 from socket import gethostname
 from threading import Thread, Event
 from werkzeug.wrappers import Response
-from werkzeug.exceptions import BadRequest, NotAcceptable
+from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound
 from werkzeug.utils import redirect
 from werkzeug.http import parse_content_range_header
+from werkzeug.wsgi import wrap_file
 import kobo.conf
 from kobo.client import HubProxy
 from kobo.exceptions import ShutdownException
@@ -708,14 +709,34 @@ class ProxyHTTP(object):
                 log_file.update_chunk(req.data, 0)
         return Response(status=204)
 
-    def put_recipe_log(self, req, recipe_id, path):
+    def _get_log(self, log_file, req):
+        try:
+            f = log_file.open_ro()
+        except IOError, e:
+            if e.errno == errno.ENOENT:
+                raise NotFound()
+            else:
+                raise
+        return Response(status=200, response=wrap_file(req.environ, f),
+                content_type='text/plain', direct_passthrough=True)
+
+    def do_recipe_log(self, req, recipe_id, path):
         log_file = self.log_storage.recipe(recipe_id, path)
-        return self._put_log(log_file, req)
+        if req.method == 'GET':
+            return self._get_log(log_file, req)
+        elif req.method == 'PUT':
+            return self._put_log(log_file, req)
 
-    def put_task_log(self, req, recipe_id, task_id, path):
+    def do_task_log(self, req, recipe_id, task_id, path):
         log_file = self.log_storage.task(task_id, path)
-        return self._put_log(log_file, req)
+        if req.method == 'GET':
+            return self._get_log(log_file, req)
+        elif req.method == 'PUT':
+            return self._put_log(log_file, req)
 
-    def put_result_log(self, req, recipe_id, task_id, result_id, path):
+    def do_result_log(self, req, recipe_id, task_id, result_id, path):
         log_file = self.log_storage.result(result_id, path)
-        return self._put_log(log_file, req)
+        if req.method == 'GET':
+            return self._get_log(log_file, req)
+        elif req.method == 'PUT':
+            return self._put_log(log_file, req)

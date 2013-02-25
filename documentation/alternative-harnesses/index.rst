@@ -90,3 +90,12 @@ the request body must be given as HTML form data
    :status 204: The log file was updated.
 
    Use the :mailheader:`Content-Range` header to upload part of a file.
+
+.. http:get::
+   /recipes/(recipe_id)/logs/(path:path)
+   /recipes/(recipe_id)/tasks/(task_id)/logs/(path:path)
+   /recipes/(recipe_id)/tasks/(task_id)/results/(result_id)/logs/(path:path)
+
+   Returns an uploaded log file.
+
+   Use the :mailheader:`Range` header to request part of a file.

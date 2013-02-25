@@ -11,6 +11,12 @@ class LogFile(object):
         self.path = path #: absolute path where the log will be stored
         self.register_func = register_func #: called only if the file was created
 
+    def open_ro(self):
+        """
+        If you just want to read the log, call this instead of entering the context manager.
+        """
+        return open(self.path, 'r')
+
     def __enter__(self):
         makedirs_ignore(os.path.dirname(self.path), 0755)
         created = False
