@@ -125,6 +125,7 @@ class TaskResult(DeclEnum):
         ('warn',  u'Warn',  dict(severity=30)),
         ('fail',  u'Fail',  dict(severity=40)),
         ('panic', u'Panic', dict(severity=50)),
+        ('none',  u'None',  dict(severity=15)),
     ]
 
     @classmethod
@@ -5567,7 +5568,7 @@ class RecipeTask(TaskBase):
     """
     This holds the results/status of the task being executed.
     """
-    result_types = ['pass_','warn','fail','panic']
+    result_types = ['pass_','warn','fail','panic', 'result_none']
     stop_types = ['stop','abort','cancel']
 
     def __init__(self, task):
@@ -5871,6 +5872,9 @@ class RecipeTask(TaskBase):
         Record a panic result 
         """
         return self._result(TaskResult.panic, path, score, summary)
+
+    def result_none(self, path, score, summary):
+        return self._result(TaskResult.none, path, score, summary)
 
     def _result(self, result, path, score, summary):
         """

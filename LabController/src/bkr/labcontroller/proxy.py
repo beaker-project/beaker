@@ -630,6 +630,7 @@ class ProxyHTTP(object):
         'pass': 'pass_',
         'warn': 'warn',
         'fail': 'fail',
+        'none': 'result_none',
     }
     def post_result(self, req, recipe_id, task_id):
         if 'result' not in req.form:

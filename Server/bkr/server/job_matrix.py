@@ -209,6 +209,7 @@ class JobMatrix:
         case2 = case([(model.recipe_task_table.c.result == u'Warn',1)],else_=0)
         case3 = case([(model.recipe_task_table.c.result == u'Fail',1)],else_=0)
         case4 = case([(model.recipe_task_table.c.result == u'Panic',1)],else_=0)
+        case5 = case([(model.recipe_task_table.c.result == u'None',1)],else_=0)
     
         arch_alias = model.arch_table.alias()
         recipe_table_alias = model.recipe_table.alias()
@@ -221,8 +222,9 @@ class JobMatrix:
                      case1.label('rc1'),
                      case2.label('rc2'),
                      case3.label('rc3'),
-                     case4.label('rc4'),]
-                       
+                     case4.label('rc4'),
+                     case5.label('rc5'),
+                    ]
         my_from = [model.recipe_set_table.join(recipe_table_alias). 
                               join(model.distro_tree_table, model.distro_tree_table.c.id == recipe_table_alias.c.distro_tree_id).
                               join(arch_alias, arch_alias.c.id == model.distro_tree_table.c.arch_id).
@@ -262,6 +264,7 @@ class JobMatrix:
                               func.sum(s2.c.rc2).label('Warn'),
                               func.sum(s2.c.rc3).label('Fail'),
                               func.sum(s2.c.rc4).label('Panic'),
+                              func.sum(s2.c.rc5).label('None'),
                               s2.c.whiteboard,
                               s2.c.arch,
                               s2.c.arch_id,

@@ -97,6 +97,21 @@ class TaskResultTest(LabControllerTestCase):
                 allow_redirects=False)
         self.assertEquals(response.status_code, 400)
 
+    def test_POST_none(self):
+        results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(results_url, data=dict(result='None',
+                path='/random/junk', message='See elsewhere for results'))
+        self.assertEquals(response.status_code, 201)
+        self.assert_(response.headers['Location'].startswith(results_url),
+                response.headers['Location'])
+        with session.begin():
+            session.expire_all()
+            result = self.recipe.tasks[0].results[0]
+            self.assertEquals(result.result, TaskResult.none)
+            self.assertEquals(result.path, u'/random/junk')
+            self.assertEquals(result.log, u'See elsewhere for results')
+
 class TaskStatusTest(LabControllerTestCase):
 
     def setUp(self):

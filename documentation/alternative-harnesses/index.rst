@@ -67,7 +67,7 @@ the request body must be given as HTML form data
    :mailheader:`Location` header in the form 
    ``/recipes/(recipe_id)/tasks/(task_id)/results/(result_id)``.
 
-   :form result: The result. Must be *Pass*, *Warn*, or *Fail*.
+   :form result: The result. Must be *Pass*, *Warn*, *Fail*, or *None*.
    :form path: Path of the result. Conventionally the top-level result will be 
         recorded as ``$TEST``, with sub-results as ``$TEST/suffix``, but this 
         is not required. If not specified, the default is ``/``.
