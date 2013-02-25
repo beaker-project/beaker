@@ -445,48 +445,31 @@ not execute on a particular release. Otherwise, the release should not
 be restricted so that your test can run on as many different releases as
 possible.
 
--  Valid ``Releases`` are anything that is a valid Family in Beaker,
-   such as:
+You can populate the ``Releases`` field in two different ways. To exclude 
+certain releases but include all others, list the releases each prefixed with 
+a minus sign (-). To include certain releases but exclude all others, list the 
+included releases.
 
-   -  RedHatEnterpriseLinux3
+For example, if your test runs only on RHEL3 and RHEL4::
 
-   -  RedHatEnterpriseLinux4
+    Releases: RedHatEnterpriseLinux3 RedHatEnterpriseLinux4
 
-   -  RedHatEnterpriseLinuxServer5
+Or, if your test is expected to run on any release except for RHEL3::
 
-   -  RedHatEnterpriseLinuxClient5
+    Releases: -RedHatEnterpriseLinux3
 
-   -  FedoraCore6
+Releases are identified by their OS major version. You can browse a list of OS 
+versions in Beaker by selecting :menuselection:`Distros --> Family` from the 
+menu. For example:
 
-   -  Fedora7
+-  RedHatEnterpriseLinux3
+-  RedHatEnterpriseLinux4
+-  RedHatEnterpriseLinuxServer5
+-  RedHatEnterpriseLinuxClient5
+-  RedHatEnterpriseLinux6
+-  RedHatEnterpriseLinux7
+-  Fedora17
 
-   -  Fedora8
-
--  Releases can be used in two ways:
-
-   -  specifying releases you *want* run your test for : For example, if
-      you want to run your test on RHEL3 and RHEL4 only, add "Releases:
-      RedHatEnterpriseLinux3 RedHatEnterpriseLinux4" to your Makefile
-      METADATA variable, i.e.:
-
-      ::
-
-          ...
-          @echo "Requires:        openldap-servers" >> $(METADATA)
-          @echo "Releases:        RedHatEnterpriseLinux3 RedHatEnterpriseLinux4" >> $(METADATA)
-          @echo "Priority:        Normal" >> $(METADATA)
-          ...
-
-   -  specifying releases you *don't want* run your test for (using "-"
-      sign before given releases): For example, if you don't want to run
-      your test on RHEL3, but the other releases are valid for your
-      test, add "Releases: -RedHatEnterpriseLinux3" to your Makefile
-      METADATA variable, i.e.:
-
-      ::
-
-          ...
-          @echo "Requires:        openldap-servers" >> $(METADATA)
-          @echo "Releases:        -RedHatEnterpriseLinux3" >> $(METADATA)
-          @echo "Priority:        Normal" >> $(METADATA)
-          ...
+Your Beaker administrator may have configured compatibility aliases for some OS 
+versions, which you can also use in the ``Releases`` field. See 
+:ref:`admin-os-versions` in the Administration Guide.
