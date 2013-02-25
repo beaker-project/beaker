@@ -1,0 +1,9 @@
+[product]
+version = 5.9
+name = Red Hat Enterprise Linux Server
+family = RHEL
+
+[tree]
+arches = i386,ia64,ppc,s390x,x86_64
+name = RHEL5.9-Server-20121114.2
+

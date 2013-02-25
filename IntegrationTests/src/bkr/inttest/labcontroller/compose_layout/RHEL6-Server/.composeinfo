@@ -1,0 +1,9 @@
+[product]
+version = 6.4
+name = Red Hat Enterprise Linux
+family = RHEL
+
+[tree]
+arches = i386,x86_64
+name = RHEL6.4-20130130.0
+
