@@ -27,13 +27,36 @@ from urllib import urlencode, quote
 import rdflib.graph
 from turbogears.database import session
 
-from bkr.inttest.server.selenium import SeleniumTestCase
 from bkr.inttest import data_setup, get_server_base, \
         assertions, with_transaction
 from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
         SystemStatus
 from bkr.server.tools import beakerd
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login
+
+class SystemViewTestWD(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+        with session.begin():
+            self.lab_controller = data_setup.create_labcontroller()
+            self.system = data_setup.create_system(
+                lab_controller=self.lab_controller)
+
+    def test_clear_netboot(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
+        b.find_element_by_link_text('Commands').click()
+
+        clear = b.find_element_by_xpath('//button[normalize-space(text())='
+            '"Clear Netboot"]')
+        clear.click()
+        b.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
+        flash_text = b.find_element_by_class_name('flash').text
+        self.assertEqual(flash_text, u'Clear netboot command enqueued')
 
 
 class SystemViewTest(SeleniumTestCase):
@@ -425,7 +448,7 @@ class SystemViewTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Power"]')
+        sel.click('//ul[@class="tabbernav"]//a[text()="Power Config"]')
         sel.select('name=power_type_id', 'drac')
         sel.type('name=power_address', 'nowhere.example.com')
         sel.type('name=power_user', 'asdf')

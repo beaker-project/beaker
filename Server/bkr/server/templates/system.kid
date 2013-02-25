@@ -34,7 +34,24 @@
      System must be associated to a lab controller and have at least one architecture specified to edit exclude families.
     </span>
    </div>
-   <div py:if="widgets.has_key('power')" class="tabbertab"><h2>Power</h2>
+   <div class="tabbertab"><h2>Commands</h2>
+    <fieldset py:if="widgets.has_key('power_action')">
+     <legend>Power Action</legend>
+      ${widgets['power_action'].display(method='get', action=widgets_action['power_action'], value=value, options=widgets_options['power_action'])}
+    </fieldset>
+    <fieldset py:if='widgets.has_key("clear_netboot") and value.lab_controller'>
+     <legend>Netboot</legend>
+      ${widgets['clear_netboot'].display(dict(fqdn=value.fqdn),
+          action=tg.url('../systems/clear_netboot_form'),
+          msg='Are you sure you want to clear the netboot for this system?',
+           action_text='Clear Netboot', look='button')}
+    </fieldset>
+    <fieldset py:if="widgets.has_key('power_history')">
+     <legend>Recent Commands</legend>
+     ${widgets['power_history'].display(list=widgets_options['power_history'], title='Recent Commands')}
+    </fieldset>
+   </div>
+   <div py:if="widgets.has_key('power')" class="tabbertab"><h2>Power Config</h2>
     <fieldset py:if="not readonly">
      <legend>Power Config</legend>
      <span py:if="value.lab_controller">
@@ -43,14 +60,6 @@
      <span py:if="not value.lab_controller">
       System must be associated to a lab controller to edit power.
      </span>
-    </fieldset>
-    <fieldset>
-     <legend>Power Action</legend>
-      ${widgets['power_action'].display(method='get', action=widgets_action['power_action'], value=value, options=widgets_options['power_action'])}
-    </fieldset>
-    <fieldset>
-     <legend>Recent Power Commands</legend>
-     ${widgets['power_history'].display(list=widgets_options['power_history'], title='Recent Power Commands')}
     </fieldset>
    </div>
    <div py:if="widgets.has_key('console')" class="tabbertab"><h2>Console</h2>
