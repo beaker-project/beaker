@@ -6,143 +6,103 @@ import signal
 import daemon
 from daemon import pidfile
 from optparse import OptionParser
-
 from datetime import datetime
-
-import SocketServer
-import DocXMLRPCServer
-import socket
-import xmlrpclib
-
+from SimpleXMLRPCServer import SimpleXMLRPCDispatcher
+from DocXMLRPCServer import XMLRPCDocGenerator
+from werkzeug.wrappers import Request, Response
+from werkzeug.routing import Map as RoutingMap, Rule
+from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed, BadRequest
+import gevent, gevent.pool, gevent.wsgi, gevent.event, gevent.monkey
 from bkr.common.helpers import RepeatTimer
 from bkr.labcontroller.proxy import Proxy
 from bkr.labcontroller.config import get_conf, load_conf
 from bkr.labcontroller.utils import add_rotating_file_logger
-from kobo.exceptions import ShutdownException
-from kobo.tback import Traceback, set_except_hook
 from bkr.log import add_stderr_logger
 import logging
 logger = logging.getLogger(__name__)
 
-set_except_hook()
+class XMLRPCDispatcher(SimpleXMLRPCDispatcher, XMLRPCDocGenerator):
 
-class XMLRPCServer(DocXMLRPCServer.DocXMLRPCServer):
-    def __init__(self, *args, **kwargs):
-        self.get_funcs = {}
-        DocXMLRPCServer.DocXMLRPCServer.__init__(self, *args, **kwargs)
-
-    def register_get_function(self, function, name=None):
-        if name is None:
-            name = function.__name__
-        self.get_funcs[name] = function
-
-    def _get_dispatch(self, method, params):
-        func = None
-        try:
-            # check to see if a matching get_function has been registered
-            func = self.get_funcs[method]
-        except KeyError:
-            pass
-        if func is not None:
-            return func(*params)
-        else:
-            raise Exception('method "%s" is not supported' % method)
-
-class XMLRPCRequestHandler(DocXMLRPCServer.DocXMLRPCRequestHandler):
-    rpc_paths = ('/', '/RPC2', '/server')
-
-    def do_GET(self):
-        if self.is_rpc_path_valid():
-            DocXMLRPCServer.DocXMLRPCRequestHandler.do_GET(self)
-        else:
-            args = self.path.split('/')
-            try:
-                response = self.server._get_dispatch(args[1], args[2:])
-            except Exception, e:
-                response = str(e)
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.send_header("Content-length", str(len(response)))
-            self.end_headers()
-            self.wfile.write(response)
-
-    def do_POST(self):
-        """
-        This is a replacement for the real do_POST, to work around RHBZ#789790.
-        """
-
-        # Check that the path is legal
-        if not self.is_rpc_path_valid():
-            self.report_404()
-            return
-
-        try:
-            data = self.rfile.read(int(self.headers["content-length"]))
-            if len(data) < int(self.headers["content-length"]):
-                self.connection.shutdown(1)
-                return
-
-            # In previous versions of SimpleXMLRPCServer, _dispatch
-            # could be overridden in this class, instead of in
-            # SimpleXMLRPCDispatcher. To maintain backwards compatibility,
-            # check to see if a subclass implements _dispatch and dispatch
-            # using that method if present.
-            response = self.server._marshaled_dispatch(
-                    data, getattr(self, '_dispatch', None)
-                )
-        except Exception, e: # This should only happen if the module is buggy
-            # internal error, report as HTTP server error
-            self.send_response(500)
-
-            # Send information about the exception if requested
-            if hasattr(self.server, '_send_traceback_header') and \
-                    self.server._send_traceback_header:
-                self.send_header("X-exception", str(e))
-                self.send_header("X-traceback", traceback.format_exc())
-
-            self.end_headers()
-        else:
-            # got a valid XML RPC response
-            self.send_response(200)
-            self.send_header("Content-type", "text/xml")
-            self.send_header("Content-length", str(len(response)))
-            self.end_headers()
-            self.wfile.write(response)
-
-            # shut down the connection
-            self.wfile.flush()
-            self.connection.shutdown(1)
-
-class ForkingXMLRPCServer (SocketServer.ForkingMixIn,
-                           XMLRPCServer):
-    allow_reuse_address = True
-
-    def __init__(self, *args, **kwargs):
-        XMLRPCServer.__init__(self, *args,
-                requestHandler=XMLRPCRequestHandler, **kwargs)
+    def __init__(self):
+        SimpleXMLRPCDispatcher.__init__(self, allow_none=True)
+        XMLRPCDocGenerator.__init__(self)
 
     def _dispatch(self, method, params):
         """ Custom _dispatch so we can log time used to execute method.
         """
         start = datetime.utcnow()
         try:
-            result=XMLRPCServer._dispatch(self, method, params)
+            result = SimpleXMLRPCDispatcher._dispatch(self, method, params)
         except:
             logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
             raise
         logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
         return result
 
+class WSGIApplication(object):
 
-def main_loop(conf=None, foreground=False):
+    def __init__(self, proxy):
+        self.proxy = proxy
+        self.xmlrpc_dispatcher = XMLRPCDispatcher()
+        self.xmlrpc_dispatcher.register_instance(proxy)
+        self.url_map = RoutingMap([
+            # pseudo-XML-RPC calls used in kickstarts:
+            # (these permit GET to make it more convenient to trigger them using curl)
+            Rule('/nopxe/<fqdn>', endpoint=(self.proxy, 'clear_netboot')),
+            Rule('/install_start/<recipe_id>', endpoint=(self.proxy, 'install_start')),
+            Rule('/install_done/<recipe_id>/<fqdn>',
+                    endpoint=(self.proxy, 'install_done')),
+            Rule('/postinstall_done/<recipe_id>',
+                    endpoint=(self.proxy, 'postinstall_done')),
+            Rule('/postreboot/<recipe_id>', endpoint=(self.proxy, 'postreboot')),
+        ])
+
+    @Request.application
+    def __call__(self, req):
+        if req.path in ('/', '/RPC2', '/server'):
+            if req.method == 'POST':
+                # XML-RPC
+                if req.content_type != 'text/xml':
+                    return BadRequest('XML-RPC requests must be text/xml')
+                result = self.xmlrpc_dispatcher._marshaled_dispatch(req.data)
+                return Response(response=result, content_type='text/xml')
+            elif req.method in ('GET', 'HEAD'):
+                # XML-RPC docs
+                return Response(
+                        response=self.xmlrpc_dispatcher.generate_html_documentation(),
+                        content_type='text/html')
+            else:
+                return MethodNotAllowed()
+        try:
+            (obj, attr), args = self.url_map.bind_to_environ(req.environ).match()
+            if obj is self.proxy:
+                # pseudo-XML-RPC
+                result = getattr(obj, attr)(**args)
+                return Response(response=repr(result), content_type='text/plain')
+            else:
+                return getattr(obj, attr)(req, **args)
+        except HTTPException, e:
+            return e
+
+# Temporary hack to disable keepalive in gevent.wsgi.WSGIServer. This should be easier.
+class WSGIHandler(gevent.wsgi.WSGIHandler):
+    def read_request(self, *args):
+        result = super(WSGIHandler, self).read_request(*args)
+        self.close_connection = True
+        return result
+
+def daemon_shutdown(signum, frame):
+    logger.info('Received signal %s, shutting down', signum)
+    shutting_down.set()
+
+def main_loop(proxy=None, conf=None, foreground=False):
     """infinite daemon loop"""
-    login = None
+    global shutting_down
+    shutting_down = gevent.event.Event()
+    gevent.monkey.patch_all()
 
-    def daemon_shutdown(*args):
-        if login:
-            login.stop()
-        raise ShutdownException()
     # define custom signal handlers
+    signal.signal(signal.SIGINT, daemon_shutdown)
     signal.signal(signal.SIGTERM, daemon_shutdown)
 
     # set up logging
@@ -156,35 +116,21 @@ def main_loop(conf=None, foreground=False):
         add_rotating_file_logger(logging.getLogger(), log_file,
                 log_level=log_level, format=conf["VERBOSE_LOG_FORMAT"])
 
-    # initialize Proxy
-    try:
-        proxy = Proxy(conf=conf)
-    except Exception, ex:
-        sys.stderr.write("Error initializing Proxy: %s\n" % ex)
-        sys.exit(1)
-
     login = RepeatTimer(conf['RENEW_SESSION_INTERVAL'], proxy.hub._login,
         stop_on_exception=False)
     login.daemon = True
     login.start()
-    server = ForkingXMLRPCServer(("", 8000), allow_none=True)
-    server.register_instance(proxy)
-    # register nopxe and install_start as get methods
-    # http://Example.com:8000/nopxe/fqdn <- Remove netboot record for fqdn
-    # http://Example.com:8000/install_start/fqdn <- Register start of install
-    server.register_get_function(proxy.clear_netboot, 'nopxe')
-    server.register_get_function(proxy.install_start)
-    server.register_get_function(proxy.install_done)
-    server.register_get_function(proxy.postinstall_done)
-    server.register_get_function(proxy.postreboot)
-    try:
-        server.serve_forever()
-    except (ShutdownException, KeyboardInterrupt):
-        login.stop()
-        # ignore keyboard interrupts and sigterm
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
+    server = gevent.wsgi.WSGIServer(('', 8000), WSGIApplication(proxy),
+            handler_class=WSGIHandler, spawn=gevent.pool.Pool())
+    server.stop_timeout = None
+    server.start()
+
+    try:
+        shutting_down.wait()
+    finally:
+        server.stop()
+        login.stop()
 
 def main():
     parser = OptionParser()
@@ -203,12 +149,19 @@ def main():
     pid_file = opts.pid_file
     if pid_file is None:
         pid_file = conf.get("PROXY_PID_FILE", "/var/run/beaker-lab-controller/beaker-proxy.pid")
+
+    try:
+        proxy = Proxy(conf=conf)
+    except Exception, ex:
+        sys.stderr.write("Error initializing Proxy: %s\n" % ex)
+        sys.exit(1)
+
     if opts.foreground:
-        main_loop(conf=conf, foreground=True)
+        main_loop(proxy=proxy, conf=conf, foreground=True)
     else:
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
                 pid_file, acquire_timeout=0)):
-            main_loop(conf=conf, foreground=False)
+            main_loop(proxy=proxy, conf=conf, foreground=False)
 
 if __name__ == '__main__':
     main()
