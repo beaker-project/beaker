@@ -99,3 +99,15 @@ the request body must be given as HTML form data
    Returns an uploaded log file.
 
    Use the :mailheader:`Range` header to request part of a file.
+
+.. http:get::
+   /recipes/(recipe_id)/logs/
+   /recipes/(recipe_id)/tasks/(task_id)/logs/
+   /recipes/(recipe_id)/tasks/(task_id)/results/(result_id)/logs/
+
+   Returns a listing of all uploaded logs.
+   
+   Possible response formats include an HTML index (:mimetype:`text/html`) or 
+   an Atom feed (:mimetype:`application/atom+xml`). Use the 
+   :mailheader:`Accept` header to request a particular representation. The 
+   default is HTML.

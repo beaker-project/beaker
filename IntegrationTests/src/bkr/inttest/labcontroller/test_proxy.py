@@ -3,11 +3,12 @@ import os, os.path
 import datetime
 from base64 import b64encode
 import xmlrpclib
-import lxml.etree
+import lxml.etree, lxml.html
 import urlparse
 import requests
 from nose.plugins.skip import SkipTest
-from bkr.server.model import session, TaskResult, TaskStatus
+from bkr.server.model import session, TaskResult, TaskStatus, LogRecipe, \
+        LogRecipeTask, LogRecipeTaskResult
 from bkr.labcontroller.config import get_conf
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import assert_datetime_within
@@ -498,3 +499,79 @@ class LogUploadTest(LabControllerTestCase):
                 self.get_proxy_url(), self.recipe.id)
         response = requests.get(log_url)
         self.assertEquals(response.status_code, 404)
+
+class LogIndexTest(LabControllerTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_running(self.recipe)
+            self.recipe.logs[:] = [LogRecipe(path=u'/', filename=u'console.log'),
+                    LogRecipe(path=u'some-dir', filename=u'some-file.txt')]
+            self.task = self.recipe.tasks[0]
+            self.task.logs[:] = [LogRecipeTask(path=u'/', filename=u'TESTOUT.log'),
+                    LogRecipeTask(path=u'debug', filename=u'.task_beah_raw')]
+            self.task.pass_('', 0, 'Pass')
+            self.result = self.recipe.tasks[0].results[0]
+            self.result.logs[:] = [LogRecipeTaskResult(path=u'/', filename=u'test.log'),
+                    LogRecipeTaskResult(path=u'some-dir', filename=u'some-file.txt')]
+
+    def check_html_index(self, response, logs):
+        self.assertEquals(response.headers['Content-Type'], 'text/html')
+        tree = lxml.html.fromstring(response.content)
+        links = tree.cssselect('ul li a')
+        hrefs = [link.get('href') for link in links]
+        self.assertEquals(hrefs, logs)
+
+    def check_atom_index(self, response, logs):
+        self.assertEquals(response.headers['Content-Type'], 'application/atom+xml')
+        tree = lxml.etree.fromstring(response.content)
+        entries = tree.findall('{http://www.w3.org/2005/Atom}entry')
+        hrefs = [entry.find('{http://www.w3.org/2005/Atom}link').get('href')
+                for entry in entries]
+        self.assertEquals(hrefs, logs)
+
+    def test_recipe_log_index_html(self):
+        url = '%srecipes/%s/logs/' % (self.get_proxy_url(), self.recipe.id)
+        response = requests.get(url, headers={'Accept': 'text/html'})
+        response.raise_for_status()
+        self.check_html_index(response, ['console.log', 'some-dir/some-file.txt'])
+        # no Accept header should give us HTML as well
+        response = requests.get(url)
+        response.raise_for_status()
+        self.check_html_index(response, ['console.log', 'some-dir/some-file.txt'])
+
+    def test_recipe_log_index_atom(self):
+        url = '%srecipes/%s/logs/' % (self.get_proxy_url(), self.recipe.id)
+        response = requests.get(url, headers={'Accept': 'application/atom+xml'})
+        response.raise_for_status()
+        self.check_atom_index(response, ['console.log', 'some-dir/some-file.txt'])
+
+    def test_task_log_index_html(self):
+        url = '%srecipes/%s/tasks/%s/logs/' % (self.get_proxy_url(),
+                self.recipe.id, self.task.id)
+        response = requests.get(url, headers={'Accept': 'text/html'})
+        response.raise_for_status()
+        self.check_html_index(response, ['TESTOUT.log', 'debug/.task_beah_raw'])
+
+    def test_task_log_index_atom(self):
+        url = '%srecipes/%s/tasks/%s/logs/' % (self.get_proxy_url(),
+                self.recipe.id, self.task.id)
+        response = requests.get(url, headers={'Accept': 'application/atom+xml'})
+        response.raise_for_status()
+        self.check_atom_index(response, ['TESTOUT.log', 'debug/.task_beah_raw'])
+
+    def test_result_log_index_html(self):
+        url = '%srecipes/%s/tasks/%s/results/%s/logs/' % (self.get_proxy_url(),
+                self.recipe.id, self.task.id, self.result.id)
+        response = requests.get(url, headers={'Accept': 'text/html'})
+        response.raise_for_status()
+        self.check_html_index(response, ['test.log', 'some-dir/some-file.txt'])
+
+    def test_result_log_index_atom(self):
+        url = '%srecipes/%s/tasks/%s/results/%s/logs/' % (self.get_proxy_url(),
+                self.recipe.id, self.task.id, self.result.id)
+        response = requests.get(url, headers={'Accept': 'application/atom+xml'})
+        response.raise_for_status()
+        self.check_atom_index(response, ['test.log', 'some-dir/some-file.txt'])

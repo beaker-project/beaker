@@ -16,6 +16,7 @@ import subprocess
 from cStringIO import StringIO
 from socket import gethostname
 from threading import Thread, Event
+from xml.sax.saxutils import escape as xml_escape, quoteattr as xml_quoteattr
 from werkzeug.wrappers import Response
 from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound
 from werkzeug.utils import redirect
@@ -619,7 +620,8 @@ class ProxyHTTP(object):
         self.log_storage = proxy.log_storage
 
     def get_recipe(self, req, recipe_id):
-        if req.accept_mimetypes and 'application/xml' not in req.accept_mimetypes:
+        if req.accept_mimetypes.provided and \
+                'application/xml' not in req.accept_mimetypes:
             raise NotAcceptable()
         return Response(self.hub.recipes.to_xml(recipe_id),
                 content_type='application/xml')
@@ -740,3 +742,70 @@ class ProxyHTTP(object):
             return self._get_log(log_file, req)
         elif req.method == 'PUT':
             return self._put_log(log_file, req)
+
+    # XXX use real templates here, make the Atom feed valid
+
+    def _html_log_index(self, logs):
+        hrefs = [os.path.join((log['path'] or '').lstrip('/'), log['filename'])
+                for log in logs]
+        lis = ['<li><a href=%s>%s</a></li>' % (xml_quoteattr(href), xml_escape(href))
+                for href in hrefs]
+        html = '<!DOCTYPE html><html><body><ul>%s</ul></body></html>' % ''.join(lis)
+        return Response(status=200, content_type='text/html', response=html)
+
+    def _atom_log_index(self, logs):
+        hrefs = [os.path.join((log['path'] or '').lstrip('/'), log['filename'])
+                for log in logs]
+        entries = ['<entry><link rel="alternate" href=%s /><title type="text">%s</title></entry>'
+                % (xml_quoteattr(href), xml_escape(href)) for href in hrefs]
+        atom = '<feed xmlns="http://www.w3.org/2005/Atom">%s</feed>' % ''.join(entries)
+        return Response(status=200, content_type='application/atom+xml', response=atom)
+
+    def _log_index(self, req, logs):
+        if not req.accept_mimetypes.provided:
+            response_type = 'text/html'
+        else:
+            response_type = req.accept_mimetypes.best_match(['text/html', 'application/atom+xml'])
+            if not response_type:
+                raise NotAcceptable()
+        if response_type == 'text/html':
+            return self._html_log_index(logs)
+        elif response_type == 'application/atom+xml':
+            return self._atom_log_index(logs)
+
+    def list_recipe_logs(self, req, recipe_id):
+        try:
+            logs = self.hub.taskactions.files('R:%s' % recipe_id)
+        except xmlrpclib.Fault, fault:
+            # XXX need to find a less fragile way to do this
+            if 'is not a valid Recipe id' in fault.faultString:
+                raise NotFound()
+            else:
+                raise
+        # The server includes all sub-elements' logs, filter them out
+        logs = [log for log in logs if log['tid'].startswith('R:')]
+        return self._log_index(req, logs)
+
+    def list_task_logs(self, req, recipe_id, task_id):
+        try:
+            logs = self.hub.taskactions.files('T:%s' % task_id)
+        except xmlrpclib.Fault, fault:
+            # XXX need to find a less fragile way to do this
+            if 'is not a valid RecipeTask id' in fault.faultString:
+                raise NotFound()
+            else:
+                raise
+        # The server includes all sub-elements' logs, filter them out
+        logs = [log for log in logs if log['tid'].startswith('T:')]
+        return self._log_index(req, logs)
+
+    def list_result_logs(self, req, recipe_id, task_id, result_id):
+        try:
+            logs = self.hub.taskactions.files('TR:%s' % result_id)
+        except xmlrpclib.Fault, fault:
+            # XXX need to find a less fragile way to do this
+            if 'is not a valid RecipeTaskResult id' in fault.faultString:
+                raise NotFound()
+            else:
+                raise
+        return self._log_index(req, logs)
