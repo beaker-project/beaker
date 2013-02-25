@@ -496,11 +496,13 @@ class Root(RPCRoot):
                                    [{su.System:{'all':[]}},
                                     {su.Cpu:{'all':[]}},
                                     {su.Device:{'all':[]}},
+                                    {su.Disk:{'all':[]}},
                                     {su.Key:{'all':[]}}]),
                                complete_data = su.System.search.create_complete_search_table(\
                                    [{su.System:{'all':[]}},
                                     {su.Cpu:{'all':[]}},
                                     {su.Device:{'all':[]}},
+                                    {su.Disk:{'all':[]}},
                                     {su.Key:{'all':[]}}]),
                                search_controller=url("/get_search_options"),
                                date_picker = ['system/added'],

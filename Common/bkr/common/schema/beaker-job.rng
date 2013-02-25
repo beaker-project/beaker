@@ -373,6 +373,9 @@
       <element name="or">
         <zeroOrMore><ref name="distroreq"/></zeroOrMore>
       </element>
+      <element name="not">
+        <zeroOrMore><ref name="distroreq"/></zeroOrMore>
+      </element>
       <element name="distro_family">
         <a:documentation xml:lang="en">
           Deprecated.  Use &lt;family&gt; instead.
@@ -436,6 +439,9 @@
         <zeroOrMore><ref name="hostreq"/></zeroOrMore>
       </element>
       <element name="or">
+        <zeroOrMore><ref name="hostreq"/></zeroOrMore>
+      </element>
+      <element name="not">
         <zeroOrMore><ref name="hostreq"/></zeroOrMore>
       </element>
       <element name="host">
@@ -514,6 +520,13 @@
           </choice>
         </oneOrMore>
       </element>
+      <element name="disk">
+        <a:documentation xml:lang="en">
+          Selects systems by disk. A system will match this filter if any of 
+          its disks matches the criteria in this element.
+        </a:documentation>
+        <oneOrMore><ref name="diskreq" /></oneOrMore>
+      </element>
       <element name="group">
         <ref name="equality_op" />
         <attribute name="value" />
@@ -544,6 +557,9 @@
       <zeroOrMore><ref name="cpureq"/></zeroOrMore>
     </element>
     <element name="or">
+      <zeroOrMore><ref name="cpureq"/></zeroOrMore>
+    </element>
+    <element name="not">
       <zeroOrMore><ref name="cpureq"/></zeroOrMore>
     </element>
     <element name="cores">
@@ -591,12 +607,54 @@
     </element>
    </choice>
   </define>
+  <define name="diskreq">
+    <choice>
+      <element name="and">
+        <zeroOrMore><ref name="diskreq"/></zeroOrMore>
+      </element>
+      <element name="or">
+        <zeroOrMore><ref name="diskreq"/></zeroOrMore>
+      </element>
+      <element name="not">
+        <zeroOrMore><ref name="diskreq"/></zeroOrMore>
+      </element>
+      <element name="model">
+        <ref name="equality_op" />
+        <attribute name="value" />
+      </element>
+      <element name="size">
+        <a:documentation xml:lang="en">Size of the disk in bytes.</a:documentation>
+        <ref name="op" />
+        <attribute name="value" />
+        <ref name="bytes_units" />
+      </element>
+      <element name="sector_size">
+        <a:documentation xml:lang="en">
+          Logical sector size of the disk in bytes. Modern hard disks with 
+          large sector sizes may emulate a 512-byte sector size in firmware for 
+          compatibility reasons.
+        </a:documentation>
+        <ref name="op" />
+        <attribute name="value" />
+        <ref name="bytes_units" />
+      </element>
+      <element name="phys_sector_size">
+        <a:documentation xml:lang="en">Physical sector size of the disk in bytes.</a:documentation>
+        <ref name="op" />
+        <attribute name="value" />
+        <ref name="bytes_units" />
+      </element>
+    </choice>
+  </define>
   <define name="systemreq">
   <choice>
     <element name="and">
       <zeroOrMore><ref name="systemreq"/></zeroOrMore>
     </element>
     <element name="or">
+      <zeroOrMore><ref name="systemreq"/></zeroOrMore>
+    </element>
+    <element name="not">
       <zeroOrMore><ref name="systemreq"/></zeroOrMore>
     </element>
     <element name="name">
@@ -711,5 +769,24 @@
       <value>FALSE</value>
     </choice>
    </attribute>
+  </define>
+  <define name="bytes_units">
+    <optional>
+      <attribute name="units">
+        <choice>
+          <value>bytes</value>
+          <value>B</value>
+          <value>kB</value>
+          <value>KB</value>
+          <value>KiB</value>
+          <value>MB</value>
+          <value>MiB</value>
+          <value>GB</value>
+          <value>GiB</value>
+          <value>TB</value>
+          <value>TiB</value>
+        </choice>
+      </attribute>
+    </optional>
   </define>
 </grammar>

@@ -1,9 +1,9 @@
-#!/usr/bin/python
+from selenium.webdriver.support.ui import Select
 from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
-    Device, DeviceClass
+    Device, DeviceClass, Disk
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, login, \
-        search_for_system
+        search_for_system, wait_for_animation
 from bkr.inttest import data_setup, with_transaction
 import unittest, time, re, os, datetime
 from turbogears.database import session
@@ -490,3 +490,69 @@ class HypervisorSearchTest(SeleniumTestCase):
         self.assertEquals(row_count, 1)
         self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[1]/td[1]'),
                 self.phys.fqdn)
+
+class DiskSearchTest(WebDriverTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.user = data_setup.create_user(password=u'diskin')
+            self.no_disks = data_setup.create_system(loaned=self.user)
+            self.no_disks.disks[:] = []
+            self.small_disk = data_setup.create_system(loaned=self.user)
+            self.small_disk.disks[:] = [Disk(size=8000000000,
+                    sector_size=512, phys_sector_size=512)]
+            self.big_disk = data_setup.create_system(loaned=self.user)
+            self.big_disk.disks[:] = [Disk(size=2000000000000,
+                    sector_size=4096, phys_sector_size=4096)]
+            self.two_disks = data_setup.create_system(loaned=self.user)
+            self.two_disks.disks[:] = [
+                Disk(size=8000000000, sector_size=512, phys_sector_size=512),
+                Disk(size=2000000000000, sector_size=4096, phys_sector_size=4096),
+            ]
+        self.browser = self.get_browser()
+        login(self.browser, user=self.user.user_name, password=u'diskin')
+
+    def tearDown(self):
+        self.browser.quit()
+
+    def check_search_results(self, present, absent):
+        for system in absent:
+            self.browser.find_element_by_xpath('//table[@id="widget" and '
+                    'not(.//td[1]/a/text()="%s")]' % system.fqdn)
+        for system in present:
+            self.browser.find_element_by_xpath('//table[@id="widget" and '
+                    './/td[1]/a/text()="%s"]' % system.fqdn)
+
+    def test_search_size_greater_than(self):
+        b = self.browser
+        b.get(get_server_base() + 'mine')
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_id('systemsearch_0_table'))\
+            .select_by_visible_text('Disk/Size')
+        Select(b.find_element_by_id('systemsearch_0_operation'))\
+            .select_by_visible_text('greater than')
+        b.find_element_by_id('systemsearch_0_value').clear()
+        b.find_element_by_id('systemsearch_0_value').send_keys('10000000000')
+        b.find_element_by_name('Search').click()
+        self.check_search_results(present=[self.big_disk, self.two_disks],
+                absent=[self.small_disk, self.no_disks])
+
+    def test_sector_size_is_not_for_multiple_disks(self):
+        # The search bar special-cases "is not" searches on one-to-many 
+        # relationships. "Disk/Size is not 1000" does not mean "systems with 
+        # a disk whose size is not 1000" but rather "systems with no disks of 
+        # size 1000".
+        b = self.browser
+        b.get(get_server_base() + 'mine')
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_id('systemsearch_0_table'))\
+            .select_by_visible_text('Disk/SectorSize')
+        Select(b.find_element_by_id('systemsearch_0_operation'))\
+            .select_by_visible_text('is not')
+        b.find_element_by_id('systemsearch_0_value').clear()
+        b.find_element_by_id('systemsearch_0_value').send_keys('512')
+        b.find_element_by_name('Search').click()
+        self.check_search_results(present=[self.big_disk, self.no_disks],
+                absent=[self.small_disk, self.two_disks])
