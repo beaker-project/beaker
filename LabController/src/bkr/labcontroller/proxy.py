@@ -641,6 +641,16 @@ class ProxyHTTP(object):
         return redirect('/recipes/%s/tasks/%s/results/%s' % (
                 recipe_id, task_id, result_id), code=201)
 
+    def post_recipe_status(self, req, recipe_id):
+        if 'status' not in req.form:
+            raise BadRequest('Missing "status" parameter')
+        status = req.form['status'].lower()
+        if status != 'aborted':
+            raise BadRequest('Unknown status %r' % req.form['status'])
+        self.hub.recipes.stop(recipe_id, 'abort',
+                req.form.get('message'))
+        return Response(status=204)
+
     def post_task_status(self, req, recipe_id, task_id):
         if 'status' not in req.form:
             raise BadRequest('Missing "status" parameter')

@@ -32,6 +32,18 @@ the request body must be given as HTML form data
         from now.
    :status 204: The watchdog was updated.
 
+.. http:post:: /recipes/(recipe_id)/status
+
+   Updates the status of all tasks which are not already finished.
+
+   :form status: The new status. Must be *Aborted*.
+   :status 204: The task status was updated.
+   :status 400: Bad parameters given.
+
+   Typically the harness will update the status of each task individually as it 
+   runs (see below). This is provided as a convenience only, to abort all tasks 
+   in a recipe.
+
 .. http:post:: /recipes/(recipe_id)/tasks/(task_id)/status
 
    Updates the status of a task.

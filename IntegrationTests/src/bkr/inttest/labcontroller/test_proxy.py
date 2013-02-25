@@ -172,6 +172,45 @@ class TaskStatusTest(LabControllerTestCase):
         response = requests.post(status_url, data=dict(status='Running'))
         self.assertEquals(response.status_code, 409)
 
+class RecipeStatusTest(LabControllerTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.recipe = data_setup.create_recipe(task_list=[
+                    data_setup.create_task(), data_setup.create_task()])
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_running(self.recipe)
+
+    def test_xmlrpc_recipe_abort(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        s.recipe_stop(self.recipe.id, 'abort', 'fooed the bar up')
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.recipe.status, TaskStatus.aborted)
+            self.assertEquals(self.recipe.tasks[0].status, TaskStatus.aborted)
+            self.assertEquals(self.recipe.tasks[0].results[-1].log,
+                    u'fooed the bar up')
+            self.assertEquals(self.recipe.tasks[1].status, TaskStatus.aborted)
+            self.assertEquals(self.recipe.tasks[1].results[-1].log,
+                    u'fooed the bar up')
+
+    def test_POST_recipe_abort(self):
+        status_url = '%srecipes/%s/status' % (self.get_proxy_url(),
+                self.recipe.id)
+        response = requests.post(status_url, data=dict(status='Aborted',
+                message='fooed the bar up'))
+        self.assertEquals(response.status_code, 204)
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.recipe.status, TaskStatus.aborted)
+            self.assertEquals(self.recipe.tasks[0].status, TaskStatus.aborted)
+            self.assertEquals(self.recipe.tasks[0].results[-1].log,
+                    u'fooed the bar up')
+            self.assertEquals(self.recipe.tasks[1].status, TaskStatus.aborted)
+            self.assertEquals(self.recipe.tasks[1].results[-1].log,
+                    u'fooed the bar up')
+
+
 class ExtendWatchdogTest(LabControllerTestCase):
 
     def setUp(self):

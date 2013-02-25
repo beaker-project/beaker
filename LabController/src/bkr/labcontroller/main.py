@@ -61,6 +61,8 @@ class WSGIApplication(object):
                     endpoint=(self.proxy_http, 'get_recipe')),
             Rule('/recipes/<recipe_id>/watchdog', methods=['POST'],
                     endpoint=(self.proxy_http, 'post_watchdog')),
+            Rule('/recipes/<recipe_id>/status', methods=['POST'],
+                    endpoint=(self.proxy_http, 'post_recipe_status')),
             Rule('/recipes/<recipe_id>/tasks/<task_id>/status', methods=['POST'],
                     endpoint=(self.proxy_http, 'post_task_status')),
             Rule('/recipes/<recipe_id>/tasks/<task_id>/results/', methods=['POST'],
