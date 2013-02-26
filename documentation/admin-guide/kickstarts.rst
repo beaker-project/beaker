@@ -71,8 +71,8 @@ override these if necessary.
 ``print_repos``
     Sets up the system’s Yum repo configuration after install.
 
-``readahead_packages``; ``readahead_sysconfig``
-    Disables readahead, which is known to conflict with auditd.
+``readahead_sysconfig``
+    Disables readahead, which is known to conflict with auditd in RHEL6.
 
 ``rhts_devices``; ``rhts_scsi_ethdevices``
     Provides ``device`` commands (if necessary) which tell Anaconda to

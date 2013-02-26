@@ -43,9 +43,6 @@ autopart
 # no snippet data for system
 
 %packages --ignoremissing
-# readahead conflicts with auditd, see bug 561486 for detailed explanation.
--readahead
-
 @desktop-platform-devel
 @development
 @development-libs
