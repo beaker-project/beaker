@@ -1505,3 +1505,29 @@ for cfg in /etc/sysconfig/network-scripts/ifcfg-* ; do
 done
 '''
                 in k, k)
+
+    def test_harness_api(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="harness=my-alternative-harness">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('beah' not in k, k)
+        self.assert_('export BEAKER_LAB_CONTROLLER_URL="http://%s:8000/"'
+                % self.lab_controller.fqdn in k, k)
+        self.assert_('export BEAKER_LAB_CONTROLLER=%s' % self.lab_controller.fqdn in k, k)
+        self.assert_('export BEAKER_RECIPE_ID=%s' % recipe.id in k, k)
+        self.assert_('export BEAKER_HUB_URL="%s"' % get_server_base() in k, k)
+        self.assert_('yum -y install my-alternative-harness' in k, k)

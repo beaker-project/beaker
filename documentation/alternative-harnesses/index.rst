@@ -10,10 +10,64 @@ their recipes.
    Beaker. Once the interfaces have been validated, they will be declared 
    "stable" and no further backwards-incompatible changes will be made to them.
 
+Selecting an alternative harness in your recipe
+-----------------------------------------------
+
+Use the ``harness`` kickstart metadata variable to select an alternative harness.
+
+The default value is ``beah``, which activates the traditional kickstart 
+template logic for configuring ``/etc/beah_beaker.conf`` and installing Beah.
+
+When set to any other value, Beah-specific parts of the template are skipped. 
+Instead, the kickstart will contain a command to install the named harness. For 
+example::
+
+    <recipe ks_meta="harness=my-alternative-harness">
+        ...
+    </recipe>
+
+will cause the following command to appear in the kickstart ``%post`` section::
+
+    yum -y install my-alternative-harness
+
+The value of the ``harness`` variable will be substituted directly into the 
+``yum install`` command line. You can give a package name, assuming your recipe 
+also defines a custom yum repo where your harness will be installed from. Or 
+you can give an absolute URL to your harness package. If necessary, you can 
+pass multiple package names or URLs separate by spaces (remember to quote the 
+value correctly).
+
+Environment variables
+---------------------
+
+Beaker configures the following system-wide environment variables. When 
+installed, a harness implementation must arrange to start itself on reboot and 
+then configure itself according to these values.
+
+``BEAKER_LAB_CONTROLLER_URL``
+    Base URL of the Beaker lab controller. The harness communicates with Beaker 
+    by accessing HTTP resources (described below) underneath this URL.
+
+``BEAKER_LAB_CONTROLLER``
+    The fully-qualified domain name of the lab controller to which this system 
+    is attached. This will always match the hostname portion of 
+    ``BEAKER_LAB_CONTROLLER_URL`` but is provided for convenience.
+    
+``BEAKER_RECIPE_ID``
+    The ID of the Beaker recipe which this system is currently running. Use 
+    this to fetch the recipe details from the lab controller as described 
+    below.
+
+``BEAKER_HUB_URL``
+    Base URL of the Beaker server. Note that the harness should not communicate 
+    with the server directly, but it may need to pass this value on to tasks.
+
 HTTP resources
 --------------
 
-The lab controller exposes the following HTTP resources for use by the harness.
+The lab controller exposes the following HTTP resources for use by the harness. 
+All URL paths given below are relative to the value of the 
+``BEAKER_LAB_CONTROLLER_URL`` environment variable.
 
 When using the :http:method:`POST` method with the resources described below, 
 the request body must be given as HTML form data 
