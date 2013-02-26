@@ -9,7 +9,7 @@ is specified as a ``list``, the result is presented to the user such
 that each of the Job IDs are on a separate line. This makes it
 possible to use the output as an input to other command line
 utilities. Hence, for example: ``bkr job-list --mine --format list |
-wc -l ``, would return the number of jobs found for the user invoking
+wc -l``, would return the number of jobs found for the user invoking
 the command. 
 
 The ``json`` format returns the Job IDs as a JSON
