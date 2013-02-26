@@ -97,50 +97,14 @@ The provisioning may take some time.
 
 Once the System has been added, you may want to :ref:`create a
 job <submitting-a-new-job>` with the */distribution/inventory* task
-(this is available in the task repo) on the machine. The XML will
-probably look something like this, although substituting the distro and
-system name details.
+(this is available in the task repo) on the machine.  The easiest way to
+do this is to use the ``machine-test`` workflow to generate and submit an
+appropriate job definition::
 
-::
+    bkr machine-test --inventory --family=RedHatEnterpriseLinux6 --machine=<FQDN>
 
-    <job retention_tag="scratch">
-            <whiteboard>
-                    inventory
-            </whiteboard>
-            <recipeSet priority="Normal">
-                    <recipe kernel_options="ksdevice=link " kernel_options_post="" ks_meta="" role="RECIPE_MEMBERS" whiteboard="">
-                            <autopick random="false"/>
-                            <watchdog panic="ignore"/>
-                            <packages/>
-                            <ks_appends/>
-                            <repos/>
-                            <distroRequires>
-                                    <and>
-                                            <distro_variant op="=" value="Server"/>
-                                            <distro_name op="=" value="RHEL6-Server-6.0"/>
-                                            <distro_arch op="=" value="i386"/>
-                                            <distro_virt op="=" value=""/>
-                                            <distro_family op="=" value="RedHatEnterpriseLinux6"/>
-                                    </and>
-                            </distroRequires>
-                            <hostRequires>
-                                    <and>
-                                            <system_type op="=" value="Machine"/>
-                                            <hostname op="=" value="example.hostname.com"/>
-                                    </and>
-                            </hostRequires>
-                            <partitions/>
-                            <task name="/distribution/install" role="STANDALONE">
-                                    <params>
-                                            <param name="PKGARGNAME" value="smolt"/>
-                                    </params>
-                            </task>
-                            <task name="/distribution/inventory" role="None">
-                                    <params/>
-                            </task>
-                    </recipe>
-            </recipeSet>
-    </job>
+Refer to :ref:`bkr-machine-test` for more details.
+
 
 Adding a driver disk
 ~~~~~~~~~~~~~~~~~~~~
