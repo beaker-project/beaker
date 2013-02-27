@@ -762,6 +762,9 @@ class TestBeakerdMetrics(unittest.TestCase):
         session.begin()
         # Other tests might have left behind systems and running recipes,
         # so we remove or cancel them all so they don't pollute our metrics
+        manually_reserved = System.query.filter(System.open_reservation != None)
+        for system in manually_reserved:
+            data_setup.unreserve_manual(system)
         systems = System.query.filter(System.status != SystemStatus.removed)
         for system in systems:
             system.status = SystemStatus.removed
