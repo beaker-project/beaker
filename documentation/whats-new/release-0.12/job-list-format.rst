@@ -20,4 +20,4 @@ If a format is not specified, it returns the result as a JSON string.
 
 Related bugs:
  
-- `907658 <https://bugzilla.redhat.com/show_bug.cgi?id=907658>`_
+- :issue:`907658`

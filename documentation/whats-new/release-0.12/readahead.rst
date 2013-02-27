@@ -9,5 +9,5 @@ distros only.
 
 Related bugs:
 
-- `561486 <https://bugzilla.redhat.com/show_bug.cgi?id=561486>`_
-- `807991 <https://bugzilla.redhat.com/show_bug.cgi?id=807991>`_
+- :issue:`561486`
+- :issue:`807991`

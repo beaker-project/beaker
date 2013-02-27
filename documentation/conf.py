@@ -43,7 +43,7 @@ intersphinx_mapping = {'python': ('http://docs.python.org/', None),
 
 import os
 import re
-import docutils.core
+import docutils.core, docutils.nodes
 
 def strip_decorator_args(app, what, name, obj, options, signature, return_annotation):
     """
@@ -91,7 +91,18 @@ def generate_client_subcommand_doc(app, module, cls):
     app.config.man_pages.append(('man/%s' % docname, docname, description,
             [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1))
 
+# A poor man's version of sphinxcontrib-issuetracker 
+# <https://pypi.python.org/pypi/sphinxcontrib-issuetracker> which unfortunately 
+# requires a newer python-requests than is available in Fedora.
+# This code inspired by Doug Hellman's article 
+# <http://doughellmann.com/2010/05/defining-custom-roles-in-sphinx.html>.
+def beaker_bugzilla_issue_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
+    bz_url = 'https://bugzilla.redhat.com/show_bug.cgi?id=%s' % text
+    node = docutils.nodes.reference(rawtext, text, refuri=bz_url, **options)
+    return [node], []
+
 def setup(app):
     app.setup_extension('sphinx.ext.autodoc')
     app.connect('autodoc-process-signature', strip_decorator_args)
     app.connect('builder-inited', generate_client_subcommand_docs)
+    app.add_role('issue', beaker_bugzilla_issue_role)

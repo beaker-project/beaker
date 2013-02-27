@@ -8,5 +8,5 @@ Anaconda ``repo`` command in the kickstart for Red Hat Enterprise Linux
 
 Related bugs:
  
-- `902390 <https://bugzilla.redhat.com/show_bug.cgi?id=902390>`_
-- `912234 <https://bugzilla.redhat.com/show_bug.cgi?id=912234>`_
+- :issue:`902390`
+- :issue:`912234`
