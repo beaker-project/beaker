@@ -4,7 +4,7 @@
 # parallel. This semi-supported hack using __requires__ is the workaround.
 # http://bugs.python.org/setuptools/issue139
 # (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
-__requires__ = ['TurboGears']
+__requires__ = ['CherryPy < 3.0']
 
 from bkr.server.model import OSMajor
 from bkr.server.util import load_config, log_to_stream

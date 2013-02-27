@@ -25,7 +25,7 @@ __description__ = 'Cleans up stale records from the Beaker visit table'
 # parallel. This semi-supported hack using __requires__ is the workaround.
 # http://bugs.python.org/setuptools/issue139
 # (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
-__requires__ = ['TurboGears']
+__requires__ = ['CherryPy < 3.0']
 
 import sys
 import datetime

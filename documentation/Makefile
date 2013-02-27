@@ -3,9 +3,15 @@
 
 export PYTHONPATH=../Common:../Server:../Client/src
 
+# pkg_resources.requires() does not work if multiple versions are installed in 
+# parallel, but we need to be able to load bkr for autodoc generation. The
+# semi-supported hack using __requires__ in the $SPHINXBUILD definition
+# is a workaround: http://bugs.python.org/setuptools/issue139
+# (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
+
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD   = python -c '__requires__ = ["TurboGears"]; import pkg_resources; execfile("/usr/bin/sphinx-build")'
+SPHINXBUILD   = python -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; execfile("/usr/bin/sphinx-build")'
 PAPER         =
 BUILDDIR      = _build
 

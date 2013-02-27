@@ -26,5 +26,5 @@ set -x
 # (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
 
 env PYTHONPATH=../Common:../Server:../LabController/src:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} \
-    python -c '__requires__ = ["TurboGears"]; import pkg_resources; from nose.core import main; main()' \
+    python -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; from nose.core import main; main()' \
     ${*:--v rhts bkr}
