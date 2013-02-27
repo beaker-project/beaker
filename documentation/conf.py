@@ -6,12 +6,13 @@ copyright = u'2013, Red Hat, Inc'
 
 try:
     import bkr
-    version = bkr.__version__
+    release = bkr.__version__
+    version = '.'.join(release.split('.')[:2])
 except ImportError:
-    version = "dev"
-release = version
+    release = 'dev'
+    version = 'dev'
 
-html_title = 'Beaker'
+html_title = 'Beaker %s' % version
 html_use_index = False
 html_domain_indices = False
 
@@ -22,4 +23,4 @@ latex_documents = [
    u'Red Hat, Inc.', 'manual'),
 ]
 
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {'python': ('http://docs.python.org/', None)}
