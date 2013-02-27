@@ -404,7 +404,7 @@ You can then :ref:`submit the job <job-submission>`. After the job
 has completed, you can access the logs as described in :ref:`job-results`.
 You will see that on success, the ``TESTOUT.log``
 file will contain the same log as when it was run locally. You can also obtain 
-the logs using the :manpage:`bkr job-logs <bkr-job-logs(1)>` command. In some 
+the logs using the :ref:`bkr job-logs <bkr-job-logs>` command. In some 
 cases, in addition to the log files you may also want to retrieve some files 
 from the test system. For example, in this case you may want to examine the 
 contents of ``/proc/filesystems`` on the system that run the test. This can be 
@@ -460,9 +460,8 @@ Adding a new task
 
 If you already have a task packaged as an RPM, click "Scheduler>New
 Task" from the main menu bar. You will need to click on "Browse" to
-locate your task, and then add it with the "Submit Data" button. See
-:manpage:`bkr task-add <bkr-task-add(1)>` for how to do this via the
-beaker client.
+locate your task, and then add it with the "Submit Data" button. See :ref:`bkr 
+task-add <bkr-task-add>` for how to do this via the beaker client.
 
 If you are trying to update an existing task, the version of the new
 task RPM will need to be higher. This can be achieved by running
