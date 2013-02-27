@@ -519,6 +519,17 @@ def create_manual_reservation(system, start, finish=None, user=None):
         activity.created = finish
         system.activity.append(activity)
 
+def unreserve_manual(system, finish=None):
+    if finish is None:
+        finish = datetime.datetime.utcnow()
+    user = system.open_reservation.user
+    activity = SystemActivity(user=user,
+            service=u'WEBUI', action=u'Returned', field_name=u'User',
+            old_value=user.user_name, new_value=u'')
+    activity.created = finish
+    system.activity.append(activity)
+    system.open_reservation.finish_time = finish
+
 def create_test_env(type):#FIXME not yet using different types
     """
     create_test_env() will populate the DB with no specific data.
