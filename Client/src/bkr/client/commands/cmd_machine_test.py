@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
+.. _bkr-machine-test:
+
 bkr machine-test: Generate Beaker job to test a system
 ======================================================
 

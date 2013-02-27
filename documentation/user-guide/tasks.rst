@@ -7,6 +7,8 @@ more commands, and then collect the results of those commands in a way
 that other entities can access them. You can run as many or as few Tasks
 in a Job as you like.
 
+.. _creating-a-task:
+
 Creating a task
 ~~~~~~~~~~~~~~~
 

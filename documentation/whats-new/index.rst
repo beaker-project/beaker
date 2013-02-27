@@ -33,15 +33,25 @@ being upgraded to a new version.
 
        release-1.0/*
 
+Unreleased changes
+------------------
 
-What's new in Beaker 0.12?
---------------------------
-
-Beaker 0.12 is primarily a bug fix release, but it also brings some minor 
-enhancements.
+The following changes will appear in the next Beaker release.
 
 .. toctree::
    :maxdepth: 2
    :glob:
 
-   release-0.12/*
+   next/*
+
+Beaker 0.11
+-----------
+
+Beaker 0.11 brings improvements to reporting and metrics collection, as well as 
+a number of minor enhancements and bug fixes.
+
+.. toctree::
+   :maxdepth: 2
+
+   release-0.11
+   upgrade-0.11
