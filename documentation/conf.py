@@ -35,8 +35,8 @@ latex_documents = [
    u'Red Hat, Inc.', 'manual'),
 ]
 
-intersphinx_mapping = {'http://docs.python.org/': None,
-                       'http://beaker-project.org/dev': None,
+intersphinx_mapping = {'python': ('http://docs.python.org/', None),
+                       'beakerdev': ('http://beaker-project.org/dev', None),
                       }
 
 # This config is also a Sphinx extension with some Beaker-specific customisations:
