@@ -119,7 +119,12 @@ class WebDriverTestCase(unittest.TestCase):
 
     @classmethod
     def get_browser(cls):
-        b = webdriver.Firefox()
+        p = webdriver.FirefoxProfile()
+        # clicking on element may be ignored if native events is enabled
+        # https://bugzilla.redhat.com/show_bug.cgi?id=915695
+        # http://code.google.com/p/selenium/issues/detail?id=2864
+        p.native_events_enabled = False
+        b = webdriver.Firefox(p)
         b.implicitly_wait(10) # XXX is this really what we want???
         return b
 
