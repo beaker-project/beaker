@@ -23,4 +23,4 @@ latex_documents = [
    u'Red Hat, Inc.', 'manual'),
 ]
 
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {'python': ('http://docs.python.org/', None)}
