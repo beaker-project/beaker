@@ -1,0 +1,28 @@
+[general]
+family = Fedora
+timestamp = 1337720321.88
+variant = Fedora
+version = 17
+packagedir = 
+arch = i386
+
+[stage2]
+mainimage = LiveOS/squashfs.img
+
+[images-i386]
+kernel = images/pxeboot/vmlinuz
+initrd = images/pxeboot/initrd.img
+boot.iso = images/boot.iso
+
+[images-xen]
+kernel = images/pxeboot/vmlinuz-PAE
+initrd = images/pxeboot/initrd-PAE.img
+
+[checksums]
+images/boot.iso = sha256:c7131ae547ed723c7dc9a898759e7f1f71d4a19c0778b29eb391962bbee09461
+images/pxeboot/initrd-PAE.img = sha256:e8105f8b0976419232dfd1bbd6932a5ce12a4325b793e055f3904cfc605a1e83
+images/pxeboot/vmlinuz-PAE = sha256:7b4157e5cbcfa5891502c5227c2fa3ba7abed9a1afcda2e4ea35c76b2bf510c3
+images/pxeboot/initrd.img = sha256:4015f2381884c88aa739b632dca801026e9dc17b6598ab90b9f68e7d47693b2c
+images/pxeboot/vmlinuz = sha256:f11049f1708fbef6fd05c202ac54f3c5c2eebba9a4df5dbfdff2ae60b7d9c645
+repodata/repomd.xml = sha256:6877854fd0737068dbbf6250a579ad0abd348a1013f0930f6619c5c128e6c63a
+

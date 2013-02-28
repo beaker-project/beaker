@@ -1059,6 +1059,28 @@ class TreeInfoFedora(TreeInfoBase, Importer):
     def get_initrd_path(self):
         return self.parser.get('images-%s' % self.tree['arch'],'initrd')
 
+
+    def find_common_repos(self, repo_base, arch):
+        """
+        Fedora repos
+        ../debug/repodata
+        """
+        repo_paths = [('Fedora-debuginfo',
+                       'debug',
+                       '../debug'),
+                      ]
+        repos = []
+        for repo in repo_paths:
+            if url_exists(os.path.join(repo_base, repo[2], 'repodata')):
+                repos.append(dict(
+                                  repoid=repo[0],
+                                  type=repo[1],
+                                  path=repo[2],
+                                 )
+                            )
+        return repos
+
+
     def find_repos(self):
         """
         using info from known locations

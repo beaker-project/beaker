@@ -18,6 +18,8 @@ else:
 
 class DistroImportTest(unittest.TestCase):
 
+    maxDiff = None
+
     @classmethod
     def setupClass(cls):
         cls.distro_server = Process('http_server.py',
@@ -172,6 +174,169 @@ class DistroImportTest(unittest.TestCase):
                           u'osminor': u'0',
                           u'ks_meta': None}
 
+
+        # separate expected tree data are maintained for import from .treeinfo
+        # and .composeinfo, since Fedora's composeingo has debuginfo information
+        # but, .treeinfo doesn't. See the sample files in compose_layout/ for examples
+
+        self.x86_64_f17 = {u'osmajor': u'Fedora17',
+                           u'name': u'Fedora-17',
+                           u'tree_build_time': u'1337720130.41',
+                           u'osminor': u'0',
+                           u'tags': [],
+                           u'kernel_options_post': None,
+                           u'repos': [{u'path': u'../debug', u'type': u'debug',
+                                       u'repoid': u'Fedora-debuginfo'}],
+                           u'variant': u'Fedora',
+                           u'kernel_options': None,
+                           u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                        u'type': u'kernel'},
+                                       {u'path': u'images/pxeboot/initrd.img',
+                                        u'type': u'initrd'}],
+                           u'arches': [],
+                           u'urls': [u'http://localhost:19998/F-17/GOLD/Fedora/x86_64/os/'],
+                           u'arch': u'x86_64',
+                           u'ks_meta': None}
+
+        self.i386_f17 = {u'osmajor': u'Fedora17',
+                         u'name': u'Fedora-17',
+                         u'tree_build_time': u'1337720321.88',
+                         u'osminor': u'0',
+                         u'tags': [],
+                         u'kernel_options_post': None,
+                         u'repos': [{u'path': u'../debug', u'type': u'debug',
+                                     u'repoid': u'Fedora-debuginfo'}],
+                         u'variant': u'Fedora',
+                         u'kernel_options': None,
+                         u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                      u'type': u'kernel'},
+                                     {u'path': u'images/pxeboot/initrd.img',
+                                      u'type': u'initrd'}],
+                         u'arches': [],
+                         u'urls': [u'http://localhost:19998/F-17/GOLD/Fedora/i386/os/'],
+                         u'arch': u'i386',
+                         u'ks_meta': None}
+
+        self.x86_64_f17_compose = {u'osmajor': u'Fedora17',
+                                   u'name': u'Fedora-17',
+                                   u'tree_build_time': u'1337720130.41',
+                                   u'osminor': u'0',
+                                   u'tags': [],
+                                   u'kernel_options_post': None,
+                                   u'repos': [{u'path': u'../../x86_64/debug', u'type': u'debug',
+                                               u'repoid': u'Fedora-debuginfo'}],
+                                   u'variant': u'Fedora',
+                                   u'kernel_options': None,
+                                   u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                                u'type': u'kernel'},
+                                               {u'path': u'images/pxeboot/initrd.img',
+                                                u'type': u'initrd'}],
+                                   u'arches': [],
+                                   u'urls': [u'http://localhost:19998/F-17/GOLD/Fedora/x86_64/os/'],
+                                   u'arch': u'x86_64',
+                                   u'ks_meta': None}
+
+
+        self.i386_f17_compose = {u'osmajor': u'Fedora17',
+                                 u'name': u'Fedora-17',
+                                 u'tree_build_time': u'1337720321.88',
+                                 u'osminor': u'0',
+                                 u'tags': [],
+                                 u'kernel_options_post': None,
+                                 u'repos': [{u'path': u'../../i386/debug', u'type': u'debug',
+                                             u'repoid': u'Fedora-debuginfo'}],
+                                 u'variant': u'Fedora',
+                                 u'kernel_options': None,
+                                 u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                              u'type': u'kernel'},
+                                             {u'path': u'images/pxeboot/initrd.img',
+                                              u'type': u'initrd'}],
+                                 u'arches': [],
+                                 u'urls': [u'http://localhost:19998/F-17/GOLD/Fedora/i386/os/'],
+                                 u'arch': u'i386',
+                                 u'ks_meta': None}
+
+
+        self.x86_64_f18 = {u'osmajor': u'Fedora18',
+                           u'name': u'Fedora-18',
+                           u'tree_build_time': u'1357761579.49',
+                           u'osminor': u'0',
+                           u'tags': [],
+                           u'kernel_options_post': None,
+                           u'repos': [{u'path': u'../debug', u'type': u'debug',
+                                       u'repoid': u'Fedora-debuginfo'}],
+                           u'variant': u'Fedora',
+                           u'kernel_options': None,
+                           u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                        u'type': u'kernel'},
+                                       {u'path': u'images/pxeboot/initrd.img',
+                                        u'type': u'initrd'}],
+                           u'arches': [],
+                           u'urls': [u'http://localhost:19998/F-18/GOLD/Fedora/x86_64/os/'],
+                           u'arch': u'x86_64',
+                           u'ks_meta': None}
+
+        self.i386_f18 = {u'osmajor': u'Fedora18',
+                         u'name': u'Fedora-18',
+                         u'tree_build_time': u'1357759821.15',
+                         u'osminor': u'0',
+                         u'tags': [],
+                         u'kernel_options_post': None,
+                         u'repos': [{u'path': u'../debug', u'type': u'debug',
+                                     u'repoid': u'Fedora-debuginfo'}],
+                         u'variant': u'Fedora',
+                         u'kernel_options': None,
+                         u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                      u'type': u'kernel'},
+                                     {u'path': u'images/pxeboot/initrd.img',
+                                      u'type': u'initrd'}],
+                         u'arches': [],
+                         u'urls': [u'http://localhost:19998/F-18/GOLD/Fedora/i386/os/'],
+                         u'arch': u'i386',
+                         u'ks_meta': None}
+
+
+        self.x86_64_f18_compose = {u'osmajor': u'Fedora18',
+                                   u'name': u'Fedora-18',
+                                   u'tree_build_time': u'1357761579.49',
+                                   u'osminor': u'0',
+                                   u'tags': [],
+                                   u'kernel_options_post': None,
+                                   u'repos': [{u'path': u'../../x86_64/debug', u'type': u'debug',
+                                               u'repoid': u'Fedora-debuginfo'}],
+                                   u'variant': u'Fedora',
+                                   u'kernel_options': None,
+                                   u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                                u'type': u'kernel'},
+                                               {u'path': u'images/pxeboot/initrd.img',
+                                                u'type': u'initrd'}],
+                                   u'arches': [],
+                                   u'urls': [u'http://localhost:19998/F-18/GOLD/Fedora/x86_64/os/'],
+                                   u'arch': u'x86_64',
+                                   u'ks_meta': None}
+
+
+        self.i386_f18_compose = {u'osmajor': u'Fedora18',
+                                 u'name': u'Fedora-18',
+                                 u'tree_build_time': u'1357759821.15',
+                                 u'osminor': u'0',
+                                 u'tags': [],
+                                 u'kernel_options_post': None,
+                                 u'repos': [{u'path': u'../../i386/debug', u'type': u'debug',
+                                             u'repoid': u'Fedora-debuginfo'}],
+                                 u'variant': u'Fedora',
+                                 u'kernel_options': None,
+                                 u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                              u'type': u'kernel'},
+                                             {u'path': u'images/pxeboot/initrd.img',
+                                              u'type': u'initrd'}],
+                                 u'arches': [],
+                                 u'urls': [u'http://localhost:19998/F-18/GOLD/Fedora/i386/os/'],
+                                 u'arch': u'i386',
+                                 u'ks_meta': None}
+
+
+
     def _run_import(self, import_args):
         p = subprocess.Popen(import_args,
                              stdout=subprocess.PIPE,
@@ -233,6 +398,66 @@ class DistroImportTest(unittest.TestCase):
         # if there is no 'name' in .treeinfo's [general] section
         self.x86_64_rhel6['name'] = 'RedHatEnterpriseLinux-6.0'
         self.assertEquals(tree, self.x86_64_rhel6)
+
+    def test_f17_tree_import_i386(self):
+
+        trees = self._import_trees(['%sF-17/GOLD/Fedora/i386/os'
+                                    % self.distro_url])
+        self.assertTrue(len(trees) == 1)
+        tree = trees.pop()
+        self.assertEquals(tree, self.i386_f17)
+
+    def test_f17_tree_import_x86_64(self):
+
+        trees = self._import_trees(['%sF-17/GOLD/Fedora/x86_64/os'
+                                    % self.distro_url])
+        self.assertTrue(len(trees) == 1)
+        tree = trees.pop()
+        self.assertEquals(tree, self.x86_64_f17)
+
+    def test_f17_tree_import_compose(self):
+
+        trees = self._import_trees(['%sF-17/GOLD/Fedora/' % self.distro_url])
+        self.assertTrue(len(trees) == 2) # Expecting two trees
+        for tree in trees:
+            if tree['arch'] == u'i386':
+                i386_tree = tree
+            if tree['arch'] == u'x86_64':
+                x86_64_tree = tree
+
+        self.assertEquals(i386_tree, self.i386_f17_compose)
+        self.assertEquals(x86_64_tree, self.x86_64_f17_compose)
+
+
+    def test_f18_tree_import_i386(self):
+
+        trees = self._import_trees(['%sF-18/GOLD/Fedora/i386/os'
+                                    % self.distro_url])
+        self.assertTrue(len(trees) == 1)
+        tree = trees.pop()
+        self.assertEquals(tree, self.i386_f18)
+
+    def test_f18_tree_import_x86_64(self):
+
+        trees = self._import_trees(['%sF-18/GOLD/Fedora/x86_64/os'
+                                    % self.distro_url])
+        self.assertTrue(len(trees) == 1)
+        tree = trees.pop()
+        self.assertEquals(tree, self.x86_64_f18)
+
+    def test_f18_tree_import_compose(self):
+
+        trees = self._import_trees(['%sF-18/GOLD/Fedora/' % self.distro_url])
+        self.assertTrue(len(trees) == 2) # Expecting two trees
+        for tree in trees:
+            if tree['arch'] == u'i386':
+                i386_tree = tree
+            if tree['arch'] == u'x86_64':
+                x86_64_tree = tree
+
+        self.assertEquals(i386_tree, self.i386_f18_compose)
+        self.assertEquals(x86_64_tree, self.x86_64_f18_compose)
+
 
     def test_selective_compose_import(self):
         trees = self._import_trees(['--arch', 'i386',

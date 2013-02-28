@@ -1,0 +1,25 @@
+[variant-Fedora.x86_64]
+debuginfo = x86_64/debug
+os_dir = x86_64/os
+arch = x86_64
+sources = source/SRPMS
+
+[product]
+variants = Fedora
+version = 17
+name = Fedora-17
+family = Fedora
+
+[variant-Fedora.i386]
+debuginfo = i386/debug
+os_dir = i386/os
+arch = i386
+sources = source/SRPMS
+
+[variant-Fedora]
+variants = 
+arches = x86_64,i386
+type = variant
+id = Fedora
+name = Fedora
+
