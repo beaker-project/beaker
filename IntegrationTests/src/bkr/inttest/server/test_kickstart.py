@@ -417,8 +417,10 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system)
-        compare_expected('RedHatEnterpriseLinux6-scheduler-http', recipe.id,
-                recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''url --url=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
 
     def test_rhel6_ondisk(self):
         recipe = self.provision_recipe('''
@@ -438,8 +440,15 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system)
-        compare_expected('RedHatEnterpriseLinux6-scheduler-ondisk', recipe.id,
-                recipe.rendered_kickstart.kickstart)
+
+        ondisk_lines = [r'''clearpart --drives /dev/sda --all --initlabel''',
+                       r'''part /boot --size 200 --recommended --asprimary --ondisk=/dev/sda''',
+                       r'''part / --size 1024 --grow --ondisk=/dev/sda''',
+                       r'''part swap --recommended --ondisk=/dev/sda''']
+
+        for line in ondisk_lines:
+            self.assert_(line in recipe.rendered_kickstart.kickstart.splitlines(),
+                         recipe.rendered_kickstart.kickstart)
 
     def test_rhel6_partitions(self):
         recipe = self.provision_recipe('''
@@ -462,8 +471,15 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system)
-        compare_expected('RedHatEnterpriseLinux6-scheduler-partitions', recipe.id,
-                recipe.rendered_kickstart.kickstart)
+
+        part_lines = [r'''part /boot --size 200 --recommended --asprimary''',
+                      r'''part / --size 1024 --grow''',
+                      r'''part swap --recommended''',
+                      r'''part /home --size=5120 --fstype ext4''']
+
+        for line in part_lines:
+            self.assert_(line in recipe.rendered_kickstart.kickstart.splitlines(),
+                         recipe.rendered_kickstart.kickstart)
 
     def test_rhel6_repos(self):
         recipe = self.provision_recipe('''
@@ -487,8 +503,11 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system)
-        compare_expected('RedHatEnterpriseLinux6-scheduler-repos', recipe.id,
-                recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux6/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
 
     def test_rhel6_s390x(self):
         recipe = self.provision_recipe('''
@@ -508,8 +527,17 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system_s390x)
-        compare_expected('RedHatEnterpriseLinux6-scheduler-s390x', recipe.id,
-                recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-6.2/Server/s390x/os/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''xconfig''' not in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''vmcp ipl''' in recipe.rendered_kickstart.kickstart,
+                     recipe.rendered_kickstart.kickstart)
+
 
     def test_rhel7_defaults(self):
         recipe = self.provision_recipe('''
@@ -577,8 +605,16 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system_s390x)
-        compare_expected('RedHatEnterpriseLinux7-scheduler-s390x', recipe.id,
-                recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''url --url=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''xconfig''' not in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''vmcp ipl''' not in recipe.rendered_kickstart.kickstart,
+                     recipe.rendered_kickstart.kickstart)
 
     def test_fedora16_defaults(self):
         recipe = self.provision_recipe('''
