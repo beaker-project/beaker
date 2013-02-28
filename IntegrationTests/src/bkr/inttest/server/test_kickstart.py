@@ -539,6 +539,34 @@ EOF
                      recipe.rendered_kickstart.kickstart)
 
 
+    def test_rhel6_unsupported_hardware(self):
+
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
+                ks_meta=u'unsupported_hardware')
+
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+
+        self.assert_(r'''unsupported_hardware''' in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
     def test_rhel7_defaults(self):
         recipe = self.provision_recipe('''
             <job>

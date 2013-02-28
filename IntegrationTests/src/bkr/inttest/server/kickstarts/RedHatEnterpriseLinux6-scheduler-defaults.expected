@@ -43,6 +43,7 @@ autopart
 # no snippet data for RedHatEnterpriseLinux6
 # no snippet data for system
 
+
 %packages --ignoremissing
 @desktop-platform-devel
 @development
@@ -66,6 +67,7 @@ wget
 # no snippet data for packages
 
 
+%end
 
 %pre --log=/dev/console
 set -x
@@ -76,6 +78,7 @@ wget -O /tmp/anamon 'http://lab.test-kickstart.invalid/beaker/anamon'
 python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
 # no snippet data for RedHatEnterpriseLinux6_pre
 # no snippet data for system_pre
+%end
 
 %post --log=/dev/console
 set -x
@@ -337,6 +340,7 @@ EOF
 curl http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
 # no snippet data for RedHatEnterpriseLinux6_post
 # no snippet data for system_post
+%end
 
 
 

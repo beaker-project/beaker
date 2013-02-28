@@ -59,6 +59,10 @@ install
 {% snippet 'RedHatEnterpriseLinux6' %}
 {% snippet 'system' %}
 
+{% if unsupported_hardware is defined %}
+unsupported_hardware
+{% endif %}
+
 %packages --ignoremissing
 {%- if packages is undefined %} --default
 {% else %}
@@ -70,16 +74,19 @@ install
 {% endif %}{# manual #}
 
 {% endif %}{# sysprofile #}
+%end
 
 %pre --log=/dev/console
 {% snippet 'rhts_pre' %}
 {% snippet 'RedHatEnterpriseLinux6_pre' %}
 {% snippet 'system_pre' %}
+%end
 
 %post --log=/dev/console
 {% snippet 'rhts_post' %}
 {% snippet 'RedHatEnterpriseLinux6_post' %}
 {% snippet 'system_post' %}
+%end
 
 {{ ks_appends|join('\n') }}
 {% snippet 'post_s390_reboot' %}
