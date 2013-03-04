@@ -388,7 +388,7 @@ GitCommand="git add".split()
 
 # Constants
 MaxLengthSuggestedDesc = 50
-MaxLenghtTestName = 50
+MaxLengthTestName = 50
 ReviewWidth = 22
 MakefileLineWidth = 17
 VimDictionary = "# vim: dict=/usr/share/beakerlib/dictionary.vim cpt=.,w,b,u,t,i,k"
@@ -1812,7 +1812,7 @@ class Bugs(MultipleChoice):
 
     def suggestTestName(self):
         """ Suggest testname from bugzilla summary """
-        return dashifyText(shortenText(self.getSummary(), MaxLenghtTestName))
+        return dashifyText(shortenText(self.getSummary(), MaxLengthTestName))
 
     def suggestDescription(self):
         """ Suggest short description from bugzilla summary """
