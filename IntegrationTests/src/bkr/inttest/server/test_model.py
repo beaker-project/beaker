@@ -1763,6 +1763,20 @@ class MACAddressAllocationTest(unittest.TestCase):
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:01'))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=912159
+    def test_in_use_below_base_address(self):
+        job = data_setup.create_job(num_guestrecipes=1)
+        data_setup.mark_job_running(job)
+        # This can happen if the base address was previously set to a lower 
+        # value, and a guest recipe from then is still running.
+        job.recipesets[0].recipes[0].guests[0].resource.mac_address = \
+            netaddr.EUI('52:53:FF:00:00:00')
+        self.assertEquals(RecipeResource._lowest_free_mac(),
+                netaddr.EUI('52:54:00:00:00:00'))
+        job.cancel()
+        self.assertEquals(RecipeResource._lowest_free_mac(),
+                netaddr.EUI('52:54:00:00:00:00'))
+
 class LogRecipeTest(unittest.TestCase):
 
     def setUp(self):
