@@ -14,7 +14,7 @@ from werkzeug.routing import Map as RoutingMap, Rule
 from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed, BadRequest
 import gevent, gevent.pool, gevent.wsgi, gevent.event, gevent.monkey
 from bkr.common.helpers import RepeatTimer
-from bkr.labcontroller.proxy import Proxy
+from bkr.labcontroller.proxy import Proxy, ProxyHTTP
 from bkr.labcontroller.config import get_conf, load_conf
 from bkr.labcontroller.utils import add_rotating_file_logger
 from bkr.log import add_stderr_logger
@@ -43,6 +43,7 @@ class WSGIApplication(object):
 
     def __init__(self, proxy):
         self.proxy = proxy
+        self.proxy_http = ProxyHTTP(proxy)
         self.xmlrpc_dispatcher = XMLRPCDispatcher()
         self.xmlrpc_dispatcher.register_instance(proxy)
         self.url_map = RoutingMap([
@@ -55,6 +56,32 @@ class WSGIApplication(object):
             Rule('/postinstall_done/<recipe_id>',
                     endpoint=(self.proxy, 'postinstall_done')),
             Rule('/postreboot/<recipe_id>', endpoint=(self.proxy, 'postreboot')),
+            # harness API:
+            Rule('/recipes/<recipe_id>/', methods=['GET'],
+                    endpoint=(self.proxy_http, 'get_recipe')),
+            Rule('/recipes/<recipe_id>/watchdog', methods=['POST'],
+                    endpoint=(self.proxy_http, 'post_watchdog')),
+            Rule('/recipes/<recipe_id>/status', methods=['POST'],
+                    endpoint=(self.proxy_http, 'post_recipe_status')),
+            Rule('/recipes/<recipe_id>/tasks/<task_id>/status', methods=['POST'],
+                    endpoint=(self.proxy_http, 'post_task_status')),
+            Rule('/recipes/<recipe_id>/tasks/<task_id>/results/', methods=['POST'],
+                    endpoint=(self.proxy_http, 'post_result')),
+            Rule('/recipes/<recipe_id>/logs/', methods=['GET'],
+                    endpoint=(self.proxy_http, 'list_recipe_logs')),
+            Rule('/recipes/<recipe_id>/logs/<path:path>', methods=['GET', 'PUT'],
+                    endpoint=(self.proxy_http, 'do_recipe_log')),
+            Rule('/recipes/<recipe_id>/tasks/<task_id>/logs/', methods=['GET'],
+                    endpoint=(self.proxy_http, 'list_task_logs')),
+            Rule('/recipes/<recipe_id>/tasks/<task_id>/logs/<path:path>',
+                    methods=['GET', 'PUT'],
+                    endpoint=(self.proxy_http, 'do_task_log')),
+            Rule('/recipes/<recipe_id>/tasks/<task_id>/results/<result_id>/logs/',
+                    methods=['GET'],
+                    endpoint=(self.proxy_http, 'list_result_logs')),
+            Rule('/recipes/<recipe_id>/tasks/<task_id>/results/<result_id>/logs/<path:path>',
+                    methods=['GET', 'PUT'],
+                    endpoint=(self.proxy_http, 'do_result_log')),
         ])
 
     @Request.application

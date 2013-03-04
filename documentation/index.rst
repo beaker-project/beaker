@@ -16,5 +16,6 @@ In addition to the guides below, you can learn more about Beaker on the
    admin-guide/index
    man/index
    server-api/index
+   alternative-harnesses/index
    whats-new/index
    glossary

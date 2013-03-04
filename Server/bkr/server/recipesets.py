@@ -29,7 +29,6 @@ from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.recipetasks import RecipeTasks
 from socket import gethostname
-from bkr.upload import Uploader
 import exceptions
 import time
 

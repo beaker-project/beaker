@@ -1,0 +1,14 @@
+cat <<"EOF" >/etc/profile.d/beaker-harness-env.sh
+export BEAKER_LAB_CONTROLLER_URL="http://{{ lab_controller.fqdn }}:8000/"
+export BEAKER_LAB_CONTROLLER={{ lab_controller.fqdn }}
+export BEAKER_RECIPE_ID={{ recipe.id }}
+export BEAKER_HUB_URL="{{ absolute_url('/', labdomain=True) }}"
+EOF
+cat <<"EOF" >/etc/profile.d/beaker-harness-env.csh
+setenv BEAKER_LAB_CONTROLLER_URL "http://{{ lab_controller.fqdn }}:8000/"
+setenv BEAKER_LAB_CONTROLLER {{ lab_controller.fqdn }}
+setenv BEAKER_RECIPE_ID {{ recipe.id }}
+setenv BEAKER_HUB_URL "{{ absolute_url('/', labdomain=True) }}"
+EOF
+
+yum -y install {{ harness }}

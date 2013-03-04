@@ -125,6 +125,7 @@ class TaskResult(DeclEnum):
         ('warn',  u'Warn',  dict(severity=30)),
         ('fail',  u'Fail',  dict(severity=40)),
         ('panic', u'Panic', dict(severity=50)),
+        ('none',  u'None',  dict(severity=15)),
     ]
 
     @classmethod
@@ -5356,6 +5357,26 @@ class Recipe(TaskBase):
 #                    subtask_id_list = ["T:%s" % t.id for t in self.tasks],
                    )
 
+    def extend(self, kill_time):
+        """
+        Extend the watchdog by kill_time seconds
+        """
+        if not self.watchdog:
+            raise BX(_('No watchdog exists for recipe %s' % self.id))
+        self.watchdog.kill_time = datetime.utcnow() + timedelta(
+                                                              seconds=kill_time)
+        return self.status_watchdog()
+
+    def status_watchdog(self):
+        """
+        Return the number of seconds left on the current watchdog if it exists.
+        """
+        if self.watchdog:
+            delta = self.watchdog.kill_time - datetime.utcnow()
+            return delta.seconds + (86400 * delta.days)
+        else:
+            return False
+
     @property
     def all_tasks(self):
         """
@@ -5547,7 +5568,7 @@ class RecipeTask(TaskBase):
     """
     This holds the results/status of the task being executed.
     """
-    result_types = ['pass_','warn','fail','panic']
+    result_types = ['pass_','warn','fail','panic', 'result_none']
     stop_types = ['stop','abort','cancel']
 
     def __init__(self, task):
@@ -5737,6 +5758,8 @@ class RecipeTask(TaskBase):
          of what the tasks default time is.  This should be defined in number
          of seconds
         """
+        if self.is_finished():
+            raise BX(_('Cannot restart finished task'))
         if not self.recipe.watchdog:
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         if not self.start_time:
@@ -5756,21 +5779,13 @@ class RecipeTask(TaskBase):
         """
         Extend the watchdog by kill_time seconds
         """
-        if not self.recipe.watchdog:
-            raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
-        self.recipe.watchdog.kill_time = datetime.utcnow() + timedelta(
-                                                              seconds=kill_time)
-        return self.status_watchdog()
+        return self.recipe.extend(kill_time)
 
     def status_watchdog(self):
         """
         Return the number of seconds left on the current watchdog if it exists.
         """
-        if self.recipe.watchdog:
-            delta = self.recipe.watchdog.kill_time - datetime.utcnow()
-            return delta.seconds + (86400 * delta.days)
-        else:
-            return False
+        return self.recipe.status_watchdog()
 
     def stop(self, *args, **kwargs):
         """
@@ -5857,6 +5872,9 @@ class RecipeTask(TaskBase):
         Record a panic result 
         """
         return self._result(TaskResult.panic, path, score, summary)
+
+    def result_none(self, path, score, summary):
+        return self._result(TaskResult.none, path, score, summary)
 
     def _result(self, result, path, score, summary):
         """
