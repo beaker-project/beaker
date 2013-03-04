@@ -1,5 +1,6 @@
 
 import os, os.path
+import posixpath
 import datetime
 from base64 import b64encode
 import xmlrpclib
@@ -54,34 +55,91 @@ class TaskResultTest(LabControllerTestCase):
             data_setup.create_job_for_recipes([self.recipe])
             data_setup.mark_recipe_running(self.recipe)
 
-    def test_xmlrpc_task_result(self):
-        s = xmlrpclib.ServerProxy(self.get_proxy_url())
-        result_id = s.task_result(self.recipe.tasks[0].id, 'pass_',
-                '/random/junk', 123, 'The thing worked')
+    def check_result(self, result_id, result_type, path, score, log):
         with session.begin():
             session.expire_all()
             result = self.recipe.tasks[0].results[0]
             self.assertEquals(result.id, result_id)
-            self.assertEquals(result.result, TaskResult.pass_)
-            self.assertEquals(result.path, u'/random/junk')
-            self.assertEquals(result.score, 123)
-            self.assertEquals(result.log, u'The thing worked')
+            self.assertEquals(result.result, result_type)
+            self.assertEquals(result.path, path)
+            self.assertEquals(result.score, score)
+            self.assertEquals(result.log, log)
 
-    def test_POST_task_result(self):
+    def test_xmlrpc_pass(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        result_id = s.task_result(self.recipe.tasks[0].id, 'pass_',
+                '/random/junk', 123, 'The thing worked')
+        self.check_result(result_id, TaskResult.pass_, u'/random/junk', 123,
+                u'The thing worked')
+
+    def test_xmlrpc_fail(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        result_id = s.task_result(self.recipe.tasks[0].id, 'fail',
+                '/random/junk', 456, 'The thing failed')
+        self.check_result(result_id, TaskResult.fail, u'/random/junk', 456,
+                u'The thing failed')
+
+    def test_xmlrpc_warn(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        result_id = s.task_result(self.recipe.tasks[0].id, 'warn',
+                '/random/junk', -1, 'The thing broke')
+        self.check_result(result_id, TaskResult.warn, u'/random/junk', -1,
+                u'The thing broke')
+
+    def test_xmlrpc_panic(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        result_id = s.task_result(self.recipe.tasks[0].id, 'panic',
+                '/random/junk', 0, 'The thing really broke')
+        self.check_result(result_id, TaskResult.panic, u'/random/junk', 0,
+                u'The thing really broke')
+
+    def test_POST_pass(self):
         results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
                 self.recipe.id, self.recipe.tasks[0].id)
         response = requests.post(results_url, data=dict(result='Pass',
-                path='/random/junk', score=123, message='The thing worked'))
+                path='/random/junk', score='123', message='The thing worked'))
         self.assertEquals(response.status_code, 201)
         self.assert_(response.headers['Location'].startswith(results_url),
                 response.headers['Location'])
-        with session.begin():
-            session.expire_all()
-            result = self.recipe.tasks[0].results[0]
-            self.assertEquals(result.result, TaskResult.pass_)
-            self.assertEquals(result.path, u'/random/junk')
-            self.assertEquals(result.score, 123)
-            self.assertEquals(result.log, u'The thing worked')
+        result_id = int(posixpath.basename(response.headers['Location']))
+        self.check_result(result_id, TaskResult.pass_, u'/random/junk', 123,
+                u'The thing worked')
+
+    def test_POST_fail(self):
+        results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(results_url, data=dict(result='Fail',
+                path='/random/junk', score='456', message='The thing failed'))
+        self.assertEquals(response.status_code, 201)
+        self.assert_(response.headers['Location'].startswith(results_url),
+                response.headers['Location'])
+        result_id = int(posixpath.basename(response.headers['Location']))
+        self.check_result(result_id, TaskResult.fail, u'/random/junk', 456,
+                u'The thing failed')
+
+    def test_POST_warn(self):
+        results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(results_url, data=dict(result='Warn',
+                path='/random/junk', score='-1', message='The thing broke'))
+        self.assertEquals(response.status_code, 201)
+        self.assert_(response.headers['Location'].startswith(results_url),
+                response.headers['Location'])
+        result_id = int(posixpath.basename(response.headers['Location']))
+        self.check_result(result_id, TaskResult.warn, u'/random/junk', -1,
+                u'The thing broke')
+
+    def test_POST_none(self):
+        results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(results_url, data=dict(result='None',
+                path='/random/junk', message='See elsewhere for results'))
+        self.assertEquals(response.status_code, 201)
+        self.assert_(response.headers['Location'].startswith(results_url),
+                response.headers['Location'])
+        result_id = int(posixpath.basename(response.headers['Location']))
+        self.check_result(result_id, TaskResult.none, u'/random/junk', None,
+                u'See elsewhere for results')
 
     def test_POST_missing_result(self):
         results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
@@ -96,21 +154,6 @@ class TaskResultTest(LabControllerTestCase):
         response = requests.post(results_url, data=dict(result='Eggplant'),
                 allow_redirects=False)
         self.assertEquals(response.status_code, 400)
-
-    def test_POST_none(self):
-        results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
-                self.recipe.id, self.recipe.tasks[0].id)
-        response = requests.post(results_url, data=dict(result='None',
-                path='/random/junk', message='See elsewhere for results'))
-        self.assertEquals(response.status_code, 201)
-        self.assert_(response.headers['Location'].startswith(results_url),
-                response.headers['Location'])
-        with session.begin():
-            session.expire_all()
-            result = self.recipe.tasks[0].results[0]
-            self.assertEquals(result.result, TaskResult.none)
-            self.assertEquals(result.path, u'/random/junk')
-            self.assertEquals(result.log, u'See elsewhere for results')
 
 class TaskStatusTest(LabControllerTestCase):
 
