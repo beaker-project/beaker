@@ -36,6 +36,7 @@ BuildRequires:  python-sphinx10
 %else
 BuildRequires:  python-sphinx >= 1.0
 %endif
+BuildRequires:  python-sphinxcontrib-httpdomain
 BuildRequires:  bash-completion
 
 %if %{with server}

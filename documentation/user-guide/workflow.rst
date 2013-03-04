@@ -2,6 +2,7 @@ Workflow
 ========
 
 .. toctree::
+
    virtualization-workflow
    provisioning
 
