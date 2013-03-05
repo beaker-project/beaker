@@ -288,7 +288,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with server}
 %files server
 %defattr(-,root,root,-)
-%doc Server/README
 %doc SchemaUpgrades/upgrade_*
 %{python_sitelib}/bkr/server/
 %{python_sitelib}/bkr.server-%{version}-*
