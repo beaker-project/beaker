@@ -74,7 +74,7 @@ def main():
                                              distro_tree['distro_tree_id'])
             proxy.remove_distro_trees([distro_tree['distro_tree_id']])
     else:
-        sys.etderr.write("All distros are missing! Please check your server!!\n")
+        sys.stderr.write("All distros are missing! Please check your server!!\n")
         sys.exit(1)
 
 if __name__ == '__main__':
