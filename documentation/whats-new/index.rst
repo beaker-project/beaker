@@ -55,3 +55,14 @@ a number of minor enhancements and bug fixes.
 
    release-0.11
    upgrade-0.11
+
+Older releases
+--------------
+
+Release notes for versions prior to 0.11 are not available.
+
+For administrators upgrading from older versions, refer to the now-obsolete 
+`SchemaUpgrades directory 
+<http://git.beaker-project.org/cgit/beaker/tree/SchemaUpgrades/>`_ in Beaker's 
+source tree. (Those files were previously included in the beaker-server package 
+under ``/usr/share/doc/beaker-server-*``.)
