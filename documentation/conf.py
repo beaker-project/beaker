@@ -85,9 +85,8 @@ def generate_client_subcommand_doc(app, module, cls):
     outpath = os.path.join(app.srcdir, 'man', '%s.rst' % docname)
     # only write it if the contents have changed, this helps conditional builds
     if not os.path.exists(outpath) or open(outpath, 'r').read() != doc:
-        with open(outpath, 'w') as f:
-            f.write(doc)
-    description = doctitle.partition(': ')[2]
+        open(outpath, 'w').write(doc)
+    description = doctitle.split(':', 1)[1].strip()
     app.config.man_pages.append(('man/%s' % docname, docname, description,
             [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1))
 

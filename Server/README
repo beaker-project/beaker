@@ -1,7 +1,0 @@
-Beaker/Medusa
-=============
-
-    https://fedorahosted.org/beaker
-
-If you are using MySQL as the DB backend you will need to install MySQL-python.
-

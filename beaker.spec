@@ -36,6 +36,7 @@ BuildRequires:  python-sphinx10
 %else
 BuildRequires:  python-sphinx >= 1.0
 %endif
+BuildRequires:  python-sphinxcontrib-httpdomain
 BuildRequires:  bash-completion
 
 %if %{with server}
@@ -286,8 +287,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with server}
 %files server
 %defattr(-,root,root,-)
-%doc Server/README
-%doc SchemaUpgrades/upgrade_*
+%doc documentation/_build/text/whats-new/
 %{python_sitelib}/bkr/server/
 %{python_sitelib}/bkr.server-%{version}-*
 %{python_sitelib}/bkr.server-%{version}-py%{pyver}.egg-info/
