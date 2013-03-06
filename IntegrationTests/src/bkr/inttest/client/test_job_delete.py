@@ -19,6 +19,48 @@ class JobDeleteTest(unittest.TestCase):
         self.assert_(out.startswith('Jobs deleted:'), out)
         self.assert_(self.job.t_id in out, out)
 
+    def test_delete_others_job(self):
+        with session.begin():
+            other_user = data_setup.create_user(password=u'asdf')
+            other_job = data_setup.create_completed_job(owner=other_user)
+        try:
+            out = run_client(['bkr', 'job-delete', other_job.t_id],
+                             config=self.client_config)
+            fail('should raise')
+        except ClientError, e:
+            self.assert_("don't have permission" in e.stderr_output)
+
+    def test_delete_group_mates_job(self):
+        with session.begin():
+            group = data_setup.create_group()
+            mate = data_setup.create_user(password=u'asdf')
+            test_job = data_setup.create_completed_job(owner=mate)
+            data_setup.add_user_to_group(self.user, group)
+            data_setup.add_user_to_group(mate, group)
+        out = run_client(['bkr', 'job-delete', test_job.t_id],
+                         config=self.client_config)
+        self.assert_(out.startswith('Jobs deleted:'), out)
+        self.assert_(test_job.t_id in out, out)
+
+    def test_delete_job_with_admin(self):
+        with session.begin():
+            other_user = data_setup.create_user(password=u'asdf')
+            tag = data_setup.create_retention_tag(name=u'myblahtag')
+            job1 = data_setup.create_completed_job(owner=other_user)
+            job2 = data_setup.create_completed_job(owner=other_user, \
+                                                   retention_tag=tag)
+
+        # As the default admin user
+        # Admin can delete other's job with job ID
+        out = run_client(['bkr', 'job-delete', job1.t_id])
+        self.assert_(out.startswith('Jobs deleted:'), out)
+        self.assert_(job1.t_id in out, out)
+
+        # Admin can not delete other's job with tags
+        out = run_client(['bkr', 'job-delete', '-t%s' % tag.tag])
+        self.assert_(out.startswith('Jobs deleted:'), out)
+        self.assert_(job2.t_id not in out, out)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=595512
     def test_invalid_taskspec(self):
         try:

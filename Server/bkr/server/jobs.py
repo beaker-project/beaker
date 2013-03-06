@@ -290,10 +290,11 @@ class Jobs(RPCRoot):
         as per the :meth:`jobs.list` method.
 
         If *dryrun* is True, deletions will be reported but nothing will be
-        modified
+        modified.
 
-        At present, only non admins can call this feature. Admin functionality
-        will be added to when we are using a message bus.
+        Admins are not be able to delete jobs which are not owned by
+        themselves by using the tag, complete_days etc kwargs, instead, they
+        should do that via the *jobs* argument.
         """
         if jobs: #Turn them into job objects
             if not isinstance(jobs,list):
@@ -303,15 +304,19 @@ class Jobs(RPCRoot):
                 job = TaskBase.get_by_t_id(j_id)
                 if not isinstance(job,Job):
                     raise BeakerException('Incorrect task type passed %s' % j_id )
+                if not job.can_admin(identity.current.user):
+                    raise BeakerException("You don't have permission to delete job %s" % j_id)
                 jobs_to_try_to_del.append(job)
             delete_jobs_kw = dict(jobs=jobs_to_try_to_del)
         else:
+            # only allow people to delete their own jobs while using these kwargs
             delete_jobs_kw = dict(query=Job.find_jobs(tag=tag,
                 complete_days=complete_days,
-                family=family, product=product))
+                family=family, product=product,
+                owner=identity.current.user.user_name))
 
         deleted_jobs = Job.delete_jobs(**delete_jobs_kw)
-        
+
         msg = 'Jobs deleted'
         if dryrun:
             session.rollback()
