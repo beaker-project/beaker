@@ -90,9 +90,7 @@ class Machine_Test(BeakerWorkflow):
         self.parser.usage = "%%prog %s [options] --machine=FQDN" % self.normalized_name
 
     def run(self, *args, **kwargs):
-        username = kwargs.get("username", None)
-        password = kwargs.get("password", None)
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
 
         debug  = kwargs.get("debug", False)
         dryrun = kwargs.get("dryrun", False)

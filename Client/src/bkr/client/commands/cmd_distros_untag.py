@@ -79,14 +79,12 @@ class Distros_Untag(BeakerCommand):
         if len(args) < 1:
             self.parser.error("Please specify a tag")
 
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         name = kwargs.pop("name", None)
         tag = args[0]
         if not name:
             self.parser.error('If you really want to untag every distro in Beaker, use --name=%')
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         distros = self.hub.distros.untag(name, tag)
         print "Removed Tag %s from the following distros:" % tag
         print "------------------------------------------------------"

@@ -18,7 +18,6 @@ if not config_file:
         sys.stderr.write("%s is deprecated for config, please use %s instead\n" % (old_conf, user_conf))
     elif os.path.exists('/etc/beaker/client.conf'):
         config_file = "/etc/beaker/client.conf"
-        sys.stderr.write("%s not found, using %s\n" % (user_conf, config_file))
     else:
         pass
 
@@ -28,6 +27,11 @@ if config_file:
 
 class BeakerCommand(ClientCommand):
     enabled = False
+
+    def set_hub(self, username=None, password=None, **kwargs):
+        if kwargs.get('hub'):
+            self.conf['HUB_URL'] = kwargs['hub']
+        self.container.set_hub(username, password)
 
     t_id_types = dict(T = 'RecipeTask',
                       TR = 'RecipeTaskResult',
@@ -312,13 +316,11 @@ class BeakerWorkflow(BeakerCommand):
     def getArches(self, *args, **kwargs):
         """ Get all arches that apply to either this distro or family/osmajor """
 
-        username = kwargs.get("username", None)
-        password = kwargs.get("password", None)
         distro   = kwargs.get("distro", None)
         family   = kwargs.get("family", None)
 
         if not hasattr(self,'hub'):
-            self.set_hub(username, password)
+            self.set_hub(**kwargs)
 
         if family:
             return self.hub.distros.get_arch(dict(osmajor=family))
@@ -327,27 +329,21 @@ class BeakerWorkflow(BeakerCommand):
 
     def getOsMajors(self, *args, **kwargs):
         """ Get all OsMajors, optionally filter by tag """ 
-        username = kwargs.get("username", None)
-        password = kwargs.get("password", None)
         tags = kwargs.get("tag", []) or ['STABLE']
         if not hasattr(self,'hub'):
-            self.set_hub(username, password)
+            self.set_hub(**kwargs)
         return self.hub.distros.get_osmajors(tags)
 
     def getSystemOsMajorArches(self, *args, **kwargs):
         """ Get all OsMajors/arches that apply to this system, optionally filter by tag """
-        username = kwargs.get("username", None)
-        password = kwargs.get("password", None)
         fqdn = kwargs.get("machine", '')
         tags = kwargs.get("tag", []) or ['STABLE']
         if not hasattr(self,'hub'):
-            self.set_hub(username, password)
+            self.set_hub(**kwargs)
         return self.hub.systems.get_osmajor_arches(fqdn, tags)
 
     def getFamily(self, *args, **kwargs):
         """ Get the family/osmajor for a particular distro """
-        username = kwargs.get("username", None)
-        password = kwargs.get("password", None)
         distro   = kwargs.get("distro", None)
         family   = kwargs.get("family", None)
 
@@ -355,14 +351,12 @@ class BeakerWorkflow(BeakerCommand):
             return family
 
         if not hasattr(self,'hub'):
-            self.set_hub(username, password)
+            self.set_hub(**kwargs)
         return self.hub.distros.get_osmajor(distro)
     
     def getTasks(self, *args, **kwargs):
         """ get all requested tasks """
 
-        username = kwargs.get("username", None)
-        password = kwargs.get("password", None)
         types    = kwargs.get("type", None)
         packages = kwargs.get("package", None)
         self.n_clients = kwargs.get("clients", None)
@@ -370,7 +364,7 @@ class BeakerWorkflow(BeakerCommand):
         quiet = kwargs.get("quiet", False)
 
         if not hasattr(self,'hub'):
-            self.set_hub(username, password)
+            self.set_hub(**kwargs)
 
         # We only want valid tasks
         filter = dict(valid=1)

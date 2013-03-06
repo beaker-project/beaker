@@ -57,10 +57,7 @@ class Watchdog_Show(BeakerCommand):
 
 
     def run(self, *args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
-
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         for task_id in args:
             print "%s: %s" % (task_id, self.hub.recipes.tasks.watchdog(task_id))
 

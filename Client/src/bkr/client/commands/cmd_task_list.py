@@ -151,8 +151,6 @@ class Task_List(BeakerCommand):
 
     def run(self, *args, **kwargs):
         filter = dict()
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         filter['types'] = kwargs.pop("type", None)
         filter['packages'] = kwargs.pop("package", None)
         filter['distro_name'] = kwargs.pop("distro", None)
@@ -166,7 +164,7 @@ class Task_List(BeakerCommand):
         params = kwargs.pop("params", [])
         xml = kwargs.pop("xml")
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         doc = Document()
         xmlparams = doc.createElement('params')
         for param in params:

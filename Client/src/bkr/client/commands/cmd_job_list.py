@@ -185,8 +185,6 @@ class Job_List(BeakerCommand):
         )
 
     def run(self,*args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         family = kwargs.pop('family', None)
         tag = kwargs.pop('tag', None)
         product = kwargs.pop('product', None)
@@ -214,7 +212,7 @@ class Job_List(BeakerCommand):
                 and owner is None and mine is None and whiteboard is None:
             self.parser.error('Please pass either the completeDays time delta, a tag, product, family, or owner')
 
-        self.set_hub(username,password)
+        self.set_hub(**kwargs)
         jobs = self.hub.jobs.filter(dict(tag=tag,
                                         daysComplete=complete_days,
                                         family=family,

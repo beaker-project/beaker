@@ -17,9 +17,9 @@ Install the ``beaker-client`` package::
 
     $ sudo yum install beaker-client
 
-The client's configuration is in ``/etc/beaker/client.conf``. If you prefer you 
-can copy the configuration file to ``~/.beaker_client/config`` and edit it 
-there.
+A sample configuration is installed as 
+``/usr/share/doc/beaker-client-*/client.conf.example``. Copy it to 
+``/etc/beaker/client.conf`` or ``~/.beaker_client/config`` and edit it there.
 
 First, set the URL of your Beaker server *without* trailing slash::
 

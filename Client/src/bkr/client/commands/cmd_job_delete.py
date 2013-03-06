@@ -126,8 +126,6 @@ class Job_Delete(BeakerCommand):
         """
 
     def run(self,*args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         tag = kwargs.pop('tag',None)
         product = kwargs.pop('product', None)
         complete_days = kwargs.pop('completeDays', None)
@@ -146,7 +144,7 @@ class Job_Delete(BeakerCommand):
                 self.parser.error('Please either delete by job or tag/complete/family/product, not by both')
             self.check_taskspec_args(args, permitted_types=['J'])
 
-        self.set_hub(username,password)
+        self.set_hub(**kwargs)
         jobs = []
         if args:
             for job in args:

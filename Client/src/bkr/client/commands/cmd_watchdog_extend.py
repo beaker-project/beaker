@@ -65,14 +65,12 @@ class Watchdog_Extend(BeakerCommand):
 
 
     def run(self, *args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         extend_by = kwargs.pop("by", None)
 
         if not args:
             self.parser.error('Please specify one or more task ids.')
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         for task_id in args:
             print self.hub.recipes.tasks.extend(task_id, extend_by)
 

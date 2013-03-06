@@ -79,11 +79,9 @@ class Job_Watch(BeakerCommand):
 
 
     def run(self, *args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         if not args:
             self.parser.error('Please specify one or more tasks')
         self.check_taskspec_args(args)
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         sys.exit(watch_tasks(self.hub, args))

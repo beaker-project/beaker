@@ -125,8 +125,6 @@ class Distro_Trees_Verify(BeakerCommand):
 
 
     def run(self, *args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         onlybroken = kwargs.pop("broken", False)
         filter = dict( limit    = kwargs.pop("limit", None),
                        name     = kwargs.pop("name", None),
@@ -136,7 +134,7 @@ class Distro_Trees_Verify(BeakerCommand):
                        tags     = kwargs.pop("tag", []),
                      )
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         lab_controllers = set(self.hub.lab_controllers())
         trees = self.hub.distrotrees.filter(filter)
         if trees:

@@ -61,13 +61,9 @@ class Update_Prefs(BeakerCommand):
         )
 
     def run(self, *args, **kwargs):
+        self.set_hub(**kwargs)
 
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
-
-        self.set_hub(username, password)
-
-        if len(kwargs) < 1:
+        if 'email' not in kwargs:
             self.parser.error("Please specify at least one user preferences option")
 
         email_address = kwargs.pop("email", None)
