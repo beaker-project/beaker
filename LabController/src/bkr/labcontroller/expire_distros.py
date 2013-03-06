@@ -6,7 +6,7 @@ import urlparse
 
 def url_exists(url):
     try:
-        urllib2.urlopen(url)
+        urllib2.urlopen(url, timeout=20)
     except urllib2.URLError:
         return False
     except urllib2.HTTPError:
