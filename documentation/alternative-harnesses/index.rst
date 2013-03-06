@@ -126,8 +126,7 @@ the request body must be given as HTML form data
         recorded as ``$TEST``, with sub-results as ``$TEST/suffix``, but this 
         is not required. If not specified, the default is ``/``.
    :form score: Integer score for this result. The meaning of the score is 
-        defined on a per-task basis, Beaker intentionally enforces no meaning. 
-        If not specified, the default is zero.
+        defined on a per-task basis, Beaker intentionally enforces no meaning.
    :form message: Textual message to accompany the result. This is typically 
         short, and is expected to be displayed in one line in Beaker's web UI. 
         Use the log uploading mechanism to record test output.
