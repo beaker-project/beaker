@@ -299,6 +299,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-check
 %{_bindir}/product-update
 %{_bindir}/beaker-repo-update
+%{_bindir}/beaker-sync-tasks
 %{_bindir}/%{name}-cleanup-visits
 %{_bindir}/%{name}-cleanup-recipes
 %{_sysconfdir}/init.d/%{name}d
