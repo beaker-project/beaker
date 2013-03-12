@@ -6329,9 +6329,14 @@ class Task(MappedObject):
         with Flock(basepath):
             # Removed --baseurl, if upgrading you will need to manually
             # delete repodata directory before this will work correctly.
-            subprocess.check_call(['createrepo', '-q', '--update',
-                                   '--checksum', 'sha', '.'],
-                                  cwd=basepath)
+            p = subprocess.Popen(['createrepo', '-q', '--update',
+                    '--checksum', 'sha', '.'], cwd=basepath,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            output, unused_err = p.communicate()
+            retcode = p.poll()
+            if retcode:
+                raise ValueError('createrepo failed with exit status %d:\n%s'
+                        % (retcode, output))
 
     def to_dict(self):
         """ return a dict of this object """
