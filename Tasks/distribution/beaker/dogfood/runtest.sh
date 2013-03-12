@@ -23,4 +23,5 @@ else
 fi
 rhts-run-simple-test $TEST/update_config "./update-config.sh"
 rhts-run-simple-test $TEST/httpd_reload "/sbin/service httpd reload"
-rhts-run-simple-test $TEST "nosetests -v $NOSEARGS"
+rhts-run-simple-test $TEST "nosetests -v $NOSEARGS" || :
+rhts-submit-log -l /var/log/beaker/server-errors.log
