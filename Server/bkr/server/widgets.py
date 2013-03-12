@@ -1491,7 +1491,7 @@ class ReportProblemForm(RemoteForm):
     member_widgets = ['submit']
     params = ['system', 'recipe']
     name = 'problem'
-    on_success = 'success(\'Your problem has been reported, Thankyou\')'
+    on_success = 'success(\'Your problem has been reported, Thank you\')'
     on_failure = 'failure(\'We were unable to report your problem at this time\')'
  
     def update_params(self, d):
