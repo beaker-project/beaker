@@ -284,6 +284,72 @@ machine or not.
    metal machine, be sure to include <hypervisor op="=" value=""/> in your 
    <hostRequires/>
 
+.. _device-specs:
+
+If your recipe requires the presence of a specific device on the host,
+you may specify that using the ``<device>`` element (within
+``<hostRequires>``) using a syntax such as::
+
+    <device op="=" type="network" />
+
+The above device specification will try to find a host which has a
+network card to run your recipe on. If you wanted that the network
+card should be from a specific vendor, you would specify it, like so::
+
+    <device op="=" type="network" vendor_id="8086" />
+
+The other possible values of ``type`` include (but are not limited
+to): ``cpu``, ``display``, ``scsi``, ``memory`` and ``usb``.
+There are a number of other attributes that you can use to specify a device:
+``bus``, ``driver``, ``device_id``, ``subsys_vendor_id``,
+``subsys_device_id`` and ``description``.
+
+The ``op`` attribute can take one of the four values:``!=``, ``like``,
+``==``, ``=``, with the last two having serving the same
+functionality. The ``!=, =`` and ``==`` operators should be used when
+you want an exact match of your device specification. For example, if
+to ask Beaker to run your recipe on a host with *no* USB device, you
+would use the following specification::
+
+    <device op="!=" type="USB" />
+
+On the other hand, if you are only partially sure about what the device
+specification you are looking for, you would use the ``like``
+operator. For example, the following specification will try to find a
+host with a graphics controller::
+
+    <device op="like" description="graphics"/>
+
+You can of course combine more than one such ``<device>``
+elements. The next example shows an entire ``<hostRequires>`` specification::
+
+    <hostRequires>
+      <and>
+        <system_type op="=" value="Machine"/>
+        <device op="=" type="network" description="Extreme Gigabit Ethernet" />
+        <device op="=" type="video" description="VD 0190" />
+      </and>
+    </hostRequires>
+
+The above specification will try to find a host which is a Machine
+with a network interface (with description as "Extreme Gigabit
+Ethernet") and with a video device with the description as "VD 0190".
+
+.. admonition:: Inventoried Systems Only
+
+   It is worthwhile to note here that if you submit device
+   specifications in your ``<hostRequires>``, Beaker will match the
+   specifications against the current inventory data it has for the
+   systems. For this data to be available for a system, it is necessary that the
+   :ref:`Inventory task <next-steps>` has been run on it at some point of time before
+   your job specification has been submitted. What this basically
+   means is that unless a system has been inventoried, Beaker won't be
+   able to find it, even if it has the particular device you are
+   requesting. It may be a good idea to first search if there is any
+   system at all with the device you want to run your recipe on. (See:
+   :ref:`system-searching`).
+
+
 All that's left to populate our XML with, are the 'task' elements. The
 two attributes we need to specify are the ``name`` and the ``role``.
 You can find which tasks are available by :ref:`searching the task library 
