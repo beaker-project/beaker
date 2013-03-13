@@ -234,6 +234,9 @@ class Groups(AdminPage):
     def save_system(self, **kw):
         system = System.by_fqdn(kw['system']['text'],identity.current.user)
         group = Group.by_id(kw['group_id'])
+        if group in system.groups:
+            flash( _(u"System '%s' is already in group '%s'" % (system.fqdn, group.group_name)))
+            redirect("./edit?id=%s" % kw['group_id'])
         group.systems.append(system)
         activity = GroupActivity(identity.current.user, u'WEBUI', u'Added', u'System', u"", system.fqdn)
         sactivity = SystemActivity(identity.current.user, u'WEBUI', u'Added', u'Group', u"", group.display_name)

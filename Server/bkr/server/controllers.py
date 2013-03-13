@@ -1462,6 +1462,9 @@ class Root(RPCRoot):
             except InvalidRequestError:
                 flash(_(u"%s is an Invalid Group" % kw['group']['text']))
                 redirect("/view/%s" % system.fqdn)
+            if group in system.groups:
+                flash(_(u"System '%s' is already in group '%s'" % (system.fqdn, group.group_name)))
+                redirect("/view/%s" % system.fqdn)
             system.groups.append(group)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Group', "", kw['group']['text'])
             gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'System', "", system.fqdn)
