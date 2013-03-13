@@ -1,11 +1,13 @@
 import unittest, datetime, os, threading
+import shutil
 import bkr
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
-        Provision, TaskPriority
+        Provision, TaskPriority, RecipeSet
 import sqlalchemy.orm
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
+from turbogears import config
 from turbogears.database import session, get_engine
 import xmltramp
 from bkr.server.jobxml import XmlJob
@@ -22,6 +24,19 @@ class TestBeakerd(unittest.TestCase):
             self.lab_controller = data_setup.create_labcontroller()
             data_setup.create_system(lab_controller=self.lab_controller,
                     shared=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        # This is a bit of a hack...
+        # These tests invoke beakerd code directly, which will create 
+        # /var/www/beaker/rpms/repodata if it doesn't already exist. But the 
+        # tests might be running as root (as in the dogfood task, for example) 
+        # so the repodata directory could end up owned by root, whereas it 
+        # needs to be owned by apache.
+        # The hacky fix is to just delete the repodata here, and let the 
+        # application (running as apache) re-create it later.
+        repodata = os.path.join(config.get('basepath.rpms'), 'repodata')
+        shutil.rmtree(repodata, ignore_errors=True)
 
     def test_schedule_bad_recipes_dont_fail_all(self):
         with session.begin():
@@ -494,7 +509,32 @@ class TestBeakerd(unittest.TestCase):
             self.assertEqual(job.status, TaskStatus.queued)
             system = System.query.get(system.id)
             self.assertEqual(system.user, None)
-    
+
+    def test_disabled_lab_controller(self):
+        with session.begin():
+            system = data_setup.create_system(status=u'Automated', shared=True,
+                    lab_controller=self.lab_controller)
+            job = data_setup.create_job()
+            job.recipesets[0].recipes[0]._host_requires = (
+                    '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                    % system.fqdn)
+            self.lab_controller.disabled = True
+        beakerd.process_new_recipes()
+        beakerd.queue_processed_recipesets()
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            recipeset = RecipeSet.by_id(job.recipesets[0].id)
+            self.assertEquals(recipeset.status, TaskStatus.queued)
+        # now re-enable it
+        with session.begin():
+            LabController.query.get(self.lab_controller.id).disabled = False
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            recipeset = RecipeSet.by_id(job.recipesets[0].id)
+            self.assertEquals(recipeset.status, TaskStatus.scheduled)
+
     def test_fail_harness_repo(self):
         with session.begin():
             user = data_setup.create_user()
