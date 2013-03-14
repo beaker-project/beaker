@@ -407,7 +407,8 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(self.recipe.logs[0].path, '/')
             self.assertEquals(self.recipe.logs[0].filename, 'recipe-log')
             self.assertEquals(self.recipe.logs[0].server,
-                    'http://localhost/beaker/logs/recipes/%s/' % self.recipe.id)
+                    'http://%s/beaker/logs/recipes/%s/'
+                    % (self.get_lc_fqdn(), self.recipe.id))
             self.assertEquals(self.recipe.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'recipe-log'), 'r').read(),
@@ -429,7 +430,8 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(self.recipe.logs[0].path, '/')
             self.assertEquals(self.recipe.logs[0].filename, 'PUT-recipe-log')
             self.assertEquals(self.recipe.logs[0].server,
-                    'http://localhost/beaker/logs/recipes/%s/' % self.recipe.id)
+                    'http://%s/beaker/logs/recipes/%s/'
+                    % (self.get_lc_fqdn(), self.recipe.id))
             self.assertEquals(self.recipe.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'PUT-recipe-log'), 'r').read(),
@@ -456,7 +458,8 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(task.logs[0].path, '/')
             self.assertEquals(task.logs[0].filename, 'task-log')
             self.assertEquals(task.logs[0].server,
-                    'http://localhost/beaker/logs/tasks/%s/' % task.id)
+                    'http://%s/beaker/logs/tasks/%s/'
+                    % (self.get_lc_fqdn(), task.id))
             self.assertEquals(task.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'task-log'), 'r').read(),
@@ -480,7 +483,8 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(task.logs[0].path, '/')
             self.assertEquals(task.logs[0].filename, 'PUT-task-log')
             self.assertEquals(task.logs[0].server,
-                    'http://localhost/beaker/logs/tasks/%s/' % task.id)
+                    'http://%s/beaker/logs/tasks/%s/'
+                    % (self.get_lc_fqdn(), task.id))
             self.assertEquals(task.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'PUT-task-log'), 'r').read(),
@@ -508,7 +512,8 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(result.logs[0].path, '/')
             self.assertEquals(result.logs[0].filename, 'result-log')
             self.assertEquals(result.logs[0].server,
-                    'http://localhost/beaker/logs/results/%s/' % result.id)
+                    'http://%s/beaker/logs/results/%s/'
+                    % (self.get_lc_fqdn(), result.id))
             self.assertEquals(result.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'result-log'), 'r').read(),
@@ -534,7 +539,8 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(result.logs[0].path, '/')
             self.assertEquals(result.logs[0].filename, 'PUT-result-log')
             self.assertEquals(result.logs[0].server,
-                    'http://localhost/beaker/logs/results/%s/' % result.id)
+                    'http://%s/beaker/logs/results/%s/'
+                    % (self.get_lc_fqdn(), result.id))
             self.assertEquals(result.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'PUT-result-log'), 'r').read(),

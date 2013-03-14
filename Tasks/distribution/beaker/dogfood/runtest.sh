@@ -23,5 +23,13 @@ else
 fi
 rhts-run-simple-test $TEST/update_config "./update-config.sh"
 rhts-run-simple-test $TEST/httpd_reload "/sbin/service httpd reload"
+
+if echo $SERVERS | grep -q $HOSTNAME ; then
+    echo "Running with remote lab controller: ${CLIENTS}"
+    export BEAKER_LABCONTROLLER_HOSTNAME="${CLIENTS}"
+else
+    echo "Running in single-host mode"
+    export BEAKER_LABCONTROLLER_HOSTNAME="${HOSTNAME}"
+fi
 rhts-run-simple-test $TEST "nosetests -v $NOSEARGS" || :
 rhts-submit-log -l /var/log/beaker/server-errors.log
