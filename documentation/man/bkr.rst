@@ -114,18 +114,18 @@ Workflow options
 These options are applicable to :program:`bkr` workflow subcommands, such as 
 :program:`bkr workflow-simple`.
 
+.. option:: --dry-run, --dryrun
+
+   Don't submit the job(s) to Beaker.
+
 .. option:: --debug
 
    Print the generated job XML before submitting it to Beaker.
 
-.. option:: --prettyxml
+.. option:: --pretty-xml, --prettyxml
 
    Pretty-print the generated job XML in a human-readable form (with 
    indentation and line breaks).
-
-.. option:: --dryrun
-
-   Don't submit the job(s) to Beaker.
 
 .. option:: --wait
 
@@ -133,75 +133,156 @@ These options are applicable to :program:`bkr` workflow subcommands, such as
    The command will not exit until all submitted jobs have finished. See 
    :manpage:`bkr-job-watch(1)`.
 
-Options for selecting a distro:
+.. option:: --no-wait, --nowait
 
-.. option:: --distro <name>
+   Do not wait on job completion [default].
 
-   Run the job with distro named <name>.
+.. option:: --quiet
+
+   Be quiet, don't print warnings.
+
+Options for selecting distro tree(s):
 
 .. option:: --family <family>
 
-   Run the job with the latest distro in <family>, for example 
-   ``RedHatEnterpriseLinux6``.
-
-.. option:: --variant <variant>
-
-   Run the job with distro variant <variant>, for example ``Server``. Combine 
-   this with :option:`--family`.
+   Run the job with the latest distro in <family> (for example: `RedHatEnterpriseLinux6``).
 
 .. option:: --tag <tag>
 
    Run the job with the latest distro tagged with <tag>. Combine this with 
    :option:`--family`. By default the ``STABLE`` tag is used.
 
-Options for selecting systems:
+.. option:: --distro <name>
 
-.. option:: --arch <arch>
+   Run the job with distro named <name>.
 
-   Generate a job for <arch>. This option may be specified multiple times. By 
-   default, a copy of the job is generated for each arch supported by the 
-   selected distro.
+.. option:: --variant <variant>
 
-.. option:: --systype <type>
+   Run the job with distro variant <variant>, for example ``Server``. Combine 
+   this with :option:`--family`.
 
-   Run the job on system(s) of type <type>. This defaults to ``Machine`` which 
-   is almost always what you want.
+.. option:: --arch <arch> 
 
-.. option:: --keyvalue <name>=<value>
+   Use only <arch> in job. By default, a recipe set is generated for
+   each arch supported by the selected distro. This option may be
+   specified multiple times. 
 
-   Run the job on system(s) which have the key <name> set to <value>, for 
-   example ``NETWORK=e1000``.
+Options for selecting system(s):
 
 .. option:: --machine <fqdn>
 
    Run the job on system with <fqdn>. This option will always select a single 
    system, and so does not make sense combined with any other system options.
 
+.. option:: --systype <type>
+
+   Run the job on system(s) of type <type>. This defaults to ``Machine`` which 
+   is almost always what you want. Other supported values are
+   ``Laptop``, ``Prototype`` and ``Resource``. ``Laptop`` type would be
+   used to select a system from the available laptop
+   computers. Similarly, ``Resource`` and ``Prototype`` would be used in cases
+   where you would want to schedule your job against a system whose
+   type has been set as such.
+
+.. option:: --hostrequire "TAG OPERATOR VALUE"
+
+   Additional <hostRequires/> for job (example: labcontroller=lab.example.com).
+
+.. option:: --keyvalue <name>=<value>
+
+   Run the job on system(s) which have the key <name> set to <value>
+   (for example: ``NETWORK=e1000``). 
+
 .. option:: --random
 
-   Select a system at random.
+   Select a system at random. The systems owned by the user are first
+   checked for availability, followed by the systems owned by the
+   user's group and finally all other systems.
 
-Options for specifying tasks in the job:
+Options for selecting tasks:
+
+.. option:: --task <task>
+
+   Include <task> in the job. This option may be specified multiple times.
 
 .. option:: --package <package>
 
    Include tests for <package> in the job. This option may be specified 
    multiple times.
 
-.. option:: --type <type>
+.. option:: --task-type <type>
 
    Include tasks of type <type> in the job. This option may be specified 
    multiple times.
 
-.. option:: --task <task>
+.. option:: --install  <package>
 
-   Include <task> in the job. This option may be specified multiple times.
+   Install additional package <package> after provisioning. This uses the 
+   ``/distribution/pkginstall`` task. This option may be specified
+   multiple times.
 
-Options to customise the installation:
+.. option:: --kdump
+
+   Enable ``kdump`` using using ``/kernel/networking/kdump``.
+
+.. option:: --ndump
+
+   Enable ``ndnc`` using using ``/kernel/networking/ndnc``.
+
+.. option:: --suppress-install-task
+
+   Omit ``/distribution/install`` which is included by default.
+
+Options for job configuration:
+
+.. option:: --whiteboard <whiteboard>
+
+   Set the job's whiteboard to <whiteboard>.
+
+.. option:: --taskparam <name>=<value>
+
+   Sets parameter <name> to <value> for all tasks in the job.
+
+.. option:: --repo <url>
+
+   Make the yum repository at <url> available during the job. This option may 
+   be specified multiple times.
+
+.. option:: --ignore-panic 
+
+   Do not abort job if panic message appears on serial console.
+
+.. option:: --cc <email>
+
+   Add <email> to the cc list for the job(s). The cc list will receive the job 
+   completion notification. This option may be specified multiple times.
+
+.. option:: --priority <priority>
+
+   Set job priority to <priority>. Can be ``Low``, ``Medium``, ``Normal``, 
+   ``High``, or ``Urgent``. The default is ``Normal``.
+
+.. option:: --retention-tag <TAG>
+ 
+   Specify data retention policy for this job [default: Scratch]
+
+.. option:: --product <PRODUCT>
+
+   Associate job with PRODUCT for data retention purposes.
+
+Options for installation:
+
+.. option:: --method <METHOD>
+
+   Installation source method (nfs, http, ftp) [default: nfs].
+ 
+.. option:: --ks-meta <OPTIONS>
+
+   Pass kickstart metadata OPTIONS when generating kickstart.
 
 .. option:: --kernel_options <opts>
 
-   Pass additional kernel options for during installation. The options string 
+   Pass additional kernel options for during installation. The options string
    is applied on top of any install-time kernel options which are set by 
    default for the chosen system and distro.
 
@@ -220,56 +301,6 @@ Options for multi-host testing:
 .. option:: --servers <number>
 
    Use <number> servers in the job.
-
-Other options for modifying the job:
-
-.. option:: --whiteboard <whiteboard>
-
-   Set the job's whiteboard to <whiteboard>.
-
-.. option:: --retention_tag <tag>
-
-   Set the job's data retention policy to <tag>. This defaults to ``scratch``.
-
-.. option:: --product <cpeid>
-
-   Set the job's product to <cpeid>.
-
-.. option:: --repo <url>
-
-   Make the yum repository at <url> available during the job. This option may 
-   be specified multiple times.
-
-.. option:: --taskparam <name>=<value>
-
-   Sets parameter <name> to <value> for all tasks in the job.
-
-.. option:: --install <package>
-
-   Install additional package <package> after provisioning. This uses the 
-   /distribution/pkginstall task. This option may be specified multiple times.
-
-.. option:: --cc <email>
-
-   Add <email> to the cc list for the job(s). The cc list will receive the job 
-   completion notification. This option may be specified multiple times.
-
-.. option:: --kdump
-
-   Turn on kdump.
-
-.. option:: --ndump
-
-   Turn on ndnc.
-
-.. option:: --method <method>
-
-   Install using <method> (``nfs`` or ``http``). The default is to use NFS.
-
-.. option:: --priority <priority>
-
-   Set job priority to <priority>. Can be ``Low``, ``Medium``, ``Normal``, 
-   ``High``, or ``Urgent``. The default is ``Normal``.
 
 Files
 -----
