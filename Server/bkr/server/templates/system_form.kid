@@ -163,10 +163,10 @@ $(document).ready(function(){
        <th class="list">
         ${label_for('loaned')}
        </th>
-       <td class="list">
-        ${loaned_email_link}
-        <span py:if="loan_type">
-            ${loan_widget.display(loan_type, id)}
+       <td class="list" py:if='value'>
+        <span id='loanee-name'>${value.get('loaned')}</span>
+        <span py:strip="1" py:if="show_loan_options">
+         ${loan_widget.display(value, comment=loan_comment)}
         </span>
        </td>
       </tr>

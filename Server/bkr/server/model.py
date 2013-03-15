@@ -281,6 +281,7 @@ system_table = Table('system', metadata,
     Column('mac_address',String(18)),
     Column('loan_id', Integer,
            ForeignKey('tg_user.user_id')),
+    Column('loan_comment', Unicode(1000),),
     Column('release_action', ReleaseAction.db_type()),
     Column('reprovision_distro_tree_id', Integer,
            ForeignKey('distro_tree.id')),
@@ -2024,6 +2025,7 @@ class System(SystemObject):
         return False
 
     def can_admin(self,user=None):
+        # XXX Refactor this out, use is_admin() instead.
         if user:
             if user == self.owner or user.is_admin() or self.is_admin(user=user):
                 return True
@@ -2048,10 +2050,62 @@ class System(SystemObject):
                 return True
         return False
 
+    def change_loan(self, user_name, comment=None, service='WEBUI'):
+        """Changes the current system loan
+
+        change_loan() updates the user a system is loaned to, by
+        either adding a new loanee, changing the existing to another,
+        or by removing the existing loanee. It also changes the comment
+        associated with the loan.
+
+        It checks all permissions that are needed and
+        updates SystemActivity.
+
+        Returns the user holding the loan.
+        """
+        def _update_loanee():
+            if user != self.loaned:
+                activity = SystemActivity(identity.current.user, service,
+                    u'Changed', u'Loaned To', u'%s' % self.loaned if self.loaned else '' ,
+                    u'%s' % user if user else '')
+                self.loaned = user
+                self.activity.append(activity)
+
+        loaning_to = user_name
+        user = User.by_user_name(loaning_to)
+        # This is an error condition
+        if loaning_to and not user:
+            raise ValueError('user name %s is invalid' % loaning_to)
+
+
+        # This implies a Change to another user
+        if self.loaned and loaning_to:
+            if self.is_admin():
+                _update_loanee()
+            else:
+                raise BX(_("Insufficient permissions to change loanee of system"))
+        # This implies a Return
+        elif self.loaned and not loaning_to:
+            # Check permission
+            if self.current_loan(identity.current.user):
+                # Clear any existing comments
+                _update_loanee()
+                comment = None
+            else:
+                raise BX(_("Insufficient permissions to return loan"))
+        # This is a new loan
+        elif not self.loaned and loaning_to:
+            # Check permission
+            if self.is_admin():
+                _update_loanee()
+            else:
+                raise BX(_("Insufficient permissions to create loan"))
+        self._update_loan_comment(comment)
+        return loaning_to if loaning_to else ''
+
     def current_loan(self, user=None):
         if user and self.loaned:
             if self.loaned == user or \
-               self.owner  == user or \
                self.is_admin():
                 return True
         return False
@@ -2069,6 +2123,29 @@ class System(SystemObject):
                 if group in self.groups:
                     return True
 
+    def _update_loan_comment(self, comment=None, service=u'WEBUI'):
+        """Updates the comment associated with a loan
+
+        Checks permissions and adds SystemActivity entry.
+        """
+        if not self.loaned and comment:
+            raise BX(_(u'Cannot add a loan comment without a current loan'))
+
+        def _update_comment():
+            if self.loan_comment != comment:
+                activity = SystemActivity(identity.current.user, service,
+                    u'Changed', u'Loan Comment', u'%s' % self.loan_comment if
+                    self.loan_comment else '' , u'%s' % comment if
+                    comment else '')
+                self.activity.append(activity)
+                self.loan_comment = comment
+        if self.can_admin(identity.current.user):
+            _update_comment()
+        # This is the case when returning a loan by a loanee
+        elif not self.loaned and not comment:
+            _update_comment()
+        else:
+            raise BX(_('Insufficient permissions to change loan comment'))
 
     def is_available(self,user=None):
         """

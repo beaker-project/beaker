@@ -718,13 +718,7 @@ class Root(RPCRoot):
             options['owner_change_text'] = ' (Change)'
             options['show_cc'] = True
 
-        options['loan_widget'] = LoanWidget() 
-        if system.current_loan(our_user) and system.is_admin():
-            options['loan_type'] = LoanWidget.RETURN_CHANGE
-        elif system.current_loan(our_user):
-            options['loan_type'] = LoanWidget.RETURN
-        elif system.can_loan(our_user):
-            options['loan_type'] = LoanWidget.LOAN
+        options['loan_widget'] = LoanWidget()
 
         # Has privs and machine is available, can take
         if system.can_share(our_user) and \
