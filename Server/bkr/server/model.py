@@ -4014,7 +4014,8 @@ class Job(TaskBase):
 
     @classmethod
     def find_jobs(cls, query=None, tag=None, complete_days=None, family=None,
-        product=None, include_deleted=False, include_to_delete=False, **kw):
+        product=None, include_deleted=False, include_to_delete=False,
+        owner=None, **kw):
         """Return a filtered job query
 
         Does what it says. Also helps searching for expired jobs
@@ -4055,6 +4056,13 @@ class Job(TaskBase):
                 query = cls.by_product(product,query)
             except NoResultFound:
                 err_msg = _('Product is invalid: %s') % product
+                log.exception(err_msg)
+                raise BX(err_msg)
+        if owner:
+            try:
+                query = cls.by_owner(owner, query)
+            except NoResultFound:
+                err_msg = _('Owner is invalid: %s') % owner
                 log.exception(err_msg)
                 raise BX(err_msg)
         return query
