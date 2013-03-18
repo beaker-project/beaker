@@ -683,7 +683,7 @@ class TreeInfoBase(object):
         return os_dir
 
 
-    def process(self, urls, options):
+    def process(self, urls, options, repos=None):
         '''
         distro_data = dict(
                 name='RHEL-6-U1',
@@ -705,6 +705,8 @@ class TreeInfoBase(object):
                 ])
 
         '''
+        if not repos:
+            repos = []
         self.options = options
         self.scheduler = SchedulerProxy(options)
         self.tree = dict()
@@ -741,7 +743,10 @@ class TreeInfoBase(object):
         self.tree['arches'] = map(string.strip,
                                      arches and arches.split(',') or [])
         full_os_dir = self.get_os_dir()
-        common_repos = self.find_common_repos(full_os_dir, self.tree['arch'])
+        # These would have been passed from the Compose*.process()
+        common_repos = repos
+        if not common_repos:
+            common_repos = self.find_common_repos(full_os_dir, self.tree['arch'])
         self.tree['repos'] = self.find_repos() + common_repos
 
         # Add install images
