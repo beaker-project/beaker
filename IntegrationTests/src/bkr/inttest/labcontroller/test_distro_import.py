@@ -13,7 +13,7 @@ if os.path.exists(os.path.join(_git_root_dir, '.git')):
     # Looks like we are in a git checkout
     _command = os.path.join(_git_root_dir, 'LabController/src/bkr/labcontroller/distro_import.py')
 else:
-    _command = '/usr/bin/beaker-distro-import'
+    _command = '/usr/bin/beaker-import'
 
 
 class DistroImportTest(unittest.TestCase):
