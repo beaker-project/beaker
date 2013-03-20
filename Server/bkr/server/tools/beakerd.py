@@ -373,8 +373,8 @@ def schedule_queued_recipes(*args):
         # FIXME Add secondary order by number of matched systems.
         if True:
             recipes = recipes.order_by(RecipeSet.priority.desc())
-        # order recipes by id
-        recipes = recipes.order_by(MachineRecipe.id)
+        # order by recipe_set id, then by recipe id
+        recipes = recipes.order_by(RecipeSet.id).order_by(MachineRecipe.id)
         if not recipes.count():
             return False
         log.debug("Entering schedule_queued_recipes")
