@@ -1090,7 +1090,10 @@ class TreeInfoFedora(TreeInfoBase, Importer):
         repo_paths = [('Fedora',
                        'variant',
                        '.'),
-                     ]
+                      ('Fedora-Everything',
+                       'fedora',
+                       '../../../Everything/%s/os' % self.tree['arch'])]
+
         for repo in repo_paths:
             if url_exists(os.path.join(self.parser.url,repo[2],'repodata')):
                 repos.append(dict(
@@ -1099,8 +1102,8 @@ class TreeInfoFedora(TreeInfoBase, Importer):
                                   path=repo[2],
                                  )
                             )
-        return repos
 
+        return repos
 
 class TreeInfoFedoraArm(TreeInfoFedora, Importer):
     """
