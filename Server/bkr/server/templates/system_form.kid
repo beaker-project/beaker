@@ -191,10 +191,10 @@ $(document).ready(function(){
        <td class="list">
         ${display_system_property("type")}
        </td>
-       <th class="list" py:if="show_cc">
+       <th class="list">
         ${label_for('cc')}
        </th>
-       <td class="list" py:if="show_cc">
+       <td class="list">
         ${'; '.join(value_for("cc") or [])}
         <a href="${tg.url('/cc_change', system_id=id)}">(Change)</a>
        </td>
