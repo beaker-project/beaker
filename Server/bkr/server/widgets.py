@@ -1403,7 +1403,6 @@ class SystemForm(Form):
             d["loan_widget"] = d["options"]["loan_widget"]
         if d["options"].has_key("running_job"):
             d["running_job"] = d["options"]["running_job"]
-        d['show_cc'] = d['options'].get('show_cc', False)
         d["id"] = d["value_for"]("id")
         if d["value"] and "owner" in d["value"] and d["value"]["owner"]:
             d["owner_email_link"] = d["value"]["owner"].email_link

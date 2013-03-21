@@ -716,7 +716,6 @@ class Root(RPCRoot):
         our_user = identity.current.user
         if system.can_admin(user=our_user):
             options['owner_change_text'] = ' (Change)'
-            options['show_cc'] = True
 
         options['loan_widget'] = LoanWidget() 
         if system.current_loan(our_user) and system.is_admin():

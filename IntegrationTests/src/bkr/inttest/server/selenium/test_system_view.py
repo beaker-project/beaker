@@ -560,13 +560,6 @@ class SystemViewTest(SeleniumTestCase):
         self.assertEqual(sel.get_value('koptions'), 'noverifyssl some_kernel_option=5')
         self.assertEqual(sel.get_value('koptions_post'), 'some_kernel_option=6')
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=703548
-    def test_cc_not_visible_to_random_noobs(self):
-        self.login(self.unprivileged_user.user_name, 'password')
-        sel = self.selenium
-        self.go_to_system_view()
-        self.assert_(not sel.is_text_present('Notify CC'))
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=664482
     def test_cannot_change_lab_controller_while_system_in_use(self):
         with session.begin():
