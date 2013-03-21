@@ -34,6 +34,7 @@ class TestBeakerd(unittest.TestCase):
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % system.fqdn)
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.processed)
@@ -51,6 +52,7 @@ class TestBeakerd(unittest.TestCase):
         beakerd.process_new_recipes()
         beakerd.queue_processed_recipesets()
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
 
         with session.begin():
             job = Job.query.get(job.id)
@@ -73,6 +75,7 @@ class TestBeakerd(unittest.TestCase):
                     u'<hostRequires><and></and></hostRequires>')
 
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
 
         with session.begin():
             job = Job.query.get(job.id)
@@ -106,6 +109,7 @@ class TestBeakerd(unittest.TestCase):
             system3_id = system3.id
 
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
 
         with session.begin():
             job = Job.query.get(job_id)
@@ -130,6 +134,7 @@ class TestBeakerd(unittest.TestCase):
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % system.fqdn)
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.aborted)
@@ -147,6 +152,7 @@ class TestBeakerd(unittest.TestCase):
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
                     % system.fqdn)
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.processed)
@@ -233,12 +239,14 @@ class TestBeakerd(unittest.TestCase):
             admin = data_setup.create_admin()
         job_id = self.check_user_can_run_job_on_system(admin, system)
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job_id)
             self.assertEqual(job.status, TaskStatus.queued)
         # Even though the system is free the job should stay queued while
         # the loan is in place.
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job_id)
             self.assertEqual(job.status, TaskStatus.queued)
@@ -252,10 +260,12 @@ class TestBeakerd(unittest.TestCase):
                     shared=True, loaned=loanee)
         job_id = self.check_user_can_run_job_on_system(loanee, system)
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job_id)
             self.assertEqual(job.status, TaskStatus.queued)
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job_id)
             self.assertEqual(job.status, TaskStatus.scheduled)
@@ -270,12 +280,14 @@ class TestBeakerd(unittest.TestCase):
             user = data_setup.create_user()
         job_id = self.check_user_can_run_job_on_system(user, system)
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job_id)
             self.assertEqual(job.status, TaskStatus.queued)
         # Even though the system is free the job should stay queued while
         # the loan is in place.
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job_id)
             self.assertEqual(job.status, TaskStatus.queued)
@@ -292,12 +304,14 @@ class TestBeakerd(unittest.TestCase):
         # loan is returned their job will be able to run.
         job_id = self.check_user_can_run_job_on_system(owner, system)
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job_id)
             self.assertEqual(job.status, TaskStatus.queued)
         # Even though the system is free the job should stay queued while
         # the loan is in place.
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job_id)
             self.assertEqual(job.status, TaskStatus.queued)
@@ -324,6 +338,7 @@ class TestBeakerd(unittest.TestCase):
             beakerd.queue_processed_recipesets()
             beakerd.schedule_queued_recipes()
             beakerd.provision_scheduled_recipesets()
+            beakerd.update_dirty_jobs()
             with session.begin():
                 job = Job.by_id(job.id)
                 self.assertEqual(job.status, TaskStatus.aborted)
@@ -352,6 +367,7 @@ class TestBeakerd(unittest.TestCase):
         beakerd.queue_processed_recipesets()
         beakerd.schedule_queued_recipes()
         beakerd.provision_scheduled_recipesets()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.by_id(job.id)
             self.assertEqual(job.status, TaskStatus.waiting)
@@ -424,6 +440,7 @@ class TestBeakerd(unittest.TestCase):
         beakerd.queue_processed_recipesets()
         beakerd.schedule_queued_recipes()
         beakerd.provision_scheduled_recipesets()
+        beakerd.update_dirty_jobs()
 
         with session.begin():
             job = Job.query.get(job.id)
@@ -458,6 +475,7 @@ class TestBeakerd(unittest.TestCase):
                 """
         beakerd.process_new_recipes()
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job.id)
             system1 = System.query.get(system1.id)
@@ -469,6 +487,7 @@ class TestBeakerd(unittest.TestCase):
             system1.groups[:] = [data_setup.create_group()]
         # first iteration: "recipe no longer has access"
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job.id)
             system2 = System.query.get(system2.id)
@@ -477,6 +496,7 @@ class TestBeakerd(unittest.TestCase):
             self.assertEqual(candidate_systems, [system2])
         # second iteration: system2 is picked instead
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         with session.begin():
             job = Job.query.get(job.id)
             system2 = System.query.get(system2.id)
@@ -504,6 +524,7 @@ class TestBeakerd(unittest.TestCase):
         beakerd.queue_processed_recipesets()
         beakerd.schedule_queued_recipes()
         beakerd.provision_scheduled_recipesets()
+        beakerd.update_dirty_jobs()
 
         with session.begin():
             job = Job.query.get(job.id)
@@ -735,6 +756,7 @@ class TestBeakerd(unittest.TestCase):
         beakerd.process_new_recipes()
         beakerd.queue_processed_recipesets()
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
 
         with session.begin():
             job = Job.query.get(job.id)
@@ -770,8 +792,9 @@ class TestBeakerdMetrics(unittest.TestCase):
             system.status = SystemStatus.removed
         running = Recipe.query.filter(not_(Recipe.status.in_(
                 [s for s in TaskStatus if s.finished])))
-        for rs in running:
-            rs.cancel()
+        for recipe in running:
+            recipe.cancel()
+            recipe.recipeset.job.update_status()
 
     def tearDown(self):
         session.rollback()

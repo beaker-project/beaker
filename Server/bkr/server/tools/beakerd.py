@@ -89,6 +89,31 @@ def _virt_enabled():
 def _virt_possible(recipe):
     return _virt_enabled() and recipe.virt_status == RecipeVirtStatus.possible
 
+def update_dirty_jobs():
+    dirty_jobs = Job.query.filter(Job.dirty_version != Job.clean_version)
+    if not dirty_jobs.count():
+        return False
+    log.debug("Entering update_dirty_jobs")
+    for job_id, in dirty_jobs.values(Job.id):
+        session.begin()
+        try:
+            update_dirty_job(job_id)
+            session.commit()
+        except Exception, e:
+            log.exception('Error in update_dirty_job(%s)', job_id)
+            session.rollback()
+        finally:
+            session.close()
+        if event.is_set():
+            break
+    log.debug("Exiting update_dirty_jobs")
+    return True
+
+def update_dirty_job(job_id):
+    log.debug('Updating dirty job %s', job_id)
+    job = Job.by_id(job_id)
+    job.update_status()
+
 def process_new_recipes(*args):
     recipes = MachineRecipe.query.filter(Recipe.status == TaskStatus.new)
     if not recipes.count():
@@ -157,7 +182,8 @@ def process_new_recipe(recipe_id):
         guestrecipe.process()
 
 def queue_processed_recipesets(*args):
-    recipesets = RecipeSet.query.filter(RecipeSet.status == TaskStatus.processed)
+    recipesets = RecipeSet.query.filter(not_(RecipeSet.recipes.any(
+            Recipe.status != TaskStatus.processed)))
     if not recipesets.count():
         return False
     log.debug("Entering queue_processed_recipesets")
@@ -614,6 +640,13 @@ def system_count_metrics():
 # exceptions instead of letting them be written to stderr and lost to the ether
 
 @log_traceback(log)
+def update_dirty_jobs_loop(*args, **kwargs):
+    while running:
+        if not update_dirty_jobs():
+            event.wait()
+    log.debug("update_dirty_jobs thread exiting")
+
+@log_traceback(log)
 def new_recipes_loop(*args, **kwargs):
     while running:
         if not process_new_recipes():
@@ -663,8 +696,14 @@ def schedule():
         metrics_thread.daemon = True
         metrics_thread.start()
 
-    beakerd_threads = set(["new_recipes", "processed_recipesets",\
-                           "main_recipes"])
+    beakerd_threads = set(["update_dirty_jobs", "new_recipes",
+            "processed_recipesets", "main_recipes"])
+
+    log.debug("starting update_dirty_jobs thread")
+    update_dirty_jobs_thread = threading.Thread(target=update_dirty_jobs_loop,
+            name="update_dirty_jobs")
+    update_dirty_jobs_thread.daemon = True
+    update_dirty_jobs_thread.start()
 
     log.debug("starting new recipes thread")
     new_recipes_thread = threading.Thread(target=new_recipes_loop,
@@ -702,6 +741,7 @@ def schedule():
        event.set()
        rc = 0
 
+    update_dirty_jobs_thread.join(10)
     new_recipes_thread.join(10)
     processed_recipesets_thread.join(10)
     main_recipes_thread.join(10)

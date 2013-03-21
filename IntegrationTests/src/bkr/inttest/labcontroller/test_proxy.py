@@ -245,7 +245,6 @@ class RecipeStatusTest(LabControllerTestCase):
         s.recipe_stop(self.recipe.id, 'abort', 'fooed the bar up')
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.recipe.status, TaskStatus.aborted)
             self.assertEquals(self.recipe.tasks[0].status, TaskStatus.aborted)
             self.assertEquals(self.recipe.tasks[0].results[-1].log,
                     u'fooed the bar up')
@@ -261,7 +260,6 @@ class RecipeStatusTest(LabControllerTestCase):
         self.assertEquals(response.status_code, 204)
         with session.begin():
             session.expire_all()
-            self.assertEquals(self.recipe.status, TaskStatus.aborted)
             self.assertEquals(self.recipe.tasks[0].status, TaskStatus.aborted)
             self.assertEquals(self.recipe.tasks[0].results[-1].log,
                     u'fooed the bar up')

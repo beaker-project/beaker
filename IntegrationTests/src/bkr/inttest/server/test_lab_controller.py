@@ -49,6 +49,7 @@ class TestLabController(unittest.TestCase):
         with session.begin():
             LabController.by_name(self.lc_fqdn).disabled = True
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         with session.begin():
             recipeset = RecipeSet.by_id(self.job.recipesets[0].id)
             self.assertEquals(recipeset.status, TaskStatus.queued)
@@ -57,6 +58,7 @@ class TestLabController(unittest.TestCase):
         with session.begin():
             LabController.by_name(self.lc_fqdn).disabled = False
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         with session.begin():
             recipeset = RecipeSet.by_id(self.job.recipesets[0].id)
             self.assertEquals(recipeset.status, TaskStatus.scheduled)

@@ -14,7 +14,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
-        RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task
+        RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -146,9 +146,10 @@ class TestBrokenSystemDetection(unittest.TestCase):
         if distro_tree is None:
             distro_tree = data_setup.create_distro_tree(distro_tags=[u'RELEASED'])
         recipe = data_setup.create_recipe(distro_tree=distro_tree)
-        data_setup.create_job_for_recipes([recipe])
+        job = data_setup.create_job_for_recipes([recipe])
         data_setup.mark_recipe_running(recipe, system=self.system)
         recipe.abort()
+        job.update_status()
 
     def test_multiple_suspicious_aborts_triggers_broken_system(self):
         # first aborted recipe shouldn't trigger it
@@ -230,10 +231,19 @@ class TestJob(unittest.TestCase):
         data_setup.mark_job_running(job2, system=system)
         session.flush()
         job.cancel()
+        job.update_status()
         # Test that the previous cancel did not end
         # the current reservation
         self.assert_(system.open_reservation is not None)
 
+    def test_cancel_waiting_job(self):
+        job = data_setup.create_job()
+        data_setup.mark_job_waiting(job)
+        job.cancel()
+        self.assertNotEquals(job.dirty_version, job.clean_version)
+        job.update_status()
+        self.assertEquals(job.status, TaskStatus.cancelled)
+        self.assertEquals(job.result, TaskResult.warn)
 
 class DistroTreeByFilterTest(unittest.TestCase):
 
@@ -1502,7 +1512,7 @@ class RecipeTest(unittest.TestCase):
             data_setup.create_recipe(distro_tree=dt, role=u'CLIENTTWO'),
         ])
         for i in range(3):
-            data_setup.mark_recipe_complete(job.recipesets[0].recipes[i], system=systems[i])
+            data_setup.mark_recipe_running(job.recipesets[0].recipes[i], system=systems[i])
         xml = job.recipesets[0].recipes[0].to_xml(clone=False).toxml()
         self.assert_('<roles>'
                 '<role value="CLIENTONE"><system value="clientone.roles_to_xml"/></role>'
@@ -1599,6 +1609,8 @@ class MachineRecipeTest(unittest.TestCase):
         for i in range(2):
             recipes[i].queue()
         recipes[0].schedule()
+        for recipe in recipes:
+            recipe.recipeset.job.update_status()
         return {u'new': len(recipes)-4,  u'processed': 1, u'queued': 1,
                 u'scheduled': 1, u'waiting': 0, u'running': 0}
 
@@ -1699,6 +1711,7 @@ class MACAddressAllocationTest(unittest.TestCase):
                 [s for s in TaskStatus if s.finished])))
         for rs in running:
             rs.cancel()
+            rs.job.update_status()
 
     def tearDown(self):
         model.VirtManager = self.orig_VirtManager
@@ -1728,6 +1741,7 @@ class MACAddressAllocationTest(unittest.TestCase):
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:02'))
         first_job.cancel()
+        first_job.update_status()
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:00'))
 
@@ -1745,6 +1759,7 @@ class MACAddressAllocationTest(unittest.TestCase):
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:02'))
         first_job.cancel()
+        first_job.update_status()
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:00'))
 
@@ -1774,6 +1789,7 @@ class MACAddressAllocationTest(unittest.TestCase):
         self.assertEquals(RecipeResource._lowest_free_mac(),
                 netaddr.EUI('52:54:00:00:00:00'))
         job.cancel()
+        job.update_status()
         self.assertEquals(RecipeResource._lowest_free_mac(),
                 netaddr.EUI('52:54:00:00:00:00'))
 

@@ -383,6 +383,7 @@ class TestPowerFailures(XmlRpcTestCase):
         beakerd.queue_processed_recipesets()
         beakerd.schedule_queued_recipes()
         beakerd.provision_scheduled_recipesets()
+        beakerd.update_dirty_jobs()
 
         with session.begin():
             job = Job.query.get(job.id)
@@ -395,6 +396,7 @@ class TestPowerFailures(XmlRpcTestCase):
                 u'needs moar powa')
         with session.begin():
             job = Job.query.get(job.id)
+            job.update_status()
             self.assertEqual(job.recipesets[0].recipes[0].status,
                              TaskStatus.aborted)
 
@@ -415,6 +417,7 @@ class TestPowerFailures(XmlRpcTestCase):
         beakerd.queue_processed_recipesets()
         beakerd.schedule_queued_recipes()
         beakerd.provision_scheduled_recipesets()
+        beakerd.update_dirty_jobs()
 
         with session.begin():
             job = Job.query.get(job.id)
@@ -427,5 +430,6 @@ class TestPowerFailures(XmlRpcTestCase):
                 u'oops it borked')
         with session.begin():
             job = Job.query.get(job.id)
+            job.update_status()
             self.assertEqual(job.recipesets[0].recipes[0].status,
                              TaskStatus.aborted)

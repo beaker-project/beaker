@@ -382,6 +382,11 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
     if not only:
         mark_recipe_running(recipe, **kwargs)
 
+    # Need to make sure recipe.watchdog has been persisted, since we delete it 
+    # below when the recipe completes and sqlalchemy will barf on deleting an 
+    # instance that hasn't been persisted.
+    session.flush()
+
     if not server_log:
         recipe.logs = [LogRecipe(path=u'recipe_path',filename=u'dummy.txt')]
     else:
@@ -405,16 +410,19 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
         rtr.logs = [rtr_log()]
         recipe_task.logs = [rt_log()]
         recipe_task.finish_time = finish_time
-        recipe_task.status = TaskStatus.completed
+        recipe_task._change_status(TaskStatus.completed)
         recipe_task.results.append(rtr)
     recipe.resource.install_done = finish_time
     recipe.resource.postinstall_done = finish_time
-    recipe.update_status()
+    recipe.recipeset.job.update_status()
     log.debug('Marked %s as complete with result %s', recipe.t_id, result)
 
-def mark_job_complete(job, finish_time=None, **kwargs):
+def mark_job_complete(job, finish_time=None, only=False, **kwargs):
+    if not only:
+        for recipe in job.all_recipes:
+            mark_recipe_running(recipe, **kwargs)
     for recipe in job.all_recipes:
-        mark_recipe_complete(recipe, finish_time=finish_time, **kwargs)
+        mark_recipe_complete(recipe, finish_time=finish_time, only=True, **kwargs)
         if finish_time:
             recipe.resource.reservation.finish_time = finish_time
             recipe.finish_time = finish_time
@@ -451,6 +459,7 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
     recipe.watchdog = Watchdog()
     recipe.waiting()
     recipe.resource.rebooted = start_time
+    recipe.recipeset.job.update_status()
     log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.resource.fqdn)
 
 def mark_job_waiting(job):
@@ -467,6 +476,7 @@ def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
         if not fqdn:
             fqdn = unique_name(u'guest_fqdn_%s')
         recipe.resource.fqdn = fqdn
+    recipe.recipeset.job.update_status()
     log.debug('Started %s', recipe.tasks[0].t_id)
 
 def mark_job_running(job, **kw):
@@ -477,6 +487,7 @@ def mark_job_queued(job):
     for recipe in job.all_recipes:
         recipe.process()
         recipe.queue()
+    job.update_status()
 
 def playback_task_results(task, xmltask):
     # Start task
@@ -497,8 +508,10 @@ def playback_job_results(job, xmljob):
             for l, xmlguest in enumerate(xmlrecipe.iter_guests()):
                 for k, xmltask in enumerate(xmlguest.iter_tasks()):
                     playback_task_results(job.recipesets[i].recipes[j].guests[l].tasks[k], xmltask)
+                    job.update_status()
             for k, xmltask in enumerate(xmlrecipe.iter_tasks()):
                 playback_task_results(job.recipesets[i].recipes[j].tasks[k], xmltask)
+                job.update_status()
 
 def create_manual_reservation(system, start, finish=None, user=None):
     if user is None:

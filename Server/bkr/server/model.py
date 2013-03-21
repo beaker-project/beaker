@@ -18,7 +18,7 @@ from sqlalchemy.sql import exists, union
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exc import InvalidRequestError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.types import TypeDecorator
+from sqlalchemy.types import TypeDecorator, BINARY
 from identity import LdapSqlAlchemyIdentityProvider
 from bkr.server.installopts import InstallOptions, global_install_options
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
@@ -29,7 +29,8 @@ import socket
 from xmlrpclib import ProtocolError
 import time
 from kid import Element
-from bkr.server.bexceptions import BeakerException, BX, VMCreationFailedException
+from bkr.server.bexceptions import BeakerException, BX, \
+        VMCreationFailedException, StaleTaskStatusException
 from bkr.server.enum import DeclEnum
 from bkr.server.helpers import *
 from bkr.server.util import unicode_truncate, absolute_url
@@ -48,6 +49,7 @@ import random
 import string
 import cracklib
 import lxml.etree
+import uuid
 import netaddr
 from bkr.common.helpers import Flock, makedirs_ignore, unlink_ignore
 import subprocess
@@ -204,6 +206,30 @@ class RecipeVirtStatus(DeclEnum):
         ('skipped',     u'Skipped',     dict()),
         ('failed',      u'Failed',      dict()),
     ]
+
+class UUID(TypeDecorator):
+    """
+    Database type for storing UUIDs as BINARY(16).
+    """
+    impl = BINARY
+
+    def __init__(self):
+        super(UUID, self).__init__(length=16)
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        if isinstance(value, uuid.UUID):
+            return value.bytes
+        raise TypeError('Expected UUID but got %r' % value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        return uuid.UUID(bytes=value)
+
+    def is_mutable(self):
+        return False
 
 # A netaddr "dialect" for formatting MAC addresses... this is the most common 
 # format, and is expected by virt-install, so I'm not sure why netaddr doesn't 
@@ -908,6 +934,8 @@ key_value_int_table = Table('key_value_int', metadata,
 
 job_table = Table('job',metadata,
         Column('id', Integer, primary_key=True),
+        Column('dirty_version', UUID, nullable=False),
+        Column('clean_version', UUID, nullable=False),
         Column('owner_id', Integer,
                 ForeignKey('tg_user.user_id'), index=True),
         Column('whiteboard',Unicode(2000)),
@@ -931,6 +959,8 @@ job_table = Table('job',metadata,
         Column('ktasks', Integer, default=0),
         mysql_engine='InnoDB',
 )
+# for fast dirty_version != clean_version comparisons:
+Index('ix_job_dirty_clean_version', job_table.c.dirty_version, job_table.c.clean_version)
 
 job_cc_table = Table('job_cc', metadata,
         Column('job_id', Integer, ForeignKey('job.id', ondelete='CASCADE',
@@ -2598,6 +2628,7 @@ class System(SystemObject):
         # uninterrupted run of aborted recipes leading up to this one, with 
         # at least two different STABLE distros?
         # XXX this query is stupidly big, I need to do something about it
+        session.flush()
         status_change_subquery = session.query(func.max(SystemActivity.created))\
             .filter(and_(
                 SystemActivity.system_id == self.id,
@@ -2667,6 +2698,7 @@ class System(SystemObject):
                      reservation_table.c.finish_time == None)),
                 finish_time=datetime.utcnow()).rowcount != 1:
             raise BX(_(u'System does not have an open reservation'))
+        session.expire(reservation, ['finish_time'])
         old_user = self.user
         self.user = None
         self.action_release(service=service)
@@ -3753,6 +3785,24 @@ class TaskBase(MappedObject):
         """
         current_status = self.status
         if current_status != new_status:
+            # Sanity check to make sure the status never goes backwards.
+            if isinstance(self, (Recipe, RecipeTask)) and \
+                    ((new_status.queued and not current_status.queued) or \
+                     (not new_status.finished and current_status.finished)):
+                raise ValueError('Invalid state transition for %s: %s -> %s'
+                        % (self.t_id, current_status, new_status))
+            # Use a conditional UPDATE to make sure we are really working from 
+            # the latest database state.
+            # The .base_mapper bit here is so we can get from MachineRecipe to 
+            # Recipe, which is needed due to the limitations of .update() 
+            if session.query(object_mapper(self).base_mapper)\
+                    .filter_by(id=self.id, status=current_status)\
+                    .update({'status': new_status}, synchronize_session=False) \
+                    != 1:
+                raise StaleTaskStatusException(
+                        'Status for %s updated in another transaction'
+                        % self.t_id)
+            # update the ORM session state as well
             self.status = new_status
             return True
         else:
@@ -3846,6 +3896,8 @@ class Job(TaskBase):
         self.whiteboard = whiteboard
         self.retention_tag = retention_tag
         self.product = product
+        self.dirty_version = uuid.uuid4()
+        self.clean_version = self.dirty_version
 
     stop_types = ['abort','cancel']
     max_by_whiteboard = 20
@@ -4299,19 +4351,25 @@ class Job(TaskBase):
 
     def cancel(self, msg=None):
         """
-        Method to cancel all recipesets for this job.
+        Method to cancel all unfinished tasks in this job.
         """
         for recipeset in self.recipesets:
-            recipeset._cancel(msg)
-        self.update_status()
+            for recipe in recipeset.recipes:
+                for task in recipe.tasks:
+                    if not task.is_finished():
+                        task._abort_cancel(TaskStatus.cancelled, msg)
+        self._mark_dirty()
 
     def abort(self, msg=None):
         """
-        Method to abort all recipesets for this job.
+        Method to abort all unfinished tasks in this job.
         """
         for recipeset in self.recipesets:
-            recipeset._abort(msg)
-        self.update_status()
+            for recipe in recipeset.recipes:
+                for task in recipe.tasks:
+                    if not task.is_finished():
+                        task._abort_cancel(TaskStatus.aborted, msg)
+        self._mark_dirty()
 
     def task_info(self):
         """
@@ -4338,21 +4396,15 @@ class Job(TaskBase):
                 yield recipe
     all_recipes = property(all_recipes)
 
-    def _bubble_up(self):
-        """
-        Bubble Status updates up the chain.
-        """
+    def update_status(self):
         self._update_status()
+        self._mark_clean()
 
-    def _bubble_down(self):
-        """
-        Bubble Status updates down the chain.
-        """
-        for child in self.recipesets:
-            child._bubble_down()
-        self._update_status()
+    def _mark_dirty(self):
+        self.dirty_version = uuid.uuid4()
 
-    update_status = _bubble_down
+    def _mark_clean(self):
+        self.clean_version = self.dirty_version
 
     def _update_status(self):
         """
@@ -4365,6 +4417,7 @@ class Job(TaskBase):
         max_result = TaskResult.min()
         min_status = TaskStatus.max()
         for recipeset in self.recipesets:
+            recipeset._update_status()
             self.ptasks += recipeset.ptasks
             self.wtasks += recipeset.wtasks
             self.ftasks += recipeset.ftasks
@@ -4373,9 +4426,9 @@ class Job(TaskBase):
                 min_status = recipeset.status
             if recipeset.result.severity > max_result.severity:
                 max_result = recipeset.result
-        self._change_status(min_status)
+        status_changed = self._change_status(min_status)
         self.result = max_result
-        if self.is_finished():
+        if status_changed and self.is_finished():
             # Send email notification
             mail.job_notify(self)
 
@@ -4659,58 +4712,23 @@ class RecipeSet(TaskBase):
 
     def cancel(self, msg=None):
         """
-        Method to cancel all recipes in this recipe set.
+        Method to cancel all unfinished tasks in this recipe set.
         """
-        self._cancel(msg)
-        self.update_status()
-
-    def _cancel(self, msg=None):
-        """
-        Method to cancel all recipes in this recipe set.
-        """ 
-        self._change_status(TaskStatus.cancelled)
         for recipe in self.recipes:
-            recipe._cancel(msg)
+            for task in recipe.tasks:
+                if not task.is_finished():
+                    task._abort_cancel(TaskStatus.cancelled, msg)
+        self.job._mark_dirty()
 
     def abort(self, msg=None):
         """
-        Method to abort all recipes in this recipe set.
+        Method to abort all unfinished tasks in this recipe set.
         """
-        self._abort(msg)
-        self.update_status()
-
-    def _abort(self, msg=None):
-        """
-        Method to abort all recipes in this recipe set.
-        """
-        self._change_status(TaskStatus.aborted)
         for recipe in self.recipes:
-            recipe._abort(msg)
-
-    def update_status(self):
-        """
-        Update number of passes, failures, warns, panics..
-        """
-        for child in self.recipes:
-            child._bubble_down()
-        self._update_status()
-        self.job._bubble_up()
-
-    def _bubble_up(self):
-        """
-        Bubble Status updates up the chain.
-        """
-        self._update_status()
-        # we should be able to add some logic to not call job._bubble_up() if our status+result didn't change.
-        self.job._bubble_up()
-
-    def _bubble_down(self):
-        """
-        Bubble Status updates down the chain.
-        """
-        for child in self.recipes:
-            child._bubble_down()
-        self._update_status()
+            for task in recipe.tasks:
+                if not task.is_finished():
+                    task._abort_cancel(TaskStatus.aborted, msg)
+        self.job._mark_dirty()
 
     def _update_status(self):
         """
@@ -4723,6 +4741,7 @@ class RecipeSet(TaskBase):
         max_result = TaskResult.min()
         min_status = TaskStatus.max()
         for recipe in self.recipes:
+            recipe._update_status()
             self.ptasks += recipe.ptasks
             self.wtasks += recipe.wtasks
             self.ftasks += recipe.ftasks
@@ -4731,7 +4750,7 @@ class RecipeSet(TaskBase):
                 min_status = recipe.status
             if recipe.result.severity > max_result.severity:
                 max_result = recipe.result
-        self._change_status(min_status)
+        status_changed = self._change_status(min_status)
         self.result = max_result
 
         # Return systems if recipeSet finished
@@ -5091,41 +5110,21 @@ class Recipe(TaskBase):
         """
         Move from Processed -> Queued
         """
-        if session.connection(Recipe).execute(recipe_table.update(
-          and_(recipe_table.c.id==self.id,
-               recipe_table.c.status==TaskStatus.processed)),
-          status=TaskStatus.queued).rowcount == 1:
-            self._queue()
-            self.update_status()
-        else:
-            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
-
-    def _queue(self):
-        """
-        Move from Processed -> Queued
-        """
         for task in self.tasks:
-            task._queue()
+            task._change_status(TaskStatus.queued)
+        self.recipeset.job._mark_dirty()
+        # purely as an optimisation
+        self._change_status(TaskStatus.queued)
 
     def process(self):
         """
         Move from New -> Processed
         """
-        if session.connection(Recipe).execute(recipe_table.update(
-          and_(recipe_table.c.id==self.id,
-               recipe_table.c.status==TaskStatus.new)),
-          status=TaskStatus.processed).rowcount == 1:
-            self._process()
-            self.update_status()
-        else:
-            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
-
-    def _process(self):
-        """
-        Move from New -> Processed
-        """
         for task in self.tasks:
-            task._process()
+            task._change_status(TaskStatus.processed)
+        self.recipeset.job._mark_dirty()
+        # purely as an optimisation
+        self._change_status(TaskStatus.processed)
 
     def _link_rpms(self, dst):
         """
@@ -5187,100 +5186,39 @@ class Recipe(TaskBase):
         """
         Move from Queued -> Scheduled
         """
-        if session.connection(Recipe).execute(recipe_table.update(
-          and_(recipe_table.c.id==self.id,
-               recipe_table.c.status==TaskStatus.queued)),
-          status=TaskStatus.scheduled).rowcount == 1:
-            self._schedule()
-            self.update_status()
-        else:
-            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
-
-    def _schedule(self):
-        """
-        Move from Processed -> Scheduled
-        """
         for task in self.tasks:
-            task._schedule()
+            task._change_status(TaskStatus.scheduled)
+        self.recipeset.job._mark_dirty()
+        # purely as an optimisation
+        self._change_status(TaskStatus.scheduled)
 
     def waiting(self):
         """
         Move from Scheduled to Waiting
         """
-        if session.connection(Recipe).execute(recipe_table.update(
-          and_(recipe_table.c.id==self.id,
-               recipe_table.c.status==TaskStatus.scheduled)),
-          status=TaskStatus.waiting).rowcount == 1:
-            self._waiting()
-            self.update_status()
-        else:
-            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
-
-    def _waiting(self):
-        """
-        Move from Scheduled to Waiting
-        """
         for task in self.tasks:
-            task._waiting()
+            task._change_status(TaskStatus.waiting)
+        self.recipeset.job._mark_dirty()
+        # purely as an optimisation
+        self._change_status(TaskStatus.waiting)
 
     def cancel(self, msg=None):
         """
-        Method to cancel all tasks in this recipe.
+        Method to cancel all unfinished tasks in this recipe.
         """
-        self._cancel(msg)
-        self.update_status()
-
-    def _cancel(self, msg=None):
-        """
-        Method to cancel all tasks in this recipe.
-        """
-        self._change_status(TaskStatus.cancelled)
         for task in self.tasks:
-            task._cancel(msg)
+            if not task.is_finished():
+                task._abort_cancel(TaskStatus.cancelled, msg)
+        self.recipeset.job._mark_dirty()
 
     def abort(self, msg=None):
         """
-        Method to abort all tasks in this recipe.
+        Method to abort all unfinished tasks in this recipe.
         """
-        self._abort(msg)
-        self.update_status()
-        session.flush() # XXX bad
-        if getattr(self.resource, 'system', None) and \
-                get('beaker.reliable_distro_tag', None) in self.distro_tree.distro.tags:
-            self.resource.system.suspicious_abort()
-
-    def _abort(self, msg=None):
-        """
-        Method to abort all tasks in this recipe.
-        """
-        self._change_status(TaskStatus.aborted)
         for task in self.tasks:
-            task._abort(msg)
-
-    def update_status(self):
-        """
-        Update number of passes, failures, warns, panics..
-        """
-        for child in self.tasks:
-            child._bubble_down()
-        self._update_status()
-        self.recipeset._bubble_up()
-
-    def _bubble_up(self):
-        """
-        Bubble Status updates up the chain.
-        """
-        self._update_status()
-        # we should be able to add some logic to not call recipeset._bubble_up() if our status+result didn't change.
-        self.recipeset._bubble_up()
-
-    def _bubble_down(self):
-        """
-        Bubble Status updates down the chain.
-        """
-        for child in self.tasks:
-            child._bubble_down()
-        self._update_status()
+            if not task.is_finished():
+                task._abort_cancel(TaskStatus.aborted, msg)
+        self.recipeset.job._mark_dirty()
 
     def _update_status(self):
         """
@@ -5295,6 +5233,7 @@ class Recipe(TaskBase):
         min_status = TaskStatus.max()
         # I think this loop could be replaced with some sql which would be more efficient.
         for task in self.tasks:
+            task._update_status()
             if task.is_finished():
                 if task.result == TaskResult.pass_:
                     self.ptasks += 1
@@ -5308,7 +5247,9 @@ class Recipe(TaskBase):
                 min_status = task.status
             if task.result.severity > max_result.severity:
                 max_result = task.result
-        self._change_status(min_status)
+        if self.status.finished and not min_status.finished:
+            min_status = self._fix_zombie_tasks()
+        status_changed = self._change_status(min_status)
         self.result = max_result
 
         # Record the start of this Recipe.
@@ -5319,7 +5260,26 @@ class Recipe(TaskBase):
         if self.start_time and not self.finish_time and self.is_finished():
             # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
+
+        if status_changed and self.is_finished():
             metrics.increment('counters.recipes_%s' % self.status.name)
+            if self.status == TaskStatus.aborted and \
+                    getattr(self.resource, 'system', None) and \
+                    get('beaker.reliable_distro_tag', None) in self.distro_tree.distro.tags:
+                self.resource.system.suspicious_abort()
+
+    def _fix_zombie_tasks(self):
+        # It's not possible to get into this state in recent version of Beaker, 
+        # but very old recipes may be finished while still having tasks that 
+        # are running. We don't want to restart the recipe though, so we need 
+        # to kill the zombie tasks.
+        log.debug('Fixing zombie tasks in %s', self.t_id)
+        assert self.is_finished()
+        assert not self.watchdog
+        for task in self.tasks:
+            if task.status.severity < self.status.severity:
+                task._change_status(self.status)
+        return self.status
 
     def provision(self):
         if not self.harness_repo():
@@ -5417,12 +5377,15 @@ class Recipe(TaskBase):
             self.tasks[0].start()
 
     def cleanup(self):
-        log.debug('Removing watchdog and cleaning up for recipe %s', self.id)
+        # Note that this may be called *many* times for a recipe, even when it 
+        # has already been cleaned up, so we have to handle that gracefully 
+        # (and cheaply!)
         self.destroyRepo()
         if self.resource:
             self.resource.release()
         if self.watchdog:
             session.delete(self.watchdog)
+            self.watchdog = None
 
     def task_info(self):
         """
@@ -5754,87 +5717,18 @@ class RecipeTask(TaskBase):
         return [mylog.dict for mylog in self.logs] + \
                sum([result.all_logs for result in self.results], [])
 
-    def set_status(self, value):
-        self._status = value
-
-
-    def _bubble_up(self):
-        """
-        Bubble Status updates up the chain.
-        """
-        self._update_status()
-        # we should be able to add some logic to not call recipe._bubble_up() if our status+result didn't change.
-        self.recipe._bubble_up()
-
-    update_status = _bubble_up
-
-    def _bubble_down(self):
-        """
-        Bubble Status updates down the chain.
-        """
-        self._update_status()
-
     def _update_status(self):
         """
         Update number of passes, failures, warns, panics..
         """
-        max_result = TaskResult.min()
-        for result in self.results:
-            if result.result.severity > max_result.severity:
-                max_result = result.result
-        self.result = max_result
-
-    def queue(self):
-        """
-        Moved from New -> Queued
-        """
-        self._queue()
-        self.update_status()
-
-    def _queue(self):
-        """
-        Moved from New -> Queued
-        """
-        self._change_status(TaskStatus.queued)
-
-    def process(self):
-        """
-        Moved from Queued -> Processed
-        """
-        self._process()
-        self.update_status()
-
-    def _process(self):
-        """
-        Moved from Queued -> Processed
-        """
-        self._change_status(TaskStatus.processed)
-
-    def schedule(self):
-        """
-        Moved from Processed -> Scheduled
-        """
-        self._schedule()
-        self.update_status()
-
-    def _schedule(self):
-        """
-        Moved from Processed -> Scheduled
-        """
-        self._change_status(TaskStatus.scheduled)
-
-    def waiting(self):
-        """
-        Moved from Scheduled -> Waiting
-        """
-        self._waiting()
-        self.update_status()
-
-    def _waiting(self):
-        """
-        Moved from Scheduled -> Waiting
-        """
-        self._change_status(TaskStatus.waiting)
+        # The self.result == TaskResult.new condition is just an optimisation 
+        # to avoid constantly recomputing the result after the task is finished
+        if self.is_finished() and self.result == TaskResult.new:
+            max_result = TaskResult.min()
+            for result in self.results:
+                if result.result.severity > max_result.severity:
+                    max_result = result.result
+            self.result = max_result
 
     def start(self, watchdog_override=None):
         """
@@ -5857,7 +5751,7 @@ class RecipeTask(TaskBase):
             # add in 30 minutes at a minimum
             self.recipe.watchdog.kill_time = datetime.utcnow() + timedelta(
                                                     seconds=self.task.avg_time + 1800)
-        self.update_status()
+        self.recipe.recipeset.job._mark_dirty()
         return True
 
     def extend(self, kill_time):
@@ -5883,7 +5777,7 @@ class RecipeTask(TaskBase):
         if self.start_time and not self.finish_time:
             self.finish_time = datetime.utcnow()
         self._change_status(TaskStatus.completed)
-        self.update_status()
+        self.recipe.recipeset.job._mark_dirty()
         return True
 
     def owner(self):
@@ -5894,45 +5788,29 @@ class RecipeTask(TaskBase):
         """
         Cancel this task
         """
-        self._cancel(msg)
-        self.update_status()
-
-    def _cancel(self, msg=None):
-        """
-        Cancel this task
-        """
-        return self._abort_cancel(TaskStatus.cancelled, msg)
+        self._abort_cancel(TaskStatus.cancelled, msg)
+        self.recipe.recipeset.job._mark_dirty()
 
     def abort(self, msg=None):
         """
         Abort this task
         """
-        self._abort(msg)
-        self.update_status()
-    
-    def _abort(self, msg=None):
-        """
-        Abort this task
-        """
-        return self._abort_cancel(TaskStatus.aborted, msg)
-    
+        self._abort_cancel(TaskStatus.aborted, msg)
+        self.recipe.recipeset.job._mark_dirty()
+
     def _abort_cancel(self, status, msg=None):
         """
         cancel = User instigated
         abort  = Auto instigated
         """
-        # Only record an abort/cancel on tasks that are New, Queued, Scheduled 
-        # or Running.
-        if not self.is_finished():
-            if self.start_time:
-                self.finish_time = datetime.utcnow()
-            self._change_status(status)
-            self.results.append(RecipeTaskResult(recipetask=self,
-                                       path=u'/',
-                                       result=TaskResult.warn,
-                                       score=0,
-                                       log=msg))
-        return True
+        if self.start_time:
+            self.finish_time = datetime.utcnow()
+        self._change_status(status)
+        self.results.append(RecipeTaskResult(recipetask=self,
+                                   path=u'/',
+                                   result=TaskResult.warn,
+                                   score=0,
+                                   log=msg))
 
     def pass_(self, path, score, summary):
         """
@@ -6278,7 +6156,8 @@ class SystemResource(RecipeResource):
                 reservation_type=u'recipe')
 
     def release(self):
-        if self.reservation.finish_time:
+        # system_resource rows for very old recipes may have no reservation
+        if not self.reservation or self.reservation.finish_time:
             return
         log.debug('Releasing system %s for recipe %s',
             self.system, self.recipe.id)

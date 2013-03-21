@@ -24,3 +24,10 @@ from bkr.common.bexceptions import *
 
 class VMCreationFailedException(BeakerException):
     pass
+
+class StaleTaskStatusException(ValueError):
+    """
+    Raised when attempting to update the status of a task which was changed 
+    concurrently by another transaction.
+    """
+    pass
