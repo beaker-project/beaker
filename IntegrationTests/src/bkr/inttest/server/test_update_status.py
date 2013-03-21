@@ -93,6 +93,29 @@ class TestUpdateStatus(unittest.TestCase):
         # Verify that the whole job shows aborted now.
         self.assertEquals(job.status, TaskStatus.aborted)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=903935
+    def test_finished_recipe_with_unstarted_guests(self):
+        # host completes, but guest never started
+        job = data_setup.create_job(num_recipes=1, num_guestrecipes=1)
+        data_setup.mark_job_waiting(job)
+        data_setup.mark_recipe_running(job.recipesets[0].recipes[0], only=True)
+        job.recipesets[0].recipes[0].tasks[-1].stop()
+        job.update_status()
+        self.assertEquals(job.recipesets[0].recipes[0].status,
+                TaskStatus.completed)
+        self.assertEquals(job.recipesets[0].recipes[0].guests[0].status,
+                TaskStatus.aborted)
+
+        # host aborts, but guest never started
+        job = data_setup.create_job(num_recipes=1, num_guestrecipes=1)
+        data_setup.mark_job_waiting(job)
+        job.recipesets[0].recipes[0].abort(msg='blorf')
+        job.update_status()
+        self.assertEquals(job.recipesets[0].recipes[0].status,
+                TaskStatus.aborted)
+        self.assertEquals(job.recipesets[0].recipes[0].guests[0].status,
+                TaskStatus.aborted)
+
     def test_update_status_can_be_roundtripped_35508(self):
         complete_job_xml = pkg_resources.resource_string('bkr.inttest', 'job_35508.xml')
         xmljob = XmlJob(xmltramp.parse(complete_job_xml))

@@ -5268,6 +5268,15 @@ class Recipe(TaskBase):
                     get('beaker.reliable_distro_tag', None) in self.distro_tree.distro.tags:
                 self.resource.system.suspicious_abort()
 
+        if self.is_finished():
+            # If we have any guests which haven't started, kill them now 
+            # because there is no way they can ever start.
+            for guest in getattr(self, 'guests', []):
+                if (not guest.is_finished() and
+                        guest.watchdog and not guest.watchdog.kill_time):
+                    guest.abort(msg='Aborted: host %s finished but guest never started'
+                            % self.t_id)
+
     def _fix_zombie_tasks(self):
         # It's not possible to get into this state in recent version of Beaker, 
         # but very old recipes may be finished while still having tasks that 
