@@ -106,6 +106,31 @@ appropriate job definition::
 Refer to :ref:`bkr-machine-test` for more details.
 
 
+.. _loaning-systems:
+
+Loaning Systems
+~~~~~~~~~~~~~~~
+If you have admin permissions over a system, you will be able to loan the
+system to other Beaker users. In the context of Beaker, loaning is the
+assignment of a system to a user such that the system is exclusively available
+to the loanee. The loanee also has the ability to manually reserve the system,
+see :ref:`provisioning-a-system`.
+
+To loan a system to another user, go to the :ref:`system-details` page
+and next to the :guilabel:`Loaned to` field, click the link that says
+:guilabel:`(Loan Settings)`. This will display a dialog where you can enter a user to
+loan the system to. You can also enter a comment about the loan for future
+reference. To return a loan, follow the steps above, but click
+:guilabel:`Return Loan` instead.
+
+.. admonition:: Comments
+
+   Although a loan does not require a comment, the reverse is not true.
+   Whenever a loan is returned, the comment is removed. Similarly,
+   if the :guilabel:`Update Button` is clicked when the :guilabel:`Loan To`
+   field is empty, then the loan is returned and any existing comment cleared.
+
+
 Adding a driver disk
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -154,6 +179,8 @@ need to tell Beaker which families the driver disk is needed for.
          :alt: [screenshot of RHEL6 install options fields]
 
          Adding a driver disk entry for RHEL6.
+
+.. _system-details:
 
 System details
 ~~~~~~~~~~~~~~

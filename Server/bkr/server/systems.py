@@ -23,6 +23,24 @@ class SystemsController(controllers.Controller):
 
     @expose()
     @identity.require(identity.not_anonymous())
+    def return_loan(self, fqdn=None, **kw):
+        return self.update_loan(fqdn=fqdn, loaned=None)
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def update_loan(self, fqdn=None, loaned=None, loan_comment=None, **kw):
+        """Update system loan and loan comment.
+
+        Returns the loanee
+        """
+        # The formal param 'loaned' is dictated to us by widgets.SystemForm...
+        loaning_to = loaned
+        system = System.by_fqdn(fqdn, identity.current.user)
+        system.change_loan(loaning_to, loan_comment)
+        return loaning_to if loaning_to else ''
+
+    @expose()
+    @identity.require(identity.not_anonymous())
     def reserve(self, fqdn):
         """
         "Reserves" (a.k.a. "takes") the system with the given fully-qualified domain 
