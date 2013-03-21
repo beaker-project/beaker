@@ -4766,7 +4766,9 @@ class Recipe(TaskBase):
     @property
     def link(self):
         """ Return a link to this recipe. """
-        return make_link(url='/recipes/%s' % self.id, text=self.t_id)
+        link = make_link(url='/recipes/%s' % self.id, text=self.t_id)
+        link.attrib['class'] += ' recipe-id'
+        return link
 
     def filepath(self):
         """
