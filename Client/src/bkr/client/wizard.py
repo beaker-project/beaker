@@ -1902,6 +1902,9 @@ class Reproducers(MultipleChoice):
         self.pref = []
         self.data = []
 
+        # Provide "None" as a possible choice for attachment download
+        self.list.append("None")
+
         print "Examining attachments for possible reproducers"
         for attachment in self.bug.attachments:
             # skip obsolete and patch attachments
