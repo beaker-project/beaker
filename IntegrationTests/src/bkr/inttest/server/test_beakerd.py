@@ -2,7 +2,7 @@ import unittest, datetime, os, threading
 import bkr
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
-        Provision
+        Provision, TaskPriority
 import sqlalchemy.orm
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
@@ -153,6 +153,50 @@ class TestBeakerd(unittest.TestCase):
         # This asserts that systemB was not found in the schedule_queued_recipe
         # loop. If it was it would have been picked due to owner priority
         self.assertEquals(r4.resource.system.fqdn, system_decoy.fqdn)
+
+    def test_just_in_time_systems_multihost(self):
+        with session.begin():
+            systemA = data_setup.create_system(lab_controller=self.lab_controller)
+            systemB = data_setup.create_system(lab_controller=self.lab_controller)
+
+            r1 = data_setup.create_recipe()
+            j1 = data_setup.create_job_for_recipes([r1])
+            r1.systems[:] = [systemA]
+
+            r2 = data_setup.create_recipe()
+            r3 = data_setup.create_recipe()
+            j2 = data_setup.create_job_for_recipes([r2,r3])
+            r2.systems[:] = [systemA]
+            r3.systems[:] = [systemB]
+
+            r4 = data_setup.create_recipe()
+            r5 = data_setup.create_recipe()
+            j3 = data_setup.create_job_for_recipes([r4,r5])
+            j3.recipesets[0].priority = TaskPriority.high
+            r4.systems[:] = [systemA]
+            r5.systems[:] = [systemB]
+
+        data_setup.mark_job_running(j1)
+        data_setup.mark_job_queued(j2)
+        beakerd.schedule_queued_recipes()
+        # First part of deadlock, systemB is scheduled, wait for systemA
+        self.assertTrue(r2.status, TaskStatus.queued)
+        self.assertTrue(r3.status, TaskStatus.scheduled)
+
+        # Release systemA
+        j1 = Job.by_id(j1.id)
+        data_setup.mark_job_complete(j1, only=True)
+
+        # Schedule higher priority recipes
+        j3 = Job.by_id(j3.id)
+        data_setup.mark_job_queued(j3)
+        beakerd.schedule_queued_recipes()
+
+        # Deadlock avoided
+        self.assertTrue(r4.status, TaskStatus.queued)
+        self.assertTrue(r5.status, TaskStatus.queued)
+        self.assertTrue(r2.status, TaskStatus.scheduled)
+        self.assertTrue(r3.status, TaskStatus.scheduled)
 
     def test_loaned_machine_can_be_scheduled(self):
         with session.begin():
@@ -908,7 +952,6 @@ class FakeMetrics():
         self.calls = []
     def measure(self, *args):
         self.calls.append(args)
-
 class TestBeakerdMetrics(unittest.TestCase):
 
     def setUp(self):

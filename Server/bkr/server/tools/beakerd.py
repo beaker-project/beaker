@@ -369,12 +369,16 @@ def schedule_queued_recipes(*args):
                                      ),
                                  )
                                )
-        # Order recipes by priority.
-        # FIXME Add secondary order by number of matched systems.
-        if True:
-            recipes = recipes.order_by(RecipeSet.priority.desc())
-        # order by recipe_set id, then by recipe id
-        recipes = recipes.order_by(RecipeSet.id).order_by(MachineRecipe.id)
+        # FIXME Add order by number of matched systems.
+        # Effective priority is given in the following order:
+        # * Multi host recipes with already scheduled siblings
+        # * Priority level (i.e Normal, High etc)
+        # * RecipeSet id
+        # * Recipe id
+        recipes = recipes.order_by(RecipeSet.lab_controller != None). \
+            order_by(RecipeSet.priority.desc()). \
+            order_by(RecipeSet.id). \
+            order_by(MachineRecipe.id)
         if not recipes.count():
             return False
         log.debug("Entering schedule_queued_recipes")
