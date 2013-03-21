@@ -1287,7 +1287,7 @@ rendered_kickstart_table = Table('rendered_kickstart', metadata,
 
 task_table = Table('task',metadata,
         Column('id', Integer, primary_key=True),
-        Column('name', Unicode(2048)),
+        Column('name', Unicode(255), unique=True),
         Column('rpm', Unicode(2048)),
         Column('path', Unicode(4096)),
         Column('description', Unicode(2048)),
