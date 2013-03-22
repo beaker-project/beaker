@@ -14,7 +14,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
-        RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk
+        RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -1871,6 +1871,15 @@ class TaskTest(unittest.TestCase):
 
             doc = lxml.etree.fromstring(task.to_xml())
             self.assert_(schema.validate(doc) is True)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=915549
+    def test_duplicate_task(self):
+
+        task = data_setup.create_task(name='Task1')
+        task = data_setup.create_task(name='Task1')
+
+        tasks = Task.query.filter(Task.name == 'Task1').all()
+        self.assertEquals(len(tasks), 1)
 
 if __name__ == '__main__':
     unittest.main()

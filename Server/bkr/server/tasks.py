@@ -434,12 +434,9 @@ class Tasks(RPCRoot):
                     action = './do_search')
 
     def process_taskinfo(self, raw_taskinfo):
-        tinfo = testinfo.parse_string(raw_taskinfo['desc'])
 
-        try:
-            task = Task.by_name(tinfo.test_name)
-        except NoResultFound:
-            task = Task(name=tinfo.test_name)
+        tinfo = testinfo.parse_string(raw_taskinfo['desc'])
+        task = Task.lazy_create(name=tinfo.test_name)
         # RPM is the same version we have. don't process		
         if task.version == raw_taskinfo['hdr']['ver']:
             raise BX(_("Failed to import,  %s is the same version we already have" % task.version))

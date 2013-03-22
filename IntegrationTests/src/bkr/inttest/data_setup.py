@@ -265,10 +265,8 @@ def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.
     if valid is None:
         valid = True
     rpm = u'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
-    try:
-        task = Task.by_name(name)
-    except NoResultFound:
-        task = Task(name=name)
+
+    task = Task.lazy_create(name=name)
     task.rpm = rpm
     task.version = version
     task.uploader = uploader
