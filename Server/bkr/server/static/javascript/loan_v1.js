@@ -2,10 +2,10 @@ function loan_success(msg) {
     var msg =
         $('<div class="msg success" style="max-width: 15em;" />')
             .text(msg)
-            .appendTo($('#update-loan'))
+            .appendTo($('#update_loan'))
             .oneTime(2000, 'hide', function () {
                 $(this).hide('slow').remove();
-                $('#update-loan').dialog('destroy');
+                $('#update_loan').dialog('destroy');
                 });
 }
 
@@ -15,16 +15,16 @@ function update_loan_callback() {
         $('#loanee-name').text(returned_user);
         if (!returned_user){
             // Clear our comment field
-            $('#update-loan .textarea').val("");
-            $('#update-loan .textfield').val("");
+            $('#update_loan .textarea').val("");
+            $('#update_loan .textfield').val("");
             loan_success('Loan has been returned');
-            $("[name='update-loan.return']").css('display', 'none');
-            if (!$('#update-loan.update').length) {
+            $("[name='update_loan.return']").css('display', 'none');
+            if (!$('#update_loan.update').length) {
                 $('#loan-settings').css('display', 'none');
             }
         } else {
             loan_success('Loan has been updated');
-            $("[name='update-loan.return']").css('display', 'block');
+            $("[name='update_loan.return']").css('display', 'block');
         }
     }
     return f;
