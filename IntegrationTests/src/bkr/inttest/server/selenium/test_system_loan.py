@@ -24,15 +24,15 @@ class SystemLoanTest(WebDriverTestCase):
     def change_loan(self, loanee, comment=None):
         b = self.browser
         WebDriverWait(b,5).until(lambda driver: driver. \
-            find_element_by_name("update-loan.loaned").is_displayed() is True)
-        loan_field = b.find_element_by_name("update-loan.loaned")
+            find_element_by_name("update_loan.loaned").is_displayed() is True)
+        loan_field = b.find_element_by_name("update_loan.loaned")
         loan_field.clear()
         loan_field.send_keys(loanee)
         if comment:
-            comment_field = b.find_element_by_name("update-loan.loan_comment")
+            comment_field = b.find_element_by_name("update_loan.loan_comment")
             comment_field.clear()
             comment_field.send_keys(comment)
-        b.find_element_by_name("update-loan.update").click()
+        b.find_element_by_name("update_loan.update").click()
 
     def verify_loan_update(self, user):
         b = self.browser
@@ -52,7 +52,7 @@ class SystemLoanTest(WebDriverTestCase):
         # Login as average Joe, and click 'Return Loan'
         login(b, user.user_name, 'password')
         self.go_to_loan_page()
-        b.find_element_by_name('update-loan.return').click()
+        b.find_element_by_name('update_loan.return').click()
         self.verify_loan_update('')
         logout(b)
 
@@ -69,11 +69,11 @@ class SystemLoanTest(WebDriverTestCase):
         self.assertEqual(sys_activity_comment.old_value, u'')
         self.assertEqual(sys_activity_comment.new_value, comment)
         # Let's clear the user field
-        b.find_element_by_name('update-loan.loaned').clear()
-        b.find_element_by_name('update-loan.update').click()
+        b.find_element_by_name('update_loan.loaned').clear()
+        b.find_element_by_name('update_loan.update').click()
         # This is equivalent to a loan return
         b.find_element_by_xpath('//textarea[@name='
-            '"update-loan.loan_comment" and normalize-space(text())=""]')
+            '"update_loan.loan_comment" and normalize-space(text())=""]')
         # Test going from 'admin' -> '' in SystemActivity
         sys = System.by_fqdn(self.system.fqdn, user)
         sys_activity_name = sys.dyn_activity.filter(SystemActivity.field_name == \
@@ -98,7 +98,7 @@ class SystemLoanTest(WebDriverTestCase):
         self.go_to_loan_page()
         self.assertEqual(b.find_element_by_id('loanee-name').text,
             user.user_name)
-        loaned_to = b.find_element_by_name('update-loan.loaned'). \
+        loaned_to = b.find_element_by_name('update_loan.loaned'). \
             get_attribute('value')
         self.assertEqual(user.user_name, loaned_to)
         # Test going from '' -> user in SystemActivity
@@ -119,7 +119,7 @@ class SystemLoanTest(WebDriverTestCase):
         self.verify_loan_update(user.user_name)
         # Reload page
         self.go_to_loan_page()
-        loan_comment = b.find_element_by_name('update-loan.loan_comment').text
+        loan_comment = b.find_element_by_name('update_loan.loan_comment').text
         self.assertEqual(comment, loan_comment)
 
 
@@ -153,7 +153,7 @@ class SystemLoanTest(WebDriverTestCase):
         b = self.browser
         login(b, user=user.user_name, password=p_word)
         self.go_to_loan_page()
-        loan_action = b.find_element_by_id('update-loan').text
+        loan_action = b.find_element_by_id('update_loan').text
         self.assertTrue('Loan to' not in loan_action)
 
     def test_can_change_loan_when_system_has_loanee(self):

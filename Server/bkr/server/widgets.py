@@ -1703,7 +1703,7 @@ class LoanWidget(RPC, TableForm, CompoundWidget):
     action = url("../systems/update_loan")
     update_loan = MyButton(name='update', button_label='Update Loan')
     return_loan = MyButton(name='return', button_label='Return Loan')
-    name = 'update-loan'
+    name = 'update_loan'
 
     def __init__(self, *args, **kw):
         super(LoanWidget, self).__init__(*args, **kw)
