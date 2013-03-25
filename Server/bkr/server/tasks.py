@@ -222,7 +222,6 @@ class Tasks(RPCRoot):
             flash(_(u'Failed to import because we already have %s' % 
                                                      task_rpm.filename ))
             redirect(url("./new"))
-
         try:
             with atomically_replaced_file(rpm_file) as f:
                 siphon(task_rpm.file, f)
@@ -437,9 +436,14 @@ class Tasks(RPCRoot):
 
         tinfo = testinfo.parse_string(raw_taskinfo['desc'])
         task = Task.lazy_create(name=tinfo.test_name)
-        # RPM is the same version we have. don't process		
+
+        if len(task.name) > 255:
+            raise BX(_("Task name should be <= 255 characters"))
+
+        # RPM is the same version we have. don't process
         if task.version == raw_taskinfo['hdr']['ver']:
             raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
+
         task.version = raw_taskinfo['hdr']['ver']
         task.description = tinfo.test_description
         task.types = []
