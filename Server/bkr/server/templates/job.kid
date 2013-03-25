@@ -161,9 +161,10 @@
     <?python 
         allowed_priorities = recipeset.allowed_priorities(tg.identity.user) 
     ?>   
- <div py:content="recipeset_widget(recipeset=recipeset,priorities_list=allowed_priorities)">RecipeSet goes here</div>
-   <div py:for="recipe in recipeset.recipes" class="recipe">
-    <div py:content="recipe_widget(recipe=recipe)">Recipe goes here</div>
+ <div py:replace="recipeset_widget(recipeset=recipeset,priorities_list=allowed_priorities)">RecipeSet goes here</div>
+   <div py:for="recipe in recipeset.recipes" py:strip="True" py:if="hasattr(recipe, 'guests')">
+    <div py:content="recipe_widget(recipe=recipe)" class="recipe">Recipe goes here</div>
+    <div py:for="guest in recipe.guests" class="recipe guest-recipe" py:content="recipe_widget(recipe=guest)">Guest goes here</div>
    </div>
   </div>
   ${hidden_id.display()}

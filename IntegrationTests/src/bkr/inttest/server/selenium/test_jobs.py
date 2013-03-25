@@ -28,105 +28,123 @@ import pkg_resources
 from turbogears.database import session
 from sqlalchemy import and_
 
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
-from bkr.server.model import RetentionTag, Product, Distro, Job
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest import data_setup, with_transaction, get_server_base
+from bkr.server.model import RetentionTag, Product, Distro, Job, GuestRecipe
 
-class TestViewJob(SeleniumTestCase):
+class TestViewJob(WebDriverTestCase):
 
     def setUp(self):
-        self.selenium = self.get_selenium()
-        self.selenium.start()
+        self.browser = self.get_browser()
 
     def tearDown(self):
-        self.selenium.stop()
+        self.browser.quit()
 
     def test_cc_list(self):
         with session.begin():
             user = data_setup.create_user(password=u'password')
             job = data_setup.create_job(owner=user,
                     cc=[u'laika@mir.su', u'tereshkova@kosmonavt.su'])
-        sel = self.selenium
-        self.login(user=user.user_name, password='password')
-        sel.open('')
-        sel.click('link=My Jobs')
-        sel.wait_for_page_to_load('30000')
-        sel.click('link=%s' % job.t_id)
-        sel.wait_for_page_to_load('30000')
-        self.assert_(sel.get_title().startswith('Job %s' % job.t_id))
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+        b.get(get_server_base())
+        b.find_element_by_link_text('My Jobs').click()
+        b.find_element_by_link_text(job.t_id).click()
+        b.find_element_by_xpath('//td[.//text()="%s"]' % job.t_id)
         self.assertEqual(
             # value of cell beside "CC" cell
-            sel.get_text('//table[@class="show"]//td'
-                '[preceding-sibling::td[1]/b/text() = "CC"]'),
+            b.find_element_by_xpath('//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "CC"]').text,
             'laika@mir.su; tereshkova@kosmonavt.su')
 
     def test_edit_job_whiteboard(self):
         with session.begin():
             user = data_setup.create_user(password=u'asdf')
             job = data_setup.create_job(owner=user)
-        self.login(user=user.user_name, password='asdf')
-        sel = self.selenium
-        sel.open('jobs/%s' % job.id)
-        sel.wait_for_page_to_load('30000')
-        self.assert_(sel.is_editable('name=whiteboard'))
+        b = self.browser
+        login(b, user=user.user_name, password='asdf')
+        b.get(get_server_base() + 'jobs/%s' % job.id)
         new_whiteboard = 'new whiteboard value %s' % int(time.time())
-        sel.type('name=whiteboard', new_whiteboard)
-        sel.click('//form[@id="job_whiteboard_form"]//button[@type="submit"]')
-        self.wait_for_condition(lambda: sel.is_element_present(
-                '//form[@id="job_whiteboard_form"]//div[@class="msg success"]'))
-        sel.open('jobs/%s' % job.id)
-        self.assertEqual(new_whiteboard, sel.get_value('name=whiteboard'))
+        b.find_element_by_xpath(
+                '//td[preceding-sibling::td[1]/b/text()="Whiteboard"]'
+                '//a[text()="(Edit)"]').click()
+        b.find_element_by_name('whiteboard').clear()
+        b.find_element_by_name('whiteboard').send_keys(new_whiteboard)
+        b.find_element_by_xpath('//form[@id="job_whiteboard_form"]'
+                '//button[@type="submit"]').click()
+        b.find_element_by_xpath(
+                '//form[@id="job_whiteboard_form"]//div[@class="msg success"]')
+        b.get(get_server_base() + 'jobs/%s' % job.id)
+        b.find_element_by_xpath('//input[@name="whiteboard" and @value="%s"]'
+                % new_whiteboard)
 
     def test_datetimes_are_localised(self):
         with session.begin():
             job = data_setup.create_completed_job()
-        sel = self.selenium
-        sel.open('jobs/%s' % job.id)
-        sel.wait_for_page_to_load('30000')
-        self.check_datetime_localised(
-                sel.get_text('//table[@class="show"]//td'
-                '[preceding-sibling::td[1]/b/text() = "Queued"]'))
-        self.check_datetime_localised(
-                sel.get_text('//table[@class="show"]//td'
-                '[preceding-sibling::td[1]/b/text() = "Started"]'))
-        self.check_datetime_localised(
-                sel.get_text('//table[@class="show"]//td'
-                '[preceding-sibling::td[1]/b/text() = "Finished"]'))
+        b = self.browser
+        b.get(get_server_base() + 'jobs/%s' % job.id)
+        self.check_datetime_localised(b.find_element_by_xpath(
+                '//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "Queued"]').text)
+        self.check_datetime_localised(b.find_element_by_xpath(
+                '//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "Started"]').text)
+        self.check_datetime_localised(b.find_element_by_xpath(
+                '//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "Finished"]').text)
 
     def test_invalid_datetimes_arent_localised(self):
         with session.begin():
             job = data_setup.create_job()
-        sel = self.selenium
-        sel.open('jobs/%s' % job.id)
-        sel.wait_for_page_to_load('30000')
+        b = self.browser
+        b.get(get_server_base() + 'jobs/%s' % job.id)
         self.assertEquals(
-                sel.get_text('//table[@class="show"]//td'
-                '[preceding-sibling::td[1]/b/text() = "Finished"]'),
+                b.find_element_by_xpath('//table[@class="show"]//td'
+                '[preceding-sibling::td[1]/b/text() = "Finished"]').text,
                 '')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=706435
     def test_task_result_datetimes_are_localised(self):
         with session.begin():
             job = data_setup.create_completed_job()
-        sel = self.selenium
-        sel.open('jobs/%s' % job.id)
-        sel.wait_for_page_to_load('30000')
+        b = self.browser
+        b.get(get_server_base() + 'jobs/%s' % job.id)
         recipe_id = job.recipesets[0].recipes[0].id
-        sel.click('all_recipe_%d' % recipe_id)
-        self.wait_for_condition(lambda: sel.is_element_present(
-                '//div[@id="task_items_%d"]//table[@class="list"]' % recipe_id))
+        b.find_element_by_id('all_recipe_%d' % recipe_id).click()
+        b.find_element_by_xpath(
+                '//div[@id="task_items_%d"]//table[@class="list"]' % recipe_id)
         recipe_task_start, recipe_task_finish, _ = \
-                sel.get_text('//div[@id="task_items_%d"]//table[@class="list"]'
-                    '/tbody/tr[2]/td[3]' % recipe_id).splitlines()
+                b.find_element_by_xpath(
+                    '//div[@id="task_items_%d"]//table[@class="list"]'
+                    '/tbody/tr[2]/td[3]' % recipe_id).text.splitlines()
         self.check_datetime_localised(recipe_task_start.strip())
         self.check_datetime_localised(recipe_task_finish.strip())
-        self.check_datetime_localised(
-                sel.get_text('//div[@id="task_items_%d"]//table[@class="list"]'
-                    '/tbody/tr[3]/td[3]' % recipe_id))
+        self.check_datetime_localised(b.find_element_by_xpath(
+                '//div[@id="task_items_%d"]//table[@class="list"]'
+                '/tbody/tr[3]/td[3]' % recipe_id).text)
 
     def check_datetime_localised(self, dt):
         self.assert_(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
                 '%r does not look like a localised datetime' % dt)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=881387
+    def test_guestrecipes_appear_after_host(self):
+        with session.begin():
+            # hack to force the GuestRecipe to be inserted first
+            guest = data_setup.create_recipe(cls=GuestRecipe)
+            job = data_setup.create_job_for_recipes([guest])
+            session.flush()
+            host = data_setup.create_recipe()
+            job.recipesets[0].recipes.append(host)
+            host.guests.append(guest)
+            session.flush()
+            self.assert_(guest.id < host.id)
+        b = self.browser
+        b.get(get_server_base() + 'jobs/%s' % job.id)
+        recipe_order = [elem.text for elem in b.find_elements_by_xpath(
+                '//a[@class="list recipe-id"]')]
+        self.assertEquals(recipe_order, [host.t_id, guest.t_id])
 
 class NewJobTest(SeleniumTestCase):
 
