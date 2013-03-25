@@ -3,7 +3,7 @@ import logging
 import xmlrpclib
 import datetime
 from sqlalchemy import and_
-from turbogears import expose, identity, controllers
+from turbogears import expose, identity, controllers, flash, redirect
 from bkr.server.bexceptions import BX
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         OSMajor, DistroTag, Arch, Distro
@@ -137,6 +137,19 @@ class SystemsController(controllers.Controller):
             system.clear_netboot(service=u'XMLRPC')
         system.action_power(action, service=u'XMLRPC', delay=delay)
         return system.fqdn # because turbogears makes us return something
+
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def clear_netboot_form(self, fqdn):
+        """Queues the clear netboot commands
+
+        Enqueues the command to clear any netboot configuration for this
+        system, and on success redirects to the system page.
+        """
+        system = System.by_fqdn(fqdn, identity.current.user)
+        system.clear_netboot(service=u'WEBUI')
+        flash(_(u'Clear netboot command enqueued'))
+        redirect(u'../view/%s' % fqdn)
 
     @expose()
     @identity.require(identity.not_anonymous())

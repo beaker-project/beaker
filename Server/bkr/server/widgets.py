@@ -129,6 +129,32 @@ class DeleteLinkWidget(Widget):
             d['attrs']= {'class' : 'link'}
         super(DeleteLinkWidget, self).update_params(d)
 
+class DoAndConfirmForm(Form):
+    """Generic confirmation dialogue
+
+
+    DoAndConfirmForm is a way of providing consistent look and feel
+    for confirmation dialogue boxes. It provides either a href anchor
+    or button element.
+
+    XXX This could be further rationalised with DeleteLinkWidgetForm
+    """
+
+    template = "bkr.server.templates.do_and_confirm"
+    params = ['msg', 'action_text', 'look']
+
+    def __init__(self, *args, **kw):
+        self.javascript.extend([LocalJSLink('bkr', '/static/javascript/jquery-ui.js'), 
+            LocalJSLink('bkr', '/static/javascript/util.js'),])
+        self.css.append(LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css'))
+
+    def update_params(self, d):
+        super(DoAndConfirmForm, self).update_params(d)
+        form_args = d['value']
+        d['hidden_fields'] = []
+        for id, val in form_args.items():
+            hidden_field = UnmangledHiddenField(id, attrs={'value' : val })
+            d['hidden_fields'].append(hidden_field)
 
 class DeleteLinkWidgetForm(Form, DeleteLinkWidget):
     template = """

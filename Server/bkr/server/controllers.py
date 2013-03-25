@@ -28,6 +28,7 @@ from bkr.server.systems import SystemsController
 from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid
 from bkr.server.widgets import LoanWidget
+from bkr.server.widgets import DoAndConfirmForm
 from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
 from bkr.server.widgets import PowerActionHistory
@@ -214,6 +215,7 @@ class Root(RPCRoot):
     power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')
     power_action_form = PowerActionForm(name='power_action')
+    clear_netboot = DoAndConfirmForm()
     power_history = PowerActionHistory()
     system_details = SystemDetails()
     system_activity = SystemHistory()
@@ -819,6 +821,7 @@ class Root(RPCRoot):
         widgets['provision'] = self.system_provision
         widgets['power'] = self.power_form
         widgets['power_action'] = self.power_action_form
+        widgets['clear_netboot'] = self.clear_netboot
         widgets['power_history'] = self.power_history
 
         return dict(

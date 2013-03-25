@@ -1,9 +1,10 @@
-from bkr.inttest.server.selenium import SeleniumTestCase
-from turbogears.database import session
-from bkr.inttest import data_setup
-from bkr.server.model import SSHPubKey, ConfigItem, User
 import unittest
 import datetime
+from turbogears.database import session
+from bkr.server.model import SSHPubKey, ConfigItem, User
+from bkr.inttest import data_setup
+from bkr.inttest.server.selenium import SeleniumTestCase
+
 
 class SystemManualProvisionTest(SeleniumTestCase):
 
