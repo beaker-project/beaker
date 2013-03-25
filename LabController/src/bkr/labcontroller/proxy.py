@@ -157,6 +157,10 @@ class ProxyHelper(object):
             logger.debug("get_recipe recipe_id:%s", request['recipe_id'])
             return self.hub.recipes.to_xml(request['recipe_id'])
 
+    def get_peer_roles(self, task_id):
+        logger.debug('get_peer_roles %s', task_id)
+        return self.hub.recipes.tasks.peer_roles(task_id)
+
     def extend_watchdog(self, task_id, kill_time):
         """ tell the scheduler to extend the watchdog by kill_time seconds
         """

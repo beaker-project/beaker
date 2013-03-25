@@ -20,6 +20,7 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
+from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
@@ -174,3 +175,19 @@ class RecipeTasks(RPCRoot):
     def to_xml(self, id):
         taskxml = RecipeTask.by_id(id).to_xml().toprettyxml()
         return dict(xml=taskxml)
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def peer_roles(self, task_id):
+        try:
+            task = RecipeTask.by_id(task_id)
+        except NoResultFound:
+            raise BX(_('Invalid task ID: %s') % task_id)
+        roles = {}
+        for role, recipes in task.recipe.peer_roles().iteritems():
+            roles.setdefault(unicode(role), []).extend(
+                    unicode(r.resource.fqdn) for r in recipes)
+        for role, tasks in task.peer_roles().iteritems():
+            roles.setdefault(unicode(role), []).extend(
+                    unicode(t.recipe.resource.fqdn) for t in tasks)
+        return roles
