@@ -138,7 +138,13 @@ class TaskLibrarySync:
         # This is being executed as part of a thread pool and xmlrpclib
         # is not thread safe. Hence we create a new proxy object.
         proxy = self._get_server_proxy(self.source)
-        return proxy.tasks.to_xml(task, False)
+        try:
+            return proxy.tasks.to_xml(task, False)
+        except xmlrpclib.Fault:
+            # If something goes wrong with this task, for example:
+            # https://bugzilla.redhat.com/show_bug.cgi?id=915549
+            # we do our best to continue anyway...
+            return None
 
     def tasks_diff(self,new_tasks, old_tasks):
 
@@ -147,7 +153,8 @@ class TaskLibrarySync:
 
         task_urls = []
         for xml in task_xml:
-            task_urls.append(find_task_version_url(xml)[1])
+            if xml:
+                task_urls.append(find_task_version_url(xml)[1])
 
         for task in old_tasks:
             task_xml = self.proxy['source'].tasks.to_xml(task, False)
