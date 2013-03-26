@@ -22,7 +22,7 @@ Options
 
 .. option:: --action <action>
 
-   Perform the given power action. Valid actions are ``on``, ``off``, 
+   Perform the given power action. Valid actions are ``on``, ``off``, ``interrupt``
    and ``reboot``. The default is ``reboot``.
 
 .. option:: --clear-netboot
