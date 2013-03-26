@@ -195,33 +195,22 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         ACTIVE          = RetentionTag(tag=u'active', needs_product=True)
         AUDIT           = RetentionTag(tag=u'audit', needs_product=True)
 
-    try:
-        ConfigItem.by_name(u'root_password')
-    except NoResultFound:
-        rootpw_clear    = ConfigItem(name=u'root_password',
-                                     description=u'Plaintext root password for provisioned systems')
-    try:
-        ConfigItem.by_name(u'root_password_validity')
-    except NoResultFound:
-        rootpw_validity = ConfigItem(name=u'root_password_validity',
-                                     description=u"Maximum number of days a user's root password is valid for",
-                                     numeric=True)
+    config_items = [
+        # name, description, numeric
+        (u'root_password', u'Plaintext root password for provisioned systems', False),
+        (u'root_password_validity', u"Maximum number of days a user's root password is valid for", True),
+        (u'default_guest_memory', u"Default memory (MB) for dynamic guest provisioning", True),
+        (u'default_guest_disk_size', u"Default disk size (GB) for dynamic guest provisioning", True),
+        (u'guest_name_prefix', u'Prefix for names of dynamic guests in oVirt', True),
+    ]
+    for name, description, numeric in config_items:
+        try:
+            ConfigItem.by_name(name)
+        except NoResultFound:
+            ConfigItem(name=name, description=description, numeric=numeric)
     session.flush()
     if ConfigItem.by_name(u'root_password').current_value() is None:
         ConfigItem.by_name(u'root_password').set(u'beaker', user=admin.users[0])
-
-    try:
-        ConfigItem.by_name(u'default_guest_memory')
-    except NoResultFound:
-        ConfigItem(name=u'default_guest_memory',
-                description=u"Default memory (MB) for dynamic guest provisioning",
-                numeric=True)
-    try:
-        ConfigItem.by_name(u'default_guest_disk_size')
-    except NoResultFound:
-        ConfigItem(name=u'default_guest_disk_size',
-                description=u"Default disk size (GB) for dynamic guest provisioning",
-                numeric=True)
 
     session.commit()
     session.close()

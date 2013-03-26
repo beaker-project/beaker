@@ -37,7 +37,11 @@ centers whose name does not correspond to a lab controller.
 
 The default memory and disk size allocated to virtual machines is
 controlled by the ``default_guest_memory`` and
-``default_guest_disk_size`` settings (see :ref:`admin-configuration`).
+``default_guest_disk_size`` settings (see :ref:`admin-configuration`). The name 
+for each virtual machine is constructed from the ``guest_name_prefix`` setting 
+combined with the recipe ID. If you have configured multiple Beaker instances 
+to use the same oVirt Engine instance, make sure you set a distinct value for 
+``guest_name_prefix`` to avoid name collisions.
 
 Beaker requires that autofs be enabled and configured to manage ``/net``
 on the hypervisors, so that they can access installer images when

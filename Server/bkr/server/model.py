@@ -6646,8 +6646,8 @@ class VirtManager(object):
         from ovirtsdk.xml.params import VM, Template, NIC, Network, Disk, \
                 StorageDomains, MAC
         # Default of 1GB memory and 20GB disk
-        memory = ConfigItem.by_name('default_guest_memory').current_value(1024) * 1024**2
-        disk_size = ConfigItem.by_name('default_guest_disk_size').current_value(20) * 1024**3
+        memory = ConfigItem.by_name(u'default_guest_memory').current_value(1024) * 1024**2
+        disk_size = ConfigItem.by_name(u'default_guest_disk_size').current_value(20) * 1024**3
 
         if virtio_possible:
             nic_interface = "virtio"
