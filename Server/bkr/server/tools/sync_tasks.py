@@ -45,6 +45,7 @@ Extra:
   --krb_realm=KRB_REALM                        Specify Kerberos realm
   --krb_service=KRB_SERVICE                    Specify Kerberos service
   --force                                      Do not ask before overwriting task RPMs
+  --debug                                      Display messages useful for debugging (verbose)
 
 Examples
 --------
@@ -71,7 +72,6 @@ import xmlrpclib
 import lxml.etree as ET
 import urllib2
 import logging
-from multiprocessing.pool import ThreadPool
 from urllib2 import urlopen
 from urlparse import urljoin
 from optparse import OptionParser
@@ -109,6 +109,8 @@ class TaskLibrarySync:
                     'dest':dest_proxy
                     }
 
+        self.t_uploaded = 0
+
         # detect invalid credentials early
         self.check_login()
 
@@ -125,7 +127,7 @@ class TaskLibrarySync:
         # we can continue if the credentials are not valid for source, since
         # we do not need correct credentials if we are not uploading tasks
         if not self.proxy['dest']._logged_in:
-            logging.info('Invalid credentials for %s. Cannot Continue.' %self.dest)
+            logging.error('Invalid credentials for %s. Cannot Continue.' % self.dest)
             sys.exit(1)
 
     def get_tasks(self, server):
@@ -133,40 +135,18 @@ class TaskLibrarySync:
         tasks = self.proxy[server].tasks.filter({'valid':1})
         return [task['name'] for task in tasks]
 
-    def _get_task_xml(self, task):
+    def _get_task_xml(self, server, task):
 
-        # This is being executed as part of a thread pool and xmlrpclib
-        # is not thread safe. Hence we create a new proxy object.
-        proxy = self._get_server_proxy(self.source)
         try:
-            return proxy.tasks.to_xml(task, False)
-        except xmlrpclib.Fault:
+            logging.debug('Getting task XML for %s from %s' % (task, getattr(self, server)))
+            return self.proxy[server].tasks.to_xml(task, False)
+        except xmlrpclib.Fault, e:
             # If something goes wrong with this task, for example:
             # https://bugzilla.redhat.com/show_bug.cgi?id=915549
             # we do our best to continue anyway...
+            logging.error('Could not get task XML for %s from %s. Continuing.' % (task, server))
+            logging.error('Error message: %s' % e.faultString)
             return None
-
-    def tasks_diff(self,new_tasks, old_tasks):
-
-        pool = ThreadPool(processes=4)
-        task_xml = pool.map(self._get_task_xml, new_tasks)
-
-        task_urls = []
-        for xml in task_xml:
-            if xml:
-                task_urls.append(find_task_version_url(xml)[1])
-
-        for task in old_tasks:
-            task_xml = self.proxy['source'].tasks.to_xml(task, False)
-            source_task_version, source_task_url = find_task_version_url(task_xml)
-
-            task_xml = self.proxy['dest'].tasks.to_xml(task, False)
-            dest_task_version = find_task_version_url(task_xml)[0]
-
-            if source_task_version != dest_task_version:
-                task_urls.append(source_task_url)
-
-        return task_urls
 
     def _upload(self, task_url):
 
@@ -174,30 +154,53 @@ class TaskLibrarySync:
         try:
             task_rpm_data = urlopen(task_url).read()
         except urllib2.HTTPError as e:
-            logging.critical('Error retrieving %s' %task_rpm_name)
+            logging.critical('Error retrieving %s' % task_rpm_name)
         else:
             # Upload
             try:
-                logging.info('Uploading task %s' %task_rpm_name)
-                # This is being executed as part of a thread pool and xmlrpclib
-                # is not thread safe. Hence we create a new proxy object.
-                proxy = self._get_server_proxy(self.dest)
+                logging.debug('Uploading task %s' %task_rpm_name)
+                proxy = self.proxy['dest']
                 proxy.tasks.upload(task_rpm_name, \
-                                                    xmlrpclib.Binary(task_rpm_data))
+                                       xmlrpclib.Binary(task_rpm_data))
+
+                # keep a track of tasks uploaded.
+                self.t_uploaded = self.t_uploaded + 1
+
             except xmlrpclib.Fault, e:
                 logging.critical('Error uploading task: %s' % e.faultString)
 
         return
 
-    def tasks_upload(self, task_urls):
+    def tasks_upload(self, new_tasks, old_tasks):
 
-        pool = ThreadPool(processes=4)
-        # fire upload
-        pool.map(self._upload, task_urls)
+        # process the new tasks and upload
+        logging.info('Processing and uploading %s new tasks' % len(new_tasks))
 
-        # Serial
-        for url in task_urls:
-            self._upload(url)
+        # Get the task XMLs
+        task_xml = []
+        for task in new_tasks:
+            task_xml = self._get_task_xml('source', task)
+            if task_xml is not None:
+                task_url = find_task_version_url(task_xml)[1]
+                self._upload(task_url)
+
+        # common tasks
+        logging.info('Processing (and uploading) %s common tasks' % len(old_tasks))
+
+        # tasks which exist in both source and destination
+        # will be uploaded only if source_version != destination_version
+        for task in old_tasks:
+            task_xml = self._get_task_xml('source', task)
+            source_task_version, source_task_url = find_task_version_url(task_xml)
+
+            task_xml = self._get_task_xml('dest', task)
+            dest_task_version = find_task_version_url(task_xml)[0]
+
+            if source_task_version != dest_task_version:
+                self._upload(source_task_url)
+
+        # End
+        logging.info('Uploaded %d Tasks to %s' % (self.t_uploaded, self.dest))
 
         return
 
@@ -230,7 +233,8 @@ def get_parser():
     parser.add_option('--force', action='store_true',dest='force',default=False,
                       help='Do not ask before overwriting task RPMs')
 
-
+    parser.add_option('--debug', action='store_true',dest='debug',default=False,
+                      help='Display all messages')
 
     return parser
 
@@ -279,10 +283,16 @@ def main():
             sys.exit(1)
 
     # Setup logging
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
     stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(formatter)
     logger = logging.getLogger('')
     logger.addHandler(stdout_handler)
-    logger.setLevel(logging.INFO)
+
+    if options.debug:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     # setup source, destination hubs, etc.
     source, dest, kobo_conf = setup(options)
@@ -298,33 +308,28 @@ def main():
     new_tasks = list(set(source_tasks).difference(dest_tasks))
     old_tasks = list(set(source_tasks).intersection(dest_tasks))
 
-    # Get the task URL's to upload to destination
-    logging.info('Finding tasks to upload to destination..')
-    task_urls = task_sync.tasks_diff(new_tasks, old_tasks)
 
-    # Upload
-    if len(task_urls) > 0:
-        logging.warning('Warning: Tasks already present in %s will be overwritten with the version from %s.' %  \
-                            (task_sync.dest, task_sync.source))
+    if not options.force:
+        if len(old_tasks)>0:
+            logging.warning('Warning: %d tasks already present in %s may be overwritten '
+                            'with the version from %s if the two versions are different' % (len(old_tasks), task_sync.dest, task_sync.source))
 
-        if not options.force:
-            proceed = raw_input('Proceed? (y/n) ')
-            if proceed.lower() == 'y':
-                proceed = True
-        else:
+        proceed = raw_input('Proceed with task upload? (y/n) ')
+        if proceed.lower() == 'y':
             proceed = True
-
-        if proceed:
-            logging.info('Starting upload of %d tasks..'% len(task_urls))
-            task_sync.tasks_upload(task_urls)
         else:
-            logging.info('Task syncing aborted.')
-
+            proceed = False
     else:
-        logging.info('No tasks to be uploaded to destination from source')
+        proceed = True
+
+    if proceed:
+        task_sync.tasks_upload(new_tasks, old_tasks)
+    else:
+        logging.info('Task syncing aborted.')
 
     return
 
 # Begin here
 if __name__ == '__main__':
     main()
+
