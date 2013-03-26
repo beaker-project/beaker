@@ -305,7 +305,7 @@ def main():
     # Upload
     if len(task_urls) > 0:
         logging.warning('Warning: Tasks already present in %s will be overwritten with the version from %s.' %  \
-                            (task_sync.source, task_sync.dest))
+                            (task_sync.dest, task_sync.source))
 
         if not options.force:
             proceed = raw_input('Proceed? (y/n) ')
