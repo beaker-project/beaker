@@ -402,13 +402,14 @@ class LogUploadTest(LabControllerTestCase):
         s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 0,
                 b64encode('a' * 10))
-        local_log_dir = '%s/recipes/%s/' % (get_conf().get('CACHEPATH'), self.recipe.id)
+        local_log_dir = '%s/recipes/%s+/%s/' % (get_conf().get('CACHEPATH'),
+                self.recipe.id // 1000, self.recipe.id)
         with session.begin():
             self.assertEquals(self.recipe.logs[0].path, '/')
             self.assertEquals(self.recipe.logs[0].filename, 'recipe-log')
             self.assertEquals(self.recipe.logs[0].server,
-                    'http://%s/beaker/logs/recipes/%s/'
-                    % (self.get_lc_fqdn(), self.recipe.id))
+                    'http://%s/beaker/logs/recipes/%s+/%s/'
+                    % (self.get_lc_fqdn(), self.recipe.id // 1000, self.recipe.id))
             self.assertEquals(self.recipe.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'recipe-log'), 'r').read(),
@@ -425,13 +426,14 @@ class LogUploadTest(LabControllerTestCase):
                 self.recipe.id)
         response = requests.put(upload_url, data='a' * 10)
         self.assertEquals(response.status_code, 204)
-        local_log_dir = '%s/recipes/%s/' % (get_conf().get('CACHEPATH'), self.recipe.id)
+        local_log_dir = '%s/recipes/%s+/%s/' % (get_conf().get('CACHEPATH'),
+                self.recipe.id // 1000, self.recipe.id)
         with session.begin():
             self.assertEquals(self.recipe.logs[0].path, '/')
             self.assertEquals(self.recipe.logs[0].filename, 'PUT-recipe-log')
             self.assertEquals(self.recipe.logs[0].server,
-                    'http://%s/beaker/logs/recipes/%s/'
-                    % (self.get_lc_fqdn(), self.recipe.id))
+                    'http://%s/beaker/logs/recipes/%s+/%s/'
+                    % (self.get_lc_fqdn(), self.recipe.id // 1000, self.recipe.id))
             self.assertEquals(self.recipe.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'PUT-recipe-log'), 'r').read(),
@@ -453,13 +455,14 @@ class LogUploadTest(LabControllerTestCase):
         s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
                 b64encode('a' * 10))
-        local_log_dir = '%s/tasks/%s/' % (get_conf().get('CACHEPATH'), task.id)
+        local_log_dir = '%s/tasks/%s+/%s/' % (get_conf().get('CACHEPATH'),
+                task.id // 1000, task.id)
         with session.begin():
             self.assertEquals(task.logs[0].path, '/')
             self.assertEquals(task.logs[0].filename, 'task-log')
             self.assertEquals(task.logs[0].server,
-                    'http://%s/beaker/logs/tasks/%s/'
-                    % (self.get_lc_fqdn(), task.id))
+                    'http://%s/beaker/logs/tasks/%s+/%s/'
+                    % (self.get_lc_fqdn(), task.id // 1000, task.id))
             self.assertEquals(task.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'task-log'), 'r').read(),
@@ -478,13 +481,14 @@ class LogUploadTest(LabControllerTestCase):
                 self.recipe.id, task.id)
         response = requests.put(upload_url, data='a' * 10)
         self.assertEquals(response.status_code, 204)
-        local_log_dir = '%s/tasks/%s/' % (get_conf().get('CACHEPATH'), task.id)
+        local_log_dir = '%s/tasks/%s+/%s/' % (get_conf().get('CACHEPATH'),
+                task.id // 1000, task.id)
         with session.begin():
             self.assertEquals(task.logs[0].path, '/')
             self.assertEquals(task.logs[0].filename, 'PUT-task-log')
             self.assertEquals(task.logs[0].server,
-                    'http://%s/beaker/logs/tasks/%s/'
-                    % (self.get_lc_fqdn(), task.id))
+                    'http://%s/beaker/logs/tasks/%s+/%s/'
+                    % (self.get_lc_fqdn(), task.id // 1000, task.id))
             self.assertEquals(task.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'PUT-task-log'), 'r').read(),
@@ -507,13 +511,14 @@ class LogUploadTest(LabControllerTestCase):
         s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.result_upload_file(result.id, '/', 'result-log', 10, None, 0,
                 b64encode('a' * 10))
-        local_log_dir = '%s/results/%s/' % (get_conf().get('CACHEPATH'), result.id)
+        local_log_dir = '%s/results/%s+/%s/' % (get_conf().get('CACHEPATH'),
+                result.id // 1000, result.id)
         with session.begin():
             self.assertEquals(result.logs[0].path, '/')
             self.assertEquals(result.logs[0].filename, 'result-log')
             self.assertEquals(result.logs[0].server,
-                    'http://%s/beaker/logs/results/%s/'
-                    % (self.get_lc_fqdn(), result.id))
+                    'http://%s/beaker/logs/results/%s+/%s/'
+                    % (self.get_lc_fqdn(), result.id // 1000, result.id))
             self.assertEquals(result.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'result-log'), 'r').read(),
@@ -534,13 +539,14 @@ class LogUploadTest(LabControllerTestCase):
                 self.get_proxy_url(), self.recipe.id, task.id, result.id)
         response = requests.put(upload_url, data='a' * 10)
         self.assertEquals(response.status_code, 204)
-        local_log_dir = '%s/results/%s/' % (get_conf().get('CACHEPATH'), result.id)
+        local_log_dir = '%s/results/%s+/%s/' % (get_conf().get('CACHEPATH'),
+                result.id // 1000, result.id)
         with session.begin():
             self.assertEquals(result.logs[0].path, '/')
             self.assertEquals(result.logs[0].filename, 'PUT-result-log')
             self.assertEquals(result.logs[0].server,
-                    'http://%s/beaker/logs/results/%s/'
-                    % (self.get_lc_fqdn(), result.id))
+                    'http://%s/beaker/logs/results/%s+/%s/'
+                    % (self.get_lc_fqdn(), result.id // 1000, result.id))
             self.assertEquals(result.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'PUT-result-log'), 'r').read(),
