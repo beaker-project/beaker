@@ -11,7 +11,8 @@ from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         or_, and_, not_, select, case, func, BigInteger)
 
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
-        query, object_mapper, mapper, column_property, contains_eager
+        query, object_mapper, mapper, column_property, contains_eager, \
+        relationship
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.sql import exists, union
@@ -2977,17 +2978,21 @@ class LabController(SystemObject):
             all = cls.query.filter_by(removed=None)
         return [(lc.id, lc.fqdn) for lc in all]
 
-    # XXX this is a bit sad... RHEV data center names must be <40 chars and
-    # cannot contain periods, so we have to munge the fqdn
-    @property
-    def data_center_name(self):
-        return self.fqdn.replace('.', '_')[:40]
-    @classmethod
-    def by_data_center_name(cls, data_center):
-        for lc in cls.query:
-            if lc.data_center_name == data_center:
-                return lc
-        return None
+class LabControllerDataCenter(DeclBase, MappedObject):
+    """
+    A mapping from a lab controller to an oVirt data center.
+    """
+    __tablename__ = 'lab_controller_data_center'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+
+    id = Column(Integer, autoincrement=True,
+            nullable=False, primary_key=True)
+    lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
+            name='lab_controller_data_center_lab_controller_id_fk'),
+            nullable=False)
+    lab_controller = relationship(LabController, backref='data_centers')
+    data_center = Column(Unicode(255), nullable=False)
+    storage_domain = Column(Unicode(255))
 
 
 class Watchdog(MappedObject):
@@ -6640,14 +6645,46 @@ class VirtManager(object):
         self.api, api = None, self.api
         api.disconnect()
 
-    def create_vm(self, name, lab_controllers, mac_address, virtio_possible=True):
+    def create_vm(self, name, lab_controllers, *args, **kwargs):
         if self.api is None:
             raise RuntimeError('Context manager was not entered')
+
+        # Try to create the VM on every cluster that is in an acceptable data center
+        for lab_controller in lab_controllers:
+            for mapping in lab_controller.data_centers:
+                cluster_query = 'datacenter.name=%s' % mapping.data_center
+                clusters = self.api.clusters.list(cluster_query)
+                if mapping.storage_domain:
+                    storage_domains = [self.api.storagedomains.get(mapping.storage_domain)]
+                else:
+                    sd_query = 'datacenter=%s' % mapping.data_center
+                    storage_domains = self.api.storagedomains.list(sd_query)
+                for cluster in clusters:
+                    log.debug('Trying to create vm %s on cluster %s', name, cluster.name)
+                    vm = None
+                    try:
+                        self._create_vm_on_cluster(name, cluster,
+                                storage_domains, *args, **kwargs)
+                    except Exception:
+                        log.exception("Failed to create VM %s on cluster %s",
+                                name, cluster.name)
+                        if vm is not None:
+                            try:
+                                vm.delete()
+                            except Exception:
+                                pass
+                        continue
+                    else:
+                        return lab_controller
+        raise VMCreationFailedException('No clusters successfully created VM %s' % name)
+
+    def _create_vm_on_cluster(self, name, cluster, storage_domains,
+            mac_address=None, virtio_possible=True):
         from ovirtsdk.xml.params import VM, Template, NIC, Network, Disk, \
                 StorageDomains, MAC
         # Default of 1GB memory and 20GB disk
-        memory = ConfigItem.by_name('default_guest_memory').current_value(1024) * 1024**2
-        disk_size = ConfigItem.by_name('default_guest_disk_size').current_value(20) * 1024**3
+        memory = ConfigItem.by_name(u'default_guest_memory').current_value(1024) * 1024**2
+        disk_size = ConfigItem.by_name(u'default_guest_disk_size').current_value(20) * 1024**3
 
         if virtio_possible:
             nic_interface = "virtio"
@@ -6657,64 +6694,37 @@ class VirtManager(object):
             nic_interface = "rtl8139"
             disk_interface = "ide"
 
-        # Try to create the VM on every cluster that is in an acceptable data center
-        cluster_query = ' or '.join('datacenter.name=%s' % lc.data_center_name
-                for lc in lab_controllers)
-        for cluster in self.api.clusters.list(cluster_query):
-            log.debug('Trying to create vm %s on cluster %s', name, cluster.name)
-            vm = None
-            try:
-                vm_definition = VM(name=name, memory=memory, cluster=cluster,
-                        type_='server', template=Template(name='Blank'))
-                vm = self.api.vms.add(vm_definition)
-                nic = NIC(name='eth0', interface=nic_interface, network=Network(name='rhevm'),
-                        mac=MAC(address=str(mac_address)))
-                vm.nics.add(nic)
-                sd_query = ' or '.join('datacenter=%s' % lc.data_center_name
-                        for lc in lab_controllers)
-                storage_domain_name = get('ovirt.storage_domain')
-                if storage_domain_name:
-                    storage_domains = [self.api.storagedomains.get(storage_domain_name)]
-                else:
-                    storage_domains = self.api.storagedomains.list(sd_query)
-                disk = Disk(storage_domains=StorageDomains(storage_domain=storage_domains),
-                        size=disk_size, type_='data', interface=disk_interface, format='cow',
-                        bootable=True)
-                vm.disks.add(disk)
+        vm_definition = VM(name=name, memory=memory, cluster=cluster,
+                type_='server', template=Template(name='Blank'))
+        vm = self.api.vms.add(vm_definition)
+        nic = NIC(name='eth0', interface=nic_interface, network=Network(name='rhevm'),
+                mac=MAC(address=str(mac_address)))
+        vm.nics.add(nic)
+        disk = Disk(storage_domains=StorageDomains(storage_domain=storage_domains),
+                size=disk_size, type_='data', interface=disk_interface, format='cow',
+                bootable=True)
+        vm.disks.add(disk)
 
-                # Wait up to twenty seconds(!) for the disk image to be created.
-                # Check both the vm state and disk state, image creation may not
-                # lock the vms. That should be a RHEV issue, but it doesn't hurt
-                # to check both of them by us.
-                for _ in range(20):
-                    vm = self.api.vms.get(name)
-                    vm_state = vm.status.state
-                    # create disk with param 'name' doesn't work in RHEV 3.0, so just
-                    # find the first disk of the vm as we only attached one to it
-                    disk_state = vm.disks.list()[0].status.state
-                    if vm_state == 'down' and disk_state == "ok":
-                        break
-                    time.sleep(1)
-                vm = self.api.vms.get(name)
-                vm_state = vm.status.state
-                disk_state = vm.disks.list()[0].status.state
-                if vm_state != 'down':
-                    raise ValueError("VM %s's state: %s", name, vm_state)
-                if disk_state != 'ok':
-                    raise ValueError("VM %s's disk state: %s", name, disk_state)
-
-                dc_name = self.api.datacenters.get(id=cluster.data_center.id).name
-                return LabController.by_data_center_name(dc_name)
-            except Exception:
-                log.exception("Failed to create VM %r on %r cluster %r",
-                        name, self, cluster.name)
-                if vm is not None:
-                    try:
-                        vm.delete()
-                    except Exception:
-                        pass
-                continue
-        raise VMCreationFailedException('No clusters successfully created VM %s' % name)
+        # Wait up to twenty seconds(!) for the disk image to be created.
+        # Check both the vm state and disk state, image creation may not
+        # lock the vms. That should be a RHEV issue, but it doesn't hurt
+        # to check both of them by us.
+        for _ in range(20):
+            vm = self.api.vms.get(name)
+            vm_state = vm.status.state
+            # create disk with param 'name' doesn't work in RHEV 3.0, so just
+            # find the first disk of the vm as we only attached one to it
+            disk_state = vm.disks.list()[0].status.state
+            if vm_state == 'down' and disk_state == "ok":
+                break
+            time.sleep(1)
+        vm = self.api.vms.get(name)
+        vm_state = vm.status.state
+        disk_state = vm.disks.list()[0].status.state
+        if vm_state != 'down':
+            raise ValueError("VM %s's state: %s", name, vm_state)
+        if disk_state != 'ok':
+            raise ValueError("VM %s's disk state: %s", name, disk_state)
 
     def start_install(self, name, distro_tree, kernel_options, lab_controller):
         if self.api is None:

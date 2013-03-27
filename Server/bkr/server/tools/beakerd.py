@@ -514,9 +514,12 @@ def provision_virt_recipes(*args):
         return False
     log.debug("Entering provision_virt_recipes")
     for recipe_id, in recipes.values(Recipe.id.distinct()):
-        system_name = "guest_for_recipe_%d" % recipe_id
+        system_name = None
         session.begin()
         try:
+            system_name = u'%srecipe_%s' % (
+                    ConfigItem.by_name(u'guest_name_prefix').current_value(u'beaker_'),
+                    recipe_id)
             provision_virt_recipe(system_name, recipe_id)
             session.commit()
         except needpropertyxml.NotVirtualisable:
@@ -536,8 +539,9 @@ def provision_virt_recipes(*args):
             session.rollback()
             try:
                 # Don't leak the vm if it was created
-                with VirtManager() as manager:
-                    manager.destroy_vm(system_name)
+                if system_name:
+                    with VirtManager() as manager:
+                        manager.destroy_vm(system_name)
                 # As an added precaution, let's try and avoid this recipe in future
                 session.begin()
                 recipe = Recipe.by_id(recipe_id)
