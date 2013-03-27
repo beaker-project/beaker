@@ -2103,11 +2103,13 @@ class System(SystemObject):
                 self.activity.append(activity)
 
         loaning_to = user_name
-        user = User.by_user_name(loaning_to)
-        # This is an error condition
-        if loaning_to and not user:
-            raise ValueError('user name %s is invalid' % loaning_to)
-
+        if loaning_to:
+            user = User.by_user_name(loaning_to)
+            # This is an error condition
+            if not user:
+                raise ValueError('user name %s is invalid' % loaning_to)
+        else:
+            user = None
 
         # This implies a Change to another user
         if self.loaned and loaning_to:
