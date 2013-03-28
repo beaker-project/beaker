@@ -1,0 +1,55 @@
+[addon-HighAvailability]
+id = HighAvailability
+name = High Availability
+packages = addons/HighAvailability
+repository = addons/HighAvailability
+uid = Server-HighAvailability
+
+[addon-LoadBalancer]
+id = LoadBalancer
+name = Load Balancer
+packages = addons/LoadBalancer
+repository = addons/LoadBalancer
+uid = Server-LoadBalancer
+
+[addon-ResilientStorage]
+id = ResilientStorage
+name = Resilient Storage
+packages = addons/ResilientStorage
+repository = addons/ResilientStorage
+uid = Server-ResilientStorage
+
+[checksums]
+LiveOS/squashfs.img = sha256:969b05ef3454f4aaa0097bbef54b41b300ae337ece86023d23b1ac35fa659d71
+addons/HighAvailability/repodata/repomd.xml = sha256:75fbdae979cbf0b5173427075f1209f8dab94e501dcd31199345898ae4515487
+addons/LoadBalancer/repodata/repomd.xml = sha256:cbb9055f0b40291cf5ffbb9b0fc2fe1f140a2daddb90a03d4f662a9424378daf
+addons/ResilientStorage/repodata/repomd.xml = sha256:0a6279ff45be7b36881766a7c346c2b17ad26a95cd9e3ccdffb3fc96af29f365
+images/boot.iso = sha256:723c89372e0cfa545258ee373d35bbb7114be17dccf2c1a776fef718d2470154
+images/product.img = sha256:cadc65f540769d783cec2c76ebc9c129819f8e89989a8e75e3b3a09da3a9855a
+images/pxeboot/initrd.img = sha256:7d986287a63132197da2ac4b1840b2be70f2679338ac70a0fbe1b22d9de8a539
+images/pxeboot/vmlinuz = sha256:520955effe5b7824c68d087f80f2a6cd874c5825f42d4436f3aab2c0abb42d38
+repodata/repomd.xml = sha256:31c5ea4ac9f9cdea92a7bb31ba0c73511190461b566637460d1f25c9af5cdc39
+
+[general]
+addons = HighAvailability,LoadBalancer,ResilientStorage
+arch = x86_64
+family = Red Hat Enterprise Linux
+packages = Packages
+repository = 
+timestamp = 1362589479.252791
+variant = Server
+version = 7.0
+
+[images-x86_64]
+boot.iso = images/boot.iso
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+product.img = images/product.img
+
+[images-xen]
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+
+[stage2]
+mainimage = LiveOS/squashfs.img
+

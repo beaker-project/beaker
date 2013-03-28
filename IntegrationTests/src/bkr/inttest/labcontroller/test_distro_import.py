@@ -3,6 +3,7 @@ import unittest
 import subprocess
 import json
 import pkg_resources
+from copy import copy
 from bkr.inttest import Process
 
 _current_dir = os.path.dirname(__file__)
@@ -368,9 +369,10 @@ class DistroImportTest(unittest.TestCase):
                              env=dict(os.environ.items() + [('PYTHONUNBUFFERED', '1')]))
         return p
 
-    def _import_trees(self, import_args):
-        self.import_args.extend(import_args)
-        p = self._run_import(self.import_args)
+    def _import_trees(self, additional_import_args):
+        import_args = copy(self.import_args)
+        import_args.extend(additional_import_args)
+        p = self._run_import(import_args)
         stdout, stderr = p.communicate()
         self.assertEquals(p.returncode, 0,
             'Returned nonzero, stderr: %s' % stderr)
@@ -378,6 +380,24 @@ class DistroImportTest(unittest.TestCase):
         del json_trees[-1] # Empty string
         trees = [json.loads(t) for t in json_trees]
         return trees
+
+
+    def test_invalid_arch(self):
+        rhel7_trees = self._import_trees(['--arch', 'i386', '--arch', 'x86_64',
+            '%sRHEL7/' % self.distro_url])
+        self.assertEquals(len(rhel7_trees), 4)
+
+        f18_trees = self._import_trees(['--arch', 'CISC', '--arch', 'x86_64',
+            '%sF-18/GOLD/Fedora' % self.distro_url])
+        self.assertEquals(len(f18_trees), 1)
+
+        rhel6_trees = self._import_trees(['--arch', 'AVR', '--arch', 'x86_64',
+            '%sRHEL6-Server/' % self.distro_url])
+        self.assertEquals(len(rhel6_trees), 1)
+
+        rhel5_trees = self._import_trees(['--arch', 'RISC', '--arch', 'x86_64',
+            '%sRHEL5-Server/' % self.distro_url])
+        self.assertEquals(len(rhel5_trees), 1)
 
     def test_rhel5_tree_import_compose(self):
         trees = self._import_trees(['%sRHEL5-Server/' % self.distro_url])

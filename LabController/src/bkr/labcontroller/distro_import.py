@@ -246,8 +246,10 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
         """
         specific_arches = self.options.arch
         if specific_arches:
-            return specific_arches
-        return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
+            return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
+                      and x, [arch for arch in specific_arches])
+        else:
+            return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
                       and x, [arch for arch in self.arches])
 
     def get_os_dir(self, arch):
@@ -573,12 +575,16 @@ sources = Workstation/source/SRPMS
     def get_arches(self, variant):
         """ Return a list of arches for variant
         """
-        specific_arches = self.options.arch
+        
+        all_arches = self.parser.get('variant-%s' % variant, 'arches'). \
+            split(',')
+        specific_arches = set(self.options.arch)
         if specific_arches:
-            return specific_arches
-        return self.parser.get('variant-%s' %
-                                          variant, 'arches').split(',')
-
+            applicable_arches = specific_arches.intersection(set(all_arches))
+            return list(applicable_arches)
+        else:
+            return all_arches
+        
     def get_variants(self):
         """ Return a list of variants
         """
@@ -628,7 +634,6 @@ sources = Workstation/source/SRPMS
         self.options = options
         self.scheduler = SchedulerProxy(self.options)
         self.distro_trees = []
-
         for variant in self.get_variants():
             for arch in self.get_arches(variant):
                 os_dir = self.parser.get('variant-%s.%s' %
