@@ -1,3 +1,5 @@
+.. _alternative-harnesses:
+
 Alternative Harness Guide
 =========================
 

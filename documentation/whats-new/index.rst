@@ -33,16 +33,16 @@ being upgraded to a new version.
 
        release-1.0/*
 
-Unreleased changes
-------------------
+Beaker 0.12
+-----------
 
-The following changes will appear in the next Beaker release.
+Beaker 0.12 includes a number of new features and bug fixes.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   next/*
+   release-0.12
+   upgrade-0.12
 
 Beaker 0.11
 -----------
