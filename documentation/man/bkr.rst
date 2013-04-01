@@ -145,7 +145,7 @@ Options for selecting distro tree(s):
 
 .. option:: --family <family>
 
-   Run the job with the latest distro in <family> (for example: `RedHatEnterpriseLinux6``).
+   Run the job with the latest distro in <family> (for example: ``RedHatEnterpriseLinux6``).
 
 .. option:: --tag <tag>
 
@@ -184,11 +184,11 @@ Options for selecting system(s):
    where you would want to schedule your job against a system whose
    type has been set as such.
 
-.. option:: --hostrequire "TAG OPERATOR VALUE"
+.. option:: --hostrequire "<tag> <operator> <value>"
 
-   Additional <hostRequires/> for job (example: labcontroller=lab.example.com).
+   Additional <hostRequires/> for job (example: ``labcontroller=lab.example.com``).
 
-.. option:: --keyvalue <name>=<value>
+.. option:: --keyvalue "<name> <operator> <value>"
 
    Run the job on system(s) which have the key <name> set to <value>
    (for example: ``NETWORK=e1000``). 
@@ -215,7 +215,7 @@ Options for selecting tasks:
    Include tasks of type <type> in the job. This option may be specified 
    multiple times.
 
-.. option:: --install  <package>
+.. option:: --install <package>
 
    Install additional package <package> after provisioning. This uses the 
    ``/distribution/pkginstall`` task. This option may be specified
@@ -262,31 +262,31 @@ Options for job configuration:
    Set job priority to <priority>. Can be ``Low``, ``Medium``, ``Normal``, 
    ``High``, or ``Urgent``. The default is ``Normal``.
 
-.. option:: --retention-tag <TAG>
+.. option:: --retention-tag <tag>
  
    Specify data retention policy for this job [default: Scratch]
 
-.. option:: --product <PRODUCT>
+.. option:: --product <product>
 
-   Associate job with PRODUCT for data retention purposes.
+   Associate job with <product> for data retention purposes.
 
 Options for installation:
 
-.. option:: --method <METHOD>
+.. option:: --method <method>
 
    Installation source method (nfs, http, ftp) [default: nfs].
  
-.. option:: --ks-meta <OPTIONS>
+.. option:: --ks-meta <options>
 
-   Pass kickstart metadata OPTIONS when generating kickstart.
+   Pass kickstart metadata <options> when generating kickstart.
 
-.. option:: --kernel_options <opts>
+.. option:: --kernel-options <opts>
 
    Pass additional kernel options for during installation. The options string
    is applied on top of any install-time kernel options which are set by 
    default for the chosen system and distro.
 
-.. option:: --kernel_options_post <opts>
+.. option:: --kernel-options-post <opts>
 
    Pass additional kernel options for after installation. The options string is 
    applied on top of any post-install kernel options which are set by default 
