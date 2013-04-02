@@ -6637,7 +6637,7 @@ class VirtManager(object):
         self.api = None
 
     def __enter__(self):
-        self.api = ovirtsdk.api.API(url=get('ovirt.api_url'),
+        self.api = ovirtsdk.api.API(url=get('ovirt.api_url'), timeout=10,
                 username=get('ovirt.username'), password=get('ovirt.password'),
                 # XXX add some means to specify SSL CA cert
                 insecure=True)
