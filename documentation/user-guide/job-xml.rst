@@ -1,3 +1,5 @@
+.. _job-xml:
+
 Job XML
 -------
 

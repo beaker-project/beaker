@@ -44,6 +44,17 @@ The following changes will appear in the next Beaker release.
 
    next/*
 
+Beaker 0.12
+-----------
+
+Beaker 0.12 includes a number of new features and bug fixes.
+
+.. toctree::
+   :maxdepth: 2
+
+   release-0.12
+   upgrade-0.12
+
 Beaker 0.11
 -----------
 
