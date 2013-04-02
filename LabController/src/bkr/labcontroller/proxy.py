@@ -262,8 +262,9 @@ class WatchFile(object):
             elif size < self.blocksize and where == now:
                 return False
             else:
+                self.where = now
                 with self.proxy.log_storage.recipe(self.watchdog['recipe_id'], self.filename) as log_file:
-                    log_file.update_chunk(line, now)
+                    log_file.update_chunk(line, where)
                 return True
         return False
 
