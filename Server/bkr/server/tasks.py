@@ -35,6 +35,7 @@ from sqlalchemy.orm import joinedload, joinedload_all
 from sqlalchemy.orm.exc import NoResultFound
 from subprocess import Popen, PIPE
 import tempfile
+from turbogears.identity.exceptions import IdentityException
 
 import rpm
 import os
@@ -501,7 +502,12 @@ class Tasks(RPCRoot):
             task.needs.append(TaskPropertyNeeded(property=need))
         task.license = tinfo.license
         task.owner = tinfo.owner
-        task.uploader = identity.current.user
+
+        try:
+            task.uploader = identity.current.user
+        except IdentityException:
+            task.uploader = User.query.get(1)
+
         task.valid = True
 
         return task
