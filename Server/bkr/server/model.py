@@ -4415,6 +4415,10 @@ class Job(TaskBase):
     def _mark_clean(self):
         self.clean_version = self.dirty_version
 
+    @property
+    def is_dirty(self):
+        return (self.dirty_version != self.clean_version)
+
     def _update_status(self):
         """
         Update number of passes, failures, warns, panics..
@@ -4738,6 +4742,10 @@ class RecipeSet(TaskBase):
                 if not task.is_finished():
                     task._abort_cancel(TaskStatus.aborted, msg)
         self.job._mark_dirty()
+
+    @property
+    def is_dirty(self):
+        return self.job.is_dirty
 
     def _update_status(self):
         """
@@ -5230,6 +5238,10 @@ class Recipe(TaskBase):
             if not task.is_finished():
                 task._abort_cancel(TaskStatus.aborted, msg)
         self.recipeset.job._mark_dirty()
+
+    @property
+    def is_dirty(self):
+        return self.recipeset.job.is_dirty
 
     def _update_status(self):
         """
@@ -5736,6 +5748,10 @@ class RecipeTask(TaskBase):
     def all_logs(self):
         return [mylog.dict for mylog in self.logs] + \
                sum([result.all_logs for result in self.results], [])
+
+    @property
+    def is_dirty(self):
+        return False
 
     def _update_status(self):
         """

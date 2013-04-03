@@ -53,7 +53,8 @@ for details).
 However, the job and recipe states shown in Beaker's interface (including 
 Status, Result, and progress bars) will lag a small amount behind reality. The 
 amount of lag is expected to be less than 20 seconds (the polling interval for 
-beakerd).
+beakerd). While a job is waiting to be updated its status will appear as 
+"Updating…".
 
 Task names are limited to 255 characters
 ++++++++++++++++++++++++++++++++++++++++
