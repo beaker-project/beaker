@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
-DESCRIPTION = """ beaker-sync-tasks is a script to sync task RPMs between
-two Beaker instances
-"""
+__requires__=['TurboGears']
 
+DESCRIPTION = """ beaker-sync-tasks is a script to sync local Beaker Task RPMs from a remote
+Beaker installation
+"""
 __doc__ = """
 
-beaker-sync-tasks: Tool to sync Beaker task RPMs between two Beaker instances
-=============================================================================
+beaker-sync-tasks: Tool to sync local Beaker task RPMs from a remote Beaker installation
+========================================================================================
 
 Synopsis
 --------
@@ -17,65 +18,68 @@ Synopsis
 Description
 -----------
 
-beaker-sync-tasks is a script to sync tasks between two Beaker instances.
+beaker-sync-tasks is a script to sync local task RPMs from a remote Beaker installation
 
 Syncing protocol:
 
-- Task doesn't exist in destination: copy it.
-- Task exists in destination: Overwrite it, if it is a different version
-  on the source
-- Tasks which exist on the destination and not on the source are left
+- Task doesn't exist in local: copy it.
+- Task exists in local: Overwrite it, if it is a different version
+  on the remote
+- Tasks which exist on the local and not on the remote are left
   untouched
 
 Options
 -------
 
--h, --help                                   show this help message and exit
+-h, --help                                     show this help message and exit
 
-Source and destination:
-  -s SOURCE, --source=SOURCE                   Source Beaker Instance
-  -d DESTINATION, --destination=DESTINATION    Destination Beaker Instance
-
-Credentials:
-  -u USERNAME, --username=USERNAME             Username for the destination server
-  -p PASSWORD, --password=PASSWORD             Password for the destination server
-  -k, --kerberos                               Specify to use Kerberos authentication
+Servers:
+  --remote=REMOTE                              Remote Beaker instance
 
 Extra:
-  --krb_realm=KRB_REALM                        Specify Kerberos realm
-  --krb_service=KRB_SERVICE                    Specify Kerberos service
   --force                                      Do not ask before overwriting task RPMs
   --debug                                      Display messages useful for debugging (verbose)
 
 Examples
 --------
 
-Using Kerberos authentication:
+Sync tasks from a remote Beaker server and display debug messages:
 
-$ beaker-sync-tasks --source=http://127.0.0.1/bkr --destination=http://my-remote-beaker --kerberos
-
-Using Username/password:
-
-$ beaker-sync-tasks --source=http://127.0.0.1/bkr --destination=http://my-remote-beaker --username <username>
-Password:
-
-$ beaker-sync-tasks --source=http://127.0.0.1/bkr --destination=http://my-remote-beaker --username <username> --password <mypass>
+$ beaker-sync-tasks --remote=http://127.0.0.1/bkr --debug
 
 Don't prompt before beginning task upload:
 
-$ beaker-sync-tasks --source=http://127.0.0.1/bkr --destination=http://my-remote-beaker --kerberos --force
+$ beaker-sync-tasks --remote=http://127.0.0.1/bkr --force
+
+More information
+----------------
+
+Querying the existing tasks: The script communicates with the remote Beaker server via XML-RPC
+calls and directly interacts with the local Beaker database.
+
+Adding new tasks: The tasks to be added to the local Beaker database
+are first downloaded in the task directort (usually,
+/var/www/beaker/rpms). Each of these tasks are then added to the
+Beaker database and finally createrepo is run.
 
 """
+
+import pwd
 import os
 import sys
 import xmlrpclib
 import lxml.etree as ET
-import urllib2
 import logging
-from urllib2 import urlopen
-from urlparse import urljoin
+import urllib2
 from optparse import OptionParser
-import getpass
+
+import turbogears.config
+from turbogears.database import session
+
+from bkr.common.helpers import atomically_replaced_file, unlink_ignore, siphon
+from bkr.server.model import Task
+from bkr.server.tasks import Tasks
+from bkr.server.util import load_config
 
 # We need kobo
 try:
@@ -85,7 +89,7 @@ except ImportError:
     print 'Please install kobo client library'
     sys.exit(1)
 
-__description__ = 'Script to sync tasks between two Beaker instances'
+__description__ = 'Script to sync local task RPMs from a remote Beaker instance'
 __version__ = '0.1'
 
 
@@ -98,109 +102,177 @@ def find_task_version_url(task_xml):
 
 class TaskLibrarySync:
 
-    def __init__(self, source, dest, kobo_conf):
+    def __init__(self, remote):
 
-        self.source = source
-        self.dest = dest
-        self.kobo_conf = kobo_conf
-        source_proxy = self._get_server_proxy(self.source)
-        dest_proxy = self._get_server_proxy(self.dest)
-        self.proxy={'source':source_proxy,
-                    'dest':dest_proxy
+        # setup, sanity checks
+        self.task_dir = turbogears.config.get("basepath.rpms", "/var/www/beaker/rpms")
+        self._setup_logging()
+        self._check_perms()
+
+        # Initialize core attributes
+        self.remote = remote
+        remote_proxy = self._get_server_proxy(self.remote)
+        self.proxy={'remote':remote_proxy,
                     }
+        self.tasks_added = []
+        self.t_downloaded = 0
+        self.tasks = Tasks()       
+        # load configuration data
+        load_config()
 
-        self.t_uploaded = 0
+    def _setup_logging(self):
+        formatter = logging.Formatter('%(asctime)s - %(message)s')
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stdout_handler.setFormatter(formatter)
+        self.logger = logging.getLogger("")
+        self.logger.addHandler(stdout_handler)
+        
+    def _check_perms(self):
 
-        # detect invalid credentials early
-        self.check_login()
+        # See if the euid is the same as that of self.task_dir
+        task_dir_uid = os.stat(self.task_dir).st_uid
+
+        if os.geteuid() != task_dir_uid:
+            self.logger.critical('You should run this script as user: %s' % pwd.getpwuid(task_dir_uid).pw_name)
+            sys.exit(-1)
 
     def _get_server_proxy(self, server):
 
-        kobo_conf = self.kobo_conf.copy()
+        kobo_conf = {}
         kobo_conf['HUB_URL'] = server
         hub = HubProxy(kobo_conf)
 
         return hub
 
-    def check_login(self):
-
-        # we can continue if the credentials are not valid for source, since
-        # we do not need correct credentials if we are not uploading tasks
-        if not self.proxy['dest']._logged_in:
-            logging.error('Invalid credentials for %s. Cannot Continue.' % self.dest)
-            sys.exit(1)
-
     def get_tasks(self, server):
 
-        tasks = self.proxy[server].tasks.filter({'valid':1})
+        # if local, directly read the database
+        if server == 'local':
+            tasks = self.tasks.filter({'valid':1})
+        else:
+            tasks = self.proxy[server].tasks.filter({'valid':1})
+
         return [task['name'] for task in tasks]
 
     def _get_task_xml(self, server, task):
 
+        # if local, directly read the database
+        if server == 'local':
+            try:
+                self.logger.debug('Getting task XML for %s from local database' % task)
+                return self.tasks.to_xml(task, False)
+            except Exception:
+                self.logger.error('Could not get task XML for %s from local Beaker DB. Continuing.' % task)
+                return None
+
         try:
-            logging.debug('Getting task XML for %s from %s' % (task, getattr(self, server)))
+            self.logger.debug('Getting task XML for %s from %s' % (task, getattr(self, server)))
             return self.proxy[server].tasks.to_xml(task, False)
-        except xmlrpclib.Fault, e:
+        except (xmlrpclib.Fault, xmlrpclib.ProtocolError) as e:
             # If something goes wrong with this task, for example:
             # https://bugzilla.redhat.com/show_bug.cgi?id=915549
             # we do our best to continue anyway...
-            logging.error('Could not get task XML for %s from %s. Continuing.' % (task, server))
-            logging.error('Error message: %s' % e.faultString)
+            self.logger.error('Could not get task XML for %s from %s. Continuing.' % (task, server))
+            self.logger.error('Error message: %s' % e.faultString)
             return None
 
-    def _upload(self, task_url):
+    def update_db(self):
 
-        task_rpm_name = os.path.split(task_url)[1]
-        try:
-            task_rpm_data = urlopen(task_url).read()
-        except urllib2.HTTPError as e:
-            logging.critical('Error retrieving %s' % task_rpm_name)
-        else:
-            # Upload
-            try:
-                logging.debug('Uploading task %s' %task_rpm_name)
-                proxy = self.proxy['dest']
-                proxy.tasks.upload(task_rpm_name, \
-                                       xmlrpclib.Binary(task_rpm_data))
+        self.logger.info('Updating local Beaker database..')
 
-                # keep a track of tasks uploaded.
-                self.t_uploaded = self.t_uploaded + 1
+        for task_rpm in self.tasks_added:
 
-            except xmlrpclib.Fault, e:
-                logging.critical('Error uploading task: %s' % e.faultString)
+            self.logger.debug('Adding %s'% task_rpm)
+
+            with open(os.path.join(self.task_dir,task_rpm)) as f:
+                try:
+                    session.begin()
+                    task = self.tasks.process_taskinfo(self.tasks.read_taskinfo(f))
+                    old_rpm = task.rpm
+                    task.rpm = task_rpm
+                    session.commit()
+
+                except Exception:
+                    session.rollback()
+                    session.close()
+                    self.logger.critical('Error adding task %s' % task_rpm)
+                    unlink_ignore(task_rpm)
+
+                else:                    
+                    session.close()
+                    self.logger.debug('Successfully added %s' % task.rpm)
+                    if old_rpm:
+                        unlink_ignore(os.path.join(self.task_dir, old_rpm))
+
+        # Update task repo
+        self.logger.info('Creating repodata..')
+        Task.update_repo()
 
         return
 
-    def tasks_upload(self, new_tasks, old_tasks):
+    def _download(self, task_url):
 
-        # process the new tasks and upload
-        logging.info('Processing and uploading %s new tasks' % len(new_tasks))
+        task_rpm_name = os.path.split(task_url)[1]
+        rpm_file = os.path.join(self.task_dir, task_rpm_name)
+
+        if not os.path.exists(rpm_file):
+
+            try:
+                with atomically_replaced_file(rpm_file) as f:
+                    siphon(urllib2.urlopen(task_url), f)
+                    f.flush()
+
+            except urllib2.HTTPError as err:
+                self.logger.critical(err)
+                #unlink_ignore(rpm_file)
+
+            except Exception as err:
+                self.logger.critical(err)
+                unlink_ignore(rpm_file)
+            else:
+                self.logger.debug('Downloaded %s' % task_rpm_name)
+                self.tasks_added.append(task_rpm_name)
+                self.t_downloaded = self.t_downloaded + 1
+
+        else:
+            self.logger.debug('Already downloaded %s' % task_rpm_name)
+            self.tasks_added.append(task_rpm_name)
+            self.t_downloaded = self.t_downloaded + 1
+
+        return
+
+    def tasks_add(self, new_tasks, old_tasks):
+
+        self.logger.info('Downloading %s new tasks' % len(new_tasks))
 
         # Get the task XMLs
         task_xml = []
         for task in new_tasks:
-            task_xml = self._get_task_xml('source', task)
+            task_xml = self._get_task_xml('remote', task)
             if task_xml is not None:
                 task_url = find_task_version_url(task_xml)[1]
-                self._upload(task_url)
+                self._download(task_url)
 
         # common tasks
-        logging.info('Processing (and uploading) %s common tasks' % len(old_tasks))
+        self.logger.info('Downloading %s common tasks' % len(old_tasks))
 
-        # tasks which exist in both source and destination
-        # will be uploaded only if source_version != destination_version
+        # tasks which exist in both remote and local
+        # will be uploaded only if remote_version != local_version
         for task in old_tasks:
-            task_xml = self._get_task_xml('source', task)
-            source_task_version, source_task_url = find_task_version_url(task_xml)
+            task_xml = self._get_task_xml('remote', task)
+            remote_task_version, remote_task_url = find_task_version_url(task_xml)
 
-            task_xml = self._get_task_xml('dest', task)
-            dest_task_version = find_task_version_url(task_xml)[0]
+            task_xml = self._get_task_xml('local', task)
+            local_task_version = find_task_version_url(task_xml)[0]
 
-            if source_task_version != dest_task_version:
-                self._upload(source_task_url)
+            if remote_task_version != local_task_version:
+                self._download(remote_task_url)
 
-        # End
-        logging.info('Uploaded %d Tasks to %s' % (self.t_uploaded, self.dest))
+        # Finished downloading tasks
+        self.logger.info('Downloaded %d Tasks' % self.t_downloaded)
+
+        # update Beaker's database
+        self.update_db()
 
         return
 
@@ -209,26 +281,9 @@ def get_parser():
     usage = "usage: %prog [options]"
     parser = OptionParser(usage, description=__description__, version=__version__)
 
-    parser.add_option('-s', '--source', dest='source',
-                      help='Source Beaker Instance',
-                     metavar='SOURCE')
-    parser.add_option('-d', '--destination', dest='destination',
-                      help='Destination Beaker Instance',
-                      metavar='DESTINATION')
-    parser.add_option('-u', '--username', dest='username',
-                      help='Username for the destination server',
-                      metavar='USERNAME')
-    parser.add_option('-p', '--password', dest='password', default=None,
-                      help='Password for the destination server',
-                      metavar='PASSWORD')
-    parser.add_option('-k', '--kerberos', action='store_true',dest='kerberos',
-                      help='Specify to use Kerberos authentication')
-
-    parser.add_option('--krb_realm', dest='krb_realm',
-                      help='Specify Kerberos realm')
-
-    parser.add_option('--krb_service', dest='krb_service',
-                      help='Specify Kerberos service')
+    parser.add_option('--remote', dest='remote',
+                      help='Remote Beaker Instance',
+                     metavar='remote')
 
     parser.add_option('--force', action='store_true',dest='force',default=False,
                       help='Do not ask before overwriting task RPMs')
@@ -238,83 +293,40 @@ def get_parser():
 
     return parser
 
-def setup(options):
-
-    kobo_conf = {}
-
-    if options.username and options.password:
-        kobo_conf['AUTH_METHOD'] = 'password'
-        kobo_conf['USERNAME'] = options.username
-        kobo_conf['PASSWORD'] = options.password
-
-    if options.kerberos:
-        kobo_conf['AUTH_METHOD'] = 'krbv'
-
-        if options.krb_service:
-            kobo_conf['KRB_SERVICE'] = options.krb_service
-        if options.krb_realm:
-            kobo_conf['KRB_REALM'] = options.krb_realm
-
-    if options.username and options.password and options.kerberos:
-        logging.info('You have specified both username/password and Kerberos, Kerberos will be used')
-
-    source = options.source.rstrip('/')
-    destination = options.destination.rstrip('/')
-
-    return source, destination, kobo_conf
-
 def main():
 
     parser = get_parser()
     (options, args) = parser.parse_args()
 
     # Sanity check
-    if None in [options.source, options.destination]:
-        logging.info('Please specify both source and destination Beaker instances')
+    if options.remote is None:
         parser.print_help()
         sys.exit(1)
 
-    if None in [options.username,options.password] and not options.kerberos:
-        if options.password is None:
-            options.password = getpass.getpass()
-        else:
-            logging.info('Please specify either an username/password or enable kerberos authentication')
-            parser.print_help()
-            sys.exit(1)
-
-    # Setup logging
-    formatter = logging.Formatter('%(asctime)s - %(message)s')
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setFormatter(formatter)
-    logger = logging.getLogger('')
-    logger.addHandler(stdout_handler)
+    remote = options.remote.rstrip('/')
+    task_sync = TaskLibrarySync(remote)
 
     if options.debug:
-        logger.setLevel(logging.DEBUG)
+        task_sync.logger.setLevel(logging.DEBUG)
     else:
-        logger.setLevel(logging.INFO)
+        task_sync.logger.setLevel(logging.INFO)
 
-    # setup source, destination hubs, etc.
-    source, dest, kobo_conf = setup(options)
-    task_sync = TaskLibrarySync(source, dest, kobo_conf)
+    # Get list of tasks from remote and local
+    task_sync.logger.info('Getting the list of tasks from remote and local Beaker..')
+    remote_tasks = task_sync.get_tasks('remote')
+    local_tasks = task_sync.get_tasks('local')
 
-    # Get list of tasks from source and destination
-    logging.info('Getting the list of tasks from source and destination..')
-    source_tasks = task_sync.get_tasks('source')
-    dest_tasks = task_sync.get_tasks('dest')
-
-    # new_tasks -> Tasks which do not exist on the destination
-    # old_tasks-> Tasks which exist on source and destination
-    new_tasks = list(set(source_tasks).difference(dest_tasks))
-    old_tasks = list(set(source_tasks).intersection(dest_tasks))
-
+    # new_tasks -> Tasks which do not exist on the local
+    # old_tasks-> Tasks which exist on remote and local
+    new_tasks = list(set(remote_tasks).difference(local_tasks))
+    old_tasks = list(set(remote_tasks).intersection(local_tasks))
 
     if not options.force:
         if len(old_tasks)>0:
-            logging.warning('Warning: %d tasks already present in %s may be overwritten '
-                            'with the version from %s if the two versions are different' % (len(old_tasks), task_sync.dest, task_sync.source))
+            task_sync.logger.warning('Warning: %d tasks already present may be overwritten '
+                            'with the version from %s if the two versions are different' % (len(old_tasks), task_sync.remote))
 
-        proceed = raw_input('Proceed with task upload? (y/n) ')
+        proceed = raw_input('Proceed with task addition? (y/n) ')
         if proceed.lower() == 'y':
             proceed = True
         else:
@@ -323,13 +335,12 @@ def main():
         proceed = True
 
     if proceed:
-        task_sync.tasks_upload(new_tasks, old_tasks)
+        task_sync.tasks_add(new_tasks, old_tasks)
     else:
-        logging.info('Task syncing aborted.')
+        task_sync.logger.info('Task syncing aborted.')
 
     return
 
 # Begin here
 if __name__ == '__main__':
     main()
-
