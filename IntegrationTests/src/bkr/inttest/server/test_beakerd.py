@@ -596,6 +596,8 @@ class TestBeakerd(unittest.TestCase):
                 lab_controller=self.lab_controller, owner=user, cpu=Cpu(processors=2))
             system_one_proc_owner = data_setup.create_system(
                 lab_controller=self.lab_controller, owner=user, cpu=Cpu(processors=1))
+            system_one_proc_kvm = data_setup.create_system(
+                lab_controller=self.lab_controller, cpu=Cpu(processors=1), hypervisor=u'KVM')
             system_two_proc = data_setup.create_system(
                 lab_controller=self.lab_controller, cpu=Cpu(processors=2))
             system_one_proc = data_setup.create_system(
@@ -619,14 +621,17 @@ class TestBeakerd(unittest.TestCase):
         self.assertEqual(recipe1.resource.system, system_two_proc_owner)
 
         # Test that non group, non owner single processor sorting works
+        # and that only bare metal machines are considered in the single
+        # processor ordering.
         with session.begin():
             recipe2 = data_setup.create_recipe()
             data_setup.create_job_for_recipes([recipe2])
             recipe2.process()
             recipe2.queue()
-            recipe2.systems[:] = [system_one_proc, system_two_proc]
+            recipe2.systems[:] = [system_one_proc, system_two_proc,
+                system_one_proc_kvm]
         beakerd.schedule_queued_recipe(recipe2.id)
-        self.assertEqual(recipe2.resource.system, system_two_proc)
+        self.assertNotEqual(recipe2.resource.system, system_one_proc)
 
         # Test that group owner priority higher than dual processor
         with session.begin():
