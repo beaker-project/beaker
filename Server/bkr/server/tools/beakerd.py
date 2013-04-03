@@ -446,11 +446,15 @@ def schedule_queued_recipe(recipe_id):
     # </recipe>
     user = recipe.recipeset.job.owner
     if True: #FIXME if pools are defined add them here in the order requested.
+        # Order by:
+        #   System Owner
+        #   System group
+        #   Single procesor bare metal system
         systems = systems.order_by(
             case([(System.owner==user, 1),
                 (and_(System.owner!=user, System.group_assocs != None), 1)],
                 else_=3),
-            Cpu.processors == 1) # In mysql this orders single processors last
+                and_(System.hypervisor == None, Cpu.processors == 1))
     if recipe.recipeset.lab_controller:
         # First recipe of a recipeSet determines the lab_controller
         systems = systems.filter(
