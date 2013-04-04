@@ -118,7 +118,10 @@
    <td class="title"><b>Job ID</b></td>
    <td class="value"><a class="list" href="${tg.url('/jobs/%s' % job.id)}">${job.t_id}</a></td>
    <td class="title"><b>Status</b></td>
-   <td class="value">${job.status}</td>
+   <td class="value">
+    <span py:if="job.is_dirty" class="statusDirty">Updating…</span>
+    <span py:if="not job.is_dirty" py:strip="True">${job.status}</span>
+   </td>
    <td class="title"><b>Result</b></td>
    <td class="value">${job.result}</td>
   </tr>

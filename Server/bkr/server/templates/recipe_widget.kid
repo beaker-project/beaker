@@ -122,7 +122,10 @@ $(document).ready(function() {
    <td class="title"><b>Progress</b></td>
    <td class="value">${recipe.progress_bar}</td>
    <td class="title"><b>Status</b></td>
-   <td class="value">${recipe.status}</td>
+   <td class="value">
+    <span py:if="recipe.is_dirty" class="statusDirty">Updating…</span>
+    <span py:if="not recipe.is_dirty" py:strip="True">${recipe.status}</span>
+   </td>
    <td class="title"><b>Result</b></td>
    <td class="value">${recipe.result}</td>
   </tr>

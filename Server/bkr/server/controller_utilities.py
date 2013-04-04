@@ -20,6 +20,10 @@ log = logging.getLogger("bkr.server.controllers")
 
 
 def _custom_status(x):
+    if x.is_dirty:
+        e = Element('span', {'class': 'statusDirty'})
+        e.text = u'Updating\u2026'
+        return e
     e = Element('span', {'class' : 'status%s' % x.status})
     e.text = x.status
     return e
