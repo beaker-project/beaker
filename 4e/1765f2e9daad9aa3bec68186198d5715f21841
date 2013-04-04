@@ -1,0 +1,8 @@
+Verified+1: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+1: Raymond Mancy <rmancy@redhat.com>
+Code-Review+2: Amit Saha <asaha@redhat.com>
+Submitted-by: Dan Callaghan <dcallagh@redhat.com>
+Submitted-at: Wed, 03 Apr 2013 22:49:19 -0400
+Reviewed-on: http://gerrit.beaker-project.org/1847
+Project: beaker
+Branch: refs/heads/release-0.12
