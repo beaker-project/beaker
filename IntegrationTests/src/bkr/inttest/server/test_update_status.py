@@ -276,6 +276,7 @@ class ConcurrentUpdateTest(unittest.TestCase):
                 </hostRequires>
                 """ % system.fqdn)
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
         with session.begin():

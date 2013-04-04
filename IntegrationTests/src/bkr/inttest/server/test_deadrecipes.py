@@ -15,9 +15,8 @@ import threading
 
 class TestBeakerd(unittest.TestCase):
 
-    @classmethod
     @with_transaction
-    def setUpClass(cls):
+    def setUp(cls):
         # Create two unique labs
         lab1 = data_setup.create_labcontroller(fqdn=u'lab_%d' %
                                                int(time.time() * 1000))
@@ -79,6 +78,7 @@ class TestBeakerd(unittest.TestCase):
 
     def test_02_abort_dead_recipes(self):
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
         with session.begin():
