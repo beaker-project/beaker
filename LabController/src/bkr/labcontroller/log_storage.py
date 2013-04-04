@@ -76,31 +76,37 @@ class LogStorage(object):
         path = os.path.normpath(path.lstrip('/'))
         if path.startswith('../'):
             raise ValueError('Upload path not allowed: %s' % path)
-        recipe_base = os.path.join(self.base_dir, 'recipes', str(recipe_id))
-        return LogFile(os.path.join(recipe_base, path),
-                lambda: self.hub.recipes.register_file(
-                    '%srecipes/%s/' % (self.base_url, recipe_id),
+        recipe_base_dir = os.path.join(self.base_dir, 'recipes',
+                (recipe_id[:-3] or '0') + '+', recipe_id, '')
+        recipe_base_url = '%srecipes/%s+/%s/' % (self.base_url,
+                recipe_id[:-3] or '0', recipe_id)
+        return LogFile(os.path.join(recipe_base_dir, path),
+                lambda: self.hub.recipes.register_file(recipe_base_url,
                     recipe_id, os.path.dirname(path), os.path.basename(path),
-                    recipe_base + '/'))
+                    recipe_base_dir))
 
     def task(self, task_id, path):
         path = os.path.normpath(path.lstrip('/'))
         if path.startswith('../'):
             raise ValueError('Upload path not allowed: %s' % path)
-        task_base = os.path.join(self.base_dir, 'tasks', str(task_id))
-        return LogFile(os.path.join(task_base, path),
-                lambda: self.hub.recipes.tasks.register_file(
-                    '%stasks/%s/' % (self.base_url, task_id),
+        task_base_dir = os.path.join(self.base_dir, 'tasks',
+                (task_id[:-3] or '0') + '+', task_id, '')
+        task_base_url = '%stasks/%s+/%s/' % (self.base_url,
+                task_id[:-3] or '0', task_id)
+        return LogFile(os.path.join(task_base_dir, path),
+                lambda: self.hub.recipes.tasks.register_file(task_base_url,
                     task_id, os.path.dirname(path), os.path.basename(path),
-                    task_base + '/'))
+                    task_base_dir))
 
     def result(self, result_id, path):
         path = os.path.normpath(path.lstrip('/'))
         if path.startswith('../'):
             raise ValueError('Upload path not allowed: %s' % path)
-        result_base = os.path.join(self.base_dir, 'results', str(result_id))
-        return LogFile(os.path.join(result_base, path),
-                lambda: self.hub.recipes.tasks.register_result_file(
-                    '%sresults/%s/' % (self.base_url, result_id),
+        result_base_dir = os.path.join(self.base_dir, 'results',
+                (result_id[:-3] or '0') + '+', result_id, '')
+        result_base_url = '%sresults/%s+/%s/' % (self.base_url,
+                result_id[:-3] or '0', result_id)
+        return LogFile(os.path.join(result_base_dir, path),
+                lambda: self.hub.recipes.tasks.register_result_file(result_base_url,
                     result_id, os.path.dirname(path), os.path.basename(path),
-                    result_base + '/'))
+                    result_base_dir))

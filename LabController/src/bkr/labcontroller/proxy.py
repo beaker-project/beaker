@@ -91,7 +91,7 @@ class ProxyHelper(object):
         # Originally offset=-1 had special meaning, but that was unused
         logger.debug("recipe_upload_file recipe_id:%s name:%s offset:%s size:%s",
                 recipe_id, name, offset, size)
-        with self.log_storage.recipe(recipe_id, os.path.join(path, name)) as log_file:
+        with self.log_storage.recipe(str(recipe_id), os.path.join(path, name)) as log_file:
             log_file.update_chunk(base64.decodestring(data), int(offset or 0))
         return True
 
@@ -479,7 +479,7 @@ class Proxy(ProxyHelper):
         # Originally offset=-1 had special meaning, but that was unused
         logger.debug("task_upload_file task_id:%s name:%s offset:%s size:%s",
                 task_id, name, offset, size)
-        with self.log_storage.task(task_id, os.path.join(path, name)) as log_file:
+        with self.log_storage.task(str(task_id), os.path.join(path, name)) as log_file:
             log_file.update_chunk(base64.decodestring(data), int(offset or 0))
         return True
 
@@ -567,7 +567,7 @@ class Proxy(ProxyHelper):
         # Originally offset=-1 had special meaning, but that was unused
         logger.debug("result_upload_file result_id:%s name:%s offset:%s size:%s",
                 result_id, name, offset, size)
-        with self.log_storage.result(result_id, os.path.join(path, name)) as log_file:
+        with self.log_storage.result(str(result_id), os.path.join(path, name)) as log_file:
             log_file.update_chunk(base64.decodestring(data), int(offset or 0))
         return True
 
