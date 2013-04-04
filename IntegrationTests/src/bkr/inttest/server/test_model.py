@@ -1568,6 +1568,16 @@ class CheckDynamicVirtTest(unittest.TestCase):
             data_setup.create_job_for_recipes([recipe])
             self.assertVirtPrecluded(recipe, "Host requires did not preclude virt")
 
+    def test_hypervisor_hostrequires_precludes_virt(self):
+        recipe = data_setup.create_recipe(arch=u'x86_64')
+        recipe.host_requires = u"""
+            <hostRequires>
+                <hypervisor value="" />
+            </hostRequires>
+        """
+        data_setup.create_job_for_recipes([recipe])
+        self.assertVirtPrecluded(recipe, "<hypervisor/> did not preclude virt")
+
     # Additional virt check due to https://bugzilla.redhat.com/show_bug.cgi?id=907307
     def test_virt_possible_arch(self):
         for arch in [u"i386", u"x86_64"]:
