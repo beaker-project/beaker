@@ -46,11 +46,11 @@ class TestBeakerd(unittest.TestCase):
             j1 = data_setup.create_job_for_recipes([r1,r2])
             r1.systems[:] = [system]
             r2.systems[:] = [system]
-
-        r1.process()
-        r1.queue()
-        r2.process()
-        r2.queue()
+            r1.process()
+            r1.queue()
+            r2.process()
+            r2.queue()
+        beakerd.update_dirty_jobs()
         aborted_recipes = [r1,r2]
         scheduled_recipes = []
         original_sqr = beakerd.schedule_queued_recipe
@@ -119,23 +119,25 @@ class TestBeakerd(unittest.TestCase):
             r3.systems[:] = [systemA]
             r4.systems[:] = [systemB, system_decoy]
 
-        # We need this to be the case so that we release
-        # our resource at the correct time
-        assert spare_recipe.id < r4.id
+            # We need this to be the case so that we release
+            # our resource at the correct time
+            assert spare_recipe.id < r4.id
 
-        data_setup.mark_recipe_running(holds_deadlocking_resource_recipe,
-            system=systemB)
-        data_setup.mark_recipe_running(r1, system=systemA)
+            data_setup.mark_recipe_running(holds_deadlocking_resource_recipe,
+                system=systemB)
+            data_setup.mark_recipe_running(r1, system=systemA)
 
-        spare_recipe.process()
-        spare_recipe.queue()
+            spare_recipe.process()
+            spare_recipe.queue()
 
-        r2.process()
-        r2.queue()
-        r3.process()
-        r3.queue()
-        r4.process()
-        r4.queue()
+            r2.process()
+            r2.queue()
+            r3.process()
+            r3.queue()
+            r4.process()
+            r4.queue()
+
+        beakerd.update_dirty_jobs()
 
         engine = get_engine()
         SessionFactory = sessionmaker(bind=engine)
@@ -242,7 +244,9 @@ class TestBeakerd(unittest.TestCase):
                     % system.fqdn)
 
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
         beakerd.update_dirty_jobs()
 
@@ -520,7 +524,9 @@ class TestBeakerd(unittest.TestCase):
                     % system.fqdn)
             self.lab_controller.disabled = True
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
         beakerd.update_dirty_jobs()
         with session.begin():
@@ -552,8 +558,11 @@ class TestBeakerd(unittest.TestCase):
             if os.path.exists(harness_dir):
                 os.rmdir(harness_dir)
             beakerd.process_new_recipes()
+            beakerd.update_dirty_jobs()
             beakerd.queue_processed_recipesets()
+            beakerd.update_dirty_jobs()
             beakerd.schedule_queued_recipes()
+            beakerd.update_dirty_jobs()
             beakerd.provision_scheduled_recipesets()
             beakerd.update_dirty_jobs()
             with session.begin():
@@ -581,8 +590,11 @@ class TestBeakerd(unittest.TestCase):
         if not os.path.exists(harness_dir):
             os.mkdir(harness_dir)
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.provision_scheduled_recipesets()
         beakerd.update_dirty_jobs()
         with session.begin():
@@ -659,8 +671,11 @@ class TestBeakerd(unittest.TestCase):
                 """ % system.fqdn)
 
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.provision_scheduled_recipesets()
         beakerd.update_dirty_jobs()
 
@@ -696,6 +711,7 @@ class TestBeakerd(unittest.TestCase):
                 </hostRequires>
                 """
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
         with session.begin():
@@ -743,8 +759,11 @@ class TestBeakerd(unittest.TestCase):
                 """ % system.fqdn)
 
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.provision_scheduled_recipesets()
         beakerd.update_dirty_jobs()
 
@@ -976,7 +995,9 @@ class TestBeakerd(unittest.TestCase):
             job = controller.process_xmljob(xmljob, user)
 
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
         beakerd.update_dirty_jobs()
 

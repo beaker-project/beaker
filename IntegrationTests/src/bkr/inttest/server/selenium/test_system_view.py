@@ -146,8 +146,11 @@ class SystemViewTest(SeleniumTestCase):
                     % self.system.fqdn)
             job_id = job.id
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         self.go_to_system_view()
         sel.click('link=(Current Job)')
         sel.wait_for_page_to_load('30000')

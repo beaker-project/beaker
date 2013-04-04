@@ -380,8 +380,11 @@ class TestPowerFailures(XmlRpcTestCase):
                 """ % system.fqdn)
 
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.provision_scheduled_recipesets()
         beakerd.update_dirty_jobs()
 
@@ -414,8 +417,11 @@ class TestPowerFailures(XmlRpcTestCase):
                 """ % system.fqdn)
 
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.provision_scheduled_recipesets()
         beakerd.update_dirty_jobs()
 
