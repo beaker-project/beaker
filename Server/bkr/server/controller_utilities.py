@@ -247,6 +247,12 @@ class Utility:
         return lambda x: make_link("/view/%s" % x.fqdn, x.fqdn)
 
     @classmethod
+    def system_loancomment_getter(cls):
+        # Return only first 70 chars of loan comment
+        return lambda x: x.loan_comment[:70] if x.loan_comment else \
+            x.loan_comment
+
+    @classmethod
     def system_serialnumber_getter(cls):
         return lambda x: x.serial
 
