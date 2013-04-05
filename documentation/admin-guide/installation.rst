@@ -229,27 +229,17 @@ pre-built version of the tasks from http://beaker-project.org/tasks/.
 You can also copy *all* the tasks from another Beaker instance using the
 ``beaker-sync-tasks`` tool (distributed as a part of the
 ``beaker-server`` package and first available with the 0.12
-release). If there are tasks having the same name in the `destination`
-Beaker instance, they will be overwritten.
+release). For example::
 
-For example:
-::
+    $ beaker-sync-tasks --remote=http://server1.com
 
-    $ beaker-sync-tasks --source=http://server1.com --destination=http://server2.com --kerberos
-
-It is also possible to use your password to authenticate to the
-destination server, like so:
-
-::
-
-    $ beaker-sync-tasks --source=http://server1.com --destination=http://server2.com --username <username>
-    Password:
+The above command will copy all the tasks from the Beaker instance at
+``http://server1.com`` to the local instance. If there are tasks
+having the same name in the local Beaker instance, they will be
+overwritten only if the versions are different.
 
 By default, the script asks for your approval before beginning the
 task upload. If that is not suitable for your purpose, you may specify
-a ``--force`` switch (with kerberos authentication) so that the script
-may run without any user intervention:
-
-::
-
-    $ beaker-sync-tasks --source=http://server1.com --destination=http://server2.com --kerberos --force
+a :option:`--force` switch so that the script may run without any user
+intervention. The :option:`--debug` switch turns on verbose logging
+messages on the standard output.

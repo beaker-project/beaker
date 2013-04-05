@@ -193,8 +193,12 @@ Other enhancements
   (Contributed by Qixiang Wan in :issue:`832937`.)
 
 - The ``beaker-sync-tasks`` command is a new server side tool to sync the task
-  RPMs between two Beaker instances. It overwrites tasks of the same name on 
-  the destination Beaker instance with that from the source Beaker instance. 
+  RPMs on a local Beaker instance with those on a remote Beaker instance. It
+  overwrites tasks of the same name on the local instance with that
+  from the remote Beaker instance if they are of different
+  versions. Tasks which are only present on the remote instance are
+  added to the local instance.
+  
   See :ref:`copying tasks <sync-tasks>` to learn more about how to use this 
   tool. (Contributed by Amit Saha in :issue:`912205`.)
 
