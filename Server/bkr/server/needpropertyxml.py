@@ -20,6 +20,7 @@
 
 import os
 import sys
+import operator
 from bkr.server.model import *
 from turbogears.database import session
 import turbogears
@@ -432,7 +433,7 @@ class XmlHypervisor(ElementWrapper):
         # uses, but we should have a better solution
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None) or None
-        if getattr('KVM', op)(value):
+        if getattr(operator, op)('KVM', value):
             return {}
         else:
             raise NotVirtualisable()
@@ -818,7 +819,7 @@ class XmlArch(ElementWrapper):
         # XXX add some better logic here
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        if getattr('i386', op)(value) or getattr('x86_64', op)(value):
+        if getattr(operator, op)('x86_64', value):
             return {}
         else:
             raise NotVirtualisable()

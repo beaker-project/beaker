@@ -938,6 +938,9 @@ class System(SystemObject):
                                             col_type='string',
                                             onclause=model.System.loaned,
                                             relations=[model.User]),
+                          'LoanComment': MyColumn(
+                                            column=model.System.loan_comment,
+                                            col_type='string'),
                           'Group'     : AliasedColumn(col_type='string',
                                             target_table=[model.Group],
                                             relations = lambda: [model.System.group_assocs, model.Group],

@@ -73,7 +73,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.reserve(system.fqdn)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('bkr.common.bexceptions.BX' in e.faultString,
+            self.assert_('cannot reserve system' in e.faultString,
                     e.faultString)
 
     def test_reserve_system(self):

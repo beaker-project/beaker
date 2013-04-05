@@ -53,7 +53,8 @@ for details).
 However, the job and recipe states shown in Beaker's interface (including 
 Status, Result, and progress bars) will lag a small amount behind reality. The 
 amount of lag is expected to be less than 20 seconds (the polling interval for 
-beakerd).
+beakerd). While a job is waiting to be updated its status will appear as 
+"Updating…".
 
 Task names are limited to 255 characters
 ++++++++++++++++++++++++++++++++++++++++
@@ -89,6 +90,25 @@ server is configured and beaker-transfer is enabled, then logs are moved there.
 
 The ``CACHE`` setting in ``/etc/beaker/labcontroller.conf``, which previously 
 controlled this behaviour, no longer has any effect and can be removed.
+
+``beaker-expire-distros`` reports network errors
+++++++++++++++++++++++++++++++++++++++++++++++++
+
+The ``beaker-expire-distros`` command runs on the lab controllers to detect 
+distro trees which have been removed. Previously, it would consider a tree to 
+be "missing" if the root directory of the mirror was accessible but the tree 
+itself was not -- even if the cause was a network error or server-side failure.
+
+Now ``beaker-expire-distros`` checks specifically for the protocol errors which 
+mean the path does not exist (404 and 410 for HTTP, 550 for FTP). Any other 
+errors, including DNS resolution failures, network timeouts, or failed 
+requests, are printed to stderr and the command exits. If the 
+``--ignore-errors`` option is passed, network errors are suppressed instead and 
+``beaker-expire-distros`` continues checking other trees.
+
+If your distro mirror is known to be unreliable (for example, requests time out 
+during periods of high load) you may wish to add ``--ignore-errors`` to 
+``/etc/cron.hourly/beaker_expire_distros`` in order to avoid cron spam.
 
 New features
 ------------

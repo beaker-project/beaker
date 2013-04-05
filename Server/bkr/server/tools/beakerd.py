@@ -117,7 +117,10 @@ def update_dirty_job(job_id):
     job.update_status()
 
 def process_new_recipes(*args):
-    recipes = MachineRecipe.query.filter(Recipe.status == TaskStatus.new)
+    recipes = MachineRecipe.query\
+            .join(MachineRecipe.recipeset).join(RecipeSet.job)\
+            .filter(Job.dirty_version == Job.clean_version)\
+            .filter(Recipe.status == TaskStatus.new)
     if not recipes.count():
         return False
     log.debug("Entering process_new_recipes")
@@ -184,8 +187,10 @@ def process_new_recipe(recipe_id):
         guestrecipe.process()
 
 def queue_processed_recipesets(*args):
-    recipesets = RecipeSet.query.filter(not_(RecipeSet.recipes.any(
-            Recipe.status != TaskStatus.processed)))
+    recipesets = RecipeSet.query.join(RecipeSet.job)\
+            .filter(Job.dirty_version == Job.clean_version)\
+            .filter(not_(RecipeSet.recipes.any(
+                Recipe.status != TaskStatus.processed)))
     if not recipesets.count():
         return False
     log.debug("Entering queue_processed_recipesets")
@@ -313,7 +318,10 @@ def abort_dead_recipes(*args):
                 Recipe.virt_status != RecipeVirtStatus.possible))
     else:
         filters.append(not_(Recipe.systems.any()))
-    recipes = MachineRecipe.query.outerjoin(Recipe.distro_tree)\
+    recipes = MachineRecipe.query\
+            .join(MachineRecipe.recipeset).join(RecipeSet.job)\
+            .filter(Job.dirty_version == Job.clean_version)\
+            .outerjoin(Recipe.distro_tree)\
             .filter(Recipe.status == TaskStatus.queued)\
             .filter(or_(*filters))
     if not recipes.count():
@@ -348,6 +356,7 @@ def schedule_queued_recipes(*args):
     try:
         recipes = MachineRecipe.query\
                         .join(Recipe.recipeset, RecipeSet.job)\
+                        .filter(Job.dirty_version == Job.clean_version)\
                         .join(Recipe.systems)\
                         .join(Recipe.distro_tree)\
                         .join(DistroTree.lab_controller_assocs,
@@ -446,11 +455,15 @@ def schedule_queued_recipe(recipe_id):
     # </recipe>
     user = recipe.recipeset.job.owner
     if True: #FIXME if pools are defined add them here in the order requested.
+        # Order by:
+        #   System Owner
+        #   System group
+        #   Single procesor bare metal system
         systems = systems.order_by(
             case([(System.owner==user, 1),
                 (and_(System.owner!=user, System.group_assocs != None), 1)],
                 else_=3),
-            Cpu.processors == 1) # In mysql this orders single processors last
+                and_(System.hypervisor == None, Cpu.processors == 1))
     if recipe.recipeset.lab_controller:
         # First recipe of a recipeSet determines the lab_controller
         systems = systems.filter(
@@ -501,7 +514,8 @@ def provision_virt_recipes(*args):
     # We limit to labs where the tree is available by NFS because RHEV needs to 
     # use autofs to grab the images. See VirtManager.start_install.
     recipes = MachineRecipe.query\
-            .join(Recipe.recipeset)\
+            .join(Recipe.recipeset).join(RecipeSet.job)\
+            .filter(Job.dirty_version == Job.clean_version)\
             .join(Recipe.distro_tree, DistroTree.lab_controller_assocs, LabController)\
             .filter(Recipe.status == TaskStatus.queued)\
             .filter(Recipe.virt_status == RecipeVirtStatus.possible)\
@@ -586,8 +600,10 @@ def provision_scheduled_recipesets(*args):
     if All recipes in a recipeSet are in Scheduled state then move them to
      Running.
     """
-    recipesets = RecipeSet.query.filter(not_(RecipeSet.recipes.any(
-            Recipe.status != TaskStatus.scheduled)))
+    recipesets = RecipeSet.query.join(RecipeSet.job)\
+            .filter(Job.dirty_version == Job.clean_version)\
+            .filter(not_(RecipeSet.recipes.any(
+                Recipe.status != TaskStatus.scheduled)))
     if not recipesets.count():
         return False
     log.debug("Entering provision_scheduled_recipesets")
