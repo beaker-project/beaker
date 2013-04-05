@@ -29,7 +29,11 @@ class NFSServerInaccessible(ValueError): pass
 def check_nfs(tree):
     """ Make sure the tree is accessible, check that the server is up first.
     """
-    (nfs_server, nfs_path) = tree[6:].split(':', 1)
+    _, nfs_server, nfs_path, _, _, _ = urlparse.urlparse(tree)
+    # Beaker uses a non-standard syntax for NFS URLs, inherited from Cobbler:
+    # nfs://server:/path
+    # so we need to strip a trailing colon from the hostname portion.
+    nfs_server = nfs_server.rstrip(':')
     server_path = os.path.join('/net', nfs_server)
     if nfs_path.startswith('/'):
         nfs_path = nfs_path[1:]
