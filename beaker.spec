@@ -17,7 +17,7 @@
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.11.3
+Version:        0.12.0
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -376,6 +376,11 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Fri Apr 05 2013 Dan Callaghan <dcallagh@redhat.com> 0.12.0-1
+- new release 0.12.0:
+  http://beaker-project.org/releases/#beaker-0.12.0-1
+  http://beaker-project.org/docs/whats-new/release-0.12.html
+
 * Fri Feb 08 2013 Raymond Mancy <rmancy@redhat.com> 0.11.3-1
 - 907297 Pass full principal when creating a kerberos AP_REQ
   (rmancy@redhat.com)

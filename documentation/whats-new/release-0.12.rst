@@ -290,7 +290,6 @@ The following bugs were fixed in Beaker 0.12.0:
 - :issue:`880497`: User column is always empty on Recipe Systems page
 - :issue:`881387`: Order in which recipes are displayed on the job page depends on their database ID
 - :issue:`888959`: ``rhts_post`` snippet doesn't handle duplicate EFI entries
-- :issue:`889065`: Scheduling deadlock for multihost tests
 - :issue:`890261`: "like" op in CPU flag filtering does not work
 - :issue:`893878`: ``bkr machine-test`` can submit an invalid job if no matching distro is found
 - :issue:`903935`: Guest recipes remain stuck in Waiting even though their host recipe is finished
