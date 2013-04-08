@@ -507,7 +507,7 @@ class Root(RPCRoot):
                                     {su.Disk:{'all':[]}},
                                     {su.Key:{'all':[]}}]),
                                search_controller=url("/get_search_options"),
-                               date_picker = ['system/added'],
+                               date_picker = ['system/added', 'system/lastinventoried'],
                                table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
 
         if 'quick_search' in kw:

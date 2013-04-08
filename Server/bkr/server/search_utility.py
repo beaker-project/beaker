@@ -914,6 +914,8 @@ class System(SystemObject):
                           'Lender'    : MyColumn(column=model.System.lender,col_type='string'),
                           'Location'  : MyColumn(column=model.System.location, col_type='string'),
                           'Added'     : MyColumn(column=model.System.date_added, col_type='date'),
+                          'LastInventoried': MyColumn(column=model.System.date_lastcheckin,
+                                             col_type='date'),
                           'Model'     : MyColumn(column=model.System.model,col_type='string'),
                           'SerialNumber': MyColumn(column=model.System.serial, col_type='string'),
                           'Memory'    : MyColumn(column=model.System.memory,col_type='numeric'),
@@ -957,6 +959,20 @@ class System(SystemObject):
             return col == None
         else:
             return and_(col >= '%s 00:00:00' % val, col <= '%s 23:59:99' % val)
+
+    @classmethod
+    def lastinventoried_is_filter(cls,col,val):
+        if not val:
+            return col == None
+        else:
+            return and_(col >= '%s 00:00:00' % val, col <= '%s 23:59:99' % val)
+
+    @classmethod
+    def lastinventoried_after_filter(cls,col,val):
+        if not val:
+            return col == None
+        else:
+            return col >= '%s 23:59:59' % val
 
     @classmethod
     def arch_is_not_filter(cls,col,val):

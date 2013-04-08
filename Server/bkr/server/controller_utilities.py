@@ -230,6 +230,10 @@ class Utility:
         return lambda x: x.date_added
 
     @classmethod
+    def system_lastinventoried_getter(cls):
+        return lambda x: x.date_lastcheckin
+
+    @classmethod
     def system_loanedto_getter(cls):
         return lambda x: x.loaned
           

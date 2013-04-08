@@ -64,7 +64,7 @@ class TestSystemsGrid(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Systems')
         # check number of columns in the table
-        self.assertEqual(sel.get_xpath_count('//table[@id="widget"]//th'), 29)
+        self.assertEqual(sel.get_xpath_count('//table[@id="widget"]//th'), 30)
 
 class TestSystemGridSorting(SeleniumTestCase):
 
