@@ -6,7 +6,7 @@ import urlparse
 
 def check_http(url):
     try:
-        urllib2.urlopen(url, timeout=20)
+        urllib2.urlopen(url, timeout=120)
         return True
     except urllib2.HTTPError, e:
         if e.code in (404, 410):
@@ -16,7 +16,7 @@ def check_http(url):
 
 def check_ftp(url):
     try:
-        urllib2.urlopen(url, timeout=20)
+        urllib2.urlopen(url, timeout=120)
         return True
     except urllib2.URLError, e:
         if '550' in e.reason:
