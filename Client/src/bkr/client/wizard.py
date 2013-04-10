@@ -1913,17 +1913,21 @@ class Reproducers(MultipleChoice):
         print "Examining attachments for possible reproducers"
         for attachment in self.bug.attachments:
             # skip obsolete and patch attachments
-            if attachment['ispatch'] == 0 and attachment['isobsolete'] == 0:
-                self.list.append(attachment['filename'])
+            is_patch = attachment.get("is_patch", attachment.get("ispatch"))
+            filename = attachment.get("file_name", attachment.get("filename"))
+            is_obsolete = attachment.get(
+                    "is_obsolete", attachment.get("isobsolete"))
+            if is_patch == 0 and is_obsolete == 0:
+                self.list.append(filename)
                 # add to suggested attachments if it looks like a reproducer
                 if RegExpReproducer.search(attachment['description']) or \
-                        RegExpReproducer.search(attachment['filename']):
-                    self.data.append(attachment['filename'])
-                    self.pref.append(attachment['filename'])
+                        RegExpReproducer.search(filename):
+                    self.data.append(filename)
+                    self.pref.append(filename)
                     print "Adding",
                 else:
                     print "Skipping",
-                print "%s (%s)" % (attachment['filename'], attachment['description'])
+                print "%s (%s)" % (filename, attachment['description'])
                 sleep(1)
 
     def download(self, path):
@@ -1931,17 +1935,20 @@ class Reproducers(MultipleChoice):
         if not self.bug:
             return False
         for attachment in self.bug.attachments:
-            if attachment['filename'] in self.data \
-                    and attachment['isobsolete'] == 0:
-                print "Attachment", attachment['filename'],
+            attachment_filename = attachment.get(
+                    "file_name", attachment.get("filename"))
+            is_obsolete = attachment.get(
+                    "is_obsolete", attachment.get("isobsolete"))
+            if attachment_filename in self.data and is_obsolete == 0:
+                print "Attachment", attachment_filename,
                 try:
                     dirfiles = os.listdir(path)
-                    filename = path + "/" + attachment['filename']
+                    filename = path + "/" + attachment_filename
                     remote = self.options.bugzilla.openattachment(
                             attachment['id'])
                     # rename the attachment if it has the same name as one
                     # of the files in the current directory
-                    if attachment['filename'] in dirfiles:
+                    if attachment_filename in dirfiles:
                         print "- file already exists in {0}/".format(path)
                         new_name = ""
                         while new_name == "":
