@@ -60,12 +60,9 @@ class System_Reserve(BeakerCommand):
         self.parser.usage = "%%prog %s [options] <fqdn>" % self.normalized_name
 
     def run(self, *args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
-
         if len(args) != 1:
             self.parser.error('Exactly one system fqdn must be given')
         fqdn = args[0]
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         self.hub.systems.reserve(fqdn)

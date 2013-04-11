@@ -1,4 +1,3 @@
-import pkg_resources
 from setuptools import setup, find_packages
 import glob
 import re
@@ -13,9 +12,6 @@ from distutils.command.install_data import install_data as _install_data
 from distutils.dep_util import newer
 from setuptools.command.install import install as _install
 from setuptools.command.install_lib import install_lib as _install_lib
-
-pkg_resources.require('Sphinx >= 1.0.4')
-from sphinx.setup_command import BuildDoc
 
 execfile(os.path.join("bkr/server", "release.py"))
 
@@ -33,10 +29,6 @@ class Build(_build, object):
     # These are set in finalize_options()
     substitutions = {'@DATADIR@': None, '@LOCALEDIR@': None}
     subRE = re.compile('(' + '|'.join(substitutions.keys()) + ')+')
-
-    sub_commands = _build.sub_commands + [
-        ('build_sphinx', lambda self: True)
-    ]
 
     def initialize_options(self):
         self.install_data = None
@@ -150,8 +142,6 @@ def find_data_recursive(dest_dir, src_dir, exclude=frozenset()):
                 if filename not in exclude])
 
 data_files = \
-    list(find_data_recursive('bkr/server/apidoc/html', 'build/sphinx/html/',
-            exclude=['.buildinfo'])) + \
     list(find_data_recursive('bkr/server/static', 'bkr/server/static/')) + [
     ("/etc/beaker", ["server.cfg"]),
     ("/etc/httpd/conf.d", ["apache/beaker-server.conf"]),
@@ -179,16 +169,7 @@ setup(
     cmdclass = {
         'build': Build,
         'build_py': build_py_and_kid,
-        'build_sphinx': BuildDoc,
         'install_data': InstallData,
-    },
-    command_options={
-        'build_sphinx': {
-            #'project': ('setup.py', 'Beaker Server'),
-            'version': ('setup.py', '@VERSION@'),
-            'release': ('setup.py', '@VERSION@'),
-            'source_dir': ('setup.py', 'apidoc'),
-        },
     },
     install_requires=[
         'TurboGears >= 1.1',
@@ -229,7 +210,7 @@ setup(
             'beaker-check = bkr.server.tools.check_beaker:main',
             'beaker-cleanup-visits = bkr.server.tools.cleanup_visits:main',
             'beaker-repo-update = bkr.server.tools.repo_update:main',
-            'beaker-cleanup-recipes = bkr.server.tools.cleanup_unfinished_recipesets:main'
+            'beaker-sync-tasks = bkr.server.tools.sync_tasks:main'
         ),
     }
     )

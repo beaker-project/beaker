@@ -190,4 +190,4 @@ class XmlRpcLoginTest(XmlRpcTestCase):
             server.auth.who_am_i()
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('Please log in first' in e.faultString, e.faultString)
+            self.assert_('Anonymous access denied' in e.faultString, e.faultString)

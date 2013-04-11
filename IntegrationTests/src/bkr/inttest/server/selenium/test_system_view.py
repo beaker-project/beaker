@@ -27,13 +27,36 @@ from urllib import urlencode, quote
 import rdflib.graph
 from turbogears.database import session
 
-from bkr.inttest.server.selenium import SeleniumTestCase
 from bkr.inttest import data_setup, get_server_base, \
         assertions, with_transaction
 from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
         SystemStatus
 from bkr.server.tools import beakerd
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login
+
+class SystemViewTestWD(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+        with session.begin():
+            self.lab_controller = data_setup.create_labcontroller()
+            self.system = data_setup.create_system(
+                lab_controller=self.lab_controller)
+
+    def test_clear_netboot(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
+        b.find_element_by_link_text('Commands').click()
+
+        clear = b.find_element_by_xpath('//button[normalize-space(text())='
+            '"Clear Netboot"]')
+        clear.click()
+        b.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
+        flash_text = b.find_element_by_class_name('flash').text
+        self.assertEqual(flash_text, u'Clear netboot command enqueued')
 
 
 class SystemViewTest(SeleniumTestCase):
@@ -123,8 +146,11 @@ class SystemViewTest(SeleniumTestCase):
                     % self.system.fqdn)
             job_id = job.id
         beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
         self.go_to_system_view()
         sel.click('link=(Current Job)')
         sel.wait_for_page_to_load('30000')
@@ -425,7 +451,7 @@ class SystemViewTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Power"]')
+        sel.click('//ul[@class="tabbernav"]//a[text()="Power Config"]')
         sel.select('name=power_type_id', 'drac')
         sel.type('name=power_address', 'nowhere.example.com')
         sel.type('name=power_user', 'asdf')
@@ -559,13 +585,6 @@ class SystemViewTest(SeleniumTestCase):
         # noverifyssl comes from server-test.cfg
         self.assertEqual(sel.get_value('koptions'), 'noverifyssl some_kernel_option=5')
         self.assertEqual(sel.get_value('koptions_post'), 'some_kernel_option=6')
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=703548
-    def test_cc_not_visible_to_random_noobs(self):
-        self.login(self.unprivileged_user.user_name, 'password')
-        sel = self.selenium
-        self.go_to_system_view()
-        self.assert_(not sel.is_text_present('Notify CC'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=664482
     def test_cannot_change_lab_controller_while_system_in_use(self):

@@ -109,8 +109,6 @@ class Job_Clone(BeakerCommand):
     def run(self, *args, **kwargs):
         self.check_taskspec_args(args, permitted_types=['J', 'RS'])
 
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         wait = kwargs.pop("wait", None)
         xml = kwargs.pop("xml", None)
         pretty = kwargs.pop("prettyxml", None)
@@ -119,7 +117,7 @@ class Job_Clone(BeakerCommand):
         submitted_jobs = []
         failed = False
         clone = True
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         for task in args:
             try:
                 task_type, task_id = task.split(":")

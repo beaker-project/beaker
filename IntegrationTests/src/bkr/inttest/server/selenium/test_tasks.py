@@ -168,5 +168,20 @@ class TestSubmitTask(SeleniumTestCase):
         self.assertEquals(sel.get_text('css=.flash'), 'Failed to import task: '
                 'Owner field not defined')
 
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=915549
+    def test_task_name_length(self):
+        sel = self.selenium
+        sel.open('')
+        sel.click('link=New Task')
+        sel.wait_for_page_to_load('30000')
+        sel.type('task_task_rpm',
+                 pkg_resources.resource_filename(self.__module__,
+                'tmp-distribution-beaker-long-task-RPM-1.0-1.noarch.rpm'))
+        sel.click('//input[@value="Submit Data"]')
+        sel.wait_for_page_to_load('30000')
+        self.assertEquals(sel.get_text('css=.flash'), "Failed to import task: "
+                  "'Task name should be <= 255 characters'")
+
 if __name__ == "__main__":
     unittest.main()

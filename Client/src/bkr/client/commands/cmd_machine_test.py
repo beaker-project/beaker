@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
+.. _bkr-machine-test:
+
 bkr machine-test: Generate Beaker job to test a system
 ======================================================
 
@@ -88,9 +90,7 @@ class Machine_Test(BeakerWorkflow):
         self.parser.usage = "%%prog %s [options] --machine=FQDN" % self.normalized_name
 
     def run(self, *args, **kwargs):
-        username = kwargs.get("username", None)
-        password = kwargs.get("password", None)
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
 
         debug  = kwargs.get("debug", False)
         dryrun = kwargs.get("dryrun", False)
@@ -116,6 +116,11 @@ class Machine_Test(BeakerWorkflow):
             families = dict((family, [arch for arch in kwargs['arches']]) for family in kwargs['family'])
         else:
             families = self.getSystemOsMajorArches(*args, **kwargs)
+
+        # Exit early
+        if not families:
+            print >>sys.stderr, 'Could not find an appropriate distro to provision system with.'
+            sys.exit(1)
 
         # Create Job
         job = BeakerJob(*args, **kwargs)

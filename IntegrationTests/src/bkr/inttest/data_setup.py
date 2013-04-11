@@ -265,10 +265,8 @@ def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.
     if valid is None:
         valid = True
     rpm = u'example%s-%s.noarch.rpm' % (name.replace('/', '-'), version)
-    try:
-        task = Task.by_name(name)
-    except NoResultFound:
-        task = Task(name=name)
+
+    task = Task.lazy_create(name=name)
     task.rpm = rpm
     task.version = version
     task.uploader = uploader
@@ -325,8 +323,9 @@ def create_recipe(distro_tree=None, task_list=None,
         recipe.tasks.append(rt)
     return recipe
 
-def create_guestrecipe(host, **kwargs):
+def create_guestrecipe(host, guestname=None, **kwargs):
     guestrecipe = create_recipe(cls=GuestRecipe, **kwargs)
+    guestrecipe.guestname = guestname
     host.guests.append(guestrecipe)
     return guestrecipe
 
@@ -383,6 +382,11 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
     if not only:
         mark_recipe_running(recipe, **kwargs)
 
+    # Need to make sure recipe.watchdog has been persisted, since we delete it 
+    # below when the recipe completes and sqlalchemy will barf on deleting an 
+    # instance that hasn't been persisted.
+    session.flush()
+
     if not server_log:
         recipe.logs = [LogRecipe(path=u'recipe_path',filename=u'dummy.txt')]
     else:
@@ -406,16 +410,19 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
         rtr.logs = [rtr_log()]
         recipe_task.logs = [rt_log()]
         recipe_task.finish_time = finish_time
-        recipe_task.status = TaskStatus.completed
+        recipe_task._change_status(TaskStatus.completed)
         recipe_task.results.append(rtr)
     recipe.resource.install_done = finish_time
     recipe.resource.postinstall_done = finish_time
-    recipe.update_status()
+    recipe.recipeset.job.update_status()
     log.debug('Marked %s as complete with result %s', recipe.t_id, result)
 
-def mark_job_complete(job, finish_time=None, **kwargs):
+def mark_job_complete(job, finish_time=None, only=False, **kwargs):
+    if not only:
+        for recipe in job.all_recipes:
+            mark_recipe_running(recipe, **kwargs)
     for recipe in job.all_recipes:
-        mark_recipe_complete(recipe, finish_time=finish_time, **kwargs)
+        mark_recipe_complete(recipe, finish_time=finish_time, only=True, **kwargs)
         if finish_time:
             recipe.resource.reservation.finish_time = finish_time
             recipe.finish_time = finish_time
@@ -452,6 +459,7 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
     recipe.watchdog = Watchdog()
     recipe.waiting()
     recipe.resource.rebooted = start_time
+    recipe.recipeset.job.update_status()
     log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.resource.fqdn)
 
 def mark_job_waiting(job):
@@ -468,6 +476,7 @@ def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
         if not fqdn:
             fqdn = unique_name(u'guest_fqdn_%s')
         recipe.resource.fqdn = fqdn
+    recipe.recipeset.job.update_status()
     log.debug('Started %s', recipe.tasks[0].t_id)
 
 def mark_job_running(job, **kw):
@@ -478,6 +487,7 @@ def mark_job_queued(job):
     for recipe in job.all_recipes:
         recipe.process()
         recipe.queue()
+    job.update_status()
 
 def playback_task_results(task, xmltask):
     # Start task
@@ -498,8 +508,10 @@ def playback_job_results(job, xmljob):
             for l, xmlguest in enumerate(xmlrecipe.iter_guests()):
                 for k, xmltask in enumerate(xmlguest.iter_tasks()):
                     playback_task_results(job.recipesets[i].recipes[j].guests[l].tasks[k], xmltask)
+                    job.update_status()
             for k, xmltask in enumerate(xmlrecipe.iter_tasks()):
                 playback_task_results(job.recipesets[i].recipes[j].tasks[k], xmltask)
+                job.update_status()
 
 def create_manual_reservation(system, start, finish=None, user=None):
     if user is None:
@@ -517,6 +529,17 @@ def create_manual_reservation(system, start, finish=None, user=None):
                 old_value=user.user_name, new_value=u'')
         activity.created = finish
         system.activity.append(activity)
+
+def unreserve_manual(system, finish=None):
+    if finish is None:
+        finish = datetime.datetime.utcnow()
+    user = system.open_reservation.user
+    activity = SystemActivity(user=user,
+            service=u'WEBUI', action=u'Returned', field_name=u'User',
+            old_value=user.user_name, new_value=u'')
+    activity.created = finish
+    system.activity.append(activity)
+    system.open_reservation.finish_time = finish
 
 def create_test_env(type):#FIXME not yet using different types
     """

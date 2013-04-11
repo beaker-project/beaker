@@ -78,11 +78,9 @@ class Job_Cancel(BeakerCommand):
             self.parser.error('Please specify a taskspec to cancel')
         self.check_taskspec_args(args)
 
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         msg = kwargs.pop("msg", None)
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         for task in args:
             self.hub.taskactions.stop(task, 'cancel', msg)
             print 'Cancelled %s' % task

@@ -28,6 +28,8 @@ permissions to the group, as well as changing its display name and group name.
 To search through the historical activity of all groups, select 
 :menuselection:`Activity --> Groups` from the menu.
 
+.. _admin-external-reports:
+
 External reports
 ----------------
 

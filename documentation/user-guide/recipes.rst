@@ -6,7 +6,8 @@ Recipes
 Recipes are contained within a Job (although indirectly, as directly
 they are contained in a recipe set) and are themselves a container for
 Tasks. There can be more than one Recipe per Job. The purpose of a
-Recipe is to group a set of Tasks into a single logical unit.
+Recipe is to group a set of Tasks into a single logical unit (See:
+:ref:`job-workflow-details`).
 
 Recipe searching
 ~~~~~~~~~~~~~~~~
@@ -33,5 +34,5 @@ details on searching.
 Recipe actions
 ~~~~~~~~~~~~~~
 
-At any time you may wish to cancel the Recipe, you may press the
+At any time you wish to cancel the Recipe, you may press the
 "Cancel" link that is placed under the "Action" column.

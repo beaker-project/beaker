@@ -35,6 +35,7 @@ from sqlalchemy.orm import joinedload, joinedload_all
 from sqlalchemy.orm.exc import NoResultFound
 from subprocess import Popen, PIPE
 import tempfile
+from turbogears.identity.exceptions import IdentityException
 
 import rpm
 import os
@@ -222,7 +223,6 @@ class Tasks(RPCRoot):
             flash(_(u'Failed to import because we already have %s' % 
                                                      task_rpm.filename ))
             redirect(url("./new"))
-
         try:
             with atomically_replaced_file(rpm_file) as f:
                 siphon(task_rpm.file, f)
@@ -434,15 +434,17 @@ class Tasks(RPCRoot):
                     action = './do_search')
 
     def process_taskinfo(self, raw_taskinfo):
-        tinfo = testinfo.parse_string(raw_taskinfo['desc'])
 
-        try:
-            task = Task.by_name(tinfo.test_name)
-        except NoResultFound:
-            task = Task(name=tinfo.test_name)
-        # RPM is the same version we have. don't process		
+        tinfo = testinfo.parse_string(raw_taskinfo['desc'])
+        task = Task.lazy_create(name=tinfo.test_name)
+
+        if len(task.name) > 255:
+            raise BX(_("Task name should be <= 255 characters"))
+
+        # RPM is the same version we have. don't process
         if task.version == raw_taskinfo['hdr']['ver']:
             raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
+
         task.version = raw_taskinfo['hdr']['ver']
         task.description = tinfo.test_description
         task.types = []
@@ -500,7 +502,12 @@ class Tasks(RPCRoot):
             task.needs.append(TaskPropertyNeeded(property=need))
         task.license = tinfo.license
         task.owner = tinfo.owner
-        task.uploader = identity.current.user
+
+        try:
+            task.uploader = identity.current.user
+        except IdentityException:
+            task.uploader = User.query.get(1)
+
         task.valid = True
 
         return task

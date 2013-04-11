@@ -1,3 +1,5 @@
+.. _install-guide:
+
 Installation
 ============
 
@@ -199,6 +201,8 @@ read this directory, the following command must be enabled in
 
     #includedir /etc/sudoers.d
 
+.. _next-steps:
+
 Next steps
 ----------
 
@@ -210,6 +214,32 @@ You can now proceed to
 
 There are two special tasks which Beaker relies on for normal operation: 
 ``/distribution/install`` and ``/distribution/reservesys``. You should add 
-these to your Beaker installation before attempting to run jobs. You can build 
-the tasks from source by cloning Beaker's git repository, or fetch a pre-built 
-version of the tasks from http://beaker-project.org/tasks/.
+these to your Beaker installation before attempting to run jobs. 
+A third task, ``/distribution/inventory`` is important from a Beaker
+administrator's point of view. This task, when run on a system
+populates the Beaker database with details of the different hardware
+devices on the system. This allows discoverability of the systems when
+searched against a job's specific hardware requirements (See:
+:ref:`device specification in recipes <device-specs>`). You can build
+the tasks from source by cloning Beaker's git repository, or fetch a
+pre-built version of the tasks from http://beaker-project.org/tasks/.
+
+.. _sync-tasks:
+
+You can also copy *all* the tasks from another Beaker instance using the
+``beaker-sync-tasks`` tool (distributed as a part of the
+``beaker-server`` package and first available with the 0.12
+release). For example::
+
+    $ beaker-sync-tasks --remote=http://server1.com
+
+The above command will copy all the tasks from the Beaker instance at
+``http://server1.com`` to the local instance. If there are tasks
+having the same name in the local Beaker instance, they will be
+overwritten only if the versions are different.
+
+By default, the script asks for your approval before beginning the
+task upload. If that is not suitable for your purpose, you may specify
+a :option:`--force` switch so that the script may run without any user
+intervention. The :option:`--debug` switch turns on verbose logging
+messages on the standard output.

@@ -1,3 +1,5 @@
+.. _reporting-queries:
+
 Reporting from the Beaker database
 ==================================
 

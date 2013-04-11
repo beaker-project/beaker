@@ -763,4 +763,5 @@ warn {
 .statusAborted, .resultFail { color: red; }
 .statusCancelled, .resultWarn { color: goldenrod; }
 .statusRunning { color: blue; }
+.statusDirty { font-style: italic; }
 

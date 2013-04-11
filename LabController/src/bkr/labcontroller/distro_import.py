@@ -12,6 +12,7 @@ import copy
 from bkr.common.bexceptions import BX
 import pprint
 import time
+import json
 
 def url_exists(url):
     try:
@@ -29,12 +30,42 @@ def url_exists(url):
             raise
     return True
 
+
+class _DummyProxy:
+
+
+    """A class that enables RPCs to be accessed as attributes ala xmlrpclib.ServerProxy
+       Inspired/ripped from xmlrpclib.ServerProxy
+    """
+
+    def __init__(self, name):
+        self.__name = name
+
+    def __getattr__(self, name):
+        return _DummyProxy("%s.%s" % (self.__name, name))
+
+    def __call__(self, *args):
+        logging.debug('Dummy call to: %s, args: %s' % (self.__name, args))
+        return True
+
+
 class SchedulerProxy(object):
     """Scheduler Proxy"""
     def __init__(self, options):
         self.add_distro_cmd = options.add_distro_cmd
         # addDistroCmd = '/var/lib/beaker/addDistro.sh'
-        self.proxy = xmlrpclib.ServerProxy(options.lab_controller,
+        if options.dry_run:
+
+
+            class _Dummy(object):
+
+                def __getattr__(self, name):
+                    return _DummyProxy(name)
+
+
+            self.proxy = _Dummy()
+        else:
+            self.proxy = xmlrpclib.ServerProxy(options.lab_controller,
                                            allow_none=True)
 
     def add_distro(self, profile):
@@ -139,6 +170,29 @@ class Importer(object):
     def __init__(self, parser):
         self.parser = parser
 
+    def check_input(self, opts):
+        pass
+
+    def check_arches(self, arches, multiple=True, single=True):
+        if not arches:
+            return
+        if len(arches) > 1 and not multiple:
+            raise BX('Multiple values for arch are incompatible with %s '
+                'importer' % self.__class__.__name__)
+        if not single:
+            raise BX('Specific value for arch is incompatible with %s '
+                'importer' % self.__class__.__name__)
+
+    def check_variants(self, variants, multiple=True, single=True):
+        if not variants:
+            return
+        if len(variants) > 1 and not multiple:
+            raise BX('Multiple values for variant are incompatible with %s '
+            'importer' % self.__class__.__name__)
+        if not single:
+            raise BX('Specific value for variant is incompatible with %s '
+            'importer' % self.__class__.__name__)
+
 
 class ComposeInfoBase(object):
     @classmethod
@@ -190,7 +244,12 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
     def get_arches(self):
         """ Return a list of arches
         """
-        return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
+        specific_arches = self.options.arch
+        if specific_arches:
+            return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
+                      and x, [arch for arch in specific_arches])
+        else:
+            return filter(lambda x: url_exists(os.path.join(self.parser.url,x)) \
                       and x, [arch for arch in self.arches])
 
     def get_os_dir(self, arch):
@@ -204,54 +263,29 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
             raise BX('%s no os_dir found: %s' % (base_path, e))
         return os.path.join(arch, os_dir)
 
+    def check_input(self, options):
+        self.check_variants(options.variant, single=False)
+
     def process(self, urls, options):
         self.options = options
         self.scheduler = SchedulerProxy(self.options)
         self.distro_trees = []
         for arch in self.get_arches():
-            os_dir = self.get_os_dir(arch)
-            full_os_dir = os.path.join(self.parser.url, os_dir)
-            options = copy.deepcopy(self.options)
-            if not options.name:
-                options.name = self.parser.get('tree', 'name')
-            urls_arch = [os.path.join(url, os_dir) for url in urls]
-            # find our repos, but relative from os_dir
-            repos = self.find_repos(full_os_dir, arch)
             try:
+                os_dir = self.get_os_dir(arch)
+                full_os_dir = os.path.join(self.parser.url, os_dir)
+                options = copy.deepcopy(self.options)
+                if not options.name:
+                    options.name = self.parser.get('tree', 'name')
+                urls_arch = [os.path.join(url, os_dir) for url in urls]
+                # find our repos, but relative from os_dir
+                #repos = self.find_repos(full_os_dir, arch)
                 build = Build(full_os_dir)
-                build.process(urls_arch, options, repos)
+                build.process(urls_arch, options)
                 self.distro_trees.append(build.tree)
             except BX, err:
-                logging.warn(err)
-
-    def find_repos(self, repo_base, arch):
-        """
-        RHEL6 repos
-        ../../optional/<ARCH>/os/repodata
-        ../../optional/<ARCH>/debug/repodata
-        ../debug/repodata
-        """
-        repo_paths = [('debuginfo',
-                       'debug',
-                       '../debug'),
-                      ('optional-debuginfo',
-                       'debug',
-                       '../optional/%s/debug' % arch),
-                      ('optional',
-                       'optional',
-                       '../../optional/%s/os' % arch),
-                     ]
-        repos = []
-        for repo in repo_paths:
-            if url_exists(os.path.join(repo_base,repo[2],'repodata')):
-                repos.append(dict(
-                                  repoid=repo[0],
-                                  type=repo[1],
-                                  path=repo[2],
-                                 )
-                            )
-        return repos
-
+                if not options.ignore_missing:
+                    logging.warn(err)
 
 class ComposeInfo(ComposeInfoBase, Importer):
     """
@@ -541,12 +575,22 @@ sources = Workstation/source/SRPMS
     def get_arches(self, variant):
         """ Return a list of arches for variant
         """
-        return self.parser.get('variant-%s' %
-                                          variant, 'arches').split(',')
-
+        
+        all_arches = self.parser.get('variant-%s' % variant, 'arches'). \
+            split(',')
+        specific_arches = set(self.options.arch)
+        if specific_arches:
+            applicable_arches = specific_arches.intersection(set(all_arches))
+            return list(applicable_arches)
+        else:
+            return all_arches
+        
     def get_variants(self):
         """ Return a list of variants
         """
+        specific_variants = self.options.variant
+        if specific_variants:
+            return specific_variants
         return self.parser.get('product', 'variants').split(',')
 
     def find_repos(self, repo_base, rpath, variant, arch):
@@ -590,7 +634,6 @@ sources = Workstation/source/SRPMS
         self.options = options
         self.scheduler = SchedulerProxy(self.options)
         self.distro_trees = []
-
         for variant in self.get_variants():
             for arch in self.get_arches(variant):
                 os_dir = self.parser.get('variant-%s.%s' %
@@ -608,11 +651,14 @@ sources = Workstation/source/SRPMS
 
                 urls_variant_arch = [os.path.join(url, os_dir) for url in urls]
                 try:
+                    options.variant = [variant]
+                    options.arch = [arch]
                     build = Build(os.path.join(self.parser.url, os_dir))
                     build.process(urls_variant_arch, options, repos)
                     self.distro_trees.append(build.tree)
                 except BX, err:
-                    logging.warn(err)
+                    if not options.ignore_missing:
+                        logging.warn(err)
 
 
 class TreeInfoBase(object):
@@ -625,7 +671,24 @@ class TreeInfoBase(object):
                ]
     excluded = []
 
-    def process(self, urls, options, repos=[]):
+    def check_input(self, options):
+        self.check_variants(options.variant, single=False)
+        self.check_arches(options.arch, single=False)
+
+
+    def get_os_dir(self):
+        """ Return path to os directory
+        This is just a sanity check, the parser's URL should be the os dir.
+        """
+        try:
+            os_dir = filter(lambda x: url_exists(x) \
+                            and x, [self.parser.url])[0]
+        except IndexError, e:
+            raise BX('%s no os_dir found: %s' % (self.parser.url, e))
+        return os_dir
+
+
+    def process(self, urls, options, repos=None):
         '''
         distro_data = dict(
                 name='RHEL-6-U1',
@@ -647,6 +710,8 @@ class TreeInfoBase(object):
                 ])
 
         '''
+        if not repos:
+            repos = []
         self.options = options
         self.scheduler = SchedulerProxy(options)
         self.tree = dict()
@@ -661,9 +726,11 @@ class TreeInfoBase(object):
                                    self.parser.get('general', 'name', 
                                    '%s-%s' % (family,version)
                                                     )
-        self.tree['variant'] = self.options.variant or \
-                               self.parser.get('general','variant','')
-        self.tree['arch'] = self.parser.get('general','arch')
+        if self.options.variant:
+            self.tree['variant'] = self.options.variant.pop()
+        else:
+            self.tree['variant'] = self.parser.get('general','variant','')
+        self.tree['arch'] = self.parser.get('general', 'arch')
         self.tree['tree_build_time'] = self.options.buildtime or \
                                        self.parser.get('general','timestamp',
                                                        self.parser.last_modified)
@@ -680,7 +747,12 @@ class TreeInfoBase(object):
         arches = self.parser.get('general', 'arches','')
         self.tree['arches'] = map(string.strip,
                                      arches and arches.split(',') or [])
-        self.tree['repos'] = repos + self.find_repos()
+        full_os_dir = self.get_os_dir()
+        # These would have been passed from the Compose*.process()
+        common_repos = repos
+        if not common_repos:
+            common_repos = self.find_common_repos(full_os_dir, self.tree['arch'])
+        self.tree['repos'] = self.find_repos() + common_repos
 
         # Add install images
         self.tree['images'] = self.get_images()
@@ -689,12 +761,42 @@ class TreeInfoBase(object):
         self.tree['kernel_options_post'] = self.options.kopts_post
         self.tree['ks_meta'] = self.options.ks_meta
 
+        if options.json:
+            print json.dumps(self.tree)
         logging.debug('\n%s' % pprint.pformat(self.tree))
         try:
             self.add_to_beaker()
-            logging.info('%s added to beaker.' % self.tree['name'])
+            logging.info('%s %s %s added to beaker.' % (self.tree['name'], self.tree['variant'], self.tree['arch']))
         except (xmlrpclib.Fault, socket.error), e:
-            raise BX('failed to add %s to beaker: %s' % (self.tree['name'],e))
+            raise BX('failed to add %s %s %s to beaker: %s' % (self.tree['name'], self.tree['variant'], self.tree['arch'], e))
+
+    def find_common_repos(self, repo_base, arch):
+        """
+        RHEL6 repos
+        ../../optional/<ARCH>/os/repodata
+        ../../optional/<ARCH>/debug/repodata
+        ../debug/repodata
+        """
+        repo_paths = [('debuginfo',
+                       'debug',
+                       '../debug'),
+                      ('optional-debuginfo',
+                       'debug',
+                       '../optional/%s/debug' % arch),
+                      ('optional',
+                       'optional',
+                       '../../optional/%s/os' % arch),
+                     ]
+        repos = []
+        for repo in repo_paths:
+            if url_exists(os.path.join(repo_base, repo[2], 'repodata')):
+                repos.append(dict(
+                                  repoid=repo[0],
+                                  type=repo[1],
+                                  path=repo[2],
+                                 )
+                            )
+        return repos
 
     def get_images(self):
         images = []
@@ -771,7 +873,7 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
         except IndexError, e:
             raise BX('%s no kernel found: %s' % (self.parser.url, e))
 
-    def find_repos(self):
+    def find_repos(self, *args, **kw):
         """
         using info from .treeinfo and known locations
 
@@ -787,7 +889,7 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
         ../repo-srpm-<VARIANT>-<ARCH>/repodata
         arch = ppc64 = ppc
         """
-
+        repos = super(TreeInfoLegacy, self).find_repos(*args, **kw)
         # ppc64 arch uses ppc for the repos
         arch = self.tree['arch'].replace('ppc64','ppc')
 
@@ -830,7 +932,6 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
                        'addon',
                        'Workstation'),
                      ]
-        repos = []
         for repo in repo_paths:
             if url_exists(os.path.join(self.parser.url,repo[2],'repodata')):
                 repos.append(dict(
@@ -901,7 +1002,6 @@ mainimage = images/stage2.img
         ./Client
         ./Workstation
         """
-
         # ppc64 arch uses ppc for the repos
         arch = self.tree['arch'].replace('ppc64','ppc')
 
@@ -954,7 +1054,7 @@ class TreeInfoFedora(TreeInfoBase, Importer):
         if not parser.get('general', 'family').startswith("Fedora"):
             return False
         # Arm uses a different importer because of all the kernel types.
-        if parser.get('general', 'arch') in ['armhfp']:
+        if parser.get('general', 'arch') in ['arm', 'armhfp']:
             return False
         return parser
 
@@ -964,19 +1064,19 @@ class TreeInfoFedora(TreeInfoBase, Importer):
     def get_initrd_path(self):
         return self.parser.get('images-%s' % self.tree['arch'],'initrd')
 
-    def find_repos(self):
-        """
-        using info from known locations
 
+    def find_common_repos(self, repo_base, arch):
         """
-
-        repo_paths = [('Fedora',
-                       'variant',
-                       '.'),
-                     ]
+        Fedora repos
+        ../debug/repodata
+        """
+        repo_paths = [('Fedora-debuginfo',
+                       'debug',
+                       '../debug'),
+                      ]
         repos = []
         for repo in repo_paths:
-            if url_exists(os.path.join(self.parser.url,repo[2],'repodata')):
+            if url_exists(os.path.join(repo_base, repo[2], 'repodata')):
                 repos.append(dict(
                                   repoid=repo[0],
                                   type=repo[1],
@@ -985,6 +1085,30 @@ class TreeInfoFedora(TreeInfoBase, Importer):
                             )
         return repos
 
+
+    def find_repos(self):
+        """
+        using info from known locations
+
+        """
+        repos = []
+        repo_paths = [('Fedora',
+                       'variant',
+                       '.'),
+                      ('Fedora-Everything',
+                       'fedora',
+                       '../../../Everything/%s/os' % self.tree['arch'])]
+
+        for repo in repo_paths:
+            if url_exists(os.path.join(self.parser.url,repo[2],'repodata')):
+                repos.append(dict(
+                                  repoid=repo[0],
+                                  type=repo[1],
+                                  path=repo[2],
+                                 )
+                            )
+
+        return repos
 
 class TreeInfoFedoraArm(TreeInfoFedora, Importer):
     """
@@ -1004,7 +1128,7 @@ class TreeInfoFedoraArm(TreeInfoFedora, Importer):
         if not parser.get('general', 'family').startswith("Fedora"):
             return False
         # Arm uses a different importer because of all the kernel types.
-        if parser.get('general', 'arch') not in ['armhfp']:
+        if parser.get('general', 'arch') not in ['arm', 'armhfp']:
             return False
         return parser
 
@@ -1359,7 +1483,7 @@ kernel = images/pxeboot/vmlinuz
 	   or parser.get('general', 'family').startswith("CentOS")):
             return False
         # Arm uses a different importer because of all the kernel types.
-        if parser.get('general', 'arch') in ['armhfp']:
+        if parser.get('general', 'arch') in ['arm', 'armhfp']:
             return False
         return parser
 
@@ -1456,7 +1580,7 @@ kernel = images/pxeboot/vmlinuz
 	   or parser.get('general', 'family').startswith("CentOS")):
             return False
         # Arm uses a different importer because of all the kernel types.
-        if parser.get('general', 'arch') not in ['armhfp']:
+        if parser.get('general', 'arch') not in ['arm', 'armhfp']:
             return False
         return parser
 
@@ -1557,6 +1681,10 @@ class NakedTree(Importer):
             return False
         return True
 
+    def check_input(self, options):
+        self.check_variants(options.variant, multiple=False)
+        self.check_arches(options.arch, multiple=False)
+
     def process(self, urls, options, repos=[]):
         self.scheduler = SchedulerProxy(options)
         self.tree = dict()
@@ -1569,8 +1697,14 @@ class NakedTree(Importer):
         family  = options.family
         version = options.version
         self.tree['name'] = options.name
-        self.tree['variant'] = options.variant or ''
-        self.tree['arch'] = options.arch
+        try:
+            self.tree['variant'] = options.variant.pop()
+        except IndexError:
+            self.tree['variant'] = ''
+        try:
+            self.tree['arch'] = options.arch.pop()
+        except IndexError:
+            self.tree['arch'] = ''
         self.tree['tree_build_time'] = options.buildtime or \
                                        time.time()
         self.tree['tags'] = options.tags
@@ -1590,7 +1724,8 @@ class NakedTree(Importer):
         self.tree['images'].append(dict(type='initrd',
                                         path=options.initrd))
 
-
+        if options.json:
+            print json.dumps(self.tree)
         logging.debug('\n%s' % pprint.pformat(self.tree))
         try:
             self.add_to_beaker()
@@ -1602,22 +1737,42 @@ class NakedTree(Importer):
         self.scheduler.add_distro(self.tree)
 
 def Build(url, options=None):
-    logging.info("Importing: %s", url)
     # Try all other importers before trying NakedTree
     for cls in Importer.__subclasses__() + [NakedTree]:
         parser = cls.is_importer_for(url, options)
         if parser != False:
             logging.debug("\tImporter %s Matches", cls.__name__)
+            logging.info("Attempting to import: %s", url)
             return cls(parser)
         else:
             logging.debug("\tImporter %s does not match", cls.__name__)
     raise BX('No valid importer found for %s' % url)
+
+_primary_methods = ['http', 'ftp',]
+
+def _get_primary_url(urls):
+    """Return primary method used to import distro
+
+    Primary method is what we use to import the distro, we look for
+            .composeinfo or .treeinfo at that location.  Because of this
+             nfs can't be the primary install method.
+    """
+    for url in urls:
+        method = url.split(':',1)[0]
+        if method in _primary_methods:
+            primary = url
+            return primary
+    return None
 
 def main():
     usage = "usage: %prog [options] distro_url [distro_url] [distro_url]"
     description = """Imports distro(s) from the given distro_url.  Valid distro_urls are nfs://, http:// and ftp://.  A primary distro_url of either http:// or ftp:// must be specified. In order for an import to succeed a .treeinfo or a .composeinfo must be present at the distro_url or you can do what is called a "naked" import if you specify the following arguments: --family, --version, --name, --arch, --kernel, --initrd. Only one tree can be imported at a time when doing a naked import."""
 
     parser = OptionParser(usage=usage, description=description)
+    parser.add_option("-j", "--json",
+                      default=False,
+                      action='store_true',
+                      help="Prints the tree to be imported, in JSON format")
     parser.add_option("-c", "--add-distro-cmd",
                       default="/var/lib/beaker/addDistro.sh",
                       help="Command to run to add a new distro")
@@ -1637,6 +1792,8 @@ def main():
                       action='store_true',
                       default=False,
                       help="show debug messages")
+    parser.add_option('--dry-run', action='store_true',
+            help='Do not actually add any distros to beaker')
     parser.add_option("-q", "--quiet",
                       action='store_true',
                       default=False,
@@ -1645,8 +1802,9 @@ def main():
                       default=None,
                       help="Specify family")
     parser.add_option("--variant",
-                      default=None,
-                      help="Specify variant")
+                      action='append',
+                      default=[],
+                      help="Specify variant. Multiple values are valid when importing a compose >=RHEL7")
     parser.add_option("--version",
                       default=None,
                       help="Specify version")
@@ -1663,6 +1821,15 @@ def main():
                       default=None,
                       type=float,
                       help="Specify build time")
+    parser.add_option("--arch",
+                      action='append',
+                      default=[],
+                      help="Specify arch. Multiple values are valid when importing a compose")
+    parser.add_option("--ignore-missing-tree-compose",
+                      dest='ignore_missing',
+                      action='store_true',
+                      default=False,
+                      help="If a specific tree within a compose is missing, do not print any errors")
     group = OptionGroup(parser, "Naked Tree Options",
                        "These options only apply when importing without a .treeinfo or .composeinfo")
     group.add_option("--kernel",
@@ -1671,9 +1838,6 @@ def main():
     group.add_option("--initrd",
                       default=None,
                       help="Specify path to initrd (relative to distro_url)")
-    group.add_option("--arch",
-                      default=None,
-                      help="Specify arch")
     group.add_option("--lab-controller",
                       default="http://localhost:8000",
                       help="Specify which lab controller to import to. Defaults to http://localhost:8000")
@@ -1700,29 +1864,25 @@ def main():
 
     if not urls:
         logging.critical('No location(s) specified!')
-        sys.exit(10)
-    # primary method is what we use to import the distro, we look for 
-    #         .composeinfo or .treeinfo at that location.  Because of this
-    #         nfs can't be the primary install method.
-    primary_methods = ['http',
-                       'ftp',
-                      ]
-    primary = None
-    for url in urls:
-        method = url.split(':',1)[0]
-        if method in primary_methods:
-            primary = url
-            break
-    if primary == None:
-        logging.critical('missing a valid primary installer! %s, are valid install methods' % ' and '.join(primary_methods))
-        sys.exit(20)
+        sys.exit(1)
 
+    primary_url = _get_primary_url(urls)
+    if primary_url == None:
+        logging.critical('missing a valid primary installer! %s, are valid install methods' % ' and '.join(_primary_methods))
+        sys.exit(2)
+    if opts.dry_run:
+        logging.info('Dry Run only, no data will be sent to beaker')
     try:
-        build = Build(primary, options=opts)
-        build.process(urls, opts)
+        build = Build(primary_url, options=opts)
+        try:
+            build.check_input(opts)
+            build.process(urls, opts)
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
+            logging.critical(str(e))
+            sys.exit(3)
     except BX, err:
         logging.critical(err)
-        sys.exit(30)
+        sys.exit(127)
     if opts.run_jobs:
         logging.info('running jobs.')
         build.run_jobs()

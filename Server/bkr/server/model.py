@@ -6,19 +6,20 @@ from turbogears import url
 from copy import copy
 import ldap
 from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
-                        String, Unicode, Integer, DateTime,
+                        String, Unicode, Integer, BigInteger, DateTime,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
                         or_, and_, not_, select, case, func, BigInteger)
 
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
-        query, object_mapper, mapper, column_property, contains_eager
+        query, object_mapper, mapper, column_property, contains_eager, \
+        relationship
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.sql import exists, union
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exc import InvalidRequestError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.types import TypeDecorator
+from sqlalchemy.types import TypeDecorator, BINARY
 from identity import LdapSqlAlchemyIdentityProvider
 from bkr.server.installopts import InstallOptions, global_install_options
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
@@ -29,7 +30,9 @@ import socket
 from xmlrpclib import ProtocolError
 import time
 from kid import Element
-from bkr.server.bexceptions import BeakerException, BX, VMCreationFailedException
+from bkr.server.bexceptions import BeakerException, BX, \
+        VMCreationFailedException, StaleTaskStatusException, \
+        InsufficientSystemPermissions, StaleSystemUserException
 from bkr.server.enum import DeclEnum
 from bkr.server.helpers import *
 from bkr.server.util import unicode_truncate, absolute_url
@@ -48,6 +51,7 @@ import random
 import string
 import cracklib
 import lxml.etree
+import uuid
 import netaddr
 from bkr.common.helpers import Flock, makedirs_ignore, unlink_ignore
 import subprocess
@@ -125,6 +129,7 @@ class TaskResult(DeclEnum):
         ('warn',  u'Warn',  dict(severity=30)),
         ('fail',  u'Fail',  dict(severity=40)),
         ('panic', u'Panic', dict(severity=50)),
+        ('none',  u'None',  dict(severity=15)),
     ]
 
     @classmethod
@@ -204,6 +209,30 @@ class RecipeVirtStatus(DeclEnum):
         ('failed',      u'Failed',      dict()),
     ]
 
+class UUID(TypeDecorator):
+    """
+    Database type for storing UUIDs as BINARY(16).
+    """
+    impl = BINARY
+
+    def __init__(self):
+        super(UUID, self).__init__(length=16)
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        if isinstance(value, uuid.UUID):
+            return value.bytes
+        raise TypeError('Expected UUID but got %r' % value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        return uuid.UUID(bytes=value)
+
+    def is_mutable(self):
+        return False
+
 # A netaddr "dialect" for formatting MAC addresses... this is the most common 
 # format, and is expected by virt-install, so I'm not sure why netaddr doesn't 
 # ship with it...
@@ -280,6 +309,7 @@ system_table = Table('system', metadata,
     Column('mac_address',String(18)),
     Column('loan_id', Integer,
            ForeignKey('tg_user.user_id')),
+    Column('loan_comment', Unicode(1000),),
     Column('release_action', ReleaseAction.db_type()),
     Column('reprovision_distro_tree_id', Integer,
            ForeignKey('distro_tree.id')),
@@ -495,6 +525,18 @@ device_table = Table('device', metadata,
     mysql_engine='InnoDB',
 )
 Index('ix_device_pciid', device_table.c.vendor_id, device_table.c.device_id)
+
+disk_table = Table('disk', metadata,
+    Column('id', Integer, autoincrement=True,
+        nullable=False, primary_key=True),
+    Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
+    Column('model', String(255)),
+    # sizes are in bytes
+    Column('size', BigInteger),
+    Column('sector_size', Integer),
+    Column('phys_sector_size', Integer),
+    mysql_engine='InnoDB',
+)
 
 locked_table = Table('locked', metadata,
     Column('id', Integer, autoincrement=True,
@@ -894,6 +936,8 @@ key_value_int_table = Table('key_value_int', metadata,
 
 job_table = Table('job',metadata,
         Column('id', Integer, primary_key=True),
+        Column('dirty_version', UUID, nullable=False),
+        Column('clean_version', UUID, nullable=False),
         Column('owner_id', Integer,
                 ForeignKey('tg_user.user_id'), index=True),
         Column('whiteboard',Unicode(2000)),
@@ -917,6 +961,8 @@ job_table = Table('job',metadata,
         Column('ktasks', Integer, default=0),
         mysql_engine='InnoDB',
 )
+# for fast dirty_version != clean_version comparisons:
+Index('ix_job_dirty_clean_version', job_table.c.dirty_version, job_table.c.clean_version)
 
 job_cc_table = Table('job_cc', metadata,
         Column('job_id', Integer, ForeignKey('job.id', ondelete='CASCADE',
@@ -1274,7 +1320,7 @@ rendered_kickstart_table = Table('rendered_kickstart', metadata,
 
 task_table = Table('task',metadata,
         Column('id', Integer, primary_key=True),
-        Column('name', Unicode(2048)),
+        Column('name', Unicode(255), unique=True),
         Column('rpm', Unicode(2048)),
         Column('path', Unicode(4096)),
         Column('description', Unicode(2048)),
@@ -1737,7 +1783,7 @@ class System(SystemObject):
                        model=None, type=SystemType.machine, serial=None, vendor=None,
                        owner=None, lab_controller=None, lender=None,
                        hypervisor=None, loaned=None, memory=None,
-                       kernel_type=None):
+                       kernel_type=None, cpu=None):
         super(System, self).__init__()
         self.fqdn = fqdn
         self.status = status
@@ -1754,7 +1800,8 @@ class System(SystemObject):
         self.loaned = loaned
         self.memory = memory
         self.kernel_type = kernel_type
-    
+        self.cpu = cpu
+
     def to_xml(self, clone=False):
         """ Return xml describing this system """
         fields = dict(
@@ -2010,6 +2057,7 @@ class System(SystemObject):
         return False
 
     def can_admin(self,user=None):
+        # XXX Refactor this out, use is_admin() instead.
         if user:
             if user == self.owner or user.is_admin() or self.is_admin(user=user):
                 return True
@@ -2034,10 +2082,64 @@ class System(SystemObject):
                 return True
         return False
 
+    def change_loan(self, user_name, comment=None, service='WEBUI'):
+        """Changes the current system loan
+
+        change_loan() updates the user a system is loaned to, by
+        either adding a new loanee, changing the existing to another,
+        or by removing the existing loanee. It also changes the comment
+        associated with the loan.
+
+        It checks all permissions that are needed and
+        updates SystemActivity.
+
+        Returns the user holding the loan.
+        """
+        def _update_loanee():
+            if user != self.loaned:
+                activity = SystemActivity(identity.current.user, service,
+                    u'Changed', u'Loaned To', u'%s' % self.loaned if self.loaned else '' ,
+                    u'%s' % user if user else '')
+                self.loaned = user
+                self.activity.append(activity)
+
+        loaning_to = user_name
+        if loaning_to:
+            user = User.by_user_name(loaning_to)
+            # This is an error condition
+            if not user:
+                raise ValueError('user name %s is invalid' % loaning_to)
+        else:
+            user = None
+
+        # This implies a Change to another user
+        if self.loaned and loaning_to:
+            if self.is_admin():
+                _update_loanee()
+            else:
+                raise BX(_("Insufficient permissions to change loanee of system"))
+        # This implies a Return
+        elif self.loaned and not loaning_to:
+            # Check permission
+            if self.current_loan(identity.current.user):
+                # Clear any existing comments
+                _update_loanee()
+                comment = None
+            else:
+                raise BX(_("Insufficient permissions to return loan"))
+        # This is a new loan
+        elif not self.loaned and loaning_to:
+            # Check permission
+            if self.is_admin():
+                _update_loanee()
+            else:
+                raise BX(_("Insufficient permissions to create loan"))
+        self._update_loan_comment(comment)
+        return loaning_to if loaning_to else ''
+
     def current_loan(self, user=None):
         if user and self.loaned:
             if self.loaned == user or \
-               self.owner  == user or \
                self.is_admin():
                 return True
         return False
@@ -2055,6 +2157,29 @@ class System(SystemObject):
                 if group in self.groups:
                     return True
 
+    def _update_loan_comment(self, comment=None, service=u'WEBUI'):
+        """Updates the comment associated with a loan
+
+        Checks permissions and adds SystemActivity entry.
+        """
+        if not self.loaned and comment:
+            raise BX(_(u'Cannot add a loan comment without a current loan'))
+
+        def _update_comment():
+            if self.loan_comment != comment:
+                activity = SystemActivity(identity.current.user, service,
+                    u'Changed', u'Loan Comment', u'%s' % self.loan_comment if
+                    self.loan_comment else '' , u'%s' % comment if
+                    comment else '')
+                self.activity.append(activity)
+                self.loan_comment = comment
+        if self.can_admin(identity.current.user):
+            _update_comment()
+        # This is the case when returning a loan by a loanee
+        elif not self.loaned and not comment:
+            _update_comment()
+        else:
+            raise BX(_('Insufficient permissions to change loan comment'))
 
     def is_available(self,user=None):
         """
@@ -2117,7 +2242,7 @@ class System(SystemObject):
     def get_update_method(self,obj_str):
         methods = dict ( Cpu = self.updateCpu, Arch = self.updateArch, 
                          Devices = self.updateDevices, Numa = self.updateNuma,
-                         Hypervisor = self.updateHypervisor, )
+                         Hypervisor = self.updateHypervisor, Disk = self.updateDisk)
         return methods[obj_str]
 
     def update_legacy(self, inventory):
@@ -2249,6 +2374,30 @@ class System(SystemObject):
                         service=u'XMLRPC', action=u'Added',
                         field_name=u'Arch', old_value=None,
                         new_value=new_arch.arch))
+
+    def updateDisk(self, diskinfo):
+        currentDisks = []
+        self.disks = getattr(self, 'disks', [])
+
+        for disk in diskinfo['Disks']:
+            disk = Disk(**disk)
+            if disk not in self.disks:
+                self.disks.append(disk)
+                self.activity.append(SystemActivity(
+                        user=identity.current.user,
+                        service=u'XMLRPC', action=u'Added',
+                        field_name=u'Disk', old_value=None,
+                        new_value=disk.size))
+            currentDisks.append(disk)
+
+        for disk in self.disks:
+            if disk not in currentDisks:
+                self.disks.remove(disk)
+                self.activity.append(SystemActivity(
+                        user=identity.current.user,
+                        service=u'XMLRPC', action=u'Removed',
+                        field_name=u'Disk', old_value=disk.size,
+                        new_value=None))
 
     def updateDevices(self, deviceinfo):
         currentDevices = []
@@ -2483,6 +2632,7 @@ class System(SystemObject):
         # uninterrupted run of aborted recipes leading up to this one, with 
         # at least two different STABLE distros?
         # XXX this query is stupidly big, I need to do something about it
+        session.flush()
         status_change_subquery = session.query(func.max(SystemActivity.created))\
             .filter(and_(
                 SystemActivity.system_id == self.id,
@@ -2512,18 +2662,19 @@ class System(SystemObject):
         if user is None:
             user = identity.current.user
         if self.user is not None and self.user == user:
-            raise BX(_(u'User %s has already reserved system %s')
-                    % (user, self))
+            raise StaleSystemUserException(_(u'User %s has already reserved '
+                'system %s') % (user, self))
         if not self.can_share(user):
-            raise BX(_(u'User %s cannot reserve system %s')
-                    % (user, self))
+            raise InsufficientSystemPermissions(_(u'User %s cannot '
+                'reserve system %s') % (user, self))
         # Atomic operation to reserve the system
         session.flush()
         if session.connection(System).execute(system_table.update(
                 and_(system_table.c.id == self.id,
                      system_table.c.user_id == None)),
                 user_id=user.user_id).rowcount != 1:
-            raise BX(_(u'System %r is already reserved') % self)
+            raise StaleSystemUserException(_(u'System %r is already '
+                'reserved') % self)
         self.user = user # do it here too, so that the ORM is aware
         reservation = Reservation(user=user, type=reservation_type)
         self.reservations.append(reservation)
@@ -2552,6 +2703,7 @@ class System(SystemObject):
                      reservation_table.c.finish_time == None)),
                 finish_time=datetime.utcnow()).rowcount != 1:
             raise BX(_(u'System does not have an open reservation'))
+        session.expire(reservation, ['finish_time'])
         old_user = self.user
         self.user = None
         self.action_release(service=service)
@@ -2828,17 +2980,21 @@ class LabController(SystemObject):
             all = cls.query.filter_by(removed=None)
         return [(lc.id, lc.fqdn) for lc in all]
 
-    # XXX this is a bit sad... RHEV data center names must be <40 chars and
-    # cannot contain periods, so we have to munge the fqdn
-    @property
-    def data_center_name(self):
-        return self.fqdn.replace('.', '_')[:40]
-    @classmethod
-    def by_data_center_name(cls, data_center):
-        for lc in cls.query:
-            if lc.data_center_name == data_center:
-                return lc
-        return None
+class LabControllerDataCenter(DeclBase, MappedObject):
+    """
+    A mapping from a lab controller to an oVirt data center.
+    """
+    __tablename__ = 'lab_controller_data_center'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+
+    id = Column(Integer, autoincrement=True,
+            nullable=False, primary_key=True)
+    lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
+            name='lab_controller_data_center_lab_controller_id_fk'),
+            nullable=False)
+    lab_controller = relationship(LabController, backref='data_centers')
+    data_center = Column(Unicode(255), nullable=False)
+    storage_domain = Column(Unicode(255))
 
 
 class Watchdog(MappedObject):
@@ -2963,6 +3119,12 @@ class DeviceClass(SystemObject):
 class Device(SystemObject):
     pass
 
+class Disk(SystemObject):
+    def __init__(self, size=None, sector_size=None, phys_sector_size=None, model=None):
+        self.size = int(size)
+        self.sector_size = int(sector_size)
+        self.phys_sector_size = int(phys_sector_size)
+        self.model = model
 
 class Locked(MappedObject):
     def __init__(self, name=None):
@@ -3632,6 +3794,24 @@ class TaskBase(MappedObject):
         """
         current_status = self.status
         if current_status != new_status:
+            # Sanity check to make sure the status never goes backwards.
+            if isinstance(self, (Recipe, RecipeTask)) and \
+                    ((new_status.queued and not current_status.queued) or \
+                     (not new_status.finished and current_status.finished)):
+                raise ValueError('Invalid state transition for %s: %s -> %s'
+                        % (self.t_id, current_status, new_status))
+            # Use a conditional UPDATE to make sure we are really working from 
+            # the latest database state.
+            # The .base_mapper bit here is so we can get from MachineRecipe to 
+            # Recipe, which is needed due to the limitations of .update() 
+            if session.query(object_mapper(self).base_mapper)\
+                    .filter_by(id=self.id, status=current_status)\
+                    .update({'status': new_status}, synchronize_session=False) \
+                    != 1:
+                raise StaleTaskStatusException(
+                        'Status for %s updated in another transaction'
+                        % self.t_id)
+            # update the ORM session state as well
             self.status = new_status
             return True
         else:
@@ -3725,6 +3905,8 @@ class Job(TaskBase):
         self.whiteboard = whiteboard
         self.retention_tag = retention_tag
         self.product = product
+        self.dirty_version = uuid.uuid4()
+        self.clean_version = self.dirty_version
 
     stop_types = ['abort','cancel']
     max_by_whiteboard = 20
@@ -3970,7 +4152,8 @@ class Job(TaskBase):
 
     @classmethod
     def find_jobs(cls, query=None, tag=None, complete_days=None, family=None,
-        product=None, include_deleted=False, include_to_delete=False, **kw):
+        product=None, include_deleted=False, include_to_delete=False,
+        owner=None, **kw):
         """Return a filtered job query
 
         Does what it says. Also helps searching for expired jobs
@@ -4011,6 +4194,13 @@ class Job(TaskBase):
                 query = cls.by_product(product,query)
             except NoResultFound:
                 err_msg = _('Product is invalid: %s') % product
+                log.exception(err_msg)
+                raise BX(err_msg)
+        if owner:
+            try:
+                query = cls.by_owner(owner, query)
+            except NoResultFound:
+                err_msg = _('Owner is invalid: %s') % owner
                 log.exception(err_msg)
                 raise BX(err_msg)
         return query
@@ -4170,19 +4360,25 @@ class Job(TaskBase):
 
     def cancel(self, msg=None):
         """
-        Method to cancel all recipesets for this job.
+        Method to cancel all unfinished tasks in this job.
         """
         for recipeset in self.recipesets:
-            recipeset._cancel(msg)
-        self.update_status()
+            for recipe in recipeset.recipes:
+                for task in recipe.tasks:
+                    if not task.is_finished():
+                        task._abort_cancel(TaskStatus.cancelled, msg)
+        self._mark_dirty()
 
     def abort(self, msg=None):
         """
-        Method to abort all recipesets for this job.
+        Method to abort all unfinished tasks in this job.
         """
         for recipeset in self.recipesets:
-            recipeset._abort(msg)
-        self.update_status()
+            for recipe in recipeset.recipes:
+                for task in recipe.tasks:
+                    if not task.is_finished():
+                        task._abort_cancel(TaskStatus.aborted, msg)
+        self._mark_dirty()
 
     def task_info(self):
         """
@@ -4209,21 +4405,19 @@ class Job(TaskBase):
                 yield recipe
     all_recipes = property(all_recipes)
 
-    def _bubble_up(self):
-        """
-        Bubble Status updates up the chain.
-        """
+    def update_status(self):
         self._update_status()
+        self._mark_clean()
 
-    def _bubble_down(self):
-        """
-        Bubble Status updates down the chain.
-        """
-        for child in self.recipesets:
-            child._bubble_down()
-        self._update_status()
+    def _mark_dirty(self):
+        self.dirty_version = uuid.uuid4()
 
-    update_status = _bubble_down
+    def _mark_clean(self):
+        self.clean_version = self.dirty_version
+
+    @property
+    def is_dirty(self):
+        return (self.dirty_version != self.clean_version)
 
     def _update_status(self):
         """
@@ -4236,6 +4430,7 @@ class Job(TaskBase):
         max_result = TaskResult.min()
         min_status = TaskStatus.max()
         for recipeset in self.recipesets:
+            recipeset._update_status()
             self.ptasks += recipeset.ptasks
             self.wtasks += recipeset.wtasks
             self.ftasks += recipeset.ftasks
@@ -4244,9 +4439,9 @@ class Job(TaskBase):
                 min_status = recipeset.status
             if recipeset.result.severity > max_result.severity:
                 max_result = recipeset.result
-        self._change_status(min_status)
+        status_changed = self._change_status(min_status)
         self.result = max_result
-        if self.is_finished():
+        if status_changed and self.is_finished():
             # Send email notification
             mail.job_notify(self)
 
@@ -4530,58 +4725,27 @@ class RecipeSet(TaskBase):
 
     def cancel(self, msg=None):
         """
-        Method to cancel all recipes in this recipe set.
+        Method to cancel all unfinished tasks in this recipe set.
         """
-        self._cancel(msg)
-        self.update_status()
-
-    def _cancel(self, msg=None):
-        """
-        Method to cancel all recipes in this recipe set.
-        """ 
-        self._change_status(TaskStatus.cancelled)
         for recipe in self.recipes:
-            recipe._cancel(msg)
+            for task in recipe.tasks:
+                if not task.is_finished():
+                    task._abort_cancel(TaskStatus.cancelled, msg)
+        self.job._mark_dirty()
 
     def abort(self, msg=None):
         """
-        Method to abort all recipes in this recipe set.
+        Method to abort all unfinished tasks in this recipe set.
         """
-        self._abort(msg)
-        self.update_status()
-
-    def _abort(self, msg=None):
-        """
-        Method to abort all recipes in this recipe set.
-        """
-        self._change_status(TaskStatus.aborted)
         for recipe in self.recipes:
-            recipe._abort(msg)
+            for task in recipe.tasks:
+                if not task.is_finished():
+                    task._abort_cancel(TaskStatus.aborted, msg)
+        self.job._mark_dirty()
 
-    def update_status(self):
-        """
-        Update number of passes, failures, warns, panics..
-        """
-        for child in self.recipes:
-            child._bubble_down()
-        self._update_status()
-        self.job._bubble_up()
-
-    def _bubble_up(self):
-        """
-        Bubble Status updates up the chain.
-        """
-        self._update_status()
-        # we should be able to add some logic to not call job._bubble_up() if our status+result didn't change.
-        self.job._bubble_up()
-
-    def _bubble_down(self):
-        """
-        Bubble Status updates down the chain.
-        """
-        for child in self.recipes:
-            child._bubble_down()
-        self._update_status()
+    @property
+    def is_dirty(self):
+        return self.job.is_dirty
 
     def _update_status(self):
         """
@@ -4594,6 +4758,7 @@ class RecipeSet(TaskBase):
         max_result = TaskResult.min()
         min_status = TaskStatus.max()
         for recipe in self.recipes:
+            recipe._update_status()
             self.ptasks += recipe.ptasks
             self.wtasks += recipe.wtasks
             self.ftasks += recipe.ftasks
@@ -4602,7 +4767,7 @@ class RecipeSet(TaskBase):
                 min_status = recipe.status
             if recipe.result.severity > max_result.severity:
                 max_result = recipe.result
-        self._change_status(min_status)
+        status_changed = self._change_status(min_status)
         self.result = max_result
 
         # Return systems if recipeSet finished
@@ -4714,7 +4879,9 @@ class Recipe(TaskBase):
     @property
     def link(self):
         """ Return a link to this recipe. """
-        return make_link(url='/recipes/%s' % self.id, text=self.t_id)
+        link = make_link(url='/recipes/%s' % self.id, text=self.t_id)
+        link.attrib['class'] += ' recipe-id'
+        return link
 
     def filepath(self):
         """
@@ -4962,41 +5129,21 @@ class Recipe(TaskBase):
         """
         Move from Processed -> Queued
         """
-        if session.connection(Recipe).execute(recipe_table.update(
-          and_(recipe_table.c.id==self.id,
-               recipe_table.c.status==TaskStatus.processed)),
-          status=TaskStatus.queued).rowcount == 1:
-            self._queue()
-            self.update_status()
-        else:
-            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
-
-    def _queue(self):
-        """
-        Move from Processed -> Queued
-        """
         for task in self.tasks:
-            task._queue()
+            task._change_status(TaskStatus.queued)
+        self.recipeset.job._mark_dirty()
+        # purely as an optimisation
+        self._change_status(TaskStatus.queued)
 
     def process(self):
         """
         Move from New -> Processed
         """
-        if session.connection(Recipe).execute(recipe_table.update(
-          and_(recipe_table.c.id==self.id,
-               recipe_table.c.status==TaskStatus.new)),
-          status=TaskStatus.processed).rowcount == 1:
-            self._process()
-            self.update_status()
-        else:
-            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
-
-    def _process(self):
-        """
-        Move from New -> Processed
-        """
         for task in self.tasks:
-            task._process()
+            task._change_status(TaskStatus.processed)
+        self.recipeset.job._mark_dirty()
+        # purely as an optimisation
+        self._change_status(TaskStatus.processed)
 
     def _link_rpms(self, dst):
         """
@@ -5058,100 +5205,43 @@ class Recipe(TaskBase):
         """
         Move from Queued -> Scheduled
         """
-        if session.connection(Recipe).execute(recipe_table.update(
-          and_(recipe_table.c.id==self.id,
-               recipe_table.c.status==TaskStatus.queued)),
-          status=TaskStatus.scheduled).rowcount == 1:
-            self._schedule()
-            self.update_status()
-        else:
-            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
-
-    def _schedule(self):
-        """
-        Move from Processed -> Scheduled
-        """
         for task in self.tasks:
-            task._schedule()
+            task._change_status(TaskStatus.scheduled)
+        self.recipeset.job._mark_dirty()
+        # purely as an optimisation
+        self._change_status(TaskStatus.scheduled)
 
     def waiting(self):
         """
         Move from Scheduled to Waiting
         """
-        if session.connection(Recipe).execute(recipe_table.update(
-          and_(recipe_table.c.id==self.id,
-               recipe_table.c.status==TaskStatus.scheduled)),
-          status=TaskStatus.waiting).rowcount == 1:
-            self._waiting()
-            self.update_status()
-        else:
-            raise BX(_('Invalid state transition for Recipe ID %s' % self.id))
-
-    def _waiting(self):
-        """
-        Move from Scheduled to Waiting
-        """
         for task in self.tasks:
-            task._waiting()
+            task._change_status(TaskStatus.waiting)
+        self.recipeset.job._mark_dirty()
+        # purely as an optimisation
+        self._change_status(TaskStatus.waiting)
 
     def cancel(self, msg=None):
         """
-        Method to cancel all tasks in this recipe.
+        Method to cancel all unfinished tasks in this recipe.
         """
-        self._cancel(msg)
-        self.update_status()
-
-    def _cancel(self, msg=None):
-        """
-        Method to cancel all tasks in this recipe.
-        """
-        self._change_status(TaskStatus.cancelled)
         for task in self.tasks:
-            task._cancel(msg)
+            if not task.is_finished():
+                task._abort_cancel(TaskStatus.cancelled, msg)
+        self.recipeset.job._mark_dirty()
 
     def abort(self, msg=None):
         """
-        Method to abort all tasks in this recipe.
+        Method to abort all unfinished tasks in this recipe.
         """
-        self._abort(msg)
-        self.update_status()
-        session.flush() # XXX bad
-        if getattr(self.resource, 'system', None) and \
-                get('beaker.reliable_distro_tag', None) in self.distro_tree.distro.tags:
-            self.resource.system.suspicious_abort()
-
-    def _abort(self, msg=None):
-        """
-        Method to abort all tasks in this recipe.
-        """
-        self._change_status(TaskStatus.aborted)
         for task in self.tasks:
-            task._abort(msg)
+            if not task.is_finished():
+                task._abort_cancel(TaskStatus.aborted, msg)
+        self.recipeset.job._mark_dirty()
 
-    def update_status(self):
-        """
-        Update number of passes, failures, warns, panics..
-        """
-        for child in self.tasks:
-            child._bubble_down()
-        self._update_status()
-        self.recipeset._bubble_up()
-
-    def _bubble_up(self):
-        """
-        Bubble Status updates up the chain.
-        """
-        self._update_status()
-        # we should be able to add some logic to not call recipeset._bubble_up() if our status+result didn't change.
-        self.recipeset._bubble_up()
-
-    def _bubble_down(self):
-        """
-        Bubble Status updates down the chain.
-        """
-        for child in self.tasks:
-            child._bubble_down()
-        self._update_status()
+    @property
+    def is_dirty(self):
+        return self.recipeset.job.is_dirty
 
     def _update_status(self):
         """
@@ -5166,6 +5256,7 @@ class Recipe(TaskBase):
         min_status = TaskStatus.max()
         # I think this loop could be replaced with some sql which would be more efficient.
         for task in self.tasks:
+            task._update_status()
             if task.is_finished():
                 if task.result == TaskResult.pass_:
                     self.ptasks += 1
@@ -5179,7 +5270,9 @@ class Recipe(TaskBase):
                 min_status = task.status
             if task.result.severity > max_result.severity:
                 max_result = task.result
-        self._change_status(min_status)
+        if self.status.finished and not min_status.finished:
+            min_status = self._fix_zombie_tasks()
+        status_changed = self._change_status(min_status)
         self.result = max_result
 
         # Record the start of this Recipe.
@@ -5190,7 +5283,35 @@ class Recipe(TaskBase):
         if self.start_time and not self.finish_time and self.is_finished():
             # Record the completion of this Recipe.
             self.finish_time = datetime.utcnow()
+
+        if status_changed and self.is_finished():
             metrics.increment('counters.recipes_%s' % self.status.name)
+            if self.status == TaskStatus.aborted and \
+                    getattr(self.resource, 'system', None) and \
+                    get('beaker.reliable_distro_tag', None) in self.distro_tree.distro.tags:
+                self.resource.system.suspicious_abort()
+
+        if self.is_finished():
+            # If we have any guests which haven't started, kill them now 
+            # because there is no way they can ever start.
+            for guest in getattr(self, 'guests', []):
+                if (not guest.is_finished() and
+                        guest.watchdog and not guest.watchdog.kill_time):
+                    guest.abort(msg='Aborted: host %s finished but guest never started'
+                            % self.t_id)
+
+    def _fix_zombie_tasks(self):
+        # It's not possible to get into this state in recent version of Beaker, 
+        # but very old recipes may be finished while still having tasks that 
+        # are running. We don't want to restart the recipe though, so we need 
+        # to kill the zombie tasks.
+        log.debug('Fixing zombie tasks in %s', self.t_id)
+        assert self.is_finished()
+        assert not self.watchdog
+        for task in self.tasks:
+            if task.status.severity < self.status.severity:
+                task._change_status(self.status)
+        return self.status
 
     def provision(self):
         if not self.harness_repo():
@@ -5288,12 +5409,15 @@ class Recipe(TaskBase):
             self.tasks[0].start()
 
     def cleanup(self):
-        log.debug('Removing watchdog and cleaning up for recipe %s', self.id)
+        # Note that this may be called *many* times for a recipe, even when it 
+        # has already been cleaned up, so we have to handle that gracefully 
+        # (and cheaply!)
         self.destroyRepo()
         if self.resource:
             self.resource.release()
         if self.watchdog:
             session.delete(self.watchdog)
+            self.watchdog = None
 
     def task_info(self):
         """
@@ -5312,6 +5436,26 @@ class Recipe(TaskBase):
 # so many xmlrpc calls.
 #                    subtask_id_list = ["T:%s" % t.id for t in self.tasks],
                    )
+
+    def extend(self, kill_time):
+        """
+        Extend the watchdog by kill_time seconds
+        """
+        if not self.watchdog:
+            raise BX(_('No watchdog exists for recipe %s' % self.id))
+        self.watchdog.kill_time = datetime.utcnow() + timedelta(
+                                                              seconds=kill_time)
+        return self.status_watchdog()
+
+    def status_watchdog(self):
+        """
+        Return the number of seconds left on the current watchdog if it exists.
+        """
+        if self.watchdog:
+            delta = self.watchdog.kill_time - datetime.utcnow()
+            return delta.seconds + (86400 * delta.days)
+        else:
+            return False
 
     @property
     def all_tasks(self):
@@ -5379,7 +5523,7 @@ class GuestRecipe(Recipe):
     systemtype = 'Virtual'
     def to_xml(self, clone=False, from_recipeset=False, from_machine=False):
         recipe = xmldoc.createElement("guestrecipe")
-        recipe.setAttribute("guestname", "%s" % self.guestname)
+        recipe.setAttribute("guestname", "%s" % (self.guestname or ""))
         recipe.setAttribute("guestargs", "%s" % self.guestargs)
         if self.resource and self.resource.mac_address and not clone:
             recipe.setAttribute("mac_address", "%s" % self.resource.mac_address)
@@ -5428,13 +5572,8 @@ class MachineRecipe(Recipe):
         """
         Decide whether this recipe can be run as a virt guest
         """
-        # oVirt is i386/x86_64 only but Beaker's own support
-        # is currently only for x86_64
-        if self.distro_tree.arch.arch != u'x86_64':
-            return RecipeVirtStatus.precluded
-        # RHEL3 lacks virtio (XXX hardcoding this here is not great)
-        if self.distro_tree.distro.osversion.osmajor.osmajor == \
-                u'RedHatEnterpriseLinux3':
+        # oVirt is i386/x86_64 only
+        if self.distro_tree.arch.arch not in [u'i386', u'x86_64']:
             return RecipeVirtStatus.precluded
         # Can't run VMs in a VM
         if self.guests:
@@ -5509,7 +5648,7 @@ class RecipeTask(TaskBase):
     """
     This holds the results/status of the task being executed.
     """
-    result_types = ['pass_','warn','fail','panic']
+    result_types = ['pass_','warn','fail','panic', 'result_none']
     stop_types = ['stop','abort','cancel']
 
     def __init__(self, task):
@@ -5610,87 +5749,22 @@ class RecipeTask(TaskBase):
         return [mylog.dict for mylog in self.logs] + \
                sum([result.all_logs for result in self.results], [])
 
-    def set_status(self, value):
-        self._status = value
-
-
-    def _bubble_up(self):
-        """
-        Bubble Status updates up the chain.
-        """
-        self._update_status()
-        # we should be able to add some logic to not call recipe._bubble_up() if our status+result didn't change.
-        self.recipe._bubble_up()
-
-    update_status = _bubble_up
-
-    def _bubble_down(self):
-        """
-        Bubble Status updates down the chain.
-        """
-        self._update_status()
+    @property
+    def is_dirty(self):
+        return False
 
     def _update_status(self):
         """
         Update number of passes, failures, warns, panics..
         """
-        max_result = TaskResult.min()
-        for result in self.results:
-            if result.result.severity > max_result.severity:
-                max_result = result.result
-        self.result = max_result
-
-    def queue(self):
-        """
-        Moved from New -> Queued
-        """
-        self._queue()
-        self.update_status()
-
-    def _queue(self):
-        """
-        Moved from New -> Queued
-        """
-        self._change_status(TaskStatus.queued)
-
-    def process(self):
-        """
-        Moved from Queued -> Processed
-        """
-        self._process()
-        self.update_status()
-
-    def _process(self):
-        """
-        Moved from Queued -> Processed
-        """
-        self._change_status(TaskStatus.processed)
-
-    def schedule(self):
-        """
-        Moved from Processed -> Scheduled
-        """
-        self._schedule()
-        self.update_status()
-
-    def _schedule(self):
-        """
-        Moved from Processed -> Scheduled
-        """
-        self._change_status(TaskStatus.scheduled)
-
-    def waiting(self):
-        """
-        Moved from Scheduled -> Waiting
-        """
-        self._waiting()
-        self.update_status()
-
-    def _waiting(self):
-        """
-        Moved from Scheduled -> Waiting
-        """
-        self._change_status(TaskStatus.waiting)
+        # The self.result == TaskResult.new condition is just an optimisation 
+        # to avoid constantly recomputing the result after the task is finished
+        if self.is_finished() and self.result == TaskResult.new:
+            max_result = TaskResult.min()
+            for result in self.results:
+                if result.result.severity > max_result.severity:
+                    max_result = result.result
+            self.result = max_result
 
     def start(self, watchdog_override=None):
         """
@@ -5699,6 +5773,8 @@ class RecipeTask(TaskBase):
          of what the tasks default time is.  This should be defined in number
          of seconds
         """
+        if self.is_finished():
+            raise BX(_('Cannot restart finished task'))
         if not self.recipe.watchdog:
             raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
         if not self.start_time:
@@ -5711,28 +5787,20 @@ class RecipeTask(TaskBase):
             # add in 30 minutes at a minimum
             self.recipe.watchdog.kill_time = datetime.utcnow() + timedelta(
                                                     seconds=self.task.avg_time + 1800)
-        self.update_status()
+        self.recipe.recipeset.job._mark_dirty()
         return True
 
     def extend(self, kill_time):
         """
         Extend the watchdog by kill_time seconds
         """
-        if not self.recipe.watchdog:
-            raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
-        self.recipe.watchdog.kill_time = datetime.utcnow() + timedelta(
-                                                              seconds=kill_time)
-        return self.status_watchdog()
+        return self.recipe.extend(kill_time)
 
     def status_watchdog(self):
         """
         Return the number of seconds left on the current watchdog if it exists.
         """
-        if self.recipe.watchdog:
-            delta = self.recipe.watchdog.kill_time - datetime.utcnow()
-            return delta.seconds + (86400 * delta.days)
-        else:
-            return False
+        return self.recipe.status_watchdog()
 
     def stop(self, *args, **kwargs):
         """
@@ -5745,7 +5813,7 @@ class RecipeTask(TaskBase):
         if self.start_time and not self.finish_time:
             self.finish_time = datetime.utcnow()
         self._change_status(TaskStatus.completed)
-        self.update_status()
+        self.recipe.recipeset.job._mark_dirty()
         return True
 
     def owner(self):
@@ -5756,45 +5824,29 @@ class RecipeTask(TaskBase):
         """
         Cancel this task
         """
-        self._cancel(msg)
-        self.update_status()
-
-    def _cancel(self, msg=None):
-        """
-        Cancel this task
-        """
-        return self._abort_cancel(TaskStatus.cancelled, msg)
+        self._abort_cancel(TaskStatus.cancelled, msg)
+        self.recipe.recipeset.job._mark_dirty()
 
     def abort(self, msg=None):
         """
         Abort this task
         """
-        self._abort(msg)
-        self.update_status()
-    
-    def _abort(self, msg=None):
-        """
-        Abort this task
-        """
-        return self._abort_cancel(TaskStatus.aborted, msg)
-    
+        self._abort_cancel(TaskStatus.aborted, msg)
+        self.recipe.recipeset.job._mark_dirty()
+
     def _abort_cancel(self, status, msg=None):
         """
         cancel = User instigated
         abort  = Auto instigated
         """
-        # Only record an abort/cancel on tasks that are New, Queued, Scheduled 
-        # or Running.
-        if not self.is_finished():
-            if self.start_time:
-                self.finish_time = datetime.utcnow()
-            self._change_status(status)
-            self.results.append(RecipeTaskResult(recipetask=self,
-                                       path=u'/',
-                                       result=TaskResult.warn,
-                                       score=0,
-                                       log=msg))
-        return True
+        if self.start_time:
+            self.finish_time = datetime.utcnow()
+        self._change_status(status)
+        self.results.append(RecipeTaskResult(recipetask=self,
+                                   path=u'/',
+                                   result=TaskResult.warn,
+                                   score=0,
+                                   log=msg))
 
     def pass_(self, path, score, summary):
         """
@@ -5819,6 +5871,9 @@ class RecipeTask(TaskBase):
         Record a panic result 
         """
         return self._result(TaskResult.panic, path, score, summary)
+
+    def result_none(self, path, score, summary):
+        return self._result(TaskResult.none, path, score, summary)
 
     def _result(self, result, path, score, summary):
         """
@@ -6095,6 +6150,7 @@ class RecipeResource(MappedObject):
                 from_obj=left_side.outerjoin(right_side,
                     onclause=left_side.c.mac_address + 1 == right_side.c.mac_address))\
                 .where(right_side.c.mac_address == None)\
+                .where(left_side.c.mac_address + 1 >= int(base_addr))\
                 .order_by(left_side.c.mac_address).limit(1))
         # The type of (left_side.c.mac_address + 1) comes out as Integer
         # instead of MACAddress, I think it's a sqlalchemy bug :-(
@@ -6136,7 +6192,8 @@ class SystemResource(RecipeResource):
                 reservation_type=u'recipe')
 
     def release(self):
-        if self.reservation.finish_time:
+        # system_resource rows for very old recipes may have no reservation
+        if not self.reservation or self.reservation.finish_time:
             return
         log.debug('Releasing system %s for recipe %s',
             self.system, self.recipe.id)
@@ -6170,8 +6227,13 @@ class VirtResource(RecipeResource):
         self.mac_address = self._lowest_free_mac()
         log.debug('Creating vm with MAC address %s for recipe %s',
                 self.mac_address, self.recipe.id)
+
+        virtio_possible = True
+        if self.recipe.distro_tree.distro.osversion.osmajor.osmajor == "RedHatEnterpriseLinux3":
+            virtio_possible = False
+
         self.lab_controller = manager.create_vm(self.system_name,
-                lab_controllers, self.mac_address)
+                lab_controllers, self.mac_address, virtio_possible)
 
     def release(self):
         try:
@@ -6267,9 +6329,14 @@ class Task(MappedObject):
         with Flock(basepath):
             # Removed --baseurl, if upgrading you will need to manually
             # delete repodata directory before this will work correctly.
-            subprocess.check_call(['createrepo', '-q', '--update',
-                                   '--checksum', 'sha', '.'],
-                                  cwd=basepath)
+            p = subprocess.Popen(['createrepo', '-q', '--update',
+                    '--checksum', 'sha', '.'], cwd=basepath,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            output, unused_err = p.communicate()
+            retcode = p.poll()
+            if retcode:
+                raise ValueError('createrepo failed with exit status %d:\n%s'
+                        % (retcode, output))
 
     def to_dict(self):
         """ return a dict of this object """
@@ -6586,7 +6653,7 @@ class VirtManager(object):
         self.api = None
 
     def __enter__(self):
-        self.api = ovirtsdk.api.API(url=get('ovirt.api_url'),
+        self.api = ovirtsdk.api.API(url=get('ovirt.api_url'), timeout=10,
                 username=get('ovirt.username'), password=get('ovirt.password'),
                 # XXX add some means to specify SSL CA cert
                 insecure=True)
@@ -6596,60 +6663,86 @@ class VirtManager(object):
         self.api, api = None, self.api
         api.disconnect()
 
-    def create_vm(self, name, lab_controllers, mac_address):
+    def create_vm(self, name, lab_controllers, *args, **kwargs):
         if self.api is None:
             raise RuntimeError('Context manager was not entered')
+
+        # Try to create the VM on every cluster that is in an acceptable data center
+        for lab_controller in lab_controllers:
+            for mapping in lab_controller.data_centers:
+                cluster_query = 'datacenter.name=%s' % mapping.data_center
+                clusters = self.api.clusters.list(cluster_query)
+                if mapping.storage_domain:
+                    storage_domains = [self.api.storagedomains.get(mapping.storage_domain)]
+                else:
+                    sd_query = 'datacenter=%s' % mapping.data_center
+                    storage_domains = self.api.storagedomains.list(sd_query)
+                for cluster in clusters:
+                    log.debug('Trying to create vm %s on cluster %s', name, cluster.name)
+                    vm = None
+                    try:
+                        self._create_vm_on_cluster(name, cluster,
+                                storage_domains, *args, **kwargs)
+                    except Exception:
+                        log.exception("Failed to create VM %s on cluster %s",
+                                name, cluster.name)
+                        if vm is not None:
+                            try:
+                                vm.delete()
+                            except Exception:
+                                pass
+                        continue
+                    else:
+                        return lab_controller
+        raise VMCreationFailedException('No clusters successfully created VM %s' % name)
+
+    def _create_vm_on_cluster(self, name, cluster, storage_domains,
+            mac_address=None, virtio_possible=True):
         from ovirtsdk.xml.params import VM, Template, NIC, Network, Disk, \
                 StorageDomains, MAC
         # Default of 1GB memory and 20GB disk
-        memory = ConfigItem.by_name('default_guest_memory').current_value(1024) * 1024**2
-        disk_size = ConfigItem.by_name('default_guest_disk_size').current_value(20) * 1024**3
-        # Try to create the VM on every cluster that is in an acceptable data center
-        cluster_query = ' or '.join('datacenter.name=%s' % lc.data_center_name
-                for lc in lab_controllers)
-        for cluster in self.api.clusters.list(cluster_query):
-            log.debug('Trying to create vm %s on cluster %s', name, cluster.name)
-            vm = None
-            try:
-                vm_definition = VM(name=name, memory=memory, cluster=cluster,
-                        type_='virtio26', template=Template(name='Blank'))
-                vm = self.api.vms.add(vm_definition)
-                nic = NIC(name='eth0', interface='virtio', network=Network(name='rhevm'),
-                        mac=MAC(address=str(mac_address)))
-                vm.nics.add(nic)
-                sd_query = ' or '.join('datacenter=%s' % lc.data_center_name
-                        for lc in lab_controllers)
-                storage_domain_name = get('ovirt.storage_domain')
-                if storage_domain_name:
-                    storage_domains = [self.api.storagedomains.get(storage_domain_name)]
-                else:
-                    storage_domains = self.api.storagedomains.list(sd_query)
-                disk = Disk(storage_domains=StorageDomains(storage_domain=storage_domains),
-                        size=disk_size, type_='data', interface='virtio', format='cow',
-                        bootable=True)
-                vm.disks.add(disk)
+        memory = ConfigItem.by_name(u'default_guest_memory').current_value(1024) * 1024**2
+        disk_size = ConfigItem.by_name(u'default_guest_disk_size').current_value(20) * 1024**3
 
-                # Wait up to twenty seconds(!) for the disk image to be created
-                for _ in range(20):
-                    if self.api.vms.get(name).status.state != 'image_locked':
-                        break
-                    time.sleep(1)
-                state = self.api.vms.get(name).status.state
-                if state == 'image_locked':
-                    raise ValueError('VM %s state %s', name, state)
+        if virtio_possible:
+            nic_interface = "virtio"
+            disk_interface = "virtio"
+        else:
+            # use emulated interface
+            nic_interface = "rtl8139"
+            disk_interface = "ide"
 
-                dc_name = self.api.datacenters.get(id=cluster.data_center.id).name
-                return LabController.by_data_center_name(dc_name)
-            except Exception:
-                log.exception("Failed to create VM %r on %r cluster %r",
-                        name, self, cluster.name)
-                if vm is not None:
-                    try:
-                        vm.delete()
-                    except Exception:
-                        pass
-                continue
-        raise VMCreationFailedException('No clusters successfully created VM %s' % name)
+        vm_definition = VM(name=name, memory=memory, cluster=cluster,
+                type_='server', template=Template(name='Blank'))
+        vm = self.api.vms.add(vm_definition)
+        nic = NIC(name='eth0', interface=nic_interface, network=Network(name='rhevm'),
+                mac=MAC(address=str(mac_address)))
+        vm.nics.add(nic)
+        disk = Disk(storage_domains=StorageDomains(storage_domain=storage_domains),
+                size=disk_size, type_='data', interface=disk_interface, format='cow',
+                bootable=True)
+        vm.disks.add(disk)
+
+        # Wait up to twenty seconds(!) for the disk image to be created.
+        # Check both the vm state and disk state, image creation may not
+        # lock the vms. That should be a RHEV issue, but it doesn't hurt
+        # to check both of them by us.
+        for _ in range(20):
+            vm = self.api.vms.get(name)
+            vm_state = vm.status.state
+            # create disk with param 'name' doesn't work in RHEV 3.0, so just
+            # find the first disk of the vm as we only attached one to it
+            disk_state = vm.disks.list()[0].status.state
+            if vm_state == 'down' and disk_state == "ok":
+                break
+            time.sleep(1)
+        vm = self.api.vms.get(name)
+        vm_state = vm.status.state
+        disk_state = vm.disks.list()[0].status.state
+        if vm_state != 'down':
+            raise ValueError("VM %s's state: %s", name, vm_state)
+        if disk_state != 'ok':
+            raise ValueError("VM %s's disk state: %s", name, disk_state)
 
     def start_install(self, name, distro_tree, kernel_options, lab_controller):
         if self.api is None:
@@ -6705,6 +6798,8 @@ System.mapper = mapper(System, system_table,
                         extension=SystemStatusAttributeExtension()),
                      'devices':relation(Device,
                                         secondary=system_device_map,backref='systems'),
+                     'disks':relation(Disk, backref='system',
+                        cascade='all, delete, delete-orphan'),
                      'arch':relation(Arch,
                                      order_by=[arch_table.c.arch],
                                         secondary=system_arch_map,
@@ -6827,8 +6922,8 @@ CpuFlag.mapper = mapper(CpuFlag, cpu_flag_table)
 Numa.mapper = mapper(Numa, numa_table)
 Device.mapper = mapper(Device, device_table,
        properties = {'device_class': relation(DeviceClass)})
-
 mapper(DeviceClass, device_class_table)
+mapper(Disk, disk_table)
 mapper(Locked, locked_table)
 mapper(PowerType, power_type_table)
 mapper(Power, power_table,

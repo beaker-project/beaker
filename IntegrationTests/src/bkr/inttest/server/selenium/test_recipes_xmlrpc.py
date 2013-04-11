@@ -23,6 +23,8 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
             job = data_setup.create_job_for_recipes(
                     [completed_recipe, incomplete_recipe])
             job.recipesets[0].lab_controller = self.lc
+            data_setup.mark_recipe_running(incomplete_recipe,
+                    system=data_setup.create_system(lab_controller=self.lc))
             data_setup.mark_recipe_complete(completed_recipe,
                     system=data_setup.create_system(lab_controller=self.lc))
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')

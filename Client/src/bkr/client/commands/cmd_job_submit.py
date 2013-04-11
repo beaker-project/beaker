@@ -149,8 +149,6 @@ class Job_Submit(BeakerCommand):
         )
 
     def run(self, *args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         convert  = kwargs.pop("convert", False)
         combine  = kwargs.pop("combine", False)
         debug   = kwargs.pop("debug", False)
@@ -163,7 +161,7 @@ class Job_Submit(BeakerCommand):
         job_schema = lxml.etree.RelaxNG(lxml.etree.parse(
                 pkg_resources.resource_stream('bkr.common', 'schema/beaker-job.rng')))
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         submitted_jobs = []
         is_failed = False
 

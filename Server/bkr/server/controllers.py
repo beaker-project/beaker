@@ -28,6 +28,7 @@ from bkr.server.systems import SystemsController
 from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid
 from bkr.server.widgets import LoanWidget
+from bkr.server.widgets import DoAndConfirmForm
 from bkr.server.widgets import PowerTypeForm
 from bkr.server.widgets import PowerForm
 from bkr.server.widgets import PowerActionHistory
@@ -214,6 +215,7 @@ class Root(RPCRoot):
     power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')
     power_action_form = PowerActionForm(name='power_action')
+    clear_netboot = DoAndConfirmForm()
     power_history = PowerActionHistory()
     system_details = SystemDetails()
     system_activity = SystemHistory()
@@ -496,11 +498,13 @@ class Root(RPCRoot):
                                    [{su.System:{'all':[]}},
                                     {su.Cpu:{'all':[]}},
                                     {su.Device:{'all':[]}},
+                                    {su.Disk:{'all':[]}},
                                     {su.Key:{'all':[]}}]),
                                complete_data = su.System.search.create_complete_search_table(\
                                    [{su.System:{'all':[]}},
                                     {su.Cpu:{'all':[]}},
                                     {su.Device:{'all':[]}},
+                                    {su.Disk:{'all':[]}},
                                     {su.Key:{'all':[]}}]),
                                search_controller=url("/get_search_options"),
                                date_picker = ['system/added'],
@@ -714,15 +718,8 @@ class Root(RPCRoot):
         our_user = identity.current.user
         if system.can_admin(user=our_user):
             options['owner_change_text'] = ' (Change)'
-            options['show_cc'] = True
 
-        options['loan_widget'] = LoanWidget() 
-        if system.current_loan(our_user) and system.is_admin():
-            options['loan_type'] = LoanWidget.RETURN_CHANGE
-        elif system.current_loan(our_user):
-            options['loan_type'] = LoanWidget.RETURN
-        elif system.can_loan(our_user):
-            options['loan_type'] = LoanWidget.LOAN
+        options['loan_widget'] = LoanWidget()
 
         # Has privs and machine is available, can take
         if system.can_share(our_user) and \
@@ -824,6 +821,7 @@ class Root(RPCRoot):
         widgets['provision'] = self.system_provision
         widgets['power'] = self.power_form
         widgets['power_action'] = self.power_action_form
+        widgets['clear_netboot'] = self.clear_netboot
         widgets['power_history'] = self.power_history
 
         return dict(
@@ -1459,6 +1457,9 @@ class Root(RPCRoot):
                 group = Group.by_name(kw['group']['text'])
             except InvalidRequestError:
                 flash(_(u"%s is an Invalid Group" % kw['group']['text']))
+                redirect("/view/%s" % system.fqdn)
+            if group in system.groups:
+                flash(_(u"System '%s' is already in group '%s'" % (system.fqdn, group.group_name)))
                 redirect("/view/%s" % system.fqdn)
             system.groups.append(group)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Group', "", kw['group']['text'])

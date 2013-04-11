@@ -64,9 +64,7 @@ class Workflow_Simple(BeakerWorkflow):
         self.parser.usage = "%%prog %s [options]" % self.normalized_name
 
     def run(self, *args, **kwargs):
-        username = kwargs.get("username", None)
-        password = kwargs.get("password", None)
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
 
         # get all tasks requested
         requestedTasks = self.getTasks(*args, **kwargs)

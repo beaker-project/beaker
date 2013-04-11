@@ -1,0 +1,30 @@
+[checksums]
+LiveOS/squashfs.img = sha256:969b05ef3454f4aaa0097bbef54b41b300ae337ece86023d23b1ac35fa659d71
+images/boot.iso = sha256:3cd2922c0a323e29b958e6c8933b5adf89d6e8f9a90387bdcf33c4ddfcab7f51
+images/product.img = sha256:e9a292fe4f4d2b791600a721688b3254aab3d61d1745d5917d81d5f715006e58
+images/pxeboot/initrd.img = sha256:7d986287a63132197da2ac4b1840b2be70f2679338ac70a0fbe1b22d9de8a539
+images/pxeboot/vmlinuz = sha256:520955effe5b7824c68d087f80f2a6cd874c5825f42d4436f3aab2c0abb42d38
+repodata/repomd.xml = sha256:d1992cfafd2580523d51923ad7eef2eb8661d5dca0af807f2d12530cf1678653
+
+[general]
+arch = x86_64
+family = Red Hat Enterprise Linux
+packages = Packages
+repository = 
+timestamp = 1362589487.790007
+variant = Workstation
+version = 7.0
+
+[images-x86_64]
+boot.iso = images/boot.iso
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+product.img = images/product.img
+
+[images-xen]
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+
+[stage2]
+mainimage = LiveOS/squashfs.img
+

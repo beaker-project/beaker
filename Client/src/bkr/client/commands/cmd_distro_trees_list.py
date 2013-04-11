@@ -174,8 +174,6 @@ class Distro_Trees_List(BeakerCommand):
 
 
     def run(self, *args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         filter = dict( limit    = kwargs.pop("limit", None),
                        name     = kwargs.pop("name", None),
                        treepath = kwargs.pop("treepath", None),
@@ -189,7 +187,7 @@ class Distro_Trees_List(BeakerCommand):
                      )
         format = kwargs['format']
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         distro_trees = self.hub.distrotrees.filter(filter)
         if format == 'json':
             print json.dumps(distro_trees, indent=4)

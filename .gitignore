@@ -16,12 +16,12 @@ Common/setup.py
 Client/build
 Client/build.out
 Client/setup.py
-Client/doc/bkr-*.rst
 LabController/build
 LabController/setup.py
 IntegrationTests/build
 IntegrationTests/setup.py
 documentation/_build
+documentation/man/bkr-*.rst
 *.diff
 selenium.log
 /Tasks/distribution/beaker/dogfood/selenium-server-standalone-2.21.0.jar

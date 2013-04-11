@@ -1,0 +1,24 @@
+[images-i386]
+initrd = images/pxeboot/initrd.img
+diskboot.img = images/diskboot.img
+boot.iso = images/boot.iso
+kernel = images/pxeboot/vmlinuz
+
+[stage2]
+instimage = images/minstg2.img
+mainimage = images/stage2.img
+
+[images-xen]
+initrd = images/xen/initrd.img
+kernel = images/xen/vmlinuz
+
+[general]
+family = Red Hat Enterprise Linux Server
+timestamp = 1352936114.36
+totaldiscs = 1
+label = RHEL-5.9-Server-RC-1.0
+version = 5.9
+discnum = 1
+packagedir = Server
+arch = i386
+

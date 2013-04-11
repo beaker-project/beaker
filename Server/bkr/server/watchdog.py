@@ -39,14 +39,22 @@ class Watchdogs(RPCRoot):
                 object_count=query.count(),
                 list=query)
 
-    @identity.require(identity.in_group("admin"))
+
+    # TODO: future cleanup so that the correct error message
+    # is given to the client code.
+    @identity.require(identity.in_group('admin'))
     @cherrypy.expose
     def extend(self, time):
         '''Allow admins to push watchdog times out after an outage'''
+
         watchdogs = []
         for w in Watchdog.by_status(status=u'active'):
             n_kill_time = w.kill_time + timedelta(seconds=time)
             watchdogs.append("R:%s watchdog moved from %s to %s" % (
                               w.recipe_id, w.kill_time, n_kill_time))
             w.kill_time = n_kill_time
-        return "\n".join(watchdogs)
+
+        if watchdogs:
+            return "\n".join(watchdogs)
+        else:
+            return 'No active watchdogs found'

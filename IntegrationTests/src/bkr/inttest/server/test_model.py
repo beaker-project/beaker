@@ -14,7 +14,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
-        RecipeVirtStatus, MachineRecipe, GuestRecipe
+        RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -146,9 +146,10 @@ class TestBrokenSystemDetection(unittest.TestCase):
         if distro_tree is None:
             distro_tree = data_setup.create_distro_tree(distro_tags=[u'RELEASED'])
         recipe = data_setup.create_recipe(distro_tree=distro_tree)
-        data_setup.create_job_for_recipes([recipe])
+        job = data_setup.create_job_for_recipes([recipe])
         data_setup.mark_recipe_running(recipe, system=self.system)
         recipe.abort()
+        job.update_status()
 
     def test_multiple_suspicious_aborts_triggers_broken_system(self):
         # first aborted recipe shouldn't trigger it
@@ -230,10 +231,19 @@ class TestJob(unittest.TestCase):
         data_setup.mark_job_running(job2, system=system)
         session.flush()
         job.cancel()
+        job.update_status()
         # Test that the previous cancel did not end
         # the current reservation
         self.assert_(system.open_reservation is not None)
 
+    def test_cancel_waiting_job(self):
+        job = data_setup.create_job()
+        data_setup.mark_job_waiting(job)
+        job.cancel()
+        self.assertNotEquals(job.dirty_version, job.clean_version)
+        job.update_status()
+        self.assertEquals(job.status, TaskStatus.cancelled)
+        self.assertEquals(job.result, TaskResult.warn)
 
 class DistroTreeByFilterTest(unittest.TestCase):
 
@@ -998,6 +1008,13 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(excluded not in systems)
         self.assert_(included in systems)
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <cpu><flag op="like" value="%vmx%" /></cpu>
+            </hostRequires>
+            """))
+        self.assert_(excluded not in systems)
+        self.assert_(included in systems)
 
     def test_or_lab_controller(self):
         lc1 = data_setup.create_labcontroller(fqdn=u'lab1')
@@ -1205,6 +1222,14 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(with_module not in systems)
         self.assert_(without_module in systems)
+        # ... or using <not/> is a saner way to do it:
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <not><key_value key="MODULE" /></not>
+            </hostRequires>
+            """))
+        self.assert_(with_module not in systems)
+        self.assert_(without_module in systems)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=729156
     def test_keyvalue_does_not_cause_duplicate_rows(self):
@@ -1349,6 +1374,59 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         self.assert_(with_e1000 in systems)
         self.assert_(with_tg3 in systems)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=766919
+    def test_filtering_by_disk(self):
+        small_disk = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        small_disk.disks[:] = [Disk(size=8000000000,
+                sector_size=512, phys_sector_size=512)]
+        big_disk = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        big_disk.disks[:] = [Disk(size=2000000000000,
+                sector_size=4096, phys_sector_size=4096)]
+        two_disks = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc)
+        two_disks.disks[:] = [
+                Disk(size=500000000000, sector_size=512, phys_sector_size=512),
+                Disk(size=8000000000, sector_size=4096, phys_sector_size=4096)]
+        session.flush()
+
+        # criteria inside the same <disk/> element apply to a single disk
+        # and are AND'ed by default
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <disk>
+                    <size op="&gt;" value="10" units="GB" />
+                    <phys_sector_size op="=" value="4" units="KiB" />
+                </disk>
+            </hostRequires>
+            """))
+        self.assert_(small_disk not in systems)
+        self.assert_(big_disk in systems)
+        self.assert_(two_disks not in systems)
+
+        # separate <disk/> elements can match separate disks
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <disk><size op="&gt;" value="10" units="GB" /></disk>
+                <disk><phys_sector_size op="=" value="4" units="KiB" /></disk>
+            </hostRequires>
+            """))
+        self.assert_(small_disk not in systems)
+        self.assert_(big_disk in systems)
+        self.assert_(two_disks in systems)
+
+        # <not/> combined with a negative filter can be used to filter against 
+        # all disks (e.g. "give me systems with only 512-byte-sector disks")
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <not><disk><sector_size op="!=" value="512" /></disk></not>
+            </hostRequires>
+            """))
+        self.assert_(small_disk in systems)
+        self.assert_(big_disk not in systems)
+        self.assert_(two_disks not in systems)
+
 class OSMajorTest(unittest.TestCase):
 
     def setUp(self):
@@ -1434,7 +1512,7 @@ class RecipeTest(unittest.TestCase):
             data_setup.create_recipe(distro_tree=dt, role=u'CLIENTTWO'),
         ])
         for i in range(3):
-            data_setup.mark_recipe_complete(job.recipesets[0].recipes[i], system=systems[i])
+            data_setup.mark_recipe_running(job.recipesets[0].recipes[i], system=systems[i])
         xml = job.recipesets[0].recipes[0].to_xml(clone=False).toxml()
         self.assert_('<roles>'
                 '<role value="CLIENTONE"><system value="clientone.roles_to_xml"/></role>'
@@ -1460,49 +1538,56 @@ class CheckDynamicVirtTest(unittest.TestCase):
                          RecipeVirtStatus.precluded, msg)
 
     # Virtualisation checks added due to https://bugzilla.redhat.com/show_bug.cgi?id=902659
-    def test_virt_precluded_rhel_3(self):
-        dt = data_setup.create_distro_tree(arch=u'x86_64',
-                                           osmajor=u'RedHatEnterpriseLinux3')
-        recipe = data_setup.create_recipe(dt)
-        data_setup.create_job_for_recipes([recipe])
-        self.assertVirtPrecluded(recipe, "RHEL 3 did not preclude virt")
-
     def test_virt_precluded_guest_recipes(self):
-        dt = data_setup.create_distro_tree(arch=u'x86_64')
-        job = data_setup.create_job(num_guestrecipes=1, distro_tree=dt)
-        recipe = job.recipesets[0].recipes[0]
-        self.assertVirtPrecluded(recipe, "Guest recipe did not preclude virt")
+        for arch in [u"i386", u"x86_64"]:
+            dt = data_setup.create_distro_tree(arch=arch)
+            job = data_setup.create_job(num_guestrecipes=1, distro_tree=dt)
+            recipe = job.recipesets[0].recipes[0]
+            self.assertVirtPrecluded(recipe, "Guest recipe did not preclude virt")
 
     def test_virt_precluded_multihost(self):
-        dt = data_setup.create_distro_tree(arch=u'x86_64')
-        recipe1 = data_setup.create_recipe(dt)
-        recipe2 = data_setup.create_recipe(dt)
-        data_setup.create_job_for_recipes([recipe1, recipe2])
-        self.assertVirtPrecluded(recipe1,
-                                 "Multihost recipeset did not preclude virt")
-        self.assertVirtPrecluded(recipe2,
-                                 "Multihost recipeset did not preclude virt")
+        for arch in [u"i386", u"x86_64"]:
+            dt = data_setup.create_distro_tree(arch=arch)
+            recipe1 = data_setup.create_recipe(dt)
+            recipe2 = data_setup.create_recipe(dt)
+            data_setup.create_job_for_recipes([recipe1, recipe2])
+            self.assertVirtPrecluded(recipe1,
+                                    "Multihost recipeset did not preclude virt")
+            self.assertVirtPrecluded(recipe2,
+                                    "Multihost recipeset did not preclude virt")
 
     def test_virt_precluded_host_requires(self):
-        dt = data_setup.create_distro_tree(arch=u'x86_64')
-        recipe = data_setup.create_recipe(dt)
+        for arch in [u"i386", u"x86_64"]:
+            dt = data_setup.create_distro_tree(arch=arch)
+            recipe = data_setup.create_recipe(dt)
+            recipe.host_requires = u"""
+                <hostRequires>
+                    <system_type op="=" value="Prototype" />
+                </hostRequires>
+            """
+            data_setup.create_job_for_recipes([recipe])
+            self.assertVirtPrecluded(recipe, "Host requires did not preclude virt")
+
+    def test_hypervisor_hostrequires_precludes_virt(self):
+        recipe = data_setup.create_recipe(arch=u'x86_64')
         recipe.host_requires = u"""
             <hostRequires>
-                <system_type op="=" value="Prototype" />
+                <hypervisor value="" />
             </hostRequires>
         """
         data_setup.create_job_for_recipes([recipe])
-        self.assertVirtPrecluded(recipe, "Host requires did not preclude virt")
+        self.assertVirtPrecluded(recipe, "<hypervisor/> did not preclude virt")
 
     # Additional virt check due to https://bugzilla.redhat.com/show_bug.cgi?id=907307
-    def test_virt_possible_x86_64(self):
-        dt = data_setup.create_distro_tree(arch=u'x86_64')
-        recipe = data_setup.create_recipe(dt)
-        data_setup.create_job_for_recipes([recipe])
-        self.assertVirtPossible(recipe, "virt precluded for x86_64")
+    def test_virt_possible_arch(self):
+        for arch in [u"i386", u"x86_64"]:
+            dt = data_setup.create_distro_tree(arch=arch)
+            recipe = data_setup.create_recipe(dt)
+            data_setup.create_job_for_recipes([recipe])
+            self.assertVirtPossible(recipe, "virt precluded for %s" % arch)
 
     def test_virt_precluded_unsupported_arch(self):
-        for arch in [u"i386", u"ppc", u"ppc64", u"s390", u"s390x"]:
+        for arch in [u"ppc", u"ppc64", u"s390", u"s390x"]:
             dt = data_setup.create_distro_tree(arch=arch)
             recipe = data_setup.create_recipe(dt)
             data_setup.create_job_for_recipes([recipe])
@@ -1534,6 +1619,8 @@ class MachineRecipeTest(unittest.TestCase):
         for i in range(2):
             recipes[i].queue()
         recipes[0].schedule()
+        for recipe in recipes:
+            recipe.recipeset.job.update_status()
         return {u'new': len(recipes)-4,  u'processed': 1, u'queued': 1,
                 u'scheduled': 1, u'waiting': 0, u'running': 0}
 
@@ -1609,6 +1696,18 @@ class GuestRecipeTest(unittest.TestCase):
         self.assert_('nfs_location="nfs://something:/somewhere"' in guestxml, guestxml)
         self.assert_('http_location="http://something/somewhere"' in guestxml, guestxml)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=691666
+    def test_guestname(self):
+        job_1 = data_setup.create_job(num_guestrecipes=1)
+        guest_recipe_1 = job_1.recipesets[0].recipes[0].guests[0]
+        job_2 = data_setup.create_job(num_guestrecipes=1, guestname="blueguest")
+        guest_recipe_2 = job_2.recipesets[0].recipes[0].guests[0]
+        session.flush()
+
+        guestxml_1 = guest_recipe_1.to_xml().toxml()
+        guestxml_2 = guest_recipe_2.to_xml().toxml()
+        self.assert_('guestname=""' in guestxml_1, guestxml_1)
+        self.assert_('guestname="blueguest"' in guestxml_2, guestxml_2)
 
 class MACAddressAllocationTest(unittest.TestCase):
 
@@ -1622,6 +1721,7 @@ class MACAddressAllocationTest(unittest.TestCase):
                 [s for s in TaskStatus if s.finished])))
         for rs in running:
             rs.cancel()
+            rs.job.update_status()
 
     def tearDown(self):
         model.VirtManager = self.orig_VirtManager
@@ -1651,6 +1751,7 @@ class MACAddressAllocationTest(unittest.TestCase):
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:02'))
         first_job.cancel()
+        first_job.update_status()
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:00'))
 
@@ -1668,6 +1769,7 @@ class MACAddressAllocationTest(unittest.TestCase):
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:02'))
         first_job.cancel()
+        first_job.update_status()
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:00'))
 
@@ -1685,6 +1787,21 @@ class MACAddressAllocationTest(unittest.TestCase):
         # ... so we mustn't re-use the MAC address yet
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:01'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=912159
+    def test_in_use_below_base_address(self):
+        job = data_setup.create_job(num_guestrecipes=1)
+        data_setup.mark_job_running(job)
+        # This can happen if the base address was previously set to a lower 
+        # value, and a guest recipe from then is still running.
+        job.recipesets[0].recipes[0].guests[0].resource.mac_address = \
+            netaddr.EUI('52:53:FF:00:00:00')
+        self.assertEquals(RecipeResource._lowest_free_mac(),
+                netaddr.EUI('52:54:00:00:00:00'))
+        job.cancel()
+        job.update_status()
+        self.assertEquals(RecipeResource._lowest_free_mac(),
+                netaddr.EUI('52:54:00:00:00:00'))
 
 class LogRecipeTest(unittest.TestCase):
 
@@ -1780,6 +1897,15 @@ class TaskTest(unittest.TestCase):
 
             doc = lxml.etree.fromstring(task.to_xml())
             self.assert_(schema.validate(doc) is True)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=915549
+    def test_duplicate_task(self):
+
+        task = data_setup.create_task(name='Task1')
+        task = data_setup.create_task(name='Task1')
+
+        tasks = Task.query.filter(Task.name == 'Task1').all()
+        self.assertEquals(len(tasks), 1)
 
 if __name__ == '__main__':
     unittest.main()

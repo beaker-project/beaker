@@ -2,11 +2,12 @@ import fnmatch
 import os
 from glob import glob
 from setuptools import setup, find_packages
-def find_osversion():
+
+def get_compose_layout():
     matches = []
-    for root, dirnames, filenames in os.walk('src/bkr/inttest/labcontroller/osversion_data'):
+    for root, dirnames, filenames in os.walk('src/bkr/inttest/labcontroller/compose_layout'):
       for filename in fnmatch.filter(filenames, '*'):
-          matches.append(os.path.join(root, filename))
+          matches.append(os.path.join(root.replace('src/bkr/inttest/', ''), filename))
     return matches
 
 setup(
@@ -21,7 +22,7 @@ setup(
         'server/selenium/*.csv',
         'server/selenium/*.rpm',
         'server/selenium/invalid-task_file',] +
-        map(lambda x: x.replace('src/bkr/inttest/',''), find_osversion())
+        get_compose_layout()
     },
     namespace_packages=['bkr'],
     install_requires=[

@@ -16,25 +16,25 @@ import subprocess
 from cStringIO import StringIO
 from socket import gethostname
 from threading import Thread, Event
-
+from xml.sax.saxutils import escape as xml_escape, quoteattr as xml_quoteattr
+from werkzeug.wrappers import Response
+from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound
+from werkzeug.utils import redirect
+from werkzeug.http import parse_content_range_header
+from werkzeug.wsgi import wrap_file
 import kobo.conf
 from kobo.client import HubProxy
 from kobo.exceptions import ShutdownException
 from kobo.xmlrpc import retry_request_decorator, CookieTransport, \
         SafeCookieTransport
 from bkr.labcontroller.config import get_conf
+from bkr.labcontroller.log_storage import LogStorage
 from kobo.process import kill_process_group
-from bkr.upload import Uploader
 import utils
 try:
     from subprocess import check_output
 except ImportError:
     from utils import check_output
-
-try:
-    from hashlib import md5 as md5_constructor
-except ImportError:
-    from md5 import new as md5_constructor
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +65,9 @@ class ProxyHelper(object):
             TransportClass = retry_request_decorator(CookieTransport)
         self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
                 transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
-        self.log_base_url = "http://%s/beaker/logs" % self.conf.get("SERVER", gethostname())
-        self.basepath = None
-        self.upload = None
-        if self.conf.get("CACHE", False):
-            self.basepath = self.conf.get("CACHEPATH", "/var/www/beaker/logs")
-            self.upload = Uploader('%s' % self.basepath).uploadFile
+        self.log_storage = LogStorage(self.conf.get("CACHEPATH"),
+                "http://%s/beaker/logs" % self.conf.get("SERVER", gethostname()),
+                self.hub)
 
     def recipe_upload_file(self, 
                          recipe_id, 
@@ -90,29 +87,13 @@ class ProxyHelper(object):
             Files can be uploaded in chunks, if so the md5 and the size 
             describe the chunk rather than the whole file.  The offset
             indicates where the chunk belongs
-            the special offset -1 is used to indicate the final chunk
         """
+        # Originally offset=-1 had special meaning, but that was unused
         logger.debug("recipe_upload_file recipe_id:%s name:%s offset:%s size:%s",
                 recipe_id, name, offset, size)
-        if self.conf.get("CACHE",False):
-            if int(offset) == 0:
-                self.hub.recipes.register_file('%s/recipes/%s/' % (self.log_base_url, recipe_id),
-                                                                  recipe_id, path, name,
-                                               '%s/recipes/%s/' % (self.basepath, recipe_id))
-            return self.upload('/recipes/%s/%s' % (recipe_id, path), 
-                               name, 
-                               size, 
-                               md5sum, 
-                               offset, 
-                               data)
-        else:
-            return self.hub.recipes.upload_file(recipe_id,
-                                                path, 
-                                                name, 
-                                                size, 
-                                                md5sum, 
-                                                offset, 
-                                                data)
+        with self.log_storage.recipe(str(recipe_id), os.path.join(path, name)) as log_file:
+            log_file.update_chunk(base64.decodestring(data), int(offset or 0))
+        return True
 
     def task_result(self, 
                     task_id, 
@@ -175,6 +156,10 @@ class ProxyHelper(object):
         if 'recipe_id' in request:
             logger.debug("get_recipe recipe_id:%s", request['recipe_id'])
             return self.hub.recipes.to_xml(request['recipe_id'])
+
+    def get_peer_roles(self, task_id):
+        logger.debug('get_peer_roles %s', task_id)
+        return self.hub.recipes.tasks.peer_roles(task_id)
 
     def extend_watchdog(self, task_id, kill_time):
         """ tell the scheduler to extend the watchdog by kill_time seconds
@@ -278,15 +263,10 @@ class WatchFile(object):
                 return False
             else:
                 self.where = now
-                data = base64.encodestring(line)
-                md5sum = md5_constructor(line).hexdigest()
-                self.proxy.recipe_upload_file(self.watchdog['recipe_id'],
-                                             "/",
-                                             self.filename,
-                                             size,
-                                             md5sum,
-                                             where,
-                                             data)
+                with self.proxy.log_storage.recipe(
+                        str(self.watchdog['recipe_id']),
+                        self.filename) as log_file:
+                    log_file.update_chunk(line, where)
                 return True
         return False
 
@@ -316,47 +296,46 @@ class Watchdog(ProxyHelper):
         return transfered
 
     def transfer_recipe_logs(self, recipe_id):
-        """ If Cache is turned on then move the recipes logs to there final place
+        """ If Cache is turned on then move the recipes logs to their final place
         """
-        if self.conf.get("CACHE",False):
-            tmpdir = tempfile.mkdtemp(dir=self.basepath)
-            try:
-                # Move logs to tmp directory layout
-                mylogs = self.hub.recipes.files(recipe_id)
-                trlogs = []
-                for mylog in mylogs:
+        tmpdir = tempfile.mkdtemp(dir=self.conf.get("CACHEPATH"))
+        try:
+            # Move logs to tmp directory layout
+            mylogs = self.hub.recipes.files(recipe_id)
+            trlogs = []
+            for mylog in mylogs:
+                mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
+                mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
+                                          mylog['path'], mylog['filename'])
+                if os.path.exists(mysrc):
+                    if not os.path.exists(os.path.dirname(mydst)):
+                        os.makedirs(os.path.dirname(mydst))
+                    try:
+                        os.link(mysrc,mydst)
+                        trlogs.append(mylog)
+                    except OSError, e:
+                        logger.error('unable to hardlink %s to %s, %s', mysrc, mydst, e)
+                        return
+                else:
+                        logger.warn('file missing: %s', mysrc)
+            # rsync the logs to their new home
+            rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
+            logger.debug("rsync rc=%s", rc)
+            if rc == 0:
+                # if the logs have been transferred then tell the server the new location
+                self.hub.recipes.change_files(recipe_id, self.conf.get("ARCHIVE_SERVER"),
+                                                         self.conf.get("ARCHIVE_BASEPATH"))
+                for mylog in trlogs:
                     mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                    mydst = '%s/%s/%s/%s' % (tmpdir, mylog['filepath'], 
-                                              mylog['path'], mylog['filename'])
-                    if os.path.exists(mysrc):
-                        if not os.path.exists(os.path.dirname(mydst)):
-                            os.makedirs(os.path.dirname(mydst))
-                        try:
-                            os.link(mysrc,mydst)
-                            trlogs.append(mylog)
-                        except OSError, e:
-                            logger.error('unable to hardlink %s to %s, %s', mysrc, mydst, e)
-                            return
-                    else:
-                            logger.warn('file missing: %s', mysrc)
-                # rsync the logs to there new home
-                rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
-                logger.debug("rsync rc=%s", rc)
-                if rc == 0:
-                    # if the logs have been transfered then tell the server the new location
-                    self.hub.recipes.change_files(recipe_id, self.conf.get("ARCHIVE_SERVER"),
-                                                             self.conf.get("ARCHIVE_BASEPATH"))
-                    for mylog in trlogs:
-                        mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                        self.rm(mysrc)
-                        try:
-                            self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
-                        except OSError:
-                            # Its ok if it fails, dir may not be empty yet
-                            pass
-            finally:
-                # get rid of our tmpdir.
-                shutil.rmtree(tmpdir)
+                    self.rm(mysrc)
+                    try:
+                        self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
+                    except OSError:
+                        # It's ok if it fails, dir may not be empty yet
+                        pass
+        finally:
+            # get rid of our tmpdir.
+            shutil.rmtree(tmpdir)
 
     def rm(self, src):
         """ remove src
@@ -468,9 +447,7 @@ class Monitor(ProxyHelper):
         self.watchdog = watchdog
         self.conf = obj.conf
         self.hub = obj.hub
-        self.upload = obj.upload
-        self.basepath = obj.basepath
-        self.log_base_url = obj.log_base_url
+        self.log_storage = obj.log_storage
         logger.info("Initialize monitor for system: %s", self.watchdog['system'])
         self.console_watch = WatchFile(
                 "%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),
@@ -500,30 +477,13 @@ class Proxy(ProxyHelper):
             Files can be uploaded in chunks, if so the md5 and the size 
             describe the chunk rather than the whole file.  The offset
             indicates where the chunk belongs
-            the special offset -1 is used to indicate the final chunk
         """
+        # Originally offset=-1 had special meaning, but that was unused
         logger.debug("task_upload_file task_id:%s name:%s offset:%s size:%s",
                 task_id, name, offset, size)
-        if self.conf.get("CACHE",False):
-            if int(offset) == 0:
-                self.hub.recipes.tasks.register_file('%s/tasks/%s/' % (self.log_base_url, task_id), 
-                                                     task_id, path, name, 
-                                                     '%s/tasks/%s/' % (self.basepath, task_id))
-
-            return self.upload('/tasks/%s/%s' % (task_id, path), 
-                               name, 
-                               size, 
-                               md5sum, 
-                               offset, 
-                               data)
-        else:
-            return self.hub.recipes.tasks.upload_file(task_id, 
-                                                      path, 
-                                                      name, 
-                                                      size, 
-                                                      md5sum, 
-                                                      offset, 
-                                                      data)
+        with self.log_storage.task(str(task_id), os.path.join(path, name)) as log_file:
+            log_file.update_chunk(base64.decodestring(data), int(offset or 0))
+        return True
 
     def task_start(self,
                    task_id,
@@ -605,31 +565,13 @@ class Proxy(ProxyHelper):
             Files can be uploaded in chunks, if so the md5 and the size 
             describe the chunk rather than the whole file.  The offset
             indicates where the chunk belongs
-            the special offset -1 is used to indicate the final chunk
         """
+        # Originally offset=-1 had special meaning, but that was unused
         logger.debug("result_upload_file result_id:%s name:%s offset:%s size:%s",
                 result_id, name, offset, size)
-        if self.conf.get("CACHE",False):
-            if int(offset) == 0:
-                self.hub.recipes.tasks.register_result_file('%s/results/%s/' % (self.log_base_url,result_id),
-                                                            result_id, path, name,
-                                                            '%s/results/%s/' % (self.basepath, 
-                                                                               result_id))
-
-            return self.upload('/results/%s/%s' % (result_id, path), 
-                               name, 
-                               size, 
-                               md5sum, 
-                               offset, 
-                               data)
-        else:
-            return self.hub.recipes.tasks.result_upload_file(result_id, 
-                                                             path, 
-                                                             name, 
-                                                             size, 
-                                                             md5sum, 
-                                                             offset, 
-                                                             data)
+        with self.log_storage.result(str(result_id), os.path.join(path, name)) as log_file:
+            log_file.update_chunk(base64.decodestring(data), int(offset or 0))
+        return True
 
     def push(self, fqdn, inventory):
         """ Push inventory data to Scheduler
@@ -677,3 +619,201 @@ class Proxy(ProxyHelper):
         """
         # TODO tie this in to installation tracking when that is implemented
         return self.hub.labcontrollers.get_last_netboot_for_system(fqdn)
+
+class ProxyHTTP(object):
+
+    def __init__(self, proxy):
+        self.hub = proxy.hub
+        self.log_storage = proxy.log_storage
+
+    def get_recipe(self, req, recipe_id):
+        if req.accept_mimetypes.provided and \
+                'application/xml' not in req.accept_mimetypes:
+            raise NotAcceptable()
+        return Response(self.hub.recipes.to_xml(recipe_id),
+                content_type='application/xml')
+
+    _result_types = { # maps from public API names to internal Beaker names
+        'pass': 'pass_',
+        'warn': 'warn',
+        'fail': 'fail',
+        'none': 'result_none',
+    }
+    def post_result(self, req, recipe_id, task_id):
+        if 'result' not in req.form:
+            raise BadRequest('Missing "result" parameter')
+        result = req.form['result'].lower()
+        if result not in self._result_types:
+            raise BadRequest('Unknown result type %r' % req.form['result'])
+        result_id = self.hub.recipes.tasks.result(task_id,
+                self._result_types[result],
+                req.form.get('path'), req.form.get('score'),
+                req.form.get('message'))
+        return redirect('/recipes/%s/tasks/%s/results/%s' % (
+                recipe_id, task_id, result_id), code=201)
+
+    def post_recipe_status(self, req, recipe_id):
+        if 'status' not in req.form:
+            raise BadRequest('Missing "status" parameter')
+        status = req.form['status'].lower()
+        if status != 'aborted':
+            raise BadRequest('Unknown status %r' % req.form['status'])
+        self.hub.recipes.stop(recipe_id, 'abort',
+                req.form.get('message'))
+        return Response(status=204)
+
+    def post_task_status(self, req, recipe_id, task_id):
+        if 'status' not in req.form:
+            raise BadRequest('Missing "status" parameter')
+        status = req.form['status'].lower()
+        if status not in ['running', 'completed', 'aborted']:
+            raise BadRequest('Unknown status %r' % req.form['status'])
+        try:
+            if status == 'running':
+                self.hub.recipes.tasks.start(task_id)
+            elif status == 'completed':
+                self.hub.recipes.tasks.stop(task_id, 'stop')
+            elif status == 'aborted':
+                self.hub.recipes.tasks.stop(task_id, 'abort',
+                        req.form.get('message'))
+            return Response(status=204)
+        except xmlrpclib.Fault, fault:
+            # XXX need to find a less fragile way to do this
+            if 'Cannot restart finished task' in fault.faultString:
+                return Response(status=409, response=fault.faultString,
+                        content_type='text/plain')
+            else:
+                raise
+
+    def post_watchdog(self, req, recipe_id):
+        if 'seconds' not in req.form:
+            raise BadRequest('Missing "seconds" parameter')
+        try:
+            seconds = int(req.form['seconds'])
+        except ValueError:
+            raise BadRequest('Invalid "seconds" parameter %r' % req.form['seconds'])
+        self.hub.recipes.extend(recipe_id, seconds)
+        return Response(status=204)
+
+    # XXX should do streaming here, so that clients can send
+    # big files without chunking
+
+    def _put_log(self, log_file, req):
+        if not req.content_length:
+            raise BadRequest('Missing "Content-Length" header')
+        content_range = parse_content_range_header(req.headers.get('Content-Range'))
+        if content_range:
+            # a few sanity checks
+            if req.content_length != (content_range.stop - content_range.start):
+                raise BadRequest('Content length does not match range length')
+            if content_range.length and content_range.length < content_range.stop:
+                raise BadRequest('Total length is smaller than range end')
+        with log_file:
+            if content_range:
+                if content_range.length: # length may be '*' meaning unspecified
+                    log_file.truncate(content_range.length)
+                log_file.update_chunk(req.data, content_range.start)
+            else:
+                # no Content-Range, therefore the request is the whole file
+                log_file.truncate(req.content_length)
+                log_file.update_chunk(req.data, 0)
+        return Response(status=204)
+
+    def _get_log(self, log_file, req):
+        try:
+            f = log_file.open_ro()
+        except IOError, e:
+            if e.errno == errno.ENOENT:
+                raise NotFound()
+            else:
+                raise
+        return Response(status=200, response=wrap_file(req.environ, f),
+                content_type='text/plain', direct_passthrough=True)
+
+    def do_recipe_log(self, req, recipe_id, path):
+        log_file = self.log_storage.recipe(recipe_id, path)
+        if req.method == 'GET':
+            return self._get_log(log_file, req)
+        elif req.method == 'PUT':
+            return self._put_log(log_file, req)
+
+    def do_task_log(self, req, recipe_id, task_id, path):
+        log_file = self.log_storage.task(task_id, path)
+        if req.method == 'GET':
+            return self._get_log(log_file, req)
+        elif req.method == 'PUT':
+            return self._put_log(log_file, req)
+
+    def do_result_log(self, req, recipe_id, task_id, result_id, path):
+        log_file = self.log_storage.result(result_id, path)
+        if req.method == 'GET':
+            return self._get_log(log_file, req)
+        elif req.method == 'PUT':
+            return self._put_log(log_file, req)
+
+    # XXX use real templates here, make the Atom feed valid
+
+    def _html_log_index(self, logs):
+        hrefs = [os.path.join((log['path'] or '').lstrip('/'), log['filename'])
+                for log in logs]
+        lis = ['<li><a href=%s>%s</a></li>' % (xml_quoteattr(href), xml_escape(href))
+                for href in hrefs]
+        html = '<!DOCTYPE html><html><body><ul>%s</ul></body></html>' % ''.join(lis)
+        return Response(status=200, content_type='text/html', response=html)
+
+    def _atom_log_index(self, logs):
+        hrefs = [os.path.join((log['path'] or '').lstrip('/'), log['filename'])
+                for log in logs]
+        entries = ['<entry><link rel="alternate" href=%s /><title type="text">%s</title></entry>'
+                % (xml_quoteattr(href), xml_escape(href)) for href in hrefs]
+        atom = '<feed xmlns="http://www.w3.org/2005/Atom">%s</feed>' % ''.join(entries)
+        return Response(status=200, content_type='application/atom+xml', response=atom)
+
+    def _log_index(self, req, logs):
+        if not req.accept_mimetypes.provided:
+            response_type = 'text/html'
+        else:
+            response_type = req.accept_mimetypes.best_match(['text/html', 'application/atom+xml'])
+            if not response_type:
+                raise NotAcceptable()
+        if response_type == 'text/html':
+            return self._html_log_index(logs)
+        elif response_type == 'application/atom+xml':
+            return self._atom_log_index(logs)
+
+    def list_recipe_logs(self, req, recipe_id):
+        try:
+            logs = self.hub.taskactions.files('R:%s' % recipe_id)
+        except xmlrpclib.Fault, fault:
+            # XXX need to find a less fragile way to do this
+            if 'is not a valid Recipe id' in fault.faultString:
+                raise NotFound()
+            else:
+                raise
+        # The server includes all sub-elements' logs, filter them out
+        logs = [log for log in logs if log['tid'].startswith('R:')]
+        return self._log_index(req, logs)
+
+    def list_task_logs(self, req, recipe_id, task_id):
+        try:
+            logs = self.hub.taskactions.files('T:%s' % task_id)
+        except xmlrpclib.Fault, fault:
+            # XXX need to find a less fragile way to do this
+            if 'is not a valid RecipeTask id' in fault.faultString:
+                raise NotFound()
+            else:
+                raise
+        # The server includes all sub-elements' logs, filter them out
+        logs = [log for log in logs if log['tid'].startswith('T:')]
+        return self._log_index(req, logs)
+
+    def list_result_logs(self, req, recipe_id, task_id, result_id):
+        try:
+            logs = self.hub.taskactions.files('TR:%s' % result_id)
+        except xmlrpclib.Fault, fault:
+            # XXX need to find a less fragile way to do this
+            if 'is not a valid RecipeTaskResult id' in fault.faultString:
+                raise NotFound()
+            else:
+                raise
+        return self._log_index(req, logs)

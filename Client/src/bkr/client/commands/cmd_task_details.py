@@ -85,15 +85,13 @@ class Task_Details(BeakerCommand):
 
     def run(self, *args, **kwargs):
         filter = dict()
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
         xml = kwargs.pop("xml")
         prettyxml = kwargs.pop("prettyxml")
         valid = True
         if kwargs.get("invalid"):
             valid = None
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         for task in args:
             if xml:
                 print "%s\n%s" % (task, self.hub.tasks.to_xml(task, prettyxml, valid))

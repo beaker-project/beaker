@@ -96,6 +96,21 @@ class TestSystemGroups(WebDriverTestCase):
         group_just_added = b.find_element_by_xpath('//table[@id="systemgroups"]//tr[position()=last()]/td').text
         self.assert_(group_just_added == self.group.group_name)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=917745
+    def test_add_group_to_system_twice(self):
+        with session.begin():
+            test_group = data_setup.create_group()
+        b = self.browser
+        self.add_group_to_system(b, group=test_group)
+        # Make sure it has been persisted
+        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
+        b.find_element_by_link_text('Groups').click()
+        group_just_added = b.find_element_by_xpath('//table[@id="systemgroups"]//tr[position()=last()]/td').text
+        self.assert_(group_just_added == test_group.group_name)
+        self.add_group_to_system(b, group=test_group)
+        self.assertEquals(b.find_element_by_xpath('//div[@class="flash"]').text,
+                          "System '%s' is already in group '%s'" % (self.system.fqdn, test_group.group_name))
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=797584
     def test_removing_group_removes_admin(self):
         with session.begin():

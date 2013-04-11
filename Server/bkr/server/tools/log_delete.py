@@ -1,5 +1,10 @@
 #!/usr/bin/python
-__requires__ = ['TurboGears']
+
+# pkg_resources.requires() does not work if multiple versions are installed in 
+# parallel. This semi-supported hack using __requires__ is the workaround.
+# http://bugs.python.org/setuptools/issue139
+# (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
+__requires__ = ['CherryPy < 3.0']
 
 import sys
 import errno

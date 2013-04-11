@@ -19,13 +19,19 @@
 
 # -*- coding: utf-8 -*-
 
-__requires__ = ['TurboGears']
+# pkg_resources.requires() does not work if multiple versions are installed in 
+# parallel. This semi-supported hack using __requires__ is the workaround.
+# http://bugs.python.org/setuptools/issue139
+# (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
+__requires__ = ['CherryPy < 3.0']
 
 import sys
 import os
 import random
 from bkr.server import needpropertyxml, utilisation
-from bkr.server.bexceptions import BX, VMCreationFailedException
+from bkr.server.bexceptions import BX, VMCreationFailedException, \
+    StaleTaskStatusException, InsufficientSystemPermissions, \
+    StaleSystemUserException
 from bkr.server.model import *
 from bkr.server.util import load_config, log_traceback
 from bkr.server.recipetasks import RecipeTasks
@@ -85,8 +91,36 @@ def _virt_enabled():
 def _virt_possible(recipe):
     return _virt_enabled() and recipe.virt_status == RecipeVirtStatus.possible
 
+def update_dirty_jobs():
+    dirty_jobs = Job.query.filter(Job.dirty_version != Job.clean_version)
+    if not dirty_jobs.count():
+        return False
+    log.debug("Entering update_dirty_jobs")
+    for job_id, in dirty_jobs.values(Job.id):
+        session.begin()
+        try:
+            update_dirty_job(job_id)
+            session.commit()
+        except Exception, e:
+            log.exception('Error in update_dirty_job(%s)', job_id)
+            session.rollback()
+        finally:
+            session.close()
+        if event.is_set():
+            break
+    log.debug("Exiting update_dirty_jobs")
+    return True
+
+def update_dirty_job(job_id):
+    log.debug('Updating dirty job %s', job_id)
+    job = Job.by_id(job_id)
+    job.update_status()
+
 def process_new_recipes(*args):
-    recipes = MachineRecipe.query.filter(Recipe.status == TaskStatus.new)
+    recipes = MachineRecipe.query\
+            .join(MachineRecipe.recipeset).join(RecipeSet.job)\
+            .filter(Job.dirty_version == Job.clean_version)\
+            .filter(Recipe.status == TaskStatus.new)
     if not recipes.count():
         return False
     log.debug("Entering process_new_recipes")
@@ -153,7 +187,10 @@ def process_new_recipe(recipe_id):
         guestrecipe.process()
 
 def queue_processed_recipesets(*args):
-    recipesets = RecipeSet.query.filter(RecipeSet.status == TaskStatus.processed)
+    recipesets = RecipeSet.query.join(RecipeSet.job)\
+            .filter(Job.dirty_version == Job.clean_version)\
+            .filter(not_(RecipeSet.recipes.any(
+                Recipe.status != TaskStatus.processed)))
     if not recipesets.count():
         return False
     log.debug("Entering queue_processed_recipesets")
@@ -281,7 +318,10 @@ def abort_dead_recipes(*args):
                 Recipe.virt_status != RecipeVirtStatus.possible))
     else:
         filters.append(not_(Recipe.systems.any()))
-    recipes = MachineRecipe.query.outerjoin(Recipe.distro_tree)\
+    recipes = MachineRecipe.query\
+            .join(MachineRecipe.recipeset).join(RecipeSet.job)\
+            .filter(Job.dirty_version == Job.clean_version)\
+            .outerjoin(Recipe.distro_tree)\
             .filter(Recipe.status == TaskStatus.queued)\
             .filter(or_(*filters))
     if not recipes.count():
@@ -312,54 +352,84 @@ def abort_dead_recipe(recipe_id):
         recipe.recipeset.abort(msg)
 
 def schedule_queued_recipes(*args):
-    recipes = MachineRecipe.query\
-                    .join(Recipe.recipeset, RecipeSet.job)\
-                    .join(Recipe.systems)\
-                    .join(Recipe.distro_tree)\
-                    .join(DistroTree.lab_controller_assocs,
-                        (LabController, and_(
-                            LabControllerDistroTree.lab_controller_id == LabController.id,
-                            System.lab_controller_id == LabController.id)))\
-                    .filter(
-                         and_(Recipe.status==TaskStatus.queued,
-                              System.user==None,
-                              System.status==SystemStatus.automated,
-                              LabController.disabled==False,
-                              or_(
-                                  RecipeSet.lab_controller==None,
-                                  RecipeSet.lab_controller_id==System.lab_controller_id,
-                                 ),
-                              or_(
-                                  System.loan_id==None,
-                                  System.loan_id==Job.owner_id,
-                                 ),
-                             )
-                           )
-    # Order recipes by priority.
-    # FIXME Add secondary order by number of matched systems.
-    if True:
-        recipes = recipes.order_by(RecipeSet.priority.desc())
-    # order recipes by id
-    recipes = recipes.order_by(MachineRecipe.id)
-    if not recipes.count():
-        return False
-    log.debug("Entering schedule_queued_recipes")
-    for recipe_id, in recipes.values(MachineRecipe.id.distinct()):
-        session.begin()
-        try:
-            schedule_queued_recipe(recipe_id)
-            session.commit()
-        except Exception, e:
-            log.exception('Error in schedule_queued_recipe(%s)', recipe_id)
-            session.rollback()
-        finally:
-            session.close()
-    log.debug("Exiting schedule_queued_recipes")
-    return True
+    session.begin()
+    try:
+        recipes = MachineRecipe.query\
+                        .join(Recipe.recipeset, RecipeSet.job)\
+                        .filter(Job.dirty_version == Job.clean_version)\
+                        .join(Recipe.systems)\
+                        .join(Recipe.distro_tree)\
+                        .join(DistroTree.lab_controller_assocs,
+                            (LabController, and_(
+                                LabControllerDistroTree.lab_controller_id == LabController.id,
+                                System.lab_controller_id == LabController.id)))\
+                        .filter(
+                             and_(Recipe.status==TaskStatus.queued,
+                                  System.user==None,
+                                  System.status==SystemStatus.automated,
+                                  LabController.disabled==False,
+                                  or_(
+                                      RecipeSet.lab_controller==None,
+                                      RecipeSet.lab_controller_id==System.lab_controller_id,
+                                     ),
+                                  or_(
+                                      System.loan_id==None,
+                                      System.loan_id==Job.owner_id,
+                                     ),
+                                 )
+                               )
+        # FIXME Add order by number of matched systems.
+        # Effective priority is given in the following order:
+        # * Multi host recipes with already scheduled siblings
+        # * Priority level (i.e Normal, High etc)
+        # * RecipeSet id
+        # * Recipe id
+        recipes = recipes.order_by(RecipeSet.lab_controller != None). \
+            order_by(RecipeSet.priority.desc()). \
+            order_by(RecipeSet.id). \
+            order_by(MachineRecipe.id)
+        if not recipes.count():
+            return False
+        log.debug("Entering schedule_queued_recipes")
+        for recipe_id, in recipes.values(MachineRecipe.id.distinct()):
+            session.begin(nested=True)
+            try:
+                schedule_queued_recipe(recipe_id)
+                session.commit()
+            except (StaleSystemUserException, InsufficientSystemPermissions,
+                 StaleTaskStatusException), e:
+                # Either
+                # System user has changed before
+                # system allocation
+                # or
+                # System permissions have changed before
+                # system allocation
+                # or
+                # Something has moved our status on from queued
+                # already.
+                log.warn(str(e))
+                session.rollback()
+            except Exception, e:
+                log.exception('Error in schedule_queued_recipe(%s)', recipe_id)
+                session.rollback()
+                session.begin(nested=True)
+                try:
+                    recipe=MachineRecipe.by_id(recipe_id)
+                    recipe.recipeset.abort("Aborted in schedule_queued_recipe: %s" % e)
+                    session.commit()
+                except Exception, e:
+                    log.exception("Error during error handling in schedule_queued_recipe: %s" % e)
+                    session.rollback()
+        log.debug("Exiting schedule_queued_recipes")
+        return True
+    finally:
+        session.commit()
+        session.close()
 
 def schedule_queued_recipe(recipe_id):
     recipe = MachineRecipe.by_id(recipe_id)
     systems = recipe.dyn_systems\
+               .outerjoin(System.cpu)\
                .join(System.lab_controller)\
                .filter(and_(System.user==None,
                           LabController._distro_trees.any(
@@ -385,9 +455,15 @@ def schedule_queued_recipe(recipe_id):
     # </recipe>
     user = recipe.recipeset.job.owner
     if True: #FIXME if pools are defined add them here in the order requested.
-        systems = systems.order_by(case([(System.owner==user, 1),
-                  (and_(System.owner!=user, System.group_assocs != None), 2)],
-                      else_=3))
+        # Order by:
+        #   System Owner
+        #   System group
+        #   Single procesor bare metal system
+        systems = systems.order_by(
+            case([(System.owner==user, 1),
+                (and_(System.owner!=user, System.group_assocs != None), 1)],
+                else_=3),
+                and_(System.hypervisor == None, Cpu.processors == 1))
     if recipe.recipeset.lab_controller:
         # First recipe of a recipeSet determines the lab_controller
         systems = systems.filter(
@@ -438,7 +514,8 @@ def provision_virt_recipes(*args):
     # We limit to labs where the tree is available by NFS because RHEV needs to 
     # use autofs to grab the images. See VirtManager.start_install.
     recipes = MachineRecipe.query\
-            .join(Recipe.recipeset)\
+            .join(Recipe.recipeset).join(RecipeSet.job)\
+            .filter(Job.dirty_version == Job.clean_version)\
             .join(Recipe.distro_tree, DistroTree.lab_controller_assocs, LabController)\
             .filter(Recipe.status == TaskStatus.queued)\
             .filter(Recipe.virt_status == RecipeVirtStatus.possible)\
@@ -451,9 +528,12 @@ def provision_virt_recipes(*args):
         return False
     log.debug("Entering provision_virt_recipes")
     for recipe_id, in recipes.values(Recipe.id.distinct()):
-        system_name = "guest_for_recipe_%d" % recipe_id
+        system_name = None
         session.begin()
         try:
+            system_name = u'%srecipe_%s' % (
+                    ConfigItem.by_name(u'guest_name_prefix').current_value(u'beaker_'),
+                    recipe_id)
             provision_virt_recipe(system_name, recipe_id)
             session.commit()
         except needpropertyxml.NotVirtualisable:
@@ -473,8 +553,9 @@ def provision_virt_recipes(*args):
             session.rollback()
             try:
                 # Don't leak the vm if it was created
-                with VirtManager() as manager:
-                    manager.destroy_vm(system_name)
+                if system_name:
+                    with VirtManager() as manager:
+                        manager.destroy_vm(system_name)
                 # As an added precaution, let's try and avoid this recipe in future
                 session.begin()
                 recipe = Recipe.by_id(recipe_id)
@@ -519,8 +600,10 @@ def provision_scheduled_recipesets(*args):
     if All recipes in a recipeSet are in Scheduled state then move them to
      Running.
     """
-    recipesets = RecipeSet.query.filter(not_(RecipeSet.recipes.any(
-            Recipe.status != TaskStatus.scheduled)))
+    recipesets = RecipeSet.query.join(RecipeSet.job)\
+            .filter(Job.dirty_version == Job.clean_version)\
+            .filter(not_(RecipeSet.recipes.any(
+                Recipe.status != TaskStatus.scheduled)))
     if not recipesets.count():
         return False
     log.debug("Entering provision_scheduled_recipesets")
@@ -607,6 +690,13 @@ def system_count_metrics():
 # exceptions instead of letting them be written to stderr and lost to the ether
 
 @log_traceback(log)
+def update_dirty_jobs_loop(*args, **kwargs):
+    while running:
+        if not update_dirty_jobs():
+            event.wait()
+    log.debug("update_dirty_jobs thread exiting")
+
+@log_traceback(log)
 def new_recipes_loop(*args, **kwargs):
     while running:
         if not process_new_recipes():
@@ -656,8 +746,14 @@ def schedule():
         metrics_thread.daemon = True
         metrics_thread.start()
 
-    beakerd_threads = set(["new_recipes", "processed_recipesets",\
-                           "main_recipes"])
+    beakerd_threads = set(["update_dirty_jobs", "new_recipes",
+            "processed_recipesets", "main_recipes"])
+
+    log.debug("starting update_dirty_jobs thread")
+    update_dirty_jobs_thread = threading.Thread(target=update_dirty_jobs_loop,
+            name="update_dirty_jobs")
+    update_dirty_jobs_thread.daemon = True
+    update_dirty_jobs_thread.start()
 
     log.debug("starting new recipes thread")
     new_recipes_thread = threading.Thread(target=new_recipes_loop,
@@ -695,6 +791,7 @@ def schedule():
        event.set()
        rc = 0
 
+    update_dirty_jobs_thread.join(10)
     new_recipes_thread.join(10)
     processed_recipesets_thread.join(10)
     main_recipes_thread.join(10)

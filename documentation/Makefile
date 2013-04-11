@@ -1,9 +1,24 @@
 # Makefile for Sphinx documentation
 #
 
+SHELL = /bin/bash
+export PYTHONPATH=../Common:../Server:../Client/src
+SPHINXBUILD ?= $(firstword $(shell command -v sphinx-1.0-build sphinx-build))
+
+SPHINXREQUIRES = "Sphinx >= 1.0"
+# pkg_resources.requires() does not work if multiple versions are installed in 
+# parallel, but we need to be able to load bkr for autodoc generation. The
+# semi-supported hack using __requires__ in the $SPHINXBUILD definition
+# is a workaround: http://bugs.python.org/setuptools/issue139
+# (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
+# (EPEL6 has python-sphinx = 0.6 and python-sphinx10 = 1.0)
+ifeq (0,$(shell python -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources' &>/dev/null ; echo $$?))
+    SPHINXREQUIRES += , "CherryPy < 3.0"
+endif
+
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
+SPHINXBUILD  := python -c '__requires__ = [$(SPHINXREQUIRES)]; import pkg_resources; execfile("$(SPHINXBUILD)")'
 PAPER         =
 BUILDDIR      = _build
 
@@ -13,6 +28,15 @@ PAPEROPT_letter = -D latex_paper_size=letter
 ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 # the i18n builder cannot share the environment and doctrees with the others
 I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
+
+.PHONY: build
+build: man text
+
+.PHONY: install
+install: man
+	install -m0755 -d $(DESTDIR)/usr/share/man/man1
+	install -m0644 _build/man/*.1 $(DESTDIR)/usr/share/man/man1
+	ln -s bkr-distro-trees-verify.1.gz $(DESTDIR)/usr/share/man/man1/bkr-distros-verify.1.gz
 
 .PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest gettext
 

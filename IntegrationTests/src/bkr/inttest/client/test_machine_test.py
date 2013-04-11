@@ -9,23 +9,31 @@ class MachineTestTest(unittest.TestCase):
 
     @with_transaction
     def setUp(self):
+        self.system = data_setup.create_system()
         data_setup.create_task(name=u'/distribution/inventory')
         self.distro = data_setup.create_distro(tags=[u'STABLE'])
         data_setup.create_distro_tree(distro=self.distro)
 
     def test_machine_test(self):
-        fqdn = 'system1.example.invalid'
         out = run_client(['bkr', 'machine-test', '--inventory',
-                '--machine', fqdn, '--arch', 'i386',
+                '--machine', self.system.fqdn, '--arch', 'i386',
                 '--family', self.distro.osversion.osmajor.osmajor])
         self.assert_(out.startswith('Submitted:'), out)
         with session.begin():
             new_job = Job.query.order_by(Job.id.desc()).first()
-            self.assertEqual(new_job.whiteboard, u'Test system1.example.invalid')
+            self.assertEqual(new_job.whiteboard, u'Test '+ self.system.fqdn)
             tasks = new_job.recipesets[0].recipes[0].tasks
             self.assertEqual(len(tasks), 2)
             self.assertEqual(tasks[0].task.name, u'/distribution/install')
             self.assertEqual(tasks[1].task.name, u'/distribution/inventory')
+
+        #https://bugzilla.redhat.com/show_bug.cgi?id=893878
+        try:
+            out = run_client(['bkr', 'machine-test','--machine', 
+                              self.system.fqdn, '--tag','aTAG'])
+        except Exception as ex:
+            self.assertEqual(ex.stderr_output.rstrip('\n'), \
+                                 'Could not find an appropriate distro to provision system with.')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=876752
     def test_filters_out_excluded_families(self):

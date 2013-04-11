@@ -20,6 +20,7 @@
 
 import os
 import sys
+import operator
 from bkr.server.model import *
 from turbogears.database import session
 import turbogears
@@ -28,6 +29,23 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import aliased
 import datetime
 from lxml import etree
+
+# This follows the SI conventions used in disks and networks --
+# *not* applicable to computer memory!
+def bytes_multiplier(units):
+    return {
+        'bytes': 1,
+        'B':     1,
+        'kB':    1000,
+        'KB':    1000,
+        'KiB':   1024,
+        'MB':    1000*1000,
+        'MiB':   1024*1024,
+        'GB':    1000*1000*1000,
+        'GiB':   1024*1024*1024,
+        'TB':    1000*1000*1000*1000,
+        'TiB':   1024*1024*1024*1024,
+    }.get(units)
 
 class NotVirtualisable(ValueError): pass
 
@@ -152,6 +170,37 @@ class XmlOr(ElementWrapper):
         if not clauses:
             return None
         return or_(*clauses)
+
+    def vm_params(self):
+        raise NotVirtualisable() # too hard!
+
+
+class XmlNot(ElementWrapper):
+    """
+    Combines sub-filters with not_(and_()).
+    """
+    subclassDict = None
+
+    def filter(self, joins):
+        queries = []
+        for child in self:
+            if callable(getattr(child, 'filter', None)):
+                (joins, query) = child.filter(joins)
+                if query is not None:
+                    queries.append(query)
+        if not queries:
+            return (joins, None)
+        return (joins, not_(and_(*queries)))
+
+    def filter_lab(self, query):
+        clauses = []
+        for child in self:
+            clause = child.filter_lab()
+            if clause is not None:
+                clauses.append(clause)
+        if not clauses:
+            return None
+        return not_(and_(*clauses))
 
     def vm_params(self):
         raise NotVirtualisable() # too hard!
@@ -384,7 +433,7 @@ class XmlHypervisor(ElementWrapper):
         # uses, but we should have a better solution
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None) or None
-        if getattr('KVM', op)(value):
+        if getattr(operator, op)('KVM', value):
             return {}
         else:
             raise NotVirtualisable()
@@ -719,6 +768,12 @@ class XmlCpuFlag(ElementWrapper):
     """
     Filter systems based on System.cpu.flags
     """
+
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 'like' : 'like',
+                 '!=' : '__ne__'}
+
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         equal = op == '__ne__' and '__eq__' or op
@@ -727,10 +782,10 @@ class XmlCpuFlag(ElementWrapper):
         if value:
             joins = joins.join(System.cpu)
             query = getattr(CpuFlag.flag, equal)(value)
-            if op == '__eq__':
-                query = Cpu.flags.any(query)
-            else:
+            if op == '__ne__':
                 query = not_(Cpu.flags.any(query))
+            else:
+                query = Cpu.flags.any(query)
         return (joins, query)
 
 class XmlArch(ElementWrapper):
@@ -764,7 +819,7 @@ class XmlArch(ElementWrapper):
         # XXX add some better logic here
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        if getattr('x86_64', op)(value):
+        if getattr(operator, op)('x86_64', value):
             return {}
         else:
             raise NotVirtualisable()
@@ -814,10 +869,74 @@ class XmlDevice(ElementWrapper):
         return (joins, query)
 
 
+# N.B. these XmlDisk* filters do not work outside of a <disk/> element!
+
+class XmlDiskModel(ElementWrapper):
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 'like' : 'like',
+                 '!=' : '__ne__'}
+    def filter_disk(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        if value:
+            return getattr(Disk.model, op)(value)
+        return None
+
+class XmlDiskSize(ElementWrapper):
+    def filter_disk(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        units = self.get_xml_attr('units', unicode, 'bytes')
+        if value:
+            return getattr(Disk.size, op)(value * bytes_multiplier(units))
+        return None
+
+class XmlDiskSectorSize(ElementWrapper):
+    def filter_disk(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        units = self.get_xml_attr('units', unicode, 'bytes')
+        if value:
+            return getattr(Disk.phys_sector_size, op)(
+                    value * bytes_multiplier(units))
+        return None
+
+class XmlDiskPhysSectorSize(ElementWrapper):
+    def filter_disk(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        units = self.get_xml_attr('units', unicode, 'bytes')
+        if value:
+            return getattr(Disk.phys_sector_size, op)(
+                    value * bytes_multiplier(units))
+        return None
+
+class XmlDisk(ElementWrapper):
+    subclassDict = {
+        'model': XmlDiskModel,
+        'size': XmlDiskSize,
+        'sector_size': XmlDiskSectorSize,
+        'phys_sector_size': XmlDiskPhysSectorSize,
+    }
+
+    def filter(self, joins):
+        clauses = []
+        for child in self:
+            if callable(getattr(child, 'filter_disk', None)):
+                clause = child.filter_disk()
+                if clause is not None:
+                    clauses.append(clause)
+        if not clauses:
+            return (joins, System.disks.any())
+        return (joins, System.disks.any(and_(*clauses)))
+
+
 class XmlCpu(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
                     'or': XmlOr,
+                    'not': XmlNot,
                     'processors': XmlCpuProcessors,
                     'cores': XmlCpuCores,
                     'family': XmlCpuFamily,
@@ -831,11 +950,11 @@ class XmlCpu(XmlAnd):
                     'flag': XmlCpuFlag,
                    }
 
-
 class XmlSystem(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
                     'or': XmlOr,
+                    'not': XmlNot,
                     'name': XmlHostName,
                     'type': XmlSystemType,
                     'status': XmlSystemStatus,
@@ -860,10 +979,12 @@ class XmlHost(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
                     'or': XmlOr,
+                    'not': XmlNot,
                     'labcontroller': XmlHostLabController,
                     'system': XmlSystem,
                     'cpu': XmlCpu,
                     'device': XmlDevice,
+                    'disk': XmlDisk,
                     'group': XmlGroup,
                     'key_value': XmlKeyValue,
                     'auto_prov': XmlAutoProv,
@@ -881,6 +1002,7 @@ class XmlDistro(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
                     'or': XmlOr,
+                    'not': XmlNot,
                     'arch': XmlDistroArch,
                     'family': XmlDistroFamily,
                     'variant': XmlDistroVariant,

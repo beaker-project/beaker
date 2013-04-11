@@ -17,8 +17,8 @@
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.11.3
-Release:        1%{?dist}
+Version:        0.12.0
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -36,6 +36,7 @@ BuildRequires:  python-sphinx10
 %else
 BuildRequires:  python-sphinx >= 1.0
 %endif
+BuildRequires:  python-sphinxcontrib-httpdomain
 BuildRequires:  bash-completion
 
 %if %{with server}
@@ -110,6 +111,7 @@ Requires:       python-netaddr
 # Kerberos support was added to requests in 0.13.4
 Requires:       python-requests >= 0.13.4
 Requires:       ovirt-engine-sdk
+Requires:  	kobo-client >= 0.3
 %endif
 
 
@@ -156,6 +158,7 @@ Requires:       python-krbV
 Requires:       python-concurrentloghandler
 Requires:       python-gevent >= 1.0
 Requires:       python-daemon
+Requires:       python-werkzeug
 
 %package lab-controller-addDistro
 Summary:        addDistro scripts for Lab Controller
@@ -277,7 +280,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{python_sitelib}/bkr/__init__.py*
 %{python_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python_sitelib}/bkr/common/
-%{python_sitelib}/bkr/upload.py*
 %{python_sitelib}/bkr/log.py*
 %{python_sitelib}/bkr-%{version}-*
 %{python_sitelib}/bkr-%{version}-py%{pyver}.egg-info/
@@ -286,8 +288,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with server}
 %files server
 %defattr(-,root,root,-)
-%doc Server/README
-%doc SchemaUpgrades/upgrade_*
+%doc documentation/_build/text/whats-new/
 %{python_sitelib}/bkr/server/
 %{python_sitelib}/bkr.server-%{version}-*
 %{python_sitelib}/bkr.server-%{version}-py%{pyver}.egg-info/
@@ -298,8 +299,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-check
 %{_bindir}/product-update
 %{_bindir}/beaker-repo-update
+%{_bindir}/beaker-sync-tasks
 %{_bindir}/%{name}-cleanup-visits
-%{_bindir}/%{name}-cleanup-recipes
 %{_sysconfdir}/init.d/%{name}d
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %attr(0755,root,root)%{_bindir}/%{name}d
@@ -325,7 +326,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %files client
 %defattr(-,root,root,-)
-%config(noreplace) %{_sysconfdir}/beaker/client.conf
+%doc Client/client.conf.example
 %{python_sitelib}/bkr/client/
 %{python_sitelib}/bkr.client-%{version}-*
 %{python_sitelib}/bkr.client-%{version}-py%{pyver}.egg-info/
@@ -375,6 +376,17 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Wed Apr 10 2013 Dan Callaghan <dcallagh@redhat.com> 0.12.0-3
+- beaker-expire-distros: increase timeout to 120 seconds (dcallagh@redhat.com)
+
+* Tue Apr 09 2013 Dan Callaghan <dcallagh@redhat.com> 0.12.0-2
+- fix build for client-only platforms (dcallagh@redhat.com)
+
+* Fri Apr 05 2013 Dan Callaghan <dcallagh@redhat.com> 0.12.0-1
+- new release 0.12.0:
+  http://beaker-project.org/releases/#beaker-0.12.0-1
+  http://beaker-project.org/docs/whats-new/release-0.12.html
+
 * Fri Feb 08 2013 Raymond Mancy <rmancy@redhat.com> 0.11.3-1
 - 907297 Pass full principal when creating a kerberos AP_REQ
   (rmancy@redhat.com)

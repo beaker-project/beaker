@@ -111,14 +111,12 @@ class Job_Modify(BeakerCommand):
             help = "Set a job's product",
          )
 
-    def run(self, *args, **kw):
-        username = kw.pop("username", None)
-        password = kw.pop("password", None)
-        response = kw.pop('response', None)
-        retention_tag = kw.pop('retention_tag', None)
-        product = kw.pop('product', None)
+    def run(self, *args, **kwargs):
+        response = kwargs.pop('response', None)
+        retention_tag = kwargs.pop('retention_tag', None)
+        product = kwargs.pop('product', None)
 
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         self.check_taskspec_args(args, permitted_types=['J', 'RS'])
         modded = []
         error = False

@@ -33,7 +33,7 @@ function BuildBeaker ()
     rlRun "tito build --rpm --test"
     rlRun "popd"
     rlRun "createrepo /tmp/tito/noarch/"
-    cat >/etc/yum.repos.d/tito.repo <<"EOF"
+    cat >/etc/yum.repos.d/beaker-local-builds.repo <<"EOF"
 [tito]
 name=tito
 baseurl=file:///tmp/tito/noarch/
@@ -248,6 +248,7 @@ if $(echo $CLIENTS | grep -q $HOSTNAME); then
     SERVER=$(echo $SERVERS | awk '{print $1}')
     [[ $SOURCE == "_git" ]] && BuildBeaker
     LabController
+    rm -f /etc/yum.repos.d/beaker-local-builds.repo
     exit 0
 fi
 
@@ -256,6 +257,7 @@ if $(echo $SERVERS | grep -q $HOSTNAME); then
     TEST="$TEST/inventory"
     [[ $SOURCE == "_git" ]] && BuildBeaker
     Inventory
+    rm -f /etc/yum.repos.d/beaker-local-builds.repo
     exit 0
 fi
 
@@ -268,6 +270,7 @@ if [ -z "$SERVERS" -o -z "$CLIENTS" ]; then
     TEST="$TEST/lab_controller" LabController &
     sleep 120
     TEST="$TEST/inventory" Inventory
+    rm -f /etc/yum.repos.d/beaker-local-builds.repo
     exit 0
 fi
 

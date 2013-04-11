@@ -2,6 +2,7 @@ Beaker interface
 ================
 
 .. toctree::
+
    systems
    distros
    jobs

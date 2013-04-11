@@ -99,6 +99,10 @@ class DeviceColumn(MyColumn):
             kw['relations'] = 'devices'
         super(DeviceColumn,self).__init__(**kw)        
 
+class DiskColumn(MyColumn):
+    def __init__(self, **kwargs):
+        kwargs.setdefault('relations', ['disks'])
+        super(DiskColumn, self).__init__(**kwargs)
 
 class AliasedColumn(MyColumn):
 
@@ -358,6 +362,7 @@ class Search(object):
         return cls.get_search_options_worker(search,col_type)
 
     def append_results(self,value,column,operation,**kw): 
+        value = value.strip()
         pre = self.pre_operations(column,operation,value,**kw)
         cls_name = re.sub('Search','',self.__class__.__name__)
         cls = globals()[cls_name]  
@@ -604,6 +609,7 @@ class SystemSearch(Search):
         #inadequate. 
         #If we are looking at the System class and column 'arch' with the 'is not' operation, it will try and get
         # System.arch_is_not_filter
+        value = value.strip()
         underscored_operation = re.sub(' ','_',operation)
         col_op_filter = getattr(cls_ref,'%s_%s_filter' % (column.lower(),underscored_operation),None)
          
@@ -932,6 +938,9 @@ class System(SystemObject):
                                             col_type='string',
                                             onclause=model.System.loaned,
                                             relations=[model.User]),
+                          'LoanComment': MyColumn(
+                                            column=model.System.loan_comment,
+                                            col_type='string'),
                           'Group'     : AliasedColumn(col_type='string',
                                             target_table=[model.Group],
                                             relations = lambda: [model.System.group_assocs, model.Group],
@@ -1479,3 +1488,25 @@ class Device(SystemObject):
     
         ids = [r.id for r in query]  
         return not_(model.system_table.c.id.in_(ids))   
+
+class Disk(SystemObject):
+    display_name = 'Disk'
+    searchable_columns = {
+        'Model': DiskColumn(col_type='string', column=model.Disk.model),
+        'Size': DiskColumn(col_type='numeric', column=model.Disk.size),
+        'SectorSize': DiskColumn(col_type='numeric', column=model.Disk.sector_size),
+        'PhysicalSectorSize': DiskColumn(col_type='numeric',
+            column=model.Disk.phys_sector_size),
+    }
+
+    # This is the special case for "is not" which is applied on 
+    # one-to-many related entities...
+    @classmethod
+    def _is_not_filter(cls, col, val):
+        if not val:
+            return or_(col != None, col != val)
+        return not_(model.System.disks.any(col == val))
+    model_is_not_filter = _is_not_filter
+    size_is_not_filter = _is_not_filter
+    sectorsize_is_not_filter = _is_not_filter
+    physicalsectorsize_is_not_filter = _is_not_filter

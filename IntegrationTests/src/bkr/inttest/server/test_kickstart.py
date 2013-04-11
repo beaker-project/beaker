@@ -244,6 +244,18 @@ EOF
             DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
         ]
 
+
+        cls.f18 = data_setup.create_distro(name=u'Fedora-18',
+                osmajor=u'Fedora18', osminor=u'0')
+        cls.f18_x86_64 = data_setup.create_distro_tree(
+                distro=cls.f18, variant=u'Fedora', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/x86_64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-18/GOLD/Fedora/x86_64/os/'])
+        cls.f18_x86_64.repos[:] = [
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+        ]
+
         session.flush()
 
     def setUp(self):
@@ -334,6 +346,38 @@ EOF
         compare_expected('RedHatEnterpriseLinuxServer5-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_rhel5server_repos(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL5-Server-U8" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <repos>
+                            <repo name="custom"
+                            url="http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinuxServer5/"/>
+                        </repos>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        self.assert_(r'''repo --name=custom --baseurl=http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinuxServer5/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
+        for line in recipe.rendered_kickstart.kickstart.splitlines():
+            if line.startswith('repo'):
+                self.assert_(r'''--cost'''
+                             not in line, 
+                             line)
+
     def test_rhel6_defaults(self):
         recipe = self.provision_recipe('''
             <job>
@@ -373,8 +417,10 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system)
-        compare_expected('RedHatEnterpriseLinux6-scheduler-http', recipe.id,
-                recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''url --url=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
 
     def test_rhel6_ondisk(self):
         recipe = self.provision_recipe('''
@@ -394,8 +440,15 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system)
-        compare_expected('RedHatEnterpriseLinux6-scheduler-ondisk', recipe.id,
-                recipe.rendered_kickstart.kickstart)
+
+        ondisk_lines = [r'''clearpart --drives /dev/sda --all --initlabel''',
+                       r'''part /boot --size 200 --recommended --asprimary --ondisk=/dev/sda''',
+                       r'''part / --size 1024 --grow --ondisk=/dev/sda''',
+                       r'''part swap --recommended --ondisk=/dev/sda''']
+
+        for line in ondisk_lines:
+            self.assert_(line in recipe.rendered_kickstart.kickstart.splitlines(),
+                         recipe.rendered_kickstart.kickstart)
 
     def test_rhel6_partitions(self):
         recipe = self.provision_recipe('''
@@ -418,8 +471,15 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system)
-        compare_expected('RedHatEnterpriseLinux6-scheduler-partitions', recipe.id,
-                recipe.rendered_kickstart.kickstart)
+
+        part_lines = [r'''part /boot --size 200 --recommended --asprimary''',
+                      r'''part / --size 1024 --grow''',
+                      r'''part swap --recommended''',
+                      r'''part /home --size=5120 --fstype ext4''']
+
+        for line in part_lines:
+            self.assert_(line in recipe.rendered_kickstart.kickstart.splitlines(),
+                         recipe.rendered_kickstart.kickstart)
 
     def test_rhel6_repos(self):
         recipe = self.provision_recipe('''
@@ -443,8 +503,11 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system)
-        compare_expected('RedHatEnterpriseLinux6-scheduler-repos', recipe.id,
-                recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux6/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
 
     def test_rhel6_s390x(self):
         recipe = self.provision_recipe('''
@@ -464,8 +527,45 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system_s390x)
-        compare_expected('RedHatEnterpriseLinux6-scheduler-s390x', recipe.id,
-                recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-6.2/Server/s390x/os/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''xconfig''' not in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''vmcp ipl''' in recipe.rendered_kickstart.kickstart,
+                     recipe.rendered_kickstart.kickstart)
+
+
+    def test_rhel6_unsupported_hardware(self):
+
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
+                ks_meta=u'unsupported_hardware')
+
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+
+        self.assert_(r'''unsupported_hardware''' in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
 
     def test_rhel7_defaults(self):
         recipe = self.provision_recipe('''
@@ -488,6 +588,33 @@ EOF
         compare_expected('RedHatEnterpriseLinux7-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_rhel7_repos(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <repos>
+                            <repo name="custom"
+                            url="http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux7/"/>
+                        </repos>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/RedHatEnterpriseLinux7/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
     def test_rhel7_s390x(self):
         recipe = self.provision_recipe('''
             <job>
@@ -506,8 +633,16 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system_s390x)
-        compare_expected('RedHatEnterpriseLinux7-scheduler-s390x', recipe.id,
-                recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''url --url=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Server/s390x/os/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''xconfig''' not in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
+        self.assert_(r'''vmcp ipl''' not in recipe.rendered_kickstart.kickstart,
+                     recipe.rendered_kickstart.kickstart)
 
     def test_fedora16_defaults(self):
         recipe = self.provision_recipe('''
@@ -528,6 +663,34 @@ EOF
             ''', self.system)
         compare_expected('Fedora16-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
+
+    def test_fedora_repos(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <repos>
+                            <repo name="custom"
+                            url="http://repos.fedorapeople.org/repos/beaker/server/Fedora18/"/>
+                        </repos>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/Fedora18/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
+
+
 
     def test_ignoredisk(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
@@ -1406,3 +1569,29 @@ for cfg in /etc/sysconfig/network-scripts/ifcfg-* ; do
 done
 '''
                 in k, k)
+
+    def test_harness_api(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="harness=my-alternative-harness">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('beah' not in k, k)
+        self.assert_('export BEAKER_LAB_CONTROLLER_URL="http://%s:8000/"'
+                % self.lab_controller.fqdn in k, k)
+        self.assert_('export BEAKER_LAB_CONTROLLER=%s' % self.lab_controller.fqdn in k, k)
+        self.assert_('export BEAKER_RECIPE_ID=%s' % recipe.id in k, k)
+        self.assert_('export BEAKER_HUB_URL="%s"' % get_server_base() in k, k)
+        self.assert_('yum -y install my-alternative-harness' in k, k)

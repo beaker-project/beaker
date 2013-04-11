@@ -6,7 +6,7 @@ PKGNAME=beaker
 SCM_REMOTEREPO_RE = ^ssh://(.*@)?git.fedorahosted.org/git/$(PKGNAME).git$
 UPLOAD_URL = ssh://fedorahosted.org/$(PKGNAME)
 
-SUBDIRS := Common Client
+SUBDIRS := Common Client documentation
 ifdef WITH_SERVER
     SUBDIRS += Server
 endif

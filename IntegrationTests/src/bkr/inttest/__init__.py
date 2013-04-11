@@ -75,7 +75,7 @@ class DummyVirtManager(object):
         return self
     def __exit__(self, exc_type, exc_value, exc_tb):
         pass
-    def create_vm(self, name, lab_controllers, mac_address):
+    def create_vm(self, name, lab_controllers, mac_address, virtio_possible):
         pass
     def destroy_vm(self, name):
         pass
@@ -103,12 +103,13 @@ class Process(object):
     """
 
     def __init__(self, name, args, env=None, listen_port=None,
-            stop_signal=signal.SIGTERM):
+            stop_signal=signal.SIGTERM, exec_dir=None):
         self.name = name
         self.args = args
         self.env = env
         self.listen_port = listen_port
         self.stop_signal = stop_signal
+        self.exec_dir = exec_dir
 
     def start(self):
         log.info('Spawning %s: %s %r', self.name, ' '.join(self.args), self.env)
@@ -116,7 +117,7 @@ class Process(object):
         if self.env:
             env.update(self.env)
         self.popen = subprocess.Popen(self.args, stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT, env=env)
+                stderr=subprocess.STDOUT, env=env, cwd=self.exec_dir)
         CommunicateThread(popen=self.popen).start()
         if self.listen_port:
             self._wait_for_listen(self.listen_port)

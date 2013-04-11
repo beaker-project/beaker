@@ -160,6 +160,10 @@ gpgcheck=0
         except NoResultFound:
             flash(_(u'Invalid lab controller id %s') % lab_controller_id)
             redirect(str(distro_tree.id))
+
+        url = url.strip()
+        if not url.endswith('/'):
+            url = url + '/'
         if not urlparse.urlparse(url).scheme:
             flash(_(u'URL %r is not absolute') % url)
             redirect(str(distro_tree.id))

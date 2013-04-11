@@ -16,10 +16,15 @@ if [ $(pwd) != $(readlink -f $(dirname "$0") ) ] ; then
 fi
 
 set -x
+
 # If you want to run unittests for beaker client, in your env set BEAKER_CLIENT_TEST_QPID=1,
 # and also set BEAKER_CLIENT_TEST_QPID_BROKER to something reasonable.
-# The __requires__ nonsense below is needed on Fedora so that TurboGears can 
-# import the CherryPy 2 compatibility package.
+
+# pkg_resources.requires() does not work if multiple versions are installed in 
+# parallel. This semi-supported hack using __requires__ is the workaround.
+# http://bugs.python.org/setuptools/issue139
+# (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
+
 env PYTHONPATH=../Common:../Server:../LabController/src:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} \
-    python -c '__requires__ = ["TurboGears"]; import pkg_resources; from nose.core import main; main()' \
+    python -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; from nose.core import main; main()' \
     ${*:--v rhts bkr}

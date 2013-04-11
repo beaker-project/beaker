@@ -184,6 +184,28 @@ class JobSchemaTest(unittest.TestCase, SchemaTest):
             </job>
             ''')
 
+    def test_optional_guestname(self):
+        self.assert_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <guestrecipe guestargs="--lol">
+                            <distroRequires>
+                                <distro_name op="=" value="BlueShoeLinux5-5"/>
+                            </distroRequires>
+                            <hostRequires/>
+                            <task name="/distribution/install" role="STANDALONE"/>
+                        </guestrecipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5"/>
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+
     def test_hostRequires_not_optional(self):
         self.assert_not_valid('''
             <job>
@@ -261,3 +283,41 @@ class JobSchemaTest(unittest.TestCase, SchemaTest):
                 </recipeSet>
             </job>
             ''')
+
+    def test_disk_units(self):
+        # These are all valid units for disk sizes:
+        units = ['bytes', 'B', 'kB', 'KB', 'KiB', 'MB', 'MiB',
+                 'GB', 'GiB', 'TB', 'TiB']
+        for unit in units:
+            self.assert_valid('''
+                <job>
+                    <recipeSet>
+                        <recipe>
+                            <distroRequires/>
+                            <hostRequires>
+                                <disk>
+                                    <size op="&gt;=" value="10" units="%s" />
+                                </disk>
+                            </hostRequires>
+                            <task name="/distribution/install" />
+                        </recipe>
+                    </recipeSet>
+                </job>
+                ''' % unit)
+        # gigaquads are definitely not a valid unit for disk sizes
+        self.assert_not_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires/>
+                        <hostRequires>
+                            <disk>
+                                <size op="&gt;=" value="10" units="gigaquads" />
+                            </disk>
+                        </hostRequires>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''',
+            'Invalid attribute units for element size')

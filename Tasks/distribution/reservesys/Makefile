@@ -46,5 +46,6 @@ $(METADATA): Makefile
 	@echo "Requires:	vim-enhanced"		>> $(METADATA)
 	@echo "Requires:	unifdef"		>> $(METADATA)
 	@echo "Requires:	sendmail"		>> $(METADATA)
+	@echo "Requires:	psmisc" 		>> $(METADATA)
 	@echo "License:		GPLv2"	                >> $(METADATA)
 	@echo "RhtsOptions:	-Compatible -CompatService"	>> $(METADATA)

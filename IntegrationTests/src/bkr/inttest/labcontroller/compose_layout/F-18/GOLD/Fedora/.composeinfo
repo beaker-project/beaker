@@ -1,0 +1,23 @@
+[variant-Fedora.i386]
+arch = i386
+os_dir = i386/os
+debuginfo = i386/debug
+
+[variant-Fedora.x86_64]
+arch = x86_64
+os_dir = x86_64/os
+debuginfo = x86_64/debug
+
+[product]
+family = Fedora
+name = Fedora-18
+version = 18
+variants = Fedora
+
+[variant-Fedora]
+arches = i386,x86_64
+id = Fedora
+name = Fedora
+type = variant
+variants = 
+

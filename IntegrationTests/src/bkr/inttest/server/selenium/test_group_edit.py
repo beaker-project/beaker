@@ -78,3 +78,35 @@ class EditGroup(SeleniumTestCase):
         sel.click("link=%s" % self.group.group_name)
         sel.wait_for_page_to_load(30000)
         self.assert_(self.perm1.permission_name not in sel.get_text("//table[@id='group_permission_grid']"))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=917745
+    def test_add_system_to_group_twice(self):
+        with session.begin():
+            system = data_setup.create_system()
+
+        sel = self.selenium
+        self.login()
+        sel.open('')
+
+        sel.click("//..[@id='admin']/li/a[text()='Groups']")
+        sel.wait_for_page_to_load(30000)
+        sel.click("link=%s" % self.group.group_name)
+        sel.wait_for_page_to_load(30000)
+
+        sel.type("GroupSystem_system_text", system.fqdn)
+        sel.submit("//form[@id='GroupSystem']")
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_text('css=.flash'), "OK")
+
+        sel.open('')
+
+        sel.click("//..[@id='admin']/li/a[text()='Groups']")
+        sel.wait_for_page_to_load(30000)
+        sel.click("link=%s" % self.group.group_name)
+        sel.wait_for_page_to_load(30000)
+
+        sel.type("GroupSystem_system_text", system.fqdn)
+        sel.submit("//form[@id='GroupSystem']")
+        sel.wait_for_page_to_load('30000')
+        self.assertEqual(sel.get_text('css=.flash'),
+                "System '%s' is already in group '%s'" % (system.fqdn, self.group.group_name))

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
+.. _bkr-job-logs:
+
 bkr job-logs: Print URLs of Beaker recipe log files
 ===================================================
 
@@ -62,10 +64,7 @@ class Job_Logs(BeakerCommand):
     def run(self, *args, **kwargs):
         self.check_taskspec_args(args)
 
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
-
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
         for task in args:
             logfiles = self.hub.taskactions.files(task)
             for log in logfiles:

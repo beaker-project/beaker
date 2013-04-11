@@ -118,7 +118,10 @@
    <td class="title"><b>Job ID</b></td>
    <td class="value"><a class="list" href="${tg.url('/jobs/%s' % job.id)}">${job.t_id}</a></td>
    <td class="title"><b>Status</b></td>
-   <td class="value">${job.status}</td>
+   <td class="value">
+    <span py:if="job.is_dirty" class="statusDirty">Updating…</span>
+    <span py:if="not job.is_dirty" py:strip="True">${job.status}</span>
+   </td>
    <td class="title"><b>Result</b></td>
    <td class="value">${job.result}</td>
   </tr>
@@ -161,9 +164,10 @@
     <?python 
         allowed_priorities = recipeset.allowed_priorities(tg.identity.user) 
     ?>   
- <div py:content="recipeset_widget(recipeset=recipeset,priorities_list=allowed_priorities)">RecipeSet goes here</div>
-   <div py:for="recipe in recipeset.recipes" class="recipe">
-    <div py:content="recipe_widget(recipe=recipe)">Recipe goes here</div>
+ <div py:replace="recipeset_widget(recipeset=recipeset,priorities_list=allowed_priorities)">RecipeSet goes here</div>
+   <div py:for="recipe in recipeset.recipes" py:strip="True" py:if="hasattr(recipe, 'guests')">
+    <div py:content="recipe_widget(recipe=recipe)" class="recipe">Recipe goes here</div>
+    <div py:for="guest in recipe.guests" class="recipe guest-recipe" py:content="recipe_widget(recipe=guest)">Guest goes here</div>
    </div>
   </div>
   ${hidden_id.display()}

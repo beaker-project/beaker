@@ -31,7 +31,6 @@ from bkr.server.helpers import *
 from bkr.server.recipetasks import RecipeTasks
 from bkr.server.controller_utilities import _custom_status, _custom_result
 from socket import gethostname
-from bkr.upload import Uploader
 import exceptions
 import time
 import urlparse
@@ -63,8 +62,6 @@ class Recipes(RPCRoot):
 
     recipe_widget = RecipeWidget()
     recipe_tasks_widget = RecipeTasksWidget()
-
-    upload = Uploader(config.get("basepath.logs", "/var/www/beaker/logs"))
 
     log_types = dict(R = LogRecipe,
                      T = LogRecipeTask,
@@ -163,26 +160,15 @@ class Recipes(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def upload_file(self, recipe_id, path, filename, size, md5sum, offset, data):
+    def extend(self, recipe_id, kill_time):
         """
-        upload to recipe in pieces 
+        Extend recipe watchdog by kill_time seconds
         """
         try:
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
-
-        # Add the log to the DB if it hasn't been recorded yet.
-        LogRecipe.lazy_create(parent=recipe,
-                              path=path,
-                              filename=filename,
-                             )
-        return self.upload.uploadFile("%s/%s" % (recipe.filepath, path), 
-                                      filename, 
-                                      size, 
-                                      md5sum, 
-                                      offset, 
-                                      data)
+        return recipe.extend(kill_time)
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
@@ -431,7 +417,7 @@ class Recipes(RPCRoot):
             redirect(url("/recipes"))
         PDC = widgets.PaginateDataGrid.Column
         fields = [PDC(name='fqdn', getter=lambda x: x.link, title='Name'),
-            PDC(name='user', getter=lambda x: x.user and x.user.email_link or None, title='User'),]
+            PDC(name='user', getter=lambda x: x.user.email_link if x.user else None, title='User'),]
         grid = myPaginateDataGrid(fields=fields)
         return dict(title='Recipe Systems', grid=grid, list=recipe.systems,
             object_count = len(recipe.systems), search_bar=None)

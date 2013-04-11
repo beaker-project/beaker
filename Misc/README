@@ -1,0 +1,8 @@
+This sub-directory consists of a number of miscellaneous scripts which
+are not suitable for any of the other directories.
+
+Scripts
+-------
+
+* checkbugs.py: Script to check the status of bugs slated against a given release.
+* beaker_test_setup.sh, beaker_test_run.sh: Setup and run Beaker's test suite

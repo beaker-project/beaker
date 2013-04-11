@@ -1,3 +1,4 @@
+{% if not distro is osmajor('RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
 {% set repo_base = distro_tree.url_in_lab(lab_controller, scheme=['http', 'ftp']) %}
 {% if repo_base %}
 {% for repo in distro_tree.repos %}
@@ -6,12 +7,17 @@ repo --name=beaker-{{ repo.repo_id }} --cost=100 --baseurl={{ repo_base|urljoin(
 {% endif %}
 {% endfor %}
 {% endif %}
+{% endif %}
 {% if customrepos %}
 {% for repo in customrepos %}
 {% if '$' in repo.path %}
 # skipping {{ repo.repo_id }},{{ repo.path }} which contains a yum variable
 {% else %}
+{% if not distro is osmajor('RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
 repo --name={{repo.repo_id }} --cost=100 --baseurl={{ repo.path }}
+{% else %}
+repo --name={{repo.repo_id }} --baseurl={{ repo.path }}
+{% endif %}
 {% endif %}
 {% endfor %}
 {% endif %}

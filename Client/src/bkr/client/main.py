@@ -31,8 +31,12 @@ def main():
     command_container = BeakerCommandContainer(conf=conf)
 
     option_list = [
-        Option("--username", help="specify user"),
-        Option("--password", help="specify password"),
+        Option('--hub', metavar='URL',
+            help='Connect to Beaker server at URL (overrides config file)'),
+        Option('--username',
+            help='Use USERNAME for password authentication (overrides config file)'),
+        Option('--password',
+            help='Use PASSWORD for password authentication (overrides config file)'),
     ]
 
     formatter = IndentedHelpFormatter(max_help_position=60, width=120)

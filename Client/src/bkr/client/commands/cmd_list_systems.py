@@ -180,9 +180,6 @@ class List_Systems(BeakerCommand):
         self.parser.set_defaults(feed='')
 
     def run(self, *args, **kwargs):
-        username = kwargs.pop("username", None)
-        password = kwargs.pop("password", None)
-
         if args:
             self.parser.error('This command does not accept any arguments')
 
@@ -203,7 +200,7 @@ class List_Systems(BeakerCommand):
         feed_url = '/%s?%s' % (kwargs['feed'], urllib.urlencode(qs_args))
 
         # This will log us in using XML-RPC
-        self.set_hub(username, password)
+        self.set_hub(**kwargs)
 
         # Now we can steal the cookie jar to make our own HTTP requests
         urlopener = urllib2.build_opener(urllib2.HTTPCookieProcessor(

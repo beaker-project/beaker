@@ -52,6 +52,7 @@ xconfig --startxonboot
 # Install OS instead of upgrade
 install
 
+{% snippet 'print_anaconda_repos' %}
 {% snippet 'rhts_scsi_ethdevices' %}
 {% snippet 'rhts_partitions' %}
 {% snippet 'RedHatEnterpriseLinuxClient5' %}

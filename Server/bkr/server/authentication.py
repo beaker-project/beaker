@@ -52,8 +52,11 @@ class Auth(RPCRoot):
         .. versionadded:: 0.6.0
         .. versionchanged:: 0.6.1
            Formerly returned only the username.
+        .. versionchanged:: 1.0
+           Also return the email address of user.
         """
-        retval = {'username': identity.current.user.user_name}
+        retval = {'username': identity.current.user.user_name,
+                  'email_address' : identity.current.user.email_address}
         if identity.current.visit_link.proxied_by_user is not None:
             retval['proxied_by_username'] = identity.current.visit_link.proxied_by_user.user_name
         return retval
