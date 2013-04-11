@@ -328,7 +328,7 @@ Bugs
 If you encounter an issue or have an idea for enhancement, please `file a new bug`_.
 See also `open bugs`_.
 
-.. _file a new bug: https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker&component=command+line&short_desc=beaker-wizard:+&assigned_to=psplicha@redhat.com
+.. _file a new bug: https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker&component=command+line&short_desc=beaker-wizard:+&status_whiteboard=BeakerWizard&assigned_to=psplicha@redhat.com
 .. _open bugs: https://bugzilla.redhat.com/buglist.cgi?product=Beaker&bug_status=__open__&short_desc=beaker-wizard&short_desc_type=allwordssubstr
 
 See also
