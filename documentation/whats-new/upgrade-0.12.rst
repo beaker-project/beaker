@@ -4,6 +4,10 @@ Upgrading to Beaker 0.12
 Database changes
 ----------------
 
+After upgrading the ``beaker-server`` package on your Beaker server, run the 
+``beaker-init`` command to create new tables. Then follow the additional 
+database upgrade instructions below.
+
 Asynchronous job status updates (bug :issue:`807237`)
 +++++++++++++++++++++++++++++++++++++++++++++++++++++
 
