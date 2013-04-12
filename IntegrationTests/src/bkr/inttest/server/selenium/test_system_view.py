@@ -35,15 +35,22 @@ from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System,
 from bkr.server.tools import beakerd
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login
+from selenium.webdriver.support.ui import Select
+from bkr.inttest.assertions import wait_for_condition
 
 class SystemViewTestWD(WebDriverTestCase):
 
     def setUp(self):
-        self.browser = self.get_browser()
         with session.begin():
             self.lab_controller = data_setup.create_labcontroller()
-            self.system = data_setup.create_system(
-                lab_controller=self.lab_controller)
+            self.user = data_setup.create_user(password=u'password')
+            self.system = data_setup.create_system(lab_controller=self.lab_controller)
+            self.distro_tree = data_setup.create_distro_tree()
+
+        self.browser = self.get_browser()
+
+    def tearDown(self):
+        self.browser.quit()
 
     def test_clear_netboot(self):
         b = self.browser
@@ -58,6 +65,55 @@ class SystemViewTestWD(WebDriverTestCase):
         flash_text = b.find_element_by_class_name('flash').text
         self.assertEqual(flash_text, u'Clear netboot command enqueued')
 
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=886875
+    def test_kernel_install_options_propagated_view(self):
+
+        with session.begin():
+            self.system.provisions[self.distro_tree.arch] = \
+                Provision(arch=self.distro_tree.arch,
+                          ks_meta = u'key1=value1 key1=value2 key2=value key3',
+                          kernel_options=u'key1=value1 key1=value2 key2=value key3',
+                          kernel_options_post=u'key1=value1 key1=value2 key2=value key3')
+
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
+
+        # provision tab
+        b.find_element_by_link_text('Provision').click()
+
+        # select the distro
+        Select(b.find_element_by_name('prov_install'))\
+            .select_by_visible_text(unicode(self.distro_tree))
+
+        # check the kernel install options field
+        def provision_ks_meta_populated():
+            if b.find_element_by_xpath("//input[@id='provision_ks_meta']")\
+                    .get_attribute('value') == \
+                    u'key1=value1 key1=value2 key2=value key3':
+                return True
+
+
+
+        # check the kernel install options field
+        def provision_koptions_populated():
+            if b.find_element_by_xpath("//input[@id='provision_koptions']")\
+                    .get_attribute('value') == \
+                    u'key1=value1 key1=value2 key2=value key3 noverifyssl':
+                return True
+
+        # check the kernel post install options field
+        def provision_koptions_post_populated():
+            if b.find_element_by_xpath("//input[@id='provision_koptions_post']")\
+                    .get_attribute('value') == \
+                    'key1=value1 key1=value2 key2=value key3':
+                return True
+
+
+        wait_for_condition(provision_ks_meta_populated)
+        wait_for_condition(provision_koptions_populated)
+        wait_for_condition(provision_koptions_post_populated)
 
 class SystemViewTest(SeleniumTestCase):
 
