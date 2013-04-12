@@ -183,11 +183,18 @@ class RecipeTasks(RPCRoot):
             task = RecipeTask.by_id(task_id)
         except NoResultFound:
             raise BX(_('Invalid task ID: %s') % task_id)
+        # don't use set, we want to preserve ordering
         roles = {}
         for role, recipes in task.recipe.peer_roles().iteritems():
-            roles.setdefault(unicode(role), []).extend(
-                    unicode(r.resource.fqdn) for r in recipes)
+            fqdns = roles.setdefault(unicode(role), [])
+            for recipe in recipes:
+                fqdn = unicode(recipe.resource.fqdn)
+                if fqdn not in fqdns:
+                    fqdns.append(fqdn)
         for role, tasks in task.peer_roles().iteritems():
-            roles.setdefault(unicode(role), []).extend(
-                    unicode(t.recipe.resource.fqdn) for t in tasks)
+            fqdns = roles.setdefault(unicode(role), [])
+            for task in tasks:
+                fqdn = unicode(task.recipe.resource.fqdn)
+                if fqdn not in fqdns:
+                    fqdns.append(fqdn)
         return roles
