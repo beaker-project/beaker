@@ -360,7 +360,23 @@ class DistroImportTest(unittest.TestCase):
                                  u'arch': u'i386',
                                  u'ks_meta': None}
 
-
+        self.x86_64_rhel6_naked =  {u'arch': u'x86_64',
+                                    u'arches': [u'x86_64'],
+                                    u'images': [{u'path': u'/RHEL-6-Server-RHEV/6.4/6.4.1.1/vmlinuz0',
+                                                 u'type': u'kernel'},
+                                                {u'path': u'/RHEL-6-Server-RHEV/6.4/6.4.1.1/initrd0.img',
+                                                 u'type': u'initrd'}],
+                                    u'kernel_options': None,
+                                    u'kernel_options_post': None,
+                                    u'ks_meta': None,
+                                    u'name': u'RHEVH-6.4-20130318.1',
+                                    u'osmajor': u'RHEVH6',
+                                    u'osminor': u'4',
+                                    u'repos': [],
+                                    u'tags': [],
+                                    u'tree_build_time': 1366007531.817827,
+                                    u'urls': [u'http://localhost:19998/RHEL-6-Server-RHEV/6.4/6.4.1.1/'],
+                                    u'variant': u'Server'}
 
     def _run_import(self, import_args):
         p = subprocess.Popen(import_args,
@@ -398,6 +414,18 @@ class DistroImportTest(unittest.TestCase):
         rhel5_trees = self._import_trees(['--arch', 'RISC', '--arch', 'x86_64',
             '%sRHEL5-Server/' % self.distro_url])
         self.assertEquals(len(rhel5_trees), 1)
+
+    def test_rhel6_naked_import(self):
+        trees = self._import_trees(['%sRHEL-6-Server-RHEV/6.4/6.4.1.1/' % \
+            self.distro_url, "--name", "RHEVH-6.4-20130318.1", "--family", \
+            "RHEVH", "--variant", "Server", "--version", "6.4", "--kernel", \
+            "/RHEL-6-Server-RHEV/6.4/6.4.1.1/vmlinuz0", "--initrd", \
+            "/RHEL-6-Server-RHEV/6.4/6.4.1.1/initrd0.img", "--arch", "x86_64"])
+        self.assertEqual(len(trees), 1)
+        tree = trees[0]
+        # Naked imports return the current time
+        tree['tree_build_time'] = 1366007531.817827
+        self.assertEquals(tree, self.x86_64_rhel6_naked)
 
     def test_rhel5_tree_import_compose(self):
         trees = self._import_trees(['%sRHEL5-Server/' % self.distro_url])

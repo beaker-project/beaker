@@ -726,9 +726,10 @@ class TreeInfoBase(object):
                                    self.parser.get('general', 'name', 
                                    '%s-%s' % (family,version)
                                                     )
-        if self.options.variant:
-            self.tree['variant'] = self.options.variant.pop()
-        else:
+
+        try:
+            self.tree['variant'] = self.options.variant[0]
+        except IndexError:
             self.tree['variant'] = self.parser.get('general','variant','')
         self.tree['arch'] = self.parser.get('general', 'arch')
         self.tree['tree_build_time'] = self.options.buildtime or \
@@ -1698,11 +1699,11 @@ class NakedTree(Importer):
         version = options.version
         self.tree['name'] = options.name
         try:
-            self.tree['variant'] = options.variant.pop()
+            self.tree['variant'] = options.variant[0]
         except IndexError:
             self.tree['variant'] = ''
         try:
-            self.tree['arch'] = options.arch.pop()
+            self.tree['arch'] = options.arch[0]
         except IndexError:
             self.tree['arch'] = ''
         self.tree['tree_build_time'] = options.buildtime or \
@@ -1714,7 +1715,7 @@ class NakedTree(Importer):
         else:
             self.tree['osminor'] = '0'
 
-        self.tree['arches'] = [options.arch]
+        self.tree['arches'] = options.arch
         self.tree['repos'] = repos
 
         # Add install images
