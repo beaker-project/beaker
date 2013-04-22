@@ -170,12 +170,10 @@ following utilities are available in templates:
         {{ end }}
 
 ``parsed_url``
-    A Jinja filter which parses a URL using
-    ```urlparse.urlparse`` <http://docs.python.org/library/urlparse.html#urlparse.urlparse>`_.
+    A Jinja filter which parses a URL using :py:func:`urlparse.urlparse`.
 
 ``re``
-    The Python `re <http://docs.python.org/library/re.html>`_ module,
-    for evaluating regular expressions.
+    The Python :py:mod:`re` module, for evaluating regular expressions.
 
 ``snippet``
     A function which evaluates the named snippet and returns the result.
@@ -184,8 +182,7 @@ following utilities are available in templates:
 
 ``split``
     A Jinja filter which splits on whitespace, or any other delimiter.
-    See
-    `string.split <http://docs.python.org/library/string.html#string.split>`_.
+    See :py:func:`string.split`.
 
 ``arch``; ``osmajor``; ``osversion``
     These are Jinja tests which can be applied to ``distro_tree``. Each
