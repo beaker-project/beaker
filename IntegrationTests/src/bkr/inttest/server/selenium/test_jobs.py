@@ -157,6 +157,119 @@ class TestViewJob(WebDriverTestCase):
                 '//a[@class="list recipe-id"]')]
         self.assertEquals(recipe_order, [host.t_id, guest.t_id])
 
+class NewJobTestWD(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+        with session.begin():
+            self.user = data_setup.create_user(password=u'password')
+            if not Distro.by_name(u'BlueShoeLinux5-5'):
+                data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
+            data_setup.create_product(product_name=u'the_product')
+
+    def tearDown(self):
+        self.browser.quit()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=949777
+    def test_invalid_inventory_date_with_equal(self):
+
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'jobs/new')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with invalid date value with equal op</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires>
+                           <system>
+                              <last_inventoried op="=" value="2010-10-10 10:10:10"/>
+                           </system>
+                           <system_type value="Machine"/>
+                        </hostRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
+        b.find_element_by_xpath("//input[@value='Submit Data']").click()
+        b.find_element_by_xpath("//input[@value='Queue']").click()
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assert_('Invalid date format' in flash_text, flash_text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=949777
+    def test_invalid_inventory_date_with_not_equal(self):
+
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'jobs/new')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with invalid date value with equal op</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires>
+                           <system>
+                              <last_inventoried op="!=" value="2010-10-10 10:10:10"/>
+                           </system>
+                           <system_type value="Machine"/>
+                        </hostRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
+        b.find_element_by_xpath("//input[@value='Submit Data']").click()
+        b.find_element_by_xpath("//input[@value='Queue']").click()
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assert_('Invalid date format' in flash_text, flash_text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=949777
+    def test_valid_inventory_date(self):
+
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'jobs/new')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with invalid date value with equal op</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires>
+                           <system>
+                              <last_inventoried op="&gt;" value="2010-10-10"/>
+                           </system>
+                           <system_type value="Machine"/>
+                        </hostRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
+        b.find_element_by_xpath("//input[@value='Submit Data']").click()
+        b.find_element_by_xpath("//input[@value='Queue']").click()
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assert_('Success!' in flash_text, flash_text)
+        self.assertEqual(b.title, 'My Jobs')
+
 class NewJobTest(SeleniumTestCase):
 
     @with_transaction

@@ -114,6 +114,44 @@ class JobSchemaTest(unittest.TestCase, SchemaTest):
             </job>
             ''')
 
+    def test_minimal_job_with_system_inventory_status(self):
+        self.assert_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5"/>
+                        </distroRequires>
+                        <hostRequires>
+                            <system>
+                              <last_inventoried op="=" value=""/>
+                            </system>
+                        </hostRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+
+    def test_minimal_job_with_system_inventory_date(self):
+        self.assert_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5"/>
+                        </distroRequires>
+                        <hostRequires>
+                            <system>
+                              <last_inventoried op="=" value="2013-10-10" />
+                            </system>
+                        </hostRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+
     def test_recipe_elements_in_different_order(self):
         self.assert_valid('''
             <job>

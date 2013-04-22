@@ -47,6 +47,15 @@ def bytes_multiplier(units):
         'TiB':   1024*1024*1024*1024,
     }.get(units)
 
+# convert a date to a datetime range
+def get_dtrange(dt):
+    start_dt = datetime.datetime.combine(
+        dt, datetime.time(0,0,0))
+    end_dt = datetime.datetime.combine(
+        dt, datetime.time(23,59,59))
+
+    return start_dt, end_dt
+
 class NotVirtualisable(ValueError): pass
 
 class ElementWrapper(object):
@@ -477,6 +486,50 @@ class XmlHostName(ElementWrapper):
         query = None
         if value:
             query = getattr(System.fqdn, op)(value)
+        return (joins, query)
+
+class XmlLastInventoried(ElementWrapper):
+    """
+    Pick a system wth the correct last inventoried date/status
+    """
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 '!=' : '__ne__',
+                 '>'  : '__gt__',
+                 '>=' : '__ge__',
+                 '<'  : '__lt__',
+                 '<=' : '__le__'}
+
+    def filter(self, joins):
+        col = System.date_lastcheckin
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+
+        if value:
+            # bail out early, we don't have any RelaxNG enforced
+            # date format, since we want to allow ""
+            try:
+                dt = datetime.datetime.strptime(value,'%Y-%m-%d').date()
+            except ValueError,e:
+                raise ValueError('Invalid date format: %s. '
+                                 'Use YYYY-MM-DD.' % value)
+            if op == '__eq__':
+                start_dt, end_dt = get_dtrange(dt)
+                query = and_(getattr(col, '__ge__')(start_dt),
+                                 (getattr(col, '__le__')(end_dt)))
+            elif op == '__ne__':
+                start_dt, end_dt = get_dtrange(dt)
+                query = not_(and_(getattr(col, '__ge__')(start_dt),
+                                      (getattr(col, '__le__')(end_dt))))
+            elif op == '__gt__':
+                query = getattr(col, '__gt__')(datetime.datetime.combine
+                                               (dt,datetime.time(23, 59, 59)))
+            else:
+                query = getattr(col, op)(datetime.datetime.combine
+                                         (dt,datetime.time(0, 0, 0)))
+        else:
+            query = getattr(col, op)(None)
+
         return (joins, query)
 
 class XmlSystemLender(ElementWrapper):
@@ -972,6 +1025,7 @@ class XmlSystem(XmlAnd):
                     'numanodes': XmlNumaNodeCount,
                     'hypervisor': XmlHypervisor,
                     'added': XmlSystemAdded,
+                    'last_inventoried':XmlLastInventoried
                    }
 
 
@@ -1031,6 +1085,7 @@ def apply_system_filter(filter, query):
                 clauses.append(clause)
     if clauses:
         query = query.filter(and_(*clauses))
+
     return query
 
 def apply_lab_controller_filter(filter, query):

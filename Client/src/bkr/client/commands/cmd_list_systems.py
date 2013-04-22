@@ -205,11 +205,17 @@ class List_Systems(BeakerCommand):
         # Now we can steal the cookie jar to make our own HTTP requests
         urlopener = urllib2.build_opener(urllib2.HTTPCookieProcessor(
                 self.hub._transport.cookiejar))
-        atom = lxml.etree.parse(urlopener.open(self.hub._hub_url + feed_url))
-        titles = atom.xpath('/atom:feed/atom:entry/atom:title',
-                namespaces={'atom': 'http://www.w3.org/2005/Atom'})
-        if not titles:
-            sys.stderr.write('Nothing Matches\n')
+        try:
+            content = urlopener.open(self.hub._hub_url + feed_url)
+        except urllib2.HTTPError,e:
+            sys.stderr.write(e.read())
             sys.exit(1)
-        for title in titles:
-            print title.text.strip()
+        else:
+            atom = lxml.etree.parse(content)
+            titles = atom.xpath('/atom:feed/atom:entry/atom:title',
+                                namespaces={'atom': 'http://www.w3.org/2005/Atom'})
+            if not titles:
+                sys.stderr.write('Nothing Matches\n')
+                sys.exit(1)
+            for title in titles:
+                print title.text.strip()

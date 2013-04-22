@@ -466,6 +466,13 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
     def tearDown(self):
         session.commit()
 
+    def check_systems(self, present, absent, systems):
+        for system in present:
+            self.assert_(system in systems)
+
+        for system in absent:
+            self.assert_(system not in systems)
+
     # test cases for <group/> are in bkr.server.test.test_group_xml
 
     def test_autoprov(self):
@@ -633,6 +640,117 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
             """).all()
         self.assert_(excluded not in systems)
         self.assert_(included in systems)
+
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=949777
+    def test_system_inventory_filter(self):
+
+        # date times
+        today = datetime.date.today()
+        time_now = datetime.datetime.combine(today, datetime.time(0, 0))
+        time_delta1 = datetime.datetime.combine(today, datetime.time(0, 30))
+        time_tomorrow = time_now + datetime.timedelta(days=1)
+        time_dayafter = time_now + datetime.timedelta(days=2)
+
+        # dates
+        date_today = time_now.date().isoformat()
+        date_tomorrow = time_tomorrow.date().isoformat()
+        date_dayafter = time_dayafter.date().isoformat()
+
+        not_inv = data_setup.create_system()
+        inv1 = data_setup.create_system()
+        inv1.date_lastcheckin = time_now
+        inv2 = data_setup.create_system()
+        inv2.date_lastcheckin = time_delta1
+        inv3 = data_setup.create_system()
+        inv3.date_lastcheckin = time_tomorrow
+
+        session.flush()
+
+        # not inventoried
+        systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="=" value="" /> </system>
+                </hostRequires>
+                """).all()
+
+        self.check_systems(present=[not_inv],
+                           absent=[inv1,inv2,inv3],
+                           systems=systems)
+        # inventoried
+        systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="!=" value="" /> </system>
+                </hostRequires>
+                """).all()
+
+        self.check_systems(present=[inv1,inv2,inv3],
+                           absent=[not_inv],
+                           systems=systems)
+
+        # on a particular day
+        systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="=" value="%s" /> </system>
+                </hostRequires>
+                """ %date_today).all()
+
+        self.check_systems(present=[inv1,inv2],
+                           absent=[not_inv, inv3],
+                           systems=systems)
+
+        # on a particular day on which no machines have been inventoried
+        systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="=" value="%s" /> </system>
+                </hostRequires>
+                """ %date_dayafter).all()
+
+        self.assertEquals(len(systems),0)
+
+        # not on a particular day
+        systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="!=" value="%s" /> </system>
+                </hostRequires>
+                """ %date_today).all()
+
+        self.check_systems(present=[inv3],
+                           absent=[not_inv,inv1,inv2],
+                           systems=systems)
+
+        # after a particular day
+        systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="&gt;" value="%s" /> </system>
+                </hostRequires>
+                """ %date_today).all()
+
+        self.check_systems(present=[inv3],
+                           absent=[not_inv, inv1, inv2],
+                           systems=systems)
+
+        # Invalid date with &gt;
+        try:
+            systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="&gt;" value="foo-bar-baz f:b:z" /> </system>
+                </hostRequires>
+                """).all()
+            self.fail('Must Fail or Die')
+        except ValueError, e:
+            self.assert_('Invalid date format' in e.message, e.message)
+
+        # Invalid date format with =
+        try:
+            systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="=" value="2013-10-10 00:00:10" /> </system>
+                </hostRequires>
+                """).all()
+            self.fail('Must Fail or Die')
+        except ValueError, e:
+            self.assert_('Invalid date format' in e.message, e.message)
 
     def test_system_loaned(self):
         user1 = data_setup.create_user()

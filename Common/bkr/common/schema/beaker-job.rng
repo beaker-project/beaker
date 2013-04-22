@@ -687,6 +687,20 @@
         <data type="date"/>
       </attribute>
     </element>
+    <element name="last_inventoried">
+      <a:documentation xml:lang="en">
+        Date on which the system was last inventoried.
+      </a:documentation>
+      <ref name="op" />
+      <attribute name="value">
+        <a:documentation xml:lang="en">
+          The date should be specified as "YYYY-MM-DD". It can be
+          specified as "" to be used in conjunction with the '=' or
+          '!=' operators - the former matching only uninventoried
+          machines and the latter only inventoried machines.
+         </a:documentation>
+      </attribute>
+    </element>
     <element name="arch">
       <ref name="equality_op" />
       <attribute name="value" />
