@@ -317,9 +317,11 @@ def create_recipe(distro_tree=None, task_list=None,
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
             rt = RecipeTask(task=t)
+            rt.role = u'STANDALONE'
             recipe.tasks.append(rt)
     else:
         rt = RecipeTask(task=create_task(name=task_name))
+        rt.role = u'STANDALONE'
         recipe.tasks.append(rt)
     return recipe
 

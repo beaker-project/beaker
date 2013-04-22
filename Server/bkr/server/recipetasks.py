@@ -188,12 +188,16 @@ class RecipeTasks(RPCRoot):
         for role, recipes in task.recipe.peer_roles().iteritems():
             fqdns = roles.setdefault(unicode(role), [])
             for recipe in recipes:
+                if not recipe.resource or not recipe.resource.fqdn:
+                    continue
                 fqdn = unicode(recipe.resource.fqdn)
                 if fqdn not in fqdns:
                     fqdns.append(fqdn)
         for role, tasks in task.peer_roles().iteritems():
             fqdns = roles.setdefault(unicode(role), [])
             for task in tasks:
+                if not task.recipe.resource or not task.recipe.resource.fqdn:
+                    continue
                 fqdn = unicode(task.recipe.resource.fqdn)
                 if fqdn not in fqdns:
                     fqdns.append(fqdn)
