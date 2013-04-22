@@ -1,0 +1,6 @@
+#!/bin/bash
+# Dummy power script, for testing purposes only!
+
+[[ -n "$power_id" ]] && sleep $power_id
+
+exit 0

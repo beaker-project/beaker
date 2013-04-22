@@ -15,6 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import time
 import datetime
 
 def assert_sorted(things, key=None):
@@ -77,3 +78,14 @@ def assert_durations_contiguous(durations):
         if durations[i - 1].finish_time != durations[i].start_time:
             raise AssertionError('Gap found between %r and %r'
                     % (durations[i - 1], durations[i]))
+
+def wait_for_condition(condition_func, timeout=30):
+    start_time = time.time()
+    while True:
+        if condition_func():
+            break
+        if time.time() - start_time > timeout:
+            raise AssertionError('Condition %r not satisfied within %d seconds'
+                    % (condition_func, timeout))
+        else:
+            time.sleep(0.25)

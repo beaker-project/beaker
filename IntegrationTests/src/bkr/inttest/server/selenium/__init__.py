@@ -21,7 +21,6 @@ import os
 import re
 import logging
 import subprocess
-import time
 from selenium import selenium, webdriver
 import unittest
 import xmlrpclib
@@ -29,6 +28,7 @@ from urlparse import urljoin
 import kobo.xmlrpc
 from datetime import datetime
 from bkr.inttest import data_setup, get_server_base, Process
+from bkr.inttest.assertions import wait_for_condition
 from bkr.server.bexceptions import BX
 from time import sleep
 import pkg_resources
@@ -59,16 +59,7 @@ class SeleniumTestCase(unittest.TestCase):
                     pass
     @classmethod
     def wait_for_condition(cls, cond, wait_time=30):
-        start_time = time.time()
-        while True:
-            if cond():
-                break
-            current_test_time = time.time()
-            if time.time() - start_time > wait_time:
-                raise AssertionError('Condition %r not satisfied within %d seconds'
-                        % (cond, wait_time))
-            else:
-                sleep(0.25)
+        wait_for_condition(cond, timeout=wait_time)
 
     @classmethod
     def get_selenium(cls):
