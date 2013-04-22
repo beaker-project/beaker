@@ -359,7 +359,9 @@ class LabControllers(RPCRoot):
         if cmd.system.lab_controller != lab_controller:
             raise ValueError('%s cannot update command for %s in wrong lab'
                     % (lab_controller, cmd.system))
-        cmd.status = CommandStatus.running
+        if cmd.status != CommandStatus.queued:
+            raise ValueError('Command %s already run' % command_id)
+        cmd.change_status(CommandStatus.running)
         return True
 
     @cherrypy.expose
@@ -370,7 +372,9 @@ class LabControllers(RPCRoot):
         if cmd.system.lab_controller != lab_controller:
             raise ValueError('%s cannot update command for %s in wrong lab'
                     % (lab_controller, cmd.system))
-        cmd.status = CommandStatus.completed
+        if cmd.status != CommandStatus.running:
+            raise ValueError('Command %s not running' % command_id)
+        cmd.change_status(CommandStatus.completed)
         cmd.log_to_system_history()
         return True
 
@@ -398,7 +402,9 @@ class LabControllers(RPCRoot):
         if cmd.system.lab_controller != lab_controller:
             raise ValueError('%s cannot update command for %s in wrong lab'
                     % (lab_controller, cmd.system))
-        cmd.status = CommandStatus.failed
+        if cmd.status != CommandStatus.running:
+            raise ValueError('Command %s not running' % command_id)
+        cmd.change_status(CommandStatus.failed)
         cmd.new_value = message
         if cmd.system.status == SystemStatus.automated:
             cmd.system.mark_broken(reason=u'Power command failed: %s' % message)
