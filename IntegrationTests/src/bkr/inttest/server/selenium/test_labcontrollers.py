@@ -338,6 +338,7 @@ class TestPowerFailures(XmlRpcTestCase):
                                                         lab_controller=self.lab_controller,
                                                         status = SystemStatus.automated)
             command = automated_system.action_power(u'on')
+        self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
                 u'needs moar powa')
         with session.begin():
@@ -354,6 +355,7 @@ class TestPowerFailures(XmlRpcTestCase):
                                                      lab_controller = self.lab_controller,
                                                      status = SystemStatus.manual)
             command = manual_system.action_power(u'on')
+        self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
                 u'needs moar powa')
         with session.begin():
@@ -395,6 +397,7 @@ class TestPowerFailures(XmlRpcTestCase):
             command = system.command_queue[0]
             self.assertEquals(command.action, 'reboot')
 
+        self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
                 u'needs moar powa')
         with session.begin():
@@ -432,6 +435,7 @@ class TestPowerFailures(XmlRpcTestCase):
             command = system.command_queue[1]
             self.assertEquals(command.action, 'configure_netboot')
 
+        self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
                 u'oops it borked')
         with session.begin():
