@@ -384,7 +384,7 @@ def schedule_queued_recipes(*args):
         # * Priority level (i.e Normal, High etc)
         # * RecipeSet id
         # * Recipe id
-        recipes = recipes.order_by(RecipeSet.lab_controller != None). \
+        recipes = recipes.order_by(RecipeSet.lab_controller == None). \
             order_by(RecipeSet.priority.desc()). \
             order_by(RecipeSet.id). \
             order_by(MachineRecipe.id)
