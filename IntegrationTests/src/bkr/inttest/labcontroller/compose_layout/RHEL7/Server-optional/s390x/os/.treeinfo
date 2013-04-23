@@ -1,0 +1,12 @@
+[checksums]
+repodata/repomd.xml = sha256:924aa04f506450eb253db8fca188c480a3e3afe02fb5417f89e1c0680ff9b558
+
+[general]
+arch = s390x
+family = Red Hat Enterprise Linux
+packages = Packages
+repository = 
+timestamp = 1342048154.988068
+variant = Server-optional
+version = 7.0
+
