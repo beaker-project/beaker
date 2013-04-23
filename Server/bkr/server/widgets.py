@@ -1331,7 +1331,7 @@ class SystemForm(Form):
                TextField(name='model', label=_(u'Model')),
                TextField(name='date_added', label=_(u'Date Created')),
                TextField(name='date_modified', label=_(u'Last Modification')),
-               TextField(name='date_lastcheckin', label=_(u'Last Checkin')),
+               TextField(name='date_lastcheckin', label=_(u'Last Inventoried')),
                TextField(name='serial', label=_(u'Serial Number')),
                SingleSelectField(name='type',
                                  label=_(u'Type'),
