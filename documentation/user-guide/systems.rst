@@ -194,7 +194,7 @@ logged in as either the owner of the System, or an admin.
 
 -  *Date Checkin*: When the machine was added to the inventory.
 
--  *Last Checkin*: Last time this machine had its inventory updated
+-  *Last Inventoried*: Last time this machine had its inventory updated
 
 -  *Lender*: Name of the organization that has lent this system to
    beaker's inventory.
