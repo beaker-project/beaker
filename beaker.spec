@@ -17,8 +17,8 @@
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.12.0
-Release:        3%{?dist}
+Version:        0.12.1
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -376,6 +376,16 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Tue Apr 23 2013 Dan Callaghan <dcallagh@redhat.com> 0.12.1-1
+- 951283 remove duplicate FQDNs in peer roles (dcallagh@redhat.com)
+- 951981 Fixes problems importing naked distro tree. (rmancy@redhat.com)
+- 889065 Fix ordering for multihost recipes. (rmancy@redhat.com)
+- 950922 docs: mention outage due to dirty jobs in upgrade notes
+  (dcallagh@redhat.com)
+- 952948 skip unknown FQDNs in peer roles, instead of using 'None'
+  (dcallagh@redhat.com)
+- 951309 fix completion notification for greenlets (dcallagh@redhat.com)
+
 * Wed Apr 10 2013 Dan Callaghan <dcallagh@redhat.com> 0.12.0-3
 - beaker-expire-distros: increase timeout to 120 seconds (dcallagh@redhat.com)
 
