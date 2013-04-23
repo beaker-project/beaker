@@ -1,6 +1,6 @@
 [product]
 family = Red Hat Enterprise Linux
-name = RHEL-7.0-20130306.0
+name = RHEL-7.0-20120711.2
 short = RHEL
 variants = Client,ComputeNode,Server,Workstation
 version = 7.0
@@ -85,7 +85,7 @@ id = Server
 name = Server
 type = variant
 uid = Server
-variants = Server-HighAvailability,Server-LoadBalancer,Server-ResilientStorage,Server-optional
+variants = Server-HighAvailability,Server-LoadBalancer,Server-ResilientStorage,Server-ScalableFileSystem,Server-optional
 
 [variant-Server-HighAvailability]
 arches = x86_64
@@ -140,6 +140,24 @@ parent = Server.x86_64
 repository = Server/x86_64/os/addons/ResilientStorage
 source_packages = Server/source/tree/addons/ResilientStorage
 source_repository = Server/source/tree/addons/ResilientStorage
+
+[variant-Server-ScalableFileSystem]
+arches = x86_64
+id = ScalableFileSystem
+name = Scalable Filesystem Support
+parent = Server
+type = addon
+uid = Server-ScalableFileSystem
+
+[variant-Server-ScalableFileSystem.x86_64]
+arch = x86_64
+debuginfo = Server/x86_64/debuginfo/tree/addons/ScalableFileSystem
+os_dir = Server/x86_64/os
+packages = Server/x86_64/os/addons/ScalableFileSystem
+parent = Server.x86_64
+repository = Server/x86_64/os/addons/ScalableFileSystem
+source_packages = Server/source/tree/addons/ScalableFileSystem
+source_repository = Server/source/tree/addons/ScalableFileSystem
 
 [variant-Server-optional]
 arches = ppc64,s390x,x86_64
@@ -218,7 +236,25 @@ id = Workstation
 name = Workstation
 type = variant
 uid = Workstation
-variants = Workstation-optional
+variants = Workstation-ScalableFileSystem,Workstation-optional
+
+[variant-Workstation-ScalableFileSystem]
+arches = x86_64
+id = ScalableFileSystem
+name = Scalable Filesystem Support
+parent = Workstation
+type = addon
+uid = Workstation-ScalableFileSystem
+
+[variant-Workstation-ScalableFileSystem.x86_64]
+arch = x86_64
+debuginfo = Workstation/x86_64/debuginfo/tree/addons/ScalableFileSystem
+os_dir = Workstation/x86_64/os
+packages = Workstation/x86_64/os/addons/ScalableFileSystem
+parent = Workstation.x86_64
+repository = Workstation/x86_64/os/addons/ScalableFileSystem
+source_packages = Workstation/source/tree/addons/ScalableFileSystem
+source_repository = Workstation/source/tree/addons/ScalableFileSystem
 
 [variant-Workstation-optional]
 arches = x86_64

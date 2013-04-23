@@ -175,6 +175,90 @@ class DistroImportTest(unittest.TestCase):
                           u'osminor': u'0',
                           u'ks_meta': None}
 
+        self.x86_64_rhel7_compose = {u'arch': u'x86_64',
+                                    u'arches': [],
+                                    u'images': [{u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
+                                                {u'path': u'images/pxeboot/initrd.img', u'type': u'initrd'}],
+                                    u'kernel_options': None,
+                                    u'kernel_options_post': None,
+                                    u'ks_meta': None,
+                                    u'name': u'RHEL-7.0-20120711.2',
+                                    u'osmajor': u'RedHatEnterpriseLinux7',
+                                    u'osminor': u'0',
+                                    u'repos': [{u'path': u'addons/ScalableFileSystem',
+                                                u'repoid': u'ScalableFileSystem',
+                                                u'type': u'addon'},
+                                               {u'path': u'../../../Workstation-optional/x86_64/os',
+                                                u'repoid': u'Workstation-optional',
+                                                u'type': u'optional'},
+                                               {u'path': u'../../../Workstation-optional/x86_64/debuginfo/tree',
+                                                u'repoid': u'Workstation-optional-debuginfo',
+                                                u'type': u'debug'},
+                                               {u'path': u'../../../Workstation/x86_64/os',
+                                                u'repoid': u'Workstation',
+                                                u'type': u'variant'},
+                                               {u'path': u'../../../Workstation/x86_64/debuginfo/tree',
+                                                u'repoid': u'Workstation-debuginfo',
+                                                u'type': u'debug'}],
+                                    u'tags': [],
+                                    u'tree_build_time': u'1342048152.161907',
+                                    u'urls': [u'http://localhost:19998/RHEL7/Workstation/x86_64/os/'],
+                                    u'variant': u'Workstation'}
+
+        self.s390x_rhel7_compose= {u'arch': u's390x',
+                                   u'arches': [],
+                                   u'images': [{u'path': u'images/kernel.img', u'type': u'kernel'},
+                                               {u'path': u'images/initrd.img', u'type': u'initrd'}],
+                                   u'kernel_options': None,
+                                   u'kernel_options_post': None,
+                                   u'ks_meta': None,
+                                   u'name': u'RHEL-7.0-20120711.2',
+                                   u'osmajor': u'RedHatEnterpriseLinux7',
+                                   u'osminor': u'0',
+                                   u'repos': [{u'path': u'../../../Server-optional/s390x/os',
+                                               u'repoid': u'Server-optional',
+                                               u'type': u'optional'},
+                                              {u'path': u'../../../Server-optional/s390x/debuginfo/tree',
+                                               u'repoid': u'Server-optional-debuginfo',
+                                               u'type': u'debug'},
+                                              {u'path': u'../../../Server/s390x/os',
+                                               u'repoid': u'Server',
+                                               u'type': u'variant'},
+                                              {u'path': u'../../../Server/s390x/debuginfo/tree',
+                                               u'repoid': u'Server-debuginfo',
+                                               u'type': u'debug'}],
+                                   u'tags': [],
+                                   u'tree_build_time': u'1342048144.836192',
+                                   u'urls': [u'http://localhost:19998/RHEL7/Server/s390x/os/'],
+                                   u'variant': u'Server'}
+
+        self.ppc64_rhel7_compose = { u'arch': u'ppc64',
+                                     u'arches': [],
+                                     u'images': [{u'path': u'ppc/ppc64/vmlinuz', u'type': u'kernel'},
+                                                 {u'path': u'ppc/ppc64/initrd.img', u'type': u'initrd'}],
+                                     u'kernel_options': None,
+                                     u'kernel_options_post': None,
+                                     u'ks_meta': None,
+                                     u'name': u'RHEL-7.0-20120711.2',
+                                     u'osmajor': u'RedHatEnterpriseLinux7',
+                                     u'osminor': u'0',
+                                     u'repos': [{u'path': u'../../../Server-optional/ppc64/os',
+                                                 u'repoid': u'Server-optional',
+                                                 u'type': u'optional'},
+                                                {u'path': u'../../../Server-optional/ppc64/debuginfo/tree',
+                                                 u'repoid': u'Server-optional-debuginfo',
+                                                 u'type': u'debug'},
+                                                {u'path': u'../../../Server/ppc64/os',
+                                                 u'repoid': u'Server',
+                                                 u'type': u'variant'},
+                                                {u'path': u'../../../Server/ppc64/debuginfo/tree',
+                                                 u'repoid': u'Server-debuginfo',
+                                                 u'type': u'debug'}],
+                                     u'tags': [],
+                                     u'tree_build_time': u'1342048133.432813',
+                                     u'urls': [u'http://localhost:19998/RHEL7/Server/ppc64/os/'],
+                                     u'variant': u'Server'}
+
 
         # separate expected tree data are maintained for import from .treeinfo
         # and .composeinfo, since Fedora's composeingo has debuginfo information
@@ -442,6 +526,23 @@ class DistroImportTest(unittest.TestCase):
         # if there is no 'name' in .treeinfo's [general] section
         self.x86_64_rhel6['name'] = 'RedHatEnterpriseLinux-6.0'
         self.assertEquals(tree, self.x86_64_rhel6)
+
+    def test_rhel7_tree_import_compose(self):
+        trees = self._import_trees(['%sRHEL7/'% self.distro_url])
+
+        self.assertTrue(len(trees) == 6)
+        for tree in trees:
+            if tree['arch'] == u'x86_64':
+                x86_64_tree = tree
+            if tree['arch'] == u's390x':
+                s390x_tree = tree
+            if tree['arch'] == u'ppc64':
+                ppc64_tree = tree
+
+        self.assertEquals(x86_64_tree, self.x86_64_rhel7_compose)
+        self.assertEquals(s390x_tree, self.s390x_rhel7_compose)
+        self.assertEquals(ppc64_tree, self.ppc64_rhel7_compose)
+
 
     def test_f17_tree_import_i386(self):
 
