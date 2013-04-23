@@ -33,6 +33,12 @@ class StaleTaskStatusException(ValueError):
     """
     pass
 
+class StaleCommandStatusException(ValueError):
+    """
+    Raised when attempting to update the status of a command which was changed 
+    concurrently by another transaction.
+    """
+    pass
 
 class StaleSystemUserException(BX):
     """

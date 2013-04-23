@@ -32,7 +32,8 @@ import time
 from kid import Element
 from bkr.server.bexceptions import BeakerException, BX, \
         VMCreationFailedException, StaleTaskStatusException, \
-        InsufficientSystemPermissions, StaleSystemUserException
+        InsufficientSystemPermissions, StaleSystemUserException, \
+        StaleCommandStatusException
 from bkr.server.enum import DeclEnum
 from bkr.server.helpers import *
 from bkr.server.util import unicode_truncate, absolute_url
@@ -3514,6 +3515,17 @@ class CommandActivity(Activity):
 
     def object_name(self):
         return "Command: %s %s" % (self.object.fqdn, self.action)
+
+    def change_status(self, new_status):
+        current_status = self.status
+        if session.connection(CommandActivity).execute(command_queue_table.update(
+                and_(command_queue_table.c.id == self.id,
+                     command_queue_table.c.status == current_status)),
+                status=new_status).rowcount != 1:
+            raise StaleCommandStatusException(
+                    'Status for command %s updated in another transaction'
+                    % self.id)
+        self.status = new_status
 
     def log_to_system_history(self):
         sa = SystemActivity(self.user, self.service, self.action, u'Power', u'',

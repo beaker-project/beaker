@@ -174,46 +174,70 @@ class TestBeakerd(unittest.TestCase):
     def test_just_in_time_systems_multihost(self):
         with session.begin():
             systemA = data_setup.create_system(lab_controller=self.lab_controller)
-            systemB = data_setup.create_system(lab_controller=self.lab_controller)
-
             r1 = data_setup.create_recipe()
             j1 = data_setup.create_job_for_recipes([r1])
+            j1_id = j1.id
             r1.systems[:] = [systemA]
+            r1.process()
+            r1.queue()
+            r1.recipeset.job.update_status()
+            r1_id = r1.id
 
+        beakerd.schedule_queued_recipes()
+
+        with session.begin():
+            r1 = Recipe.by_id(r1_id)
+            data_setup.mark_recipe_running(r1)
+            systemA = System.by_fqdn(systemA.fqdn, User.by_user_name('admin'))
+            systemB = data_setup.create_system(lab_controller=self.lab_controller)
             r2 = data_setup.create_recipe()
             r3 = data_setup.create_recipe()
             j2 = data_setup.create_job_for_recipes([r2,r3])
+            j2_id = j2.id
             r2.systems[:] = [systemA]
             r3.systems[:] = [systemB]
+            data_setup.mark_job_queued(j2)
+            r2_id = r2.id
+            r3_id = r3.id
 
+        beakerd.schedule_queued_recipes()
+        r2 = Recipe.by_id(r2_id)
+        r3 = Recipe.by_id(r3_id)
+        # First part of deadlock, systemB is scheduled, wait for systemA
+        self.assertEqual(r2.status, TaskStatus.queued)
+        self.assertEqual(r3.status, TaskStatus.scheduled)
+
+        with session.begin():
+            systemA = System.by_fqdn(systemA.fqdn, User.by_user_name('admin'))
+            systemB = System.by_fqdn(systemB.fqdn, User.by_user_name('admin'))
             r4 = data_setup.create_recipe()
             r5 = data_setup.create_recipe()
             j3 = data_setup.create_job_for_recipes([r4,r5])
+            r4_id = r4.id
+            r5_id = r5.id
+            j3_id = j3.id
             j3.recipesets[0].priority = TaskPriority.high
             r4.systems[:] = [systemA]
             r5.systems[:] = [systemB]
+            j1 = Job.by_id(j1_id)
+            data_setup.mark_job_complete(j1, only=True) # Release systemA
+            j3 = Job.by_id(j3_id)
+            data_setup.mark_job_queued(j3) # Queue higher priority recipes
 
-        data_setup.mark_job_running(j1)
-        data_setup.mark_job_queued(j2)
+        # Ensure j2 is clean
+        with session.begin():
+            j2 = Job.by_id(j2_id)
+            j2.update_status()
         beakerd.schedule_queued_recipes()
-        # First part of deadlock, systemB is scheduled, wait for systemA
-        self.assertTrue(r2.status, TaskStatus.queued)
-        self.assertTrue(r3.status, TaskStatus.scheduled)
-
-        # Release systemA
-        j1 = Job.by_id(j1.id)
-        data_setup.mark_job_complete(j1, only=True)
-
-        # Schedule higher priority recipes
-        j3 = Job.by_id(j3.id)
-        data_setup.mark_job_queued(j3)
-        beakerd.schedule_queued_recipes()
-
-        # Deadlock avoided
-        self.assertTrue(r4.status, TaskStatus.queued)
-        self.assertTrue(r5.status, TaskStatus.queued)
-        self.assertTrue(r2.status, TaskStatus.scheduled)
-        self.assertTrue(r3.status, TaskStatus.scheduled)
+        r2 = Recipe.by_id(r2_id)
+        r3 = Recipe.by_id(r3_id)
+        r4 = Recipe.by_id(r4_id)
+        r5 = Recipe.by_id(r5_id)
+        # Deadlock avoided due to prioritisation
+        self.assertEqual(r4.status, TaskStatus.queued)
+        self.assertEqual(r5.status, TaskStatus.queued)
+        self.assertEqual(r2.status, TaskStatus.scheduled)
+        self.assertEqual(r3.status, TaskStatus.scheduled)
 
     def test_loaned_machine_can_be_scheduled(self):
         with session.begin():

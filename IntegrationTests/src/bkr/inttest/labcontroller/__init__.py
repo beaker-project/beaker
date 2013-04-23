@@ -33,22 +33,21 @@ def setup_package():
     conf = get_conf()
 
     if 'BEAKER_LABCONTROLLER_HOSTNAME' not in os.environ:
-        # Let's start the proxy server if we don't
-        # have a real one
+        # Need to start the lab controller daemons ourselves
         with session.begin():
             user = data_setup.create_user(user_name=conf.get('USERNAME').decode('utf8'), password=conf.get('PASSWORD'))
             lc = data_setup.create_labcontroller(fqdn='localhost', user=user)
-        p = Process('beaker-proxy',
+        processes.extend([
+            Process('beaker-proxy',
                     args=['python', '../LabController/src/bkr/labcontroller/main.py',
                           '-c', config_file, '-f'],
                     listen_port=8000,
-                    stop_signal=signal.SIGTERM)
-        processes.append(p)
-        try:
-            p.start()
-        except:
-            p.stop()
-            raise
+                    stop_signal=signal.SIGTERM),
+            Process('beaker-provision',
+                    args=['python', '../LabController/src/bkr/labcontroller/provision.py',
+                          '-c', config_file, '-f'],
+                    stop_signal=signal.SIGTERM),
+        ])
         lc_fqdn = 'localhost'
     else:
         # We have been passed a space seperated list of LCs
@@ -65,6 +64,14 @@ def setup_package():
     # If we've been passed a remote hostname for the LC, we assume it's been 
     # freshly provisioned and the dir will already be empty.
     shutil.rmtree(conf.get('CACHEPATH'), ignore_errors=True)
+
+    try:
+        for process in processes:
+            process.start()
+    except:
+        for process in processes:
+            process.stop()
+        raise
 
 def teardown_package():
     for process in processes:

@@ -305,3 +305,12 @@ The following bugs were fixed in Beaker 0.12.0:
 - :issue:`917933`: Users can delete jobs not owned by themselves
 - :issue:`920433`: ``createrepo`` output is not captured
 - :issue:`922721`: Notify CC list should be visible to non-admins
+
+The following bugs were fixed in Beaker 0.12.1:
+
+- :issue:`889065`: Scheduling deadlock for multihost tests
+- :issue:`950922`: Upgrade instructions for 0.12 may lead to a long outage
+- :issue:`951283`: Role environment variables have duplicate FQDNs if recipe role and task role are the same
+- :issue:`951309`: beaker-provision sometimes runs commands twice
+- :issue:`951981`: Cannot import naked distro tree
+- :issue:`952948`: CLIENTS role in a guest recipe halts /distribution/install task of host recipe

@@ -18,13 +18,35 @@ Run the following SQL::
         ADD COLUMN clean_version BINARY(16) NOT NULL AFTER dirty_version,
         ADD INDEX ix_job_dirty_clean_version
             (dirty_version, clean_version);
+
+It is also recommended to mark all existing jobs in the Beaker database as 
+"dirty" so that beakerd will update their status. This will clean up any jobs 
+left in an inconsistent state by bugs in previous versions of Beaker. Note 
+however that *no new jobs will proceed* while beakerd is processing a backlog 
+of dirty jobs. Processing will take approximately 1 hour for every 10,000 jobs 
+in the backlog.
+
+If this outage period is acceptable for your Beaker installation (for example, 
+you have less than 5000 existing jobs) you can mark all existing jobs as dirty 
+during the upgrade and beakerd will update them when it next starts up::
+
     UPDATE job SET dirty_version = '1111111111111111';
 
-Note that this marks all jobs in the Beaker database as "dirty", which will 
-cause beakerd to update their status. This will correct any existing 
-inconsistencies in job state, but it will put your Beaker server under higher 
-than normal load until this initial pass is complete. The initial pass takes 
-approximately 1 hour for every 10,000 jobs.
+Otherwise, you can periodically mark old jobs as dirty in batches, to minimize 
+the impact on new jobs. First, make a note of the newest job at upgrade time::
+
+    SELECT MAX(id) FROM job;
+
+Then, after the upgrade is complete, periodically set ``dirty_version`` on old 
+job IDs up to the value you noted above. Adjust the size and frequency of the 
+batches according to the performance of your Beaker server. For example, you 
+could update 1000 jobs every 10 minutes::
+
+    UPDATE job SET dirty_version = '1111111111111111'
+        WHERE id > 0 AND <= 1000;
+    UPDATE job SET dirty_version = '1111111111111111'
+        WHERE id > 1000 AND <= 2000;
+    ...
 
 To roll back, run the following SQL::
 
