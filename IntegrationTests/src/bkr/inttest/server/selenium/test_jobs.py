@@ -201,7 +201,7 @@ class NewJobTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//input[@value='Submit Data']").click()
         b.find_element_by_xpath("//input[@value='Queue']").click()
         flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
-        self.assert_('Invalid date format' in flash_text, flash_text)
+        self.assert_('Job failed schema validation' in flash_text, flash_text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=949777
     def test_invalid_inventory_date_with_not_equal(self):
@@ -234,7 +234,7 @@ class NewJobTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//input[@value='Submit Data']").click()
         b.find_element_by_xpath("//input[@value='Queue']").click()
         flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
-        self.assert_('Invalid date format' in flash_text, flash_text)
+        self.assert_('Job failed schema validation' in flash_text, flash_text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=949777
     def test_valid_inventory_date(self):
