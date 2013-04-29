@@ -194,10 +194,10 @@ following utilities are available in templates:
         {% if distro_tree is arch('s390', 's390x') %}
         <...>
 
-        {% if distro_tree is osversion('RedHatEnterpriseLinux6.0') %}
+        {% if distro is osversion('RedHatEnterpriseLinux6.0') %}
         <...>
 
-        {% if distro_tree is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4') %}
+        {% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4') %}
         <...>
 
 ``urljoin``
