@@ -783,7 +783,7 @@ class TreeInfoBase(object):
                        '../debug'),
                       ('optional-debuginfo',
                        'debug',
-                       '../optional/%s/debug' % arch),
+                       '../../optional/%s/debug' % arch),
                       ('optional',
                        'optional',
                        '../../optional/%s/os' % arch),
