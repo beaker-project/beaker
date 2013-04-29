@@ -82,6 +82,10 @@ correspond to the similarly-named kickstart option.
     for a particular distro tree under the :guilabel:`Repos` tab on the distro 
     tree page.
 
+``no_clock_sync``
+    Omits additional packages and scripts which ensure the system clock is 
+    synchronized after installation.
+
 ``password=<encrypted>``
     Root password to use. Must be encrypted in the conventional 
     :manpage:`crypt(3)` format.

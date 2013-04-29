@@ -6,6 +6,7 @@ bootloader --location=mbr
 # Use text mode install
 text
 # no specific network configuration
+services --enabled=chronyd,chrony-wait
 repo --name=beaker-repos_addons_ScalableFileSystem --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/addons/ScalableFileSystem
 repo --name=beaker-repos_Workstation-optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/os
 repo --name=beaker-repos_debug_Workstation --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/debuginfo
@@ -60,6 +61,8 @@ unifdef
 vim-enhanced
 wget
 # no snippet data for packages
+chrony
+-ntp
 %end
 
 
@@ -119,14 +122,25 @@ LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
 __EOT__
 
 
-/sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
-/sbin/chkconfig ntpd on >/dev/null 2>&1 || :
+if [ -e /etc/sysconfig/ntpdate ] ; then
+    /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
+fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
+    /sbin/chkconfig ntpd on >/dev/null 2>&1 || :
     GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
     if [ -z "$GOT_G" ]; then
         /bin/sed -i -r 's/(^OPTIONS\s*=\s*)(['\''|"])(.+)$/\1\2\-x \3 /' /etc/sysconfig/ntpd
     fi
+fi
+if [ -e /etc/chrony.conf ] ; then
+    cp /etc/chrony.conf{,.orig}
+    # use only DHCP-provided time servers, no default pool servers
+    sed -i '/^server /d' /etc/chrony.conf
+    cp /etc/sysconfig/network{,.orig}
+    # setting iburst should speed up initial sync
+    # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
+    echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
 fi
 
 
