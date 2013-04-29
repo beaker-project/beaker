@@ -1,0 +1,41 @@
+#!/bin/bash
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#   hyper-v
+#   Description: Power control of Hyper-V guests via WS-MAN
+#   Author: Ladislav Jozsa <ljozsa@redhat.com>
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#   Copyright (c) 2012 Red Hat, Inc. All rights reserved.
+#
+#   This copyrighted material is made available to anyone wishing
+#   to use, modify, copy, or redistribute it subject to the terms
+#   and conditions of the GNU General Public License version 2.
+#
+#   This program is distributed in the hope that it will be
+#   useful, but WITHOUT ANY WARRANTY; without even the implied
+#   warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+#   PURPOSE. See the GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public
+#   License along with this program; if not, write to the Free
+#   Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+#   Boston, MA 02110-1301, USA.
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+set -e
+
+# Search for guest UUID
+uuid=`wsman enumerate http://schemas.microsoft.com/wbem/wsman/1/wmi/root/virtualization/* --username $power_user -p $power_pass -h $power_address --port 5985 -y basic --filter "select * from Msvm_ComputerSystem where Description = \"Microsoft Virtual Machine\" and ElementName = \"$power_id\"" -D http://schemas.microsoft.com/wbem/wsman/1/WQL --port 5985 | grep \<p:Name\> | sed 's/^[^>]*>\([^<]*\).*$/\1/'`
+
+# Execute given power action
+if [[ $power_mode == "on" ]]; then
+    wsman invoke -a RequestStateChange -k RequestedState=2 "http://schemas.microsoft.com/wbem/wsman/1/wmi/root/virtualization/Msvm_ComputerSystem?Name=$uuid,CreationClassName=Msvm_ComputerSystem" --username $power_user -p $power_pass -y basic -h $power_address --port 5985 > /dev/null
+elif [[ $power_mode == "off" ]]; then
+    wsman invoke -a RequestStateChange -k RequestedState=3 "http://schemas.microsoft.com/wbem/wsman/1/wmi/root/virtualization/Msvm_ComputerSystem?Name=$uuid,CreationClassName=Msvm_ComputerSystem" --username $power_user -p $power_pass -y basic -h $power_address --port 5985 > /dev/null
+else
+    echo 'Invalid power operation' >&2; exit 1
+fi
+
+sleep 5

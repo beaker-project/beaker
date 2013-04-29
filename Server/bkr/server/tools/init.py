@@ -144,6 +144,7 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         bullpap     = PowerType(u'bladepap')
         drac        = PowerType(u'drac')
         ether_wake  = PowerType(u'ether_wake')
+        PowerType(u'hyper-v')
         ilo         = PowerType(u'ilo')
         integrity   = PowerType(u'integrity')
         ipmilan     = PowerType(u'ipmilan')
