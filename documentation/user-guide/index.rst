@@ -29,3 +29,4 @@ Contents
    makefile
    workflow
    tests
+   beaker-provided-tasks
