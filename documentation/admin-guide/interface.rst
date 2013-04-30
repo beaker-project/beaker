@@ -69,10 +69,11 @@ Alias
     ``RedHatEnterpriseLinux3``).
 
 Install Options
-    Like install options for systems (see :ref:`system-details-tabs`), these 
-    are the default options when provisioning a distro from this major version.
-    Options may be set for all arches or for each arch individually. Options at 
-    this level are overridden by any options set at the distro tree level.
+    These are the default install options when provisioning a distro from this 
+    major version. Options may be set for all arches or for each arch 
+    individually. Options at this level are overridden by any options set at 
+    the distro tree level. See :ref:`install-options` for details about the 
+    meaning of these options.
 
 .. _admin-configuration:
 

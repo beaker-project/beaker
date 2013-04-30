@@ -283,6 +283,7 @@ Notes
 Install Options
     These are default options which will be used when a system is provisioned. 
     You can create different options per Arch/Distro combination.
+    See :ref:`install-options` for details about the meaning of these options.
 Provision
     Allows the user of this System to install a Distro on it. 
 Lab Info
