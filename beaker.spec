@@ -146,6 +146,7 @@ Requires:       cobbler >= 1.4
 Requires:       yum-utils
 Requires:       fence-agents
 Requires:       ipmitool
+Requires:       wsmancli
 Requires:       telnet
 Requires:       sudo
 Requires:       python-cpio
