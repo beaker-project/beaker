@@ -1,5 +1,5 @@
-nfs --server lab.test-kickstart.invalid --dir /distros/F-16/GOLD/Fedora/x86_64/os/
-#url --url=nfs://lab.test-kickstart.invalid:/distros/F-16/GOLD/Fedora/x86_64/os/
+nfs --server lab.test-kickstart.invalid --dir /distros/F-18/GOLD/Fedora/x86_64/os/
+#url --url=nfs://lab.test-kickstart.invalid:/distros/F-18/GOLD/Fedora/x86_64/os/
 
 auth --useshadow --enablemd5
 # System bootloader configuration
@@ -8,7 +8,7 @@ bootloader --location=mbr
 text
 # no specific network configuration
 
-repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f16&arch=x86_64
+repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f18&arch=x86_64
 
 firewall --disabled
 # Run the Setup Agent on first boot
@@ -28,7 +28,7 @@ timezone America/New_York
 # Install OS instead of upgrade
 install
 
-repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/F-16/GOLD/Fedora/x86_64/debug
+repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/x86_64/debug
 zerombr
 clearpart --all --initlabel
 
@@ -161,7 +161,7 @@ EOF
 cat <<"EOF" >/etc/yum.repos.d/beaker-harness.repo
 [beaker-harness]
 name=beaker-harness
-baseurl=@HARNESS@Fedora16/
+baseurl=@HARNESS@Fedora18/
 enabled=1
 gpgcheck=0
 EOF
@@ -170,7 +170,7 @@ EOF
 cat <<"EOF" >/etc/yum.repos.d/beaker-debug.repo
 [beaker-debug]
 name=beaker-debug
-baseurl=http://lab.test-kickstart.invalid/distros/F-16/GOLD/Fedora/x86_64/debug
+baseurl=http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/x86_64/debug
 enabled=1
 gpgcheck=0
 skip_if_unavailable=1

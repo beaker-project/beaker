@@ -90,6 +90,9 @@ EOF
         cls.system_s390x.provisions[s390x] = Provision(arch=s390x)
         cls.system_s390x.provisions[s390x].provision_families[rhel7] = \
                 ProvisionFamily(osmajor=rhel7, ks_meta=u'postreboot')
+        cls.system_armhfp = data_setup.create_system(arch=u'armhfp',
+                fqdn=u'test03.test-kickstart.invalid', status=u'Automated',
+                lab_controller=cls.lab_controller)
 
         cls.rhel39 = data_setup.create_distro(name=u'RHEL3-U9',
                 osmajor=u'RedHatEnterpriseLinux3', osminor=u'9')
@@ -225,25 +228,16 @@ EOF
             DistroTreeRepo(repo_id=u'repos_Server', repo_type=u'os', path=u'.'),
         ]
 
-        cls.f16 = data_setup.create_distro(name=u'Fedora-16',
-                osmajor=u'Fedora16', osminor=u'0')
-        cls.f16_x86_64 = data_setup.create_distro_tree(
-                distro=cls.f16, variant=u'Fedora', arch=u'x86_64',
+        cls.f17 = data_setup.create_distro(name=u'Fedora-17',
+                osmajor=u'Fedora17', osminor=u'0')
+        cls.f17_armhfp = data_setup.create_distro_tree(
+                distro=cls.f17, variant=u'Fedora', arch=u'armhfp',
                 lab_controllers=[cls.lab_controller],
-                urls=[u'http://lab.test-kickstart.invalid/distros/F-16/GOLD/Fedora/x86_64/os/',
-                      u'nfs://lab.test-kickstart.invalid:/distros/F-16/GOLD/Fedora/x86_64/os/'])
-        cls.f16_x86_64.repos[:] = [
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-17/GOLD/Fedora/armhfp/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-17/GOLD/Fedora/armhfp/os/'])
+        cls.f17_armhfp.repos[:] = [
             DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
         ]
-        cls.f16_armhfp = data_setup.create_distro_tree(
-                distro=cls.f16, variant=u'Fedora', arch=u'armhfp',
-                lab_controllers=[cls.lab_controller],
-                urls=[u'http://lab.test-kickstart.invalid/distros/F-16/GOLD/Fedora/armhfp/os/',
-                      u'nfs://lab.test-kickstart.invalid:/distros/F-16/GOLD/Fedora/armhfp/os/'])
-        cls.f16_armhfp.repos[:] = [
-            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
-        ]
-
 
         cls.f18 = data_setup.create_distro(name=u'Fedora-18',
                 osmajor=u'Fedora18', osminor=u'0')
@@ -253,6 +247,14 @@ EOF
                 urls=[u'http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/x86_64/os/',
                       u'nfs://lab.test-kickstart.invalid:/distros/F-18/GOLD/Fedora/x86_64/os/'])
         cls.f18_x86_64.repos[:] = [
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+        ]
+        cls.f18_armhfp = data_setup.create_distro_tree(
+                distro=cls.f18, variant=u'Fedora', arch=u'armhfp',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/armhfp/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-18/GOLD/Fedora/armhfp/os/'])
+        cls.f18_armhfp.repos[:] = [
             DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
         ]
 
@@ -644,14 +646,14 @@ EOF
         self.assert_(r'''vmcp ipl''' not in recipe.rendered_kickstart.kickstart,
                      recipe.rendered_kickstart.kickstart)
 
-    def test_fedora16_defaults(self):
+    def test_fedora18_defaults(self):
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
                 <recipeSet>
                     <recipe>
                         <distroRequires>
-                            <distro_name op="=" value="Fedora-16" />
+                            <distro_name op="=" value="Fedora-18" />
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
@@ -661,7 +663,7 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system)
-        compare_expected('Fedora16-scheduler-defaults', recipe.id,
+        compare_expected('Fedora18-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
     def test_fedora_repos(self):
@@ -1433,7 +1435,7 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
                 <recipeSet>
                     <recipe>
                         <distroRequires>
-                            <distro_name op="=" value="Fedora-16" />
+                            <distro_name op="=" value="Fedora-18" />
                             <distro_arch op="=" value="armhfp" />
                         </distroRequires>
                         <hostRequires/>
@@ -1456,7 +1458,7 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
                 <recipeSet>
                     <recipe>
                         <distroRequires>
-                            <distro_name op="=" value="Fedora-16" />
+                            <distro_name op="=" value="Fedora-18" />
                             <distro_arch op="=" value="armhfp" />
                         </distroRequires>
                         <hostRequires/>
@@ -1468,6 +1470,27 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
         k = recipe.rendered_kickstart.kickstart
         self.assert_('# Install U-Boot boot.scr' in k.splitlines(), k)
         self.assert_('Yosemite Fedora' in k, k)
+
+    def test_f17_arm(self):
+        # Fedora 17 ARM had some special one-off hacks
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-17" />
+                            <distro_arch op="=" value="armhfp" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system_armhfp)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('http://dmarlin.fedorapeople.org/yum/f17/arm/os/Packages/' in k, k)
+        self.assert_('%packages --ignoremissing\nuboot-tools' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=728410
     def test_per_system_packages(self):

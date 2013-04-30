@@ -19,6 +19,10 @@ bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} 
 {% set releasever = distro.osversion.osmajor.osmajor[6:] %}
 repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f{{ releasever }}&arch={{ distro_tree.arch.arch }}
 {% endif %}
+{% if distro is osmajor('Fedora17') and distro_tree is arch('armhfp') %}
+# Fedora17 Arm needs an additional repo in order to install.
+repo --name=xpfa --baseurl="http://dmarlin.fedorapeople.org/yum/f17/arm/os/Packages/"
+{% endif %}
 
 {#
 ## Firewall configuration
@@ -58,6 +62,9 @@ install
 {% snippet 'system' %}
 
 %packages --ignoremissing
+{% if distro is osmajor('Fedora17') and distro_tree is arch('armhfp') %}
+uboot-tools
+{% endif %}
 {% if packages %}
 {% snippet 'rhts_packages' %}
 {% else %}
