@@ -126,6 +126,7 @@ def main():
     if options.verbose:
         print "Retrieving bug list from Bugzilla"
     bugs = get_bugs(options.milestone, options.release)
+    bug_ids = set(bug.bug_id for bug in bugs)
     if options.verbose:
         print "Retrieving code review details from Gerrit"
     changes = get_gerrit_changes(bug.bug_id for bug in bugs)
@@ -162,7 +163,12 @@ def main():
             else:
                 problem('Bug %s should be ASSIGNED, not %s' % (bug.bug_id, bug.bug_status))
         elif bug.bug_status in ('MODIFIED', 'ON_DEV', 'ON_QA', 'VERIFIED', 'RELEASE_PENDING', 'CLOSED'):
-            if not bug_changes:
+            if bug.bug_status == 'CLOSED' and bug.resolution == 'DUPLICATE':
+                if bug.dupe_of not in bug_ids:
+                    target_kind = "release" if options.release else "milestone"
+                    problem('Bug %s marked as DUPLICATE of %s, which is not in this %s'
+                                              % (bug.bug_id, bug.dupe_of, target_kind))
+            elif not bug_changes:
                 problem('Bug %s should be ASSIGNED, not %s' % (bug.bug_id, bug.bug_status))
             elif not all(change['status'] in ('ABANDONED', 'MERGED') for change in bug_changes):
                 problem('Bug %s should be POST, not %s' % (bug.bug_id, bug.bug_status))
