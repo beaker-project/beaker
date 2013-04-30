@@ -366,9 +366,6 @@ class Search(SeleniumTestCase):
         self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
         self.failUnless(sel.is_text_present("Items found: 1"))
 
-        
-        
-
     def test_can_search_by_numa_node_count(self):
         sel = self.selenium
         sel.open('')
@@ -556,3 +553,147 @@ class DiskSearchTest(WebDriverTestCase):
         b.find_element_by_name('Search').click()
         self.check_search_results(present=[self.big_disk, self.no_disks],
                 absent=[self.small_disk, self.two_disks])
+
+
+#https://bugzilla.redhat.com/show_bug.cgi?id=949777
+class InventorySearchTest(WebDriverTestCase):
+
+    def setUp(self):
+
+        # date times
+        self.today = datetime.date.today()
+        self.time_now = datetime.datetime.combine(self.today, datetime.time(0, 0))
+        self.time_delta1 = datetime.datetime.combine(self.today, datetime.time(0, 30))
+        self.time_tomorrow = self.time_now + datetime.timedelta(days=1)
+        self.time_yesterday = self.time_now - datetime.timedelta(days=1)
+        # today date
+        self.date_yesterday = self.time_yesterday.date().isoformat()
+        self.date_today = self.time_now.date().isoformat()
+        self.date_tomorrow = self.time_tomorrow.date().isoformat()
+
+        with session.begin():
+            self.not_inv = data_setup.create_system()
+
+            self.inv1 = data_setup.create_system()
+            self.inv1.date_lastcheckin = self.time_now
+
+            self.inv2 = data_setup.create_system()
+            self.inv2.date_lastcheckin = self.time_delta1
+
+            self.inv3 = data_setup.create_system()
+            self.inv3.date_lastcheckin = self.time_tomorrow
+
+            self.inv4 = data_setup.create_system()
+            self.inv4.date_lastcheckin = self.time_yesterday
+
+        self.browser = self.get_browser()
+
+    def check_search_results(self, present, absent):
+
+        for system in absent:
+            self.browser.find_element_by_xpath('//table[@id="widget" and '
+                    'not(.//td[1]/a/text()="%s")]' % system.fqdn)
+        for system in present:
+            self.browser.find_element_by_xpath('//table[@id="widget" and '
+                    './/td[1]/a/text()="%s"]' % system.fqdn)
+
+    def tearDown(self):
+        self.browser.quit()
+
+    def test_uninventoried_search(self):
+
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_id('systemsearch_0_table'))\
+            .select_by_visible_text('System/LastInventoried')
+        Select(b.find_element_by_id('systemsearch_0_operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_id('systemsearch_0_value').clear()
+        b.find_element_by_id('systemsearch_0_value').send_keys(' ')
+        b.find_element_by_name('Search').click()
+        self.check_search_results(present=[self.not_inv], \
+                                      absent=[self.inv1, self.inv2,
+                                              self.inv3, self.inv4])
+
+    def test_inventoried_search_after(self):
+
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_id('systemsearch_0_table'))\
+            .select_by_visible_text('System/LastInventoried')
+        Select(b.find_element_by_id('systemsearch_0_operation'))\
+            .select_by_visible_text('after')
+        b.find_element_by_id('systemsearch_0_value').clear()
+        b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
+        b.find_element_by_name('Search').click()
+        self.check_search_results(present=[self.inv3], \
+                                      absent=[self.not_inv,
+                                              self.inv1, self.inv2, self.inv4])
+
+    def test_inventoried_search_is(self):
+
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_id('systemsearch_0_table'))\
+            .select_by_visible_text('System/LastInventoried')
+        Select(b.find_element_by_id('systemsearch_0_operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_id('systemsearch_0_value').clear()
+        b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
+        b.find_element_by_name('Search').click()
+
+        self.check_search_results(present=[self.inv1, self.inv2],\
+                                      absent=[self.not_inv, self.inv3, self.inv4])
+
+    def test_inventoried_search_before(self):
+
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_id('systemsearch_0_table'))\
+            .select_by_visible_text('System/LastInventoried')
+        Select(b.find_element_by_id('systemsearch_0_operation'))\
+            .select_by_visible_text('before')
+        b.find_element_by_id('systemsearch_0_value').clear()
+        b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
+        b.find_element_by_name('Search').click()
+        self.check_search_results(present=[self.inv4], \
+                                      absent=[self.not_inv, self.inv1,
+                                              self.inv2, self.inv3])
+
+    def test_inventoried_search_range(self):
+
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
+
+        #after
+        Select(b.find_element_by_id('systemsearch_0_table'))\
+            .select_by_visible_text('System/LastInventoried')
+        Select(b.find_element_by_id('systemsearch_0_operation'))\
+            .select_by_visible_text('after')
+        b.find_element_by_id('systemsearch_0_value').clear()
+        b.find_element_by_id('systemsearch_0_value').send_keys(self.date_yesterday)
+
+        b.find_element_by_id('doclink').click()
+
+        #before
+        Select(b.find_element_by_id('systemsearch_1_table'))\
+            .select_by_visible_text('System/LastInventoried')
+        Select(b.find_element_by_id('systemsearch_1_operation'))\
+            .select_by_visible_text('before')
+        b.find_element_by_id('systemsearch_1_value').clear()
+        b.find_element_by_id('systemsearch_1_value').send_keys(self.date_tomorrow)
+
+        b.find_element_by_name('Search').click()
+        self.check_search_results(present=[self.inv1, self.inv2], \
+                                      absent=[self.not_inv,
+                                              self.inv3, self.inv4])
