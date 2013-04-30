@@ -1783,9 +1783,14 @@ class Bugs(MultipleChoice):
 
     def getComponent(self):
         """ Return bug component fetched from bugzilla """
-        # ... and ignore generic CVE component "vulnerability"
-        if self.bug and self.bug.component[0] != 'vulnerability':
-            return self.bug.component[0]
+        if self.bug:
+            component = self.bug.component
+            # Use the first component if component list given
+            if isinstance(component, list):
+                component = component[0]
+            # Ignore generic CVE component "vulnerability"
+            if component != 'vulnerability':
+                return component
 
     def getLink(self):
         """ Return URL of the first bug """
