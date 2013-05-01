@@ -2728,13 +2728,34 @@ class SystemStatusAttributeExtension(AttributeExtension):
         if child == oldchild:
             return child
         if oldchild in (None, NEVER_SET):
+            # First time system.status has been set, there will be no duration 
+            # rows yet.
             assert not obj.status_durations
-        else:
-            assert obj.status_durations[0].finish_time is None
-            assert obj.status_durations[0].status == oldchild
-            obj.status_durations[0].finish_time = datetime.utcnow()
-        obj.status_durations.insert(0,
-                SystemStatusDuration(system=obj, status=child))
+            obj.status_durations.insert(0, SystemStatusDuration(status=child))
+            return child
+        # Otherwise, there should be exactly one "open" duration row, 
+        # with NULL finish_time.
+        open_sd = obj.status_durations[0]
+        assert open_sd.finish_time is None
+        assert open_sd.status == oldchild
+        if open_sd in session.new:
+            # The current open row is not actually persisted yet. This 
+            # happens when system.status is set more than once in 
+            # a session. In this case we can just update the same row and 
+            # return, no reason to insert another.
+            open_sd.status = child
+            return child
+        # Need to close the open row using a conditional UPDATE to ensure 
+        # we don't race with another transaction
+        now = datetime.utcnow()
+        if session.query(SystemStatusDuration)\
+                .filter_by(finish_time=None, id=open_sd.id)\
+                .update({'finish_time': now}, synchronize_session=False) \
+                != 1:
+            raise RuntimeError('System status updated in another transaction')
+        # Make the ORM aware of it as well
+        open_sd.finish_time = now
+        obj.status_durations.insert(0, SystemStatusDuration(status=child))
         return child
 
 class SystemCc(SystemObject):
