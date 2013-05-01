@@ -122,10 +122,11 @@ def create_admin(**kwargs):
 def add_system_lab_controller(system,lc): 
     system.lab_controller = lc
 
-def create_group(permissions=None):
+def create_group(permissions=None, group_name=None):
     # tg_group.group_name column is VARCHAR(16)
-    suffix = unique_name('%s')
-    group = Group(group_name=u'group%s' % suffix, display_name=u'Group %s' % suffix)
+    if group_name is None:
+        group_name = unique_name(u'group%s')
+    group = Group.lazy_create(group_name=group_name, display_name=u'Group %s' % group_name)
     if permissions:
         group.permissions.extend(Permission.by_name(name) for name in permissions)
     return group
@@ -338,7 +339,7 @@ def create_retention_tag(name=None, default=False, needs_product=False):
     return new_tag
 
 def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,
-        retention_tag=None, **kwargs):
+        retention_tag=None, group=None, **kwargs):
     if retention_tag is None:
         retention_tag = RetentionTag.by_tag(u'scratch') # Don't use default, unpredictable
     else:
@@ -348,7 +349,8 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
         owner = create_user()
     if whiteboard is None:
         whiteboard = unique_name(u'job %s')
-    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,retention_tag = retention_tag, product=product)
+    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,
+        retention_tag=retention_tag, group=group, product=product)
     if cc is not None:
         job.cc = cc
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),

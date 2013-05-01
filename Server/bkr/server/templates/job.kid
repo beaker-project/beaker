@@ -133,6 +133,15 @@
    <td class="title" rowspan="2"><b>Action(s)</b></td>
    <td class="value" rowspan="2">${action_widget(job, delete_action=delete_action, export=tg.url("/to_xml?taskid=%s" % job.t_id))}</td>
   </tr>
+  <tr py:if="job.group">
+   <td class='title'><b>Group</b></td>
+   <td class="value">
+    <a class="list"
+     href="${tg.url('/groups/group_members/?id=%d' % job.group.group_id)}">
+     ${job.group}
+    </a>
+   </td>
+  </tr>
   <tr>
    <td class="title"><b>CC</b></td>
    <td class="value" colspan="3">${'; '.join(job.cc)}</td>

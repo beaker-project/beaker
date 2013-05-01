@@ -10,6 +10,14 @@
     <element name="job">
       <interleave>
         <optional>
+          <attribute name="group">
+          <a:documentation xml:lang="en">
+          Specifies the group this job was submitted on behalf of.
+          This will allow other group members to view and modify this job.
+          </a:documentation>
+          </attribute>
+        </optional>
+        <optional>
           <attribute name="retention_tag">
           <a:documentation xml:lang="en">
             Specifies the data retention policy for the job. See http://your-beaker-server/retentiontag/

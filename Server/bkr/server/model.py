@@ -941,6 +941,8 @@ job_table = Table('job',metadata,
         Column('clean_version', UUID, nullable=False),
         Column('owner_id', Integer,
                 ForeignKey('tg_user.user_id'), index=True),
+        Column('group_id', Integer, ForeignKey('tg_group.group_id', \
+            name='job_group_id_fk'), default=None),
         Column('whiteboard',Unicode(2000)),
         Column('retention_tag_id', Integer, ForeignKey('retention_tag.id'), nullable=False),
         Column('product_id', Integer, ForeignKey('product.id'),nullable=True),
@@ -3910,10 +3912,11 @@ class Job(TaskBase):
     """
 
     def __init__(self, ttasks=0, owner=None, whiteboard=None,
-            retention_tag=None, product=None):
+            retention_tag=None, product=None, group=None):
         # Intentionally not chaining to super(), to avoid session.add(self)
         self.ttasks = ttasks
         self.owner = owner
+        self.group = group
         self.whiteboard = whiteboard
         self.retention_tag = retention_tag
         self.product = product
@@ -4359,6 +4362,8 @@ class Job(TaskBase):
                 notify.appendChild(node('cc', email_address))
             job.appendChild(notify)
         job.setAttribute("retention_tag", "%s" % self.retention_tag.tag)
+        if self.group:
+            job.setAttribute("group", "%s" % self.group.group_name)
         if self.product:
             job.setAttribute("product", "%s" % self.product.name)
         job.appendChild(node("whiteboard", self.whiteboard or ''))
@@ -7119,6 +7124,7 @@ mapper(Job, job_table,
         properties = {'recipesets':relation(RecipeSet, backref='job'),
                       'owner':relation(User, uselist=False,
                         backref=backref('jobs', cascade_backrefs=False)),
+                      'group': relation(Group, uselist=False),
                       'retention_tag':relation(RetentionTag, uselist=False,
                         backref=backref('jobs', cascade_backrefs=False)),
                       'product':relation(Product, uselist=False,

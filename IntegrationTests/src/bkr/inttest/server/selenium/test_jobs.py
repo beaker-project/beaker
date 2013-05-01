@@ -41,6 +41,17 @@ class TestViewJob(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
+    def test_group_job(self):
+        with session.begin():
+            user = data_setup.create_user()
+            group = data_setup.create_group()
+            job = data_setup.create_job(group=group)
+        b = self.browser
+        b.get(get_server_base() + 'jobs/%s' % job.id)
+        b.find_element_by_link_text("%s" % job.group).click()
+        self.assertEqual(b.find_element_by_xpath('//title').text,
+            'Group Users')
+
     def test_cc_list(self):
         with session.begin():
             user = data_setup.create_user(password=u'password')
