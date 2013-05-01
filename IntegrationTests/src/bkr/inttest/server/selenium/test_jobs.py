@@ -29,9 +29,10 @@ from turbogears.database import session
 from sqlalchemy import and_
 
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, is_text_present, logout
 from bkr.inttest import data_setup, with_transaction, get_server_base
-from bkr.server.model import RetentionTag, Product, Distro, Job, GuestRecipe
+from bkr.server.model import RetentionTag, Product, Distro, Job, GuestRecipe, \
+    User
 
 class TestViewJob(WebDriverTestCase):
 
@@ -157,6 +158,26 @@ class TestViewJob(WebDriverTestCase):
                 '//a[@class="list recipe-id"]')]
         self.assertEquals(recipe_order, [host.t_id, guest.t_id])
 
+    def test_myjobs(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            user2 = data_setup.create_user(password='password')
+            group = data_setup.create_group()
+            user.groups.append(group)
+            user2.groups.append(group)
+            job = data_setup.create_job(owner=user, group=group)
+        b = self.browser
+        login(b, user=user2.user_name, password='password')
+        b.find_element_by_link_text('My Jobs').click()
+        b.find_element_by_xpath('//title[normalize-space(text())="My Jobs"]')
+        self.assertTrue(is_text_present(b, job.t_id))
+        logout(b)
+        login(b, user=user.user_name, password='password')
+        b.find_element_by_link_text('My Jobs').click()
+        b.find_element_by_xpath('//title[normalize-space(text())="My Jobs"]')
+        self.assertTrue(is_text_present(b, job.t_id))
+
+
 class NewJobTestWD(WebDriverTestCase):
 
     def setUp(self):
@@ -270,6 +291,7 @@ class NewJobTestWD(WebDriverTestCase):
         self.assert_('Success!' in flash_text, flash_text)
         self.assertEqual(b.title, 'My Jobs')
 
+
 class NewJobTest(SeleniumTestCase):
 
     @with_transaction
@@ -277,6 +299,9 @@ class NewJobTest(SeleniumTestCase):
         if not Distro.by_name(u'BlueShoeLinux5-5'):
             data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
         data_setup.create_product(product_name=u'the_product')
+        group = data_setup.create_group(group_name='somegroup')
+        user = User.by_user_name(self.BEAKER_LOGIN_USER)
+        user.groups.append(group)
         self.selenium = self.get_selenium()
         self.selenium.start()
 

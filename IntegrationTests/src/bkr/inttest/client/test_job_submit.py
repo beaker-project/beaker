@@ -13,6 +13,7 @@ class JobSubmitTest(unittest.TestCase):
     @with_transaction
     def setUp(self):
         data_setup.create_product(product_name=u'the_product')
+        data_setup.create_group(group_name='somegroup')
         if not Distro.by_name(u'BlueShoeLinux5-5'):
             data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
 

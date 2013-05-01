@@ -3950,9 +3950,14 @@ class Job(TaskBase):
     @classmethod
     def mine(cls, owner):
         """
-        A class method that can be used to search for Jobs that belong to a user
+        A class method that can be used to search for Jobs that belong to a
+        user or associated to a user's group.
         """
-        return cls.query.filter(Job.owner==owner)
+        if owner.groups:
+            return cls.query.join(Job.group).filter(or_(Job.owner==owner,
+                Group.group_id.in_([g.group_id for g in owner.groups])))
+        else:
+            return cls.query.filter(Job.owner==owner)
 
     @classmethod
     def get_nacks(self,jobs):
