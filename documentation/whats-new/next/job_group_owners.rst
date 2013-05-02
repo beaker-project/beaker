@@ -1,5 +1,5 @@
 Job group owner ("feature")
-===============
+===========================
 
 This change allows specifying a group owner of a job. This is done via the
 ``group`` attribute on a job XML's ``&lt;job /&gt;``, or by passing
