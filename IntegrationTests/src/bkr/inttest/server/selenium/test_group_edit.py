@@ -6,9 +6,9 @@ from bkr.inttest import data_setup
 class EditGroup(SeleniumTestCase):
 
     def setUp(self):
-        self.perm1 = data_setup.create_permission()
-        self.group = data_setup.create_group()
-        session.flush()
+        with session.begin():
+            self.perm1 = data_setup.create_permission()
+            self.group = data_setup.create_group()
         self.selenium = self.get_selenium()
         self.selenium.start()
 
