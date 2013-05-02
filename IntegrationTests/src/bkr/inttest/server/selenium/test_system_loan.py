@@ -74,6 +74,7 @@ class SystemLoanTest(WebDriverTestCase):
         # This is equivalent to a loan return
         b.find_element_by_xpath('//textarea[@name='
             '"update_loan.loan_comment" and normalize-space(text())=""]')
+        self.verify_loan_update('')
         # Test going from 'admin' -> '' in SystemActivity
         sys = System.by_fqdn(self.system.fqdn, user)
         sys_activity_name = sys.dyn_activity.filter(SystemActivity.field_name == \
