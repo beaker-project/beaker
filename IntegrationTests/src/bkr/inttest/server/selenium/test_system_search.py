@@ -558,35 +558,36 @@ class DiskSearchTest(WebDriverTestCase):
 #https://bugzilla.redhat.com/show_bug.cgi?id=949777
 class InventorySearchTest(WebDriverTestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
 
         # date times
-        self.today = datetime.date.today()
-        self.time_now = datetime.datetime.combine(self.today, datetime.time(0, 0))
-        self.time_delta1 = datetime.datetime.combine(self.today, datetime.time(0, 30))
-        self.time_tomorrow = self.time_now + datetime.timedelta(days=1)
-        self.time_yesterday = self.time_now - datetime.timedelta(days=1)
+        cls.today = datetime.date.today()
+        cls.time_now = datetime.datetime.combine(cls.today, datetime.time(0, 0))
+        cls.time_delta1 = datetime.datetime.combine(cls.today, datetime.time(0, 30))
+        cls.time_tomorrow = cls.time_now + datetime.timedelta(days=1)
+        cls.time_yesterday = cls.time_now - datetime.timedelta(days=1)
         # today date
-        self.date_yesterday = self.time_yesterday.date().isoformat()
-        self.date_today = self.time_now.date().isoformat()
-        self.date_tomorrow = self.time_tomorrow.date().isoformat()
+        cls.date_yesterday = cls.time_yesterday.date().isoformat()
+        cls.date_today = cls.time_now.date().isoformat()
+        cls.date_tomorrow = cls.time_tomorrow.date().isoformat()
 
         with session.begin():
-            self.not_inv = data_setup.create_system()
+            cls.not_inv = data_setup.create_system()
 
-            self.inv1 = data_setup.create_system()
-            self.inv1.date_lastcheckin = self.time_now
+            cls.inv1 = data_setup.create_system()
+            cls.inv1.date_lastcheckin = cls.time_now
 
-            self.inv2 = data_setup.create_system()
-            self.inv2.date_lastcheckin = self.time_delta1
+            cls.inv2 = data_setup.create_system()
+            cls.inv2.date_lastcheckin = cls.time_delta1
 
-            self.inv3 = data_setup.create_system()
-            self.inv3.date_lastcheckin = self.time_tomorrow
+            cls.inv3 = data_setup.create_system()
+            cls.inv3.date_lastcheckin = cls.time_tomorrow
 
-            self.inv4 = data_setup.create_system()
-            self.inv4.date_lastcheckin = self.time_yesterday
+            cls.inv4 = data_setup.create_system()
+            cls.inv4.date_lastcheckin = cls.time_yesterday
 
-        self.browser = self.get_browser()
+        cls.browser = cls.get_browser()
 
     def check_search_results(self, present, absent):
 
@@ -597,8 +598,9 @@ class InventorySearchTest(WebDriverTestCase):
             self.browser.find_element_by_xpath('//table[@id="widget" and '
                     './/td[1]/a/text()="%s"]' % system.fqdn)
 
-    def tearDown(self):
-        self.browser.quit()
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.quit()
 
     def test_uninventoried_search(self):
 
