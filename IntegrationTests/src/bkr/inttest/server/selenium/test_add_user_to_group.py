@@ -9,12 +9,11 @@ class TestAddUserToGroup(SeleniumTestCase):
         self.verificationErrors = []
         self.selenium = self.get_selenium()
         self.selenium.start()
-        self.BEAKER_TEST_USER_1 = data_setup.create_user(password='password')
-        self.BEAKER_TEST_USER_2 = data_setup.create_user(password='password')
-        self.GROUP = data_setup.create_group()
-        session.flush()
+        with session.begin():
+            self.BEAKER_TEST_USER_1 = data_setup.create_user(password='password')
+            self.BEAKER_TEST_USER_2 = data_setup.create_user(password='password')
+            self.GROUP = data_setup.create_group()
 
-    
     def test_add_user_to_admin_group(self):
         sel = self.selenium
         sel.open("")
@@ -58,8 +57,8 @@ class TestAddUserToGroup(SeleniumTestCase):
         self.failUnless(not sel.is_text_present("%s" % self.BEAKER_TEST_USER_1.user_name))
 
     def test_user_group_is_updated(self):
-        group = data_setup.create_group()
-        session.flush()
+        with session.begin():
+            group = data_setup.create_group()
         sel = self.selenium
         self.login()
         sel.click("//..[@id='admin']/li/a[text()='Groups']")
@@ -74,9 +73,8 @@ class TestAddUserToGroup(SeleniumTestCase):
         self.assert_(group.display_name in sel.get_text('//table[@id="groups_grid"]'))
 
     def tearDown(self):
-	self.selenium.stop()
-	self.assertEqual([], self.verificationErrors)
+        self.selenium.stop()
+        self.assertEqual([], self.verificationErrors)
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -229,7 +229,12 @@ class NewJobTest(SeleniumTestCase):
         self.assert_('Failed to import job' in sel.get_text('css=.flash'))
 
     def test_valid_job_xml_doesnt_trigger_xsd_warning(self):
-        self.login()
+        with session.begin():
+            group = data_setup.create_group(group_name='somegroup')
+            user = data_setup.create_user(password=u'hornet')
+            user.groups.append(group)
+
+        self.login(user=user.user_name, password='hornet')
         sel = self.selenium
         sel.open('')
         sel.click('link=New Job')
