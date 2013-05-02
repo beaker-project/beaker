@@ -10,7 +10,7 @@ them in XML files and save them as regression test suites and such.
 
 The various elements along with their attributes and the values they can
 take are described in the RELAX NG schema described in the file
-`beaker-job.rng <http://beaker-project.org/schema/beaker-job.rng>`_. 
+`beaker-job.rng <http://beaker-project.org/schema/beaker-job.rng>`_.
 
 .. _job-workflow-details:
 
@@ -26,14 +26,13 @@ workflow. Each job has a root node called the job element:
 
 This is an optional attribute that indicates the job is being
 submitted on behalf of a particular group.
-It will affect who is able to view and modify elements of the job.
 
 A direct child is the "whiteboard" element. The content is normally a
 mnemonic piece of text describing the job:
 
 ::
 
-    <job>
+    <job group='product-QA'>
     <whiteboard>
             Apache 2.2 test
     </whiteboard>
@@ -57,7 +56,7 @@ be managed (e.g. submitted, cancelled) as a single unit.
 
 ::
 
-    <job>
+    <job group='product-QA'>
       <whiteboard>
         Apache 2.2 test
       </whiteboard>
@@ -81,7 +80,7 @@ Individual recipes can have the following attributes:
 
 Here is an example::
 
-    <job>
+    <job group='product-QA'>
       <whiteboard>
         Apache 2.2 test
       </whiteboard>
@@ -106,7 +105,7 @@ installed on top of anything that comes installed by default.
 
 ::
 
-    <job>
+    <job group='product-QA'>
       <whiteboard>
         Apache 2.2 test
       </whiteboard>
@@ -130,7 +129,7 @@ You can use any text you like for the name attribute.
 
 ::
 
-    <job>
+    <job group='product-QA'>
      <whiteboard>
         Apache 2.2 test
       </whiteboard>
@@ -165,7 +164,7 @@ machine or not.
 
 ::
 
-    <job>
+    <job group='product-QA'>
       <whiteboard>
         Apache 2.2 test
       </whiteboard>
@@ -199,7 +198,7 @@ machine or not.
 
 ::
 
-    <job>
+    <job group='product-QA'>
       <whiteboard>
         Apache 2.2 test
       </whiteboard>
@@ -319,7 +318,7 @@ assigned to a new environment variable specified by ``name``.
 
 ::
 
-    <job>
+    <job group='product-QA'>
       <whiteboard>
         Apache 2.2 test
       </whiteboard>

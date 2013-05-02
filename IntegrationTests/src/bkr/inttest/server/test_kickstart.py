@@ -939,6 +939,45 @@ logvol /butter --name=butter --vgname=TestVolume001 --size=25600 --fstype btrfs
                 in recipe.rendered_kickstart.kickstart,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_sshkeys_group(self):
+        self.user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'neveroddoreven', u'description'))
+        user2 = data_setup.create_user()
+        user2.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'murderforajarofredrum', u'description'))
+        group = data_setup.create_group(group_name='group1')
+        self.user.groups.append(group)
+        user2.groups.append(group)
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        recipe = self.provision_recipe('''
+            <job group="group1">
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+
+        self.assert_('''
+mkdir -p /root/.ssh
+cat >>/root/.ssh/authorized_keys <<"__EOF__"
+ssh-rsa neveroddoreven description
+ssh-rsa murderforajarofredrum description
+__EOF__
+restorecon -R /root/.ssh
+chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
+'''
+                in recipe.rendered_kickstart.kickstart,
+                recipe.rendered_kickstart.kickstart)
+
     def test_sshkeys(self):
         self.user.root_password = '$1$beaker$yMeLK4p1IVkFa80RyTkpE.'
         self.user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'lolthisismykey', u'description'))
