@@ -556,6 +556,8 @@ class DiskSearchTest(WebDriverTestCase):
 
 
 #https://bugzilla.redhat.com/show_bug.cgi?id=949777
+# we visit the 'mine' page, so that we have substantially
+# less systems to deal with
 class InventorySearchTest(WebDriverTestCase):
 
     @classmethod
@@ -573,21 +575,23 @@ class InventorySearchTest(WebDriverTestCase):
         cls.date_tomorrow = cls.time_tomorrow.date().isoformat()
 
         with session.begin():
-            cls.not_inv = data_setup.create_system()
+            cls.user = data_setup.create_user(password=u'pass')
+            cls.not_inv = data_setup.create_system(loaned=cls.user)
 
-            cls.inv1 = data_setup.create_system()
+            cls.inv1 = data_setup.create_system(loaned=cls.user)
             cls.inv1.date_lastcheckin = cls.time_now
 
-            cls.inv2 = data_setup.create_system()
+            cls.inv2 = data_setup.create_system(loaned=cls.user)
             cls.inv2.date_lastcheckin = cls.time_delta1
 
-            cls.inv3 = data_setup.create_system()
+            cls.inv3 = data_setup.create_system(loaned=cls.user)
             cls.inv3.date_lastcheckin = cls.time_tomorrow
 
-            cls.inv4 = data_setup.create_system()
+            cls.inv4 = data_setup.create_system(loaned=cls.user)
             cls.inv4.date_lastcheckin = cls.time_yesterday
 
         cls.browser = cls.get_browser()
+        login(cls.browser, user=cls.user.user_name, password='pass')
 
     def check_search_results(self, present, absent):
 
@@ -605,7 +609,7 @@ class InventorySearchTest(WebDriverTestCase):
     def test_uninventoried_search(self):
 
         b = self.browser
-        b.get(get_server_base())
+        b.get(get_server_base() + 'mine')
         b.find_element_by_id('advancedsearch').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_id('systemsearch_0_table'))\
@@ -622,7 +626,7 @@ class InventorySearchTest(WebDriverTestCase):
     def test_inventoried_search_after(self):
 
         b = self.browser
-        b.get(get_server_base())
+        b.get(get_server_base() + 'mine')
         b.find_element_by_id('advancedsearch').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_id('systemsearch_0_table'))\
@@ -639,7 +643,7 @@ class InventorySearchTest(WebDriverTestCase):
     def test_inventoried_search_is(self):
 
         b = self.browser
-        b.get(get_server_base())
+        b.get(get_server_base() + 'mine')
         b.find_element_by_id('advancedsearch').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_id('systemsearch_0_table'))\
@@ -656,7 +660,7 @@ class InventorySearchTest(WebDriverTestCase):
     def test_inventoried_search_before(self):
 
         b = self.browser
-        b.get(get_server_base())
+        b.get(get_server_base() + 'mine')
         b.find_element_by_id('advancedsearch').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_id('systemsearch_0_table'))\
@@ -673,7 +677,7 @@ class InventorySearchTest(WebDriverTestCase):
     def test_inventoried_search_range(self):
 
         b = self.browser
-        b.get(get_server_base())
+        b.get(get_server_base() + 'mine')
         b.find_element_by_id('advancedsearch').click()
         wait_for_animation(b, '#searchform')
 
