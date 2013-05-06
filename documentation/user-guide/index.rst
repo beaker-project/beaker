@@ -26,7 +26,6 @@ Contents
 
    bkr-client
    interface
-   makefile
    workflow
-   tests
+   writing-tasks
    beaker-provided-tasks
