@@ -36,6 +36,22 @@ subsequent requests which belong with this session.
 
 .. automethod:: auth.who_am_i
 
+User Preferences
+----------------
+
+.. currentmodule:: bkr.server.preferences
+
+.. automethod:: prefs.update
+
+Groups
+------
+
+These XML-RPC methods allow the caller to query and manipulate groups
+in Beaker.
+
+.. currentmodule:: bkr.server.group
+
+.. automethod:: groups.create
 
 Systems
 -------
@@ -140,14 +156,6 @@ Running jobs
 .. automethod:: taskactions.to_xml
 
 .. automethod:: taskactions.stop
-
-
-User Preferences
-----------------
-
-.. currentmodule:: bkr.server.preferences
-
-.. automethod:: prefs.update
 
 
 General Beaker information

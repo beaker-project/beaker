@@ -750,6 +750,7 @@ user_group_table = Table('user_group', metadata,
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    Column('is_owner', Boolean, nullable=False, default=False),
     mysql_engine='InnoDB',
 )
 
@@ -1673,6 +1674,12 @@ class User(MappedObject):
             return True
         return False
 
+    groups = association_proxy('group_user_assocs','group',
+            creator=lambda group: UserGroup(group=group))
+
+
+class UserGroup(MappedObject):
+    pass
 
 class Permission(MappedObject):
     """
@@ -1777,8 +1784,23 @@ class Group(MappedObject):
             log.error(e)
             return
 
+    def owners(self):
+        owners = UserGroup.query.filter_by(group_id=self.group_id,
+                                           is_owner=True).all()
+        return [owner.user_id for owner in owners]
+
+    def has_owner(self, user):
+        return user is not None and user.user_id in self.owners()
+
+    def can_edit(self, user):
+        return self.has_owner(user) or user.is_admin()
+
     systems = association_proxy('system_assocs', 'system',
             creator=lambda system: SystemGroup(system=system))
+
+    users = association_proxy('user_group_assocs','user',
+            creator=lambda user: UserGroup(user=user))
+
 
 class System(SystemObject):
 
@@ -7035,9 +7057,13 @@ mapper(User, users_table,
       'lab_controller' : relation(LabController, uselist=False),
 })
 
-mapper(Group, groups_table,
-    properties=dict(users=relation(User, uselist=True, secondary=user_group_table, backref='groups'),
-    ))
+mapper(Group, groups_table)
+
+mapper(UserGroup, user_group_table, properties={
+        'group': relation(Group, backref=backref('user_group_assocs', cascade='all, delete-orphan')),
+        'user': relation(User, backref=backref('group_user_assocs', cascade='all, delete-orphan'))
+        })
+
 
 mapper(SystemGroup, system_group_table, properties={
     'system': relation(System, backref=backref('group_assocs', cascade='all, delete-orphan')),
