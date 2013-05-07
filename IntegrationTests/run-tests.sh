@@ -25,6 +25,11 @@ set -x
 # http://bugs.python.org/setuptools/issue139
 # (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
 
+# Ensure legacy tmp files from previous runs are cleared
+rm -rf /tmp/beaker-*
+rm -rf /tmp/bkr-*
+
+
 env PYTHONPATH=../Common:../Server:../LabController/src:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} \
     python -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; from nose.core import main; main()' \
     ${*:--v rhts bkr}

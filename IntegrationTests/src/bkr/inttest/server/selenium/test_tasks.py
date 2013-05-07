@@ -1,6 +1,7 @@
 #!/usr/bin/python
 from bkr.inttest.server.selenium import SeleniumTestCase
 from bkr.inttest import data_setup
+from bkr.common.helpers import unlink_ignore
 import unittest, time, re, os, shutil, turbogears
 import pkg_resources
 from turbogears.database import session
@@ -16,13 +17,22 @@ class TestSubmitTask(SeleniumTestCase):
         cls.selenium = cls.get_selenium()
         cls.selenium.start()
         cls.login(user=cls.uploader.user_name, password=u'upload')
-    
+
     @classmethod
     def teardownClass(cls):
         cls.selenium.stop()
         basepath = (turbogears.config.get('basepath.rpms'))
-        os.remove(os.path.join(basepath, 'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
-        os.remove(os.path.join(basepath, 'tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
+        # These may be missing if a test failed or wasn't run. We shouldn't
+        # confuse matters further by complaining that they're missing.
+        unlink_ignore(os.path.join(basepath, 'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
+        unlink_ignore(os.path.join(basepath, 'tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
+
+    def assert_task_upload_flash_OK(self, name):
+        sel = self.selenium
+        expected = '%s Added/Updated' % name
+        actual = sel.get_text('css=.flash')
+        failure_msg = "%s not in %s" % (expected, actual)
+        self.assert_(expected in actual, failure_msg)
 
     def test_submit_task(self):
         test_package_name = '/distribution/beaker/task_test'
@@ -37,8 +47,7 @@ class TestSubmitTask(SeleniumTestCase):
                 'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
         sel.click('//input[@value="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        self.assert_(('%s Added/Updated' % test_package_name)
-                in sel.get_text('css=.flash'))
+        self.assert_task_upload_flash_OK(test_package_name)
         # ...and make sure it worked...
         sel.type('simplesearch', test_package_name)
         sel.click('search')
@@ -58,8 +67,7 @@ class TestSubmitTask(SeleniumTestCase):
                 'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
         sel.click('//input[@value="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        self.assert_(('%s Added/Updated' % test_package_name)
-                in sel.get_text('css=.flash'))
+        self.assert_task_upload_flash_OK(test_package_name)
         # ...and make sure everything was updated
         sel.type('simplesearch', test_package_name)
         sel.click('search')
@@ -130,6 +138,7 @@ class TestSubmitTask(SeleniumTestCase):
                 'tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
         sel.click('//input[@value="Submit Data"]')
         sel.wait_for_page_to_load('30000')
+        self.assert_task_upload_flash_OK(test_package_name)
         sel.type('simplesearch', test_package_name)
         sel.click('search')
         sel.wait_for_page_to_load('30000')
