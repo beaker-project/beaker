@@ -39,7 +39,7 @@ def all(iterable):
             return False
     return True
 
-def get_bugs(milestone, release, sprint, states):
+def get_bz_proxy():
     bz = bugzilla.Bugzilla(url=BUGZILLA_URL)
     # Make sure the user has logged themselves in properly, otherwise we might 
     # accidentally omit private bugs from the list
@@ -47,6 +47,10 @@ def get_bugs(milestone, release, sprint, states):
         raise RuntimeError('Configure your username in ~/.bugzillarc')
     if bz._proxy.User.valid_cookie(dict(login=bz.user))['cookie_isvalid'] != 1:
         raise RuntimeError('Invalid BZ credentials, try running "bugzilla login"')
+    return bz
+
+def get_bugs(milestone, release, sprint, states):
+    bz = get_bz_proxy()
     criteria = {'product': 'Beaker'}
     if milestone:
         criteria['target_milestone'] = milestone
@@ -57,6 +61,15 @@ def get_bugs(milestone, release, sprint, states):
     if states:
         criteria['status'] = list(states)
     return bz.query(bz.build_query(**criteria))
+
+def get_bug(bug_id):
+    bz = get_bz_proxy()
+    criteria = {'bug_id': bug_id}
+    result = bz.query(bz.build_query(**criteria))
+    if not result:
+        raise RuntimeError("No bug found with ID %r" % bug_id)
+    return result[0]
+
 
 def get_gerrit_changes(bug_ids):
     p = subprocess.Popen(['ssh',
@@ -195,9 +208,13 @@ def main():
         elif bug.bug_status in ('MODIFIED', 'ON_DEV', 'ON_QA', 'VERIFIED', 'RELEASE_PENDING', 'CLOSED'):
             if bug.bug_status == 'CLOSED' and bug.resolution == 'DUPLICATE':
                 if bug.dupe_of not in bug_ids:
-                    target_kind = "release" if options.release else "milestone"
-                    problem('Bug %s marked as DUPLICATE of %s, which is not in this %s'
-                                              % (bug.bug_id, bug.dupe_of, target_kind))
+                    dupe = get_bug(bug.dupe_of)
+                    if dupe.bug_status != 'CLOSED':
+                        for target_kind in "release", "milestone", "sprint":
+                            if getattr(options, target_kind, False):
+                                break
+                        problem('Bug %s marked as DUPLICATE of %s, which is not in this %s'
+                                                  % (bug.bug_id, bug.dupe_of, target_kind))
             elif not bug_changes:
                 problem('Bug %s should be ASSIGNED, not %s' % (bug.bug_id, bug.bug_status))
             elif not all(change['status'] in ('ABANDONED', 'MERGED') for change in bug_changes):
