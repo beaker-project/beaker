@@ -254,7 +254,7 @@ Other enhancements
 Documentation improvements
 --------------------------
 
-- The :ref:`makefile` section was updated to describe the ``Provides`` field. 
+- The :ref:`Beaker Makefile <testinfo.desc>` section was updated to describe the ``Provides`` field. 
   (Contributed by Amit Saha in :issue:`910725`.)
 - The various job XML–related sections were rearranged into a new page, 
   :ref:`job-xml`. This page now includes examples of searching for specific 
