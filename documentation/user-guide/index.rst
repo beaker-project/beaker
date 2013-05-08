@@ -23,6 +23,7 @@ Contents
 --------
 
 .. toctree::
+   :maxdepth: 2
 
    bkr-client
    interface
