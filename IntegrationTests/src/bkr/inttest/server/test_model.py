@@ -701,7 +701,7 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
             """% time_now).all()
             self.fail('Fail or Die')
         except ValueError,e:
-            self.assert_('Invalid date format' in e.message)
+            self.assert_('Invalid date format' in str(e), e)
 
     # https://bugzillaOA.redhat.com/show_bug.cgi?id=949777
     def test_system_inventory_filter(self):
