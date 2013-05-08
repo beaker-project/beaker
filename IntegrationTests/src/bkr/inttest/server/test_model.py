@@ -800,7 +800,7 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
                 """).all()
             self.fail('Must Fail or Die')
         except ValueError, e:
-            self.assert_('Invalid date format' in e.message, e.message)
+            self.assert_('Invalid date format' in str(e), e)
 
         # Invalid date format with =
         try:
@@ -811,7 +811,7 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
                 """).all()
             self.fail('Must Fail or Die')
         except ValueError, e:
-            self.assert_('Invalid date format' in e.message, e.message)
+            self.assert_('Invalid date format' in str(e), e)
 
     def test_system_loaned(self):
         user1 = data_setup.create_user()
