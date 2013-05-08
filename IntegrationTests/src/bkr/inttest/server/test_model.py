@@ -14,7 +14,8 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
-        RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult
+        RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
+        Group, User
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -1674,6 +1675,52 @@ class GroupTest(unittest.TestCase):
 
         self.assert_(not self.group.has_owner(self.user2))
         self.assert_(self.user2 in self.group.users)
+
+class GroupTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.rollback()
+
+    def test_populate_ldap_group(self):
+        group = Group(group_name=u'beakerdevs',
+                display_name=u'Beaker Developers', ldap=True)
+        session.flush()
+        group.refresh_ldap_members()
+        session.flush()
+        session.expire_all()
+        self.assertEquals(group.users, [User.by_user_name(u'dcallagh')])
+        self.assertEquals(group.activity[0].action, u'Added')
+        self.assertEquals(group.activity[0].field_name, u'User')
+        self.assertEquals(group.activity[0].old_value, None)
+        self.assertEquals(group.activity[0].new_value, u'dcallagh')
+        self.assertEquals(group.activity[0].service, u'LDAP')
+
+    def test_add_remove_ldap_members(self):
+        # billybob will be removed, dcallagh will be added
+        group = Group(group_name=u'beakerdevs',
+                display_name=u'Beaker Developers', ldap=True)
+        old_member = data_setup.create_user(user_name=u'billybob')
+        group.users.append(old_member)
+        self.assertEquals(group.users, [old_member])
+        session.flush()
+        group.refresh_ldap_members()
+        session.flush()
+        session.expire_all()
+        self.assertEquals(group.users, [User.by_user_name(u'dcallagh')])
+        self.assertEquals(group.activity[0].action, u'Removed')
+        self.assertEquals(group.activity[0].field_name, u'User')
+        self.assertEquals(group.activity[0].old_value, u'billybob')
+        self.assertEquals(group.activity[0].new_value, None)
+        self.assertEquals(group.activity[0].service, u'LDAP')
+        self.assertEquals(group.activity[1].action, u'Added')
+        self.assertEquals(group.activity[1].field_name, u'User')
+        self.assertEquals(group.activity[1].old_value, None)
+        self.assertEquals(group.activity[1].new_value, u'dcallagh')
+        self.assertEquals(group.activity[1].service, u'LDAP')
+
 
 class TaskTypeTest(unittest.TestCase):
 

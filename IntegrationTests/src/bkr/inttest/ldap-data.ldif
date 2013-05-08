@@ -1,0 +1,79 @@
+dn: dc=example,dc=invalid
+objectClass: top
+objectClass: domain
+
+dn: ou=users,dc=example,dc=invalid
+objectClass: organizationalUnit
+objectClass: top
+ou: users
+
+dn: ou=groups,dc=example,dc=invalid
+objectClass: organizationalUnit
+objectClass: top
+ou: groups
+
+dn: uid=my_ldap_user,ou=users,dc=example,dc=invalid
+objectClass: top
+objectClass: person
+objectClass: organizationalperson
+objectClass: inetorgperson
+objectClass: posixAccount
+cn: My LDAP User
+givenName: My
+sn: LDAP User
+uid: my_ldap_user
+uidNumber: 15549
+gidNumber: 15549
+homeDirectory: /home/lol
+mail: my_ldap_user@example.invalid
+
+dn: uid=dcallagh,ou=users,dc=example,dc=invalid
+objectClass: top
+objectClass: person
+objectClass: organizationalperson
+objectClass: inetorgperson
+objectClass: posixAccount
+cn: Dan Callaghan
+givenName: Daniel
+sn: Callaghan
+uid: dcallagh
+uidNumber: 15550
+gidNumber: 15550
+homeDirectory: /home/dcallagh
+mail: dcallagh@example.invalid
+
+dn: uid=jgillard,ou=users,dc=example,dc=invalid
+objectClass: top
+objectClass: person
+objectClass: organizationalperson
+objectClass: inetorgperson
+objectClass: posixAccount
+cn: Julia Gillard
+givenName: Julia
+sn: Gillard
+uid: jgillard
+uidNumber: 15551
+gidNumber: 15551
+homeDirectory: /home/jgillard
+mail: jgillard@example.invalid
+
+dn: cn=my_ldap_group,ou=groups,dc=example,dc=invalid
+objectClass: top
+objectClass: posixGroup
+gidNumber: 5517
+cn: my_ldap_group
+memberUid: my_ldap_user
+
+dn: cn=beakerdevs,ou=groups,dc=example,dc=invalid
+objectClass: top
+objectClass: posixGroup
+gidNumber: 5518
+cn: beakerdevs
+memberUid: dcallagh
+
+dn: cn=alp,ou=groups,dc=example,dc=invalid
+objectClass: top
+objectClass: posixGroup
+gidNumber: 5519
+cn: alp
+memberUid: jgillard

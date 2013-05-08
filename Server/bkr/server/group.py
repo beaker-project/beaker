@@ -1,7 +1,9 @@
+
+from turbogears import identity, redirect, config, controllers, expose, \
+        flash, widgets, validate, error_handler, validators, redirect, \
+        paginate, url
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from turbogears.widgets import AutoCompleteField
-from turbogears import identity, redirect
 from sqlalchemy.orm.exc import NoResultFound
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -25,15 +27,32 @@ import string
 class GroupFormSchema(validators.Schema):
     display_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
     group_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
+    ldap = validators.StringBool(if_empty=False)
 
+class GroupForm(widgets.TableForm):
+    name = 'Group'
+    fields = [
+        widgets.HiddenField(name='group_id'),
+        widgets.TextField(name='group_name', label=_(u'Group Name')),
+        widgets.TextField(name='display_name', label=_(u'Display Name')),
+        widgets.CheckBox(name='ldap', label=_(u'LDAP'),
+                help_text=_(u'Populate group membership from LDAP?')),
+    ]
+    action = 'save_data'
+    submit_text = _(u'Save')
+    validator = GroupFormSchema()
+
+    def update_params(self, d):
+        if not identity.current.user.is_admin() or \
+                not config.get('identity.ldap.enabled', False):
+            d['disabled_fields'] = ['ldap']
+        super(GroupForm, self).update_params(d)
 
 class Groups(AdminPage):
     # For XMLRPC methods in this class.
     exposed = True
 
     group_id     = widgets.HiddenField(name='group_id')
-    display_name = widgets.TextField(name='display_name', label=_(u'Display Name'))
-    group_name   = widgets.TextField(name='group_name', label=_(u'Group Name'))
     auto_users    = AutoCompleteField(name='user',
                                      search_controller = url("/users/by_name"),
                                      search_param = "input",
@@ -53,19 +72,12 @@ class Groups(AdminPage):
                                      search_param = "input",
                                      result_name = "matches")
 
-    group_form = widgets.TableForm(
-        'Group',
-        fields = [group_id, display_name, group_name],
-        action = 'save_data',
-        submit_text = _(u'Save'),
-        validator = GroupFormSchema()
-    )
+    group_form = GroupForm()
 
     permissions_form = widgets.RemoteForm(
         'Permissions',
         fields = [search_permissions, group_id],
         submit_text = _(u'Add'),
-        validator = GroupFormSchema(),
         on_success = 'add_group_permission_success(http_request.responseText)',
         on_failure = 'add_group_permission_failure(http_request.responseText)',
         before = 'before_group_permission_submit()',
@@ -148,23 +160,17 @@ class Groups(AdminPage):
             value = kw,
         )
 
-    def show_members(self,id):
-        user_member = ('User Members', lambda x: x.display_name)
-
-        group = Group.by_id(id)
-        # run this in a try..catch block, since identity.current.user may be None
-        try:
-            can_edit = group.can_edit(identity.current.user)
-        except AttributeError:
-            pass
-        else:
-            if can_edit:
-                remove_link = (' ', lambda x: make_link('removeUser?group_id=%s&id=%s' % (id, x.user_id), u'Remove (-)'))
-
-        user_fields = [user_member]
-        if 'remove_link' in locals():
-            user_fields.append(remove_link)
-
+    def show_members(self, group):
+        user_fields = [
+            ('User Members', lambda x: x.display_name),
+        ]
+        can_edit = False
+        if identity.current.user:
+            can_edit = group.can_modify_membership(identity.current.user)
+        if can_edit:
+            user_fields.append((' ', lambda x: make_link(
+                    'removeUser?group_id=%s&id=%s' % (group.group_id, x.user_id),
+                    u'Remove (-)')))
         return widgets.DataGrid(fields=user_fields)
 
     @expose(template='bkr.server.templates.grid')
@@ -191,7 +197,7 @@ class Groups(AdminPage):
             flash(_(u'Need a valid group to search on'))
             redirect('../groups/')
 
-        usergrid = self.show_members(id)
+        usergrid = self.show_members(group)
         return dict(value = group,grid = usergrid)
 
     @identity.require(identity.not_anonymous())
@@ -208,7 +214,7 @@ class Groups(AdminPage):
             flash(_(u'You are not an owner of group %s' % group))
             redirect('../groups/mine')
 
-        usergrid = self.show_members(id)
+        usergrid = self.show_members(group)
         systemgrid = widgets.DataGrid(fields=[
                                   ('System Members', lambda x: x.fqdn),
                                   (' ', lambda x: make_link('removeSystem?group_id=%s&id=%s' % (id, x.id), u'Remove (-)')),
@@ -236,11 +242,13 @@ class Groups(AdminPage):
     @expose()
     @validate(form=group_form)
     @error_handler(edit)
-    def save(self, **kw):
-        display_name = kw['display_name']
-        group_name = kw['group_name']
-        if kw.get('group_id'):
-            group = Group.by_id(kw['group_id'])
+    def save(self, group_id=None, display_name=None, group_name=None, ldap=False, **kwargs):
+        if ldap and not identity.current.user.is_admin():
+            flash(_(u'Only admins can create LDAP groups'))
+            redirect('.')
+
+        if group_id is not None:
+            group = Group.by_id(group_id)
 
             if not group.can_edit(identity.current.user):
                 flash(_(u'You are not an owner of group %s' % group))
@@ -248,23 +256,27 @@ class Groups(AdminPage):
 
             group.display_name = display_name
             group.group_name = group_name
-            flash( _(u"OK") )
-            redirect(".")
+            group.ldap = ldap
         else:
             try:
-                group = Group.by_name(group_name)
+                Group.by_name(group_name)
             except NoResultFound:
-                group = Group()
-                activity = Activity(identity.current.user, u'WEBUI', u'Added', u'Group', u"", kw['display_name'] )
-                group.display_name = display_name
-                group.group_name = group_name
-                user = identity.current.user
-                group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
-                flash( _(u"OK") )
-                redirect(".")
+                pass
             else:
                 flash( _(u"Group %s already exists." % group_name) )
                 redirect(".")
+            group = Group()
+            activity = Activity(identity.current.user, u'WEBUI', u'Added', u'Group', u"", display_name)
+            group.display_name = display_name
+            group.group_name = group_name
+            group.ldap = ldap
+            if not ldap: # LDAP groups don't have owners
+                user = identity.current.user
+                group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
+        if group.ldap:
+            group.refresh_ldap_members()
+        flash( _(u"OK") )
+        redirect(".")
 
     @identity.require(identity.not_anonymous())
     @expose()
@@ -336,7 +348,7 @@ class Groups(AdminPage):
             redirect("./edit?id=%s" % kw['group_id'])
         group = Group.by_id(kw['group_id'])
 
-        if not group.can_edit(identity.current.user):
+        if not group.can_modify_membership(identity.current.user):
             flash(_(u'You are not an owner of group %s' % group))
             redirect('../groups/mine')
 
@@ -445,7 +457,7 @@ class Groups(AdminPage):
         group = Group.by_id(group_id)
         group_owners = group.owners()
 
-        if not group.can_edit(identity.current.user):
+        if not group.can_modify_membership(identity.current.user):
             flash(_(u'You are not an owner of group %s' % group))
             redirect('../groups/mine')
 

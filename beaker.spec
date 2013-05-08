@@ -131,6 +131,8 @@ Requires:       Xvfb
 Requires:       firefox
 Requires:       lsof
 Requires:       python-requests >= 0.11
+Requires:       /usr/sbin/slapd
+Requires:       /usr/bin/slapadd
 %endif
 
 
@@ -302,6 +304,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-repo-update
 %{_bindir}/beaker-sync-tasks
 %{_bindir}/%{name}-cleanup-visits
+%{_bindir}/beaker-refresh-ldap
 %{_sysconfdir}/init.d/%{name}d
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %attr(0755,root,root)%{_bindir}/%{name}d
