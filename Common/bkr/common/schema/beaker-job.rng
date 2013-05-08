@@ -699,6 +699,10 @@
           '!=' operators - the former matching only uninventoried
           machines and the latter only inventoried machines.
          </a:documentation>
+         <choice>
+           <data type="date"/>
+           <value></value>
+         </choice>
       </attribute>
     </element>
     <element name="arch">

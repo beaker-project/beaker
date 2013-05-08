@@ -625,24 +625,85 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         self.assert_(excluded not in systems)
         self.assert_(included in systems)
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=955868
     def test_system_added(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.manual,
-                date_added=datetime.datetime(2011, 9, 1, 0, 0, 0))
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.automated,
-                date_added=datetime.datetime(2012, 9, 1, 0, 0, 0))
+
+        # date times
+        today = datetime.date.today()
+        time_now = datetime.datetime.combine(today, datetime.time(0, 0))
+        time_delta1 = datetime.datetime.combine(today, datetime.time(0, 30))
+        time_tomorrow = time_now + datetime.timedelta(days=2)
+
+        # today date
+        date_today = time_now.date().isoformat()
+        date_tomorrow = time_tomorrow.date().isoformat()
+
+        sys_today1 = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc, date_added=time_now)
+        sys_today2 = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc, date_added=time_delta1)
+        sys_tomorrow = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc, date_added=time_tomorrow)
+
         session.flush()
+
+        # on a date
         systems = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
-                <system><date_added op="&gt;" value="2012-01-01" /></system>
+                <system><added op="=" value="%s" /></system>
             </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
+            """% date_today).all()
+
+        self.assert_(sys_today1 in systems)
+        self.assert_(sys_today2 in systems)
+        self.assert_(sys_tomorrow not in systems)
+
+        # not on a date
+        systems = self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <system><added op="!=" value="%s" /></system>
+            </hostRequires>
+            """% date_today).all()
+
+        self.assert_(sys_today1 not in systems)
+        self.assert_(sys_today2 not in systems)
+        self.assert_(sys_tomorrow in systems)
+
+        # after a date
+        systems = self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <system><added op="&gt;" value="%s" /></system>
+            </hostRequires>
+            """% date_today).all()
+
+        self.assert_(sys_tomorrow in systems)
+        self.assert_(sys_today1 not in systems)
+        self.assert_(sys_today2 not in systems)
+
+        # before a date
+        systems = self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <system><added op="&lt;" value="%s" /></system>
+            </hostRequires>
+            """% date_tomorrow).all()
+
+        self.assert_(sys_tomorrow not in systems)
+        self.assert_(sys_today1 in systems)
+        self.assert_(sys_today2 in systems)
 
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=949777
+        # on a date time
+        try:
+            systems = self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <system><added op="=" value="%s" /></system>
+            </hostRequires>
+            """% time_now).all()
+            self.fail('Fail or Die')
+        except ValueError,e:
+            self.assert_('Invalid date format' in e.message)
+
+    # https://bugzillaOA.redhat.com/show_bug.cgi?id=949777
     def test_system_inventory_filter(self):
 
         # date times

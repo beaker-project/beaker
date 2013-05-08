@@ -135,3 +135,62 @@ class ListSystemsTest(unittest.TestCase):
             self.assertEqual(e.status, 1)
             self.assert_('Invalid date format' in e.stderr_output,
                     e.stderr_output)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=955868
+    def test_added_date_search(self):
+
+        # date times
+        today = datetime.date.today()
+        time_now = datetime.datetime.combine(today, datetime.time(0, 0))
+        time_delta1 = datetime.datetime.combine(today, datetime.time(0, 30))
+        time_tomorrow = time_now + datetime.timedelta(days=1)
+        time_tomorrow = time_now + datetime.timedelta(days=2)
+
+        # dates
+        date_today = time_now.date().isoformat()
+        date_tomorrow = time_tomorrow.date().isoformat()
+
+
+        with session.begin():
+            sys_today1 = data_setup.create_system(arch=u'i386', shared=True,
+                                          date_added=time_now)
+            sys_today2 = data_setup.create_system(arch=u'i386', shared=True,
+                                          date_added=time_delta1)
+            sys_tomorrow = data_setup.create_system(arch=u'i386', shared=True,
+                                            date_added=time_tomorrow)
+
+        # on a date
+        out = run_client(['bkr', 'list-systems',
+                          '--xml-filter',
+                          '<system>'
+                          '<added op="=" value="%s" />'
+                          '</system>' % date_today])
+
+        returned_systems = out.splitlines()
+        self.assert_(sys_today1.fqdn in returned_systems)
+        self.assert_(sys_today2.fqdn in returned_systems)
+        self.assert_(sys_tomorrow.fqdn not in returned_systems)
+
+        # on a datetime
+        try:
+            out = run_client(['bkr', 'list-systems',
+                              '--xml-filter',
+                              '<system>'
+                              '<added op="=" value="%s" />'
+                              '</system>' % time_now])
+            self.fail('Must Fail or Die')
+        except ClientError,e:
+            self.assertEquals(e.status, 1)
+            self.assert_('Invalid date format' in e.stderr_output, e.stderr_output)
+
+        # date as  " "
+        try:
+            out = run_client(['bkr', 'list-systems',
+                              '--xml-filter',
+                              '<system>'
+                              '<added op="=" value=" " />'
+                              '</system>'])
+            self.fail('Must Fail or die')
+        except ClientError,e:
+            self.assertEquals(e.status, 1)
+            self.assert_('Invalid date format' in e.stderr_output, e.stderr_output)

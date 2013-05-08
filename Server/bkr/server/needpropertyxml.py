@@ -56,6 +56,31 @@ def get_dtrange(dt):
 
     return start_dt, end_dt
 
+# Common special query processing specific to
+# System.date_added and System.date_lastcheckin
+def date_filter(col, op, value):
+    try:
+        dt = datetime.datetime.strptime(value,'%Y-%m-%d').date()
+    except ValueError,e:
+        raise ValueError('Invalid date format: %s. '
+                                 'Use YYYY-MM-DD.' % value)
+    if op == '__eq__':
+        start_dt, end_dt = get_dtrange(dt)
+        clause = and_(getattr(col, '__ge__')(start_dt),
+                                 (getattr(col, '__le__')(end_dt)))
+    elif op == '__ne__':
+        start_dt, end_dt = get_dtrange(dt)
+        clause = not_(and_(getattr(col, '__ge__')(start_dt),
+                                      (getattr(col, '__le__')(end_dt))))
+    elif op == '__gt__':
+        clause = getattr(col, '__gt__')(datetime.datetime.combine
+                                       (dt,datetime.time(23, 59, 59)))
+    else:
+        clause = getattr(col, op)(datetime.datetime.combine
+                                 (dt,datetime.time(0, 0, 0)))
+
+    return clause
+
 class NotVirtualisable(ValueError): pass
 
 class ElementWrapper(object):
@@ -506,31 +531,11 @@ class XmlLastInventoried(ElementWrapper):
         value = self.get_xml_attr('value', unicode, None)
 
         if value:
-            # bail out early, we don't have any RelaxNG enforced
-            # date format, since we want to allow ""
-            try:
-                dt = datetime.datetime.strptime(value,'%Y-%m-%d').date()
-            except ValueError,e:
-                raise ValueError('Invalid date format: %s. '
-                                 'Use YYYY-MM-DD.' % value)
-            if op == '__eq__':
-                start_dt, end_dt = get_dtrange(dt)
-                query = and_(getattr(col, '__ge__')(start_dt),
-                                 (getattr(col, '__le__')(end_dt)))
-            elif op == '__ne__':
-                start_dt, end_dt = get_dtrange(dt)
-                query = not_(and_(getattr(col, '__ge__')(start_dt),
-                                      (getattr(col, '__le__')(end_dt))))
-            elif op == '__gt__':
-                query = getattr(col, '__gt__')(datetime.datetime.combine
-                                               (dt,datetime.time(23, 59, 59)))
-            else:
-                query = getattr(col, op)(datetime.datetime.combine
-                                         (dt,datetime.time(0, 0, 0)))
+            clause = date_filter(col, op, value)
         else:
-            query = getattr(col, op)(None)
+            clause = getattr(col, op)(None)
 
-        return (joins, query)
+        return (joins, clause)
 
 class XmlSystemLender(ElementWrapper):
     """
@@ -654,14 +659,24 @@ class XmlSystemAdded(ElementWrapper):
     """
     Pick a system based on when it was added
     """
+    op_table = { '=' : '__eq__',
+                 '==' : '__eq__',
+                 '!=' : '__ne__',
+                 '>'  : '__gt__',
+                 '>=' : '__ge__',
+                 '<'  : '__lt__',
+                 '<=' : '__le__'}
+
     def filter(self, joins):
+        col = System.date_added
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        date_added = datetime.date(*map(int, value.split('-')))
-        query = None
+        clause = None
+
         if value:
-            query = getattr(System.date_added, op)(value)
-        return (joins, query)
+            clause = date_filter(col, op, value)
+
+        return (joins, clause)
 
 class XmlSystemPowertype(ElementWrapper):
     """
