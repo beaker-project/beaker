@@ -1,4 +1,5 @@
 import unittest
+from turbogears.database import session
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError
 
@@ -13,7 +14,8 @@ class WatchdogsExtend(unittest.TestCase):
                         or 'watchdog moved from' in out)
 
         # As a non-admin user
-        user1 = data_setup.create_user(password='abc')
+        with session.begin():
+            user1 = data_setup.create_user(password='abc')
         try:
             out = run_client(['bkr', 'watchdogs-extend',\
                                   '--username',user1.user_name,'--password','abc'])

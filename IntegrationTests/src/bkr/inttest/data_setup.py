@@ -87,9 +87,9 @@ def create_labcontroller(fqdn=None, user=None):
         lc = LabController.by_name(fqdn)  
     except NoResultFound:
         if user is None:
-            user = create_user()
-            session.flush()
-        lc = LabController.lazy_create(fqdn=fqdn, user=user)
+            user = User(user_name='host/%s' % fqdn)
+        lc = LabController(fqdn=fqdn)
+        lc.user = user
         user.groups.append(Group.by_name(u'lab_controller'))
         return lc
     log.debug('labcontroller %s already exists' % fqdn)
@@ -103,10 +103,7 @@ def create_user(user_name=None, password=None, display_name=None,
         display_name = user_name
     if email_address is None:
         email_address = u'%s@example.com' % user_name
-    # XXX use User.lazy_create
-    user = User.by_user_name(user_name)
-    if user is None:
-        user = User(user_name=user_name)
+    user = User.lazy_create(user_name=user_name)
     user.display_name = display_name
     user.email_address = email_address
     if password:
