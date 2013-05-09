@@ -1,7 +1,7 @@
 Delete duplicate system_status_duration rows with NULL finish_time (bug :issue:`903902`)
 ========================================================================================
 
-Run the following SQL:
+Run the following SQL::
 
     DELETE FROM system_status_duration
     USING system_status_duration

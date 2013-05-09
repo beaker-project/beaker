@@ -9,7 +9,7 @@ submitter. (Contributed by Raymond Mancy in :issue:`908183`.)
 
 Database Changes
 ----------------
-Please run the following:
+Please run the following::
 
   ALTER TABLE job
       ADD COLUMN group_id int(11) default NULL AFTER owner_id,
@@ -17,6 +17,6 @@ Please run the following:
           REFERENCES `tg_group` (group_id);
 
 
-To roll back:
+To roll back::
 
   ALTER TABLE job DROP FOREIGN KEY job_group_id_fk, DROP COLUMN group_id;

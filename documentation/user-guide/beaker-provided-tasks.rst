@@ -115,10 +115,10 @@ good idea to run this task on every system to ensure that the hardware
 details are correctly updated in Beaker's database.
 
 
-/distribution/dogfood
-=====================
+/distribution/beaker/dogfood
+============================
 
-The ``/distribution/dogfood`` task runs Beaker's test suite (unit
+The ``/distribution/beaker/dogfood`` task runs Beaker's test suite (unit
 tests and selenium tests) on a test system. It can be configured to
 either run the tests from the development branch of Beaker or the most
 recent released version.

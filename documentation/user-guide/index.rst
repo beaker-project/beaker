@@ -26,7 +26,6 @@ Contents
 
    bkr-client
    interface
-   makefile
    job-design
    workflow
    writing-tasks
