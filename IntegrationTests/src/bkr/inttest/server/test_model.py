@@ -1652,6 +1652,28 @@ class UserTest(unittest.TestCase):
         except ValueError:
             pass
 
+class GroupTest(unittest.TestCase):
+
+    def setUp(self):
+
+        session.begin()
+
+        self.user1 = data_setup.create_user()
+        self.user2 = data_setup.create_user()
+        self.group = data_setup.create_group(owner=self.user1)
+        self.group.users.append(self.user2)
+
+        session.flush()
+
+    def tearDown(self):
+        session.commit()
+
+    def test_add_owner_group(self):
+        self.assert_(self.group.has_owner(self.user1))
+        self.assert_(self.user1 in self.group.users)
+
+        self.assert_(not self.group.has_owner(self.user2))
+        self.assert_(self.user2 in self.group.users)
 
 class TaskTypeTest(unittest.TestCase):
 

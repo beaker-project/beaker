@@ -26,7 +26,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session
 from bkr.server import model
-from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arch, \
+from bkr.server.model import LabController, User, Group, UserGroup, Distro, DistroTree, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
@@ -122,11 +122,17 @@ def create_admin(**kwargs):
 def add_system_lab_controller(system,lc): 
     system.lab_controller = lc
 
-def create_group(permissions=None, group_name=None):
+def create_group(permissions=None, group_name=None, owner=None):
     # tg_group.group_name column is VARCHAR(16)
     if group_name is None:
         group_name = unique_name(u'group%s')
     group = Group.lazy_create(group_name=group_name, display_name=u'Group %s' % group_name)
+    if owner:
+        add_owner_to_group(owner, group)
+    else:
+        group_owner = create_user(user_name=unique_name(u'group_owner_%s'))
+        add_owner_to_group(group_owner, group)
+
     if permissions:
         group.permissions.extend(Permission.by_name(name) for name in permissions)
     return group
@@ -138,6 +144,15 @@ def create_permission(name=None):
 
 def add_user_to_group(user,group):
     user.groups.append(group)
+
+def add_owner_to_group(user, group):
+
+    if user not in group.users:
+        group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
+    else:
+        for assoc in group.user_group_assocs:
+            if assoc.user == user:
+                assoc.is_owner = True
 
 def add_group_to_system(system, group, admin=False):
     system.group_assocs.append(SystemGroup(group=group, admin=admin))
