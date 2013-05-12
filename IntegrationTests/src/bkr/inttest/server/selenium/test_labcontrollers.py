@@ -291,10 +291,10 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
 
     def test_clear_running_commands(self):
         with session.begin():
+            system = data_setup.create_system(lab_controller=self.lc)
             command = CommandActivity(
                     user=None, service=u'testdata', action=u'on',
                     status=CommandStatus.running)
-            system = data_setup.create_system(lab_controller=self.lc)
             system.command_queue.append(command)
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         self.server.labcontrollers.clear_running_commands(u'Staleness')

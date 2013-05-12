@@ -3093,7 +3093,7 @@ class LabInfo(SystemObject):
 
 class Cpu(SystemObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
-        super(Cpu, self).__init__()
+        # Intentionally not chaining to super(), to avoid session.add(self)
         self.vendor = vendor
         self.model = model
         self.model_name = model_name

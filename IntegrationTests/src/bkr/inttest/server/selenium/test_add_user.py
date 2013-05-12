@@ -15,16 +15,16 @@ class AddUserWD(WebDriverTestCase):
         self.browser.quit()
 
     def test_add_invalid_details_existing_user(self):
-        existing_name = data_setup.unique_name('user%s')
-        existing_email = data_setup.unique_name('me%s@my.com')
-        data_setup.create_user(user_name=existing_name,
-            email_address=existing_email)
+        with session.begin():
+            existing_name = data_setup.unique_name('user%s')
+            existing_email = data_setup.unique_name('me%s@my.com')
+            data_setup.create_user(user_name=existing_name,
+                email_address=existing_email)
 
-        existing_name2 = data_setup.unique_name('user%s')
-        existing_email2 = data_setup.unique_name('me%s@my.com')
-        data_setup.create_user(user_name=existing_name2,
-            email_address=existing_email2)
-        session.flush()
+            existing_name2 = data_setup.unique_name('user%s')
+            existing_email2 = data_setup.unique_name('me%s@my.com')
+            data_setup.create_user(user_name=existing_name2,
+                email_address=existing_email2)
 
         b = self.browser
         login(b)
@@ -58,11 +58,11 @@ class AddUserWD(WebDriverTestCase):
         is_text_present(b, '%s saved' % existing_name)
 
     def test_add_invalid_details_new_user(self):
-        existing_name = data_setup.unique_name('user%s')
-        existing_email = data_setup.unique_name('thisguysemail%s@my.com')
-        data_setup.create_user(user_name=existing_name, password='password',
-            email_address=existing_email)
-        session.flush()
+        with session.begin():
+            existing_name = data_setup.unique_name('user%s')
+            existing_email = data_setup.unique_name('thisguysemail%s@my.com')
+            data_setup.create_user(user_name=existing_name, password='password',
+                email_address=existing_email)
         b = self.browser
         login(b)
         b.get(get_server_base() + 'users')

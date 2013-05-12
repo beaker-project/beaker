@@ -10,9 +10,9 @@ class UserPrefs(WebDriverTestCase):
 
     def setUp(self):
         self.browser = self.get_browser()
-        self.user = data_setup.create_user(password='password')
-        self.user2 = data_setup.create_user()
-        session.flush()
+        with session.begin():
+            self.user = data_setup.create_user(password='password')
+            self.user2 = data_setup.create_user()
         login(self.browser, user=self.user.user_name, password='password')
         self.browser.get(get_server_base() + 'prefs')
 
