@@ -54,8 +54,6 @@ import cracklib
 import lxml.etree
 import uuid
 import netaddr
-from bkr.common.helpers import Flock, makedirs_ignore, unlink_ignore
-import subprocess
 from turbogears import identity
 import ovirtsdk.api
 from collections import defaultdict
@@ -63,6 +61,16 @@ from datetime import timedelta, date, datetime
 from hashlib import md5
 import xml.dom.minidom
 from xml.dom.minidom import Node, parseString
+
+# These are only here for TaskLibrary. It would be nice to factor that out,
+# but there's a circular dependency between Task and TaskLibrary
+import subprocess
+import rpm
+from rhts import testinfo
+from rhts.testinfo import ParserError, ParserWarning
+from bkr.common.helpers import (AtomicFileReplacement, Flock,
+                                makedirs_ignore, unlink_ignore)
+
 
 import logging
 log = logging.getLogger(__name__)
@@ -4604,7 +4612,7 @@ class RetentionTag(BeakerTag):
             except InvalidRequestError, e: pass
         self.is_default = is_default
     default = property(get_default_val,set_default_val)
-        
+
     @classmethod
     def get_default(cls, *args, **kw):
         return cls.query.filter(cls.is_default==True).one()
@@ -4648,7 +4656,7 @@ class RecipeSetResponse(MappedObject):
     """
     An acknowledgment of a RecipeSet's results. Can be used for filtering reports
     """
-    
+
     def __init__(self,type=None,response_id=None,comment=None):
         super(RecipeSetResponse, self).__init__()
         if response_id is not None:
@@ -4913,10 +4921,6 @@ class Recipe(TaskBase):
     @property
     def harnesspath(self):
         return get('basepath.harness', '/var/www/beaker/harness')
-
-    @property
-    def rpmspath(self):
-        return get('basepath.rpms', '/var/www/beaker/rpms')
 
     @property
     def repopath(self):
@@ -5210,47 +5214,16 @@ class Recipe(TaskBase):
         # purely as an optimisation
         self._change_status(TaskStatus.processed)
 
-    def _link_rpms(self, dst):
-        """
-        Hardlink the task rpms into dst
-        """
-        names = os.listdir(self.rpmspath)
-        makedirs_ignore(dst, 0755)
-        for name in names:
-            srcname = os.path.join(self.rpmspath, name)
-            dstname = os.path.join(dst, name)
-            if os.path.isdir(srcname):
-                continue
-            else:
-                unlink_ignore(dstname)
-                os.link(srcname, dstname)
-
     def createRepo(self):
         """
         Create Recipe specific task repo based on the tasks requested.
         """
-        directory = os.path.join(self.repopath, str(self.id))
-        try:
-            os.makedirs(directory)
-        except OSError:
-            # This can happen when beakerd.virt_recipes() creates a repo
-            # but the subsequent virt provisioning fails and the recipe
-            # falls back to being queued on a regular system
-            if not os.path.isdir(directory):
-                #something else must have gone wrong
-                raise
-        # This should only run if we are missing repodata in the rpms path
-        # since this should normally be updated when new tasks are uploaded
-        if not os.path.isdir(os.path.join(self.rpmspath, 'repodata')):
-            log.info("repodata missing, generating...")
-            Task.update_repo()
-        if not os.path.isdir(os.path.join(directory, 'repodata')):
-            # Copy updated repo to recipe specific repo
-            with Flock(self.rpmspath):
-                self._link_rpms(directory)
-                shutil.copytree(os.path.join(self.rpmspath, 'repodata'),
-                                os.path.join(directory, 'repodata')
-                               )
+        snapshot_repo = os.path.join(self.repopath, str(self.id))
+        # The repo may already exist if beakerd.virt_recipes() creates a
+        # repo but the subsequent virt provisioning fails and the recipe
+        # falls back to being queued on a regular system
+        makedirs_ignore(snapshot_repo, 0755)
+        Task.make_snapshot_repo(snapshot_repo)
         return True
 
     def destroyRepo(self):
@@ -6353,14 +6326,175 @@ class RenderedKickstart(MappedObject):
                            labdomain=True)
         return url
 
+# Helper for manipulating the task library
+
+class TaskLibrary(object):
+
+    @property
+    def rpmspath(self):
+        # Lazy lookup so module can be imported prior to configuration
+        return get("basepath.rpms", "/var/www/beaker/rpms")
+
+    def get_rpm_path(self, rpm_name):
+        return os.path.join(self.rpmspath, rpm_name)
+
+    def _unlink_locked_rpm(self, rpm_name):
+        # Internal call that assumes the flock is already held
+        unlink_ignore(self.get_rpm_path(rpm_name))
+
+    def unlink_rpm(self, rpm_name):
+        """
+        Ensures an RPM is no longer present in the task library
+        """
+        with Flock(self.rpmspath):
+            self._unlink_locked_rpm(rpm_name)
+
+    def _update_locked_repo(self):
+        # Internal call that assumes the flock is already held
+        # Removed --baseurl, if upgrading you will need to manually
+        # delete repodata directory before this will work correctly.
+        p = subprocess.Popen(['createrepo', '-q', '--update',
+                '--checksum', 'sha', '.'], cwd=self.rpmspath,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output, unused_err = p.communicate()
+        retcode = p.poll()
+        if retcode:
+            raise ValueError('createrepo failed with exit status %d:\n%s'
+                    % (retcode, output))
+
+    def update_repo(self):
+        """Update the task library yum repo metadata"""
+        with Flock(self.rpmspath):
+            self._update_locked_repo()
+
+    def _all_rpms(self):
+        """Iterator over the task RPMs currently on disk"""
+        basepath = self.rpmspath
+        for name in os.listdir(basepath):
+            if not name.endswith("rpm"):
+                continue
+            srcpath = os.path.join(basepath, name)
+            if os.path.isdir(srcname):
+                continue
+            yield srcpath
+
+    def _link_rpms(self, dst):
+        """Hardlink the task rpms into dst"""
+        makedirs_ignore(dst, 0755)
+        for srcpath in self._all_rpms():
+            dstname = os.path.join(dst, name)
+            unlink_ignore(dstname)
+            os.link(srcname, dstname)
+
+    def make_snapshot_repo(self, repo_dir):
+        """Create a snapshot of the current state of the task library"""
+        # This should only run if we are missing repodata in the rpms path
+        # since this should normally be updated when new tasks are uploaded
+        if not os.path.isdir(os.path.join(self.rpmspath, 'repodata')):
+            log.info("repodata missing, generating...")
+            self.update_repo()
+        if not os.path.isdir(os.path.join(repo_dir, 'repodata')):
+            # Copy updated repo to recipe specific repo
+            with Flock(self.rpmspath):
+                self._link_rpms(repo_dir)
+                shutil.copytree(os.path.join(self.rpmspath, 'repodata'),
+                                os.path.join(repo_dir, 'repodata')
+                               )
+
+    def update_task(self, rpm_name, write_rpm):
+        """Updates the specified task
+
+           write_rpm must be a callable that takes a file object as its
+           sole argument and populates it with the raw task RPM contents
+
+           Expects to be called in a transaction, and for that transaction
+           to be rolled back if an exception is thrown.
+        """
+        # XXX (ncoghlan): How do we get rid of that assumption about the
+        # transaction handling? Assuming we're *not* already in a transaction
+        # won't work either.
+        rpm_path = self.get_rpm_path(rpm_name)
+        upgrade = AtomicFileReplacement(rpm_path)
+        f = upgrade.create_temp()
+        try:
+            write_rpm(f)
+            f.flush()
+            f.seek(0)
+            task = Task.create_from_taskinfo(self.read_taskinfo(f))
+            old_rpm_name = task.rpm
+            task.rpm = rpm_name
+            with Flock(self.rpmspath):
+                upgrade.replace_dest()
+                try:
+                    self._update_locked_repo()
+                except:
+                    # We assume the current transaction is going to be rolled back,
+                    # so the Task possibly defined above, or changes to an existing
+                    # task, will never by written to the database (even if it was
+                    # the _update_locked_repo() call that failed).
+                    # Accordingly, we also throw away the newly created RPM.
+                    self._unlink_locked_rpm(rpm_name)
+                    raise
+                # New task has been added, throw away the old one
+                if old_rpm_name:
+                    self._unlink_locked_rpm(old_rpm_name)
+                    # Since it existed when we called _update_locked_repo()
+                    # above, this RPM will still be referenced from the
+                    # metadata, albeit not as the latest version.
+                    # However, it's too expensive (several seconds of IO
+                    # with the task repo locked) to do it twice for every
+                    # task update, so we rely on the fact that tasks are
+                    # referenced by name rather than requesting specific
+                    # versions, and thus will always grab the latest.
+        finally:
+            # This is a no-op if we successfully replaced the destination
+            upgrade.destroy_temp()
+        return task
+
+    def get_rpm_info(self, fd):
+        """Returns rpm information by querying a rpm"""
+        ts = rpm.ts()
+        fd.seek(0)
+        try:
+            hdr = ts.hdrFromFdno(fd.fileno())
+        except rpm.error:
+            ts.setVSFlags(rpm._RPMVSF_NOSIGNATURES)
+            fd.seek(0)
+            hdr = ts.hdrFromFdno(fd.fileno())
+        return { 'name': hdr[rpm.RPMTAG_NAME], 
+                    'ver' : "%s-%s" % (hdr[rpm.RPMTAG_VERSION],
+                                    hdr[rpm.RPMTAG_RELEASE]), 
+                    'epoch': hdr[rpm.RPMTAG_EPOCH],
+                    'arch': hdr[rpm.RPMTAG_ARCH] , 
+                    'files': hdr['filenames']}
+
+    def read_taskinfo(self, fd):
+        """Retrieve Beaker task details from an RPM"""
+        taskinfo = dict(desc = '',
+                        hdr  = '',
+                        )
+        taskinfo['hdr'] = self.get_rpm_info(fd)
+        taskinfo_file = None
+        for file in taskinfo['hdr']['files']:
+            if file.endswith('testinfo.desc'):
+                taskinfo_file = file
+        if taskinfo_file:
+            fd.seek(0)
+            p1 = subprocess.Popen(["rpm2cpio"],
+                                  stdin=fd.fileno(), stdout=subprocess.PIPE)
+            p2 = subprocess.Popen(["cpio", "--quiet", "--extract",
+                                   "--to-stdout", ".%s" % taskinfo_file],
+                                  stdin=p1.stdout, stdout=subprocess.PIPE)
+            taskinfo['desc'] = p2.communicate()[0]
+        return taskinfo
+
+
 class Task(MappedObject):
     """
     Tasks that are available to schedule
     """
 
-    @property
-    def task_dir(self):
-        return get("basepath.rpms", "/var/www/beaker/rpms")
+    library = TaskLibrary()
 
     @classmethod
     def by_name(cls, name, valid=None):
@@ -6389,19 +6523,97 @@ class Task(MappedObject):
         return query.join('runfor').filter(TaskPackage.package==package)
 
     @classmethod
-    def update_repo(cls):
-        basepath = get("basepath.rpms", "/var/www/beaker/rpms")
-        with Flock(basepath):
-            # Removed --baseurl, if upgrading you will need to manually
-            # delete repodata directory before this will work correctly.
-            p = subprocess.Popen(['createrepo', '-q', '--update',
-                    '--checksum', 'sha', '.'], cwd=basepath,
-                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            output, unused_err = p.communicate()
-            retcode = p.poll()
-            if retcode:
-                raise ValueError('createrepo failed with exit status %d:\n%s'
-                        % (retcode, output))
+    def get_rpm_path(cls, rpm_name):
+        return cls.library.get_rpm_path(rpm_name)
+
+    @classmethod
+    def update_task(cls, rpm_name, write_rpm):
+        return cls.library.update_task(rpm_name, write_rpm)
+
+    @classmethod
+    def make_snapshot_repo(cls, repo_dir):
+        return cls.library.make_snapshot_repo(repo_dir)
+
+    @classmethod
+    def create_from_taskinfo(cls, raw_taskinfo):
+        """Create a new task object based on details retrieved from an RPM"""
+
+        tinfo = testinfo.parse_string(raw_taskinfo['desc'])
+        task = cls.lazy_create(name=tinfo.test_name)
+
+        if len(task.name) > 255:
+            raise BX(_("Task name should be <= 255 characters"))
+
+        # RPM is the same version we have. don't process
+        if task.version == raw_taskinfo['hdr']['ver']:
+            raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
+
+        task.version = raw_taskinfo['hdr']['ver']
+        task.description = tinfo.test_description
+        task.types = []
+        task.bugzillas = []
+        task.required = []
+        task.runfor = []
+        task.needs = []
+        task.excluded_osmajor = []
+        task.excluded_arch = []
+        includeFamily=[]
+        for family in tinfo.releases:
+            if family.startswith('-'):
+                try:
+                    if family.lstrip('-') not in task.excluded_osmajor:
+                        task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family.lstrip('-'))))
+                except InvalidRequestError:
+                    pass
+            else:
+                try:
+                    includeFamily.append(OSMajor.by_name_alias(family).osmajor)
+                except InvalidRequestError:
+                    pass
+        families = set([ '%s' % family.osmajor for family in OSMajor.query])
+        if includeFamily:
+            for family in families.difference(set(includeFamily)):
+                if family not in task.excluded_osmajor:
+                    task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family)))
+        if tinfo.test_archs:
+            arches = set([ '%s' % arch.arch for arch in Arch.query])
+            for arch in arches.difference(set(tinfo.test_archs)):
+                if arch not in task.excluded_arch:
+                    task.excluded_arch.append(TaskExcludeArch(arch=Arch.by_name(arch)))
+        task.avg_time = tinfo.avg_test_time
+        for type in tinfo.types:
+            ttype = TaskType.lazy_create(type=type)
+            task.types.append(ttype)
+        for bug in tinfo.bugs:
+            task.bugzillas.append(TaskBugzilla(bugzilla_id=bug))
+        task.path = tinfo.test_path
+        # Bug 772882. Remove duplicate required package here
+        # Avoid ORM insert in task_packages_required_map twice.
+        tinfo.runfor = list(set(tinfo.runfor))
+        for runfor in tinfo.runfor:
+            package = TaskPackage.lazy_create(package=runfor)
+            task.runfor.append(package)
+        task.priority = tinfo.priority
+        task.destructive = tinfo.destructive
+        # Bug 772882. Remove duplicate required package here
+        # Avoid ORM insert in task_packages_required_map twice.
+        tinfo.requires = list(set(tinfo.requires))
+        for require in tinfo.requires:
+            package = TaskPackage.lazy_create(package=require)
+            task.required.append(package)
+        for need in tinfo.needs:
+            task.needs.append(TaskPropertyNeeded(property=need))
+        task.license = tinfo.license
+        task.owner = tinfo.owner
+
+        try:
+            task.uploader = identity.current.user
+        except IdentityException:
+            task.uploader = User.query.get(1)
+
+        task.valid = True
+
+        return task
 
     def to_dict(self):
         """ return a dict of this object """
@@ -6506,7 +6718,6 @@ class Task(MappedObject):
             task.append(excluded)
         return lxml.etree.tostring(task, pretty_print=pretty)
 
-
     def elapsed_time(self, suffixes=[' year',' week',' day',' hour',' minute',' second'], add_s=True, separator=', '):
         """
         Takes an amount of seconds and turns it into a human-readable amount of 
@@ -6543,10 +6754,8 @@ class Task(MappedObject):
         """
         Disable task so it can't be used.
         """
-        rpm_path = os.path.join(self.task_dir, self.rpm)
-        if os.path.exists(rpm_path):
-            os.unlink(rpm_path)
-        self.valid=False
+        self.library.unlink_rpm(self.rpm)
+        self.valid = False
         return
 
 

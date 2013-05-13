@@ -28,16 +28,12 @@ from bkr.server.widgets import SearchBar
 from bkr.server.widgets import TaskActionWidget
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
-from bkr.common.helpers import atomically_replaced_file, unlink_ignore, siphon
-from rhts import testinfo
-from rhts.testinfo import ParserError, ParserWarning
+from bkr.common.helpers import unlink_ignore, siphon
 from sqlalchemy.orm import joinedload, joinedload_all
 from sqlalchemy.orm.exc import NoResultFound
-from subprocess import Popen, PIPE
 import tempfile
 from turbogears.identity.exceptions import IdentityException
 
-import rpm
 import os
 import errno
 
@@ -59,7 +55,6 @@ class Tasks(RPCRoot):
     task_list_action_widget = TaskActionWidget()
     task_form = TaskSearchForm()
     task_widget = TasksWidget()
-    task_dir = config.get("basepath.rpms", "/var/www/beaker/rpms")
 
     upload = widgets.FileField(name='task_rpm', label='Task rpm')
     form = widgets.TableForm(
@@ -191,24 +186,13 @@ class Tasks(RPCRoot):
         :param task_rpm_data: contents of the task RPM
         :type task_rpm_data: XML-RPC binary
         """
-        rpm_file = os.path.join(self.task_dir, task_rpm_name)
-        if os.path.exists("%s" % rpm_file):
+        rpm_path = Task.get_rpm_path(task_rpm_name)
+        if os.path.exists("%s" % rpm_path):
             raise BX(_(u'Cannot import duplicate task %s') % task_rpm_name)
-        try:
-            with atomically_replaced_file(rpm_file) as f:
-                f.write(task_rpm_data.data)
-                f.flush()
-                f.seek(0)
-                task = self.process_taskinfo(self.read_taskinfo(f))
-            old_rpm = task.rpm
-            task.rpm = task_rpm_name
-            Task.update_repo()
-        except Exception:
-            unlink_ignore(rpm_file)
-            raise
-        else:
-            if old_rpm:
-                unlink_ignore(os.path.join(self.task_dir, old_rpm))
+
+        def write_data(f):
+            f.write(task_rpm_data.data)
+        Task.update_task(task_rpm_name, write_data)
         return "Success"
 
     @expose()
@@ -217,31 +201,22 @@ class Tasks(RPCRoot):
         """
         TurboGears method to upload task rpm package
         """
-        rpm_file = os.path.join(self.task_dir, task_rpm.filename)
+        rpm_path = Task.get_rpm_path(task_rpm.filename)
 
-        if os.path.exists("%s" % rpm_file):
+        if os.path.exists("%s" % rpm_path):
             flash(_(u'Failed to import because we already have %s' % 
                                                      task_rpm.filename ))
             redirect(url("./new"))
+
         try:
-            with atomically_replaced_file(rpm_file) as f:
+            def write_data(f):
                 siphon(task_rpm.file, f)
-                f.flush()
-                f.seek(0)
-                task = self.process_taskinfo(self.read_taskinfo(f))
-            old_rpm = task.rpm
-            task.rpm = task_rpm.filename
-            Task.update_repo()
+            task = Task.update_task(task_rpm.filename, write_data)
         except Exception, err:
             session.rollback()
-            unlink_ignore(rpm_file)
             log.exception('Failed to import %s', task_rpm.filename)
             flash(_(u'Failed to import task: %s' % err))
             redirect(url("./new"))
-        else:
-            if old_rpm:
-                unlink_ignore(os.path.join(self.task_dir, old_rpm))
-
         flash(_(u"%s Added/Updated at id:%s" % (task.name,task.id)))
         redirect(".")
 
@@ -433,85 +408,6 @@ class Tasks(RPCRoot):
                     options = dict(hidden=dict(task = 1)),
                     action = './do_search')
 
-    def process_taskinfo(self, raw_taskinfo):
-
-        tinfo = testinfo.parse_string(raw_taskinfo['desc'])
-        task = Task.lazy_create(name=tinfo.test_name)
-
-        if len(task.name) > 255:
-            raise BX(_("Task name should be <= 255 characters"))
-
-        # RPM is the same version we have. don't process
-        if task.version == raw_taskinfo['hdr']['ver']:
-            raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
-
-        task.version = raw_taskinfo['hdr']['ver']
-        task.description = tinfo.test_description
-        task.types = []
-        task.bugzillas = []
-        task.required = []
-        task.runfor = []
-        task.needs = []
-        task.excluded_osmajor = []
-        task.excluded_arch = []
-        includeFamily=[]
-        for family in tinfo.releases:
-            if family.startswith('-'):
-                try:
-                    if family.lstrip('-') not in task.excluded_osmajor:
-                        task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family.lstrip('-'))))
-                except InvalidRequestError:
-                    pass
-            else:
-                try:
-                    includeFamily.append(OSMajor.by_name_alias(family).osmajor)
-                except InvalidRequestError:
-                    pass
-        families = set([ '%s' % family.osmajor for family in OSMajor.query])
-        if includeFamily:
-            for family in families.difference(set(includeFamily)):
-                if family not in task.excluded_osmajor:
-                    task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family)))
-        if tinfo.test_archs:
-            arches = set([ '%s' % arch.arch for arch in Arch.query])
-            for arch in arches.difference(set(tinfo.test_archs)):
-                if arch not in task.excluded_arch:
-                    task.excluded_arch.append(TaskExcludeArch(arch=Arch.by_name(arch)))
-        task.avg_time = tinfo.avg_test_time
-        for type in tinfo.types:
-            ttype = TaskType.lazy_create(type=type)
-            task.types.append(ttype)
-        for bug in tinfo.bugs:
-            task.bugzillas.append(TaskBugzilla(bugzilla_id=bug))
-        task.path = tinfo.test_path
-        # Bug 772882. Remove duplicate required package here
-        # Avoid ORM insert in task_packages_required_map twice.
-        tinfo.runfor = list(set(tinfo.runfor))
-        for runfor in tinfo.runfor:
-            package = TaskPackage.lazy_create(package=runfor)
-            task.runfor.append(package)
-        task.priority = tinfo.priority
-        task.destructive = tinfo.destructive
-        # Bug 772882. Remove duplicate required package here
-        # Avoid ORM insert in task_packages_required_map twice.
-        tinfo.requires = list(set(tinfo.requires))
-        for require in tinfo.requires:
-            package = TaskPackage.lazy_create(package=require)
-            task.required.append(package)
-        for need in tinfo.needs:
-            task.needs.append(TaskPropertyNeeded(property=need))
-        task.license = tinfo.license
-        task.owner = tinfo.owner
-
-        try:
-            task.uploader = identity.current.user
-        except IdentityException:
-            task.uploader = User.query.get(1)
-
-        task.valid = True
-
-        return task
-
     @expose(format='json')
     def by_name(self, task):
         task = task.lower()
@@ -530,40 +426,6 @@ class Tasks(RPCRoot):
         Returns an XML-RPC structure (dict) with details about the given task.
         """
         return Task.by_name(name, valid).to_dict()
-
-    def read_taskinfo(self, fd):
-        taskinfo = dict(desc = '',
-                        hdr  = '',
-                       )
-        taskinfo['hdr'] = self.get_rpm_info(fd)
-        taskinfo_file = None
-	for file in taskinfo['hdr']['files']:
-            if file.endswith('testinfo.desc'):
-                taskinfo_file = file
-        if taskinfo_file:
-            fd.seek(0)
-            p1 = Popen(["rpm2cpio"], stdin=fd.fileno(), stdout=PIPE)
-            p2 = Popen(["cpio", "--quiet", "--extract" , "--to-stdout", ".%s" % taskinfo_file], stdin=p1.stdout, stdout=PIPE)
-            taskinfo['desc'] = p2.communicate()[0]
-        return taskinfo
-
-    def get_rpm_info(self, fd):
-        """Returns rpm information by querying a rpm"""
-        ts = rpm.ts()
-        fd.seek(0)
-        try:
-            hdr = ts.hdrFromFdno(fd.fileno())
-        except rpm.error:
-            ts.setVSFlags(rpm._RPMVSF_NOSIGNATURES)
-            fd.seek(0)
-            hdr = ts.hdrFromFdno(fd.fileno())
-        return { 'name': hdr[rpm.RPMTAG_NAME], 
-                 'ver' : "%s-%s" % (hdr[rpm.RPMTAG_VERSION],
-                                    hdr[rpm.RPMTAG_RELEASE]), 
-                 'epoch': hdr[rpm.RPMTAG_EPOCH],
-                 'arch': hdr[rpm.RPMTAG_ARCH] , 
-                 'files': hdr['filenames']}
-
 
     def _tasks(self,task,**kw):
         return_dict = {}                    
