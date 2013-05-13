@@ -4,17 +4,27 @@ An example task: checking for ext4 support
 Generating the skeleton using beaker-wizard
 -------------------------------------------
 
-The beaker-wizard utility provides a guided step by step method to
-create a task without the need to manually create the necessary files. To
-get a basic idea of how we can use beaker-wizard, we will create a new
-task which will check the support for the ext4 filesystem. If you have
-the ``beaker-client`` package installed, you should already have
-beaker-wizard available. You will also need to install the
-``rhts-devel`` package. Create a new directory, where we will create the
-task. In most cases, your task will be meant to test a particular
-package. Hence, you should create a directory with the package name if
-that's the case. In this case, we will simply create a directory with
-the name ``mytask``. From your terminal, type::
+The :ref:`beaker-wizard <beaker-wizard>` utility provides a guided step by
+step method to create a task without the need to manually create all of the
+necessary files. To get a basic idea of how we can use
+:program:`beaker-wizard`, we will create a new task which will check the
+platform supports the ext4 filesystem. If you have the ``beaker-client``
+package installed, you should already have :program:`beaker-wizard`
+available. You will also need to install the ``rhts-devel`` package.
+
+The wizard supports creating various different kinds of tasks, but for this
+example we're just going to use the default and create a task based on
+`BeakerLib <https://fedorahosted.org/beakerlib>`__, a utility library
+that makes it easier to write Beaker tasks as shell scripts.
+
+Since Beaker was originally created to test distribution packages, new
+tasks will typically be meant to test a particular package, and the
+task directory will be named to match the package being tested. Many of
+the questions in the wizard also assume that the task is being written
+to test a particular package or bug fix.
+
+For this example, however, we will simply create a directory with the
+name ``mytask``. From your terminal, type::
 
      $ mkdir mytask
      $ cd mytask
@@ -35,8 +45,11 @@ You will see a welcome message as follows::
     the '+' sign to add the bugs instead of replacing the current list.
     [None?] 
 
-If you are writing this task to write a test related to a specific bug,
-enter the bug number here. In our case, we are not, so simply press the
+If you were writing this task to create a test related to a specific bug
+recorded in `Red Hat Bugzilla <https://bugzilla.redhat.com>`__ you would
+enter the bug ID or CVE reference number here.
+
+Our example task, however, does not relate to a bug, so simply press the
 return key. The wizard will then proceed to ask you several questions
 regarding the test such as the description, the type of test, and
 others. The wizard gives you choices for the answer wherever relevant,
@@ -124,34 +137,43 @@ your own option or press return to accept the default answer::
     Use the "write" keyword to save current settings as preferences.
     [Everything OK?] 
 
+.. note::
+
+   Some of the options in the wizard (notably the test type and namespace)
+   currently have long lists of possible values that are actually only
+   relevant to the initial Beaker instance created at Red Hat. They're only
+   used to generate a suitable task name, so just pick whatever seems most
+   appropriate for your task.
+
 Once you have answered all the questions, the wizard allows you to
-review the answers you have. As you can see, beaker-wizard assumed
-default values for some of the options such as ``Run for packages``,
-``Required packages``, ``License`` and others without asking from you.
-As per the instructions above, you can edit any of these or the ones you
-specified earlier before creating the test. For example, if this test is
-Confidential, you can change it, like so::
+review the answers you have provided. As you can see, :program:`beaker-wizard`
+assumed default values for some of the options such as ``Run for packages``,
+``Required packages``, ``License`` and others without asking for more details.
+As per the instructions displayed by the wizard, you can edit any of these or
+the ones you specified earlier before creating the task. For example, if this
+task is licensed under a license other than the default GPLv2, you can change
+it, like so::
 
-    [Everything OK?] Confi
+    [Everything OK?] Lic
 
-    Confidential
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Possible values: Yes, No
-    [No?] Yes
+    What licence should be used?
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Just supply a license GPLv2, GPLv3, ...
+    [GPLv2?] GPLv3
 
     Ready to create the test, please review
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ..
-    ..
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ...
 
-Once you have changed the value of Confidential, you will again be able
+Once you have changed the value of License, you will again be able
 to review all the options (and change if necessary). Finally, when you
-are satisfied, press the enter key to create the test::
+are satisfied, press the enter key to create the task::
 
     Directory Sanity/ext4-test created
     File Sanity/ext4-test/PURPOSE written
     File Sanity/ext4-test/runtest.sh written
     File Sanity/ext4-test/Makefile written
+
 
 Populating ``runtest.sh``
 -------------------------
@@ -160,7 +182,7 @@ In the ``Sanity/ext4-test`` directory, you will notice that the three files:
 ``PURPOSE``, ``runtest.sh``, and a ``Makefile`` have been created. You
 will see that ``PURPOSE`` will have the test description you entered
 earlier along with the author's details. The ``runtest.sh`` file will
-have the following contents::
+contain something similar to the following::
 
     #!/bin/bash
     # vim: dict=/usr/share/beakerlib/dictionary.vim cpt=.,w,b,u,t,i,k
@@ -216,34 +238,40 @@ have the following contents::
     rlJournalPrintText
     rlJournalEnd
 
-The GPLv2 license header in the beginning is default for a task. You can
+The GPLv2 license header in the beginning is the default for a task. You can
 change the license to something more appropriate for your needs during
-the task creation. ``beaker-wizard`` will try to find a license header
+the task creation. :program:`beaker-wizard` will try to find a license header
 corresponding to the specified license and if it is not present will
-insert a default text where you can insert the appropriate header
-information and copyright notice. Please consult the ``beaker-wizard``
-man page for details on how you can add your own license text using a
-preference file.
+insert a default text where you can add the appropriate header
+information and copyright notice. Please consult the :program:`beaker-wizard`
+:ref:`man page <beaker-wizard>` for details on how you can add your own
+license text using a preference file.
 
 The package for which this task is defined is declared in the
 ``PACKAGE`` variable. We will simply delete this line since this task is
 not for testing a package. Every BeakerLib-based task must begin with
 ``rlJournalStart``. This initializes the journaling functionality so
-that the logging mechanism is initialized so that your test results can
-be saved. The functionality of a test is divided into three stages:
-setup, start and cleanup indicated by the ``rlPhaseStartSetup``,
-``rlPhaseStartTest`` and ``rlPhaseStartCleanup`` functions respectively.
+that the logging mechanism is initialized and your test results can
+be saved. The functionality of a BeakerLib-based task is divided into
+three stages: setup, start and cleanup, as indicated by the
+``rlPhaseStartSetup``, ``rlPhaseStartTest`` and ``rlPhaseStartCleanup``
+functions respectively.
+
 The setup phase first checks if the package which we want to test is
 available and then creates a temporary directory and moves there so that
-all the test activities are performed in that directory. The
-``rlPhaseStartTest`` and its corresponding ``rlPhaseEnd``, encloses the
-core test logic. Here, as you can see, the test is checking whether an
+all the test activities are performed in that directory.
+
+The ``rlPhaseStartTest`` and its corresponding ``rlPhaseEnd``, encloses
+the core test logic. Here, as you can see, the test is checking whether an
 empty file has been created successfully or not. We will replace these
 lines to include our own logic to check for the presence of ext4
-support. The cleanup phase is used to cleanup the working directory
+support.
+
+The cleanup phase is used to cleanup the working directory
 created for the test and change back to the original working directory.
-For our task, we don't need this. The modified ``runtest.sh`` file looks
-like::
+For our task, we don't need this.
+
+The modified ``runtest.sh`` file looks like::
 
     #!/bin/bash
     # vim: dict=/usr/share/beakerlib/dictionary.vim cpt=.,w,b,u,t,i,k
@@ -340,15 +368,16 @@ working using ``make run``::
 
 As you can see, the test passes with the logs saved in the above files.
 Before we can upload this task to Beaker, we will have to package this
-is an RPM. Both these steps can be accomplished via ``make bkradd``
-(assuming you have set your beaker client configuration successfully).
-If you do not see any errors here, then you should see that this task
-has been uploaded to the task library *http://your-beaker-root/tasks/*.
+as an RPM. Both of these steps can be accomplished via ``make bkradd``
+(assuming you have set your beaker client configuration successfully —
+running ``bkr whoami`` is the easiest way to check that). If you do not
+see any errors here, then you should see that this task has been uploaded to
+the task library located at ``http://<your-beaker-instance>/tasks/``.
 
 To learn more about the functions used to write the test, please see the
 `BeakerLib documentation 
-<https://fedorahosted.org/beakerlib/wiki/Manual>`_. You can learn
-more about ``beaker-wizard`` from its
+<https://fedorahosted.org/beakerlib/wiki/Manual>`__. You can learn
+more about :program:`beaker-wizard` from its
 :ref:`man page <beaker-wizard>`.
 
 Running the task
@@ -356,8 +385,10 @@ Running the task
 
 Once the task is available in the "Task Library", you have to write a
 job description (XML file) to run this test on a system provisioned in
-Beaker. A sample job description that runs this task would be as
-follows::
+Beaker (or else use one of the ``bkr`` client commands that will generate the
+XML for you based on relevant command line parameters). Since our current
+task is a simple one, we will look at the simple job description
+needed to run this task explicitly::
 
     <job>
       <whiteboard>
@@ -392,5 +423,5 @@ done using the ``rhts-submit-log`` command or the ``rlFileSubmit`` function
 from BeakerLib.
 
 The overall workflow of creating a task for a test, submitting a job to
-run the test and accessing the test results are illustrated in 
+run the test and accessing the test results is illustrated in 
 :ref:`chronological-overview`.

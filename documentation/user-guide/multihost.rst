@@ -3,13 +3,15 @@ Multihost tasks
 
 Beaker has support for tasks that run on multiple hosts, e.g. for testing the 
 interactions of a client and a server. When a multihost task is run in the lab, 
-a machine will be allocated to each role in the test. Each machine has its own 
-recipe.
+one or more machines will be allocated to each role in the test. Each machine
+has its own recipe.
 
 Each machine under test will need to synchronize to ensure that they
 start the test together, and may need to synchronize at various stages
-within the test. Beaker has three notional roles: client, server and
-driver.
+within the test. While Beaker doesn't assign any particular semantics to
+role names (it just uses them to set the corresponding task environment
+variables), there are three common roles used in used in many multi-host
+tests: client, server and driver.
 
 For many purposes all you will need are client and server roles. For a
 test involving one or more clients talking to one or more servers, a
@@ -41,52 +43,63 @@ are performing in the test. You will need to have logic in your
 role accordingly. These variables are shared by all instances of the
 runtest.sh within a recipeset:
 
--  *CLIENTS* contains a space-separated list of hostnames of clients
-   within this recipeset.
+.. envvar:: CLIENTS
 
--  *SERVERS* contains a space-separated list of hostnames of servers
-   within this recipeset.
+   Contains a space-separated list of FQDNs of clients within this
+   recipeset (that is, systems running recipes marked with the ``CLIENTS``
+   role in the job XML).
 
--  *DRIVER* is the hostname of the driver of this recipeset, if any.
+.. envvar:: SERVERS
 
-The variable HOSTNAME can be used by runtest.sh to determine its
-identity. It is set by rhts-environment.sh, and will be unique for each
+   Contains a space-separated list of FQDNs of servers within this
+   recipeset (that is, systems running recipes marked with the ``SERVERS``
+   role in the job XML).
+
+.. envvar:: DRIVER
+
+   Contains the FQDN for the driver of this recipe set, if any (that is, a
+   system running a recipe marked with the ``DRIVER`` role in the job XML).
+
+The variable :envvar:`HOSTNAME` can be used by ``runtest.sh`` to determine its
+identity. It is set by ``rhts-environment.sh``, and will be unique for each
 host within a recipeset.
 
 Your test can thus decide whether it is a client, server or driver by
 investigating these variables: see the example below.
 
 When you are developing your test outside the lab environment, only
-HOSTNAME is set for you (when sourcing the rhts-environment.sh script).
-Typically you will copy your test to multiple development machines, set
-up CLIENTS, SERVERS and DRIVER manually within a shell on each machine,
-and then manually run the runtest.sh on each one, debugging as
-necessary.
+:envvar:`HOSTNAME` is set for you (when sourcing the
+``rhts-environment.sh`` script). One way to run multihost tests outside a
+Beaker instance is to copy the test to multiple development machines, set
+up :envvar:`CLIENTS`, :envvar:`SERVERS`, and :envvar:`DRIVER` manually
+within a shell on each machine, and then manually run the ``runtest.sh``
+on each one, debugging as necessary. Alternatively, support for standalone
+testing may be added directly to the test script, as described in
+:ref:`multihost-standalone`.
 
-A multihost test needs to be marked as such in the\ *Type: Multihost*.
-
-In it's simplest form, a job with multihost testing can look like::
+In its simplest form, a job with multihost testing may look something like::
 
     <job>
       <RecipeSet>
-         <recipe>
-            <task role='STANDALONE' name='/distribution/install'/>
-            <task role='SERVERS' name='/my/multihost/test'/>
+         <recipe role='SERVERS'>
+            <task name='/distribution/install'/>
+            <task name='/my/multihost/test'/>
          </recipe>
-         <recipe>
-            <task role='STANDALONE' name='/distribution/install'/>
-            <task role='CLIENTS' name='/my/multihost/test'/>
+         <recipe role='CLIENTS'>
+            <task name='/distribution/install'/>
+            <task name='/my/multihost/test'/>
          </recipe>
       </RecipeSet>
     </job>
 
 .. note:: For brevity some necessary parts are left out in the above job
-   description
+   definition. See :ref:`job-xml` for details.
 
-Submitting the job above will export environmental variables SERVERS and
-CLIENTS set to their respective hostnames. This allows a tester to write
-tests for each machines. So the runtest.sh in /my/multihost/test test
-might look like::
+As there is only one recipe in the recipe set with each defined role,
+submitting the job above will export environmental variables
+:envvar:`SERVERS` and :envvar:`CLIENTS` set to their respective
+FQDNs. This allows a tester to write tests for each machine. So the
+``runtest.sh`` in ``/my/multihost/test`` test might look like::
 
     Server() {
         # .. server code here
@@ -109,57 +122,79 @@ might look like::
         report_result $TEST $RESULT
     fi
 
-    if $(echo $SERVERS | grep -q $HOSTNAME); then
+    if $(echo $SERVERS | grep -q $:envvar:`HOSTNAME`); then
         TEST="$TEST/Server"
         Server
     fi
 
-    if $(echo $CLIENTS | grep -q $HOSTNAME); then
+    if $(echo $CLIENTS | grep -q $:envvar:`HOSTNAME`); then
         TEST="$TEST/Client"
         Client
     fi
 
-Let's dissect the code. First of, we have Server() and Client() functions
-which will be executed on SERVERS and CLIENTS machines respectively.
-Then we have an if block to determine if this is running as an beaker
-test, or if it's being run on the test developer's machine(s) to test it
-out. The last couple if blocks determine what code to run on this
-particular machine. As mentioned before, SERVERS and CLIENTS
+Keep in mind that if you're not fond of writing shell scripts, then 
+``runtest.sh`` may just execute a test script written in another language
+(such as Python). Technically, you can even write ``runtest.sh`` itself using
+something other than shell script by setting the shebang line appropriately,
+but the mandatory ``.sh`` extension makes it inadvisable to actually do so.
+
+For now, let's dissect the shell script version. Firstly, we have ``Server()``
+and ``Client()`` functions which will be executed by recipes with the
+:envvar:`SERVERS` and :envvar:`CLIENTS` role respectively.
+
+Then we test for :envvar:`JOBID` to determine if the script is running inside
+a Beaker instance or if it's being run on the test developer's local
+workstation or any other non-Beaker system.
+
+The tests comparing :envvar:`SERVERS` and :envvar:`CLIENTS` to
+:envvar:`HOSTNAME` determine what code to run on this particular
+machine. As mentioned before, since only one recipe in our
+recipe set uses each role, the :envvar:`SERVERS` and :envvar:`CLIENTS`
 environmental variables will be set to their respective machines' names
 and exported on both machines.
 
-Obviously, there will have to be some sort of coordination and
-synchronization between the machines and the execution of the test code
-on both sides. Beaker offers two utilities for this purpose,
-rhts-sync-set and rhts-sync-block . rhts-sync-set is used to setting a
-state on a machine. rhts-sync-block is used to block the execution of
-the code until a certain state on certain machine(s) are reached. Those
-familiar with parallel programming can think of this as a barrier
-operation . The detailed usage information about both of this utilities
-is below:
+For most meaningful multi-host tests, there will have to be some sort of
+coordination and synchronization between the machines and the execution
+of the test code on both sides. While in some cases, this may be handled
+by a dedicated recipe with the :envvar:`DRIVER` role, Beaker also offers
+two utilities for this purpose: :ref:`rhts-sync-set` and
+:ref:`rhts-sync-block`.
 
--  *rhts-sync-set*: It does set the state of the current machine. State
-   can be anything. Syntax: rhts-sync-set -s STATE
+The :program:`rhts-sync-set` command is used to set a state on a machine.
+The :program:`rhts-sync-block` command is used to block the execution of the
+task until a certain state on certain machine(s) is reached. Those familiar
+with parallel programming can think of this as a barrier operation .
+A brief overview of the usage of these utilities:
 
--  *rhts-sync-block*: It blocks the code and doesn't return until a
-   desired STATE is set on desired machine(s) . You can actually look
-   for a certain state on multiple machines.. Syntax: rhts-sync-block -s
-   STATE [-s STATE1 -s STATE2] machine1 machine2 ...
+*  :program:`rhts-sync-set`: This command sets the state of the current
+   machine to an arbitrary text string. Syntax: ``rhts-sync-set -s STATE``
 
-There are a couple of important points to pay attention. First of, the
-multihost testing must be on the same chronological order on all
-machines. For example, the below will fail:
+*  :program:`rhts-sync-block`: This command blocks execution and doesn't
+   return until the specified ``STATE`` is set on the specified machine(s).
+   Syntax:
+   ``rhts-sync-block -s STATE [-s STATE1 -s STATE2] machine1 machine2 ...``
+
+The role related environment variables can be useful here, as they contain
+the hostnames of all recipes in the recipe set with that role. For example,
+you can wait for all recipes with the :envvar:`SERVERS` role to set their
+state to ``"READY"`` by running::
+
+    rhts-sync-block -s READY $SERVERS
+
+There are a few more important points to consider when writing multihost
+tests. Firstly, any multihost testing must ensure that the task execution
+order aligns correctly on all machines. For example, the below will fail:
 
 ::
 
               <recipe>
                 <task role='STANDALONE' name='/distribution/install'/>
                 <task role='STANDALONE' name='/my/test/number1'/>
-                <task role='SERVERS'     name='/my/multihost/test'/>
+                <task role='SERVERS'    name='/my/multihost/test'/>
               </recipe>
               <recipe>
                 <task role='STANDALONE' name='/distribution/install'/>
-                <task role='CLIENTS'     name='/my/multihost/test'/>
+                <task role='CLIENTS'    name='/my/multihost/test'/>
               </recipe>
 
 This will fail, because the multihost test is the 3rd test on the server
@@ -173,55 +208,26 @@ the above can be fixed as:
               <recipe>
                <task role='STANDALONE' name='/distribution/install'/>
                <task role='STANDALONE' name='/my/test/number1'/>
-               <task role='SERVERS'     name='/my/multihost/test'/>
+               <task role='SERVERS'    name='/my/multihost/test'/>
               </recipe>
               <recipe>
                <task role='STANDALONE' name='/distribution/install'/>
                <task role='STANDALONE' name='/distribution/utils/dummy'/>
-               <task role='CLIENTS'     name='/my/multihost/test'/>
+               <task role='CLIENTS'    name='/my/multihost/test'/>
               </recipe>
 
-One shortcoming of the rhts-sync-block utility is that it blocks
-forever, so if there are multiple things being done in your test between
-the hosts, your test will timeout without possibly a lot of code being
-executed. There is a utility, blockwrapper.exp which can be used to put
-a limit on how many second it should block. The script lives in
-/CoreOS/common test, so be sure to add that test before your multihost
-tests in your recipes. The usage is exactly same as that of
-rhts-sync-block with the addition of a timeout value at the end, i.e.:
+Secondly, by default the :program:`rhts-sync-block` utility will block until
+the local or external watchdog is triggered if the expected state is never
+achieved. If this behaviour isn't desired, the
+:option:`--timeout <rhts-sync-block --timeout>` option can be used
+instead. In that case, a zero return code indicates that the desired state
+was reached, while a non-zero return code indicates the operation timed out.
 
-::
+Finally, these commands require a bit of manual intervention when run in
+the standalone execution environment for Beaker task development, as the
+Beaker lab controller normally coordinates the barrier operation. See
+:ref:`multihost-standalone`.
 
-                        blockwrapper.exp -s STATE machine N 
-
-where N is the timeout value in seconds. If the desired state in the
-desired machine(s) haven't been set in N seconds, then the script will
-exit with a non-zero return code. In case of success it'll exit with
-code 0 .
-
-Synchronization commands
-------------------------
-
-Synchronization of machines within a multihost test is performed using
-per-host state strings managed on the Beaker server. Each machine's
-starting state is the empty string.
-
-::
-
-    rhts-sync-set -s state 
-
-The rhts-sync-set command sets the state of this machine within the test
-to the given value.
-
-::
-
-    rhts-sync-block -s state [hostnames...] 
-
-The rhts-sync-block command blocks further execution of this instance of
-the script until all of the listed hosts are in the given state.
-
-Unfortunately, there is currently no good way to run these commands in
-the standalone helper environment.
 
 Example ``runtest.sh`` for a multihost task
 -------------------------------------------
@@ -277,12 +283,12 @@ Example ``runtest.sh`` for a multihost task
 
     # ---------- Start Test -------------
     result="FAIL"
-    if echo "${CLIENTS}" | grep "${HOSTNAME}" >/dev/null; then
+    if echo "${CLIENTS}" | grep "${:envvar:`HOSTNAME`}" >/dev/null; then
         echo "-- run finger test as client."
         TEST=${TEST}/client
         client
     fi
-    if echo "${SERVERS}" | grep "${HOSTNAME}" >/dev/null; then
+    if echo "${SERVERS}" | grep "${:envvar:`HOSTNAME`}" >/dev/null; then
         echo "-- run finger test as server."
         TEST=${TEST}/server
         server
@@ -291,30 +297,36 @@ Example ``runtest.sh`` for a multihost task
     report_result "${TEST}" "${result}" 0
     exit 0
 
-Tuning up multihost tests
--------------------------
+.. _multihost-standalone:
 
-Multihost tests can be easily tuned up outside Beaker using following
-code snippet based on $JOBID variable (which is set when running in
-Beaker environment). Just log in to two machines (let's say:
-client.example.com and server.example.com) and add following lines at
-the beginning of your runtest.sh script.
+Standalone execution of multihost tests
+---------------------------------------
 
-::
+Multihost tests can be more easily executed outside a Beaker instance by
+altering their behavior based on the :envvar:`JOBID` variable (or any other
+documented variable which is set when running inside a Beaker instance).
 
-    # decide if we're running on RHTS or in developer mode
+For a two machine test that uses the :envvar:`CLIENTS` and
+:envvar:`SERVERS` roles, you could create a pair of local virtual machines
+and add the following lines at the beginning of your ``runtest.sh`` script::
+
+    # decide if we're running standalone or in a Beaker instance
     if test -z $JOBID ; then
-            echo "Variable JOBID not set, assuming developer mode"
-            CLIENTS="client.example.com"
-            SERVERS="server.example.com"
+            echo "Variable JOBID not set, assuming standalone"
+            CLIENTS="client-vm.example.com"
+            SERVERS="server-vm.example.com"
     else
-            echo "Variable JOBID set, we're running on RHTS"
+            echo "Variable JOBID set, we're running inside Beaker"
     fi
     echo "Clients: $CLIENTS"
     echo "Servers: $SERVERS"
 
+    # ... rest of test script
+
 Then you just run the script on both client and server. When scripts
-reach one of the synchronization commands (rhts-sync-set or
-rhts-sync-block) you will be asked for supplying actual state of the
-client/server by keyboard (usually just confirm readiness by hitting
-Enter). That's it! :-)
+reach the :program:`rhts-sync-block` synchronization command they will
+display a prompt asking for confirmation of the actual state of the
+client/server by keyboard. Generally, this means checking each of the tests
+to make sure they've reached the appropriate state (:program:`rhts-sync-set`
+will display the state change on stdout), and then confirming this at the
+:program:`rhts-sync-block` prompt by hitting Enter.
