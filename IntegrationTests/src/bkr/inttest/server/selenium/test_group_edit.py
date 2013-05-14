@@ -1,5 +1,5 @@
 from turbogears.database import session
-from bkr.server.model import Group, User
+from bkr.server.model import Group, User, Activity
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.server.webdriver_utils import login
@@ -113,6 +113,21 @@ class TestGroupsWD(WebDriverTestCase):
         # added as a group owner
         b.find_element_by_link_text('FBZ').click()
         b.find_element_by_name('group_name')
+        # check activity was recorded
+        with session.begin():
+            self.assertEquals(Activity.query.filter_by(service=u'WEBUI',
+                    field_name=u'Group', action=u'Added',
+                    new_value=u'Group FBZ').count(), 1)
+            group = Group.by_name(u'FBZ')
+            self.assertEquals(group.display_name, u'Group FBZ')
+            self.assertEquals(group.activity[-1].action, u'Added')
+            self.assertEquals(group.activity[-1].field_name, u'Owner')
+            self.assertEquals(group.activity[-1].new_value, self.user.user_name)
+            self.assertEquals(group.activity[-1].service, u'WEBUI')
+            self.assertEquals(group.activity[-2].action, u'Added')
+            self.assertEquals(group.activity[-2].field_name, u'User')
+            self.assertEquals(group.activity[-2].new_value, self.user.user_name)
+            self.assertEquals(group.activity[-2].service, u'WEBUI')
 
     def test_can_edit_owned_existing_groups(self):
         with session.begin():

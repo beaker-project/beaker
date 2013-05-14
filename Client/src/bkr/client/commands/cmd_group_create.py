@@ -62,7 +62,7 @@ class Group_Create(BeakerCommand):
             self.parser.error('Exactly one group name must be specified.')
 
         group_name = args[0]
-        display_name = kwargs.get('display-name', group_name)
+        display_name = kwargs.get('display_name', group_name)
 
         self.set_hub(**kwargs)
         self.hub.groups.create(dict(group_name=group_name,
