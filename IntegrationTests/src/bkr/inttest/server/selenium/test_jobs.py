@@ -299,9 +299,6 @@ class NewJobTest(SeleniumTestCase):
         if not Distro.by_name(u'BlueShoeLinux5-5'):
             data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
         data_setup.create_product(product_name=u'the_product')
-        group = data_setup.create_group(group_name='somegroup')
-        user = User.by_user_name(self.BEAKER_LOGIN_USER)
-        user.groups.append(group)
         self.selenium = self.get_selenium()
         self.selenium.start()
 
