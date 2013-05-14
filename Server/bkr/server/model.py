@@ -4,7 +4,7 @@ from turbogears.database import metadata, session
 from turbogears.config import get
 from turbogears import url
 from copy import copy
-import ldap
+import ldap, ldap.filter
 from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         String, Unicode, Integer, BigInteger, DateTime,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
@@ -729,6 +729,7 @@ groups_table = Table('tg_group', metadata,
     Column('group_name', Unicode(16), unique=True, nullable=False),
     Column('display_name', Unicode(255)),
     Column('created', DateTime, default=datetime.utcnow),
+    Column('ldap', Boolean, default=False, nullable=False, index=True),
     mysql_engine='InnoDB',
 )
 
@@ -1516,13 +1517,9 @@ class User(MappedObject):
     Reasonably basic User definition.
     Probably would want additional attributes.
     """
-    ldapenabled = get("identity.ldap.enabled",False)
-    if ldapenabled:
-        uri = get("identity.soldapprovider.uri", "ldaps://localhost")
-        basedn  = get("identity.soldapprovider.basedn", "dc=localhost")
-        autocreate = get("identity.soldapprovider.autocreate", False)
-        # Only needed for devel.  comment out for Prod.
-        ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+
+    # XXX we probably shouldn't be doing this!
+    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 
     def permissions(self):
         perms = set()
@@ -1563,36 +1560,40 @@ class User(MappedObject):
         # Try to look up the user via local DB first.
         user = cls.query.filter_by(user_name=user_name).first()
         # If user doesn't exist in DB check ldap if enabled.
+        ldapenabled = get('identity.ldap.enabled', False)
+        autocreate = get('identity.soldapprovider.autocreate', False)
         # Presence of '/' indicates a Kerberos service principal.
-        if not user and cls.ldapenabled and '/' not in user_name:
-            filter = "(uid=%s)" % user_name
-            ldapcon = ldap.initialize(cls.uri)
-            rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
-            objects = ldapcon.result(rc)[1]
+        if not user and ldapenabled and autocreate and '/' not in user_name:
+            filter = ldap.filter.filter_format('(uid=%s)', [user_name])
+            ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
+            objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
+                    ldap.SCOPE_SUBTREE, filter,
+                    timeout=get('identity.soldapprovider.timeout', 20))
             # no match
             if(len(objects) == 0):
                 return None
             # need exact match
             elif(len(objects) > 1):
                 return None
-            if cls.autocreate:
-                user = User()
-                user.user_name = user_name
-                user.display_name = objects[0][1]['cn'][0]
-	        user.email_address = objects[0][1]['mail'][0]
-                session.add(user)
-                session.flush([user])
+            user = User()
+            user.user_name = user_name
+            user.display_name = objects[0][1]['cn'][0].decode('utf8')
+            user.email_address = objects[0][1]['mail'][0].decode('utf8')
+            session.add(user)
+            session.flush([user])
         return user
 
     @classmethod
     def list_by_name(cls, username,find_anywhere=False,find_ldap_users=True):
         ldap_users = []
-        if cls.ldapenabled and find_ldap_users is True:
-            filter = "(uid=%s*)" % username
-            ldapcon = ldap.initialize(cls.uri)
-            rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
-            objects = ldapcon.result(rc)[1]
-            ldap_users = [object[0].split(',')[0].split('=')[1] for object in objects]
+        ldapenabled = get('identity.ldap.enabled', False)
+        if ldapenabled and find_ldap_users is True:
+            filter = ldap.filter.filter_format('(uid=%s*)', [user_name])
+            ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
+            objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
+                    ldap.SCOPE_SUBTREE, filter,
+                    timeout=get('identity.soldapprovider.timeout', 20))
+            ldap_users = [object[1]['uid'][0].decode('utf8') for object in objects]
         if find_anywhere:
             f = User.user_name.like('%%%s%%' % username)
         else:
@@ -1768,8 +1769,14 @@ class Group(MappedObject):
     def by_id(cls, id):
         return cls.query.filter_by(group_id=id).one()
 
-    def __repr__(self):
+    def __unicode__(self):
         return self.display_name
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __repr__(self):
+        return 'Group(group_name=%r, display_name=%r)' % (self.group_name, self.display_name)
 
     @classmethod
     def list_by_name(cls, name, find_anywhere=False):
@@ -1798,10 +1805,59 @@ class Group(MappedObject):
         return [owner.user_id for owner in owners]
 
     def has_owner(self, user):
-        return user is not None and user.user_id in self.owners()
+        if user is None:
+            return False
+        return bool(UserGroup.query.filter_by(group_id=self.group_id,
+                user_id=user.user_id, is_owner=True).count())
 
     def can_edit(self, user):
         return self.has_owner(user) or user.is_admin()
+
+    def can_modify_membership(self, user):
+        return not self.ldap and (self.has_owner(user) or user.is_admin())
+
+    def refresh_ldap_members(self, ldapcon=None):
+        assert self.ldap
+        assert get('identity.ldap.enabled', False)
+        if ldapcon is None:
+            ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
+        log.debug('Refreshing LDAP group %s' % self.group_name)
+        existing = set(self.users)
+        refreshed = set(self._ldap_members(ldapcon))
+        added_members = refreshed.difference(existing)
+        removed_members = existing.difference(refreshed)
+        for user in removed_members:
+            log.debug('Removing %r from %r', user, self)
+            self.users.remove(user)
+            self.activity.append(GroupActivity(user=None, service=u'LDAP',
+                    action=u'Removed', field_name=u'User',
+                    old_value=user.user_name, new_value=None))
+        for user in added_members:
+            log.debug('Adding %r to %r', user, self)
+            self.users.append(user)
+            self.activity.append(GroupActivity(user=None, service=u'LDAP',
+                    action=u'Added', field_name=u'User', old_value=None,
+                    new_value=user.user_name))
+
+    def _ldap_members(self, ldapcon):
+        # Supports only RFC2307 style, with group members listed by username in
+        # the memberUid attribute.
+        filter = ldap.filter.filter_format(
+                '(&(cn=%s)(objectClass=posixGroup))', [self.group_name])
+        result = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
+                ldap.SCOPE_SUBTREE, filter,
+                timeout=get('identity.soldapprovider.timeout', 20))
+        if not result:
+            log.warning('LDAP group %s not found in LDAP directory', self.group_name)
+            return []
+        dn, attrs = result[0] # should never be more than one result
+        users = []
+        for username in attrs.get('memberUid', []):
+            log.debug('LDAP group %s has member %s', self.group_name, username)
+            user = User.by_user_name(username.decode('utf8'))
+            if user is not None:
+                users.append(user)
+        return users
 
     systems = association_proxy('system_assocs', 'system',
             creator=lambda system: SystemGroup(system=system))

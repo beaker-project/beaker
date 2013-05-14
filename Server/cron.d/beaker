@@ -1,2 +1,4 @@
 # clean up stale visit rows
 52 3 * * * apache /usr/bin/beaker-cleanup-visits
+# refresh LDAP groups
+37 2,8,12,18 * * * apache /usr/bin/beaker-refresh-ldap

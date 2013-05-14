@@ -1,4 +1,5 @@
 from turbogears.database import session
+from bkr.server.model import Group, User
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.server.webdriver_utils import login
@@ -153,3 +154,33 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="GroupUser_user_text"]').send_keys(user.user_name)
         b.find_element_by_xpath('//input[@value="Add"]').click()
         b.find_element_by_xpath('//td[text()="%s"]' % user.user_name)
+
+    def test_create_ldap_group(self):
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'groups/new')
+        b.find_element_by_name('group_name').send_keys('my_ldap_group')
+        b.find_element_by_name('display_name').send_keys('My LDAP group')
+        self.assertEquals(b.find_element_by_name('ldap').is_selected(), False)
+        b.find_element_by_name('ldap').click()
+        b.find_element_by_id('Group').submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text, 'OK')
+        with session.begin():
+            group = Group.by_name(u'my_ldap_group')
+            self.assertEquals(group.ldap, True)
+            self.assertEquals(group.users, [User.by_user_name(u'my_ldap_user')])
+
+    def test_cannot_modify_membership_of_ldap_group(self):
+        with session.begin():
+            group = data_setup.create_group(ldap=True)
+            group.users.append(data_setup.create_user())
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'groups/edit?id=%s' % group.group_id)
+        self.assertEquals(b.find_element_by_name('group_name').get_attribute('value'),
+                group.group_name)
+        # form to add new users should be absent
+        b.find_element_by_xpath('//body[not(.//label[text()="User"])]')
+        # "Remove" link should be absent from "User Members" table
+        b.find_element_by_xpath('//table[thead/tr/th[1]/text()="User Members"]'
+                '/tbody/tr[not(.//a[text()="Remove (-)"])]')
