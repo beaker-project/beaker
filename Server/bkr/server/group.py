@@ -273,6 +273,12 @@ class Groups(AdminPage):
             if not ldap: # LDAP groups don't have owners
                 user = identity.current.user
                 group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
+                group.activity.append(GroupActivity(user, service=u'WEBUI',
+                        action=u'Added', field_name=u'User',
+                        old_value=None, new_value=user.user_name))
+                group.activity.append(GroupActivity(user, service=u'WEBUI',
+                        action=u'Added', field_name=u'Owner',
+                        old_value=None, new_value=user.user_name))
         if group.ldap:
             group.refresh_ldap_members()
         flash( _(u"OK") )
@@ -567,11 +573,17 @@ class Groups(AdminPage):
             group = Group.by_name(group_name)
         except NoResultFound:
             group = Group()
-            activity = Activity(identity.current.user, u'XML-RPC', u'Added', u'Group', u"", kw['display_name'] )
+            activity = Activity(identity.current.user, u'XMLRPC', u'Added', u'Group', u"", kw['display_name'] )
             group.display_name = display_name
             group.group_name = group_name
             user = identity.current.user
             group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
+            group.activity.append(GroupActivity(user, service=u'XMLRPC',
+                    action=u'Added', field_name=u'User',
+                    old_value=None, new_value=user.user_name))
+            group.activity.append(GroupActivity(user, service=u'XMLRPC',
+                    action=u'Added', field_name=u'Owner',
+                    old_value=None, new_value=user.user_name))
             return 'Group created: %s.' % group_name
         else:
             raise BX(_(u'Group already exists: %s.' % group_name))
