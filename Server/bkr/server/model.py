@@ -726,7 +726,7 @@ visit_identity_table = Table('visit_identity', metadata,
 
 groups_table = Table('tg_group', metadata,
     Column('group_id', Integer, primary_key=True),
-    Column('group_name', Unicode(16), unique=True),
+    Column('group_name', Unicode(16), unique=True, nullable=False),
     Column('display_name', Unicode(255)),
     Column('created', DateTime, default=datetime.utcnow),
     mysql_engine='InnoDB',
