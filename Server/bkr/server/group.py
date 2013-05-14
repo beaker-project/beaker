@@ -539,8 +539,6 @@ class Groups(AdminPage):
         return [(system.id, system.fqdn) for system in systems]
 
     # XML-RPC method for creating a group
-    # can be also subsequently used for editing a group
-    # as save() above does
     @identity.require(identity.not_anonymous())
     @expose(format='json')
     def create(self, kw):
@@ -575,6 +573,58 @@ class Groups(AdminPage):
             return 'Group created: %s.' % group_name
         else:
             raise BX(_(u'Group already exists: %s.' % group_name))
+
+    # XML-RPC method for modifying a group
+    @identity.require(identity.not_anonymous())
+    @expose(format='json')
+    def modify(self, group_name, kw):
+        """
+        Modifies an existing group. You must be an owner of a group to modify any details.
+
+        :param group_name: An existing group name
+        :type group_name: string
+
+        The *kw* argument must be an XML-RPC structure (dict)
+        specifying the following keys:
+
+            'group_name'
+                 New group name (maximum 16 characters)
+            'display_name'
+                 New group display name
+
+        Returns a message whether the group was successfully modified or
+        raises an exception on failure.
+
+        """
+        # if not called from the bkr group-modify
+        if not kw:
+            raise BX(_('Please specify an attribute to modify.'))
+        try:
+            group = Group.by_name(group_name)
+            if not group.can_edit(identity.current.user):
+                raise BX(_('You are not an owner of group %s' % group_name))
+
+            display_name = group.display_name
+
+            if kw.get('display_name', None):
+                group.display_name = kw.get('display_name')
+                activity = GroupActivity(identity.current.user, u'XMLRPC',
+                                    action=u'Changed', field_name=u'Display Name',
+                                    old_value=display_name, new_value=kw['display_name'])
+                group.activity.append(activity)
+
+            if kw.get('group_name', None):
+                group.group_name = kw.get('group_name')
+                activity = GroupActivity(identity.current.user, u'XMLRPC',
+                                    action=u'Changed', field_name=u'Name',
+                                    old_value=group_name, new_value=kw['group_name'])
+                group.activity.append(activity)
+
+            #dummy success return value
+            return ['1']
+
+        except NoResultFound:
+            raise BX(_(u'Group does not exist: %s.' % group_name))
 
 # for sphinx
 groups = Groups
