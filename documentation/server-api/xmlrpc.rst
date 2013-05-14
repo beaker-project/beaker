@@ -53,6 +53,8 @@ in Beaker.
 
 .. automethod:: groups.create
 
+.. automethod:: groups.modify
+
 Systems
 -------
 

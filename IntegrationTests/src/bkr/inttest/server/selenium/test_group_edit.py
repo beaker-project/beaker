@@ -199,3 +199,33 @@ class TestGroupsWD(WebDriverTestCase):
         # "Remove" link should be absent from "User Members" table
         b.find_element_by_xpath('//table[thead/tr/th[1]/text()="User Members"]'
                 '/tbody/tr[not(.//a[text()="Remove (-)"])]')
+
+
+    def test_edit_display_group_names(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            group = data_setup.create_group(owner=user)
+
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+
+        new_display_name = 'New Display Name for Group FBZ 2'
+        new_group_name = 'FBZ-2-new'
+
+        # edit
+        b.get(get_server_base() + 'groups/mine')
+        b.find_element_by_link_text(group.group_name).click()
+        b.find_element_by_xpath('//input[@id="Group_display_name"]').clear()
+        b.find_element_by_xpath('//input[@id="Group_display_name"]').\
+            send_keys(new_display_name)
+        b.find_element_by_xpath('//input[@id="Group_group_name"]').clear()
+        b.find_element_by_xpath('//input[@id="Group_group_name"]').\
+            send_keys(new_group_name)
+        b.find_element_by_xpath('//input[@value="Save"]').click()
+
+        # check
+        b.get(get_server_base() + "groups/edit?id=%d" % group.group_id)
+        self.assertEquals(b.find_element_by_xpath('//input[@id="Group_display_name"]').\
+                              get_attribute('value'), new_display_name)
+        self.assertEquals(b.find_element_by_xpath('//input[@id="Group_group_name"]').\
+                              get_attribute('value'), new_group_name)
