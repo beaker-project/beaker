@@ -108,11 +108,10 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="Group_group_name"]').send_keys('FBZ')
         b.find_element_by_xpath('//input[@value="Save"]').click()
         b.find_element_by_xpath('//h2[text()="Groups"]')
-        self.assertEquals(b.title,'Groups')
-        b.find_element_by_link_text('FBZ').click()
         # this is required to check whether the creator was automatically
         # added as a group owner
-        self.assertEquals(b.title,'Group Edit')
+        b.find_element_by_link_text('FBZ').click()
+        b.find_element_by_name('group_name')
 
     def test_can_edit_owned_existing_groups(self):
         with session.begin():
@@ -149,10 +148,8 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="Group_display_name"]').send_keys('Group FBZ 1')
         b.find_element_by_xpath('//input[@id="Group_group_name"]').send_keys('FBZ-1')
         b.find_element_by_xpath('//input[@value="Save"]').click()
-        self.assertEquals(b.title,'Groups')
         b.find_element_by_xpath('//h2[text()="Groups"]')
         b.find_element_by_link_text('FBZ-1').click()
-        self.assertEquals(b.title,'Group Edit')
         b.find_element_by_xpath('//input[@id="GroupUser_user_text"]').send_keys(user.user_name)
         b.find_element_by_xpath('//input[@value="Add"]').click()
         b.find_element_by_xpath('//td[text()="%s"]' % user.user_name)
