@@ -1792,12 +1792,8 @@ class Group(MappedObject):
 
     @classmethod
     def by_user(cls,user):
-        try:
-            groups = Group.query.join('users').filter(User.user_id == user.user_id)
-            return groups
-        except Exception, e: 
-            log.error(e)
-            return
+        groups = Group.query.filter(Group.users.contains(user))
+        return groups
 
     def owners(self):
         owners = UserGroup.query.filter_by(group_id=self.group_id,

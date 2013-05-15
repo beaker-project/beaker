@@ -403,7 +403,7 @@ class Groups(AdminPage):
     @paginate('list', default_order='group_name', limit=20)
     def mine(self,*args,**kw):
         current_user = identity.current.user
-        groups = self.process_search(*args, **kw)
+        groups = Group.by_user(current_user)
         template_data = self.groups(groups,current_user,*args,**kw)
         template_data['title'] = 'My Groups'
         template_data['grid_fields'].append((' ',
