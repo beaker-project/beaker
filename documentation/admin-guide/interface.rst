@@ -7,26 +7,31 @@ Most of this functionality is accessed from the :guilabel:`Admin` menu.
 Groups
 ------
 
-Users can be grouped together in groups. A user can belong to one or
-more groups. Similarly, a system can belong to one or more groups. If a
-shared system belongs to a group, it can only be used by members of that
-group.
+In addition to the groups functionality available to all users (see 
+:doc:`../../user-guide/interface/groups`), administrators have access to 
+certain extra features.
 
-*Adding a Group*.
-To add a new group, select :menuselection:`Admin --> Groups` from the menu and 
-then click the :guilabel:`Add ( + )` link at the bottom left. You'll then be 
-prompted to enter a "Display Name" and a "Group Name". The former is the name 
-that users of Beaker will see, and the latter is the name used internally. It's 
-fine to have these names the same, or different.
+If LDAP is configured for identity management (``identity.ldap.enabled`` in the 
+server configuration file), you can flag a group's membership to be populated 
+from LDAP. If this flag is set, Beaker will not allow users to be added or 
+removed from the group manually. Instead, a cron job runs the 
+``beaker-refresh-ldap`` command periodically to refresh group membership from 
+LDAP.
 
-*Editing a Group*.
-To edit a group, select :menuselection:`Admin --> Groups` and click on the name 
-of the group you wish to edit. From here you can add users, systems, and 
-permissions to the group, as well as changing its display name and group name.
+You can also grant additional permissions to groups. These permissions would 
+typically only be granted to special groups for service accounts or privileged 
+users. The following permissions are defined:
 
-*Group Activity*.
-To search through the historical activity of all groups, select 
-:menuselection:`Activity --> Groups` from the menu.
+    tag_distro
+        Permitted to tag and untag distros.
+    distro_expire
+        Permitted to remove a distro's association with a lab controller.
+    secret_visible
+        Permitted to view all systems, including other users' systems which are 
+        marked as "Secret".
+    stop_task
+        Permitted to stop, cancel, or abort jobs or recipe sets owned by any 
+        user.
 
 .. _admin-external-reports:
 

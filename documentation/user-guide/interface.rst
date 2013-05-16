@@ -9,4 +9,5 @@ Beaker interface
    recipes
    tasks
    reports
+   interface/groups
    user-preferences
