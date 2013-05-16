@@ -189,6 +189,8 @@ rhts-submit-log
 Uploads a log file to Beaker. The file will be available in the Beaker results 
 for the current task.
 
+.. _rhts-sync-block:
+
 rhts-sync-block
 ---------------
 
@@ -211,8 +213,10 @@ Refer to :doc:`multihost` for a more detailed guide.
 
 .. option:: --timeout <timeout>
 
-   Exit with an error after *timeout* seconds if the state has not been 
-   reached. By default no timeout is enforced.
+   Return a non-zero exit status after *timeout* seconds if the state has
+   not been reached. By default no timeout is enforced and the command will
+   block until either the given state is reached on all specified systems
+   or the recipe is aborted by the local or external watchdog.
 
 .. option:: --any
 
@@ -223,6 +227,8 @@ Refer to :doc:`multihost` for a more detailed guide.
 
    FQDN of the systems to wait for. At least one FQDN must be given. Use the 
    role environment variables to determine which FQDNs to pass.
+
+.. _rhts-sync-set:
 
 rhts-sync-set
 -------------

@@ -27,9 +27,9 @@ carry out these and other related functions.
    :maxdepth: 2
 
    example-task
-   multihost
    task-environment
    task-metadata
+   multihost
 
 .. todo::
 

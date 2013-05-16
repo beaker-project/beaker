@@ -7,6 +7,11 @@ when creating a new task (see :doc:`An example task <example-task>`). A sample
 Makefile is also included in the ``rhts-devel`` package as 
 ``/usr/share/doc/rhts-devel-*/Makefile.template``.
 
+These details apply to tasks written using the default harness (``beah``).
+Programs written using an :ref:`alternative harness <alternative-harnesses>`
+will likely be configured differently — consult the documentation for the
+specific harness in use.
+
 .. _makefile-variables:
 
 Makefile variables
@@ -63,29 +68,28 @@ The following fields are recognised by Beaker.
 Owner
 -----
 
-Owner: (optional) is the person responsible for this test. Initially for
-Beaker, this will be whoever committed the test to Subversion. A naming
-policy may have to be introduced as the project develops. Acceptable
+``Owner`` (optional) is the person responsible for this task. Acceptable
 values are a subset of the set of valid email addresses, requiring the
 form: "Owner: human readable name <username@domain>".
 
 Name
 ----
 
-``Name``:(required) It is assumed that any result-reporting framework
+``Name`` (required) It is assumed that any result-reporting framework
 will organize all available tests into a hierarchical namespace, using
-forward-slashes to separate names (analogous to a path). This field
-specifies the namespace where the test will appear in the framework, and
-serves as a unique ID for the test. Tests should be grouped logically by
-the package under test. This name should be consistent with the name
-used in source control too. Since some implementations will want to use
-the file system to store results, make sure to only use characters that
-are usable within a file system path.
+forward-slashes to separate components of names (analogous to a path).
+This field specifies the namespace where the task results will be recorded
+in Beaker, and serves as a unique ID for the task. Since task names are
+used to define filesystem paths (for example, tasks will be installed
+under the path ``/mnt/tests/<task-name>``), they are limited to
+characters that are usable within a file system path.
+
+For fast indexing purposes, task names are limited to 255 characters.
 
 Description
 -----------
 
-``Description``\ (required) must contain exactly one string.
+``Description`` (required) must contain exactly one string.
 
 For example:
 
@@ -100,26 +104,26 @@ For example:
 TestTime
 --------
 
-Every ``Makefile`` must contain exactly one ``TestTime`` value. It
-represent the upper limit of time that the ``runtest.sh`` script should
-execute before being terminated. That is, the API should automatically
-fail the test after this time period has expired. This is to guard
-against cases where a test has entered an infinite loop or caused a
-system to hang. This field can be used to achieve better test lab
-utilization by preventing the test from running on a system
-indefinitely.
+``TestTime`` (required) represents the upper limit of time that the
+``runtest.sh`` script should execute before being terminated. That is,
+the harness or lab controller should automatically abort the test after
+this time period has expired. This is to guard against cases where a test
+has entered an infinite loop or caused a system to hang. This field can be
+used to achieve better test lab utilization by preventing the test from
+running on a system indefinitely.
 
 The value of the field should be a number followed by either the letter
 "m" or "h" to express the time in minutes or hours. It can also be
-specified it in seconds by giving just a number. It is recommended to
-provide a value in minutes, for readability.
+specified in seconds by giving just a number. In most cases, it is
+recommended to provide a value in at least minutes rather than seconds.
 
 The time should be the absolute longest a test is expected to take on
-the slowest platform supported, plus a 10% margin of error. It is
-usually meaningless to have a test time of less than a minute, since
-some implementations of the API may be attempting to communicate with a
-busy server such as writing back to an NFS share or performing an
-XML-RPC call.
+the slowest platform supported, plus a 10% margin of error. Setting the
+time too short may lead to spurious cancellations, while setting it too long
+may waste lab system time if the task does get stuck. Durations of less than
+one minute are *not* recommended, as they usually run some risk of spurious
+cancellation, and it's typically reasonable to take a minute to abort the
+test after an actual infinite loop or deadlock.
 
 For example:
 
@@ -132,14 +136,15 @@ For example:
 Requires
 --------
 
-``Requires`` one or more. This field indicates the packages that are
+``Requires`` (optional) indicates one or more the packages that are
 required to be installed on the test machine for the test to work. The
-package being tested is automatically included via the ``PACKAGE_NAME``
-variable. Anything ``runtest.sh`` needs for execution must be included
-here.
+package being tested (if any) is automatically included via the
+``RunFor`` field. Aside from the package under test and the
+test harness itself, anything ``runtest.sh`` needs for execution
+must be included here.
 
 This field can occur multiple times within the metadata. Each value
-should be a space-separated list of package names, or of Kickstart
+should be a space-separated list of package names, or of kickstart
 package group names preceded with an @ sign. Each package or group must
 occur within the distribution tree under test (specifically, it must
 appear in the ``comps.xml`` file).
@@ -158,31 +163,38 @@ the package is installed by default.
 In a lab implementation, the dependencies of the packages listed can be
 automatically loaded using yum.
 
-Note that unlike an RPM spec file, the names of packages are used rather
-than Provides: dependencies. If one of the dependencies changes name
-between releases, one of these approaches below may be helpful:
+Note that unlike an RPM spec file, only dependencies on actual package names
+are permitted (depending on a "virtual" provides is not supported — however,
+see :ref:`rhts-requires` for a limited exception). Furthermore, even if some
+dependencies cannot be resolved, Beaker will attempt to execute the task
+anyway (this simplifies some issues with cross-version tasks as described
+below).
 
--  for major changes, split the test, so that each release is a separate
-   test in a sub-directory, with the common files built from a shared
-   directory in the ``Makefile``.
+If a task dependency ever changes in a backwards incompatible way,
+one of the approaches below may be helpful:
 
--  if only a dependency has changed name, specify the union of the names
-   of dependencies in the Requires: field; an implementation should
-   silently ignore unsolvable dependencies.
+*  if only a dependency has changed name, specify both the names
+   of dependencies in the ``Requires:`` field (enabling this is the reason
+   that missing packages are silently ignored).
 
--  it may be possible to work around the differences by logic in the
+*  it may be possible to work around the differences by logic in the
    section of the ``Makefile`` that generates the ``testinfo.desc``
    file.
+
+*  for major changes, split the test, so that each incompatible version is
+   handled by a separate task in a sub-directory, with the common files built
+   from a shared directory in the ``Makefile``.
 
 When writing a multihost test involving multiple roles client(s) and
 server(s), the union of the requirements for all of the roles must be
 listed here.
 
+
 Provides
 --------
 
-This field allows the task creator to specify the capabilities that
-the task RPM provides upon install. In addition to the default
+``Provides`` (optional) allows the task creator to specify the capabilities
+that the task RPM provides upon install. In addition to the default
 ``Provides`` generated by RPM, every task provides a virtual
 capability derived from the task name. For example, the
 ``/distribution/install`` task also provides ``test(/distribution/install)``.
@@ -194,6 +206,9 @@ can add a ``Provides`` such as the one below::
 
     Provides: test(/old/task/name)
 
+
+.. _rhts-requires:
+
 RhtsRequires
 ------------
 
@@ -201,30 +216,29 @@ This field indicates the other beaker tests that are required to be
 installed on the test machine for the test to work.
 
 This field can occur multiple times within the metadata. Each value
-should be a space-separated list of its task name enclosed in test().
-Each task must exist on the Beaker Scheduler.
+should consist of a task name in the form ``test(<task-name>)``. Each
+task dependency named this way must exist in the Beaker task library
+or the task will be aborted.
 
-For example::
+For example:: 
 
     RhtsRequires: test(/distribution/rhts/common)
 
 RunFor
 ------
 
-``RunFor`` allows for the specification of the packages which are
-relevant for the test. This field is the hook to be used for locating
-tests by package. For example, when running all tests relating to a
-particular package[1], an implementation should use this field.
-Similarly, when looking for results on a particular package, this is the
-field that should be used to locate the relevant test runs.
+``RunFor`` (optional) allows entries in the Beaker task library to be
+associated with specific packages for test execution and reporting purposes.
+It is only relevant for tasks that are specifically written as tests for
+particular packages rather than as general utilities. 
 
-When testing a specific package, that package must be listed in this
+When testing a specific package, that package should be listed in this
 field. If the test might reasonably be affected by changes to another
-package, the other package should be listed here. If a package changes
-name in the various releases of the distribution, all its names should
-be listed here.
+package, the other package should also be listed here. If a package changes
+names but the task remains applicable, then all of the package's names
+should be listed here.
 
-This field is optional; and can occur multiple times within the
+This field is optional and can occur multiple times within the
 metadata. The value should be a space-separated list of package names.
 
 .. _testinfo-releases:
@@ -234,21 +248,21 @@ Releases
 
 Some tests are only applicable to certain distribution releases. For
 example, a kernel bug may only be applicable to RHEL3 which contains the
-2.4 kernel. Limiting the release should only be used when a test will
+2.4 kernel. Limiting the release should only be used when a task will
 not execute on a particular release. Otherwise, the release should not
 be restricted so that your test can run on as many different releases as
 possible.
 
-You can populate the ``Releases`` field in two different ways. To exclude 
-certain releases but include all others, list the releases each prefixed with 
-a minus sign (-). To include certain releases but exclude all others, list the 
-included releases.
+You can populate the optional ``Releases`` field in two different ways. To
+exclude  certain releases but include all others, list the releases each
+prefixed with  a minus sign (-). To include certain releases but exclude
+all others, list the  included releases.
 
-For example, if your test runs only on RHEL3 and RHEL4::
+For example, if your task runs only on RHEL3 and RHEL4::
 
     Releases: RedHatEnterpriseLinux3 RedHatEnterpriseLinux4
 
-Or, if your test is expected to run on any release except for RHEL3::
+Or, if your task is expected to run on any release except for RHEL3::
 
     Releases: -RedHatEnterpriseLinux3
 
