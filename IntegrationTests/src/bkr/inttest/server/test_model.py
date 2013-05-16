@@ -5,6 +5,7 @@ import unittest
 import pkg_resources
 import lxml.etree
 import email
+import inspect
 from turbogears.database import session
 from bkr.server.installopts import InstallOptions
 from bkr.server import model
@@ -15,7 +16,8 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
-        Group, User
+        Group, User, ActivityMixin
+from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -32,6 +34,26 @@ class SchemaSanityTest(unittest.TestCase):
                     'SELECT engine FROM information_schema.tables '
                     'WHERE table_schema = DATABASE() AND table_name = %s',
                     table), 'InnoDB')
+
+class ActivityMixinTest(unittest.TestCase):
+
+    def test_field_names_correct(self):
+        # Ensure ActivityMixin._fields stays in sync with the parameters
+        # accepted by ActivityMixin._record_activity_inner
+        argspec = inspect.getargspec(ActivityMixin._record_activity_inner)
+        params = tuple(argspec[0][1:]) # skip 'self'
+        self.assertEqual(ActivityMixin._fields, params)
+
+    def test_log_formatting(self):
+        # Ensure ActivityMixin._log_fmt works as expected
+        entries = dict((v, k) for k, v in enumerate(ActivityMixin._fields))
+        entries['kind'] = 'ActivityKind'
+        text = ActivityMixin._log_fmt % entries
+        self.assert_(text.startswith('Tentative ActivityKind:'))
+        entries.pop('kind')
+        for name, value in entries.items():
+            self.assert_(('%s=%r' % (name, value)) in text, text)
+
 
 class TestSystem(unittest.TestCase):
 
@@ -1657,33 +1679,94 @@ class UserTest(unittest.TestCase):
 class GroupTest(unittest.TestCase):
 
     def setUp(self):
-
-        session.begin()
-
-        self.user1 = data_setup.create_user()
-        self.user2 = data_setup.create_user()
-        self.group = data_setup.create_group(owner=self.user1)
-        self.group.users.append(self.user2)
-
-        session.flush()
-
-    def tearDown(self):
-        session.commit()
-
-    def test_add_owner_group(self):
-        self.assert_(self.group.has_owner(self.user1))
-        self.assert_(self.user1 in self.group.users)
-
-        self.assert_(not self.group.has_owner(self.user2))
-        self.assert_(self.user2 in self.group.users)
-
-class GroupTest(unittest.TestCase):
-
-    def setUp(self):
         session.begin()
 
     def tearDown(self):
         session.rollback()
+
+    def test_add_user(self):
+        owner = data_setup.create_user()
+        member = data_setup.create_user()
+        group = data_setup.create_group(owner=owner)
+        group.users.append(member)
+        session.flush()
+
+        self.assert_(group.has_owner(owner))
+        self.assert_(owner in group.users)
+        self.assert_(not group.has_owner(member))
+        self.assert_(member in group.users)
+
+    def check_activity(self, activity, user, service, action,
+                       field, old, new):
+        self.assertEquals(activity.user, user)
+        self.assertEquals(activity.service, service)
+        self.assertEquals(activity.action, action)
+        self.assertEquals(activity.field_name, field)
+        self.assertEquals(activity.old_value, old)
+        self.assertEquals(activity.new_value, new)
+
+    def test_set_name(self):
+        orig_name = u'beakerdevs'
+        group = Group(group_name=orig_name,
+                      display_name=u'Beaker Developers')
+        session.flush()
+        self.assertFalse(group.is_protected_group())
+        # Setting the same name is a no-op
+        group.set_name(None, u'TEST', orig_name)
+        self.assertEquals(len(group.activity), 0)
+        # As is setting None
+        group.set_name(None, u'TEST', None)
+        self.assertEquals(len(group.activity), 0)
+        # Now check changing the name is properly recorded
+        new_name = u'beakerteam'
+        group.set_name(None, u'TEST', new_name)
+        self.assertEquals(group.group_name, new_name)
+        self.assertEquals(group.display_name, u'Beaker Developers')
+        self.assertEquals(len(group.activity), 1)
+        self.check_activity(group.activity[0], None, u'TEST', u'Changed',
+                            u'Name', orig_name, new_name)
+
+    def test_set_display_name(self):
+        orig_display_name = u'Beaker Developers'
+        group = Group(group_name=u'beakerdevs',
+                      display_name=orig_display_name)
+        session.flush()
+        # Setting the same name is a no-op
+        group.set_display_name(None, u'TEST', orig_display_name)
+        self.assertEquals(len(group.activity), 0)
+        # As is setting None
+        group.set_display_name(None, u'TEST', None)
+        self.assertEquals(len(group.activity), 0)
+        # Now check changing the name is properly recorded
+        new_display_name = u'Beaker Team'
+        group.set_display_name(None, u'TEST', new_display_name)
+        self.assertEquals(group.group_name, u'beakerdevs')
+        self.assertEquals(group.display_name, new_display_name)
+        self.assertEquals(len(group.activity), 1)
+        self.check_activity(group.activity[0], None, u'TEST', u'Changed',
+                            u'Display Name',
+                            orig_display_name, new_display_name)
+
+    def test_cannot_rename_protected_groups(self):
+        # The admin and lab_controller groups exist by default
+        groups = [Group.by_name(u'admin')]
+        groups.append(Group.by_name(u'lab_controller'))
+        # The queue_admin group is also special, but not created by default
+        groups.append(data_setup.create_group(group_name=u'queue_admin'))
+        for group in groups:
+            self.assert_(group.is_protected_group())
+            orig_name = group.group_name
+            orig_display_name = group.display_name
+            # Can't change the real name
+            self.assertRaises(BeakerException, group.set_name,
+                              None, u'TEST', u'bad_rename')
+            self.assertEquals(group.group_name, orig_name)
+            self.assertEquals(group.display_name, orig_display_name)
+            # Can change just the display name
+            group.set_display_name(None, u'TEST', u'New display name')
+            self.assertEquals(group.group_name, orig_name)
+            self.assertEquals(group.display_name, u'New display name')
+
 
     def test_populate_ldap_group(self):
         group = Group(group_name=u'beakerdevs',
@@ -1949,14 +2032,14 @@ class GuestRecipeTest(unittest.TestCase):
     def test_guestname(self):
         job_1 = data_setup.create_job(num_guestrecipes=1)
         guest_recipe_1 = job_1.recipesets[0].recipes[0].guests[0]
-        job_2 = data_setup.create_job(num_guestrecipes=1, guestname="blueguest")
+        job_2 = data_setup.create_job(num_guestrecipes=1, guestname=u'blueguest')
         guest_recipe_2 = job_2.recipesets[0].recipes[0].guests[0]
         session.flush()
 
         guestxml_1 = guest_recipe_1.to_xml().toxml()
         guestxml_2 = guest_recipe_2.to_xml().toxml()
-        self.assert_('guestname=""' in guestxml_1, guestxml_1)
-        self.assert_('guestname="blueguest"' in guestxml_2, guestxml_2)
+        self.assert_(u'guestname=""' in guestxml_1, guestxml_1)
+        self.assert_(u'guestname="blueguest"' in guestxml_2, guestxml_2)
 
 class MACAddressAllocationTest(unittest.TestCase):
 

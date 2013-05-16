@@ -1488,6 +1488,49 @@ class MappedObject(object):
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 
+class ActivityMixin(object):
+    """Helper to create activity records and append them to an activity log
+
+    Subclasses must have an "activity" attribute that references the relevant
+    activity table, as well as an "activity_type" attribute that references
+    the type of object to create for individual activities.
+    """
+
+    _fields = ('service', 'field', 'action', 'old', 'new', 'user')
+    _field_fmt = ', '.join('{0}=%({0})r'.format(name) for name in _fields)
+    _log_fmt = 'Tentative %(kind)s: ' + _field_fmt
+
+    def record_activity(self, **kwds):
+        """Helper to record object activity to the relevant history log.
+
+        For readability at call sites, only accepts keyword arguments:
+
+        *service* - service used to trigger the activity (required)
+        *field* - which field was affected by the activity (required)
+        *action* - what activity occurred (default is "Changed")
+        *old* - field value before the activity (if applicable)
+        *new* - field value before the activity (if applicable)
+        *user* - user responsible for activity (if applicable)
+
+        The default action is "Changed".
+        Activities where the old and new values are the same are permitted
+        """
+        # This trick of using an inner functions lets us force the use of
+        # keyword arguments without needing to do our own argument parsing
+        self._record_activity_inner(**kwds)
+
+    def _record_activity_inner(self, service, field, action=u'Changed',
+                               old=None, new=None, user=None):
+        entry = self.activity_type(user, service, action=action,
+                                   field_name=field,
+                                   old_value=old, new_value=new)
+        self.activity.append(entry)
+        log_details = dict(kind=self.activity_type.__name__, user=user,
+                           service=service, action=action,
+                           field=field, old=old, new=new)
+        log.debug(self._log_fmt, log_details)
+
+
 # the identity model
 class Visit(MappedObject):
     """
@@ -1751,7 +1794,10 @@ class SystemObject(MappedObject):
         return cls.mapper.c.keys()
     get_fields = classmethod(get_fields)
 
-class Group(DeclBase, MappedObject):
+class Group(DeclBase, MappedObject, ActivityMixin):
+    """
+    A group definition that records changes to the group
+    """
 
     __tablename__ = 'tg_group'
     __table_args__ = {'mysql_engine': 'InnoDB'}
@@ -1763,6 +1809,10 @@ class Group(DeclBase, MappedObject):
         default=None)
     ldap = Column(Boolean, default=False, nullable=False, index=True)
     created = Column(DateTime, default=datetime.utcnow)
+
+    @property
+    def activity_type(self):
+        return GroupActivity
 
     @classmethod
     def by_name(cls, name):
@@ -1843,10 +1893,42 @@ class Group(DeclBase, MappedObject):
     def can_edit(self, user):
         return self.has_owner(user) or user.is_admin()
 
+    def is_protected_group(self):
+        """Some group names are predefined by Beaker and cannot be modified"""
+        return self.group_name in (u'admin', u'queue_admin', u'lab_controller')
+
+    def set_name(self, user, service, group_name):
+        """Set a group's name and record any change as group activity
+
+        Passing None or the empty string means "leave this value unchanged"
+        """
+        old_group_name = self.group_name
+        if group_name and group_name != old_group_name:
+            if self.is_protected_group():
+                raise BX(_(u'Cannot rename protected group %r as %r'
+                                              % (old_group_name, group_name)))
+            self.group_name = group_name
+            self.record_activity(user=user, service=service,
+                                 field=u'Name',
+                                 old=old_group_name, new=group_name)
+
+    def set_display_name(self, user, service, display_name):
+        """Set a group's display name and record any change as group activity
+
+        Passing None or the empty string means "leave this value unchanged"
+        """
+        old_display_name = self.display_name
+        if display_name and display_name != old_display_name:
+            self.display_name = display_name
+            self.record_activity(user=user, service=service,
+                                 field=u'Display Name',
+                                 old=old_display_name, new=display_name)
+
     def can_modify_membership(self, user):
         return not self.ldap and (self.has_owner(user) or user.is_admin())
 
     def refresh_ldap_members(self, ldapcon=None):
+        """Refresh the group from LDAP and record changes as group activity"""
         assert self.ldap
         assert get('identity.ldap.enabled', False)
         if ldapcon is None:

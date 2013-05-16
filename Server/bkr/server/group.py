@@ -247,7 +247,8 @@ class Groups(AdminPage):
 
     def _new_group(self, group_id, display_name, group_name, ldap,
         root_password):
-        if ldap and not identity.current.user.is_admin():
+        user = identity.current.user
+        if ldap and not user.is_admin():
             flash(_(u'Only admins can create LDAP groups'))
             redirect('.')
         try:
@@ -259,7 +260,7 @@ class Groups(AdminPage):
             redirect(".")
         group = Group()
         session.add(group)
-        activity = Activity(identity.current.user, u'WEBUI', u'Added', u'Group', u"", display_name)
+        activity = Activity(user, u'WEBUI', u'Added', u'Group', u"", display_name)
         group.display_name = display_name
         group.group_name = group_name
         group.ldap = ldap
@@ -267,7 +268,6 @@ class Groups(AdminPage):
             group.refresh_ldap_members()
         group.root_password = root_password
         if not ldap: # LDAP groups don't have owners
-            user = identity.current.user
             group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
             group.activity.append(GroupActivity(user, service=u'WEBUI',
                 action=u'Added', field_name=u'User',
@@ -296,19 +296,34 @@ class Groups(AdminPage):
     @error_handler(edit)
     def save(self, group_id=None, display_name=None, group_name=None,
         ldap=False, root_password=None, **kwargs):
-        if ldap and not identity.current.user.is_admin():
+
+        user = identity.current.user
+
+        if ldap and not user.is_admin():
             flash(_(u'Only admins can create LDAP groups'))
             redirect('mine')
-        group = Group.by_id(group_id)
 
-        if not group.can_edit(identity.current.user):
+        try:
+            group = Group.by_id(group_id)
+        except NoResultFound:
+            flash( _(u"Group %s does not exist." % group_id) )
+            redirect('mine')
+
+        if not group.can_edit(user):
             flash(_(u'You are not an owner of group %s' % group))
             redirect('../groups/mine')
 
-        group.display_name = display_name
-        group.group_name = group_name
-        group.ldap = ldap
-        group.root_password = root_password
+        try:
+            group.set_name(user, u'WEBUI', group_name)
+            group.set_display_name(user, u'WEBUI', display_name)
+            group.ldap = ldap
+            group.root_password = root_password
+        except BeakerException, err:
+            session.rollback()
+            flash(_(u'Failed to update group %s: %s' %
+                                                    (group.group_name, err)))
+            redirect('.')
+
         flash( _(u"OK") )
         redirect("mine")
 
@@ -668,77 +683,65 @@ class Groups(AdminPage):
             group = Group.by_name(group_name)
         except NoResultFound:
             raise BX(_(u'Group does not exist: %s.' % group_name))
-        else:
-            if not group.can_edit(identity.current.user):
-                raise BX(_('You are not an owner of group %s' % group_name))
 
-            display_name = group.display_name
+        user = identity.current.user
+        if not group.can_edit(user):
+            raise BX(_('You are not an owner of group %s' % group_name))
 
-            if kw.get('display_name', None):
-                group.display_name = kw.get('display_name')
+        group.set_display_name(user, u'XMLRPC', kw.get('display_name', None))
+        group.set_name(user, u'XMLRPC', kw.get('group_name', None))
+
+        if kw.get('add_member', None):
+            username = kw.get('add_member')
+            user = User.by_user_name(username)
+            if user is None:
+                raise BX(_(u'User does not exist %s' % username))
+
+            if user not in group.users:
+                group.users.append(user)
                 activity = GroupActivity(identity.current.user, u'XMLRPC',
-                                    action=u'Changed', field_name=u'Display Name',
-                                    old_value=display_name, new_value=kw['display_name'])
+                                            action=u'Added',
+                                            field_name=u'User',
+                                            old_value=u"", new_value=username)
                 group.activity.append(activity)
+                mail.group_membership_notify(user, group,
+                                                agent = identity.current.user,
+                                                action='Added')
+            else:
+                raise BX(_(u'User %s is already in group %s' % (username, group.group_name)))
 
-            if kw.get('group_name', None):
-                group.group_name = kw.get('group_name')
-                activity = GroupActivity(identity.current.user, u'XMLRPC',
-                                    action=u'Changed', field_name=u'Name',
-                                    old_value=group_name, new_value=kw['group_name'])
-                group.activity.append(activity)
+        if kw.get('remove_member', None):
+            username = kw.get('remove_member')
+            user = User.by_user_name(username)
 
-            if kw.get('add_member', None):
-                username = kw.get('add_member')
-                user = User.by_user_name(username)
-                if user is None:
-                    raise BX(_(u'User does not exist %s' % username))
+            if user is None:
+                raise BX(_(u'User does not exist %s' % username))
 
-                if user not in group.users:
-                    group.users.append(user)
-                    activity = GroupActivity(identity.current.user, u'XMLRPC',
-                                             action=u'Added',
-                                             field_name=u'User',
-                                             old_value=u"", new_value=username)
-                    group.activity.append(activity)
-                    mail.group_membership_notify(user, group,
-                                                 agent = identity.current.user,
-                                                 action='Added')
-                else:
-                    raise BX(_(u'User %s is already in group %s' % (username, group.group_name)))
+            if user not in group.users:
+                raise BX(_(u'No user %s in group %s' % (username, group.group_name)))
+            else:
+                group_owners = group.owners()
+                if user.user_id == group_owners.pop() and not group_owners:
+                    raise BX(_(u'You are the only owner of group %s. Cannot remove' % group))
 
-            if kw.get('remove_member', None):
-                username = kw.get('remove_member')
-                user = User.by_user_name(username)
+                groupUsers = group.users
+                for usr in groupUsers:
+                    if usr.user_id == user.user_id:
+                        group.users.remove(usr)
+                        removed = user
+                        activity = GroupActivity(identity.current.user, u'XMLRPC',
+                                                    action=u'Removed',
+                                                    field_name=u'User',
+                                                    old_value=removed.user_name,
+                                                    new_value=u"")
+                        group.activity.append(activity)
+                        mail.group_membership_notify(user, group,
+                                                        agent=identity.current.user,
+                                                        action='Removed')
+                        break
 
-                if user is None:
-                    raise BX(_(u'User does not exist %s' % username))
-
-                if user not in group.users:
-                    raise BX(_(u'No user %s in group %s' % (username, group.group_name)))
-                else:
-                    group_owners = group.owners()
-                    if user.user_id == group_owners.pop() and not group_owners:
-                        raise BX(_(u'You are the only owner of group %s. Cannot remove' % group))
-
-                    groupUsers = group.users
-                    for usr in groupUsers:
-                        if usr.user_id == user.user_id:
-                            group.users.remove(usr)
-                            removed = user
-                            activity = GroupActivity(identity.current.user, u'XMLRPC',
-                                                     action=u'Removed',
-                                                     field_name=u'User',
-                                                     old_value=removed.user_name,
-                                                     new_value=u"")
-                            group.activity.append(activity)
-                            mail.group_membership_notify(user, group,
-                                                         agent=identity.current.user,
-                                                         action='Removed')
-                            break
-
-            #dummy success return value
-            return ['1']
+        #dummy success return value
+        return ['1']
 
     # XML-RPC method for listing a group's members
     @identity.require(identity.not_anonymous())
@@ -757,21 +760,21 @@ class Groups(AdminPage):
         """
         try:
             group = Group.by_name(group_name)
-            users=[]
-            for u in group.users:
-                user={}
-                user['username']=u.user_name
-                user['email'] = u.email_address
-                if group.has_owner(u):
-                    user['owner'] = True
-                else:
-                    user['owner'] = False
-                users.append(user)
-
-            return users
-
         except NoResultFound:
             raise BX(_(u'Group does not exist: %s.' % group_name))
+
+        users=[]
+        for u in group.users:
+            user={}
+            user['username']=u.user_name
+            user['email'] = u.email_address
+            if group.has_owner(u):
+                user['owner'] = True
+            else:
+                user['owner'] = False
+            users.append(user)
+
+        return users
 
 # for sphinx
 groups = Groups

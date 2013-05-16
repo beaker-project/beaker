@@ -129,7 +129,7 @@ class GroupModifyTest(unittest.TestCase):
             self.assertEquals(group.activity[-1].new_value, group_name)
             self.assertEquals(group.activity[-1].service, u'XMLRPC')
 
-    def test_group_modify_group_display_names(self):
+    def test_group_modify_group_and_display_names(self):
         display_name = 'Shiny New Display Name'
         group_name = 'shinynewgroup'
         out = run_client(['bkr', 'group-modify',
@@ -143,6 +143,41 @@ class GroupModifyTest(unittest.TestCase):
             group = Group.by_name(group_name)
             self.assertEquals(group.display_name, display_name)
             self.assertEquals(group.group_name, group_name)
+
+    def test_admin_cannot_rename_protected_group(self):
+        # See https://bugzilla.redhat.com/show_bug.cgi?id=961206
+        protected_group_name = 'admin'
+        with session.begin():
+            group = Group.by_name(protected_group_name)
+            expected_display_name = group.display_name
+
+        # Run command as the default admin user
+        try:
+            out = run_client(['bkr', 'group-modify',
+                              '--group-name', 'cannot_rename_admin',
+                              '--display-name', 'this is also unchanged',
+                              protected_group_name])
+            self.fail('Must fail or die')
+        except ClientError, e:
+            self.assert_('Cannot rename protected group' in
+                         e.stderr_output, e.stderr_output)
+
+        # Check the whole request is ignored if the name change is rejected
+        with session.begin():
+            session.refresh(group)
+            self.assertEquals(group.group_name, protected_group_name)
+            self.assertEquals(group.display_name, expected_display_name)
+
+        # However, changing just the display name is fine
+        new_display_name = 'Tested admin group'
+        out = run_client(['bkr', 'group-modify',
+                          '--display-name', new_display_name,
+                          protected_group_name])
+
+        with session.begin():
+            session.refresh(group)
+            self.assertEquals(group.group_name, protected_group_name)
+            self.assertEquals(group.display_name, new_display_name)
 
     def test_group_modify_add_member(self):
         with session.begin():

@@ -19,7 +19,7 @@ class EditGroup(SeleniumTestCase):
     def tearDown(self):
         self.selenium.stop()
 
-    def test_add_bad_perm(self):
+    def test_add_bad_permission(self):
         sel = self.selenium
         self.login()
         sel.open('groups/edit?group_id=%d' % self.group.group_id)
@@ -37,7 +37,7 @@ class EditGroup(SeleniumTestCase):
         sel.wait_for_page_to_load(30000)
         self.assert_("dumy_perm" not in sel.get_text("//table[@id='group_permission_grid']"))
 
-    def test_add_and_remove(self):
+    def test_add_and_remove_permission(self):
         sel = self.selenium
         self.login()
 
@@ -240,7 +240,7 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@name="root_password" and '
             'not(following-sibling::span[@class="fielderror"])]')
 
-    def test_can_edit_owned_existing_groups(self):
+    def test_can_open_edit_page_for_owned_existing_groups(self):
         with session.begin():
             data_setup.add_owner_to_group(self.user, self.group)
         b = self.browser
@@ -260,7 +260,7 @@ class TestGroupsWD(WebDriverTestCase):
         self.failUnless(crypt.crypt('blapppy7', self.group.root_password) ==
             self.group.root_password)
 
-    def test_cannot_edit_unowned_group(self):
+    def test_cannot_open_edit_page_for_unowned_group(self):
         with session.begin():
             user = data_setup.create_user(password='password')
             user.groups.append(self.group)
@@ -388,6 +388,15 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//table[thead/tr/th[1]/text()="User Members"]'
                 '/tbody/tr[not(.//a[text()="Remove (-)"])]')
 
+    def _edit_group_details(self, browser, new_group_name, new_display_name):
+        b = browser
+        b.find_element_by_xpath('//input[@id="Group_display_name"]').clear()
+        b.find_element_by_xpath('//input[@id="Group_display_name"]').\
+            send_keys(new_display_name)
+        b.find_element_by_xpath('//input[@id="Group_group_name"]').clear()
+        b.find_element_by_xpath('//input[@id="Group_group_name"]').\
+            send_keys(new_group_name)
+        b.find_element_by_xpath('//input[@value="Save"]').click()
 
     def test_edit_display_group_names(self):
         with session.begin():
@@ -403,13 +412,7 @@ class TestGroupsWD(WebDriverTestCase):
         # edit
         b.get(get_server_base() + 'groups/mine')
         b.find_element_by_link_text(group.group_name).click()
-        b.find_element_by_xpath('//input[@id="Group_display_name"]').clear()
-        b.find_element_by_xpath('//input[@id="Group_display_name"]').\
-            send_keys(new_display_name)
-        b.find_element_by_xpath('//input[@id="Group_group_name"]').clear()
-        b.find_element_by_xpath('//input[@id="Group_group_name"]').\
-            send_keys(new_group_name)
-        b.find_element_by_xpath('//input[@value="Save"]').click()
+        self._edit_group_details(b, new_group_name, new_display_name)
 
         # check
         b.get(get_server_base() + "groups/edit?group_id=%d" % group.group_id)
@@ -417,3 +420,21 @@ class TestGroupsWD(WebDriverTestCase):
                               get_attribute('value'), new_display_name)
         self.assertEquals(b.find_element_by_xpath('//input[@id="Group_group_name"]').\
                               get_attribute('value'), new_group_name)
+
+    def test_cannot_rename_protected_group(self):
+        with session.begin():
+            admin_user = data_setup.create_admin(password='password')
+            admin_group = Group.by_name(u'admin')
+        b = self.browser
+
+        login(b, user=admin_user.user_name, password='password')
+        new_display_name = 'New Display Name for Group FBZ 2'
+        new_group_name = 'FBZ-2-new'
+
+        # edit
+        b.get(get_server_base() + 'groups/edit?group_id=%d' % admin_group.group_id)
+        self._edit_group_details(b, new_group_name, new_display_name)
+
+        # check
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assert_('Cannot rename protected group' in flash_text, flash_text)
