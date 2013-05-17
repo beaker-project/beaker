@@ -699,5 +699,38 @@ class Groups(AdminPage):
 
             #dummy success return value
             return ['1']
+    # XML-RPC method for listing a group's members
+    @identity.require(identity.not_anonymous())
+    @expose(format='json')
+    def members(self, group_name):
+        """
+        List the members of an existing group.
+
+        :param group_name: An existing group name
+        :type group_name: string
+
+        Returns a list of the members (a dictionary containing each
+        member's username, email, and whether the member is an owner
+        or not).
+
+        """
+        try:
+            group = Group.by_name(group_name)
+            users=[]
+            for u in group.users:
+                user={}
+                user['username']=u.user_name
+                user['email'] = u.email_address
+                if group.has_owner(u):
+                    user['owner'] = True
+                else:
+                    user['owner'] = False
+                users.append(user)
+
+            return users
+
+        except NoResultFound:
+            raise BX(_(u'Group does not exist: %s.' % group_name))
+
 # for sphinx
 groups = Groups
