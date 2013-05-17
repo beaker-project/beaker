@@ -1,5 +1,6 @@
 import unittest
-from bkr.inttest import data_setup, with_transaction
+import email
+from bkr.inttest import data_setup, with_transaction, mail_capture
 from bkr.inttest.client import run_client, ClientError, create_client_config
 from bkr.server.model import Group, Activity
 from turbogears.database import session
@@ -17,6 +18,33 @@ class GroupModifyTest(unittest.TestCase):
             rand_user.groups.append(self.group)
             self.rand_client_config = create_client_config(username=rand_user.user_name,
                                                            password='asdf')
+
+        self.mail_capture = mail_capture.MailCaptureThread()
+        self.mail_capture.start()
+
+    def tearDown(self):
+        self.mail_capture.stop()
+
+    def check_notification(self, user, group, action):
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        self.assertEqual(rcpts, [user.email_address])
+        msg = email.message_from_string(raw_msg)
+        self.assertEqual(msg['To'], user.email_address)
+
+        # headers and subject
+        self.assertEqual(msg['X-Beaker-Notification'], 'group-membership')
+        self.assertEqual(msg['X-Beaker-Group'], group.group_name)
+        self.assertEqual(msg['X-Beaker-Group-Action'], action)
+        for keyword in ['Group Membership', action, group.group_name]:
+            self.assert_(keyword in msg['Subject'], msg['Subject'])
+
+        # body
+        msg_payload = msg.get_payload(decode=True)
+        action = action.lower()
+        for keyword in [action, group.group_name, self.user.email_address]:
+            self.assert_(keyword in msg_payload, (keyword, msg_payload))
+
     def test_group_modify_no_criteria(self):
         try:
             out = run_client(['bkr', 'group-modify',
@@ -131,6 +159,9 @@ class GroupModifyTest(unittest.TestCase):
             self.assert_(user.user_name in
                          [u.user_name for u in group.users])
 
+
+        self.check_notification(user, group, action='Added')
+
         try:
             out = run_client(['bkr', 'group-modify',
                               '--add-member', 'idontexist',
@@ -178,6 +209,8 @@ class GroupModifyTest(unittest.TestCase):
             group = Group.by_name(self.group.group_name)
             self.assert_(user.user_name not in
                          [u.user_name for u in group.users])
+
+        self.check_notification(user, group, action='Removed')
 
         try:
             out = run_client(['bkr', 'group-modify',

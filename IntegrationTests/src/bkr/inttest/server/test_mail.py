@@ -154,3 +154,37 @@ class JobCompletionNotificationTest(unittest.TestCase):
         # Subject header might be split across multiple lines
         subject = re.sub(r'\s+', ' ', msg['Subject'])
         self.assert_(whiteboard in subject, subject)
+
+class GroupMembershipNotificationTest(unittest.TestCase):
+
+    def setUp(self):
+        self.mail_capture = mail_capture.MailCaptureThread()
+        self.mail_capture.start()
+
+    def tearDown(self):
+        self.mail_capture.stop()
+
+    def test_actions(self):
+
+        with session.begin():
+            owner = data_setup.create_user()
+            member = data_setup.create_user()
+            group = data_setup.create_group(owner=owner)
+            member.groups.append(group)
+
+        bkr.server.mail.group_membership_notify(member, group, owner, 'Added')
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+
+        self.mail_capture.captured_mails[:] = []
+        with session.begin():
+            group.users.remove(member)
+
+        bkr.server.mail.group_membership_notify(member, group, owner, 'Removed')
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+
+        # invalid action
+        try:
+            bkr.server.mail.group_membership_notify(member, group, owner, 'Unchanged')
+            self.fail('Must fail or die')
+        except ValueError, e:
+            self.assert_('Unknown action' in str(e))

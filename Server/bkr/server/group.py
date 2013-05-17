@@ -17,6 +17,7 @@ from bkr.server.admin_page import AdminPage
 from bkr.server.bexceptions import BX 
 from bkr.server.controller_utilities import restrict_http_method
 import cherrypy
+from bkr.server import mail
 
 # from bkr.server import json
 # import logging
@@ -389,6 +390,9 @@ class Groups(AdminPage):
             group.users.append(user)
             activity = GroupActivity(identity.current.user, u'WEBUI', u'Added', u'User', u"", user.user_name)
             group.activity.append(activity)
+            mail.group_membership_notify(user, group,
+                                         agent=identity.current.user,
+                                         action='Added')
             flash( _(u"OK") )
             redirect("./edit?group_id=%s" % kw['group_id'])
         else:
@@ -504,6 +508,9 @@ class Groups(AdminPage):
                 removed = user
                 activity = GroupActivity(identity.current.user, u'WEBUI', u'Removed', u'User', removed.user_name, u"")
                 group.activity.append(activity)
+                mail.group_membership_notify(user, group,
+                                             agent=identity.current.user,
+                                             action='Removed')
                 flash( _(u"%s Removed" % removed.display_name))
                 redirect("../groups/edit?group_id=%s" % group_id)
         flash( _(u"No user %s in group %s" % (id, removed.display_name)))
@@ -694,6 +701,9 @@ class Groups(AdminPage):
                                              field_name=u'User',
                                              old_value=u"", new_value=username)
                     group.activity.append(activity)
+                    mail.group_membership_notify(user, group,
+                                                 agent = identity.current.user,
+                                                 action='Added')
                 else:
                     raise BX(_(u'User %s is already in group %s' % (username, group.group_name)))
 
@@ -722,6 +732,9 @@ class Groups(AdminPage):
                                                      old_value=removed.user_name,
                                                      new_value=u"")
                             group.activity.append(activity)
+                            mail.group_membership_notify(user, group,
+                                                         agent=identity.current.user,
+                                                         action='Removed')
                             break
 
             #dummy success return value

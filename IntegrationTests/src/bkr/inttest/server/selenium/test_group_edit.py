@@ -2,8 +2,9 @@ import crypt
 from turbogears.database import session
 from bkr.server.model import Group, User, Activity, UserGroup
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest import data_setup, get_server_base, with_transaction
+from bkr.inttest import data_setup, get_server_base, with_transaction, mail_capture
 from bkr.inttest.server.webdriver_utils import login
+import email
 
 # XXX this should be assimilated by TestGroupsWD when it is converted.
 class EditGroup(SeleniumTestCase):
@@ -98,13 +99,36 @@ class TestGroupsWD(WebDriverTestCase):
             self.group = data_setup.create_group()
             self.user.groups.append(self.group)
         self.browser = self.get_browser()
-
         self.clear_password = 'gyfrinachol'
         self.hashed_password = '$1$NaCl$O34mAzBXtER6obhoIodu8.'
         self.simple_password = 's3cr3t'
 
-    def teardown(self):
+        self.mail_capture = mail_capture.MailCaptureThread()
+        self.mail_capture.start()
+
+    def tearDown(self):
+        self.mail_capture.stop()
         self.browser.quit()
+
+    def check_notification(self, user, group, action):
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        self.assertEqual(rcpts, [user.email_address])
+        msg = email.message_from_string(raw_msg)
+        self.assertEqual(msg['To'], user.email_address)
+
+        # headers and subject
+        self.assertEqual(msg['X-Beaker-Notification'], 'group-membership')
+        self.assertEqual(msg['X-Beaker-Group'], group.group_name)
+        self.assertEqual(msg['X-Beaker-Group-Action'], action)
+        for keyword in ['Group Membership', action, group.group_name]:
+            self.assert_(keyword in msg['Subject'], msg['Subject'])
+
+        # body
+        msg_payload = msg.get_payload(decode=True)
+        action = action.lower()
+        for keyword in [action, group.group_name, self.user.email_address]:
+            self.assert_(keyword in msg_payload, (keyword, msg_payload))
 
     def _make_and_go_to_owner_page(self, user, group, set_owner=True):
         if set_owner:
@@ -268,11 +292,15 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@value="Add"]').click()
         b.find_element_by_xpath('//td[text()="%s"]' % user.user_name)
 
+        with session.begin():
+            group = Group.by_name('FBZ-1')
+        self.check_notification(user, group, action='Added')
+
     def test_remove_user_from_owning_group(self):
         with session.begin():
             user = data_setup.create_user(password='password')
 
-        group_name = data_setup.unique_name('Group%s')
+        group_name = data_setup.unique_name('Group1234%s')
         display_name = data_setup.unique_name('Group Display Name %s')
 
         b = self.browser
@@ -290,12 +318,18 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="GroupUser_user_text"]').send_keys(user.user_name)
         b.find_element_by_xpath('//input[@value="Add"]').click()
 
+        self.mail_capture.captured_mails[:] = []
+
         group_id = Group.by_name(group_name).group_id
         username = user.user_name
         user_id = user.user_id
         b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]' % username).click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                           '%s Removed' % username)
+
+        with session.begin():
+            group = Group.by_name(group_name)
+        self.check_notification(user, group, action='Removed')
 
         # remove self when I am the only owner of the group
         b.find_element_by_xpath('//a[@href="removeUser?group_id=%d&id=%d"]'
