@@ -57,6 +57,21 @@ gidNumber: 15551
 homeDirectory: /home/jgillard
 mail: jgillard@example.invalid
 
+dn: uid=asaha,ou=users,dc=example,dc=invalid
+objectClass: top
+objectClass: person
+objectClass: organizationalperson
+objectClass: inetorgperson
+objectClass: posixAccount
+cn: Amit Saha
+givenName: Amit
+sn: Saha
+uid: asaha
+uidNumber: 15552
+gidNumber: 15552
+homeDirectory: /home/asaha
+mail: asaha@example.invalid
+
 dn: cn=my_ldap_group,ou=groups,dc=example,dc=invalid
 objectClass: top
 objectClass: posixGroup
@@ -77,3 +92,10 @@ objectClass: posixGroup
 gidNumber: 5519
 cn: alp
 memberUid: jgillard
+
+dn: cn=wyfp,ou=groups,dc=example,dc=invalid
+objectClass: top
+objectClass: posixGroup
+gidNumber: 5520
+cn: wyfp
+memberUid: asaha
