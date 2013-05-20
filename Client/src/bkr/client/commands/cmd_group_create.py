@@ -7,8 +7,7 @@ bkr group-create: Create a group
 Synopsis
 --------
 
-| :program:`bkr group-create` [*options*]
-|     [--display-name=<display name>] <group-name>
+| :program:`bkr group-create` [*options*] <group-name>
 
 Description
 -----------
@@ -17,6 +16,10 @@ Create a new group with the specified name and display name.
 
 Options
 -------
+
+.. option:: --ldap
+
+   Populate the members from an LDAP group, specified by <group-name>.
 
 .. option:: --display-name
 
@@ -56,6 +59,13 @@ class Group_Create(BeakerCommand):
             help="Display name of the group",
         )
 
+        self.parser.add_option(
+            "--ldap",
+            default=False,
+            action="store_true",
+            help="Create an LDAP group",
+        )
+
     def run(self, *args, **kwargs):
 
         if len(args) != 1:
@@ -63,8 +73,9 @@ class Group_Create(BeakerCommand):
 
         group_name = args[0]
         display_name = kwargs.get('display_name', group_name)
+        ldap = kwargs.get('ldap', False)
 
         self.set_hub(**kwargs)
-        self.hub.groups.create(dict(group_name=group_name,
-                                    display_name=display_name))
-        print 'Group created.'
+        print self.hub.groups.create(dict(group_name=group_name,
+                                          display_name=display_name,
+                                          ldap=ldap))

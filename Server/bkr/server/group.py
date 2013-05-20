@@ -561,15 +561,19 @@ class Groups(AdminPage):
                  Group name (maximum 16 characters)
             'display_name'
                  Group display name
+            'ldap'
+                 Populate users from LDAP (True/False)
 
         Returns a message whether the group was successfully created or
         raises an exception on failure.
 
         """
-
         display_name = kw['display_name']
         group_name = kw['group_name']
+        ldap = kw['ldap']
 
+        if ldap and not identity.current.user.is_admin():
+            raise BX(_(u'Only admins can create LDAP groups'))
         try:
             group = Group.by_name(group_name)
         except NoResultFound:
@@ -577,14 +581,20 @@ class Groups(AdminPage):
             activity = Activity(identity.current.user, u'XMLRPC', u'Added', u'Group', u"", kw['display_name'] )
             group.display_name = display_name
             group.group_name = group_name
+            group.ldap = ldap
             user = identity.current.user
-            group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
-            group.activity.append(GroupActivity(user, service=u'XMLRPC',
+
+            if not ldap:
+                group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
+                group.activity.append(GroupActivity(user, service=u'XMLRPC',
                     action=u'Added', field_name=u'User',
                     old_value=None, new_value=user.user_name))
-            group.activity.append(GroupActivity(user, service=u'XMLRPC',
+                group.activity.append(GroupActivity(user, service=u'XMLRPC',
                     action=u'Added', field_name=u'Owner',
                     old_value=None, new_value=user.user_name))
+
+            if group.ldap:
+                group.refresh_ldap_members()
             return 'Group created: %s.' % group_name
         else:
             raise BX(_(u'Group already exists: %s.' % group_name))
