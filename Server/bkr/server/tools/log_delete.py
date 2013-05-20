@@ -11,7 +11,8 @@ import errno
 import shutil
 import datetime
 import urlparse
-import requests, requests.auth
+import requests
+import requests_kerberos
 from bkr import __version__ as bkr_version
 from optparse import OptionParser
 from bkr.server.model import Job
@@ -55,8 +56,9 @@ def log_delete(print_logs=False, dry=False, limit=None):
 
     failed = False
     if not dry:
-        requests_session = requests.session(
-                auth=requests.auth.HTTPKerberosAuth(require_mutual_auth=False))
+        requests_session = requests.Session()
+        requests_session.auth = requests_kerberos.HTTPKerberosAuth(
+                             mutual_authentication=requests_kerberos.OPTIONAL)
     for job, logs in Job.expired_logs(limit):
         logger.info('Deleting logs for %s', job.t_id)
         try:
