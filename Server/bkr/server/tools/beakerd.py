@@ -811,14 +811,12 @@ def sigterm_handler(signal, frame):
     raise SystemExit("received SIGTERM")
 
 def purge_handlers():
-    #shutdown logging subsystem
-    logging.shutdown()
-
     # Remove handlers
     for (_, logger) in logging.root.manager.loggerDict.items():
         if hasattr(logger, 'handlers'):
             for handler in logger.handlers:
                 logger.removeHandler(handler)
+                handler.close()
 
     #clear out logging's internal handler list
     logging._handlerList = []
