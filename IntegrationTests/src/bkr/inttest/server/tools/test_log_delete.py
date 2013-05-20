@@ -15,6 +15,11 @@ def setUpModule():
     except ImportError:
         raise SkipTest('kerberos module not available, but log-delete requires it')
 
+    try:
+        import requests_kerberos
+    except ImportError:
+        raise SkipTest('requests_kerberos module not available, but log-delete requires it')
+
     # It makes our tests simpler here if they only need to worry about deleting 
     # logs which they themselves have created, rather than ones which might have 
     # been left behind from earlier tests in the run.
