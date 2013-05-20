@@ -101,10 +101,7 @@ class TaskActions(RPCRoot):
         if stop_type not in task.stop_types:
             raise BX(_('Invalid stop_type: %s, must be one of %s' %
                              (stop_type, task.stop_types)))
-        # only allow those with stop_task permission or owners of the 
-        # task to stop a task.
-        if not identity.current.user.has_permission('stop_task') and \
-           getattr(task,'owner') != identity.current.user:
+        if not task.can_stop(identity.current.user):
             raise BX(_("You don't have permission to %s %s" % (stop_type,
                                                                taskid)))
         kwargs = dict(msg = msg)

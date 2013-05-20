@@ -127,7 +127,7 @@ class Jobs(RPCRoot):
     def _check_job_deletability(self, job):
         if not isinstance(job, Job):
             raise TypeError('%s is not of type %s' % (t_id, Job.__name__))
-        if not job.can_admin(identity.current.user):
+        if not job.can_delete(identity.current.user):
             raise BeakerException(_(u'You do not have permission to delete %s' % t_id))
 
     def _delete_job(self, t_id):
@@ -304,7 +304,7 @@ class Jobs(RPCRoot):
                 job = TaskBase.get_by_t_id(j_id)
                 if not isinstance(job,Job):
                     raise BeakerException('Incorrect task type passed %s' % j_id )
-                if not job.can_admin(identity.current.user):
+                if not job.can_delete(identity.current.user):
                     raise BeakerException("You don't have permission to delete job %s" % j_id)
                 jobs_to_try_to_del.append(job)
             delete_jobs_kw = dict(jobs=jobs_to_try_to_del)
@@ -631,7 +631,8 @@ class Jobs(RPCRoot):
     @identity.require(identity.not_anonymous())
     def set_retention_product(self, job_t_id, retention_tag_name, product_name):
         job = TaskBase.get_by_t_id(job_t_id)
-        if job.can_admin(identity.current.user):
+        if job.can_change_product(identity.current.user) and \
+            job.can_change_retention_tag(identity.current.user):
             if retention_tag_name:
                 try:
                     retention_tag = RetentionTag.by_name(retention_tag_name)
@@ -675,13 +676,7 @@ class Jobs(RPCRoot):
     @identity.require(identity.not_anonymous())
     def set_response(self, job_t_id, response):
         job = TaskBase.get_by_t_id(job_t_id)
-        try: # See if we are a 'RecipeSet'
-            owner_groups = ([g.group_name for g in job.job.owner.groups])
-        except AttributeError: #We are a 'Job'
-            owner_groups = ([g.group_name for g in job.owner.groups])
-        if job.is_owner(identity.current.user) or \
-            'admin' in identity.current.groups or \
-            identity.current.user.in_group(owner_groups):
+        if job.can_set_response(identity.current.user):
             job.set_response(response)
         else:
             raise BeakerException('No permission to modify %s' % job)
@@ -826,7 +821,7 @@ class Jobs(RPCRoot):
         except InvalidRequestError:
             flash(_(u"Invalid job id %s" % id))
             redirect(".")
-        if not identity.current.user.is_admin() and job.owner != identity.current.user:
+        if not job.can_cancel(identity.current.user):
             flash(_(u"You don't have permission to cancel job id %s" % id))
             redirect(".")
         job.cancel(msg)
@@ -844,7 +839,7 @@ class Jobs(RPCRoot):
         except InvalidRequestError:
             flash(_(u"Invalid job id %s" % id))
             redirect(".")
-        if not identity.current.user.is_admin() and job.owner != identity.current.user:
+        if not job.can_cancel(identity.current.user):
             flash(_(u"You don't have permission to cancel job id %s" % id))
             redirect(".")
         return dict(
@@ -865,7 +860,8 @@ class Jobs(RPCRoot):
             job = Job.by_id(id)
         except InvalidRequestError:
             raise cherrypy.HTTPError(status=400, message='Invalid job id %s' % id)
-        if not job.can_admin(identity.current.user):
+        if not job.can_change_product(identity.current.user) or not \
+            job.can_change_retention_tag(identity.current.user):
             raise cherrypy.HTTPError(status=403,
                     message="You don't have permission to update job id %s" % id)
         returns = {'success' : True, 'vars':{}}
