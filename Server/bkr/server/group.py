@@ -365,7 +365,7 @@ class Groups(AdminPage):
             flash( _(u"OK") )
             redirect("./edit?id=%s" % kw['group_id'])
         else:
-            flash( _(u"User %s is already in Group %s" %(user.user_name,group.group_name)))
+            flash( _(u"User %s is already in group %s" %(user.user_name,group.group_name)))
             redirect("./edit?id=%s" % kw['group_id'])
 
 
@@ -467,9 +467,9 @@ class Groups(AdminPage):
             flash(_(u'You are not an owner of group %s' % group))
             redirect('../groups/mine')
 
-        if len(group_owners) == 1:
-            flash(_(u'You are the only owner of group %s. Cannot delete.' % group))
-            redirect('../groups/mine')
+        if int(id) == group_owners.pop() and not group_owners:
+            flash(_(u'You are the only owner of group %s. Cannot remove' % group))
+            redirect('../groups/edit?id=%s' % group_id)
 
         groupUsers = group.users
         for user in groupUsers:
@@ -478,8 +478,11 @@ class Groups(AdminPage):
                 removed = user
                 activity = GroupActivity(identity.current.user, u'WEBUI', u'Removed', u'User', removed.user_name, u"")
                 group.activity.append(activity)
-        flash( _(u"%s Removed" % removed.display_name))
-        raise redirect("./edit?id=%s" % group_id)
+                flash( _(u"%s Removed" % removed.display_name))
+                redirect("../groups/edit?id=%s" % group_id)
+
+        flash( _(u"No user %s in group %s" % (id, removed.display_name)))
+        raise redirect("../groups/edit?id=%s" % group_id)
 
     @identity.require(identity.not_anonymous())
     @expose()
@@ -603,6 +606,10 @@ class Groups(AdminPage):
                  New group name (maximum 16 characters)
             'display_name'
                  New group display name
+            'add_member'
+                 Add user (username) to the group
+            'remove_member'
+                 Remove an existing user (username) from the group
 
         Returns a message whether the group was successfully modified or
         raises an exception on failure.
@@ -611,8 +618,12 @@ class Groups(AdminPage):
         # if not called from the bkr group-modify
         if not kw:
             raise BX(_('Please specify an attribute to modify.'))
+
         try:
             group = Group.by_name(group_name)
+        except NoResultFound:
+            raise BX(_(u'Group does not exist: %s.' % group_name))
+        else:
             if not group.can_edit(identity.current.user):
                 raise BX(_('You are not an owner of group %s' % group_name))
 
@@ -632,11 +643,51 @@ class Groups(AdminPage):
                                     old_value=group_name, new_value=kw['group_name'])
                 group.activity.append(activity)
 
+            if kw.get('add_member', None):
+                username = kw.get('add_member')
+
+                user = User.by_user_name(username)
+                if user is None:
+                    raise BX(_(u'User does not exist %s' % username))
+
+                if user not in group.users:
+                    group.users.append(user)
+                    activity = GroupActivity(identity.current.user, u'XMLRPC',
+                                             action=u'Added',
+                                             field_name=u'User',
+                                             old_value=u"", new_value=username)
+                    group.activity.append(activity)
+                else:
+                    raise BX(_(u'User %s is already in group %s' % (username, group.group_name)))
+
+            if kw.get('remove_member', None):
+                username = kw.get('remove_member')
+                user = User.by_user_name(username)
+
+                if user is None:
+                    raise BX(_(u'User does not exist %s' % username))
+
+                if user not in group.users:
+                    raise BX(_(u'No user %s in group %s' % (username, group.group_name)))
+                else:
+                    group_owners = group.owners()
+                    if user.user_id == group_owners.pop() and not group_owners:
+                        raise BX(_(u'You are the only owner of group %s. Cannot remove' % group))
+
+                    groupUsers = group.users
+                    for usr in groupUsers:
+                        if usr.user_id == user.user_id:
+                            group.users.remove(usr)
+                            removed = user
+                            activity = GroupActivity(identity.current.user, u'XMLRPC',
+                                                     action=u'Removed',
+                                                     field_name=u'User',
+                                                     old_value=removed.user_name,
+                                                     new_value=u"")
+                            group.activity.append(activity)
+                            break
+
             #dummy success return value
             return ['1']
-
-        except NoResultFound:
-            raise BX(_(u'Group does not exist: %s.' % group_name))
-
 # for sphinx
 groups = Groups

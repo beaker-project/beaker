@@ -153,7 +153,7 @@ class TestGroupsWD(WebDriverTestCase):
         flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
         self.assert_('You are not an owner' in flash_text)
 
-    def test_add_users_to_owning_group(self):
+    def test_add_user_to_owning_group(self):
         with session.begin():
             user = data_setup.create_user(password='password')
 
@@ -169,6 +169,59 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="GroupUser_user_text"]').send_keys(user.user_name)
         b.find_element_by_xpath('//input[@value="Add"]').click()
         b.find_element_by_xpath('//td[text()="%s"]' % user.user_name)
+
+    def test_remove_user_from_owning_group(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+
+        group_name = data_setup.unique_name('Group%s')
+        display_name = data_setup.unique_name('Group Display Name %s')
+
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'groups/mine')
+        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_xpath('//input[@id="Group_display_name"]').send_keys(display_name)
+        b.find_element_by_xpath('//input[@id="Group_group_name"]').send_keys(group_name)
+        b.find_element_by_xpath('//input[@value="Save"]').click()
+        b.find_element_by_xpath('//h2[text()="Groups"]')
+        b.find_element_by_link_text(group_name).click()
+
+        # add an user
+        b.find_element_by_xpath('//input[@id="GroupUser_user_text"]').send_keys(user.user_name)
+        b.find_element_by_xpath('//input[@value="Add"]').click()
+
+        group_id = Group.by_name(group_name).group_id
+        username = user.user_name
+        user_id = user.user_id
+        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]' % username).click()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                          '%s Removed' % username)
+
+        # remove self when I am the only owner of the group
+        b.find_element_by_xpath('//a[@href="removeUser?group_id=%d&id=%d"]'
+                                % (group_id, self.user.user_id)).click()
+        self.assert_('Cannot remove' in b.find_element_by_class_name('flash').text)
+
+    def test_add_user_to_admin_group(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            user.groups.append(Group.by_name('admin'))
+            group = data_setup.create_group(group_name='aaaaaaaaaaaabcc')
+
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+
+        # admin should be in groups/mine
+        b.get(get_server_base() + 'groups/mine')
+        b.find_element_by_link_text('admin')
+
+        # check if the user can edit any other group, when the user:
+        # is not an owner
+        # is not a member
+        b.get(get_server_base() + 'groups/edit?id=%d' % group.group_id)
+        b.find_element_by_xpath('//input[@id="Group_display_name"]')
+        b.find_element_by_xpath('//input[@id="Group_group_name"]')
 
     def test_create_ldap_group(self):
         login(self.browser)
