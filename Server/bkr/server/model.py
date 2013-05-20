@@ -724,15 +724,6 @@ visit_identity_table = Table('visit_identity', metadata,
     mysql_engine='InnoDB',
 )
 
-groups_table = Table('tg_group', metadata,
-    Column('group_id', Integer, primary_key=True),
-    Column('group_name', Unicode(16), unique=True, nullable=False),
-    Column('display_name', Unicode(255)),
-    Column('created', DateTime, default=datetime.utcnow),
-    Column('ldap', Boolean, default=False, nullable=False, index=True),
-    mysql_engine='InnoDB',
-)
-
 users_table = Table('tg_user', metadata,
     Column('user_id', Integer, primary_key=True),
     Column('user_name', Unicode(255), unique=True),
@@ -1455,11 +1446,13 @@ class MappedObject(object):
     def lazy_create(cls, **kwargs):
         """
         Returns the instance identified by the given uniquely-identifying 
-        attributes. If it doesn't exist yet, it is inserted first.
+        attributes. If it doesn't exist yet, it is inserted first. If it is
+        not in the session, it is added.
         """
         session.begin_nested()
         try:
             item = cls(**kwargs)
+            session.add(item)
             session.commit()
         except IntegrityError:
             session.rollback()
@@ -1588,7 +1581,7 @@ class User(MappedObject):
         ldap_users = []
         ldapenabled = get('identity.ldap.enabled', False)
         if ldapenabled and find_ldap_users is True:
-            filter = ldap.filter.filter_format('(uid=%s*)', [user_name])
+            filter = ldap.filter.filter_format('(uid=%s*)', [username])
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,
@@ -1690,6 +1683,7 @@ class User(MappedObject):
 class UserGroup(MappedObject):
     pass
 
+
 class Permission(MappedObject):
     """
     A relationship that determines what each Group can do
@@ -1757,10 +1751,19 @@ class SystemObject(MappedObject):
         return cls.mapper.c.keys()
     get_fields = classmethod(get_fields)
 
-class Group(MappedObject):
-    """
-    An ultra-simple group definition.
-    """
+class Group(DeclBase, MappedObject):
+
+    __tablename__ = 'tg_group'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+
+    group_id = Column(Integer, primary_key=True)
+    group_name = Column(Unicode(16), unique=True, nullable=False)
+    display_name = Column(Unicode(255))
+    _root_password = Column('root_password', String(255), nullable=True,
+        default=None)
+    ldap = Column(Boolean, default=False, nullable=False, index=True)
+    created = Column(DateTime, default=datetime.utcnow)
+
     @classmethod
     def by_name(cls, name):
         return cls.query.filter_by(group_name=name).one()
@@ -1794,6 +1797,37 @@ class Group(MappedObject):
     def by_user(cls,user):
         groups = Group.query.filter(Group.users.contains(user))
         return groups
+
+    @property
+    def root_password(self):
+        """
+        returns password
+        """
+        return self._root_password
+
+    @root_password.setter
+    def root_password(self, password):
+        """Set group job password
+
+           Set the root password to be used by group jobs.
+
+        """
+        if password:
+            if len(password.split('$')) != 4:
+                salt = ''.join([random.choice(string.digits + string.ascii_letters)
+                                for i in range(8)])
+                try:
+                    # If you change VeryFascistCheck, please also modify
+                    # bkr.server.validators.StrongPassword
+                    self._root_password = crypt.crypt(cracklib.VeryFascistCheck(password), "$1$%s$" % salt)
+                except ValueError, msg:
+                    msg = re.sub(r'^it is', 'the password is', str(msg))
+                    raise ValueError(msg)
+            else:
+                self._root_password = password
+        else:
+            self._root_password = None
+
 
     def owners(self):
         owners = UserGroup.query.filter_by(group_id=self.group_id,
@@ -7329,8 +7363,6 @@ mapper(User, users_table,
       '_root_password' : users_table.c.root_password,
       'lab_controller' : relation(LabController, uselist=False),
 })
-
-mapper(Group, groups_table)
 
 mapper(UserGroup, user_group_table, properties={
         'group': relation(Group, backref=backref('user_group_assocs', cascade='all, delete-orphan')),

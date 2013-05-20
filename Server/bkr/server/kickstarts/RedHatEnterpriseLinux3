@@ -36,8 +36,7 @@ lang {{ lang|default('en_US.UTF-8') }}
 langsupport --default {{ lang|default('en_US.UTF-8') }} {{ lang|default('en_US.UTF-8') }}
 
 reboot
-#Root password
-rootpw --iscrypted {{ password|default(user.root_password, True) }}
+{% snippet 'password' %}
 {% if skipx is defined %}
 # Do not configure the X Window System
 skipx

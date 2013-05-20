@@ -137,7 +137,7 @@
    <td class='title'><b>Group</b></td>
    <td class="value">
     <a class="list"
-     href="${tg.url('/groups/group_members/?id=%d' % job.group.group_id)}">
+     href="${tg.url('/groups/group_members/?group_id=%d' % job.group.group_id)}">
      ${job.group}
     </a>
    </td>

@@ -119,11 +119,13 @@ def create_admin(**kwargs):
 def add_system_lab_controller(system,lc): 
     system.lab_controller = lc
 
-def create_group(permissions=None, group_name=None, owner=None, ldap=False):
+def create_group(permissions=None, group_name=None, owner=None, ldap=False,
+    root_password=None):
     # tg_group.group_name column is VARCHAR(16)
     if group_name is None:
         group_name = unique_name(u'group%s')
     group = Group.lazy_create(group_name=group_name)
+    group.root_password = root_password
     group.display_name = u'Group %s' % group_name
     group.ldap = ldap
     if ldap:

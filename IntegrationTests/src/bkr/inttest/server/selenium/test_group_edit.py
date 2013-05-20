@@ -1,9 +1,11 @@
+import crypt
 from turbogears.database import session
-from bkr.server.model import Group, User, Activity
+from bkr.server.model import Group, User, Activity, UserGroup
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.server.webdriver_utils import login
 
+# XXX this should be assimilated by TestGroupsWD when it is converted.
 class EditGroup(SeleniumTestCase):
 
     def setUp(self):
@@ -19,7 +21,7 @@ class EditGroup(SeleniumTestCase):
     def test_add_bad_perm(self):
         sel = self.selenium
         self.login()
-        sel.open('groups/edit?id=%d' % self.group.group_id)
+        sel.open('groups/edit?group_id=%d' % self.group.group_id)
         sel.type("Permissions_permissions_text", "dummy_perm")
         sel.submit("//form[@id='Permissions']")
         #Test that it has not been dynamically added
@@ -30,7 +32,7 @@ class EditGroup(SeleniumTestCase):
         self.assert_("dumy_perm" not in sel.get_text("//table[@id='group_permission_grid']"))
 
         #Triple check it was not persisted to the DB
-        sel.open('groups/edit?id=%d' % self.group.group_id)
+        sel.open('groups/edit?group_id=%d' % self.group.group_id)
         sel.wait_for_page_to_load(30000)
         self.assert_("dumy_perm" not in sel.get_text("//table[@id='group_permission_grid']"))
 
@@ -38,7 +40,7 @@ class EditGroup(SeleniumTestCase):
         sel = self.selenium
         self.login()
 
-        sel.open('groups/edit?id=%d' % self.group.group_id)
+        sel.open('groups/edit?group_id=%d' % self.group.group_id)
         sel.wait_for_page_to_load(30000)
         sel.type("Permissions_permissions_text", "%s" % self.perm1.permission_name)
         sel.submit("//form[@id='Permissions']")
@@ -46,7 +48,7 @@ class EditGroup(SeleniumTestCase):
         self.wait_for_condition(lambda: self.perm1.permission_name in sel.get_text("//table[@id='group_permission_grid']"))
 
         #Test that the permission was persisted by reopening the current page
-        sel.open('groups/edit?id=%d' % self.group.group_id)
+        sel.open('groups/edit?group_id=%d' % self.group.group_id)
         sel.wait_for_page_to_load(30000)
         self.assert_(self.perm1.permission_name in sel.get_text("//table[@id='group_permission_grid']"))
 
@@ -59,7 +61,7 @@ class EditGroup(SeleniumTestCase):
         self.wait_for_condition(lambda: self.perm1.permission_name not in sel.get_text("//table[@id='group_permission_grid']"))
 
         #Reload to make sure it has been removed from the DB
-        sel.open('groups/edit?id=%d' % self.group.group_id)
+        sel.open('groups/edit?group_id=%d' % self.group.group_id)
         sel.wait_for_page_to_load(30000)
         self.assert_(self.perm1.permission_name not in sel.get_text("//table[@id='group_permission_grid']"))
 
@@ -72,14 +74,14 @@ class EditGroup(SeleniumTestCase):
         self.login()
         sel.open('')
 
-        sel.open('groups/edit?id=%d' % self.group.group_id)
+        sel.open('groups/edit?group_id=%d' % self.group.group_id)
         sel.wait_for_page_to_load(30000)
         sel.type("GroupSystem_system_text", system.fqdn)
         sel.submit("//form[@id='GroupSystem']")
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_text('css=.flash'), "OK")
 
-        sel.open('groups/edit?id=%d' % self.group.group_id)
+        sel.open('groups/edit?group_id=%d' % self.group.group_id)
         sel.wait_for_page_to_load(30000)
         sel.type("GroupSystem_system_text", system.fqdn)
         sel.submit("//form[@id='GroupSystem']")
@@ -97,23 +99,85 @@ class TestGroupsWD(WebDriverTestCase):
             self.user.groups.append(self.group)
         self.browser = self.get_browser()
 
+        self.clear_password = 'gyfrinachol'
+        self.hashed_password = '$1$NaCl$O34mAzBXtER6obhoIodu8.'
+        self.simple_password = 's3cr3t'
+
     def teardown(self):
         self.browser.quit()
+
+    def _make_and_go_to_owner_page(self, user, group, set_owner=True):
+        if set_owner:
+            with session.begin():
+                user_group = session.query(UserGroup). \
+                    filter_by(user_id=user.user_id, group_id=group.group_id). \
+                    one()
+                user_group.is_owner = True
+        self.browser.get(get_server_base() + 'groups/mine')
+        self.browser.find_element_by_link_text(group.group_name).click()
+
+    def test_dictionary_password_rejected(self):
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        self._make_and_go_to_owner_page(self.user, self.group)
+        e = b.find_element_by_xpath('//input[@id="Group_root_password"]')
+        e.clear()
+        e.send_keys(self.simple_password)
+        b.find_element_by_xpath('//input[@value="Save"]').click()
+        error_text = b.find_element_by_xpath('//input[@name="root_password"]/'
+            'following-sibling::span[@class="fielderror"]').text
+        self.assertEquals(u'Invalid password: it is based on a dictionary word',
+            error_text, error_text)
+
+    def test_set_hashed_password(self):
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        self._make_and_go_to_owner_page(self.user, self.group)
+        e = b.find_element_by_xpath('//input[@id="Group_root_password"]')
+        e.clear()
+        e.send_keys(self.hashed_password)
+        b.find_element_by_xpath('//input[@value="Save"]').click()
+        self.assertEquals(b.find_element_by_xpath('//div[@class="flash"]').text,
+            u'OK')
+        self._make_and_go_to_owner_page(self.user, self.group, set_owner=False)
+        new_hash = b.find_element_by_xpath('//input[@id="Group_root_password"]').get_attribute('value')
+        self.failUnless(crypt.crypt(self.clear_password, new_hash) == self.hashed_password)
+
+    def test_set_plaintext_password(self):
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        self._make_and_go_to_owner_page(self.user, self.group)
+        e = b.find_element_by_xpath('//input[@id="Group_root_password"]')
+        e.clear()
+        e.send_keys(self.clear_password)
+        b.find_element_by_xpath('//input[@value="Save"]').click()
+        self.assertEquals(b.find_element_by_xpath('//div[@class="flash"]').text,
+            u'OK')
+        b.get(get_server_base() + 'groups/mine')
+        b.find_element_by_link_text(self.group.group_name).click()
+        new_hash = b.find_element_by_xpath('//input[@id="Group_root_password"]').get_attribute('value')
+        self.failUnless(new_hash)
+        self.failUnless(crypt.crypt(self.clear_password, new_hash) == new_hash)
 
     def test_create_new_group(self):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
         b.get(get_server_base() + 'groups/mine')
         b.find_element_by_link_text('Add ( + )').click()
-        b.find_element_by_xpath('//input[@id="Group_display_name"]').send_keys('Group FBZ')
-        b.find_element_by_xpath('//input[@id="Group_group_name"]').send_keys('FBZ')
+        b.find_element_by_xpath('//input[@id="Group_display_name"]'). \
+            send_keys('Group FBZ')
+        b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
+            send_keys('FBZ')
+        b.find_element_by_xpath('//input[@id="Group_root_password"]'). \
+            send_keys('blapppy7')
         b.find_element_by_xpath('//input[@value="Save"]').click()
-        b.find_element_by_xpath('//h2[text()="Groups"]')
+        b.find_element_by_xpath('//title[text()="My Groups"]')
+        b.find_element_by_link_text('F').click()
+        b.find_element_by_link_text('FBZ').click()
         # this is required to check whether the creator was automatically
         # added as a group owner
-        b.find_element_by_link_text('FBZ').click()
-        b.find_element_by_name('group_name')
-        # check activity was recorded
+        b.find_element_by_xpath('//title[normalize-space(text()) = '
+            '"Group Edit"]')
         with session.begin():
             self.assertEquals(Activity.query.filter_by(service=u'WEBUI',
                     field_name=u'Group', action=u'Added',
@@ -128,6 +192,29 @@ class TestGroupsWD(WebDriverTestCase):
             self.assertEquals(group.activity[-2].field_name, u'User')
             self.assertEquals(group.activity[-2].new_value, self.user.user_name)
             self.assertEquals(group.activity[-2].service, u'WEBUI')
+            self.failUnless(crypt.crypt('blapppy7', group.root_password) ==
+                group.root_password, group.root_password)
+
+    def test_create_new_group_sans_password(self):
+        b = self.browser
+        group_name = data_setup.unique_name('group%s')
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'groups/mine')
+        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_xpath('//input[@id="Group_display_name"]'). \
+            send_keys(group_name)
+        b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
+            send_keys(group_name)
+        b.find_element_by_xpath('//input[@value="Save"]').click()
+        b.find_element_by_xpath('//title[text()="My Groups"]')
+        b.find_element_by_link_text(group_name[0].upper())
+        b.find_element_by_link_text(group_name).click()
+        # this is required to check whether the creator was automatically
+        # added as a group owner
+        b.find_element_by_xpath('//title[normalize-space(text()) = '
+            '"Group Edit"]')
+        b.find_element_by_xpath('//input[@name="root_password" and '
+            'not(following-sibling::span[@class="fielderror"])]')
 
     def test_can_edit_owned_existing_groups(self):
         with session.begin():
@@ -138,8 +225,16 @@ class TestGroupsWD(WebDriverTestCase):
         b.get(get_server_base() + 'groups/')
         # not doing a look up using XPATH since, the group may not be on
         # the first page when run as part of the suite.
-        b.get(get_server_base() + 'groups/edit?id=%d' % self.group.group_id)
-        self.assertEquals(b.title,'Group Edit')
+        b.get(get_server_base() + 'groups/edit?group_id=%d' % self.group.group_id)
+        b.find_element_by_xpath('//input[@id="Group_root_password"]').clear()
+        b.find_element_by_xpath('//input[@id="Group_root_password"]'). \
+            send_keys('blapppy7')
+        b.find_element_by_xpath('//input[@value="Save"]').click()
+        self.assertEquals(b.find_element_by_xpath('//div[@class="flash"]').text,
+            u'OK')
+        session.expire(self.group)
+        self.failUnless(crypt.crypt('blapppy7', self.group.root_password) ==
+            self.group.root_password)
 
     def test_cannot_edit_unowned_group(self):
         with session.begin():
@@ -149,7 +244,7 @@ class TestGroupsWD(WebDriverTestCase):
 
         login(b, user=self.user.user_name, password='password')
         # direct URL check
-        b.get(get_server_base() + 'groups/edit?id=%d' % self.group.group_id)
+        b.get(get_server_base() + 'groups/edit?group_id=%d' % self.group.group_id)
         flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
         self.assert_('You are not an owner' in flash_text)
 
@@ -161,10 +256,13 @@ class TestGroupsWD(WebDriverTestCase):
         login(b, user=self.user.user_name, password='password')
         b.get(get_server_base() + 'groups/mine')
         b.find_element_by_link_text('Add ( + )').click()
-        b.find_element_by_xpath('//input[@id="Group_display_name"]').send_keys('Group FBZ 1')
-        b.find_element_by_xpath('//input[@id="Group_group_name"]').send_keys('FBZ-1')
+        b.find_element_by_xpath('//input[@id="Group_display_name"]'). \
+            send_keys('Group FBZ 1')
+        b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
+            send_keys('FBZ-1')
         b.find_element_by_xpath('//input[@value="Save"]').click()
-        b.find_element_by_xpath('//h2[text()="Groups"]')
+        b.find_element_by_xpath('//title[text()="My Groups"]')
+        b.find_element_by_link_text('F').click()
         b.find_element_by_link_text('FBZ-1').click()
         b.find_element_by_xpath('//input[@id="GroupUser_user_text"]').send_keys(user.user_name)
         b.find_element_by_xpath('//input[@value="Add"]').click()
@@ -184,7 +282,8 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="Group_display_name"]').send_keys(display_name)
         b.find_element_by_xpath('//input[@id="Group_group_name"]').send_keys(group_name)
         b.find_element_by_xpath('//input[@value="Save"]').click()
-        b.find_element_by_xpath('//h2[text()="Groups"]')
+        b.find_element_by_xpath('//title[text()="My Groups"]')
+        b.find_element_by_link_text(group_name[0].upper()).click()
         b.find_element_by_link_text(group_name).click()
 
         # add an user
@@ -219,9 +318,11 @@ class TestGroupsWD(WebDriverTestCase):
         # check if the user can edit any other group, when the user:
         # is not an owner
         # is not a member
-        b.get(get_server_base() + 'groups/edit?id=%d' % group.group_id)
+        b.get(get_server_base() + 'groups/edit?group_id=%d' % group.group_id)
         b.find_element_by_xpath('//input[@id="Group_display_name"]')
         b.find_element_by_xpath('//input[@id="Group_group_name"]')
+        b.find_element_by_xpath('//title[normalize-space(text())="Group Edit"]')
+        b.find_element_by_xpath('//input[not(@id="Group_user_text")]')
 
     def test_create_ldap_group(self):
         login(self.browser)
@@ -244,7 +345,7 @@ class TestGroupsWD(WebDriverTestCase):
             group.users.append(data_setup.create_user())
         login(self.browser)
         b = self.browser
-        b.get(get_server_base() + 'groups/edit?id=%s' % group.group_id)
+        b.get(get_server_base() + 'groups/edit?group_id=%s' % group.group_id)
         self.assertEquals(b.find_element_by_name('group_name').get_attribute('value'),
                 group.group_name)
         # form to add new users should be absent
@@ -277,7 +378,7 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@value="Save"]').click()
 
         # check
-        b.get(get_server_base() + "groups/edit?id=%d" % group.group_id)
+        b.get(get_server_base() + "groups/edit?group_id=%d" % group.group_id)
         self.assertEquals(b.find_element_by_xpath('//input[@id="Group_display_name"]').\
                               get_attribute('value'), new_display_name)
         self.assertEquals(b.find_element_by_xpath('//input[@id="Group_group_name"]').\

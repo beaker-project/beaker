@@ -1,5 +1,6 @@
 import unittest
 from turbogears.database import session
+#from sqlalchemy.orm import session
 from bkr.server.model import Activity, Group, User
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, create_client_config
@@ -32,6 +33,11 @@ class GroupCreateTest(unittest.TestCase):
         out = run_client(['bkr', 'group-create',
                           group_name])
         self.assert_('Group created' in out, out)
+
+        with session.begin():
+            group = Group.by_name(group_name)
+            self.assertEqual(group.group_name, group_name)
+            self.assertEqual(group.display_name, group_name)
 
         group_name = data_setup.unique_name('group%s')
 
@@ -73,19 +79,45 @@ class GroupCreateTest(unittest.TestCase):
             self.assert_('Only admins can create LDAP groups' in
                          e.stderr_output)
 
+    def test_group_passwords(self):
+        group_name = data_setup.unique_name('group%s')
+
+        try:
+            out = run_client(['bkr', 'group-create',
+                              '--root-password', 'fail',
+                              group_name])
+            self.fail('Expected to fail due to short password')
+        except ClientError, e:
+            self.assertTrue('the password is too short' in e.stderr_output,
+                e.stderr_output)
+
+        try:
+            out = run_client(['bkr', 'group-create',
+                              '--root-password', 'melanoma',
+                              group_name])
+
+            self.fail('Expected to fail due to dictionary words')
+        except ClientError, e:
+            self.assertTrue('the password is based on a dictionary word' in
+                e.stderr_output, e.stderr_output)
+        out = run_client(['bkr', 'group-create',
+                          '--root-password', 'Borrow or rob?',
+                          group_name])
+        self.assertTrue('Group created' in out)
+
     def test_group_duplicate(self):
         group_name = data_setup.unique_name('group%s')
         display_name = 'My Group'
         out = run_client(['bkr', 'group-create',
-                          '--display-name',display_name,
+                          '--display-name', display_name,
                           group_name])
 
         self.assert_('Group created' in out, out)
 
         try:
             out = run_client(['bkr', 'group-create',
-                              '--display-name',display_name,
                               group_name])
+            self.fail('Must fail or die')
         except ClientError,e:
             self.assert_('Group already exists' in e.stderr_output,
                          e.stderr_output)

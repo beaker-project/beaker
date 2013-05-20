@@ -8,6 +8,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
+from bkr.server.validators import StrongPassword
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
@@ -24,9 +25,16 @@ import cherrypy
 from model import *
 import string
 
+def make_edit_link(name, id):
+    # make an edit link
+    return make_link(url  = 'edit?group_id=%s' % id,
+                     text = name)
+
+
 class GroupFormSchema(validators.Schema):
     display_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
     group_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
+    root_password = StrongPassword()
     ldap = validators.StringBool(if_empty=False)
 
 class GroupForm(widgets.TableForm):
@@ -35,6 +43,8 @@ class GroupForm(widgets.TableForm):
         widgets.HiddenField(name='group_id'),
         widgets.TextField(name='group_name', label=_(u'Group Name')),
         widgets.TextField(name='display_name', label=_(u'Display Name')),
+        widgets.PasswordField(name='root_password', label=_(u'Root Password'),
+            validator=StrongPassword()),
         widgets.CheckBox(name='ldap', label=_(u'LDAP'),
                 help_text=_(u'Populate group membership from LDAP?')),
     ]
@@ -51,7 +61,6 @@ class GroupForm(widgets.TableForm):
 class Groups(AdminPage):
     # For XMLRPC methods in this class.
     exposed = True
-
     group_id     = widgets.HiddenField(name='group_id')
     auto_users    = AutoCompleteField(name='user',
                                      search_controller = url("/users/by_name"),
@@ -155,7 +164,7 @@ class Groups(AdminPage):
         return dict(
             form = self.group_form,
             title = 'New Group',
-            action = './save',
+            action = './save_new',
             options = {},
             value = kw,
         )
@@ -189,35 +198,32 @@ class Groups(AdminPage):
         return Root()._systems(systems,title, group_id = group_id,**kw)
 
     @expose(template='bkr.server.templates.group_users')
-    def group_members(self,id, **kw):
+    def group_members(self, group_id, **kw):
         try:
-            group = Group.by_id(id)
+            group = Group.by_id(group_id)
         except NoResultFound:
-            log.exception('Group id %s is not a valid group id' % id)
+            log.exception('Group id %s is not a valid group id' % group_id)
             flash(_(u'Need a valid group to search on'))
             redirect('../groups/')
-
         usergrid = self.show_members(group)
         return dict(value = group,grid = usergrid)
 
     @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.group_form')
-    def edit(self, id, **kw):
+    def edit(self, group_id, **kw):
         try:
-            group = Group.by_id(id)
+            group = Group.by_id(group_id)
         except NoResultFound:
-            log.exception('Group id %s is not a valid group id' % id)
+            log.exception('Group id %s is not a valid group id' % group_id)
             flash(_(u'Need a valid group to search on'))
             redirect('../groups/mine')
-
         if not group.can_edit(identity.current.user):
             flash(_(u'You are not an owner of group %s' % group))
             redirect('../groups/mine')
-
         usergrid = self.show_members(group)
         systemgrid = widgets.DataGrid(fields=[
                                   ('System Members', lambda x: x.fqdn),
-                                  (' ', lambda x: make_link('removeSystem?group_id=%s&id=%s' % (id, x.id), u'Remove (-)')),
+                                  (' ', lambda x: make_link('removeSystem?group_id=%s&id=%s' % (group_id, x.id), u'Remove (-)')),
                               ])
         group_permissions_grid = self.show_permissions()
         group_permissions = GroupPermissions()
@@ -238,51 +244,72 @@ class Groups(AdminPage):
             group_permissions_grid = group_permissions_grid,
         )
 
+    def _new_group(self, group_id, display_name, group_name, ldap,
+        root_password):
+        if ldap and not identity.current.user.is_admin():
+            flash(_(u'Only admins can create LDAP groups'))
+            redirect('.')
+        try:
+            Group.by_name(group_name)
+        except NoResultFound:
+            pass
+        else:
+            flash( _(u"Group %s already exists." % group_name) )
+            redirect(".")
+        group = Group()
+        session.add(group)
+        activity = Activity(identity.current.user, u'WEBUI', u'Added', u'Group', u"", display_name)
+        group.display_name = display_name
+        group.group_name = group_name
+        group.ldap = ldap
+        if group.ldap:
+            group.refresh_ldap_members()
+        group.root_password = root_password
+        if not ldap: # LDAP groups don't have owners
+            user = identity.current.user
+            group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
+            group.activity.append(GroupActivity(user, service=u'WEBUI',
+                action=u'Added', field_name=u'User',
+                old_value=None, new_value=user.user_name))
+            group.activity.append(GroupActivity(user, service=u'WEBUI',
+                action=u'Added', field_name=u'Owner',
+                old_value=None, new_value=user.user_name))
+        return group
+
+    @identity.require(identity.not_anonymous())
+    @expose()
+    @validate(form=group_form)
+    @error_handler(new)
+    def save_new(self, group_id=None, display_name=None, group_name=None,
+        ldap=False, root_password=None, **kwargs):
+        # save_new() is needed because 'edit' is not a viable
+        # error handler for new groups.
+        self._new_group(group_id, display_name, group_name, ldap,
+            root_password)
+        flash( _(u"OK") )
+        redirect("mine")
+
     @identity.require(identity.not_anonymous())
     @expose()
     @validate(form=group_form)
     @error_handler(edit)
-    def save(self, group_id=None, display_name=None, group_name=None, ldap=False, **kwargs):
+    def save(self, group_id=None, display_name=None, group_name=None,
+        ldap=False, root_password=None, **kwargs):
         if ldap and not identity.current.user.is_admin():
             flash(_(u'Only admins can create LDAP groups'))
-            redirect('.')
+            redirect('mine')
+        group = Group.by_id(group_id)
 
-        if group_id is not None:
-            group = Group.by_id(group_id)
+        if not group.can_edit(identity.current.user):
+            flash(_(u'You are not an owner of group %s' % group))
+            redirect('../groups/mine')
 
-            if not group.can_edit(identity.current.user):
-                flash(_(u'You are not an owner of group %s' % group))
-                redirect('../groups/mine')
-
-            group.display_name = display_name
-            group.group_name = group_name
-            group.ldap = ldap
-        else:
-            try:
-                Group.by_name(group_name)
-            except NoResultFound:
-                pass
-            else:
-                flash( _(u"Group %s already exists." % group_name) )
-                redirect(".")
-            group = Group()
-            activity = Activity(identity.current.user, u'WEBUI', u'Added', u'Group', u"", display_name)
-            group.display_name = display_name
-            group.group_name = group_name
-            group.ldap = ldap
-            if not ldap: # LDAP groups don't have owners
-                user = identity.current.user
-                group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
-                group.activity.append(GroupActivity(user, service=u'WEBUI',
-                        action=u'Added', field_name=u'User',
-                        old_value=None, new_value=user.user_name))
-                group.activity.append(GroupActivity(user, service=u'WEBUI',
-                        action=u'Added', field_name=u'Owner',
-                        old_value=None, new_value=user.user_name))
-        if group.ldap:
-            group.refresh_ldap_members()
+        group.display_name = display_name
+        group.group_name = group_name
+        group.ldap = ldap
+        group.root_password = root_password
         flash( _(u"OK") )
-        redirect(".")
+        redirect("mine")
 
     @identity.require(identity.not_anonymous())
     @expose()
@@ -292,7 +319,7 @@ class Groups(AdminPage):
         group = Group.by_id(kw['group_id'])
         if group in system.groups:
             flash( _(u"System '%s' is already in group '%s'" % (system.fqdn, group.group_name)))
-            redirect("./edit?id=%s" % kw['group_id'])
+            redirect("./edit?group_id=%s" % kw['group_id'])
         group.systems.append(system)
 
         if not group.can_edit(identity.current.user):
@@ -304,7 +331,7 @@ class Groups(AdminPage):
         group.activity.append(activity)
         system.activity.append(sactivity)
         flash( _(u"OK") )
-        redirect("./edit?id=%s" % kw['group_id'])
+        redirect("./edit?group_id=%s" % kw.get('group_id'))
 
     @identity.require(identity.in_group("admin"))
     @expose(format='json')
@@ -351,7 +378,7 @@ class Groups(AdminPage):
         user = User.by_user_name(kw['user']['text'])
         if user is None:
             flash(_(u"Invalid user %s" % kw['user']['text']))
-            redirect("./edit?id=%s" % kw['group_id'])
+            redirect("./edit?group_id=%s" % kw['group_id'])
         group = Group.by_id(kw['group_id'])
 
         if not group.can_modify_membership(identity.current.user):
@@ -363,11 +390,10 @@ class Groups(AdminPage):
             activity = GroupActivity(identity.current.user, u'WEBUI', u'Added', u'User', u"", user.user_name)
             group.activity.append(activity)
             flash( _(u"OK") )
-            redirect("./edit?id=%s" % kw['group_id'])
+            redirect("./edit?group_id=%s" % kw['group_id'])
         else:
-            flash( _(u"User %s is already in group %s" %(user.user_name,group.group_name)))
-            redirect("./edit?id=%s" % kw['group_id'])
-
+            flash( _(u"User %s is already in Group %s" %(user.user_name, group.group_name)))
+            redirect("./edit?group_id=%s" % kw['group_id'])
 
     @expose(template="bkr.server.templates.grid_add")
     @paginate('list', default_order='group_name', limit=20)
@@ -378,14 +404,14 @@ class Groups(AdminPage):
         return template_data
 
     @expose(template="bkr.server.templates.admin_grid")
-    @identity.require(identity.in_group('admin'))
     @paginate('list', default_order='group_name', limit=20)
+    @identity.require(identity.in_group('admin'))
     def admin(self, *args, **kw):
-
+        # XXX Look at whether this can be removed and instead use mine()
         groups = self.process_search(*args, **kw)
         template_data = self.groups(groups, identity.current.user, *args, **kw)
         template_data['grid_fields'].append((' ',
-            lambda x: self.delete_link.display(dict(id=x.group_id),
+            lambda x: self.delete_link.display(dict(group_id=x.group_id),
                                                action=url('remove'),
                                                action_text='Remove (-)')))
         groups_grid = myPaginateDataGrid(fields=template_data['grid_fields'])
@@ -434,9 +460,9 @@ class Groups(AdminPage):
                 if x.can_edit(identity.current.user):
                     return make_edit_link(x.group_name,x.group_id)
                 else:
-                    return make_link('group_members?id=%s' % x.group_id,x.group_name)
+                    return make_link('group_members?group_id=%s' % x.group_id, x.group_name)
             except AttributeError:
-                return make_link('group_members?id=%s' % x.group_id,x.group_name)
+                return make_link('group_members?group_id=%s' % x.group_id, x.group_name)
 
         def get_sys(x):
             if len(x.systems):
@@ -469,7 +495,7 @@ class Groups(AdminPage):
 
         if int(id) == group_owners.pop() and not group_owners:
             flash(_(u'You are the only owner of group %s. Cannot remove' % group))
-            redirect('../groups/edit?id=%s' % group_id)
+            redirect('../groups/edit?group_id=%s' % group_id)
 
         groupUsers = group.users
         for user in groupUsers:
@@ -479,10 +505,9 @@ class Groups(AdminPage):
                 activity = GroupActivity(identity.current.user, u'WEBUI', u'Removed', u'User', removed.user_name, u"")
                 group.activity.append(activity)
                 flash( _(u"%s Removed" % removed.display_name))
-                redirect("../groups/edit?id=%s" % group_id)
-
+                redirect("../groups/edit?group_id=%s" % group_id)
         flash( _(u"No user %s in group %s" % (id, removed.display_name)))
-        raise redirect("../groups/edit?id=%s" % group_id)
+        raise redirect("../groups/edit?group_id=%s" % group_id)
 
     @identity.require(identity.not_anonymous())
     @expose()
@@ -504,12 +529,12 @@ class Groups(AdminPage):
                 group.activity.append(activity)
                 system.activity.append(sactivity)
         flash( _(u"%s Removed" % removed.fqdn))
-        raise redirect("./edit?id=%s" % group_id)
+        raise redirect("./edit?group_id=%s" % group_id)
 
     @identity.require(identity.not_anonymous())
     @expose()
     def remove(self, **kw):
-        group = Group.by_id(kw['id'])
+        group = Group.by_id(kw['group_id'])
 
         if not group.can_edit(identity.current.user):
             flash(_(u'You are not an owner of group %s' % group))
@@ -568,9 +593,10 @@ class Groups(AdminPage):
         raises an exception on failure.
 
         """
-        display_name = kw['display_name']
-        group_name = kw['group_name']
-        ldap = kw['ldap']
+        display_name = kw.get('display_name')
+        group_name = kw.get('group_name')
+        ldap = kw.get('ldap')
+        password = kw.get('root_password')
 
         if ldap and not identity.current.user.is_admin():
             raise BX(_(u'Only admins can create LDAP groups'))
@@ -578,10 +604,12 @@ class Groups(AdminPage):
             group = Group.by_name(group_name)
         except NoResultFound:
             group = Group()
+            session.add(group)
             activity = Activity(identity.current.user, u'XMLRPC', u'Added', u'Group', u"", kw['display_name'] )
             group.display_name = display_name
             group.group_name = group_name
             group.ldap = ldap
+            group.root_password = password
             user = identity.current.user
 
             if not ldap:
@@ -655,7 +683,6 @@ class Groups(AdminPage):
 
             if kw.get('add_member', None):
                 username = kw.get('add_member')
-
                 user = User.by_user_name(username)
                 if user is None:
                     raise BX(_(u'User does not exist %s' % username))
@@ -699,6 +726,7 @@ class Groups(AdminPage):
 
             #dummy success return value
             return ['1']
+
     # XML-RPC method for listing a group's members
     @identity.require(identity.not_anonymous())
     @expose(format='json')

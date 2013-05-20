@@ -12,7 +12,7 @@ Synopsis
 Description
 -----------
 
-Create a new group with the specified name and display name.
+Create a new group with the specified name, display name and root password.
 
 Options
 -------
@@ -25,6 +25,10 @@ Options
 
    Display name of the group.
 
+.. option:: --root-password
+
+   Root password for group jobs.
+
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
 
@@ -36,9 +40,10 @@ Non-zero on error, otherwise zero.
 Examples
 --------
 
-Create a group with group name, 'mygroup' and display name, 'My Group'::
+Create a group with the following group name, display name, and root password: 'mygroup',
+'My Group', and 'd3c0yz3d' respectively::
 
-    bkr group-create --display-name="My Group" mygroup
+    bkr group-create --display-name="My Group" --root-password="d3c0yz3d" mygroup
 
 See also
 --------
@@ -66,16 +71,25 @@ class Group_Create(BeakerCommand):
             help="Create an LDAP group",
         )
 
+        self.parser.add_option(
+            "--root-password",
+            help="Root password used for group jobs",
+        )
+
     def run(self, *args, **kwargs):
 
         if len(args) != 1:
             self.parser.error('Exactly one group name must be specified.')
 
         group_name = args[0]
-        display_name = kwargs.get('display_name', group_name)
+        display_name = kwargs.get('display_name')
+        if not display_name:
+            display_name = group_name
         ldap = kwargs.get('ldap', False)
+        password = kwargs.get('root_password', None)
 
         self.set_hub(**kwargs)
         print self.hub.groups.create(dict(group_name=group_name,
+                                          root_password=password,
                                           display_name=display_name,
                                           ldap=ldap))

@@ -1,7 +1,18 @@
+import cracklib
 from turbogears import identity
 from turbogears.validators import FormValidator, Invalid, TgFancyValidator, Email
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.model import System, Recipe, User, LabController
+
+
+class StrongPassword(TgFancyValidator):
+
+    def _to_python(self, value, state):
+        try:
+            cracklib.VeryFascistCheck(value)
+            return value
+        except ValueError, msg:
+            raise Invalid('Invalid password: %s' % str(msg), value, state)
 
 
 class UniqueUserName(FormValidator):

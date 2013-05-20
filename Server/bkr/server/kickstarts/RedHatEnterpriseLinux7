@@ -38,8 +38,7 @@ keyboard {{ keyboard|default('us') }}
 lang {{ lang|default('en_US.UTF-8') }}
 
 reboot
-#Root password
-rootpw --iscrypted {{ password|default(user.root_password, True) }}
+{% snippet 'password' %}
 # SELinux configuration
 selinux {{ selinux|default('--enforcing') }}
 

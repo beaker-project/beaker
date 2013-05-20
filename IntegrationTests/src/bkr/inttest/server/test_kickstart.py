@@ -692,6 +692,36 @@ EOF
                      in recipe.rendered_kickstart.kickstart.splitlines(),
                      recipe.rendered_kickstart.kickstart)
 
+    def test_job_group_password(self):
+        group = data_setup.create_group(group_name='group1', root_password='blappy7')
+        self.user.groups.append(group)
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        session.commit()
+        session.begin()
+
+        recipe = self.provision_recipe('''
+            <job group='group1'>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assert_(
+                'rootpw --iscrypted %s' % group.root_password
+                in recipe.rendered_kickstart.kickstart.splitlines(),
+                recipe.rendered_kickstart.kickstart)
+
 
 
     def test_ignoredisk(self):
@@ -943,13 +973,13 @@ logvol /butter --name=butter --vgname=TestVolume001 --size=25600 --fstype btrfs
         self.user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'neveroddoreven', u'description'))
         user2 = data_setup.create_user()
         user2.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'murderforajarofredrum', u'description'))
-        group = data_setup.create_group(group_name='group1')
+        group = data_setup.create_group(group_name=data_setup.unique_name('group%s'))
         self.user.groups.append(group)
         user2.groups.append(group)
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
         recipe = self.provision_recipe('''
-            <job group="group1">
+            <job group="%s">
                 <whiteboard/>
                 <recipeSet>
                     <recipe>
@@ -964,7 +994,7 @@ logvol /butter --name=butter --vgname=TestVolume001 --size=25600 --fstype btrfs
                     </recipe>
                 </recipeSet>
             </job>
-            ''', system)
+            ''' % group.group_name, system)
 
         self.assert_('''
 mkdir -p /root/.ssh
