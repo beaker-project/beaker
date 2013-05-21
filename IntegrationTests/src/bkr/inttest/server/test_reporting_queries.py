@@ -359,7 +359,8 @@ class ReportingQueryTest(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=193142
     def test_system_age(self):
         system = data_setup.create_system(date_added=
-                datetime.datetime.utcnow() - datetime.timedelta(days=100))
+                datetime.datetime.utcnow() - datetime.timedelta(days=100),
+                lab_controller=data_setup.create_labcontroller())
         for _ in range(5):
             data_setup.create_completed_job(system=system)
         session.flush()

@@ -134,8 +134,8 @@ class TestBrokenSystemDetection(unittest.TestCase):
 
     def setUp(self):
         session.begin()
-        self.system = data_setup.create_system()
-        self.system.status = SystemStatus.automated
+        self.system = data_setup.create_system(status=SystemStatus.automated,
+                lab_controller=data_setup.create_labcontroller())
         data_setup.create_completed_job(system=self.system)
         session.flush()
         time.sleep(1)
@@ -223,7 +223,8 @@ class TestJob(unittest.TestCase):
         data_setup.mark_job_complete(job)
 
     def test_stopping_completed_job_doesnt_unreserve_system(self):
-        system = data_setup.create_system()
+        system = data_setup.create_system(
+                lab_controller=data_setup.create_labcontroller())
         admin  = data_setup.create_admin()
         job = data_setup.create_job(owner=admin)
         data_setup.mark_job_complete(job, system=system)
