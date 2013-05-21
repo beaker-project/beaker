@@ -6407,8 +6407,12 @@ class TaskLibrary(object):
         # delete repodata directory before this will work correctly.
         p = subprocess.Popen(['createrepo', '-q', '--update',
                 '--checksum', 'sha', '.'], cwd=self.rpmspath,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        output, unused_err = p.communicate()
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, err = p.communicate()
+        if output:
+           log.debug("stdout from createrepo: %s", output)
+        if err:
+           log.warn("stderr from createrepo: %s", err)
         retcode = p.poll()
         if retcode:
             raise ValueError('createrepo failed with exit status %d:\n%s'
@@ -6426,32 +6430,35 @@ class TaskLibrary(object):
             if not name.endswith("rpm"):
                 continue
             srcpath = os.path.join(basepath, name)
-            if os.path.isdir(srcname):
+            if os.path.isdir(srcpath):
                 continue
-            yield srcpath
+            yield srcpath, name
 
     def _link_rpms(self, dst):
         """Hardlink the task rpms into dst"""
         makedirs_ignore(dst, 0755)
-        for srcpath in self._all_rpms():
-            dstname = os.path.join(dst, name)
-            unlink_ignore(dstname)
-            os.link(srcname, dstname)
+        for srcpath, name in self._all_rpms():
+            dstpath = os.path.join(dst, name)
+            unlink_ignore(dstpath)
+            os.link(srcpath, dstpath)
 
     def make_snapshot_repo(self, repo_dir):
         """Create a snapshot of the current state of the task library"""
         # This should only run if we are missing repodata in the rpms path
         # since this should normally be updated when new tasks are uploaded
-        if not os.path.isdir(os.path.join(self.rpmspath, 'repodata')):
-            log.info("repodata missing, generating...")
+        src_meta = os.path.join(self.rpmspath, 'repodata')
+        if not os.path.isdir(src_meta):
+            log.info("Task library repodata missing, generating...")
             self.update_repo()
-        if not os.path.isdir(os.path.join(repo_dir, 'repodata')):
+        dst_meta = os.path.join(repo_dir, 'repodata')
+        if os.path.isdir(dst_meta):
+            log.info("Destination repodata already exists, skipping snapshot")
+        else:
             # Copy updated repo to recipe specific repo
+            log.debug("Generating task library snapshot")
             with Flock(self.rpmspath):
                 self._link_rpms(repo_dir)
-                shutil.copytree(os.path.join(self.rpmspath, 'repodata'),
-                                os.path.join(repo_dir, 'repodata')
-                               )
+                shutil.copytree(src_meta, dst_meta)
 
     def update_task(self, rpm_name, write_rpm):
         """Updates the specified task

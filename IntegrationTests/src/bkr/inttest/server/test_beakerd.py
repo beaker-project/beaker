@@ -3,7 +3,7 @@ import shutil
 import bkr
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
-        Provision, TaskPriority, RecipeSet
+        Provision, TaskPriority, RecipeSet, Task
 import sqlalchemy.orm
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
@@ -17,6 +17,10 @@ from bkr.inttest.assertions import assert_datetime_within, \
 from bkr.server.tools import beakerd
 from bkr.server.jobs import Jobs
 
+# We capture the sent mail to avoid error spam in the logs rather than to
+# check anything in particular
+from bkr.inttest.mail_capture import MailCaptureThread
+
 class TestBeakerd(unittest.TestCase):
 
     def setUp(self):
@@ -24,6 +28,13 @@ class TestBeakerd(unittest.TestCase):
             self.lab_controller = data_setup.create_labcontroller()
             data_setup.create_system(lab_controller=self.lab_controller,
                     shared=True)
+        self.task_id, self.rpm_name = self.add_example_task()
+        self.mail_capture = MailCaptureThread()
+        self.mail_capture.start()
+
+    def tearDown(self):
+        self.mail_capture.stop()
+        self.disable_example_task(self.task_id)
 
     @classmethod
     def tearDownClass(cls):
@@ -37,6 +48,24 @@ class TestBeakerd(unittest.TestCase):
         # application (running as apache) re-create it later.
         repodata = os.path.join(config.get('basepath.rpms'), 'repodata')
         shutil.rmtree(repodata, ignore_errors=True)
+
+    # We need something in the task library to ensure per-recipe repos are
+    # being created and destroyed correctly
+    def add_example_task(self):
+        with session.begin():
+            task = data_setup.create_task()
+            rpm_path = Task.get_rpm_path(task.rpm)
+            with open(rpm_path, 'wb'): pass
+            # TODO (ncoghlan): This results in a logged warning from
+            # createrepo, complaining about an invalid RPM file.
+            # It would be better (but trickier) to write a valid RPM file
+            # instead of a blank file
+            return task.id, task.rpm
+
+    def disable_example_task(self, task_id):
+        with session.begin():
+            task = Task.by_id(task_id)
+            task.disable()
 
     def test_schedule_bad_recipes_dont_fail_all(self):
         with session.begin():
@@ -688,17 +717,32 @@ class TestBeakerd(unittest.TestCase):
                     lab_controller=self.lab_controller)
             distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
             job = data_setup.create_job(distro_tree=distro_tree)
-            job.recipesets[0].recipes[0]._host_requires = (u"""
+            recipe = job.recipesets[0].recipes[0]
+            recipe._host_requires = (u"""
                 <hostRequires>
                     <hostname op="=" value="%s" />
                 </hostRequires>
                 """ % system.fqdn)
 
+        # Sanity check the test setup
+        rpm_name = self.rpm_name
+        self.assert_(os.path.exists(Task.get_rpm_path(rpm_name)))
+
+        # Start the recipe processing
         beakerd.process_new_recipes()
         beakerd.update_dirty_jobs()
         beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
+
+        # Scheduled recipe sets should have a recipe specific task repo
+        recipe_repo = os.path.join(recipe.repopath, str(recipe.id))
+        recipe_metadata = os.path.join(recipe_repo, 'repodata')
+        self.assert_(os.path.exists(recipe_metadata))
+        recipe_task_rpm = os.path.join(recipe_repo, rpm_name)
+        self.assert_(os.path.exists(recipe_task_rpm))
+
+        # And then continue on to provision the system
         beakerd.update_dirty_jobs()
         beakerd.provision_scheduled_recipesets()
         beakerd.update_dirty_jobs()
@@ -1042,11 +1086,14 @@ class FakeMetrics():
         self.calls = []
     def measure(self, *args):
         self.calls.append(args)
+
 class TestBeakerdMetrics(unittest.TestCase):
 
     def setUp(self):
         self.original_metrics = beakerd.metrics
         beakerd.metrics = FakeMetrics()
+        self.mail_capture = MailCaptureThread()
+        self.mail_capture.start()
         session.begin()
         # Other tests might have left behind systems and running recipes,
         # so we remove or cancel them all so they don't pollute our metrics
@@ -1064,6 +1111,7 @@ class TestBeakerdMetrics(unittest.TestCase):
 
     def tearDown(self):
         session.rollback()
+        self.mail_capture.stop()
         beakerd.metrics = self.original_metrics
 
     def test_system_count_metrics(self):
