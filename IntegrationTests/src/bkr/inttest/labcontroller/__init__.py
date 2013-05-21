@@ -6,6 +6,7 @@ import unittest
 from urlparse import urlparse, urlunparse
 from bkr.labcontroller.config import load_conf, get_conf
 from turbogears.database import session
+from bkr.server.model import LabController
 from bkr.inttest import data_setup
 from bkr.inttest import Process
 log = logging.getLogger(__name__)
@@ -24,6 +25,9 @@ class LabControllerTestCase(unittest.TestCase):
 
     def get_lc_fqdn(self):
         return lc_fqdn
+
+    def get_lc(self):
+        return LabController.by_name(self.get_lc_fqdn())
 
     def get_proxy_url(self):
         return 'http://%s:8000/' % lc_fqdn
@@ -45,6 +49,10 @@ def setup_package():
                     stop_signal=signal.SIGTERM),
             Process('beaker-provision',
                     args=['python', '../LabController/src/bkr/labcontroller/provision.py',
+                          '-c', config_file, '-f'],
+                    stop_signal=signal.SIGTERM),
+            Process('beaker-watchdog',
+                    args=['python', '../LabController/src/bkr/labcontroller/watchdog.py',
                           '-c', config_file, '-f'],
                     stop_signal=signal.SIGTERM),
         ])

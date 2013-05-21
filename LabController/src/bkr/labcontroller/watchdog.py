@@ -11,7 +11,7 @@ from daemon import pidfile
 from optparse import OptionParser
 from bkr.common.helpers import RepeatTimer
 from bkr.labcontroller.proxy import Watchdog
-from bkr.labcontroller.config import get_conf
+from bkr.labcontroller.config import load_conf, get_conf
 
 from kobo.exceptions import ShutdownException
 from kobo.tback import Traceback, set_except_hook
@@ -53,7 +53,7 @@ def main_loop(conf=None, foreground=False):
         try:
             now = time.time()
             # Poll for watchdogs
-            if now - time_of_last_check > 60:
+            if now - time_of_last_check > conf.get('SLEEP_TIME', 60):
                 time_of_last_check = now
                 watchdog.hub._login()
 
@@ -110,12 +110,10 @@ def main():
     parser.add_option("-p", "--pid-file",
                       help="specify a pid file")
     (opts, args) = parser.parse_args()
+    if opts.config:
+        load_conf(opts.config)
 
     conf = get_conf()
-    config = opts.config
-    if config is not None:
-        conf.load_from_file(config)
-
     pid_file = opts.pid_file
     if pid_file is None:
         pid_file = conf.get("WATCHDOG_PID_FILE", "/var/run/beaker-lab-controller/beaker-watchdog.pid")
