@@ -39,6 +39,7 @@ from turbogears.database import session
 from turbogears import config
 from turbomail.control import interface
 from xmlrpclib import ProtocolError
+from sqlalchemy.exc import OperationalError
 
 import socket
 import exceptions
@@ -422,8 +423,17 @@ def schedule_queued_recipes(*args):
                     session.rollback()
         log.debug("Exiting schedule_queued_recipes")
         return True
+    except Exception:
+        log.exception('Uncaught exception in schedule_queued_recipes')
+        raise
     finally:
-        session.commit()
+        try:
+            session.commit()
+        except OperationalError:
+            msg = 'Possible DB deadlock in schedule_queued_recipes. '
+            msg += 'See https://bugzilla.redhat.com/show_bug.cgi?id=958362'
+            log.exception(msg)
+            session.rollback()
         session.close()
 
 def schedule_queued_recipe(recipe_id):
