@@ -4036,7 +4036,7 @@ class Job(TaskBase):
         user or associated to a user's group.
         """
         if owner.groups:
-            return cls.query.join(Job.group).filter(or_(Job.owner==owner,
+            return cls.query.outerjoin(Job.group).filter(or_(Job.owner==owner,
                 Group.group_id.in_([g.group_id for g in owner.groups])))
         else:
             return cls.query.filter(Job.owner==owner)
