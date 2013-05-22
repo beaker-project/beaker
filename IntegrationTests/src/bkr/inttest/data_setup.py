@@ -124,6 +124,7 @@ def create_group(permissions=None, group_name=None, owner=None, ldap=False,
     # tg_group.group_name column is VARCHAR(16)
     if group_name is None:
         group_name = unique_name(u'group%s')
+    assert len(group_name) <= 16
     group = Group.lazy_create(group_name=group_name)
     group.root_password = root_password
     group.display_name = u'Group %s' % group_name
