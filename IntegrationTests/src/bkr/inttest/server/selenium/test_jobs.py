@@ -158,7 +158,7 @@ class TestViewJob(WebDriverTestCase):
                 '//a[@class="list recipe-id"]')]
         self.assertEquals(recipe_order, [host.t_id, guest.t_id])
 
-    def test_myjobs(self):
+    def test_myjobs_group(self):
         with session.begin():
             user = data_setup.create_user(password='password')
             user2 = data_setup.create_user(password='password')
@@ -177,6 +177,15 @@ class TestViewJob(WebDriverTestCase):
         b.find_element_by_xpath('//title[normalize-space(text())="My Jobs"]')
         self.assertTrue(is_text_present(b, job.t_id))
 
+    def test_myjobs_individual(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            job = data_setup.create_job(owner=user, group=None)
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+        b.find_element_by_link_text('My Jobs').click()
+        b.find_element_by_xpath('//title[normalize-space(text())="My Jobs"]')
+        self.assertTrue(is_text_present(b, job.t_id))
 
 class NewJobTestWD(WebDriverTestCase):
 
