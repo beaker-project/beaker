@@ -1,6 +1,5 @@
 import unittest
 from turbogears.database import session
-#from sqlalchemy.orm import session
 from bkr.server.model import Activity, Group, User
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, create_client_config
