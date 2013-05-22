@@ -21,8 +21,7 @@ class PowerTest(LabControllerTestCase):
         assert power_sleep < get_conf().get('SLEEP_TIME')
         assert 2 * power_sleep > get_conf().get('SLEEP_TIME')
         with session.begin():
-            lc = LabController.by_name(self.get_lc_fqdn())
-            system = data_setup.create_system(lab_controller=lc)
+            system = data_setup.create_system(lab_controller=self.get_lc())
             system.power.power_type = PowerType.lazy_create(name=u'dummy')
             system.power.power_id = power_sleep
             system.action_power(action=u'off', service=u'testdata')

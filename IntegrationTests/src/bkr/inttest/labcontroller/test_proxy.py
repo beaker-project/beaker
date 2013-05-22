@@ -369,8 +369,7 @@ class PostrebootTest(LabControllerTestCase):
 
     def setUp(self):
         with session.begin():
-            self.system = data_setup.create_system(lab_controller=
-                    data_setup.create_labcontroller(self.get_lc_fqdn()))
+            self.system = data_setup.create_system(lab_controller=self.get_lc())
             self.recipe = data_setup.create_recipe()
             data_setup.create_job_for_recipes([self.recipe])
             data_setup.mark_recipe_running(self.recipe, system=self.system)

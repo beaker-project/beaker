@@ -408,6 +408,7 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
     session.flush()
 
     if not server_log:
+        recipe.log_server = recipe.recipeset.lab_controller.fqdn
         recipe.logs = [LogRecipe(path=u'recipe_path',filename=u'dummy.txt')]
     else:
         recipe.log_server = u'dummy-archive-server'
@@ -466,6 +467,8 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
                     recipe.resource.allocate(manager, [lab_controller])
             else:
                 if not system:
+                    if not lab_controller:
+                        lab_controller = LabController.query.first()
                     system = create_system(arch=recipe.arch,
                             lab_controller=lab_controller)
                 recipe.resource = SystemResource(system=system)

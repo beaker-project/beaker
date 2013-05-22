@@ -263,10 +263,17 @@ class WatchFile(object):
                 return False
             else:
                 self.where = now
-                with self.proxy.log_storage.recipe(
-                        str(self.watchdog['recipe_id']),
-                        self.filename) as log_file:
-                    log_file.update_chunk(line, where)
+                try:
+                    log_file = self.proxy.log_storage.recipe(
+                            str(self.watchdog['recipe_id']),
+                            self.filename, create=where == 0)
+                    with log_file:
+                        log_file.update_chunk(line, where)
+                except (OSError, IOError), e:
+                    if e.errno == errno.ENOENT:
+                        pass # someone has removed our log, discard the update
+                    else:
+                        raise
                 return True
         return False
 

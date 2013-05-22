@@ -16,7 +16,8 @@ class SystemUtilisationTest(unittest.TestCase):
         session.commit()
 
     def test_durations(self):
-        system = data_setup.create_system()
+        system = data_setup.create_system(
+                lab_controller=data_setup.create_labcontroller())
 
         # Set up the following fake history for the system:
         #   2009-12-31 00:00:00 marked broken
