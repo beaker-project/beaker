@@ -15,7 +15,7 @@ class TestGroups(WebDriverTestCase):
             self.user.groups.append(self.group)
             self.system.groups.append(self.group)
             self.rand_group = data_setup.create_group \
-                (group_name=data_setup.unique_name(u'aaaaaaardvark%s'))
+                (group_name=data_setup.unique_name(u'aardvark%s'))
 
         session.flush()
         self.browser = self.get_browser()
