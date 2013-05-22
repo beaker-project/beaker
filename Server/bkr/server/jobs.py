@@ -753,6 +753,16 @@ class Jobs(RPCRoot):
                 searchvalue = jobs_return['searchvalue']
             if 'simplesearch' in jobs_return:
                 search_options['simplesearch'] = jobs_return['simplesearch']
+
+        def get_group(x):
+            if x.group:
+                if identity.current.user:
+                    if x.group.can_edit(identity.current.user):
+                        return make_link(url = '../groups/edit?group_id=%d' % x.group.group_id, text=x.group.group_name)
+                return make_link(url = '../groups/group_members?group_id=%d' % x.group.group_id, text=x.group.group_name)
+            else:
+                return None
+
         PDC = widgets.PaginateDataGrid.Column
         jobs_grid = myPaginateDataGrid(
             fields=[
@@ -761,6 +771,9 @@ class Jobs(RPCRoot):
                     title='ID', options=dict(sortable=True)),
                 PDC(name='whiteboard',
                     getter=lambda x:x.whiteboard, title='Whiteboard',
+                    options=dict(sortable=True)),
+                PDC(name='group',
+                    getter=get_group, title='Group',
                     options=dict(sortable=True)),
                 PDC(name='owner',
                     getter=lambda x:x.owner.email_link, title='Owner',
