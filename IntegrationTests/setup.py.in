@@ -16,7 +16,8 @@ setup(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     package_data={'': [
-       	'*.xml',
+        '*.xml',
+        '*.ldif',
         'server/kickstarts/*',
         'server/motd.xml',
         'server/selenium/*.csv',
