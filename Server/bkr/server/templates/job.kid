@@ -116,7 +116,16 @@
  <table width="97%" class="show">
   <tr>
    <td class="title"><b>Job ID</b></td>
-   <td class="value"><a class="list" href="${tg.url('/jobs/%s' % job.id)}">${job.t_id}</a></td>
+   <td class="value" style="min-width: 100px;">
+    <a class="list" href="${tg.url('/jobs/%s' % job.id)}">${job.t_id}</a>
+   </td>
+   <td class='title'><b>Group</b></td>
+   <td class="value" style="min-width: 100px;">
+    <a py:if="job.group" class="list"
+     href="${tg.url('/groups/group_members/?group_id=%d' % job.group.group_id)}">
+     ${job.group}
+    </a>
+   </td>
    <td class="title"><b>Status</b></td>
    <td class="value">
     <span py:if="job.is_dirty" class="statusDirty">Updating…</span>
@@ -128,37 +137,24 @@
   <tr>
    <td class="title"><b>Owner</b></td>
    <td class="value">${job.owner.email_link}</td>
+   <td class="title"><b>CC</b></td>
+   <td class="value">${'; '.join(job.cc)}</td>
    <td class="title"><b>Progress</b></td>
    <td class="value">${job.progress_bar}</td>
    <td class="title" rowspan="2"><b>Action(s)</b></td>
-   <td class="value" rowspan="2">${action_widget(job, delete_action=delete_action, export=tg.url("/to_xml?taskid=%s" % job.t_id))}</td>
-  </tr>
-  <tr py:if="job.group">
-   <td class='title'><b>Group</b></td>
-   <td class="value">
-    <a class="list"
-     href="${tg.url('/groups/group_members/?group_id=%d' % job.group.group_id)}">
-     ${job.group}
-    </a>
-   </td>
+   <td class="value" rowspan="2" style="vertical-align: top;">${action_widget(job, delete_action=delete_action, export=tg.url("/to_xml?taskid=%s" % job.t_id))}</td>
   </tr>
   <tr>
-   <td class="title"><b>CC</b></td>
-   <td class="value" colspan="3">${'; '.join(job.cc)}</td>
+  <td class="title"><b>Retention Tag</b></td>
+  <td py:if="job.can_admin(tg.identity.user)" class='value' style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id)} </td>
+ <td py:if=" not job.can_admin(tg.identity.user)" class='value' style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id,attrs=dict(disabled='1'))} </td>
+  <td class="title"><b>Product</b></td>
+  <td py:if="job.can_admin(tg.identity.user)" class='value' colspan="3" style="vertical-align:top;">${product_widget.display(value=getattr(job.product,'id',0), job_id=job.id)}</td>
+  <td py:if="not job.can_admin(tg.identity.user)" class='value' colspan="3" style="vertical-align:top;">${product_widget.display(value=getattr(job.product,'id',0), job_id=job.id, attrs=dict(disabled='1'))}</td>
   </tr>
   <tr>
    <td class="title"><b>Whiteboard</b></td>
-   <td class="value" colspan="3" style="vertical-align: top; white-space: normal;">${whiteboard_widget(value=job.whiteboard, job_id=job.id, readonly=not job.can_admin(tg.identity.user))}</td>
-  </tr> 
-  <tr>
-  <td class="title"><b>Retention Tag</b></td>
-  <td py:if="job.can_admin(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id)} </td>
- <td py:if=" not job.can_admin(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id,attrs=dict(disabled='1'))} </td>
-  </tr>
-  <tr>
-  <td class="title"><b>Product</b></td>
-  <td py:if="job.can_admin(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${product_widget.display(value=getattr(job.product,'id',0), job_id=job.id)}</td>
-  <td py:if="not job.can_admin(tg.identity.user)" class='value' coslpan="3" style="vertical-align:top;">${product_widget.display(value=getattr(job.product,'id',0), job_id=job.id, attrs=dict(disabled='1'))}</td>
+   <td class="value" colspan="7" style="vertical-align: top; white-space: normal;">${whiteboard_widget(value=job.whiteboard, job_id=job.id, readonly=not job.can_admin(tg.identity.user))}</td>
   </tr>
   <tr py:if="(job.access_rights(tg.identity.user) or job.can_admin(tg.identity.user)) and job.is_queued()">
   ${job.priority_settings(prefix=u'priority_job_', colspan='3')}
