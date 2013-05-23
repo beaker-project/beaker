@@ -30,17 +30,19 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
             return LogRecipe.query.filter_by(parent=self.recipe,
                     filename=u'console.log').count() == 1
 
+    def check_cached_log_contents(self, expected):
+        return open(self.cached_console_log, 'r').read() == expected
+
     def test_stores_console_log(self):
         first_line = 'Here is the first line of the log file.\n'
         open(self.console_log, 'w').write(first_line)
         wait_for_condition(self.check_console_log_registered)
-        self.assertEquals(open(self.cached_console_log, 'r').read(), first_line)
+        wait_for_condition(lambda: self.check_cached_log_contents(first_line))
 
         second_line = 'Here is the second line of the log file. FNORD FNORD FNORD\n'
         open(self.console_log, 'a').write(second_line)
-        def log_updated():
-            return open(self.cached_console_log, 'r').read() == (first_line + second_line)
-        wait_for_condition(log_updated)
+        wait_for_condition(lambda: self.check_cached_log_contents(
+                first_line + second_line))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=962901
     def test_console_log_not_recreated_after_removed(self):
@@ -59,7 +61,7 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
         existing_data = 'Existing data\n'
         open(self.console_log, 'w').write(existing_data)
         wait_for_condition(self.check_console_log_registered)
-        self.assertEquals(open(self.cached_console_log, 'r').read(), existing_data)
+        wait_for_condition(lambda: self.check_cached_log_contents(existing_data))
 
         # Step 2: the recipe "finishes"
         # Don't actually mark it as finished in the database though, to ensure 
