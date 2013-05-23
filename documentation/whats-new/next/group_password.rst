@@ -1,13 +1,15 @@
-Group password ("feature")
-==============
+Group password (feature)
+========================
 
-Group owners can set a password on their group. The password is used as the
-root password on systems provisioned by a recipe with an associated job group.
+Group owners can set a root password for their group. The password is used as 
+the root password on systems provisioned for a group job.
 
-Run the following SQL:
+Run the following SQL::
 
-    ALTER TABLE tg_group ADD COLUMN password VARCHAR(255) AFTER display_name;
+    ALTER TABLE tg_group
+        ADD COLUMN root_password VARCHAR(255) AFTER display_name;
 
-To rollback:
+To rollback::
 
-    ALTER TABLE tg_group DROP COLUMN password;
+    ALTER TABLE tg_group
+        DROP COLUMN root_password;
