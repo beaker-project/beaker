@@ -50,8 +50,7 @@ class TestViewJob(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'jobs/%s' % job.id)
         b.find_element_by_link_text("%s" % job.group).click()
-        self.assertEqual(b.find_element_by_xpath('//title').text,
-            'Group Users')
+        b.find_element_by_xpath('//th[text()="User Members"]')
 
     def test_cc_list(self):
         with session.begin():
