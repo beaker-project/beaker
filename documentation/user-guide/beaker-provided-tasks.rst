@@ -24,9 +24,8 @@ so that it is run immediately after the system has been provisioned.
 This task uploads the kickstart used by the Anaconda installation
 program to provision the system, the boot loader configuration file,
 error logs, a file containing the list of packages which were
-installed and other files. Hence, if there was a problem in the
-installation, the data in these files can be referred to find
-the reason for the same.
+installed and other files. If there is a problem in the installation,
+the data in these files can often be used to determine the cause.
 
 /distribution/reservesys
 ========================
@@ -45,14 +44,13 @@ The task's behavior can be configured using a number of parameters
   recipe did not pass. If it passed, this "test" is reported back to
   Beaker as a pass and the next task in the recipe (if any) begins
   execution. The parameter should be defined as: ``<param
-  name="RESERVE_IF_FAIL" value= "True" />``. (In fact, it can be
-  defined to have *any* non-empty string as value. For example,
-  ``<param name="RESERVE_IF_FAIL" value= "False" />`` will have the
-  same effect). If you want to reserve the system irrespective of the
+  name="RESERVE_IF_FAIL" value= "True" />`` (While *any* non-empty string
+  will have the same effect, using the string ``"True"`` is strongly
+  recommended). If you want to reserve the system irrespective of the
   result of the test, do not specify this variable at all.
 
 - :envvar:`RESERVETIME`: Using this parameter, you can define the duration
-  (in seconds) for which you want to reserve the system upto a maximum
+  (in seconds) for which you want to reserve the system up to a maximum
   of 356400 seconds (99 hours). If this variable is not defined, the
   default reservation is for 86400 seconds (24 hours) (Also, see
   :ref:`return-early-extend-time` below).
@@ -94,8 +92,8 @@ execute :program:`return2beaker.sh` from your terminal (after you have
 logged in to the system).
 
 To extend the reservation time, execute :program:`extendtesttime.sh`
-which will ask prompt the duration for which you want to extend the
-reservation starting from the present time.
+and enter the desired extension to the reservation (relative to the current
+time).
 
 
 /distribution/inventory
@@ -105,7 +103,7 @@ The ``/distribution/inventory`` task is useful for the administrator of
 a Beaker installation to gather detailed hardware data about
 Beaker's test systems. Hardware devices which are probed include disk
 drives, graphics hardware and network devices. When this task is run
-on a test system, it retrieves these data and sends it to the Beaker
+on a test system, it retrieves this information and sends it to the Beaker
 server where it is updated in the main database.
 
 This data can then be used by Beaker to schedule a job for which a
@@ -123,7 +121,7 @@ tests and selenium tests) on a test system. It can be configured to
 either run the tests from the development branch of Beaker or the most
 recent released version.
 
-This task is being used by the Beaker developers to run the test suite
+This task is used by the Beaker developers to run the test suite
 every time a new patch is pushed to the development branch to help
 prevent any regressions in the code base.
 
@@ -132,8 +130,8 @@ Other tasks
 
 There are a number of other tasks that you will find in the
 :file:`Tasks/` sub-directory of the Beaker `source tree`_. Most of
-these tasks (besides the ones we discussed above), would have a
-:file:`PURPOSE` file which contains a brief description of the what
+these tasks (besides the ones we discussed above), have a
+:file:`PURPOSE` file which contains a brief description of what
 the task does.
 
 .. _source tree: http://git.beaker-project.org/cgit/beaker/
