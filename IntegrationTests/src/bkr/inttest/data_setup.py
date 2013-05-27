@@ -464,14 +464,14 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
                 recipe.resource = VirtResource(
                         system_name=u'testdata_recipe_%s' % recipe.id)
                 if not lab_controller:
-                    lab_controller = LabController.query.first()
+                    lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
                 recipe.recipeset.lab_controller = lab_controller
                 with model.VirtManager() as manager:
                     recipe.resource.allocate(manager, [lab_controller])
             else:
                 if not system:
                     if not lab_controller:
-                        lab_controller = LabController.query.first()
+                        lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
                     system = create_system(arch=recipe.arch,
                             lab_controller=lab_controller)
                 recipe.resource = SystemResource(system=system)
