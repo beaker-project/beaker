@@ -1,8 +1,8 @@
 
 .. _man:
 
-Man pages
-=========
+Beaker client man pages
+=======================
 
 This is the documentation for ``bkr``, a command-line client interface to the 
 `Beaker test system <http://beaker-project.org/>`_.

@@ -14,6 +14,7 @@ except ImportError:
     version = 'dev'
 
 html_title = 'Beaker %s' % version
+html_short_title = 'Beaker'
 html_use_index = False
 html_domain_indices = False
 
