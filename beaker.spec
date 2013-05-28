@@ -108,8 +108,8 @@ Requires:       rhts-python
 Requires:       cracklib-python
 Requires:       python-jinja2
 Requires:       python-netaddr
-# Kerberos support was added to requests in 0.13.4
-Requires:       python-requests >= 0.13.4
+Requires:       python-requests >= 1.0
+Requires:       python-requests-kerberos
 Requires:       ovirt-engine-sdk
 Requires:  	kobo-client >= 0.3
 %endif
@@ -130,7 +130,8 @@ Requires:       java-openjdk >= 1:1.6.0
 Requires:       Xvfb
 Requires:       firefox
 Requires:       lsof
-Requires:       python-requests >= 0.11
+Requires:       python-requests >= 1.0
+Requires:       python-requests-kerberos
 Requires:       /usr/sbin/slapd
 Requires:       /usr/bin/slapadd
 %endif
