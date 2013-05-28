@@ -93,6 +93,15 @@ QPID_BUS=False
 __EOF__
 }
 
+function generate_client_cfg() {
+    cat <<__EOF__ >/etc/beaker/client.conf
+HUB_URL = "http://$SERVER/bkr"
+AUTH_METHOD = "password"
+USERNAME = "admin"
+PASSWORD = "testing"
+__EOF__
+}
+
 function Inventory()
 {
  rlJournalStart
@@ -190,8 +199,7 @@ function LabController()
     # Configure beaker-proxy config
     generate_proxy_cfg
     # configure beaker client
-    perl -pi -e 's|^#USERNAME.*|USERNAME = "admin"|' /etc/beaker/client.conf
-    perl -pi -e 's|^#PASSWORD.*|PASSWORD = "testing"|' /etc/beaker/client.conf
+    generate_client_cfg
     echo "add_distro=1" > /etc/sysconfig/beaker_lab_import
     # Turn on wsgi
     perl -pi -e 's|^#LoadModule wsgi_module modules/mod_wsgi.so|LoadModule wsgi_module modules/mod_wsgi.so|g' /etc/httpd/conf.d/wsgi.conf
