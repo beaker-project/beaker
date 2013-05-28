@@ -7,7 +7,6 @@ from bkr.server.model import TaskStatus, RecipeSet, LabController, System
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX
 from bkr.inttest import data_setup
-from bkr.server.tools import beakerd
 
 class TestLabController(unittest.TestCase):
 
