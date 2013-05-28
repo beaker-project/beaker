@@ -45,5 +45,5 @@ echo "GRANT ALL ON beaker_test.* TO 'beaker'@'localhost' IDENTIFIED BY
 # Download selenium JAR
 mkdir -p /usr/local/share/selenium
 pushd /usr/local/share/selenium
-wget http://selenium.googlecode.com/files/selenium-server-standalone-2.21.0.jar
+wget http://selenium.googlecode.com/files/selenium-server-standalone-2.33.0.jar
 popd
