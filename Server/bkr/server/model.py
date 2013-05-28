@@ -1880,9 +1880,8 @@ class Group(DeclBase, MappedObject, ActivityMixin):
 
 
     def owners(self):
-        owners = UserGroup.query.filter_by(group_id=self.group_id,
-                                           is_owner=True).all()
-        return [owner.user_id for owner in owners]
+        return UserGroup.query.filter_by(group_id=self.group_id,
+                                         is_owner=True).all()
 
     def has_owner(self, user):
         if user is None:
@@ -1892,6 +1891,18 @@ class Group(DeclBase, MappedObject, ActivityMixin):
 
     def can_edit(self, user):
         return self.has_owner(user) or user.is_admin()
+
+    def can_remove_member(self, user, member_id):
+        if user.is_admin():
+            if self.group_name == 'admin':
+                if len(self.users)==1:
+                    return False
+        else:
+            group_owners = self.owners()
+            if len(group_owners)==1 and group_owners[0].user_id == int(member_id):
+                return False
+
+        return True
 
     def is_protected_group(self):
         """Some group names are predefined by Beaker and cannot be modified"""

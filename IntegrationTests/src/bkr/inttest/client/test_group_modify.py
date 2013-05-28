@@ -19,6 +19,10 @@ class GroupModifyTest(unittest.TestCase):
             self.rand_client_config = create_client_config(username=rand_user.user_name,
                                                            password='asdf')
 
+            admin = data_setup.create_admin(password='password')
+            self.admin_client_config = create_client_config(username=admin.user_name,
+                                                            password='password')
+
         self.mail_capture = mail_capture.MailCaptureThread()
         self.mail_capture.start()
 
@@ -42,7 +46,7 @@ class GroupModifyTest(unittest.TestCase):
         # body
         msg_payload = msg.get_payload(decode=True)
         action = action.lower()
-        for keyword in [action, group.group_name, self.user.email_address]:
+        for keyword in [action, group.group_name]:
             self.assert_(keyword in msg_payload, (keyword, msg_payload))
 
     def test_group_modify_no_criteria(self):
@@ -246,6 +250,16 @@ class GroupModifyTest(unittest.TestCase):
                          [u.user_name for u in group.users])
 
         self.check_notification(user, group, action='Removed')
+        with session.begin():
+            session.refresh(self.group)
+            group = Group.by_name(self.group.group_name)
+            self.assertEquals(group.activity[-1].action, u'Removed')
+            self.assertEquals(group.activity[-1].field_name, u'User')
+            self.assertEquals(group.activity[-1].user.user_id,
+                              self.user.user_id)
+            self.assertEquals(group.activity[-1].old_value, user.user_name)
+            self.assertEquals(group.activity[-1].new_value, '')
+            self.assertEquals(group.activity[-1].service, u'XMLRPC')
 
         try:
             out = run_client(['bkr', 'group-modify',
@@ -273,16 +287,31 @@ class GroupModifyTest(unittest.TestCase):
                              config = self.client_config)
             self.fail('Must fail or die')
         except ClientError, e:
-            self.assert_('You are the only owner of group' in
+            self.assert_('Cannot remove member' in
                          e.stderr_output, e.stderr_output)
 
-        with session.begin():
-            session.refresh(self.group)
-            group = Group.by_name(self.group.group_name)
-            self.assertEquals(group.activity[-1].action, u'Removed')
-            self.assertEquals(group.activity[-1].field_name, u'User')
-            self.assertEquals(group.activity[-1].user.user_id,
-                              self.user.user_id)
-            self.assertEquals(group.activity[-1].old_value, user.user_name)
-            self.assertEquals(group.activity[-1].new_value, '')
-            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+        # remove the last group member/owner as 'admin'
+        self.mail_capture.captured_mails[:]=[]
+        out = run_client(['bkr', 'group-modify',
+                          '--remove-member', self.user.user_name,
+                          self.group.group_name], config=self.admin_client_config)
+        self.check_notification(self.user, self.group, action='Removed')
+
+        # try to remove self from admin group
+        # first remove all other users except 'admin'
+        group = Group.by_name('admin')
+        group_users = group.users
+        # remove  all other users from 'admin'
+        for usr in group_users:
+            if usr.user_id != 1:
+                out = run_client(['bkr', 'group-modify',
+                                  '--remove-member', usr.user_name,
+                                  'admin'], config=self.admin_client_config)
+
+        try:
+            out = run_client(['bkr', 'group-modify',
+                              '--remove-member', 'admin', 'admin'])
+            self.fail('Must fail or die')
+        except ClientError, e:
+            self.assert_('Cannot remove member' in
+                         e.stderr_output, e.stderr_output)
