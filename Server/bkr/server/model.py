@@ -1616,7 +1616,7 @@ class User(MappedObject):
             user.display_name = objects[0][1]['cn'][0].decode('utf8')
             user.email_address = objects[0][1]['mail'][0].decode('utf8')
             session.add(user)
-            session.flush([user])
+            session.flush()
         return user
 
     @classmethod
