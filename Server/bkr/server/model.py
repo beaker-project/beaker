@@ -6095,7 +6095,7 @@ class RecipeTask(TaskBase):
         self.results.append(recipeTaskResult)
         # Flush the result to the DB so we can return the id.
         session.add(recipeTaskResult)
-        session.flush([recipeTaskResult])
+        session.flush()
         return recipeTaskResult.id
 
     def task_info(self):
