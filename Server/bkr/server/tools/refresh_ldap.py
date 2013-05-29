@@ -13,7 +13,7 @@ import logging
 import optparse
 import ldap
 from turbogears import config
-from bkr import __version__
+from bkr.common import __version__
 from bkr.server.util import load_config, log_to_stream
 from bkr.server.model import session, Group
 

@@ -13,7 +13,7 @@ import datetime
 import urlparse
 import requests
 import requests_kerberos
-from bkr import __version__ as bkr_version
+from bkr.common import __version__
 from optparse import OptionParser
 from bkr.server.model import Job
 from bkr.server.util import load_config, log_to_stream
@@ -29,7 +29,7 @@ def main():
     parser = OptionParser('usage: %prog [options]',
             description='Permanently deletes log files from Beaker and/or '
                 'archive server',
-            version=bkr_version)
+            version=__version__)
     parser.add_option('-c', '--config', metavar='FILENAME',
             help='Read configuration from FILENAME')
     parser.add_option('-v', '--verbose', action='store_true',
