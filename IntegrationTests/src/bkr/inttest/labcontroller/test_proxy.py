@@ -155,6 +155,16 @@ class TaskResultTest(LabControllerTestCase):
                 allow_redirects=False)
         self.assertEquals(response.status_code, 400)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=962254
+    def test_result_for_finished_task(self):
+        with session.begin():
+            self.recipe.tasks[0].stop()
+        results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(results_url, data=dict(result='Pass'),
+                allow_redirects=False)
+        self.assertEquals(response.status_code, 409)
+
 class TaskStatusTest(LabControllerTestCase):
 
     def setUp(self):

@@ -652,10 +652,18 @@ class ProxyHTTP(object):
         result = req.form['result'].lower()
         if result not in self._result_types:
             raise BadRequest('Unknown result type %r' % req.form['result'])
-        result_id = self.hub.recipes.tasks.result(task_id,
-                self._result_types[result],
-                req.form.get('path'), req.form.get('score'),
-                req.form.get('message'))
+        try:
+            result_id = self.hub.recipes.tasks.result(task_id,
+                    self._result_types[result],
+                    req.form.get('path'), req.form.get('score'),
+                    req.form.get('message'))
+        except xmlrpclib.Fault, fault:
+            # XXX need to find a less fragile way to do this
+            if 'Cannot record result for finished task' in fault.faultString:
+                return Response(status=409, response=fault.faultString,
+                        content_type='text/plain')
+            else:
+                raise
         return redirect('/recipes/%s/tasks/%s/results/%s' % (
                 recipe_id, task_id, result_id), code=201)
 

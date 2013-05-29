@@ -6085,8 +6085,8 @@ class RecipeTask(TaskBase):
         """
         Record a result 
         """
-        if not self.recipe.watchdog:
-            raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
+        if self.is_finished():
+            raise ValueError('Cannot record result for finished task %s' % self.t_id)
         recipeTaskResult = RecipeTaskResult(recipetask=self,
                                    path=path,
                                    result=result,
