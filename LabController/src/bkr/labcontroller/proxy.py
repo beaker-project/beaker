@@ -706,7 +706,7 @@ class ProxyHTTP(object):
     # big files without chunking
 
     def _put_log(self, log_file, req):
-        if not req.content_length:
+        if req.content_length is None:
             raise BadRequest('Missing "Content-Length" header')
         content_range = parse_content_range_header(req.headers.get('Content-Range'))
         if content_range:

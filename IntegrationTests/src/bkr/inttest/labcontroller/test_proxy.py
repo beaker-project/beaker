@@ -567,6 +567,18 @@ class LogUploadTest(LabControllerTestCase):
         response = requests.get(log_url)
         self.assertEquals(response.status_code, 404)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=961300
+    def test_PUT_empty_log(self):
+        upload_url = '%srecipes/%s/logs/empty-log' % (self.get_proxy_url(),
+                self.recipe.id)
+        local_log_dir = '%s/recipes/%s+/%s/' % (get_conf().get('CACHEPATH'),
+                self.recipe.id // 1000, self.recipe.id)
+        response = requests.put(upload_url, data='')
+        self.assertEquals(response.status_code, 204)
+        self.assertEquals(
+                open(os.path.join(local_log_dir, 'empty-log'), 'r').read(),
+                '')
+
 class LogIndexTest(LabControllerTestCase):
 
     def setUp(self):
