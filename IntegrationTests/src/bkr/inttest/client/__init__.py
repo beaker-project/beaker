@@ -38,8 +38,9 @@ class ClientError(Exception):
 # If running against installed beaker-client, BEAKER_CLIENT_COMMAND=bkr should 
 # be set in the environment. Otherwise we assume we're in a source checkout and 
 # fall back to the run-client.sh script.
-client_command = os.environ.get('BEAKER_CLIENT_COMMAND',
-        os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'run-client.sh'))
+dev_client_command = os.path.join(os.path.dirname(__file__),
+                                  '..', '..', '..', '..', 'run-client.sh')
+client_command = os.environ.get('BEAKER_CLIENT_COMMAND', dev_client_command)
 
 def start_client(args, config=None, **kwargs):
     if config is None:
