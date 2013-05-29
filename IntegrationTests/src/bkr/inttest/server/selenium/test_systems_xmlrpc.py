@@ -34,7 +34,6 @@ from bkr.inttest import data_setup, with_transaction
 from bkr.server.model import User, Cpu, Key, Key_Value_String, Key_Value_Int, \
         System, SystemActivity, Provision, Hypervisor, SSHPubKey, ConfigItem, \
         RenderedKickstart, SystemStatus, ReleaseAction
-from bkr.server.tools import beakerd
 
 class ReserveSystemXmlRpcTest(XmlRpcTestCase):
 

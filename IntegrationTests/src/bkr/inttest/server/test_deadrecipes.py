@@ -6,7 +6,7 @@ import time
 from bkr.server.model import TaskStatus, Job, LabControllerDistroTree, Distro
 import sqlalchemy.orm
 from turbogears.database import session
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup, with_transaction, fix_beakerd_repodata_perms
 from bkr.server.tools import beakerd
 from bkr.server.jobxml import XmlJob
 from bkr.server.jobs import Jobs
@@ -67,6 +67,10 @@ class TestBeakerd(unittest.TestCase):
 
         cls.job1 = Jobs().process_xmljob(xmljob1, user)
         cls.job2 = Jobs().process_xmljob(xmljob2, user)
+
+    @classmethod
+    def tearDownClass(cls):
+        fix_beakerd_repodata_perms()
 
     def test_01_invalid_system_distro_combo(self):
         beakerd.process_new_recipes()

@@ -32,7 +32,6 @@ from bkr.inttest import data_setup, get_server_base, \
 from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
         SystemStatus
-from bkr.server.tools import beakerd
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login
 from selenium.webdriver.support.ui import Select
@@ -197,16 +196,8 @@ class SystemViewTest(SeleniumTestCase):
         with session.begin():
             job = data_setup.create_job(owner=self.system.owner,
                     distro_tree=self.distro_tree)
-            job.recipesets[0].recipes[0]._host_requires = (
-                    '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
-                    % self.system.fqdn)
+            data_setup.mark_job_running(job, system=self.system)
             job_id = job.id
-        beakerd.process_new_recipes()
-        beakerd.update_dirty_jobs()
-        beakerd.queue_processed_recipesets()
-        beakerd.update_dirty_jobs()
-        beakerd.schedule_queued_recipes()
-        beakerd.update_dirty_jobs()
         self.go_to_system_view()
         sel.click('link=(Current Job)')
         sel.wait_for_page_to_load('30000')

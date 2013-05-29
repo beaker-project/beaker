@@ -1,5 +1,4 @@
 import unittest, datetime, os, threading
-import shutil
 import bkr
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
@@ -7,11 +6,10 @@ from bkr.server.model import TaskStatus, Job, System, User, \
 import sqlalchemy.orm
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
-from turbogears import config
 from turbogears.database import session, get_engine
 import xmltramp
 from bkr.server.jobxml import XmlJob
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, fix_beakerd_repodata_perms
 from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 from bkr.server.tools import beakerd
@@ -38,16 +36,7 @@ class TestBeakerd(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        # This is a bit of a hack...
-        # These tests invoke beakerd code directly, which will create 
-        # /var/www/beaker/rpms/repodata if it doesn't already exist. But the 
-        # tests might be running as root (as in the dogfood task, for example) 
-        # so the repodata directory could end up owned by root, whereas it 
-        # needs to be owned by apache.
-        # The hacky fix is to just delete the repodata here, and let the 
-        # application (running as apache) re-create it later.
-        repodata = os.path.join(config.get('basepath.rpms'), 'repodata')
-        shutil.rmtree(repodata, ignore_errors=True)
+        fix_beakerd_repodata_perms()
 
     # We need something in the task library to ensure per-recipe repos are
     # being created and destroyed correctly

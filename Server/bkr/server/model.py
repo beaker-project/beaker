@@ -6532,7 +6532,7 @@ class TaskLibrary(object):
         retcode = p.poll()
         if retcode:
             raise ValueError('createrepo failed with exit status %d:\n%s'
-                    % (retcode, output))
+                    % (retcode, err))
 
     def update_repo(self):
         """Update the task library yum repo metadata"""

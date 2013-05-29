@@ -83,6 +83,19 @@ class DummyVirtManager(object):
     def start_install(self, name, distro_tree, kernel_options, lab_controller):
         pass
 
+def fix_beakerd_repodata_perms():
+    # This is ugly, but I can't come up with anything better...
+    # Any tests which invoke beakerd code directly will create 
+    # /var/www/beaker/rpms/repodata if it doesn't already exist. But the 
+    # tests might be running as root (as in the dogfood task, for example) 
+    # so the repodata directory could end up owned by root, whereas it 
+    # needs to be owned by apache.
+    # The hacky fix is to just delete the repodata at the end of the test, and 
+    # let the application (running as apache) re-create it later.
+    # Call this in a tearDown or tearDownClass method.
+    repodata = os.path.join(turbogears.config.get('basepath.rpms'), 'repodata')
+    shutil.rmtree(repodata, ignore_errors=True)
+
 def check_listen(port):
     """
     Returns True iff any process on the system is listening
