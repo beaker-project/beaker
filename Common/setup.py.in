@@ -4,6 +4,8 @@ setup(
     name = "bkr",
     version = "@VERSION@",
 
+    namespace_packages = ['bkr'],
+
     packages=find_packages('.'),
     package_dir = {'':'.'},
     package_data={'bkr.common': ['schema/*.rng', 'schema/*.ttl']},
