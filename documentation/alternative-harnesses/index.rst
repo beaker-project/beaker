@@ -145,7 +145,10 @@ the request body must be given as HTML form data
 
    Stores a log file.
 
+   Log files may not be stored against a recipe or task after it has finished.
+
    :status 204: The log file was updated.
+   :status 409: The recipe or task is already finished.
 
    Use the :mailheader:`Content-Range` header to upload part of a file.
 

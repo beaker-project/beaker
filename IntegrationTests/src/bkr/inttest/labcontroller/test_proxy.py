@@ -430,6 +430,20 @@ class LogUploadTest(LabControllerTestCase):
                     open(os.path.join(local_log_dir, 'recipe-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=962253
+    def test_xmlrpc_recipe_log_after_finished(self):
+        with session.begin():
+            data_setup.mark_recipe_complete(self.recipe, only=True)
+            assert self.recipe.is_finished()
+        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        try:
+            s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 0,
+                    b64encode('a' * 10))
+            self.fail('should raise')
+        except xmlrpclib.Fault, fault:
+            self.assert_('Cannot register file for finished recipe'
+                    in fault.faultString)
+
     def test_PUT_recipe_log(self):
         upload_url = '%srecipes/%s/logs/PUT-recipe-log' % (self.get_proxy_url(),
                 self.recipe.id)
@@ -458,6 +472,16 @@ class LogUploadTest(LabControllerTestCase):
         response.raise_for_status()
         self.assertEquals(response.content, 'aaaaaaaaaabbbbbbbbbb')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=962253
+    def test_PUT_recipe_log_after_finished(self):
+        with session.begin():
+            data_setup.mark_recipe_complete(self.recipe, only=True)
+            assert self.recipe.is_finished()
+        upload_url = '%srecipes/%s/logs/PUT-recipe-log' % (self.get_proxy_url(),
+                self.recipe.id)
+        response = requests.put(upload_url, data='a' * 10)
+        self.assertEquals(response.status_code, 409)
+
     def test_xmlrpc_task_log(self):
         with session.begin():
             task = self.recipe.tasks[0]
@@ -482,6 +506,21 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'task-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=962253
+    def test_xmlrpc_task_log_after_finished(self):
+        with session.begin():
+            task = self.recipe.tasks[0]
+            task.stop()
+            assert task.is_finished()
+        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        try:
+            s.task_upload_file(task.id, '/', 'task-log', 10, None, 0,
+                    b64encode('a' * 10))
+            self.fail('should raise')
+        except xmlrpclib.Fault, fault:
+            self.assert_('Cannot register file for finished task'
+                    in fault.faultString)
 
     def test_PUT_task_log(self):
         with session.begin():
@@ -513,6 +552,17 @@ class LogUploadTest(LabControllerTestCase):
         response.raise_for_status()
         self.assertEquals(response.content, 'aaaaaaaaaabbbbbbbbbb')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=962253
+    def test_PUT_task_log_after_finished(self):
+        with session.begin():
+            task = self.recipe.tasks[0]
+            task.stop()
+            assert task.is_finished()
+        upload_url = '%srecipes/%s/tasks/%s/logs/after-finished' % (self.get_proxy_url(),
+                self.recipe.id, task.id)
+        response = requests.put(upload_url, data='a' * 10)
+        self.assertEquals(response.status_code, 409)
+
     def test_xmlrpc_result_log(self):
         with session.begin():
             self.recipe.tasks[0].pass_(u'', 0, u'Pass')
@@ -538,6 +588,22 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'result-log'), 'r').read(),
                     'aaaaaaaaaabbbbbbbbbb')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=962253
+    def test_xmlrpc_result_log_after_finished(self):
+        with session.begin():
+            self.recipe.tasks[0].pass_(u'', 0, u'Pass')
+            result = self.recipe.tasks[0].results[0]
+            self.recipe.tasks[0].stop()
+            assert self.recipe.tasks[0].is_finished()
+        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        try:
+            s.result_upload_file(result.id, '/', 'result-log-after-finished',
+                    10, None, 0, b64encode('a' * 10))
+            self.fail('should raise')
+        except xmlrpclib.Fault, fault:
+            self.assert_('Cannot register file for finished task'
+                    in fault.faultString)
 
     def test_PUT_result_log(self):
         with session.begin():
@@ -570,6 +636,19 @@ class LogUploadTest(LabControllerTestCase):
         response = requests.get(upload_url)
         response.raise_for_status()
         self.assertEquals(response.content, 'aaaaaaaaaabbbbbbbbbb')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=962253
+    def test_PUT_result_log_after_finished(self):
+        with session.begin():
+            task = self.recipe.tasks[0]
+            task.pass_(u'', 0, u'Pass')
+            result = self.recipe.tasks[0].results[0]
+            task.stop()
+            assert task.is_finished()
+        upload_url = '%srecipes/%s/tasks/%s/results/%s/logs/after-finished' % (
+                self.get_proxy_url(), self.recipe.id, task.id, result.id)
+        response = requests.put(upload_url, data='a' * 10)
+        self.assertEquals(response.status_code, 409)
 
     def test_GET_nonexistent_log(self):
         log_url = '%srecipes/%s/logs/notexist' % (
