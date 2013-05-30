@@ -1616,7 +1616,7 @@ class User(MappedObject):
             user.display_name = objects[0][1]['cn'][0].decode('utf8')
             user.email_address = objects[0][1]['mail'][0].decode('utf8')
             session.add(user)
-            session.flush([user])
+            session.flush()
         return user
 
     @classmethod
@@ -6085,8 +6085,8 @@ class RecipeTask(TaskBase):
         """
         Record a result 
         """
-        if not self.recipe.watchdog:
-            raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
+        if self.is_finished():
+            raise ValueError('Cannot record result for finished task %s' % self.t_id)
         recipeTaskResult = RecipeTaskResult(recipetask=self,
                                    path=path,
                                    result=result,
@@ -6095,7 +6095,7 @@ class RecipeTask(TaskBase):
         self.results.append(recipeTaskResult)
         # Flush the result to the DB so we can return the id.
         session.add(recipeTaskResult)
-        session.flush([recipeTaskResult])
+        session.flush()
         return recipeTaskResult.id
 
     def task_info(self):

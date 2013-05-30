@@ -155,6 +155,16 @@ class TaskResultTest(LabControllerTestCase):
                 allow_redirects=False)
         self.assertEquals(response.status_code, 400)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=962254
+    def test_result_for_finished_task(self):
+        with session.begin():
+            self.recipe.tasks[0].stop()
+        results_url = '%srecipes/%s/tasks/%s/results/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.post(results_url, data=dict(result='Pass'),
+                allow_redirects=False)
+        self.assertEquals(response.status_code, 409)
+
 class TaskStatusTest(LabControllerTestCase):
 
     def setUp(self):
@@ -505,7 +515,7 @@ class LogUploadTest(LabControllerTestCase):
 
     def test_xmlrpc_result_log(self):
         with session.begin():
-            self.recipe.tasks[0].pass_('', 0, 'Pass')
+            self.recipe.tasks[0].pass_(u'', 0, u'Pass')
             result = self.recipe.tasks[0].results[0]
         s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
         s.result_upload_file(result.id, '/', 'result-log', 10, None, 0,
@@ -532,7 +542,7 @@ class LogUploadTest(LabControllerTestCase):
     def test_PUT_result_log(self):
         with session.begin():
             task = self.recipe.tasks[0]
-            task.pass_('', 0, 'Pass')
+            task.pass_(u'', 0, u'Pass')
             result = self.recipe.tasks[0].results[0]
         upload_url = '%srecipes/%s/tasks/%s/results/%s/logs/PUT-result-log' % (
                 self.get_proxy_url(), self.recipe.id, task.id, result.id)
@@ -579,7 +589,7 @@ class LogIndexTest(LabControllerTestCase):
             self.task = self.recipe.tasks[0]
             self.task.logs[:] = [LogRecipeTask(path=u'/', filename=u'TESTOUT.log'),
                     LogRecipeTask(path=u'debug', filename=u'.task_beah_raw')]
-            self.task.pass_('', 0, 'Pass')
+            self.task.pass_(u'', 0, u'Pass')
             self.result = self.recipe.tasks[0].results[0]
             self.result.logs[:] = [LogRecipeTaskResult(path=u'/', filename=u'test.log'),
                     LogRecipeTaskResult(path=u'some-dir', filename=u'some-file.txt')]
