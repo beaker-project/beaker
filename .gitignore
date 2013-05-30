@@ -24,4 +24,4 @@ documentation/_build
 documentation/man/bkr-*.rst
 *.diff
 selenium.log
-/Tasks/distribution/beaker/dogfood/selenium-server-standalone-2.21.0.jar
+/Tasks/distribution/beaker/dogfood/selenium-server-standalone-*.jar
