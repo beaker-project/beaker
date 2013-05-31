@@ -723,15 +723,23 @@ class ProxyHTTP(object):
                 raise BadRequest('Content length does not match range length')
             if content_range.length and content_range.length < content_range.stop:
                 raise BadRequest('Total length is smaller than range end')
-        with log_file:
-            if content_range:
-                if content_range.length: # length may be '*' meaning unspecified
-                    log_file.truncate(content_range.length)
-                log_file.update_chunk(req.data, content_range.start)
+        try:
+            with log_file:
+                if content_range:
+                    if content_range.length: # length may be '*' meaning unspecified
+                        log_file.truncate(content_range.length)
+                    log_file.update_chunk(req.data, content_range.start)
+                else:
+                    # no Content-Range, therefore the request is the whole file
+                    log_file.truncate(req.content_length)
+                    log_file.update_chunk(req.data, 0)
+        # XXX need to find a less fragile way to do this
+        except xmlrpclib.Fault, fault:
+            if 'Cannot register file for finished ' in fault.faultString:
+                return Response(status=409, response=fault.faultString,
+                        content_type='text/plain')
             else:
-                # no Content-Range, therefore the request is the whole file
-                log_file.truncate(req.content_length)
-                log_file.update_chunk(req.data, 0)
+                raise
         return Response(status=204)
 
     def _get_log(self, log_file, req):

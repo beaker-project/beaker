@@ -38,12 +38,17 @@ class LogFile(object):
             fd = os.open(self.path, os.O_RDWR)
         try:
             self.f = os.fdopen(fd, 'r+')
+        except Exception:
+            os.close(fd)
+            raise
+        try:
             if created:
                 # first time we have touched this file, need to register it
                 self.register_func()
             return self
         except Exception:
-            os.close(fd)
+            self.f.close()
+            del self.f
             raise
 
     def __exit__(self, type, value, traceback):

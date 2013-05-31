@@ -47,6 +47,9 @@ class RecipeTasks(RPCRoot):
             recipetask = RecipeTask.by_id(task_id)
         except InvalidRequestError:
             raise BX(_('Invalid task ID: %s' % task_id))
+        if recipetask.is_finished():
+            raise BX('Cannot register file for finished task %s'
+                    % recipetask.t_id)
 
         # Add the log to the DB if it hasn't been recorded yet.
         log_recipe = LogRecipeTask.lazy_create(parent=recipetask,
@@ -68,6 +71,9 @@ class RecipeTasks(RPCRoot):
             result = RecipeTaskResult.by_id(result_id)
         except InvalidRequestError:
             raise BX(_('Invalid result ID: %s' % result_id))
+        if result.recipetask.is_finished():
+            raise BX('Cannot register file for finished task %s'
+                    % result.recipetask.t_id)
 
         log_recipe = LogRecipeTaskResult.lazy_create(parent=result,
                                                      path=path, 

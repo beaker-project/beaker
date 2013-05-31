@@ -97,6 +97,9 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        if recipe.is_finished():
+            raise BX('Cannot register file for finished recipe %s'
+                    % recipe.t_id)
 
         # Add the log to the DB if it hasn't been recorded yet.
         log_recipe = LogRecipe.lazy_create(parent=recipe,
