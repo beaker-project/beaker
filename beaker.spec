@@ -132,8 +132,7 @@ Requires:       firefox
 Requires:       lsof
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
-Requires:       /usr/sbin/slapd
-Requires:       /usr/bin/slapadd
+Requires:       openldap-servers
 %endif
 
 
