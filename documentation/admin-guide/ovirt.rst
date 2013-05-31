@@ -3,6 +3,13 @@
 Integration with oVirt Engine and RHEV-M
 ========================================
 
+.. note::
+
+   The oVirt integration for dynamic system provisioning is classified as
+   experimental. It only supports some very constrained configurations on
+   the oVirt side, and even then has some quirks which may limit its
+   practical benefits.
+
 Beaker can optionally be configured to use oVirt Engine (or the
 equivalent Red Hat Enterprise Virtualization Manager product) to create
 virtual machines on demand for running recipes. Version 3.0 or higher of
