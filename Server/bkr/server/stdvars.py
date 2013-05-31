@@ -1,10 +1,10 @@
 import turbogears
-import bkr
+import bkr.common
 
 
 def beaker_version():
    try: 
-        return bkr.__version__
+        return bkr.common.__version__
    except AttributeError, (e): 
         return 'devel-version'   
 

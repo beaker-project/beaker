@@ -5,15 +5,22 @@ SHELL = /bin/bash
 export PYTHONPATH=../Common:../Server:../Client/src
 SPHINXBUILD ?= $(firstword $(shell command -v sphinx-1.0-build sphinx-build))
 
-SPHINXREQUIRES = "Sphinx >= 1.0"
 # pkg_resources.requires() does not work if multiple versions are installed in 
 # parallel, but we need to be able to load bkr for autodoc generation. The
 # semi-supported hack using __requires__ in the $SPHINXBUILD definition
 # is a workaround: http://bugs.python.org/setuptools/issue139
 # (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
 # (EPEL6 has python-sphinx = 0.6 and python-sphinx10 = 1.0)
+# pkg_resources will happily copy site-packages to the front of sys.path if we
+# give an explicit dependency on a default version, so we check the version of
+# sphinx before requiring it (this avoids breakage when building the docs on
+# Fedora with the released RPMs installed)
+# Also see: https://bitbucket.org/pypa/setuptools/issue/6/
+ifneq (True,$(shell python -c 'import sys, sphinx; print(sphinx.__version__ >= "1.0")'))
+    SPHINXREQUIRES = "Sphinx >= 1.0",
+endif
 ifeq (0,$(shell python -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources' &>/dev/null ; echo $$?))
-    SPHINXREQUIRES += , "CherryPy < 3.0"
+    SPHINXREQUIRES += "CherryPy < 3.0",
 endif
 
 # You can set these variables from the command line.
