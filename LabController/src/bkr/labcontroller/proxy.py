@@ -66,7 +66,8 @@ class ProxyHelper(object):
         self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
                 transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
         self.log_storage = LogStorage(self.conf.get("CACHEPATH"),
-                "http://%s/beaker/logs" % self.conf.get("SERVER", gethostname()),
+                "%s://%s/beaker/logs" % (self.conf.get('URL_SCHEME',
+                'http'), self.conf.get_url_domain()),
                 self.hub)
 
     def recipe_upload_file(self, 
@@ -295,7 +296,7 @@ class Watchdog(ProxyHelper):
     def transfer_logs(self):
         logger.info("Entering transfer_logs")
         transfered = False
-        server = self.conf.get("SERVER", gethostname())
+        server = self.conf.get_url_domain()
         for recipe_id in self.hub.recipes.by_log_server(server):
             transfered = True
             self.transfer_recipe_logs(recipe_id)
