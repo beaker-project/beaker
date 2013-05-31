@@ -5,27 +5,38 @@ SHELL = /bin/bash
 export PYTHONPATH=../Common:../Server:../Client/src
 SPHINXBUILD ?= $(firstword $(shell command -v sphinx-1.0-build sphinx-build))
 
+# This Makefile contains some frustrating hacks, centering around the fact that 
+# the docs use autodoc and therefore need to be able to import bkr modules from 
+# the source tree which they live inside.
+#
 # pkg_resources.requires() does not work if multiple versions are installed in 
 # parallel, but we need to be able to load bkr for autodoc generation. The
 # semi-supported hack using __requires__ in the $SPHINXBUILD definition
 # is a workaround: http://bugs.python.org/setuptools/issue139
 # (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
 # (EPEL6 has python-sphinx = 0.6 and python-sphinx10 = 1.0)
-# pkg_resources will happily copy site-packages to the front of sys.path if we
-# give an explicit dependency on a default version, so we check the version of
-# sphinx before requiring it (this avoids breakage when building the docs on
-# Fedora with the released RPMs installed)
+#
+# In addition, if the pkg_resources dependency chain includes anything which 
+# needs to be added to sys.path *and* anything which is in site-packages, then 
+# site-packages gets prepended to sys.path in front of anything we pass in 
+# through PYTHONPATH. That means, if you have bkr in site-packages it will be 
+# imported instead of the local source. To work around the pkg_resources 
+# behaviour we have to fiddle with bkr.__path__ ourselves in addition to 
+# setting PYTHONPATH.
+#
 # Also see: https://bitbucket.org/pypa/setuptools/issue/6/
-ifneq (True,$(shell python -c 'import sys, sphinx; print(sphinx.__version__ >= "1.0")'))
-    SPHINXREQUIRES = "Sphinx >= 1.0",
-endif
+
+SPHINXREQUIRES = "Sphinx >= 1.0",
 ifeq (0,$(shell python -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources' &>/dev/null ; echo $$?))
     SPHINXREQUIRES += "CherryPy < 3.0",
 endif
+BKR_PATH_INJECTED = "../Common/bkr", "../Server/bkr", "../Client/src/bkr"
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD  := python -c '__requires__ = [$(SPHINXREQUIRES)]; import pkg_resources; execfile("$(SPHINXBUILD)")'
+SPHINXBUILD  := python -c '__requires__ = [$(SPHINXREQUIRES)]; import pkg_resources; \
+    import bkr; bkr.__path__ = [$(BKR_PATH_INJECTED)]; \
+    execfile("$(SPHINXBUILD)")'
 PAPER         =
 BUILDDIR      = _build
 
