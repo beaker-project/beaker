@@ -4109,15 +4109,7 @@ class TaskBase(MappedObject):
 
         return span
     progress_bar = property(progress_bar)
-    
-    def access_rights(self,user):
-        if not user:
-            return
-        try:
-            if self.owner == user or (user.in_group(['admin','queue_admin'])):
-                return True
-        except Exception:
-            return
+
 
     def t_id(self):
         for t, class_ in self.t_id_types.iteritems():
@@ -4694,11 +4686,67 @@ class Job(TaskBase):
     def link(self):
         return make_link(url='/jobs/%s' % self.id, text=self.t_id)
 
-    def can_admin(self, user=None):
-        """Returns True iff the given user can administer this Job."""
-        if user:
-            return self.owner == user or user.is_admin() or self.owner.in_group([g.group_name for g in user.groups])
-        return False
+    def can_stop(self, user=None):
+        """Return True iff the given user can stop the job"""
+        can_stop = self._can_administer(user)
+        if not can_stop and user:
+            can_stop = user.has_permission('stop_task')
+        return can_stop
+
+    def can_change_priority(self, user=None):
+        """Return True iff the given user can change the priority"""
+        can_change = self._can_administer(user) or self._can_administer_old(user)
+        if not can_change and user:
+            can_change = user.in_group(['admin','queue_admin'])
+        return can_change
+
+    def can_change_whiteboard(self, user=None):
+        """Returns True iff the given user can change the whiteboard"""
+        return self._can_administer(user) or self._can_administer_old(user)
+
+    def can_change_product(self, user=None):
+        """Returns True iff the given user can change the product"""
+        return self._can_administer(user) or self._can_administer_old(user)
+
+    def can_change_retention_tag(self, user=None):
+        """Returns True iff the given user can change the retention tag"""
+        return self._can_administer(user) or self._can_administer_old(user)
+
+    def can_delete(self, user=None):
+        """Returns True iff the given user can delete the job"""
+        return self._can_administer(user) or self._can_administer_old(user)
+
+    def can_cancel(self, user=None):
+        """Returns True iff the given user can cancel the job"""
+        return self._can_administer(user)
+
+    def can_set_response(self, user=None):
+        """Returns True iff the given user can set the response to this job"""
+        return self._can_administer(user) or self._can_administer_old(user)
+
+    def _can_administer(self, user=None):
+        """Returns True iff the given user can administer the Job.
+
+        Admins, group job members and job owners can administer a job.
+        """
+        if user is None:
+            return False
+        if self.group:
+            return self.is_owner(user) or user.is_admin() or \
+                self.group in user.groups
+        else:
+            return self.is_owner(user) or user.is_admin()
+
+    def _can_administer_old(self, user):
+        """
+        This fills the gap between the new permissions system with group
+        jobs and the old permission model without it.
+
+        XXX Remove this the next release AFTER 0.13
+        """
+        if not user:
+            return False
+        return bool(set(user.groups).intersection(set(self.owner.groups)))
 
     cc = association_proxy('_job_ccs', 'email_address')
 
@@ -4886,6 +4934,18 @@ class RecipeSet(TaskBase):
         if self.owner == user:
             return True
         return False
+
+    def can_set_response(self, user=None):
+        """Return True iff the given user can change the response to this recipeset"""
+        return self.job.can_set_response(user)
+
+    def can_stop(sel, user=None):
+        """Returns True iff the given user can stop this recipeset"""
+        return self.job.can_stop(user)
+
+    def can_cancel(self, user=None):
+        """Returns True iff the given user can cancel this recipeset"""
+        return self.job.can_cancel(user)
 
     def build_ancestors(self, *args, **kw):
         """
@@ -6149,6 +6209,10 @@ class RecipeTask(TaskBase):
                     system.setAttribute("value", "%s" % recipetask.recipe.resource.fqdn)
                     role.appendChild(system)
             yield(role)
+
+    def can_stop(self, user=None):
+        """Returns True iff the given user can stop this recipe task"""
+        return self.recipe.recipeset.job.can_stop(user)
 
 
 class RecipeTaskParam(MappedObject):

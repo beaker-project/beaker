@@ -1,31 +1,63 @@
-#!/usr/bin/python
-
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
-import unittest, time, re, os
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import is_text_present, login
+from bkr.inttest import data_setup, get_server_base
 from turbogears.database import session
 
-class Cancel(SeleniumTestCase):
 
-    @with_transaction
+class Cancel(WebDriverTestCase):
+
     def setUp(self):
-        self.password = 'password'
-        self.user = data_setup.create_user(password=self.password)
-        self.job = data_setup.create_job(owner=self.user)
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-
-    def test_cancel_recipeset(self):
-        sel = self.selenium
-        self.login(user=self.user, password=self.password)
-        sel.open('jobs/%s' % self.job.id)
-        sel.wait_for_page_to_load("30000")
-        sel.click('//div[@class="recipeset"]//a[text()="Cancel"]')
-        sel.wait_for_page_to_load("30000")
-        sel.click("//input[@value='Yes']")
-        sel.wait_for_page_to_load("60000")
-        
-        self.assertTrue(sel.is_text_present("Successfully cancelled recipeset %s" % self.job.recipesets[0].id))
+        with session.begin():
+            self.password = 'password'
+            self.user = data_setup.create_user(password=self.password)
+            self.job = data_setup.create_job(owner=self.user)
+        self.browser = self.get_browser()
 
     def tearDown(self):
-        self.selenium.stop()
+        self.browser.quit()
+
+    def test_cancel_recipeset_group_job(self):
+        b = self.browser
+        with session.begin():
+            group = data_setup.create_group()
+            user = data_setup.create_user(password='password')
+            user.groups.append(group)
+            self.job.group = group
+        login(b, user.user_name, 'password')
+        b.get(get_server_base() + 'jobs/%s' % self.job.id)
+        b.find_element_by_xpath('//div[@class="recipeset"]//a[text()="Cancel"]').click()
+        b.find_element_by_xpath("//input[@value='Yes']").click()
+        self.assertTrue(is_text_present(b, "Successfully cancelled recipeset %s"
+            % self.job.recipesets[0].id))
+
+    def test_cancel_group_job(self):
+        b = self.browser
+        with session.begin():
+            group = data_setup.create_group()
+            user = data_setup.create_user(password='password')
+            user.groups.append(group)
+            self.job.group = group
+        login(b, user.user_name, 'password')
+        b.get(get_server_base() + 'jobs/%s' % self.job.id)
+        b.find_element_by_xpath('//div[@class="job-action-container"]//a[text()="Cancel"]').click()
+        b.find_element_by_xpath("//input[@value='Yes']").click()
+        self.assertTrue(is_text_present(b, "Successfully cancelled job %s"
+            % self.job.id))
+
+    def test_owner_cancel_job(self):
+        b = self.browser
+        login(b, self.user.user_name, self.password)
+        b.get(get_server_base() + 'jobs/%s' % self.job.id)
+        b.find_element_by_xpath('//div[@class="job-action-container"]//a[text()="Cancel"]').click()
+        b.find_element_by_xpath("//input[@value='Yes']").click()
+        self.assertTrue(is_text_present(b, "Successfully cancelled job %s"
+            % self.job.id))
+
+    def test_owner_cancel_recipeset(self):
+        b = self.browser
+        login(b, self.user.user_name, self.password)
+        b.get(get_server_base() + 'jobs/%s' % self.job.id)
+        b.find_element_by_xpath('//div[@class="recipeset"]//a[text()="Cancel"]').click()
+        b.find_element_by_xpath("//input[@value='Yes']").click()
+        self.assertTrue(is_text_present(b, "Successfully cancelled recipeset %s"
+            % self.job.recipesets[0].id))

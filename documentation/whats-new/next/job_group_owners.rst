@@ -5,7 +5,13 @@ This change allows specifying a group owner of a job. This is done via the
 ``group`` attribute on a job XML's ``&lt;job /&gt;``, or by passing
 the ``--job-group`` option to a client workflow command. The group owners
 will have the same permissions for viewing/modifying a job as the original
-submitter. (Contributed by Raymond Mancy in :issue:`908183`.)
+submitter.
+
+(breakage)
+Be aware that the release subsequent to 0.13 will no longer allow
+administrative permissions to be granted to a job's owner's group's
+co-members. These have been superceded by group jobs.
+(Contributed by Raymond Mancy in :issue:`908183`.)
 
 Database Changes
 ----------------

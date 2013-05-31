@@ -1492,11 +1492,10 @@ class RecipeSetWidget(CompoundWidget):
         super(RecipeSetWidget,self).update_params(d)
         recipeset = d['recipeset']
         owner_groups = [g.group_name for g in recipeset.job.owner.groups]
-        try:
-            can_ack_nak = recipeset.is_owner(tg.identity.current.user) or \
-            'admin' in tg.identity.current.groups or \
-            tg.identity.current.user.in_group(owner_groups)
-        except AttributeError, e:
+        user = tg.identity.current.user
+        if recipeset.can_set_response(user):
+            can_ack_nak = True
+        else:
             #Can't ack if we don't fulfil these requirements
             can_ack_nak = False
         d['can_ack_nak'] = can_ack_nak

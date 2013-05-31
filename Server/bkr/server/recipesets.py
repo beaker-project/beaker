@@ -64,7 +64,7 @@ class RecipeSets(RPCRoot):
         except InvalidRequestError:
             flash(_(u"Invalid recipeset id %s" % id))
             redirect("/jobs/%s" % recipeset.job.id)
-        if not identity.current.user.is_admin() and recipeset.job.owner != identity.current.user:
+        if not recipeset.can_cancel(identity.current.user):
             flash(_(u"You don't have permission to cancel recipeset id %s" % id))
             redirect("/jobs/%s" % recipeset.job.id)
         return dict(
@@ -86,7 +86,7 @@ class RecipeSets(RPCRoot):
         except InvalidRequestError:
             flash(_(u"Invalid recipeset id %s" % id))
             redirect("/jobs/%s" % recipeset.job.id)
-        if not identity.current.user.is_admin() and recipeset.job.owner != identity.current.user:
+        if not recipeset.can_cancel(identity.current.user):
             flash(_(u"You don't have permission to cancel recipeset id %s" % id))
             redirect("/jobs/%s" % recipeset.job.id)
         recipeset.cancel(msg)
