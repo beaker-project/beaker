@@ -18,7 +18,7 @@ from socket import gethostname
 from threading import Thread, Event
 from xml.sax.saxutils import escape as xml_escape, quoteattr as xml_quoteattr
 from werkzeug.wrappers import Response
-from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound
+from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound, LengthRequired
 from werkzeug.utils import redirect
 from werkzeug.http import parse_content_range_header
 from werkzeug.wsgi import wrap_file
@@ -715,7 +715,7 @@ class ProxyHTTP(object):
 
     def _put_log(self, log_file, req):
         if req.content_length is None:
-            raise BadRequest('Missing "Content-Length" header')
+            raise LengthRequired()
         content_range = parse_content_range_header(req.headers.get('Content-Range'))
         if content_range:
             # a few sanity checks
