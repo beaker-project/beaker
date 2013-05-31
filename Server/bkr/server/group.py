@@ -506,14 +506,13 @@ class Groups(AdminPage):
     @expose()
     def removeUser(self, group_id=None, id=None, **kw):
         group = Group.by_id(group_id)
-        group_owners = group.owners()
 
         if not group.can_modify_membership(identity.current.user):
             flash(_(u'You are not an owner of group %s' % group))
             redirect('../groups/mine')
 
-        if int(id) == group_owners.pop() and not group_owners:
-            flash(_(u'You are the only owner of group %s. Cannot remove' % group))
+        if not group.can_remove_member(identity.current.user, id):
+            flash(_(u'Cannot remove member'))
             redirect('../groups/edit?group_id=%s' % group_id)
 
         groupUsers = group.users
@@ -720,9 +719,8 @@ class Groups(AdminPage):
             if user not in group.users:
                 raise BX(_(u'No user %s in group %s' % (username, group.group_name)))
             else:
-                group_owners = group.owners()
-                if user.user_id == group_owners.pop() and not group_owners:
-                    raise BX(_(u'You are the only owner of group %s. Cannot remove' % group))
+                if not group.can_remove_member(identity.current.user, user.user_id):
+                    raise BX(_(u'Cannot remove member'))
 
                 groupUsers = group.users
                 for usr in groupUsers:

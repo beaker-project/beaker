@@ -3,7 +3,7 @@ from turbogears.database import session
 from bkr.server.model import Group, User, Activity, UserGroup
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, mail_capture
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, logout, is_text_present
 import email
 
 # XXX this should be assimilated by TestGroupsWD when it is converted.
@@ -127,7 +127,7 @@ class TestGroupsWD(WebDriverTestCase):
         # body
         msg_payload = msg.get_payload(decode=True)
         action = action.lower()
-        for keyword in [action, group.group_name, self.user.email_address]:
+        for keyword in [action, group.group_name]:
             self.assert_(keyword in msg_payload, (keyword, msg_payload))
 
     def _make_and_go_to_owner_page(self, user, group, set_owner=True):
@@ -334,7 +334,55 @@ class TestGroupsWD(WebDriverTestCase):
         # remove self when I am the only owner of the group
         b.find_element_by_xpath('//a[@href="removeUser?group_id=%d&id=%d"]'
                                 % (group_id, self.user.user_id)).click()
-        self.assert_('Cannot remove' in b.find_element_by_class_name('flash').text)
+        self.assert_('Cannot remove member' in b.find_element_by_class_name('flash').text)
+
+        # admin should be able to remove an owner, even if only one
+        logout(b)
+        #login back as admin
+        login(b)
+        b.get(get_server_base() + 'groups/admin')
+        b.find_element_by_link_text(group_name[0].upper()).click()
+        b.find_element_by_link_text(group_name).click()
+        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]' 
+                                % self.user.user_name).click()
+
+        self.assert_('%s Removed' % self.user.user_name in b.find_element_by_class_name('flash').text)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=966312
+    def test_remove_self_admin_group(self):
+
+        with session.begin():
+            user = data_setup.create_admin(password='password')
+
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+
+        # admin should be in groups/mine
+        b.get(get_server_base() + 'groups/mine')
+        b.find_element_by_link_text('admin').click()
+
+        # remove self
+        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]' 
+                                % user.user_name).click()
+
+        # admin should not be in groups/mine
+        b.get(get_server_base() + 'groups/mine')
+        self.assertTrue(not is_text_present(b, 'admin'))
+        logout(b)
+
+        # login as admin
+        login(b)
+        group = Group.by_name('admin')
+        group_users = group.users
+        # remove  all other users from 'admin'
+        b.get(get_server_base() + 'groups/edit?group_id=1')
+        for usr in group_users:
+            if usr.user_id != 1:
+                b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]' 
+                                        % usr.user_name).click()
+        # attempt to remove admin user
+        b.find_element_by_xpath('//a[@href="removeUser?group_id=1&id=1"]').click()
+        self.assert_('Cannot remove member' in b.find_element_by_class_name('flash').text)
 
     def test_add_user_to_admin_group(self):
         with session.begin():
