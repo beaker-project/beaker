@@ -3,7 +3,8 @@ from turbogears.database import session
 from bkr.server.model import Group, User, Activity, UserGroup
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, mail_capture
-from bkr.inttest.server.webdriver_utils import login, logout, is_text_present
+from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, wait_for_animation
+from bkr.inttest.assertions import wait_for_condition
 import email
 
 # XXX this should be assimilated by TestGroupsWD when it is converted.
@@ -323,17 +324,18 @@ class TestGroupsWD(WebDriverTestCase):
         group_id = Group.by_name(group_name).group_id
         username = user.user_name
         user_id = user.user_id
-        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]' % username).click()
+
+        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[2]/text()="%s"]'
+                                % username).click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                           '%s Removed' % username)
-
         with session.begin():
             group = Group.by_name(group_name)
         self.check_notification(user, group, action='Removed')
 
         # remove self when I am the only owner of the group
-        b.find_element_by_xpath('//a[@href="removeUser?group_id=%d&id=%d"]'
-                                % (group_id, self.user.user_id)).click()
+        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[2]/text()="%s"]'
+                                % self.user.user_name).click()
         self.assert_('Cannot remove member' in b.find_element_by_class_name('flash').text)
 
         # admin should be able to remove an owner, even if only one
@@ -343,9 +345,8 @@ class TestGroupsWD(WebDriverTestCase):
         b.get(get_server_base() + 'groups/admin')
         b.find_element_by_link_text(group_name[0].upper()).click()
         b.find_element_by_link_text(group_name).click()
-        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]' 
+        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[2]/text()="%s"]'
                                 % self.user.user_name).click()
-
         self.assert_('%s Removed' % self.user.user_name in b.find_element_by_class_name('flash').text)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=966312
@@ -362,7 +363,7 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_link_text('admin').click()
 
         # remove self
-        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]' 
+        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[2]/text()="%s"]'
                                 % user.user_name).click()
 
         # admin should not be in groups/mine
@@ -378,8 +379,9 @@ class TestGroupsWD(WebDriverTestCase):
         b.get(get_server_base() + 'groups/edit?group_id=1')
         for usr in group_users:
             if usr.user_id != 1:
-                b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]' 
+                b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[2]/text()="%s"]'
                                         % usr.user_name).click()
+
         # attempt to remove admin user
         b.find_element_by_xpath('//a[@href="removeUser?group_id=1&id=1"]').click()
         self.assert_('Cannot remove member' in b.find_element_by_class_name('flash').text)
@@ -504,3 +506,63 @@ class TestGroupsWD(WebDriverTestCase):
         # check
         flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
         self.assert_('Cannot rename protected group' in flash_text, flash_text)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=908174
+    def test_add_remove_owner_group(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            group = data_setup.create_group(owner=user)
+            user1 = data_setup.create_user(password='password')
+
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+        b.get(get_server_base() + 'groups/mine')
+
+        # remove self (as only owner)
+        b.find_element_by_link_text(group.group_name).click()
+        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]'
+                                % user.user_name).click()
+
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assert_("Cannot remove the only owner" in flash_text)
+
+        # add a new user as owner
+        b.find_element_by_xpath('//input[@id="GroupUser_user_text"]').send_keys(user1.user_name)
+        b.find_element_by_xpath('//input[@value="Add"]').click()
+        b.find_element_by_xpath('//td[text()="%s"]' % user1.user_name)
+        b.find_element_by_xpath('//td/a[text()="Add (+)" and ../preceding-sibling::td[text()="%s"]]'
+                                % user1.user_name).click()
+        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]'
+                                % user1.user_name)
+        logout(b)
+
+        # login as the new user and check for ownership
+        login(b, user=user1.user_name, password='password')
+        b.get(get_server_base() + 'groups/mine')
+        b.find_element_by_link_text(group.group_name).click()
+        b.find_element_by_xpath('//title[normalize-space(text()) = '
+                                '"Group Edit"]')
+        with session.begin():
+            self.assertEquals(Activity.query.filter_by(service=u'WEBUI',
+                                                       field_name=u'Owner', action=u'Added',
+                                                       new_value=user1.user_name).count(), 1)
+            group = Group.by_name(group.group_name)
+            self.assertEquals(group.activity[-1].action, u'Added')
+            self.assertEquals(group.activity[-1].field_name, u'Owner')
+            self.assertEquals(group.activity[-1].new_value, user1.user_name)
+            self.assertEquals(group.activity[-1].service, u'WEBUI')
+
+        # remove self as owner
+        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]'
+                                % user1.user_name).click()
+        b.find_element_by_xpath('//title[text()="My Groups"]')
+
+        with session.begin():
+            self.assertEquals(Activity.query.filter_by(service=u'WEBUI',
+                                                       field_name=u'Owner', action=u'Removed',
+                                                       old_value=user1.user_name).count(), 1)
+            session.refresh(group)
+            self.assertEquals(group.activity[-1].action, u'Removed')
+            self.assertEquals(group.activity[-1].field_name, u'Owner')
+            self.assertEquals(group.activity[-1].old_value, user1.user_name)
+            self.assertEquals(group.activity[-1].service, u'WEBUI')

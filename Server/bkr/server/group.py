@@ -12,7 +12,7 @@ from bkr.server.validators import StrongPassword
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
-    GroupPermissions, DeleteLinkWidgetForm
+    GroupPermissions, DeleteLinkWidgetForm, LocalJSLink
 from bkr.server.admin_page import AdminPage
 from bkr.server.bexceptions import BX 
 from bkr.server.controller_utilities import restrict_http_method
@@ -31,6 +31,16 @@ def make_edit_link(name, id):
     return make_link(url  = 'edit?group_id=%s' % id,
                      text = name)
 
+class GroupOwnerModificationForbidden(BX, cherrypy.HTTPError):
+
+    def __init__(self, message):
+        self._message = message
+        self.value = message
+
+    def set_response(self):
+        response.status = 403
+        response.body = self._message
+        response.headers['content-type'] = 'application/json'
 
 class GroupFormSchema(validators.Schema):
     display_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
@@ -171,6 +181,15 @@ class Groups(AdminPage):
         )
 
     def show_members(self, group):
+
+        def show_ownership_status(member):
+            if group.has_owner(member):
+                return make_link('revoke_owner?group_id=%s&id=%s' % (group.group_id, member.user_id),
+                                 'Remove (-)',elem_class='change_ownership_remove')
+            else:
+                return make_link('grant_owner?group_id=%s&id=%s' % (group.group_id, member.user_id),
+                                 'Add (+)',elem_class='change_ownership_add')
+
         user_fields = [
             ('User Members', lambda x: x.display_name),
         ]
@@ -178,7 +197,8 @@ class Groups(AdminPage):
         if identity.current.user:
             can_edit = group.can_modify_membership(identity.current.user)
         if can_edit:
-            user_fields.append((' ', lambda x: make_link(
+            user_fields.append(('Group Ownership', show_ownership_status))
+            user_fields.append(('Group Membership', lambda x: make_link(
                     'removeUser?group_id=%s&id=%s' % (group.group_id, x.user_id),
                     u'Remove (-)')))
         return widgets.DataGrid(fields=user_fields)
@@ -232,6 +252,7 @@ class Groups(AdminPage):
             form = self.group_form,
             system_form = self.group_system_form,
             user_form = self.group_user_form,
+            group_edit_js = LocalJSLink('bkr', '/static/javascript/group_users.js'),
             action = './save',
             system_action = './save_system',
             user_action = './save_user',
@@ -521,6 +542,107 @@ class Groups(AdminPage):
         return return_dict
 
     @identity.require(identity.not_anonymous())
+    @expose(format='json')
+    def revoke_owner(self, group_id=None, id=None, **kw):
+
+        if group_id is not None and id is not None:
+            group = Group.by_id(group_id)
+            user = User.by_id(id)
+            service = 'WEBUI'
+        else:
+            group = Group.by_name(kw['group_name'])
+            user = User.by_user_name(kw['member_name'])
+            service = 'XMLRPC'
+
+        if not group.can_edit(identity.current.user):
+            raise GroupOwnerModificationForbidden('You are not an owner of group %s' % group)
+
+        if user not in group.users:
+            raise GroupOwnerModificationForbidden('User is not a group member')
+
+        if len(group.owners())==1 and not identity.current.user.is_admin():
+            raise GroupOwnerModificationForbidden('Cannot remove the only owner')
+        else:
+            for assoc in group.user_group_assocs:
+                if assoc.user == user:
+                    if assoc.is_owner:
+                        assoc.is_owner = False
+                        group.record_activity(user=identity.current.user, service=service,
+                                              field=u'Owner', action='Removed',
+                                              old=user.user_name, new=u'')
+                        # hack to return the user removing this owner
+                        # so that if the user was logged in as a group
+                        # owner, he/she can be redirected appropriately
+                        return str(identity.current.user.user_id)
+
+    #XML-RPC interface
+    @identity.require(identity.not_anonymous())
+    @expose(format='json')
+    def revoke_ownership(self, group, kw):
+        """
+        Revoke group ownership from an existing group member
+
+        :param group: An existing group name
+        :type group: string
+
+        The *kw* argument must be an XML-RPC structure (dict)
+        specifying the following keys:
+
+            'member_name'
+                 Group member's username to revoke ownership
+        """
+
+        return self.revoke_owner(group_name=group,
+                                 member_name=kw['member_name'])
+
+    @identity.require(identity.not_anonymous())
+    @expose(format='json')
+    def grant_owner(self, group_id=None, id=None, **kw):
+
+        if group_id is not None and id is not None:
+            group = Group.by_id(group_id)
+            user = User.by_id(id)
+            service = 'WEBUI'
+        else:
+            group = Group.by_name(kw['group_name'])
+            user = User.by_user_name(kw['member_name'])
+            service = 'XMLRPC'
+
+        if not group.can_edit(identity.current.user):
+            raise GroupOwnerModificationForbidden('You are not an owner of the group %s' % group)
+
+        if user not in group.users:
+            raise GroupOwnerModificationForbidden('User is not a group member')
+        else:
+            for assoc in group.user_group_assocs:
+                if assoc.user == user:
+                    if not assoc.is_owner:
+                        assoc.is_owner = True
+                        group.record_activity(user=identity.current.user, service=service,
+                                              field=u'Owner', action='Added',
+                                              old=u'', new=user.user_name)
+                        return ''
+
+    #XML-RPC interface
+    @identity.require(identity.not_anonymous())
+    @expose(format='json')
+    def grant_ownership(self, group, kw):
+        """
+        Grant group ownership to an existing group member
+
+        :param group: An existing group name
+        :type group: string
+
+        The *kw* argument must be an XML-RPC structure (dict)
+        specifying the following keys:
+
+            'member_name'
+                 Group member's username to grant ownership
+        """
+        return self.grant_owner(group_name=group,
+                           member_name=kw['member_name'])
+
+    @identity.require(identity.not_anonymous())
     @expose()
     def removeUser(self, group_id=None, id=None, **kw):
         group = Group.by_id(group_id)
@@ -543,7 +665,7 @@ class Groups(AdminPage):
                 mail.group_membership_notify(user, group,
                                              agent=identity.current.user,
                                              action='Removed')
-                flash( _(u"%s Removed" % removed.display_name))
+                flash(_(u"%s Removed" % removed.display_name))
                 redirect("../groups/edit?group_id=%s" % group_id)
         flash( _(u"No user %s in group %s" % (id, removed.display_name)))
         raise redirect("../groups/edit?group_id=%s" % group_id)

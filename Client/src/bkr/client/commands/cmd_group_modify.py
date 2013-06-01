@@ -33,6 +33,14 @@ Options
 
    Remove a user from the group
 
+.. option:: --grant-owner
+
+   Grant group owner permissions to an existing group member.
+
+.. option:: --revoke-owner
+
+   Remove group owner permissions from an existing group owner.
+
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
 
@@ -60,6 +68,14 @@ Add a user with username 'user1' to the group 'mygroup'::
 Remove an existing group member with username 'user1' from the group 'mygroup'::
 
     bkr group-modify --remove-member user1 mygroup
+
+Add an existing group member with username 'user1' as an owner of group 'mygroup'::
+
+    bkr group-modify --grant-owner user1 mygroup
+
+Revoke group owner rights from an existing group owner of group 'mygroup' with username 'user1'::
+
+    bkr group-modify --revoke-owner user1 mygroup
 
 See also
 --------
@@ -97,6 +113,19 @@ class Group_Modify(BeakerCommand):
             help="Username of the member to remove",
             )
 
+        self.parser.add_option(
+            "--grant-owner",
+            action='append',
+            default=[],
+            help="Username of the member to grant owner rights",
+            )
+
+        self.parser.add_option(
+            "--revoke-owner",
+            action='append',
+            default=[],
+            help="Username of the member to revoke owner rights",
+            )
 
     def run(self, *args, **kwargs):
 
@@ -109,14 +138,30 @@ class Group_Modify(BeakerCommand):
         group_name = kwargs.get('group_name', None)
         add_member = kwargs.get('add_member', None)
         remove_member = kwargs.get('remove_member', None)
+        grant_owner = kwargs.get('grant_owner', None)
+        revoke_owner = kwargs.get('revoke_owner', None)
 
         attribs = dict(group_name=group_name,
                        display_name=display_name,
                        add_member=add_member,
-                       remove_member=remove_member)
+                       remove_member=remove_member,
+                       grant_owner=grant_owner,
+                       revoke_owner=revoke_owner)
 
         if not any(attribs.values()):
             self.parser.error('Please specify an attribute to modify.')
 
         self.set_hub(**kwargs)
+
+        if attribs.get('grant_owner'):
+            members = attribs.pop('grant_owner')
+            for member in members:
+                print self.hub.groups.grant_ownership(group,
+                                                      dict(member_name=member))
+        if attribs.get('revoke_owner'):
+            members = attribs.pop('revoke_owner')
+            for member in members:
+                self.hub.groups.revoke_ownership(group,
+                                                 dict(member_name=member))
+        # others
         self.hub.groups.modify(group, attribs)

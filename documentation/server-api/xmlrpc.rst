@@ -55,6 +55,10 @@ in Beaker.
 
 .. automethod:: groups.modify
 
+.. automethod:: groups.grant_ownership
+
+.. automethod:: groups.revoke_ownership
+
 Systems
 -------
 

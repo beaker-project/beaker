@@ -330,3 +330,82 @@ class GroupModifyTest(unittest.TestCase):
         except ClientError, e:
             self.assert_('Cannot remove member' in
                          e.stderr_output, e.stderr_output)
+
+    def test_group_modify_grant_owner(self):
+        with session.begin():
+            user1 = data_setup.create_user()
+            user1.groups.append(self.group)
+            user2 = data_setup.create_user()
+            user2.groups.append(self.group)
+            user3 = data_setup.create_user()
+
+        out = run_client(['bkr', 'group-modify',
+                          '--grant-owner', user1.user_name,
+                          '--grant-owner', user2.user_name,
+                          self.group.group_name],
+                         config = self.client_config)
+
+        with session.begin():
+            session.refresh(self.group)
+            group = Group.by_name(self.group.group_name)
+            self.assert_(user1.user_id in [u.user_id for u in group.owners()])
+            self.assert_(user2.user_id in [u.user_id for u in group.owners()])
+            self.assertEquals(Activity.query.filter_by(service=u'XMLRPC',
+                                                       field_name=u'Owner', action=u'Added',
+                                                       new_value=user2.user_name).count(), 1)
+            group = Group.by_name(group.group_name)
+            self.assertEquals(group.activity[-1].action, u'Added')
+            self.assertEquals(group.activity[-1].field_name, u'Owner')
+            self.assertEquals(group.activity[-1].new_value, user2.user_name)
+            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+
+        try:
+            out = run_client(['bkr', 'group-modify',
+                              '--grant-owner', user3.user_name,
+                              self.group.group_name],
+                             config = self.client_config)
+            self.fail('Must fail or die')
+        except ClientError, e:
+            self.assert_('User is not a group member' in e.stderr_output)
+
+    def test_group_modify_revoke_owner(self):
+        with session.begin():
+            user1 = data_setup.create_user()
+            user1.groups.append(self.group)
+            user2 = data_setup.create_user()
+            user2.groups.append(self.group)
+            user3 = data_setup.create_user()
+
+        out = run_client(['bkr', 'group-modify',
+                          '--grant-owner', user1.user_name,
+                          '--grant-owner', user2.user_name,
+                          self.group.group_name],
+                         config = self.client_config)
+
+        out = run_client(['bkr', 'group-modify',
+                          '--revoke-owner', user1.user_name,
+                          '--revoke-owner', user2.user_name,
+                          self.group.group_name],
+                         config = self.client_config)
+
+        with session.begin():
+            session.refresh(self.group)
+            group = Group.by_name(self.group.group_name)
+            self.assert_(user1.user_id not in [u.user_id for u in group.owners()])
+            self.assert_(user2.user_id not in [u.user_id for u in group.owners()])
+            self.assertEquals(Activity.query.filter_by(service=u'XMLRPC',
+                                                       field_name=u'Owner', action=u'Removed',
+                                                       old_value=user2.user_name).count(), 1)
+            self.assertEquals(group.activity[-1].action, u'Removed')
+            self.assertEquals(group.activity[-1].field_name, u'Owner')
+            self.assertEquals(group.activity[-1].old_value, user2.user_name)
+            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+
+        try:
+            out = run_client(['bkr', 'group-modify',
+                              '--revoke-owner', user3.user_name,
+                              self.group.group_name],
+                             config = self.client_config)
+            self.fail('Must fail or die')
+        except ClientError, e:
+            self.assert_('User is not a group member' in e.stderr_output)
