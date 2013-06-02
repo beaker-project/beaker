@@ -450,6 +450,7 @@ class TestGroupsWD(WebDriverTestCase):
         with session.begin():
             user = data_setup.create_user(password='password')
             group = data_setup.create_group(owner=user)
+            group1 = data_setup.create_group(owner=user)
 
         b = self.browser
         login(b, user=user.user_name, password='password')
@@ -468,6 +469,23 @@ class TestGroupsWD(WebDriverTestCase):
                               get_attribute('value'), new_display_name)
         self.assertEquals(b.find_element_by_xpath('//input[@id="Group_group_name"]').\
                               get_attribute('value'), new_group_name)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=967799
+    def test_edit_group_name_duplicate(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            group1 = data_setup.create_group(owner=user)
+            group2 = data_setup.create_group(owner=user)
+
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+
+        b.get(get_server_base() + 'groups/mine')
+        b.find_element_by_link_text(group2.group_name).click()
+        self._edit_group_details(b, group1.group_name, group2.display_name)
+
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assert_('Group name already exists' in flash_text, flash_text)
 
     def test_cannot_rename_protected_group(self):
         with session.begin():

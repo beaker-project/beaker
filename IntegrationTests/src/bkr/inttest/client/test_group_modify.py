@@ -148,6 +148,21 @@ class GroupModifyTest(unittest.TestCase):
             self.assertEquals(group.display_name, display_name)
             self.assertEquals(group.group_name, group_name)
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=967799
+    def test_group_modify_group_name_duplicate(self):
+        with session.begin():
+            group1 = data_setup.create_group(owner=self.user)
+            group2 = data_setup.create_group(owner=self.user)
+
+        try:
+            out = run_client(['bkr', 'group-modify',
+                              '--group-name', group1.group_name,
+                              group2.group_name],
+                             config = self.client_config)
+            self.fail('Must fail or die')
+        except ClientError, e:
+            self.assert_('Group name already exists' in e.stderr_output)
+
     def test_admin_cannot_rename_protected_group(self):
         # See https://bugzilla.redhat.com/show_bug.cgi?id=961206
         protected_group_name = 'admin'

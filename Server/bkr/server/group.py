@@ -309,6 +309,16 @@ class Groups(AdminPage):
             flash( _(u"Group %s does not exist." % group_id) )
             redirect('mine')
 
+        try:
+            Group.by_name(group_name)
+        except NoResultFound:
+            pass
+        else:
+            if group_name != group.group_name:
+                flash(_(u'Failed to update group %s: Group name already exists: %s' % 
+                        (group.group_name, group_name)))
+                redirect('.')
+
         if not group.can_edit(user):
             flash(_(u'You are not an owner of group %s' % group))
             redirect('../groups/mine')
@@ -682,6 +692,17 @@ class Groups(AdminPage):
             group = Group.by_name(group_name)
         except NoResultFound:
             raise BX(_(u'Group does not exist: %s.' % group_name))
+
+        group_name = kw.get('group_name', None)
+        if group_name:
+            try:
+                Group.by_name(group_name)
+            except NoResultFound:
+                pass
+            else:
+                if group_name != group.group_name:
+                    raise BX(_(u'Failed to update group %s: Group name already exists: %s' %
+                               (group.group_name, group_name)))
 
         user = identity.current.user
         if not group.can_edit(user):
