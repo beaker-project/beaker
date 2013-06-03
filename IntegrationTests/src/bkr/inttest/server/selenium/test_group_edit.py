@@ -300,7 +300,7 @@ class TestGroupsWD(WebDriverTestCase):
         with session.begin():
             user = data_setup.create_user(password='password')
 
-        group_name = data_setup.unique_name('Group1234%s')
+        group_name = data_setup.unique_name('AAAAAA%s')
         display_name = data_setup.unique_name('Group Display Name %s')
 
         b = self.browser
