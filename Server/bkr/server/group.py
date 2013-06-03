@@ -461,10 +461,6 @@ class Groups(AdminPage):
         groups = Group.by_user(current_user)
         template_data = self.groups(groups,current_user,*args,**kw)
         template_data['title'] = 'My Groups'
-        template_data['grid_fields'].append((' ',
-            lambda x: self.delete_link.display(dict(id=x.group_id),
-                                               action=url('remove'),
-                                               action_text='Remove (-)')))
         groups_grid = myPaginateDataGrid(fields=template_data['grid_fields'])
         template_data['grid'] = groups_grid
 
@@ -499,17 +495,29 @@ class Groups(AdminPage):
             else:
                 return 'System count: 0'
 
+        def get_remove_link(x):
+            try:
+                if x.can_edit(identity.current.user):
+                    return self.delete_link.display(dict(group_id=x.group_id),
+                                             action=url('remove'),
+                                             action_text='Remove (-)')
+                else:
+                    return ''
+            except AttributeError:
+                return ''
+
         group_name = ('Group Name', get_groups)
         systems = ('Systems', get_sys)
         display_name = ('Display Name', lambda x: x.display_name)
-        grid_fields =  [group_name, display_name, systems]
+        remove_link = ('', get_remove_link)
+
+        grid_fields =  [group_name, display_name, systems, remove_link]
         return_dict = dict(title=u"Groups",
                            grid_fields = grid_fields,
                            object_count = groups.count(),
                            search_bar = None,
                            search_widget = self.search_widget_form,
                            list = groups)
-
         return return_dict
 
     @identity.require(identity.not_anonymous())
@@ -569,6 +577,10 @@ class Groups(AdminPage):
 
         if not group.can_edit(identity.current.user):
             flash(_(u'You are not an owner of group %s' % group))
+            redirect('../groups/mine')
+
+        if group.jobs:
+            flash(_(u'Cannot delete a group which has associated jobs'))
             redirect('../groups/mine')
 
         session.delete(group)
