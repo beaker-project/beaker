@@ -33,16 +33,30 @@ being upgraded to a new version.
 
        release-1.0/*
 
-Unreleased changes
-------------------
+.. uncomment unreleased changes section after 0.13 has branched
 
-The following changes will appear in the next Beaker release.
+    Unreleased changes
+    ------------------
+
+    The following changes will appear in the next Beaker release.
+
+    .. toctree::
+    :maxdepth: 2
+    :glob:
+
+    next/*
+
+Beaker 0.13
+-----------
+
+Beaker 0.13 includes a number of new features and bug fixes, focusing on
+the :ref:`proposal-enhanced-user-groups` design proposal.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   next/*
+   release-0.13
+   upgrade-0.13
 
 Beaker 0.12
 -----------

@@ -1,3 +1,5 @@
+.. _writing-tasks:
+
 Writing tasks
 =============
 
