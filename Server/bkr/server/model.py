@@ -1843,11 +1843,6 @@ class Group(DeclBase, MappedObject, ActivityMixin):
             q = cls.query.filter(Group.group_name.like('%s%%' % name))
         return q
 
-    @classmethod
-    def by_user(cls,user):
-        groups = Group.query.filter(Group.users.contains(user))
-        return groups
-
     @property
     def root_password(self):
         """

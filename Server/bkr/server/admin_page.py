@@ -38,7 +38,9 @@ class AdminPage(RPCRoot):
                                                 search_controller = url(self.search_url),
                                                 search_param = self.search_param,
                                                 result_name = self.result_name)
-        self.search_widget_form = TableForm('Search', fields=[self.search_auto], action=self.widget_action, submit_text=_(u'Search'),) 
+        self.search_widget_form = TableForm('Search', fields=[self.search_auto],
+                method='get', action=self.widget_action,
+                submit_text=_(u'Search'))
         if getattr(self,'join',None) is None:
             self.join = []
         self.add = True

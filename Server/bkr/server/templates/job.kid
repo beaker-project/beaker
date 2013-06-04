@@ -122,7 +122,7 @@
    <td class='title'><b>Group</b></td>
    <td class="value" style="min-width: 100px;">
     <a py:if="job.group" class="list"
-     href="${tg.url('/groups/group_members/?group_id=%d' % job.group.group_id)}">
+     href="${tg.url('/groups/edit?group_id=%d' % job.group.group_id)}">
      ${job.group}
     </a>
    </td>

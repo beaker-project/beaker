@@ -197,18 +197,14 @@ class TestGroupsWD(WebDriverTestCase):
             send_keys('blapppy7')
         b.find_element_by_xpath('//input[@value="Save"]').click()
         b.find_element_by_xpath('//title[text()="My Groups"]')
-        b.find_element_by_link_text('F').click()
         b.find_element_by_link_text('FBZ').click()
-        # this is required to check whether the creator was automatically
-        # added as a group owner
-        b.find_element_by_xpath('//title[normalize-space(text()) = '
-            '"Group Edit"]')
         with session.begin():
             self.assertEquals(Activity.query.filter_by(service=u'WEBUI',
                     field_name=u'Group', action=u'Added',
                     new_value=u'Group FBZ').count(), 1)
             group = Group.by_name(u'FBZ')
             self.assertEquals(group.display_name, u'Group FBZ')
+            self.assert_(group.has_owner(self.user))
             self.assertEquals(group.activity[-1].action, u'Added')
             self.assertEquals(group.activity[-1].field_name, u'Owner')
             self.assertEquals(group.activity[-1].new_value, self.user.user_name)
@@ -232,12 +228,7 @@ class TestGroupsWD(WebDriverTestCase):
             send_keys(group_name)
         b.find_element_by_xpath('//input[@value="Save"]').click()
         b.find_element_by_xpath('//title[text()="My Groups"]')
-        b.find_element_by_link_text(group_name[0].upper())
         b.find_element_by_link_text(group_name).click()
-        # this is required to check whether the creator was automatically
-        # added as a group owner
-        b.find_element_by_xpath('//title[normalize-space(text()) = '
-            '"Group Edit"]')
         b.find_element_by_xpath('//input[@name="root_password" and '
             'not(following-sibling::span[@class="fielderror"])]')
 
@@ -261,17 +252,15 @@ class TestGroupsWD(WebDriverTestCase):
         self.failUnless(crypt.crypt('blapppy7', self.group.root_password) ==
             self.group.root_password)
 
-    def test_cannot_open_edit_page_for_unowned_group(self):
+    def test_cannot_edit_unowned_group(self):
         with session.begin():
             user = data_setup.create_user(password='password')
             user.groups.append(self.group)
         b = self.browser
-
         login(b, user=self.user.user_name, password='password')
-        # direct URL check
         b.get(get_server_base() + 'groups/edit?group_id=%d' % self.group.group_id)
-        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
-        self.assert_('You are not an owner' in flash_text)
+        b.find_element_by_xpath('//table[@id="widget" and not(.//a/text()="Remove (-)")]')
+        b.find_element_by_xpath('//body[not(.//input)]')
 
     def test_add_user_to_owning_group(self):
         with session.begin():
@@ -287,7 +276,6 @@ class TestGroupsWD(WebDriverTestCase):
             send_keys('FBZ-1')
         b.find_element_by_xpath('//input[@value="Save"]').click()
         b.find_element_by_xpath('//title[text()="My Groups"]')
-        b.find_element_by_link_text('F').click()
         b.find_element_by_link_text('FBZ-1').click()
         b.find_element_by_xpath('//input[@id="GroupUser_user_text"]').send_keys(user.user_name)
         b.find_element_by_xpath('//input[@value="Add"]').click()
@@ -312,7 +300,6 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="Group_group_name"]').send_keys(group_name)
         b.find_element_by_xpath('//input[@value="Save"]').click()
         b.find_element_by_xpath('//title[text()="My Groups"]')
-        b.find_element_by_link_text(group_name[0].upper()).click()
         b.find_element_by_link_text(group_name).click()
 
         # add an user
@@ -342,9 +329,7 @@ class TestGroupsWD(WebDriverTestCase):
         logout(b)
         #login back as admin
         login(b)
-        b.get(get_server_base() + 'groups/admin')
-        b.find_element_by_link_text(group_name[0].upper()).click()
-        b.find_element_by_link_text(group_name).click()
+        b.get(get_server_base() + 'groups/edit?group_id=%s' % group_id)
         b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[2]/text()="%s"]'
                                 % self.user.user_name).click()
         self.assert_('%s Removed' % self.user.user_name in b.find_element_by_class_name('flash').text)
@@ -405,8 +390,6 @@ class TestGroupsWD(WebDriverTestCase):
         b.get(get_server_base() + 'groups/edit?group_id=%d' % group.group_id)
         b.find_element_by_xpath('//input[@id="Group_display_name"]')
         b.find_element_by_xpath('//input[@id="Group_group_name"]')
-        b.find_element_by_xpath('//title[normalize-space(text())="Group Edit"]')
-        b.find_element_by_xpath('//input[not(@id="Group_user_text")]')
 
     def test_create_ldap_group(self):
         login(self.browser)
@@ -540,13 +523,13 @@ class TestGroupsWD(WebDriverTestCase):
         login(b, user=user1.user_name, password='password')
         b.get(get_server_base() + 'groups/mine')
         b.find_element_by_link_text(group.group_name).click()
-        b.find_element_by_xpath('//title[normalize-space(text()) = '
-                                '"Group Edit"]')
+        b.find_element_by_xpath('//input')
         with session.begin():
             self.assertEquals(Activity.query.filter_by(service=u'WEBUI',
                                                        field_name=u'Owner', action=u'Added',
                                                        new_value=user1.user_name).count(), 1)
             group = Group.by_name(group.group_name)
+            self.assert_(group.has_owner(user1))
             self.assertEquals(group.activity[-1].action, u'Added')
             self.assertEquals(group.activity[-1].field_name, u'Owner')
             self.assertEquals(group.activity[-1].new_value, user1.user_name)
@@ -575,7 +558,7 @@ class TestGroupsWD(WebDriverTestCase):
         b = self.browser
         login(b)
         b.get(get_server_base() + 'groups/edit?group_id=%s' % self.group.group_id)
-        delete_and_confirm(b, '//td[preceding-sibling::td[text()="%s"]]' % system.fqdn,
+        delete_and_confirm(b, '//td[preceding-sibling::td[.//text()="%s"]]' % system.fqdn,
                 'Remove (-)')
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 '%s Removed' % system.fqdn)

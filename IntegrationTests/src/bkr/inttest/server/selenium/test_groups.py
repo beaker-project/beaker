@@ -26,7 +26,7 @@ class TestGroups(WebDriverTestCase):
     def test_group_remove(self):
         b = self.browser
         login(b)
-        b.get(get_server_base() + 'groups/admin')
+        b.get(get_server_base() + 'groups/')
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
         b.find_element_by_xpath("//input[@value='Search']").submit()

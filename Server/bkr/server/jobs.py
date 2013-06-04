@@ -751,10 +751,7 @@ class Jobs(RPCRoot):
 
         def get_group(x):
             if x.group:
-                if identity.current.user:
-                    if x.group.can_edit(identity.current.user):
-                        return make_link(url = '../groups/edit?group_id=%d' % x.group.group_id, text=x.group.group_name)
-                return make_link(url = '../groups/group_members?group_id=%d' % x.group.group_id, text=x.group.group_name)
+                return make_link(url = '../groups/edit?group_id=%d' % x.group.group_id, text=x.group.group_name)
             else:
                 return None
 
