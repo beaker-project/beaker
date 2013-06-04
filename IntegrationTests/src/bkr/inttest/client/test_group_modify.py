@@ -1,5 +1,6 @@
 import unittest
 import email
+import crypt
 from bkr.inttest import data_setup, with_transaction, mail_capture
 from bkr.inttest.client import run_client, ClientError, create_client_config
 from bkr.server.model import Group, Activity
@@ -132,6 +133,50 @@ class GroupModifyTest(unittest.TestCase):
                               self.user.user_id)
             self.assertEquals(group.activity[-1].new_value, group_name)
             self.assertEquals(group.activity[-1].service, u'XMLRPC')
+
+    def test_group_modify_password(self):
+        # Test successful hashed password change
+        hashed_password = '$1$NaCl$O34mAzBXtER6obhoIodu8.'
+        run_client(['bkr', 'group-modify', '--root-password', hashed_password,
+            self.group.group_name], config=self.client_config)
+        session.expire(self.group)
+        with session.begin():
+            group = self.group
+            self.assertEquals(group.root_password, hashed_password)
+            self.assertEquals(group.activity[-1].action, u'Changed')
+            self.assertEquals(group.activity[-1].field_name, u'Root Password')
+            self.assertEquals(group.activity[-1].user.user_id,
+                              self.user.user_id)
+            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+
+        # Test successful cleartext password change
+        good_password = data_setup.unique_name('Borrow or %srob?')
+        run_client(['bkr', 'group-modify', '--root-password', good_password,
+            self.group.group_name], config=self.client_config)
+        session.expire(self.group)
+        with session.begin():
+            group = self.group
+            self.assertEquals(group.root_password, crypt.crypt(good_password,
+                group.root_password))
+            self.assertEquals(group.activity[-1].action, u'Changed')
+            self.assertEquals(group.activity[-1].field_name, u'Root Password')
+            self.assertEquals(group.activity[-1].user.user_id,
+                              self.user.user_id)
+            self.assertEquals(group.activity[-1].service, u'XMLRPC')
+
+        # Test unsuccessful cleartext password change
+        short_password = 'fail'
+        try:
+            run_client(['bkr', 'group-modify', '--root-password', short_password,
+                self.group.group_name], config=self.client_config)
+            self.fail('Should fail with short password')
+        except ClientError, e:
+            self.assertTrue('password is too short' in str(e))
+            session.expire(self.group)
+            with session.begin():
+                group = self.group
+                self.assertEquals(group.root_password, crypt. \
+                    crypt(good_password, group.root_password))
 
     def test_group_modify_group_and_display_names(self):
         display_name = 'Shiny New Display Name'

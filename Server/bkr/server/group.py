@@ -774,6 +774,8 @@ class Groups(AdminPage):
                  Add user (username) to the group
             'remove_member'
                  Remove an existing user (username) from the group
+            'root_password'
+                 Change the root password of this group.
 
         Returns a message whether the group was successfully modified or
         raises an exception on failure.
@@ -805,6 +807,9 @@ class Groups(AdminPage):
 
         group.set_display_name(user, u'XMLRPC', kw.get('display_name', None))
         group.set_name(user, u'XMLRPC', kw.get('group_name', None))
+        root_password = kw.get('root_password', None)
+        if root_password:
+            group.set_root_password(user, u'XMLRPC', root_password)
 
         if kw.get('add_member', None):
             username = kw.get('add_member')

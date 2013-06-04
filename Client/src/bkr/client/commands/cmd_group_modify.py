@@ -41,6 +41,10 @@ Options
 
    Remove group owner permissions from an existing group owner.
 
+.. option:: --root-password
+
+   Root password for group jobs.
+
 Common :program:`bkr` options are described in the :ref:`Options
 <common-options>` section of :manpage:`bkr(1)`.
 
@@ -127,6 +131,11 @@ class Group_Modify(BeakerCommand):
             help="Username of the member to revoke owner rights",
             )
 
+        self.parser.add_option(
+            "--root-password",
+            help="Root password used for group jobs",
+        )
+
     def run(self, *args, **kwargs):
 
         if len(args) != 1:
@@ -140,13 +149,15 @@ class Group_Modify(BeakerCommand):
         remove_member = kwargs.get('remove_member', None)
         grant_owner = kwargs.get('grant_owner', None)
         revoke_owner = kwargs.get('revoke_owner', None)
+        password = kwargs.get('root_password', None)
 
         attribs = dict(group_name=group_name,
                        display_name=display_name,
                        add_member=add_member,
-                       remove_member=remove_member,
                        grant_owner=grant_owner,
-                       revoke_owner=revoke_owner)
+                       revoke_owner=revoke_owner,
+                       root_password=password,
+                       remove_member=remove_member)
 
         if not any(attribs.values()):
             self.parser.error('Please specify an attribute to modify.')

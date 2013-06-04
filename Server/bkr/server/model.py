@@ -1903,6 +1903,18 @@ class Group(DeclBase, MappedObject, ActivityMixin):
         """Some group names are predefined by Beaker and cannot be modified"""
         return self.group_name in (u'admin', u'queue_admin', u'lab_controller')
 
+    def set_root_password(self, user, service, password):
+        if len(password.split('$')) == 4:
+            # Password is hashed
+            hashed_root_password = password
+        else:
+            # Password is cleartext
+            hashed_root_password = crypt.crypt(password, self.root_password)
+        if self.root_password != hashed_root_password:
+            self.root_password = password
+            self.record_activity(user=user, service=service,
+                field=u'Root Password', old='*****', new='*****')
+
     def set_name(self, user, service, group_name):
         """Set a group's name and record any change as group activity
 
