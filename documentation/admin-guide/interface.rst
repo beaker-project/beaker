@@ -16,7 +16,9 @@ server configuration file), you can flag a group's membership to be populated
 from LDAP. If this flag is set, Beaker will not allow users to be added or 
 removed from the group manually. Instead, a cron job runs the 
 ``beaker-refresh-ldap`` command periodically to refresh group membership from 
-LDAP.
+LDAP. Administrators with command line access to the main Beaker server may also
+run ``beaker-refresh-ldap`` directly to force an immediate update from the
+LDAP server.
 
 You can also grant additional permissions to groups. These permissions would 
 typically only be granted to special groups for service accounts or privileged 
