@@ -20,7 +20,7 @@
     &nbsp;
     <div>
        ${systemgrid.display(value.systems)}
-       <div py:if="tg.identity.user and value.can_edit(tg.identity.user)"
+       <div py:if="tg.identity.user and tg.identity.user.is_admin()"
             py:content="system_form(method='POST', action=system_action, value=value)" />
     </div>
     <div>

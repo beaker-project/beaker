@@ -1,4 +1,5 @@
 import crypt
+import requests
 from turbogears.database import session
 from bkr.server.model import Group, User, Activity, UserGroup
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
@@ -67,30 +68,6 @@ class EditGroup(SeleniumTestCase):
         sel.open('groups/edit?group_id=%d' % self.group.group_id)
         sel.wait_for_page_to_load(30000)
         self.assert_(self.perm1.permission_name not in sel.get_text("//table[@id='group_permission_grid']"))
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=917745
-    def test_add_system_to_group_twice(self):
-        with session.begin():
-            system = data_setup.create_system()
-
-        sel = self.selenium
-        self.login()
-        sel.open('')
-
-        sel.open('groups/edit?group_id=%d' % self.group.group_id)
-        sel.wait_for_page_to_load(30000)
-        sel.type("GroupSystem_system_text", system.fqdn)
-        sel.submit("//form[@id='GroupSystem']")
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_text('css=.flash'), "OK")
-
-        sel.open('groups/edit?group_id=%d' % self.group.group_id)
-        sel.wait_for_page_to_load(30000)
-        sel.type("GroupSystem_system_text", system.fqdn)
-        sel.submit("//form[@id='GroupSystem']")
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_text('css=.flash'),
-                "System '%s' is already in group '%s'" % (system.fqdn, self.group.group_name))
 
 class TestGroupsWD(WebDriverTestCase):
 
@@ -550,6 +527,55 @@ class TestGroupsWD(WebDriverTestCase):
             self.assertEquals(group.activity[-1].old_value, user1.user_name)
             self.assertEquals(group.activity[-1].service, u'WEBUI')
 
+class GroupSystemTest(WebDriverTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.group_owner = data_setup.create_user(password='password')
+            self.group = data_setup.create_group()
+            self.group.user_group_assocs.append(
+                    UserGroup(user=self.group_owner, is_owner=True))
+        self.browser = self.get_browser()
+
+    def tearDown(self):
+        self.browser.quit()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=917745
+    def test_add_system_to_group_twice(self):
+        with session.begin():
+            system = data_setup.create_system()
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'groups/edit?group_id=%s' % self.group.group_id)
+        b.find_element_by_id('GroupSystem_system_text').send_keys(system.fqdn)
+        b.find_element_by_xpath('//form[@id="GroupSystem"]').submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text, 'OK')
+        b.get(get_server_base() + 'groups/edit?group_id=%s' % self.group.group_id)
+        b.find_element_by_id('GroupSystem_system_text').send_keys(system.fqdn)
+        b.find_element_by_xpath('//form[@id="GroupSystem"]').submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                "System '%s' is already in group '%s'" % (system.fqdn, self.group.group_name))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=970499
+    def test_ordinary_user_cannot_add_system(self):
+        with session.begin():
+            system = data_setup.create_system()
+        b = self.browser
+        login(b, user=self.group_owner.user_name, password='password')
+        b.get(get_server_base() + 'groups/edit?group_id=%s' % self.group.group_id)
+        # no form to add a system
+        b.find_element_by_xpath('//body[not(.//input[@id="GroupSystem_system_text"])]')
+        # crafting a POST by hand should also be rejected
+        cookies = dict((cookie['name'].encode('ascii', 'replace'), cookie['value'])
+                for cookie in b.get_cookies())
+        response = requests.post(get_server_base() + 'groups/save_system',
+                cookies=cookies,
+                data={'group_id': self.group.group_id, 'system.text': system.fqdn})
+        response.raise_for_status()
+        with session.begin():
+            session.expire_all()
+            self.assert_(system not in self.group.systems)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=970512
     def test_remove_system(self):
         with session.begin():
@@ -557,6 +583,22 @@ class TestGroupsWD(WebDriverTestCase):
             self.group.systems.append(system)
         b = self.browser
         login(b)
+        b.get(get_server_base() + 'groups/edit?group_id=%s' % self.group.group_id)
+        delete_and_confirm(b, '//td[preceding-sibling::td[.//text()="%s"]]' % system.fqdn,
+                'Remove (-)')
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                '%s Removed' % system.fqdn)
+        with session.begin():
+            session.expire_all()
+            self.assert_(system not in self.group.systems)
+
+    def test_ordinary_group_owner_can_remove_system(self):
+        with session.begin():
+            system = data_setup.create_system()
+            self.group.systems.append(system)
+        b = self.browser
+        self.assert_(self.group_owner != system.owner)
+        login(b, user=self.group_owner.user_name, password='password')
         b.get(get_server_base() + 'groups/edit?group_id=%s' % self.group.group_id)
         delete_and_confirm(b, '//td[preceding-sibling::td[.//text()="%s"]]' % system.fqdn,
                 'Remove (-)')

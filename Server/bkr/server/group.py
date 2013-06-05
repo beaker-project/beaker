@@ -362,16 +362,17 @@ class Groups(AdminPage):
     @error_handler(edit)
     def save_system(self, **kw):
         system = System.by_fqdn(kw['system']['text'],identity.current.user)
+        # A system owner can add their system to a group, but a group owner 
+        # *cannot* add an arbitrary system to their group because that would 
+        # grant them extra privileges over it.
+        if not system.is_admin(identity.current.user):
+            flash(_(u'You are not an owner of system %s' % system))
+            redirect('edit?group_id=%s' % kw['group_id'])
         group = Group.by_id(kw['group_id'])
         if group in system.groups:
             flash( _(u"System '%s' is already in group '%s'" % (system.fqdn, group.group_name)))
             redirect("./edit?group_id=%s" % kw['group_id'])
         group.systems.append(system)
-
-        if not group.can_edit(identity.current.user):
-            flash(_(u'You are not an owner of group %s' % group))
-            redirect('../groups/mine')
-
         activity = GroupActivity(identity.current.user, u'WEBUI', u'Added', u'System', u"", system.fqdn)
         sactivity = SystemActivity(identity.current.user, u'WEBUI', u'Added', u'Group', u"", group.display_name)
         group.activity.append(activity)
@@ -634,21 +635,21 @@ class Groups(AdminPage):
     @restrict_http_method('post')
     def removeSystem(self, group_id=None, id=None, **kw):
         group = Group.by_id(group_id)
+        system = System.by_id(id, identity.current.user)
 
-        if not group.can_edit(identity.current.user):
-            flash(_(u'You are not an owner of group %s' % group))
+        # A group owner can remove a system from their group.
+        # A system owner can remove their system from a group.
+        # But note this is not symmetrical with adding systems.
+        if not (group.can_edit(identity.current.user) or system.is_admin()):
+            flash(_(u'Not permitted to remove %s from %s') % (system, group))
             redirect('../groups/mine')
 
-        groupSystems = group.systems
-        for system in groupSystems:
-            if system.id == int(id):
-                group.systems.remove(system)
-                removed = system
-                activity = GroupActivity(identity.current.user, u'WEBUI', u'Removed', u'System', removed.fqdn, u"")
-                sactivity = SystemActivity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
-                group.activity.append(activity)
-                system.activity.append(sactivity)
-        flash( _(u"%s Removed" % removed.fqdn))
+        group.systems.remove(system)
+        activity = GroupActivity(identity.current.user, u'WEBUI', u'Removed', u'System', system.fqdn, u"")
+        sactivity = SystemActivity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
+        group.activity.append(activity)
+        system.activity.append(sactivity)
+        flash( _(u"%s Removed" % system.fqdn))
         raise redirect("./edit?group_id=%s" % group_id)
 
     @identity.require(identity.not_anonymous())
