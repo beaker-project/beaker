@@ -3,6 +3,7 @@ import os
 import shutil
 import signal
 import unittest
+from socket import gethostname
 from urlparse import urlparse, urlunparse
 from bkr.labcontroller.config import load_conf, get_conf
 from turbogears.database import session
@@ -18,6 +19,11 @@ log.info('Loading LC test configuration from %s', config_file)
 assert os.path.exists(config_file) , 'Config file %s must exist' % config_file
 load_conf(config_file)
 
+if 'BEAKER_LABCONTROLLER_HOSTNAME' in os.environ:
+    running_dogfood_task = True
+else:
+    running_dogfood_task = False
+
 processes = []
 lc_fqdn = None
 
@@ -32,11 +38,16 @@ class LabControllerTestCase(unittest.TestCase):
     def get_proxy_url(self):
         return 'http://%s:8000/' % lc_fqdn
 
+    def get_log_base_url(self):
+        protocol = get_conf().get('URL_SCHEME', 'http')
+        server_name = get_conf().get_url_domain()
+        return '%s://%s' % (protocol, server_name)
+
 def setup_package():
     global lc_fqdn
     conf = get_conf()
 
-    if 'BEAKER_LABCONTROLLER_HOSTNAME' not in os.environ:
+    if not running_dogfood_task:
         # Need to start the lab controller daemons ourselves
         with session.begin():
             user = data_setup.create_user(user_name=conf.get('USERNAME').decode('utf8'), password=conf.get('PASSWORD'))

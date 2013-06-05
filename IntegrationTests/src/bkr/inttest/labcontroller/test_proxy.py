@@ -1,7 +1,9 @@
-
 import os, os.path
+import re
 import posixpath
 import datetime
+import tempfile
+import copy
 from base64 import b64encode
 import xmlrpclib
 import lxml.etree, lxml.html
@@ -10,10 +12,12 @@ import requests
 from nose.plugins.skip import SkipTest
 from bkr.server.model import session, TaskResult, TaskStatus, LogRecipe, \
         LogRecipeTask, LogRecipeTaskResult
+from bkr.labcontroller.proxy import ProxyHelper
 from bkr.labcontroller.config import get_conf
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import assert_datetime_within
-from bkr.inttest.labcontroller import LabControllerTestCase
+from bkr.inttest.labcontroller import LabControllerTestCase, processes, \
+    config_file, running_dogfood_task
 
 class GetRecipeTest(LabControllerTestCase):
 
@@ -399,6 +403,76 @@ class PostrebootTest(LabControllerTestCase):
             session.expire_all()
             self.assertEqual(self.system.command_queue[0].action, 'reboot')
 
+
+class LogUploadTestRestartProxy(LabControllerTestCase):
+
+    @classmethod
+    def setupClass(cls):
+        if running_dogfood_task:
+            raise SkipTest('Too hard to control daemon process')
+
+    def setUp(self):
+        with session.begin():
+            self.recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_running(self.recipe)
+
+    def tearDown(self):
+        # Ensure beaker-proxy is started
+        # before every test run
+        for p in processes:
+            if p.name == 'beaker-proxy':
+                beaker_proxy_process = p
+                break
+        if beaker_proxy_process.popen.poll() is not None:
+            beaker_proxy_process.start()
+
+    def test_modified_log_url_old_config_option(self):
+        self._run_modified_log_url('SERVER')
+
+    def test_modified_log_url_new_config_option(self):
+        self._run_modified_log_url('URL_DOMAIN')
+
+    def _run_modified_log_url(self, config_arg):
+        # Stop beaker-proxy
+        beaker_proxy_process = None
+        for p in processes:
+            if p.name == 'beaker-proxy':
+                beaker_proxy_process = p
+                break
+        if not beaker_proxy_process:
+            self.fail('Could not find beaker-proxy process')
+        beaker_proxy_process.stop()
+        with open(config_file, 'r') as f:
+            contents = f.read()
+        contents = re.sub('URL_DOMAIN = "localhost"', '', contents)
+        contents = contents + "\nURL_SCHEME='https'\n%s='testingme.com'\n" % \
+            config_arg
+        tmp_config = tempfile.NamedTemporaryFile()
+        tmp_config.write(contents)
+        tmp_config.flush()
+        old_args = copy.copy(beaker_proxy_process.args)
+        new_args = []
+        for arg in beaker_proxy_process.args:
+            if arg != config_file:
+                new_args.append(arg)
+            else:
+                new_args.append(tmp_config.name)
+        beaker_proxy_process.args = new_args
+        beaker_proxy_process.start()
+        s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
+        s.recipe_upload_file(self.recipe.id, '/', 'recipe-log', 10, None, 0,
+                b64encode('a' * 10))
+
+        with session.begin():
+            self.assertEquals(self.recipe.logs[0].server,
+                    'https://testingme.com/beaker/logs/recipes/%s+/%s/'
+                    % (self.recipe.id // 1000, self.recipe.id))
+        beaker_proxy_process.stop()
+        beaker_proxy_process.args = old_args
+        beaker_proxy_process.start()
+
+
 class LogUploadTest(LabControllerTestCase):
 
     def setUp(self):
@@ -406,6 +480,10 @@ class LogUploadTest(LabControllerTestCase):
             self.recipe = data_setup.create_recipe()
             data_setup.create_job_for_recipes([self.recipe])
             data_setup.mark_recipe_running(self.recipe)
+
+    def test_log_storage_base_url(self):
+        proxy = ProxyHelper(URL_SCHEME='https', URL_DOMAIN='testingme.com')
+        self.assertEquals(proxy.log_storage.base_url, 'https://testingme.com/beaker/logs/')
 
     def test_xmlrpc_recipe_log(self):
         s = xmlrpclib.ServerProxy(self.get_proxy_url(), allow_none=True)
@@ -417,8 +495,8 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(self.recipe.logs[0].path, '/')
             self.assertEquals(self.recipe.logs[0].filename, 'recipe-log')
             self.assertEquals(self.recipe.logs[0].server,
-                    'http://%s/beaker/logs/recipes/%s+/%s/'
-                    % (self.get_lc_fqdn(), self.recipe.id // 1000, self.recipe.id))
+                    '%s/beaker/logs/recipes/%s+/%s/'
+                    % (self.get_log_base_url(), self.recipe.id // 1000, self.recipe.id))
             self.assertEquals(self.recipe.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'recipe-log'), 'r').read(),
@@ -455,8 +533,8 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(self.recipe.logs[0].path, '/')
             self.assertEquals(self.recipe.logs[0].filename, 'PUT-recipe-log')
             self.assertEquals(self.recipe.logs[0].server,
-                    'http://%s/beaker/logs/recipes/%s+/%s/'
-                    % (self.get_lc_fqdn(), self.recipe.id // 1000, self.recipe.id))
+                    '%s/beaker/logs/recipes/%s+/%s/'
+                    % (self.get_log_base_url(), self.recipe.id // 1000, self.recipe.id))
             self.assertEquals(self.recipe.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'PUT-recipe-log'), 'r').read(),
@@ -494,8 +572,8 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(task.logs[0].path, '/')
             self.assertEquals(task.logs[0].filename, 'task-log')
             self.assertEquals(task.logs[0].server,
-                    'http://%s/beaker/logs/tasks/%s+/%s/'
-                    % (self.get_lc_fqdn(), task.id // 1000, task.id))
+                    '%s/beaker/logs/tasks/%s+/%s/'
+                    % (self.get_log_base_url(), task.id // 1000, task.id))
             self.assertEquals(task.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'task-log'), 'r').read(),
@@ -535,8 +613,8 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(task.logs[0].path, '/')
             self.assertEquals(task.logs[0].filename, 'PUT-task-log')
             self.assertEquals(task.logs[0].server,
-                    'http://%s/beaker/logs/tasks/%s+/%s/'
-                    % (self.get_lc_fqdn(), task.id // 1000, task.id))
+                    '%s/beaker/logs/tasks/%s+/%s/'
+                    % (self.get_log_base_url(), task.id // 1000, task.id))
             self.assertEquals(task.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'PUT-task-log'), 'r').read(),
@@ -576,8 +654,8 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(result.logs[0].path, '/')
             self.assertEquals(result.logs[0].filename, 'result-log')
             self.assertEquals(result.logs[0].server,
-                    'http://%s/beaker/logs/results/%s+/%s/'
-                    % (self.get_lc_fqdn(), result.id // 1000, result.id))
+                    '%s/beaker/logs/results/%s+/%s/'
+                    % (self.get_log_base_url(), result.id // 1000, result.id))
             self.assertEquals(result.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'result-log'), 'r').read(),
@@ -620,8 +698,8 @@ class LogUploadTest(LabControllerTestCase):
             self.assertEquals(result.logs[0].path, '/')
             self.assertEquals(result.logs[0].filename, 'PUT-result-log')
             self.assertEquals(result.logs[0].server,
-                    'http://%s/beaker/logs/results/%s+/%s/'
-                    % (self.get_lc_fqdn(), result.id // 1000, result.id))
+                    '%s/beaker/logs/results/%s+/%s/'
+                    % (self.get_log_base_url(), result.id // 1000, result.id))
             self.assertEquals(result.logs[0].basepath, local_log_dir)
             self.assertEquals(
                     open(os.path.join(local_log_dir, 'PUT-result-log'), 'r').read(),
