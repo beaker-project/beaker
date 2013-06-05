@@ -3,7 +3,8 @@ from turbogears.database import session
 from bkr.server.model import Group, User, Activity, UserGroup
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, mail_capture
-from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, wait_for_animation
+from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, \
+        wait_for_animation, delete_and_confirm
 from bkr.inttest.assertions import wait_for_condition
 import email
 
@@ -96,7 +97,6 @@ class TestGroupsWD(WebDriverTestCase):
     def setUp(self):
         with session.begin():
             self.user = data_setup.create_user(password='password')
-            self.system = data_setup.create_system()
             self.group = data_setup.create_group()
             self.user.groups.append(self.group)
         self.browser = self.get_browser()
@@ -566,3 +566,19 @@ class TestGroupsWD(WebDriverTestCase):
             self.assertEquals(group.activity[-1].field_name, u'Owner')
             self.assertEquals(group.activity[-1].old_value, user1.user_name)
             self.assertEquals(group.activity[-1].service, u'WEBUI')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=970512
+    def test_remove_system(self):
+        with session.begin():
+            system = data_setup.create_system()
+            self.group.systems.append(system)
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'groups/edit?group_id=%s' % self.group.group_id)
+        delete_and_confirm(b, '//td[preceding-sibling::td[text()="%s"]]' % system.fqdn,
+                'Remove (-)')
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                '%s Removed' % system.fqdn)
+        with session.begin():
+            session.expire_all()
+            self.assert_(system not in self.group.systems)

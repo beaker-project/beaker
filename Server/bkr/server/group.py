@@ -242,10 +242,15 @@ class Groups(AdminPage):
             flash(_(u'You are not an owner of group %s' % group))
             redirect('../groups/mine')
         usergrid = self.show_members(group)
+        system_remove_widget = DeleteLinkWidgetForm(action='removeSystem',
+                hidden_fields=[widgets.HiddenField(name='group_id'),
+                    widgets.HiddenField(name='id')],
+                action_text=u'Remove (-)')
         systemgrid = widgets.DataGrid(fields=[
-                                  ('System Members', lambda x: x.fqdn),
-                                  (' ', lambda x: make_link('removeSystem?group_id=%s&id=%s' % (group_id, x.id), u'Remove (-)')),
-                              ])
+            ('System Members', lambda x: x.fqdn),
+            (' ', lambda x: system_remove_widget.display(
+                dict(group_id=group_id, id=x.id))),
+        ])
         group_permissions_grid = self.show_permissions()
         group_permissions = GroupPermissions()
         return dict(
@@ -694,6 +699,7 @@ class Groups(AdminPage):
 
     @identity.require(identity.not_anonymous())
     @expose()
+    @restrict_http_method('post')
     def remove(self, **kw):
         group = Group.by_id(kw['group_id'])
 
