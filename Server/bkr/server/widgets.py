@@ -220,8 +220,8 @@ class GroupPermissions(Widget):
                  var group_id = "${value.group_id}"
             </script>
             ${grid.display(value.permissions)}
-            <p></p>
-            ${form.display(action='./save_group_permissions', value=value)}
+            <div py:if="tg.identity.user and tg.identity.user.is_admin()"
+                 py:content="form.display(action='./save_group_permissions', value=value)" />
         </div>
         """
 

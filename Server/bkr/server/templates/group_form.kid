@@ -4,22 +4,24 @@
 
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
-    <title>Group Edit</title>
+    <title>${value.display_name}</title>
 </head>
 
 <body class="flora">
-    <div py:if="form">
-<p py:content="form(method='POST', action=action, value=value, options=options, disabled_fields=disabled_fields)">Form goes here</p>
-    </div>
+    <h1>${value.display_name}</h1>
+    <div py:if="tg.identity.user and value.can_edit(tg.identity.user)"
+         py:content="form(method='POST', action=action, value=value, options=options, disabled_fields=disabled_fields)" />
     &nbsp;
     <div>
        ${usergrid.display(value.users)}
-       <p py:if="value.can_modify_membership(tg.identity.user)" py:content="user_form(method='POST', action=user_action, value=value)">User Form goes here</p>
+       <div py:if="tg.identity.user and value.can_modify_membership(tg.identity.user)"
+            py:content="user_form(method='POST', action=user_action, value=value)" />
     </div>
     &nbsp;
     <div>
        ${systemgrid.display(value.systems)}
-       <p py:content="system_form(method='POST', action=system_action, value=value)">System Form goes here</p>
+       <div py:if="tg.identity.user and tg.identity.user.is_admin()"
+            py:content="system_form(method='POST', action=system_action, value=value)" />
     </div>
     <div>
        <br/>

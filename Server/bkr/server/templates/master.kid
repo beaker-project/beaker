@@ -155,7 +155,7 @@ from bkr.server.reports import Reports
                         <a href="${tg.url('/users')}">Accounts</a>
                         <img class="corner_inset_right" alt="" src="${tg.url('/static/images/corner_inset_right.png')}"/>
                     </li>
-                    <li><a href="${tg.url('/groups/admin')}">Groups</a></li>
+                    <li><a href="${tg.url('/groups/')}">Groups</a></li>
                     <li><a href="${tg.url('/configuration')}">Configuration</a></li>
                     <li><a href="${tg.url('/retentiontag/admin')}">Retention Tags</a></li>
                     <li><a href="${tg.url('/labcontrollers')}">Lab Controllers</a></li>

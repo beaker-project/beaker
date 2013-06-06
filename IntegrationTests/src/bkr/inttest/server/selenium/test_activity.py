@@ -108,13 +108,12 @@ class ActivityTestWD(WebDriverTestCase):
         session.flush()
         b = self.browser
         login(b)
-        b.get(get_server_base() + 'groups/admin')
-
+        b.get(get_server_base() + 'groups/')
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
         b.find_element_by_xpath("//input[@value='Search']").submit()
         delete_and_confirm(b, "//td[preceding-sibling::td/"
-            "a[normalize-space(text())='%s']]/" % self.group.group_name,
+            "a[normalize-space(text())='%s']]" % self.group.group_name,
             'Remove (-)')
         should_have_deleted_msg = b.find_element_by_xpath('//body').text
         self.assert_('%s deleted' % self.group.display_name in should_have_deleted_msg)

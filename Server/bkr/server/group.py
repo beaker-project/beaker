@@ -26,11 +26,6 @@ from bkr.server import mail
 from model import *
 import string
 
-def make_edit_link(name, id):
-    # make an edit link
-    return make_link(url  = 'edit?group_id=%s' % id,
-                     text = name)
-
 class GroupOwnerModificationForbidden(BX, cherrypy.HTTPError):
 
     def __init__(self, message):
@@ -123,7 +118,7 @@ class Groups(AdminPage):
     def __init__(self,*args,**kw):
         kw['search_url'] =  url("/groups/by_name?anywhere=1")
         kw['search_name'] = 'group'
-        kw['widget_action'] = './admin'
+        kw['widget_action'] = ''
         super(Groups,self).__init__(*args,**kw)
 
         self.search_col = Group.group_name
@@ -218,36 +213,40 @@ class Groups(AdminPage):
         from bkr.server.controllers import Root
         return Root()._systems(systems,title, group_id = group_id,**kw)
 
-    @expose(template='bkr.server.templates.group_users')
-    def group_members(self, group_id, **kw):
-        try:
-            group = Group.by_id(group_id)
-        except NoResultFound:
-            log.exception('Group id %s is not a valid group id' % group_id)
-            flash(_(u'Need a valid group to search on'))
-            redirect('../groups/')
-        usergrid = self.show_members(group)
-        return dict(value = group,grid = usergrid)
-
-    @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.group_form')
     def edit(self, group_id, **kw):
+        # Not just for editing, also provides a read-only view
         try:
             group = Group.by_id(group_id)
         except NoResultFound:
             log.exception('Group id %s is not a valid group id' % group_id)
             flash(_(u'Need a valid group to search on'))
             redirect('../groups/mine')
-        if not group.can_edit(identity.current.user):
-            flash(_(u'You are not an owner of group %s' % group))
-            redirect('../groups/mine')
+
         usergrid = self.show_members(group)
-        systemgrid = widgets.DataGrid(fields=[
-                                  ('System Members', lambda x: x.fqdn),
-                                  (' ', lambda x: make_link('removeSystem?group_id=%s&id=%s' % (group_id, x.id), u'Remove (-)')),
-                              ])
-        group_permissions_grid = self.show_permissions()
+
+        can_edit = False
+        if identity.current.user:
+            can_edit = group.can_edit(identity.current.user)
+
+        systems_fields = [('System Members', lambda x: x.link)]
+        if can_edit:
+            system_remove_widget = DeleteLinkWidgetForm(action='removeSystem',
+                    hidden_fields=[widgets.HiddenField(name='group_id'),
+                        widgets.HiddenField(name='id')],
+                    action_text=u'Remove (-)')
+            systems_fields.append((' ', lambda x: system_remove_widget.display(
+                dict(group_id=group_id, id=x.id))))
+        systemgrid = widgets.DataGrid(fields=systems_fields)
+
+        permissions_fields = [('Permissions', lambda x: x.permission_name)]
+        if can_edit:
+            permissions_fields.append((' ', lambda x: make_fake_link('',
+                    'remove_permission_%s' % x.permission_id, 'Remove (-)')))
+        group_permissions_grid = widgets.DataGrid(name='group_permission_grid',
+                fields=permissions_fields)
         group_permissions = GroupPermissions()
+
         return dict(
             form = self.group_form,
             system_form = self.group_system_form,
@@ -260,7 +259,7 @@ class Groups(AdminPage):
             value = group,
             usergrid = usergrid,
             systemgrid = systemgrid,
-            disabled_fields = ['System Members'],
+            disabled_fields=[],
             group_permissions = group_permissions,
             group_form = self.permissions_form,
             group_permissions_grid = group_permissions_grid,
@@ -338,7 +337,7 @@ class Groups(AdminPage):
             if group_name != group.group_name:
                 flash(_(u'Failed to update group %s: Group name already exists: %s' % 
                         (group.group_name, group_name)))
-                redirect('.')
+                redirect('mine')
 
         if not group.can_edit(user):
             flash(_(u'You are not an owner of group %s' % group))
@@ -363,16 +362,17 @@ class Groups(AdminPage):
     @error_handler(edit)
     def save_system(self, **kw):
         system = System.by_fqdn(kw['system']['text'],identity.current.user)
+        # A system owner can add their system to a group, but a group owner 
+        # *cannot* add an arbitrary system to their group because that would 
+        # grant them extra privileges over it.
+        if not system.is_admin(identity.current.user):
+            flash(_(u'You are not an owner of system %s' % system))
+            redirect('edit?group_id=%s' % kw['group_id'])
         group = Group.by_id(kw['group_id'])
         if group in system.groups:
             flash( _(u"System '%s' is already in group '%s'" % (system.fqdn, group.group_name)))
             redirect("./edit?group_id=%s" % kw['group_id'])
         group.systems.append(system)
-
-        if not group.can_edit(identity.current.user):
-            flash(_(u'You are not an owner of group %s' % group))
-            redirect('../groups/mine')
-
         activity = GroupActivity(identity.current.user, u'WEBUI', u'Added', u'System', u"", system.fqdn)
         sactivity = SystemActivity(identity.current.user, u'WEBUI', u'Added', u'Group', u"", group.display_name)
         group.activity.append(activity)
@@ -448,67 +448,25 @@ class Groups(AdminPage):
     @expose(template="bkr.server.templates.grid_add")
     @paginate('list', default_order='group_name', limit=20)
     def index(self, *args, **kw):
-        template_data = self.groups(user=identity.current.user, *args, **kw)
-        template_data['grid'] = myPaginateDataGrid(fields=template_data['grid_fields'])
-        template_data['addable'] = True
-        return template_data
-
-    @expose(template="bkr.server.templates.admin_grid")
-    @paginate('list', default_order='group_name', limit=20)
-    @identity.require(identity.in_group('admin'))
-    def admin(self, *args, **kw):
-        # XXX Look at whether this can be removed and instead use mine()
         groups = self.process_search(*args, **kw)
-        template_data = self.groups(groups, identity.current.user, *args, **kw)
-        template_data['grid_fields'].append((' ',
-            lambda x: self.delete_link.display(dict(group_id=x.group_id),
-                                               action=url('remove'),
-                                               action_text='Remove (-)')))
-        groups_grid = myPaginateDataGrid(fields=template_data['grid_fields'])
-        template_data['grid'] = groups_grid
-
-        alpha_nav_data = set([elem.group_name[0].capitalize() for elem in groups])
-        nav_bar = self._build_nav_bar(alpha_nav_data,'group')
-        template_data['alpha_nav_bar'] = nav_bar
+        template_data = self.groups(groups, *args, **kw)
         template_data['addable'] = True
         return template_data
 
-
-    @expose(template="bkr.server.templates.admin_grid")
+    @expose(template="bkr.server.templates.grid_add")
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='group_name', limit=20)
     def mine(self,*args,**kw):
-        current_user = identity.current.user
-        groups = Group.by_user(current_user)
-        template_data = self.groups(groups,current_user,*args,**kw)
+        groups = self.process_search(*args, **kw)
+        groups = groups.filter(Group.users.contains(identity.current.user))
+        template_data = self.groups(groups, *args, **kw)
         template_data['title'] = 'My Groups'
-        groups_grid = myPaginateDataGrid(fields=template_data['grid_fields'])
-        template_data['grid'] = groups_grid
-
-        alpha_nav_data = set([elem.group_name[0].capitalize() for elem in groups])
-        nav_bar = self._build_nav_bar(alpha_nav_data,'group')
-        template_data['alpha_nav_bar'] = nav_bar
         template_data['addable'] = True
         return template_data
 
-    def show_permissions(self):
-        grid = widgets.DataGrid(fields=[('Permissions', lambda x: x.permission_name),
-            (' ', lambda x: make_fake_link('','remove_permission_%s' % x.permission_id, 'Remove (-)'))])
-        grid.name = 'group_permission_grid'
-        return grid
-
-    def groups(self, groups=None, user=None, *args,**kw):
+    def groups(self, groups=None, *args,**kw):
         if groups is None:
             groups = session.query(Group)
-
-        def get_groups(x):
-            try:
-                if x.can_edit(identity.current.user):
-                    return make_edit_link(x.group_name,x.group_id)
-                else:
-                    return make_link('group_members?group_id=%s' % x.group_id, x.group_name)
-            except AttributeError:
-                return make_link('group_members?group_id=%s' % x.group_id, x.group_name)
 
         def get_sys(x):
             if len(x.systems):
@@ -527,14 +485,16 @@ class Groups(AdminPage):
             except AttributeError:
                 return ''
 
-        group_name = ('Group Name', get_groups)
+        group_name = ('Group Name', lambda group: make_link(
+                'edit?group_id=%s' % group.group_id, group.group_name))
         systems = ('Systems', get_sys)
         display_name = ('Display Name', lambda x: x.display_name)
         remove_link = ('', get_remove_link)
 
         grid_fields =  [group_name, display_name, systems, remove_link]
+        grid = myPaginateDataGrid(fields=grid_fields)
         return_dict = dict(title=u"Groups",
-                           grid_fields = grid_fields,
+                           grid=grid,
                            object_count = groups.count(),
                            search_bar = None,
                            search_widget = self.search_widget_form,
@@ -675,25 +635,26 @@ class Groups(AdminPage):
     @restrict_http_method('post')
     def removeSystem(self, group_id=None, id=None, **kw):
         group = Group.by_id(group_id)
+        system = System.by_id(id, identity.current.user)
 
-        if not group.can_edit(identity.current.user):
-            flash(_(u'You are not an owner of group %s' % group))
+        # A group owner can remove a system from their group.
+        # A system owner can remove their system from a group.
+        # But note this is not symmetrical with adding systems.
+        if not (group.can_edit(identity.current.user) or system.is_admin()):
+            flash(_(u'Not permitted to remove %s from %s') % (system, group))
             redirect('../groups/mine')
 
-        groupSystems = group.systems
-        for system in groupSystems:
-            if system.id == int(id):
-                group.systems.remove(system)
-                removed = system
-                activity = GroupActivity(identity.current.user, u'WEBUI', u'Removed', u'System', removed.fqdn, u"")
-                sactivity = SystemActivity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
-                group.activity.append(activity)
-                system.activity.append(sactivity)
-        flash( _(u"%s Removed" % removed.fqdn))
+        group.systems.remove(system)
+        activity = GroupActivity(identity.current.user, u'WEBUI', u'Removed', u'System', system.fqdn, u"")
+        sactivity = SystemActivity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
+        group.activity.append(activity)
+        system.activity.append(sactivity)
+        flash( _(u"%s Removed" % system.fqdn))
         raise redirect("./edit?group_id=%s" % group_id)
 
     @identity.require(identity.not_anonymous())
     @expose()
+    @restrict_http_method('post')
     def remove(self, **kw):
         group = Group.by_id(kw['group_id'])
 
