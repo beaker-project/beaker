@@ -18,7 +18,7 @@
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
 Version:        0.13.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -380,6 +380,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Fri Jun 07 2013 Amit Saha <asaha@redhat.com> 0.13.0-2
+- need to import simplejson on RHEL5 (dcallagh@redhat.com)
+
 * Fri Jun 07 2013 Amit Saha <asaha@redhat.com> 0.13.0-1
 - new release 0.13.0:
   http://beaker-project.org/releases/#beaker-0.13.0-1
