@@ -36,7 +36,10 @@ Non-zero on error, otherwise zero.
 
 """
 
-import json
+try:
+    import json
+except ImportError:
+    import simplejson as json
 from bkr.client import BeakerCommand
 
 class Group_Members(BeakerCommand):
