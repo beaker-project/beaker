@@ -514,6 +514,9 @@ class Groups(AdminPage):
             user = User.by_user_name(kw['member_name'])
             service = 'XMLRPC'
 
+        if group.ldap:
+            raise GroupOwnerModificationForbidden('An LDAP group does not have an owner')
+
         if not group.can_edit(identity.current.user):
             raise GroupOwnerModificationForbidden('You are not an owner of group %s' % group)
 
@@ -567,6 +570,9 @@ class Groups(AdminPage):
             group = Group.by_name(kw['group_name'])
             user = User.by_user_name(kw['member_name'])
             service = 'XMLRPC'
+
+        if group.ldap:
+            raise GroupOwnerModificationForbidden('An LDAP group does not have an owner')
 
         if not group.can_edit(identity.current.user):
             raise GroupOwnerModificationForbidden('You are not an owner of the group %s' % group)
@@ -789,6 +795,12 @@ class Groups(AdminPage):
             group = Group.by_name(group_name)
         except NoResultFound:
             raise BX(_(u'Group does not exist: %s.' % group_name))
+
+        if group.ldap:
+            if not identity.current.user.is_admin():
+                raise BX(_(u'Only admins can modify LDAP groups'))
+            if kw.get('add_member', None) or kw.get('remove_member', None):
+                raise BX(_(u'Cannot edit membership of an LDAP group'))
 
         group_name = kw.get('group_name', None)
         if group_name:

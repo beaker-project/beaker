@@ -3,7 +3,7 @@ import email
 import crypt
 from bkr.inttest import data_setup, with_transaction, mail_capture
 from bkr.inttest.client import run_client, ClientError, create_client_config
-from bkr.server.model import Group, Activity
+from bkr.server.model import Group, Activity, User
 from turbogears.database import session
 
 class GroupModifyTest(unittest.TestCase):
@@ -23,6 +23,8 @@ class GroupModifyTest(unittest.TestCase):
             admin = data_setup.create_admin(password='password')
             self.admin_client_config = create_client_config(username=admin.user_name,
                                                             password='password')
+
+            self.fake_ldap_group = data_setup.create_group(ldap=True)
 
         self.mail_capture = mail_capture.MailCaptureThread()
         self.mail_capture.start()
@@ -247,6 +249,7 @@ class GroupModifyTest(unittest.TestCase):
         with session.begin():
             user = data_setup.create_user()
 
+
         out = run_client(['bkr', 'group-modify',
                           '--add-member', user.user_name,
                           self.group.group_name],
@@ -290,6 +293,15 @@ class GroupModifyTest(unittest.TestCase):
                               self.user.user_id)
             self.assertEquals(group.activity[-1].new_value, user.user_name)
             self.assertEquals(group.activity[-1].service, u'XMLRPC')
+
+        try:
+            out = run_client(['bkr', 'group-modify',
+                              '--add-member', user.user_name,
+                              self.fake_ldap_group.group_name])
+            self.fail('Must fail or die')
+        except ClientError, e:
+            self.assert_('Cannot edit membership of an LDAP group' in e.stderr_output,
+                         e.stderr_output)
 
     def test_group_modify_remove_member(self):
         with session.begin():
@@ -376,6 +388,15 @@ class GroupModifyTest(unittest.TestCase):
             self.assert_('Cannot remove member' in
                          e.stderr_output, e.stderr_output)
 
+        try:
+            out = run_client(['bkr', 'group-modify',
+                              '--remove-member', user.user_name,
+                              self.fake_ldap_group.group_name])
+            self.fail('Must fail or die')
+        except ClientError, e:
+            self.assert_('Cannot edit membership of an LDAP group' in e.stderr_output,
+                         e.stderr_output)
+
     def test_group_modify_grant_owner(self):
         with session.begin():
             user1 = data_setup.create_user()
@@ -412,6 +433,16 @@ class GroupModifyTest(unittest.TestCase):
             self.fail('Must fail or die')
         except ClientError, e:
             self.assert_('User is not a group member' in e.stderr_output)
+
+        try:
+            out = run_client(['bkr', 'group-modify',
+                              '--grant-owner', user3.user_name,
+                              self.fake_ldap_group.group_name],
+                             config = self.client_config)
+            self.fail('Must fail or die')
+        except ClientError, e:
+            self.assert_('An LDAP group does not have an owner')
+
 
     def test_group_modify_revoke_owner(self):
         with session.begin():
@@ -454,3 +485,12 @@ class GroupModifyTest(unittest.TestCase):
             self.fail('Must fail or die')
         except ClientError, e:
             self.assert_('User is not a group member' in e.stderr_output)
+
+        try:
+            out = run_client(['bkr', 'group-modify',
+                              '--revoke-owner', user3.user_name,
+                              self.fake_ldap_group.group_name],
+                             config = self.client_config)
+            self.fail('Must fail or die')
+        except ClientError, e:
+            self.assert_('An LDAP group does not have an owner')
