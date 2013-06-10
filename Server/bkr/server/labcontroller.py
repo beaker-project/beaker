@@ -1,7 +1,8 @@
 from turbogears.database import session
 from turbogears import url, expose, flash, validate, error_handler, \
-                       identity, redirect, paginate, config
+                       redirect, paginate, config
 from kid import Element
+from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link, make_edit_link
 from bkr.server.util import total_seconds

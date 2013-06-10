@@ -208,9 +208,6 @@ setup(
     ],
     test_suite='nose.collector',
     entry_points = {
-        'turbogears.identity.provider': (
-            'ldapsa = bkr.server.identity:LdapSqlAlchemyIdentityProvider'
-        ),
         'console_scripts': (
             'start-beaker = bkr.server.commands:start',
             'beaker-init = bkr.server.tools.init:main',
@@ -219,7 +216,6 @@ setup(
             'nag-mail = bkr.server.tools.nag_email:main',
             'log-delete = bkr.server.tools.log_delete:main',
             'beaker-check = bkr.server.tools.check_beaker:main',
-            'beaker-cleanup-visits = bkr.server.tools.cleanup_visits:main',
             'beaker-refresh-ldap = bkr.server.tools.refresh_ldap:main',
             'beaker-repo-update = bkr.server.tools.repo_update:main',
             'beaker-sync-tasks = bkr.server.tools.sync_tasks:main'

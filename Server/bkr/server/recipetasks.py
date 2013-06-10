@@ -17,10 +17,10 @@
 
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config
-from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from sqlalchemy.orm.exc import NoResultFound
+from bkr.server import identity
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *

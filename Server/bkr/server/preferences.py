@@ -1,10 +1,11 @@
 import cherrypy
 import sys
 from datetime import datetime
-from turbogears import widgets, expose, identity, validators, \
+from turbogears import widgets, expose, validators, \
 	error_handler, validate, flash, redirect, url
 from turbogears.database import session
 from sqlalchemy.orm.exc import NoResultFound
+from bkr.server import identity
 from bkr.server.model import ConfigItem, SSHPubKey, User
 from bkr.server import validators as beaker_validators
 from bkr.server.widgets import BeakerDataGrid, DeleteLinkWidgetForm, \
@@ -163,29 +164,21 @@ class Preferences(RPCRoot):
         redirect('.')
 
     @expose()
-    @identity.require(identity.not_anonymous())
     @error_handler(index)
     @validate(form=prefs_form)
+    @identity.require(identity.not_anonymous())
     def save(self, *args, **kw):
         email = kw.get('email_address', None)
         beaker_password = kw.get('password', None)
         root_password = kw.get('_root_password', None)
         changes = []
 
-        def _do_password_change(password):
-            identity.current.user.password = password
-            changes.append(u'Beaker password changed')
-
-        if kw['password'] != identity.current.user.password:
-            check_change_password = getattr(identity.current_provider,
-                'can_change_password', None)
-            if check_change_password:
-                if check_change_password(identity.current.user.user_name):
-                    _do_password_change(kw['password'])
-                else:
-                    changes.append(u'Cannot change password')
+        if beaker_password != identity.current.user.password:
+            if not identity.current.user.can_change_password():
+                changes.append(u'Cannot change password')
             else:
-                _do_password_change(kw['password'])
+                identity.current.user.password = beaker_password
+                changes.append(u'Beaker password changed')
 
         if email and email != identity.current.user.email_address:
             changes.append("Email address changed")
@@ -246,9 +239,9 @@ class Preferences(RPCRoot):
         redirect('.')
 
     @expose()
-    @identity.require(identity.not_anonymous())
     @error_handler(index)
     @validate(form=ssh_key_add_form)
+    @identity.require(identity.not_anonymous())
     def ssh_key_add(self, ssh_pub_key=None):
         user = identity.current.user
         k = SSHPubKey(*ssh_pub_key)

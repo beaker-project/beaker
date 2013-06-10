@@ -2,7 +2,6 @@ import cherrypy
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from turbogears.widgets import AutoCompleteField, HiddenField
-from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
@@ -12,7 +11,7 @@ from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.model import System
 from bkr.server.helpers import *
 from bkr.server.controller_utilities import Utility, restrict_http_method
-from bkr.server import search_utility 
+from bkr.server import search_utility, identity
 
 import cherrypy
 

@@ -5,7 +5,7 @@ from kid import Element
 from sqlalchemy.sql import exists
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears import expose, flash, redirect, paginate, identity, widgets, url
+from turbogears import expose, flash, redirect, paginate, widgets, url
 from bkr.server.model import session, DistroTree, Distro, OSVersion, OSMajor, \
         LabController, LabControllerDistroTree, DistroTreeActivity, \
         distro_tree_lab_controller_map, lab_controller_table, Arch, DistroTag
@@ -14,7 +14,7 @@ from bkr.server.widgets import TaskSearchForm, myPaginateDataGrid, SearchBar, \
 from bkr.server.helpers import make_link
 from bkr.server.controller_utilities import Utility, restrict_http_method
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server import search_utility, needpropertyxml
+from bkr.server import search_utility, needpropertyxml, identity
 
 __all__ = ['DistroTrees']
 

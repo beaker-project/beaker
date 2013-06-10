@@ -1,5 +1,6 @@
-from turbogears import expose, paginate, identity
+from turbogears import expose, paginate
 from sqlalchemy.orm import contains_eager, joinedload_all
+from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.model import Watchdog, Recipe, RecipeSet, Job, System, RecipeTask
 from bkr.server.widgets import myPaginateDataGrid

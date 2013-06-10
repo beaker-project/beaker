@@ -1,10 +1,10 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from turbogears.widgets import AutoCompleteField
-from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
+from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import AlphaNavBar, myPaginateDataGrid

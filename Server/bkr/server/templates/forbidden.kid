@@ -13,8 +13,6 @@
 </head>
 <body class="flora">
     <h2>Forbidden</h2>
-    <p id="reasons">
-        <span py:strip="True" py:for="reason in reasons">${reason}<br/></span>
-    </p>
+    <p id="reasons">${reason}</p>
 </body>
 </html>

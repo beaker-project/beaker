@@ -1,8 +1,9 @@
-from turbogears import controllers, identity, expose, url, database, validate, flash, redirect
+from turbogears import controllers, expose, url, database, validate, flash, redirect
 from turbogears.database import session
 from sqlalchemy.sql.expression import and_, func, not_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import InvalidRequestError
+from bkr.server import identity
 from bkr.server.widgets import ReserveWorkflow as ReserveWorkflowWidget
 from bkr.server.widgets import ReserveSystem
 from bkr.server.model import (osversion_table, distro_table, osmajor_table, arch_table, distro_tag_table,

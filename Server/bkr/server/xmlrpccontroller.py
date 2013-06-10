@@ -6,20 +6,12 @@ import cherrypy, cherrypy.config
 import turbogears
 from turbogears import controllers
 from turbogears.database import session
-from turbogears.identity.exceptions import IdentityFailure, get_identity_errors
+from bkr.server import identity
 from formencode.api import Invalid
 
 log = logging.getLogger(__name__)
 
 class RPCRoot(controllers.Controller):
-
-    # We disable external /login redirects for XML-RPC locations,
-    # because they make it impossible for us to grab IdentityFailure exceptions 
-    # and report them nicely to the caller
-    cherrypy.config.update({
-        '/RPC2': {'identity.force_external_redirect': False},
-        '/client': {'identity.force_external_redirect': False},
-    })
 
     def process_rpc(self,method,params):
         """
@@ -54,13 +46,9 @@ class RPCRoot(controllers.Controller):
                 raise AssertionError("method cannot be 'RPC2'")
             response = self.process_rpc(method,params)
             response = xmlrpclib.dumps((response,), methodresponse=1, allow_none=True)
-        except IdentityFailure, e:
+        except identity.IdentityFailure, e:
             session.rollback()
-            # IdentityFailure constructor fiddles with the response code,
-            # so let's set it back
-            cherrypy.response.status = 200
-            identity_errors = get_identity_errors()
-            response = xmlrpclib.dumps(xmlrpclib.Fault(1,"%s: %s" % (e.__class__,','.join(identity_errors))))
+            response = xmlrpclib.dumps(xmlrpclib.Fault(1,"%s: %s" % (e.__class__, str(e))))
         except xmlrpclib.Fault, fault:
             session.rollback()
             log.exception('Error handling XML-RPC method')

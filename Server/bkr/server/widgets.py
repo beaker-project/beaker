@@ -20,7 +20,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 RepeatingFieldSet, SelectionField, WidgetsList,
                                 PasswordField)
 
-from bkr.server import model, search_utility
+from bkr.server import model, search_utility, identity
 from bkr.server.bexceptions import BeakerException
 from bkr.server.helpers import make_fake_link, make_link
 from bkr.server.validators import UniqueLabControllerEmail
@@ -1379,8 +1379,8 @@ class SystemForm(Form):
             params['loan_comment'] = value.loan_comment
             # It's currently loaned or we have perm to add a new loan
             params['show_loan_options'] = value.current_loan( 
-                tg.identity.current.user) or \
-                value.can_admin(tg.identity.current.user)
+                identity.current.user) or \
+                value.can_admin(identity.current.user)
         else:
             params['loan_comment'] = None
             params['show_loan_options'] = None
@@ -1492,7 +1492,7 @@ class RecipeSetWidget(CompoundWidget):
         super(RecipeSetWidget,self).update_params(d)
         recipeset = d['recipeset']
         owner_groups = [g.group_name for g in recipeset.job.owner.groups]
-        user = tg.identity.current.user
+        user = identity.current.user
         if recipeset.can_set_response(user):
             can_ack_nak = True
         else:
@@ -1755,8 +1755,8 @@ class LoanWidget(RPC, TableForm, CompoundWidget):
             "update_loan_callback);" % (
             d['name'], jsonify.encode(self.get_options(d)), url('../systems/return_loan'))})
 
-        system = model.System.by_fqdn(d['value']['fqdn'], tg.identity.current.user)
-        if system.can_admin(tg.identity.current.user):
+        system = model.System.by_fqdn(d['value']['fqdn'], identity.current.user)
+        if system.can_admin(identity.current.user):
             for field in d['fields']:
                 if field.attrs.get('disabled'):
                     del field.attrs['disabled']
@@ -1766,7 +1766,7 @@ class LoanWidget(RPC, TableForm, CompoundWidget):
                 field.attrs.update({'disabled': 'readonly'})
             d['update_loan'].attrs.update({'style': 'display:none'})
 
-        if system.current_loan(tg.identity.current.user):
+        if system.current_loan(identity.current.user):
             d['return_loan'].attrs.update({'style': 'display:block'})
         else:
             d['return_loan'].attrs.update({'style': 'display:none'})

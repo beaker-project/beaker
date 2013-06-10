@@ -1,6 +1,6 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from turbogears import identity, redirect
+from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.admin_page import AdminPage

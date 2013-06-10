@@ -61,6 +61,7 @@ BuildRequires:  rpm-python
 BuildRequires:  rhts-python
 BuildRequires:  python-netaddr
 BuildRequires:  ovirt-engine-sdk
+BuildRequires:  python-itsdangerous
 %if %{with_systemd}
 BuildRequires:  systemd
 %endif
@@ -121,6 +122,7 @@ Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
 Requires:       ovirt-engine-sdk
 Requires:  	kobo-client >= 0.3
+Requires:       python-itsdangerous
 %if %{with_systemd}
 Requires:       systemd-units
 Requires(post): systemd
@@ -363,7 +365,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/product-update
 %{_bindir}/beaker-repo-update
 %{_bindir}/beaker-sync-tasks
-%{_bindir}/%{name}-cleanup-visits
 %{_bindir}/beaker-refresh-ldap
 
 %if %{with_systemd}
@@ -382,12 +383,13 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_datadir}/bkr
 %attr(-,apache,root) %{_datadir}/bkr/%{name}-server.wsgi
 %attr(-,apache,root) %{_datadir}/bkr/server
-%attr(-,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
+%attr(0660,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
 %dir %{_localstatedir}/log/%{name}
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
+%attr(-,apache,root) %dir %{_localstatedir}/lib/%{name}
 %if %{with_systemd}
 %attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
 %endif

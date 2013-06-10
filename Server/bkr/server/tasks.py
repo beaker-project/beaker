@@ -17,10 +17,9 @@
 
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config, url
-from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
-from bkr.server import search_utility
+from bkr.server import search_utility, identity
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import TasksWidget
 from bkr.server.widgets import TaskSearchForm
@@ -32,7 +31,6 @@ from bkr.common.helpers import unlink_ignore, siphon
 from sqlalchemy.orm import joinedload, joinedload_all
 from sqlalchemy.orm.exc import NoResultFound
 import tempfile
-from turbogears.identity.exceptions import IdentityException
 
 import os
 import errno

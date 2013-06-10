@@ -1,6 +1,6 @@
 from sqlalchemy import select, distinct, Table, Column, Integer, String
 from sqlalchemy.sql.expression import case, func, and_, bindparam, not_
-from turbogears import controllers, identity, expose, url, database, flash
+from turbogears import controllers, expose, url, database, flash
 from turbogears.widgets import DataGrid
 from turbogears.database import session, metadata, mapper
 from kid import Element, SubElement

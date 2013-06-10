@@ -1,5 +1,6 @@
 from turbogears.database import session
-from turbogears import identity, expose, flash, widgets, error_handler, validators, redirect, paginate, url
+from turbogears import expose, flash, widgets, error_handler, validators, redirect, paginate, url
+from bkr.server import identity
 from bkr.server.helpers import *
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, AlphaNavBar
 from bkr.server.admin_page import AdminPage
@@ -84,9 +85,9 @@ class Configuration(AdminPage):
             warn_msg = item.readonly and "This item is read-only",
         )
 
-    @identity.require(identity.in_group("admin"))
     @expose()
     @error_handler(edit)
+    @identity.require(identity.in_group("admin"))
     def save(self, **kw):
         if 'id' in kw and kw['id']:
             item = ConfigItem.by_id(kw['id'])

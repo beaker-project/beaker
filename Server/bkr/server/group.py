@@ -1,5 +1,5 @@
 
-from turbogears import identity, redirect, config, controllers, expose, \
+from turbogears import redirect, config, controllers, expose, \
         flash, widgets, validate, error_handler, validators, redirect, \
         paginate, url
 from turbogears.database import session
@@ -17,7 +17,7 @@ from bkr.server.admin_page import AdminPage
 from bkr.server.bexceptions import BX 
 from bkr.server.controller_utilities import restrict_http_method
 import cherrypy
-from bkr.server import mail
+from bkr.server import mail, identity
 
 # from bkr.server import json
 # import logging
@@ -302,10 +302,10 @@ class Groups(AdminPage):
                 old_value=None, new_value=user.user_name))
         return group
 
-    @identity.require(identity.not_anonymous())
     @expose()
     @validate(form=group_form)
     @error_handler(new)
+    @identity.require(identity.not_anonymous())
     def save_new(self, group_id=None, display_name=None, group_name=None,
         ldap=False, root_password=None, **kwargs):
         # save_new() is needed because 'edit' is not a viable
@@ -315,10 +315,10 @@ class Groups(AdminPage):
         flash( _(u"OK") )
         redirect("mine")
 
-    @identity.require(identity.not_anonymous())
     @expose()
     @validate(form=group_form)
     @error_handler(edit)
+    @identity.require(identity.not_anonymous())
     def save(self, group_id=None, display_name=None, group_name=None,
         ldap=False, root_password=None, **kwargs):
 
@@ -362,9 +362,9 @@ class Groups(AdminPage):
         flash( _(u"OK") )
         redirect("mine")
 
-    @identity.require(identity.not_anonymous())
     @expose()
     @error_handler(edit)
+    @identity.require(identity.not_anonymous())
     def save_system(self, **kw):
         system = System.by_fqdn(kw['system']['text'],identity.current.user)
         # A system owner can add their system to a group, but a group owner 
@@ -423,9 +423,9 @@ class Groups(AdminPage):
 
         return {'name':permission_name, 'id':permission.permission_id}
 
-    @identity.require(identity.not_anonymous())
     @expose()
     @error_handler(edit)
+    @identity.require(identity.not_anonymous())
     def save_user(self, **kw):
         user = User.by_user_name(kw['user']['text'])
         if user is None:

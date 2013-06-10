@@ -1,7 +1,7 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from model import *
-from turbogears import identity, redirect, config
+from turbogears import redirect, config
 import search_utility as su
 import bkr
 import bkr.server.stdvars
@@ -65,7 +65,7 @@ from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from bkr.server.helpers import *
 from bkr.server.tools.init import dummy
-from bkr.server import mail, needpropertyxml, metrics
+from bkr.server import mail, needpropertyxml, metrics, identity
 from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
@@ -88,13 +88,6 @@ import logging
 log = logging.getLogger("bkr.server.controllers")
 import breadcrumbs
 from datetime import datetime, timedelta
-
-def identity_failure_url(errors):
-    if identity.current.anonymous:
-        return '/login'
-    else:
-        return '/forbidden?%s' % urllib.urlencode({'reason': errors}, doseq=True)
-config.update({'identity.failure_url': identity_failure_url})
 
 class Arches:
     @expose(format='json')
@@ -184,6 +177,8 @@ class Root(RPCRoot):
         log.info('Attaching root extension controller %s as %s',
                 controller, entry_point.name)
         locals()[entry_point.name] = controller
+
+    _cp_filters = [identity.IdentityFilter()]
 
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
@@ -706,7 +701,7 @@ class Root(RPCRoot):
 
     @expose(template="bkr.server.templates.system")
     @identity.require(identity.not_anonymous())
-    def new(self):
+    def new(self, **kwargs):
         options = {}
         options['edit'] = True
         return dict(
@@ -940,7 +935,7 @@ class Root(RPCRoot):
         except InvalidRequestError, e:
             log.exception(e)
             return ('0',)
-        if not system.can_admin(turbogears.identity.current.user):
+        if not system.can_admin(identity.current.user):
             log.error('User does not have the correct permission to delete this note')
             return ('0',)
         note = Note.query.filter_by(id=id).one()
@@ -993,7 +988,7 @@ class Root(RPCRoot):
 
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
-    def owner_change(self, id):
+    def owner_change(self, id=None, **kwargs):
         try:
             system = System.by_id(id,identity.current.user)
         except InvalidRequestError:
@@ -1280,8 +1275,8 @@ class Root(RPCRoot):
 
     @expose()
     @validate(form=system_form)
-    @identity.require(identity.not_anonymous())
     @error_handler(new)
+    @identity.require(identity.not_anonymous())
     def save(self, **kw):
         if kw.get('id'):
             try:
@@ -1855,36 +1850,36 @@ class Root(RPCRoot):
 
     @expose(template='bkr.server.templates.forbidden')
     def forbidden(self, reason=None, **kwargs):
-        if reason and not isinstance(reason, list):
-            reason = [reason]
         response.status = 403
-        return dict(reasons=reason)
+        return dict(reason=reason)
 
     @expose(template="bkr.server.templates.login")
     def login(self, forward_url=None, **kwargs):
-        # need to undo the work of NestedVariablesFilter
-        original_parameters = formencode.variabledecode.variable_encode(kwargs)
-
         if not forward_url:
-            forward_url = request.headers.get('Referer', '/')
-        if not identity.current.anonymous \
-                and not identity.get_identity_errors():
-            redirect(forward_url, redirect_params=original_parameters)
-
-        if not identity.was_login_attempted():
-            msg = _('Please log in.')
+            forward_url = request.headers.get('Referer', url('/'))
+        # If the container is doing authentication for us, we might have 
+        # already been authenticated through REMOTE_USER.
+        if not identity.current.anonymous:
+            raise cherrypy.HTTPRedirect(forward_url)
+        # Is this a login attempt?
+        if cherrypy.request.method == 'POST':
+            user = User.by_user_name(kwargs.get('user_name'))
+            if user is not None and user.can_log_in() and \
+                    user.check_password(kwargs.get('password')):
+                # Attempt successful
+                identity.set_authentication(user)
+                raise cherrypy.HTTPRedirect(forward_url)
+            else:
+                msg = _('The credentials you supplied were not correct or '
+                        'did not grant access to this resource.')
         else:
-            msg = _('The credentials you supplied were not correct or '
-                    'did not grant access to this resource.')
-            
-        response.status=403 # XXX shouldn't this be 401?
-        return dict(message=msg, action=request.path, logging_in=True,
-                    original_parameters=original_parameters,
-                    forward_url=forward_url)
+            msg = _('Please log in.')
+        response.status = 403
+        return dict(message=msg, action='', forward_url=forward_url)
 
     @expose()
     def logout(self):
-        identity.current.logout()
+        identity.clear_authentication()
         raise redirect("/")
 
     @expose()

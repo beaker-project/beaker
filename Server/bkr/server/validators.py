@@ -1,7 +1,7 @@
 import cracklib
-from turbogears import identity
 from turbogears.validators import FormValidator, Invalid, TgFancyValidator, Email
 from sqlalchemy.orm.exc import NoResultFound
+from bkr.server import identity
 from bkr.server.model import System, Recipe, User, LabController
 
 

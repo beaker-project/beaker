@@ -3,7 +3,8 @@ import logging
 import xmlrpclib
 import datetime
 from sqlalchemy import and_
-from turbogears import expose, identity, controllers, flash, redirect
+from turbogears import expose, controllers, flash, redirect
+from bkr.server import identity
 from bkr.server.bexceptions import BX
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         OSMajor, DistroTag, Arch, Distro

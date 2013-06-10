@@ -3,7 +3,6 @@ from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, \
         error_handler, validators, redirect, paginate, url, config
 from turbogears.widgets import AutoCompleteField
-from turbogears import identity, redirect
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from sqlalchemy.sql import func, and_, or_, not_, select
@@ -16,7 +15,7 @@ from bkr.server.controller_utilities import SearchOptions
 from bkr.server.model import System, Reservation, SystemStatus, SystemType, \
         Arch, SystemStatusDuration, Group
 from bkr.server.util import absolute_url, get_reports_engine
-from bkr.server import search_utility
+from bkr.server import search_utility, identity
 from distro import Distros
 from bkr.server.external_reports import ExternalReportsController
 

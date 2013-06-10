@@ -1,6 +1,7 @@
 
 from turbogears.database import session
-from turbogears import expose, widgets, identity
+from turbogears import expose, widgets
+from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from tempfile import NamedTemporaryFile

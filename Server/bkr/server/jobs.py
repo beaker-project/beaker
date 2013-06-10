@@ -17,7 +17,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from turbogears import identity, redirect
 from cherrypy import request, response
 from kid import Element
 from formencode.api import Invalid
@@ -28,7 +27,7 @@ from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
     SearchBar, JobWhiteboard, ProductWidget, JobActionWidget, JobPageActionWidget
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server import search_utility
+from bkr.server import search_utility, identity
 from bkr.server.controller_utilities import _custom_status, _custom_result, \
     restrict_http_method
 import datetime

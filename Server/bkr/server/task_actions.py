@@ -18,6 +18,7 @@ values for *type*:
 
 from turbogears.database import session
 from turbogears import expose
+from bkr.server import identity
 from bkr.server.model import *
 from bkr.server.bexceptions import BX, StaleTaskStatusException
 from bkr.server.xmlrpccontroller import RPCRoot

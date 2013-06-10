@@ -20,7 +20,6 @@ from sqlalchemy.sql.expression import join
 from sqlalchemy.exc import InvalidRequestError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.types import TypeDecorator, BINARY
-from identity import LdapSqlAlchemyIdentityProvider
 from bkr.server.installopts import InstallOptions, global_install_options
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
 from sqlalchemy.util import OrderedDict
@@ -37,7 +36,7 @@ from bkr.server.bexceptions import BeakerException, BX, \
 from bkr.server.enum import DeclEnum
 from bkr.server.helpers import *
 from bkr.server.util import unicode_truncate, absolute_url
-from bkr.server import mail, metrics
+from bkr.server import mail, metrics, identity
 import traceback
 from BasicAuthTransport import BasicAuthTransport
 import xmlrpclib
@@ -54,11 +53,10 @@ import cracklib
 import lxml.etree
 import uuid
 import netaddr
-from turbogears import identity
 import ovirtsdk.api
 from collections import defaultdict
 from datetime import timedelta, date, datetime
-from hashlib import md5
+from hashlib import md5, sha1
 import xml.dom.minidom
 from xml.dom.minidom import Node, parseString
 
@@ -702,25 +700,6 @@ distro_tag_map = Table('distro_tag_map', metadata,
                                          primary_key=True),
     Column('distro_tag_id', Integer, ForeignKey('distro_tag.id'), 
                                          primary_key=True),
-    mysql_engine='InnoDB',
-)
-
-# the identity schema
-
-visits_table = Table('visit', metadata,
-    Column('visit_key', String(40), primary_key=True),
-    Column('created', DateTime, nullable=False, default=datetime.utcnow),
-    Column('expiry', DateTime),
-    mysql_engine='InnoDB',
-)
-
-
-visit_identity_table = Table('visit_identity', metadata,
-    Column('visit_key', String(40), primary_key=True, unique=True),
-    Column('user_id', Integer, ForeignKey('tg_user.user_id'),
-            nullable=False, index=True),
-    Column('proxied_by_user_id', Integer, ForeignKey('tg_user.user_id'),
-            nullable=True),
     mysql_engine='InnoDB',
 )
 
@@ -1540,23 +1519,6 @@ class ActivityMixin(object):
         log.debug(self._log_fmt, log_details)
 
 
-# the identity model
-class Visit(MappedObject):
-    """
-    A visit to your site
-    """
-    def lookup_visit(cls, visit_key):
-        return cls.query.get(visit_key)
-    lookup_visit = classmethod(lookup_visit)
-
-
-class VisitIdentity(MappedObject):
-    """
-    A Visit that is link to a User object
-    """
-    pass
-
-
 class SubmissionDelegate(DeclBase, MappedObject):
 
     """
@@ -1691,21 +1653,75 @@ class User(MappedObject, ActivityMixin):
         db_users = [user.user_name for user in cls.query.filter(f).\
                     filter(User.removed==None)]
         return list(set(db_users + ldap_users))
-        
-    def _set_password(self, password):
-        """
-        encrypts password on the fly using the encryption
-        algo defined in the configuration
-        """
-        self._password = identity.encrypt_password(password)
+
+    def _hashed_password(self, raw_password):
+        # Inherited from TurboGears...
+        # This is pretty pathetic, should be salted at least!
+        return sha1(raw_password.encode('utf8')).hexdigest()
+
+    def _set_password(self, raw_password):
+        self._password = self._hashed_password(raw_password)
 
     def _get_password(self):
-        """
-        returns password
-        """
         return self._password
 
     password = property(_get_password, _set_password)
+
+    def can_change_password(self):
+        if get('identity.ldap.enabled', False):
+            filter = ldap.filter.filter_format('(uid=%s)', [self.user_name])
+            ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
+            objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
+                    ldap.SCOPE_SUBTREE, filter,
+                    timeout=get('identity.soldapprovider.timeout', 20))
+            if len(objects) != 0:
+                # LDAP user. No chance of changing password.
+                return False
+            else:
+                # Assume non LDAP user
+                return True
+        else:
+            return True
+
+    def check_password(self, raw_password):
+        # Empty passwords are not accepted.
+        if not raw_password:
+            return False
+
+        if self._hashed_password(raw_password) == self._password:
+            return True
+
+        # If LDAP is enabled, try an LDAP bind.
+        ldapenabled = get('identity.ldap.enabled', False)
+        # Presence of '/' indicates a Kerberos service principal.
+        if ldapenabled and '/' not in self.user_name:
+            filter = ldap.filter.filter_format('(uid=%s)', [self.user_name])
+            ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
+            objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
+                    ldap.SCOPE_SUBTREE, filter,
+                    timeout=get('identity.soldapprovider.timeout', 20))
+            if len(objects) == 0:
+                return False
+            elif len(objects) > 1:
+                return False
+            dn = objects[0][0]
+            try:
+                rc = ldapcon.simple_bind(dn, raw_password)
+                ldapcon.result(rc)
+                return True
+            except ldap.INVALID_CREDENTIALS:
+                return False
+
+        return False
+
+    def can_log_in(self):
+        if self.disabled:
+            log.warning('Login attempt from disabled account %s', self.user_name)
+            return False
+        if self.removed:
+            log.warning('Login attempt from removed account %s', self.user_name)
+            return False
+        return True
 
     def _set_root_password(self, password):
         "Set the password to be used for root on provisioned systems, hashing if necessary"
@@ -3754,10 +3770,8 @@ class Activity(MappedObject):
         super(Activity, self).__init__(**kw)
         self.user = user
         self.service = service
-        try:
-            self.service = identity.current.visit_link.proxied_by_user.user_name
-        except (AttributeError, identity.exceptions.RequestRequiredException):
-            pass # probably running in beakerd or such
+        if identity.current.proxied_by_user is not None:
+            self.service = identity.current.proxied_by_user.user_name
         self.field_name = field_name
         self.action = action
         # These values are likely to be truncated by MySQL, so let's make sure 
@@ -7400,7 +7414,6 @@ class ExternalReport(DeclBase, MappedObject):
     def __init__(self, *args, **kw):
         super(ExternalReport, self).__init__(*args, **kw)
 
-# set up mappers between identity tables and classes
 Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
 KernelType.mapper = mapper(KernelType, kernel_type_table)
 System.mapper = mapper(System, system_table,
@@ -7589,16 +7602,6 @@ mapper(DistroTreeImage, distro_tree_image_table, properties={
     'distro_tree': relation(DistroTree, backref=backref('images',
         cascade='all, delete-orphan')),
     'kernel_type':relation(KernelType, uselist=False),
-})
-
-mapper(Visit, visits_table)
-
-mapper(VisitIdentity, visit_identity_table, properties={
-    'user': relation(User,
-        primaryjoin=visit_identity_table.c.user_id == users_table.c.user_id,
-        backref='visit_identity'),
-    'proxied_by_user': relation(User,
-        primaryjoin=visit_identity_table.c.proxied_by_user_id == users_table.c.user_id),
 })
 
 mapper(User, users_table,

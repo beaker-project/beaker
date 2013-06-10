@@ -2,7 +2,7 @@ import model
 import re
 import sqlalchemy
 from copy import copy
-from turbogears import flash, identity
+from turbogears import flash
 from sqlalchemy import or_, and_, not_
 from sqlalchemy.sql import visitors, select
 from sqlalchemy.exc import InvalidRequestError
