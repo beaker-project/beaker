@@ -821,9 +821,17 @@ class Jobs(RPCRoot):
         if not job.can_cancel(identity.current.user):
             flash(_(u"You don't have permission to cancel job id %s" % id))
             redirect(".")
-        job.cancel(msg)
-        flash(_(u"Successfully cancelled job %s" % id))
-        redirect('/jobs/mine')
+
+        try:
+            job.cancel(msg)
+        except StaleTaskStatusException, e:
+            log.warn(str(e))
+            session.rollback()
+            flash(_(u"Could not cancel job id %s. Please try later" % id))
+            redirect(".")
+        else:
+            flash(_(u"Successfully cancelled job %s" % id))
+            redirect('/jobs/mine')
 
     @identity.require(identity.not_anonymous())
     @expose(template="bkr.server.templates.form")
