@@ -3770,8 +3770,11 @@ class Activity(MappedObject):
         super(Activity, self).__init__(**kw)
         self.user = user
         self.service = service
-        if identity.current.proxied_by_user is not None:
-            self.service = identity.current.proxied_by_user.user_name
+        try:
+            if identity.current.proxied_by_user is not None:
+                self.service = identity.current.proxied_by_user.user_name
+        except identity.RequestRequiredException:
+            pass
         self.field_name = field_name
         self.action = action
         # These values are likely to be truncated by MySQL, so let's make sure 

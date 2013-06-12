@@ -67,6 +67,7 @@ class RetentionTag(AdminPage):
             RetentionTagUtility.save_tag(**kw)
             session.flush()
         except Exception, e:
+            session.rollback()
             log.error('Error inserting tag: %s and default: %s' % (kw.get('tag'), kw.get('default_')))
             flash(_(u"Problem saving tag %s" % kw.get('tag')))
         else:

@@ -530,37 +530,33 @@ class LabControllers(RPCRoot):
     @identity.require(identity.in_group("admin"))
     @expose()
     def remove(self, id, *args, **kw):
-        try:
-            labcontroller = LabController.by_id(id)
-            labcontroller.removed = datetime.utcnow()
-            systems = System.query.filter_by(lab_controller_id=id).values(System.id)
-            for system_id in systems:
-                sys_activity = SystemActivity(identity.current.user, 'WEBUI', \
-                    'Changed', 'lab_controller', labcontroller.fqdn,
-                    None, system_id=system_id[0])
-            system_table.update().where(system_table.c.lab_controller_id == id).\
-                values(lab_controller_id=None).execute()
-            watchdogs = Watchdog.by_status(labcontroller=labcontroller, 
-                status='active')
-            for w in watchdogs:
-                w.recipe.recipeset.job.cancel(msg='LabController %s has been deleted' % labcontroller.fqdn)
-            for lca in labcontroller._distro_trees:
-                lca.distro_tree.activity.append(DistroTreeActivity(
-                        user=identity.current.user, service=u'WEBUI',
-                        action=u'Removed', field_name=u'lab_controller_assocs',
-                        old_value=u'%s %s' % (lca.lab_controller, lca.url),
-                        new_value=None))
-                session.delete(lca)
-            labcontroller.disabled = True
-            LabControllerActivity(identity.current.user, 'WEBUI', 
-                'Changed', 'Disabled', unicode(False), unicode(True), 
-                lab_controller_id=id)
-            LabControllerActivity(identity.current.user, 'WEBUI', 
-                'Changed', 'Removed', unicode(False), unicode(True), 
-                lab_controller_id=id)
-            session.commit()
-        finally:
-            session.close()
+        labcontroller = LabController.by_id(id)
+        labcontroller.removed = datetime.utcnow()
+        systems = System.query.filter_by(lab_controller_id=id).values(System.id)
+        for system_id in systems:
+            sys_activity = SystemActivity(identity.current.user, 'WEBUI', \
+                'Changed', 'lab_controller', labcontroller.fqdn,
+                None, system_id=system_id[0])
+        system_table.update().where(system_table.c.lab_controller_id == id).\
+            values(lab_controller_id=None).execute()
+        watchdogs = Watchdog.by_status(labcontroller=labcontroller, 
+            status='active')
+        for w in watchdogs:
+            w.recipe.recipeset.job.cancel(msg='LabController %s has been deleted' % labcontroller.fqdn)
+        for lca in labcontroller._distro_trees:
+            lca.distro_tree.activity.append(DistroTreeActivity(
+                    user=identity.current.user, service=u'WEBUI',
+                    action=u'Removed', field_name=u'lab_controller_assocs',
+                    old_value=u'%s %s' % (lca.lab_controller, lca.url),
+                    new_value=None))
+            session.delete(lca)
+        labcontroller.disabled = True
+        LabControllerActivity(identity.current.user, 'WEBUI', 
+            'Changed', 'Disabled', unicode(False), unicode(True), 
+            lab_controller_id=id)
+        LabControllerActivity(identity.current.user, 'WEBUI', 
+            'Changed', 'Removed', unicode(False), unicode(True), 
+            lab_controller_id=id)
 
         flash( _(u"%s removed") % labcontroller.fqdn )
         raise redirect(".")

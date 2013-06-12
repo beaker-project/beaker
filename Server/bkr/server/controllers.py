@@ -178,8 +178,6 @@ class Root(RPCRoot):
                 controller, entry_point.name)
         locals()[entry_point.name] = controller
 
-    _cp_filters = [identity.IdentityFilter()]
-
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
 

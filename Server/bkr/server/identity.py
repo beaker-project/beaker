@@ -6,7 +6,8 @@ import string
 from functools import wraps
 import urllib
 import itsdangerous
-import cherrypy, cherrypy.filters.basefilter
+import cherrypy
+import flask
 from turbogears import config
 from bkr.common.helpers import AtomicFileReplacement
 from bkr.server.util import absolute_url
@@ -34,10 +35,10 @@ def _get_serializer():
     return itsdangerous.URLSafeTimedSerializer(key)
 
 def _generate_token():
-    token_value = {'user_name': cherrypy.request._beaker_validated_user.user_name}
-    if cherrypy.request._beaker_proxied_by_user is not None:
+    token_value = {'user_name': flask.g._beaker_validated_user.user_name}
+    if flask.g._beaker_proxied_by_user is not None:
         token_value['proxied_by_user_name'] = \
-            cherrypy.request._beaker_proxied_by_user.user_name
+            flask.g._beaker_proxied_by_user.user_name
     return _get_serializer().dumps(token_value)
 
 def _check_token(token):
@@ -59,15 +60,13 @@ def check_authentication():
         * a valid signed token, indicating that the user has authenticated to 
           us successfully on a previous request.
     Sets up the "current identity" state according to what's found.
-    Also sets a fresh signed token, in order to update the timestamp.
     """
-    # cherrypy.request.login is set to REMOTE_USER in a WSGI environment
-    if cherrypy.request.login:
+    if 'REMOTE_USER' in flask.request.environ:
         # strip realm if present
-        user_name, _, realm = cherrypy.request.login.partition('@')
+        user_name, _, realm = flask.request.environ['REMOTE_USER'].partition('@')
         proxied_by_user_name = None
-    elif _token_cookie_name in cherrypy.request.simple_cookie:
-        token = cherrypy.request.simple_cookie[_token_cookie_name].value
+    elif _token_cookie_name in flask.request.cookies:
+        token = flask.request.cookies[_token_cookie_name]
         if token == 'deleted':
             return
         token_value = _check_token(token)
@@ -77,7 +76,6 @@ def check_authentication():
         proxied_by_user_name = token_value.get('proxied_by_user_name', None)
     else:
         return
-    # XXX transaction -- are we inside or outside of sa_rwt? does it matter?
     from bkr.server.model import User
     user = User.by_user_name(user_name.decode('utf8'))
     if user is None:
@@ -92,36 +90,42 @@ def check_authentication():
             return
     else:
         proxied_by_user = None
-    cherrypy.request._beaker_validated_user = user
-    cherrypy.request._beaker_proxied_by_user = proxied_by_user
-    cherrypy.response.simple_cookie[_token_cookie_name] = _generate_token()
-    cherrypy.response.simple_cookie[_token_cookie_name]['path'] = '/'
+    flask.g._beaker_validated_user = user
+    flask.g._beaker_proxied_by_user = proxied_by_user
 
 def set_authentication(user, proxied_by=None):
     """
-    Sets the "current identity" to be the given user, and also sets a signed 
-    cookie on the response so that they can be re-authenticated on subsequent 
-    requests.
+    Sets the "current identity" to be the given user.
 
     IMPORTANT: the caller is promising that they have already authenticated the 
     user (by checking their password or other means).
     """
-    cherrypy.request._beaker_validated_user = user
-    cherrypy.request._beaker_proxied_by_user = proxied_by
-    cherrypy.response.simple_cookie[_token_cookie_name] = _generate_token()
-    cherrypy.response.simple_cookie[_token_cookie_name]['path'] = '/'
+    flask.g._beaker_validated_user = user
+    flask.g._beaker_proxied_by_user = proxied_by
 
 def clear_authentication():
-    del cherrypy.request._beaker_validated_user
-    cherrypy.response.simple_cookie[_token_cookie_name] = 'deleted'
-    cherrypy.response.simple_cookie[_token_cookie_name]['path'] = '/'
+    if hasattr(flask.g, '_beaker_validated_user'):
+        del flask.g._beaker_validated_user
+    if hasattr(flask.g, '_beaker_proxied_by_user'):
+        del flask.g._beaker_proxied_by_user
 
-class IdentityFilter(cherrypy.filters.basefilter.BaseFilter):
-
-    def before_main(self):
-        check_authentication()
+def update_response(response):
+    if hasattr(flask.g, '_beaker_validated_user'):
+        response.set_cookie(_token_cookie_name, _generate_token())
+    else:
+        response.set_cookie(_token_cookie_name, 'deleted')
+    return response
 
 # Mimics the identity.current interface (SqlAlchemyIdentity) from TurboGears:
+
+class RequestRequiredException(RuntimeError):
+    """
+    The caller tried to touch identity.current outside of a request handler 
+    (for example, in beakerd).
+    """
+    def __init__(self):
+        super(RequestRequiredException, self).__init__(
+                'identity.current is not available outside a request')
 
 class CurrentIdentity(object):
 
@@ -132,7 +136,9 @@ class CurrentIdentity(object):
 
         :rtype: User or None
         """
-        return getattr(cherrypy.request, '_beaker_validated_user', None)
+        if flask._app_ctx_stack.top is None:
+            raise RequestRequiredException()
+        return getattr(flask.g, '_beaker_validated_user', None)
 
     @property
     def groups(self):
@@ -152,7 +158,9 @@ class CurrentIdentity(object):
 
     @property
     def proxied_by_user(self):
-        return getattr(cherrypy.request, '_beaker_proxied_by_user', None)
+        if flask._app_ctx_stack.top is None:
+            raise RequestRequiredException()
+        return getattr(flask.g, '_beaker_proxied_by_user', None)
 
 current = CurrentIdentity()
 

@@ -19,6 +19,7 @@ import cherrypy
 import cherrypy._cpwsgi
 from cherrypy.filters.basefilter import BaseFilter
 from flask import Flask
+from bkr.server import identity
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +47,15 @@ def init():
     turbogears.database.EndTransactionsFilter = EndTransactionsFilterNoop
     turbogears.startup.EndTransactionsFilter = EndTransactionsFilterNoop
 
+    # Make TG's restart_transaction not call session.close(). We are 
+    # responsible for calling session.close() here at the very end of the 
+    # Flask request, and if TG does it during its validation error handling, it 
+    # will break identity.
+    def restart_transaction_patched(args):
+        session.rollback()
+        session.begin()
+    turbogears.database.restart_transaction = restart_transaction_patched
+
     # Set up old CherryPy stuff.
     cherrypy.root = bkr.server.controllers.Root()
     cherrypy.server.start(init_only=True, server_class=None)
@@ -63,6 +73,9 @@ def init():
     tgmochikit.init(register_static_directory, config)
 
     log.debug('Application initialised')
+
+# NOTE: order of before_request/after_request functions is important!
+# Flask runs them in the reverse of the order in which they were added.
 
 @app.before_request
 def begin_session():
@@ -90,6 +103,9 @@ def close_session(exception=None):
     except Exception, e:
         # log and suppress
         log.exception('Error closing session when tearing down app context')
+
+app.before_request(identity.check_authentication)
+app.after_request(identity.update_response)
 
 @app.after_request
 def fall_back_to_cherrypy(response):
