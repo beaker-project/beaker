@@ -50,6 +50,8 @@ def load_config(configfile=None):
     curdir = os.getcwd()
     if configfile and os.path.exists(configfile):
         pass
+    elif 'BEAKER_CONFIG_FILE' in os.environ:
+        configfile = os.environ['BEAKER_CONFIG_FILE']
     elif os.path.exists(os.path.join(setupdir, 'setup.py')) \
             and os.path.exists(os.path.join(setupdir, 'dev.cfg')):
         configfile = os.path.join(setupdir, 'dev.cfg')

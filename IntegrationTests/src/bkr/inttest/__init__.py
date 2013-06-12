@@ -55,7 +55,8 @@ logging.LogRecord = EagerFormattedLogRecord
 
 log = logging.getLogger(__name__)
 
-CONFIG_FILE = os.environ.get('BEAKER_CONFIG_FILE', 'server-test.cfg')
+os.environ.setdefault('BEAKER_CONFIG_FILE', 'server-test.cfg')
+CONFIG_FILE = os.environ['BEAKER_CONFIG_FILE']
 
 def get_server_base():
     return os.environ.get('BEAKER_SERVER_BASE_URL',
@@ -278,11 +279,12 @@ def setup_package():
 
     if 'BEAKER_SERVER_BASE_URL' not in os.environ:
         # need to start the server ourselves
-        # (this only works from the IntegrationTests dir of a Beaker checkout)
         processes.extend([
-            Process('beaker', args=['../Server/start-server.py', CONFIG_FILE],
-                    listen_port=turbogears.config.get('server.socket_port'),
-                    stop_signal=signal.SIGINT)
+            Process('gunicorn', args=['gunicorn',
+                '--bind', ':%s' % turbogears.config.get('server.socket_port'),
+                '--workers', '8', '--preload',
+                'bkr.server.wsgi:application'],
+                listen_port=turbogears.config.get('server.socket_port')),
         ])
     processes.extend([
         Process('slapd', args=['slapd', '-d0', '-F/tmp/beaker-tests-slapd-config',

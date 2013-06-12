@@ -209,7 +209,6 @@ setup(
     test_suite='nose.collector',
     entry_points = {
         'console_scripts': (
-            'start-beaker = bkr.server.commands:start',
             'beaker-init = bkr.server.tools.init:main',
             'product-update = bkr.server.tools.product_update:main',
             'beakerd = bkr.server.tools.beakerd:main',

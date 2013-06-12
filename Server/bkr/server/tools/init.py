@@ -28,7 +28,6 @@ __requires__ = ['CherryPy < 3.0']
 import sys
 from bkr.log import log_to_stream
 from bkr.server.model import *
-from bkr.server.commands import ConfigurationError
 from bkr.server.util import load_config
 from turbogears.database import session
 from os.path import dirname, exists, join

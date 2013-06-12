@@ -123,6 +123,7 @@ Requires:       python-requests-kerberos
 Requires:       ovirt-engine-sdk
 Requires:  	kobo-client >= 0.3
 Requires:       python-itsdangerous
+Requires:       python-flask
 %if %{with_systemd}
 Requires:       systemd-units
 Requires(post): systemd
@@ -151,6 +152,7 @@ Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
 Requires:       openldap-servers
 Requires:       python-unittest2
+Requires:       python-gunicorn
 %endif
 
 
@@ -357,7 +359,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{python_sitelib}/bkr/server/
 %{python_sitelib}/bkr.server-%{version}-*
 %{python_sitelib}/bkr.server-%{version}-py%{pyver}.egg-info/
-%{_bindir}/start-%{name}
 %{_bindir}/%{name}-init
 %{_bindir}/nag-mail
 %{_bindir}/log-delete
