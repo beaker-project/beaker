@@ -9,6 +9,7 @@ import urllib2
 import logging
 import socket
 import copy
+from bkr.log import log_to_stream
 from bkr.common.bexceptions import BX
 import pprint
 import time
@@ -1846,22 +1847,13 @@ def main():
                       
     (opts, urls) = parser.parse_args()
 
-    LOG_FORMAT = '%(asctime)s - %(levelname)s - %(filename)s - ' \
-        '%(funcName)s:%(lineno)s - %(message)s'
     if opts.debug:
-        LOG_LEVEL = logging.DEBUG
+        log_level = logging.DEBUG
     elif opts.quiet:
-        LOG_LEVEL = logging.CRITICAL
+        log_level = logging.CRITICAL
     else:
-        LOG_LEVEL = logging.INFO
-        LOG_FORMAT = '%(message)s'
-
-    formatter = logging.Formatter(LOG_FORMAT)
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setFormatter(formatter)
-    logger = logging.getLogger('')
-    logger.addHandler(stdout_handler)
-    logger.setLevel(LOG_LEVEL)
+        log_level = logging.INFO
+    log_to_stream(sys.stdout, level=log_level)
 
     if not urls:
         logging.critical('No location(s) specified!')

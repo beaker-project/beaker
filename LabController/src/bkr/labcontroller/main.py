@@ -16,8 +16,7 @@ import gevent, gevent.pool, gevent.wsgi, gevent.event, gevent.monkey
 from bkr.common.helpers import RepeatTimer
 from bkr.labcontroller.proxy import Proxy, ProxyHTTP
 from bkr.labcontroller.config import get_conf, load_conf
-from bkr.labcontroller.utils import add_rotating_file_logger
-from bkr.log import add_stderr_logger
+from bkr.log import log_to_stream, log_to_syslog
 import logging
 logger = logging.getLogger(__name__)
 
@@ -122,7 +121,7 @@ def daemon_shutdown(signum, frame):
     logger.info('Received signal %s, shutting down', signum)
     shutting_down.set()
 
-def main_loop(proxy=None, conf=None, foreground=False):
+def main_loop(proxy=None, conf=None):
     """infinite daemon loop"""
     global shutting_down
     shutting_down = gevent.event.Event()
@@ -131,17 +130,6 @@ def main_loop(proxy=None, conf=None, foreground=False):
     # define custom signal handlers
     signal.signal(signal.SIGINT, daemon_shutdown)
     signal.signal(signal.SIGTERM, daemon_shutdown)
-
-    # set up logging
-    log_level_string = conf["LOG_LEVEL"]
-    log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
-    logging.getLogger().setLevel(log_level)
-    if foreground:
-        add_stderr_logger(logging.getLogger(), log_level=log_level)
-    else:
-        log_file = conf["LOG_FILE"]
-        add_rotating_file_logger(logging.getLogger(), log_file,
-                log_level=log_level, format=conf["VERBOSE_LOG_FORMAT"])
 
     login = RepeatTimer(conf['RENEW_SESSION_INTERVAL'], proxy.hub._login,
         stop_on_exception=False)
@@ -172,11 +160,16 @@ def main():
     if opts.config:
         load_conf(opts.config)
     conf = get_conf()
+    logging.getLogger().setLevel(logging.DEBUG)
 
     pid_file = opts.pid_file
     if pid_file is None:
         pid_file = conf.get("PROXY_PID_FILE", "/var/run/beaker-lab-controller/beaker-proxy.pid")
 
+    # kobo.client.HubProxy will try to log some stuff, even though we 
+    # haven't configured our logging handlers yet. So we send logs to stderr 
+    # temporarily here, and configure it again below.
+    log_to_stream(sys.stderr, level=logging.WARNING)
     try:
         proxy = Proxy(conf=conf)
     except Exception, ex:
@@ -184,13 +177,15 @@ def main():
         sys.exit(1)
 
     if opts.foreground:
-        main_loop(proxy=proxy, conf=conf, foreground=True)
+        log_to_stream(sys.stderr, level=logging.DEBUG)
+        main_loop(proxy=proxy, conf=conf)
     else:
         # See BZ#977269
         proxy.close()
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
                 pid_file, acquire_timeout=0)):
-            main_loop(proxy=proxy, conf=conf, foreground=False)
+            log_to_syslog('beaker-proxy')
+            main_loop(proxy=proxy, conf=conf)
 
 if __name__ == '__main__':
     main()

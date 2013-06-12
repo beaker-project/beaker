@@ -19,6 +19,8 @@ setup(
                   ('/etc/cron.hourly', ['cron.hourly/beaker_expire_distros']),
                   ('/etc/sudoers.d', ['sudoers.d/beaker_proxy_clear_netboot']),
                   ('/etc/httpd/conf.d', ['apache/beaker-lab-controller.conf']),
+                  ('/etc/rsyslog.d', ['rsyslog.d/beaker-lab-controller.conf']),
+                  # /etc/logrotate.d/beaker is in Server but applies to LCs too
                   ('/var/run/beaker-lab-controller', []),
                   ('/var/lib/beaker', ['addDistro/addDistro.sh']),
                   ('/var/lib/beaker/addDistro.d', glob('addDistro/addDistro.d/*')),

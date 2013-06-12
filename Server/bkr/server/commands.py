@@ -23,10 +23,10 @@ import sys
 from os import getcwd
 from os.path import dirname, exists, join
 import resource
-
+import logging
 import cherrypy
 import turbogears
-
+from bkr.log import log_to_stream
 from bkr.server.util import load_config
 
 cherrypy.lowercase_api = True
@@ -41,6 +41,12 @@ def start():
         load_config(sys.argv[1])
     else:
         load_config()
+    log_to_stream(sys.stderr, level=logging.DEBUG)
+
+    # To see all SQL statements executed, uncomment the following.
+    #logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+    # To see access log entries printed by CherryPy, uncomment the following.
+    #logging.getLogger('turbogears.access').setLevel(logging.INFO)
 
     # If rlimit_as is defined in the config file then set the limit here.
     if turbogears.config.get('rlimit_as'):

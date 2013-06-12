@@ -147,6 +147,8 @@ data_files = \
     ("/etc/httpd/conf.d", ["apache/beaker-server.conf"]),
     ("/etc/init.d", ["init.d/beakerd"]),
     ("/etc/cron.d", ["cron.d/beaker"]),
+    ("/etc/rsyslog.d", ["rsyslog.d/beaker-server.conf"]),
+    ("/etc/logrotate.d", ["logrotate.d/beaker"]),
     ("/usr/share/bkr", filter(os.path.isfile, glob.glob("apache/*.wsgi"))),
     ("/var/log/beaker", []),
     ("/var/www/beaker/logs", []),

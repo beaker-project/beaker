@@ -7,8 +7,6 @@ except ImportError:
 
 
 from threading import Thread
-from bkr.log import add_stderr_logger
-from bkr.labcontroller.utils import add_rotating_file_logger
 from xmlrpclib import Fault as xmlrpclibFault
 
 import ConfigParser, os, socket
@@ -20,14 +18,6 @@ from bkr.labcontroller.config import get_conf
 import logging
 log = logging.getLogger(__name__)
 conf = get_conf()
-log_level_string = conf.get("QPID_BUS_LOG_LEVEL") or conf["LOG_LEVEL"]
-log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
-log_file = conf["QPID_BUS_LOG_FILE"]
-
-add_rotating_file_logger(log,
-                        log_file,
-                        log_level=log_level,
-                        format=conf['VERBOSE_LOG_FORMAT'])
 
 class LabBeakerBus(BeakerBus):
 

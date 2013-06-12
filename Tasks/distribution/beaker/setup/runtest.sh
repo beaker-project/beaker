@@ -148,9 +148,6 @@ __EOF__
     else
         rlPhaseStartTest "Initialize database"
         rlRun "beaker-init -u admin -p testing -e $SUBMITTER" 0
-        # beaker-init creates the server.log as root.  this prevents apache 
-        # from working since it can't write to it.
-        rlRun "/bin/rm -f /var/log/beaker/*" 0 "Removing root owned logs"
         rlPhaseEnd
     fi
 

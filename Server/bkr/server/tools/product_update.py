@@ -7,8 +7,9 @@
 __requires__ = ['CherryPy < 3.0']
 
 import sys
+from bkr.log import log_to_stream
 from bkr.server.model import Product
-from bkr.server.util import load_config, log_to_stream
+from bkr.server.util import load_config
 from lxml import etree
 from optparse import OptionParser
 from turbogears.database import session

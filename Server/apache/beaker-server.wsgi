@@ -13,9 +13,11 @@ import cherrypy
 import cherrypy._cpwsgi
 import turbogears
 
+from bkr.log import log_to_syslog
 from bkr.server.util import load_config
 from turbogears import config
 load_config()
+log_to_syslog('beaker-server')
 
 # If rlimit_as is defined in the config file then set the limit here.
 if config.get('rlimit_as'):
@@ -24,7 +26,6 @@ if config.get('rlimit_as'):
 
 turbogears.config.update({'global': {'server.environment': 'production'}})
 turbogears.config.update({'global': {'autoreload.on': False}})
-turbogears.config.update({'global': {'server.log_to_screen': False}})
 
 import bkr.server.controllers
 cherrypy.root = bkr.server.controllers.Root()

@@ -13,8 +13,7 @@ import pkg_resources
 import subprocess
 import gevent, gevent.hub, gevent.socket, gevent.event, gevent.monkey
 from kobo.exceptions import ShutdownException
-from bkr.log import add_stderr_logger
-from bkr.labcontroller.utils import add_rotating_file_logger
+from bkr.log import log_to_stream, log_to_syslog
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.labcontroller.proxy import ProxyHelper
 from bkr.labcontroller import netboot
@@ -194,7 +193,7 @@ def shutdown_handler(signum, frame):
     logger.info('Received signal %s, shutting down', signum)
     shutting_down.set()
 
-def main_loop(poller=None, conf=None, foreground=False):
+def main_loop(poller=None, conf=None):
     global shutting_down
     shutting_down = gevent.event.Event()
     gevent.monkey.patch_all(thread=False)
@@ -202,16 +201,6 @@ def main_loop(poller=None, conf=None, foreground=False):
     # define custom signal handlers
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
-    # set up logging
-    log_level_string = conf.get("PROVISION_LOG_LEVEL") or conf["LOG_LEVEL"]
-    log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
-    logging.getLogger().setLevel(log_level)
-    if foreground:
-        add_stderr_logger(logging.getLogger(), log_level=log_level)
-    else:
-        log_file = conf["PROVISION_LOG_FILE"]
-        add_rotating_file_logger(logging.getLogger(), log_file,
-                log_level=log_level, format=conf["VERBOSE_LOG_FORMAT"])
 
     logger.debug('Clearing old running commands')
     poller.clear_running_commands(u'Stale command cleared on startup')
@@ -238,12 +227,17 @@ def main():
     (opts, args) = parser.parse_args()
     if opts.config:
         load_conf(opts.config)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     conf = get_conf()
     pid_file = opts.pid_file
     if pid_file is None:
         pid_file = conf.get("PROVISION_PID_FILE", "/var/run/beaker-lab-controller/beaker-provision.pid")
 
+    # kobo.client.HubProxy will try to log some stuff, even though we 
+    # haven't configured our logging handlers yet. So we send logs to stderr 
+    # temporarily here, and configure it again below.
+    log_to_stream(sys.stderr, level=logging.WARNING)
     try:
         poller = CommandQueuePoller(conf=conf)
     except Exception, ex:
@@ -251,13 +245,15 @@ def main():
         sys.exit(1)
 
     if opts.foreground:
-        main_loop(poller=poller, conf=conf, foreground=True)
+        log_to_stream(sys.stderr, level=logging.DEBUG)
+        main_loop(poller=poller, conf=conf)
     else:
         # See BZ#977269
         poller.close()
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
                 pid_file, acquire_timeout=0)):
-            main_loop(poller=poller, conf=conf, foreground=False)
+            log_to_syslog('beaker-provision')
+            main_loop(poller=poller, conf=conf)
 
 if __name__ == '__main__':
     main()

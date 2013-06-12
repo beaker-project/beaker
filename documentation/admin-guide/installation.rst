@@ -80,14 +80,6 @@ We need to switch SELinux off.
 
     $ setenforce 0
 
-Due to permission issues, we need to delete the log file before we start
-Beaker for the first time. Otherwise Beaker will not run properly.
-
-::
-
-    $ rm /var/log/beaker/server*.log
-    $ rm /var/log/beaker/server*.lock
-
 Start Beaker and configure it to run on startup.
 
 ::
