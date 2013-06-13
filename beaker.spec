@@ -18,7 +18,7 @@
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
 Version:        0.13.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -380,6 +380,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Thu Jun 13 2013 Amit Saha <asaha@redhat.com> 0.13.0-3
+- 972255 Fix LDAP group modification changes via the CLI. (asaha@redhat.com)
+- 972290 Display error message when job cannot be cancelled. (asaha@redhat.com)
+
 * Fri Jun 07 2013 Amit Saha <asaha@redhat.com> 0.13.0-2
 - need to import simplejson on RHEL5 (dcallagh@redhat.com)
 
