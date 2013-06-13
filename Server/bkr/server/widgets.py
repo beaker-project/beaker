@@ -178,6 +178,23 @@ beaker_js = LocalJSBundleLink('js', order=2)
 beaker_css = LocalCSSBundleLink('css')
 
 
+class HorizontalForm(Form):
+    template = 'bkr.server.templates.horizontal_form'
+    params = ['legend_text']
+
+
+class InlineForm(Form):
+    template = 'bkr.server.templates.inline_form'
+
+class InlineRemoteForm(RPC, InlineForm):
+
+    # copied from turbogears.widgets.RemoteForm
+    def update_params(self, d):
+        super(InlineRemoteForm, self).update_params(d)
+        d['form_attrs']['onSubmit'] = "return !remoteFormRequest(this, '%s', %s);" % (
+            d.get("update", ''), jsonify.encode(self.get_options(d)))
+
+
 class UnmangledHiddenField(HiddenField):
 
     @property
@@ -285,7 +302,7 @@ class DeleteLinkWidgetAJAX(DeleteLinkWidget):
 
 class GroupPermissions(Widget):
 
-    javascript = [LocalJSLink('bkr', '/static/javascript/group_permission_v2.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/group_permission_v3.js'),
         LocalJSLink('bkr', '/static/javascript/util.js'),
         LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js'),]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]

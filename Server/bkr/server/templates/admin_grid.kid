@@ -4,8 +4,6 @@
 <head>
 <meta content="text/html; charset=utf-8" http-equiv="Content-Type" py:replace="''"/>
 <script type='text/javascript' src="${tg.url('/static/javascript/util.js')}" />
-<script type='text/javascript' src="${tg.url('/static/javascript/jquery-ui-1.9.2.min.js')}" />
-<link rel="stylesheet" type="text/css" href="${tg.url('/static/css/smoothness/jquery-ui.css')}" />
 <title>$title</title>
 </head>
 <body>

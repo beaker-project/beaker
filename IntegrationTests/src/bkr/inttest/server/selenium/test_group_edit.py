@@ -2,72 +2,12 @@ import crypt
 import requests
 from turbogears.database import session
 from bkr.server.model import Group, User, Activity, UserGroup
-from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, mail_capture
 from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, \
         wait_for_animation, delete_and_confirm
 from bkr.inttest.assertions import wait_for_condition
 import email
-
-# XXX this should be assimilated by TestGroupsWD when it is converted.
-class EditGroup(SeleniumTestCase):
-
-    def setUp(self):
-        with session.begin():
-            self.perm1 = data_setup.create_permission()
-            self.group = data_setup.create_group()
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-
-    def tearDown(self):
-        self.selenium.stop()
-
-    def test_add_bad_permission(self):
-        sel = self.selenium
-        self.login()
-        sel.open('groups/edit?group_id=%d' % self.group.group_id)
-        sel.type("Permissions_permissions_text", "dummy_perm")
-        sel.submit("//form[@id='Permissions']")
-        #Test that it has not been dynamically added
-        self.wait_for_condition(lambda: sel.is_element_present('//span[@id="response_Permissions_failure"]'), wait_time=5)
-        self.wait_for_condition(lambda: "Invalid permission value" in sel.get_text("//span[@id='response_Permissions_failure']"), wait_time=5)
-
-        #Double check that it wasn't added to the permissions
-        self.assert_("dumy_perm" not in sel.get_text("//table[@id='group_permission_grid']"))
-
-        #Triple check it was not persisted to the DB
-        sel.open('groups/edit?group_id=%d' % self.group.group_id)
-        sel.wait_for_page_to_load(30000)
-        self.assert_("dumy_perm" not in sel.get_text("//table[@id='group_permission_grid']"))
-
-    def test_add_and_remove_permission(self):
-        sel = self.selenium
-        self.login()
-
-        sel.open('groups/edit?group_id=%d' % self.group.group_id)
-        sel.wait_for_page_to_load(30000)
-        sel.type("Permissions_permissions_text", "%s" % self.perm1.permission_name)
-        sel.submit("//form[@id='Permissions']")
-        #Test that permission dynamically updated
-        self.wait_for_condition(lambda: self.perm1.permission_name in sel.get_text("//table[@id='group_permission_grid']"))
-
-        #Test that the permission was persisted by reopening the current page
-        sel.open('groups/edit?group_id=%d' % self.group.group_id)
-        sel.wait_for_page_to_load(30000)
-        self.assert_(self.perm1.permission_name in sel.get_text("//table[@id='group_permission_grid']"))
-
-        #Let's try and remove it
-        sel.click("remove_permission_%s" % self.perm1.permission_id)
-        self.wait_for_condition(lambda: sel.is_text_present("Are you sure you want to remove this"))
-        #Click 'Yes' to remove
-        sel.click("//button[normalize-space(.) = 'Yes']")
-        #Check it has been removed from the table
-        self.wait_for_condition(lambda: self.perm1.permission_name not in sel.get_text("//table[@id='group_permission_grid']"))
-
-        #Reload to make sure it has been removed from the DB
-        sel.open('groups/edit?group_id=%d' % self.group.group_id)
-        sel.wait_for_page_to_load(30000)
-        self.assert_(self.perm1.permission_name not in sel.get_text("//table[@id='group_permission_grid']"))
 
 class TestGroupsWD(WebDriverTestCase):
 
@@ -75,6 +15,7 @@ class TestGroupsWD(WebDriverTestCase):
         with session.begin():
             self.user = data_setup.create_user(password='password')
             self.group = data_setup.create_group()
+            self.perm1 = data_setup.create_permission()
             self.user.groups.append(self.group)
         self.browser = self.get_browser()
         self.clear_password = 'gyfrinachol'
@@ -87,6 +28,53 @@ class TestGroupsWD(WebDriverTestCase):
     def tearDown(self):
         self.mail_capture.stop()
         self.browser.quit()
+
+    def test_add_bad_permission(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'groups/edit?group_id=%d' % self.group.group_id)
+        b.find_element_by_id('Permissions_permissions_text').send_keys('dummy_perm')
+        b.find_element_by_id('Permissions').submit()
+        #Test that it has not been dynamically added
+        b.find_element_by_xpath('//span[@id="response_Permissions_failure" and '
+                'text()="Invalid permission value"]')
+
+        #Double check that it wasn't added to the permissions
+        b.find_element_by_xpath('//table[@id="group_permission_grid" and '
+                'not(.//td/text()="dummy_perm")]')
+
+        #Triple check it was not persisted to the DB
+        b.get(get_server_base() + 'groups/edit?group_id=%d' % self.group.group_id)
+        b.find_element_by_xpath('//table[@id="group_permission_grid" and '
+                'not(.//td/text()="dummy_perm")]')
+
+    def test_add_and_remove_permission(self):
+        b = self.browser
+        login(b)
+
+        b.get(get_server_base() + 'groups/edit?group_id=%d' % self.group.group_id)
+        b.find_element_by_id('Permissions_permissions_text').send_keys(self.perm1.permission_name)
+        b.find_element_by_id('Permissions').submit()
+        #Test that permission dynamically updated
+        b.find_element_by_xpath('//table[@id="group_permission_grid"]//td[text()="%s"]'
+                % self.perm1.permission_name)
+
+        #Test that the permission was persisted by reopening the current page
+        b.get(get_server_base() + 'groups/edit?group_id=%d' % self.group.group_id)
+        b.find_element_by_xpath('//table[@id="group_permission_grid"]//td[text()="%s"]'
+                % self.perm1.permission_name)
+
+        #Let's try and remove it
+        delete_and_confirm(b, '//td[preceding-sibling::td/text()="%s"]'
+                % self.perm1.permission_name, 'Remove')
+        #Check it has been removed from the table
+        b.find_element_by_xpath('//table[@id="group_permission_grid" and '
+                'not(.//td/text()="%s")]' % self.perm1.permission_name)
+
+        #Reload to make sure it has been removed from the DB
+        b.get(get_server_base() + 'groups/edit?group_id=%d' % self.group.group_id)
+        b.find_element_by_xpath('//table[@id="group_permission_grid" and '
+                'not(.//td/text()="%s")]' % self.perm1.permission_name)
 
     def check_notification(self, user, group, action):
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
@@ -125,9 +113,9 @@ class TestGroupsWD(WebDriverTestCase):
         e = b.find_element_by_xpath('//input[@id="Group_root_password"]')
         e.clear()
         e.send_keys(self.simple_password)
-        b.find_element_by_xpath('//input[@value="Save"]').click()
+        b.find_element_by_id('Group').submit()
         error_text = b.find_element_by_xpath('//input[@name="root_password"]/'
-            'following-sibling::span[@class="fielderror"]').text
+            'following-sibling::span[contains(@class, "error")]').text
         self.assertEquals(u'Invalid password: it is based on a dictionary word',
             error_text, error_text)
 
@@ -138,7 +126,7 @@ class TestGroupsWD(WebDriverTestCase):
         e = b.find_element_by_xpath('//input[@id="Group_root_password"]')
         e.clear()
         e.send_keys(self.hashed_password)
-        b.find_element_by_xpath('//input[@value="Save"]').click()
+        b.find_element_by_id('Group').submit()
         self.assertEquals(b.find_element_by_class_name('flash').text,
             u'OK')
         self._make_and_go_to_owner_page(self.user, self.group, set_owner=False)
@@ -152,7 +140,7 @@ class TestGroupsWD(WebDriverTestCase):
         e = b.find_element_by_xpath('//input[@id="Group_root_password"]')
         e.clear()
         e.send_keys(self.clear_password)
-        b.find_element_by_xpath('//input[@value="Save"]').click()
+        b.find_element_by_id('Group').submit()
         self.assertEquals(b.find_element_by_class_name('flash').text,
             u'OK')
         b.get(get_server_base() + 'groups/mine')
@@ -172,7 +160,7 @@ class TestGroupsWD(WebDriverTestCase):
             send_keys('FBZ')
         b.find_element_by_xpath('//input[@id="Group_root_password"]'). \
             send_keys('blapppy7')
-        b.find_element_by_xpath('//input[@value="Save"]').click()
+        b.find_element_by_id('Group').submit()
         b.find_element_by_xpath('//title[text()="My Groups"]')
         b.find_element_by_link_text('FBZ').click()
         with session.begin():
@@ -203,11 +191,11 @@ class TestGroupsWD(WebDriverTestCase):
             send_keys(group_name)
         b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
             send_keys(group_name)
-        b.find_element_by_xpath('//input[@value="Save"]').click()
+        b.find_element_by_id('Group').submit()
         b.find_element_by_xpath('//title[text()="My Groups"]')
         b.find_element_by_link_text(group_name).click()
         b.find_element_by_xpath('//input[@name="root_password" and '
-            'not(following-sibling::span[@class="fielderror"])]')
+            'not(following-sibling::span[contains(@class, "error")])]')
 
     def test_can_open_edit_page_for_owned_existing_groups(self):
         with session.begin():
@@ -222,7 +210,7 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="Group_root_password"]').clear()
         b.find_element_by_xpath('//input[@id="Group_root_password"]'). \
             send_keys('blapppy7')
-        b.find_element_by_xpath('//input[@value="Save"]').click()
+        b.find_element_by_id('Group').submit()
         self.assertEquals(b.find_element_by_class_name('flash').text,
             u'OK')
         session.expire(self.group)
@@ -236,7 +224,7 @@ class TestGroupsWD(WebDriverTestCase):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
         b.get(get_server_base() + 'groups/edit?group_id=%d' % self.group.group_id)
-        b.find_element_by_xpath('//table[@id="widget" and not(.//a/text()="Remove (-)")]')
+        b.find_element_by_xpath('//table[@id="group_members_grid" and not(.//text()="Remove")]')
         b.find_element_by_xpath('//body[not(.//input)]')
 
     def test_add_user_to_owning_group(self):
@@ -251,11 +239,11 @@ class TestGroupsWD(WebDriverTestCase):
             send_keys('Group FBZ 1')
         b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
             send_keys('FBZ-1')
-        b.find_element_by_xpath('//input[@value="Save"]').click()
+        b.find_element_by_id('Group').submit()
         b.find_element_by_xpath('//title[text()="My Groups"]')
         b.find_element_by_link_text('FBZ-1').click()
         b.find_element_by_xpath('//input[@id="GroupUser_user_text"]').send_keys(user.user_name)
-        b.find_element_by_xpath('//input[@value="Add"]').click()
+        b.find_element_by_id('GroupUser').submit()
         b.find_element_by_xpath('//td[text()="%s"]' % user.user_name)
 
         with session.begin():
@@ -275,13 +263,13 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_link_text('Add ( + )').click()
         b.find_element_by_xpath('//input[@id="Group_display_name"]').send_keys(display_name)
         b.find_element_by_xpath('//input[@id="Group_group_name"]').send_keys(group_name)
-        b.find_element_by_xpath('//input[@value="Save"]').click()
+        b.find_element_by_id('Group').submit()
         b.find_element_by_xpath('//title[text()="My Groups"]')
         b.find_element_by_link_text(group_name).click()
 
         # add an user
         b.find_element_by_xpath('//input[@id="GroupUser_user_text"]').send_keys(user.user_name)
-        b.find_element_by_xpath('//input[@value="Add"]').click()
+        b.find_element_by_id('GroupUser').submit()
 
         self.mail_capture.captured_mails[:] = []
 
@@ -289,8 +277,8 @@ class TestGroupsWD(WebDriverTestCase):
         username = user.user_name
         user_id = user.user_id
 
-        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[2]/text()="%s"]'
-                                % username).click()
+        b.find_element_by_xpath('//td[preceding-sibling::td[2]/text()="%s"]' % username)\
+                .find_element_by_link_text('Remove').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                           '%s Removed' % username)
         with session.begin():
@@ -298,8 +286,8 @@ class TestGroupsWD(WebDriverTestCase):
         self.check_notification(user, group, action='Removed')
 
         # remove self when I am the only owner of the group
-        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[2]/text()="%s"]'
-                                % self.user.user_name).click()
+        b.find_element_by_xpath('//td[preceding-sibling::td[2]/text()="%s"]' % self.user.user_name)\
+                .find_element_by_link_text('Remove').click()
         self.assert_('Cannot remove member' in b.find_element_by_class_name('flash').text)
 
         # admin should be able to remove an owner, even if only one
@@ -307,8 +295,8 @@ class TestGroupsWD(WebDriverTestCase):
         #login back as admin
         login(b)
         b.get(get_server_base() + 'groups/edit?group_id=%s' % group_id)
-        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[2]/text()="%s"]'
-                                % self.user.user_name).click()
+        b.find_element_by_xpath('//td[preceding-sibling::td[2]/text()="%s"]' % self.user.user_name)\
+                .find_element_by_link_text('Remove').click()
         self.assert_('%s Removed' % self.user.user_name in b.find_element_by_class_name('flash').text)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=966312
@@ -325,8 +313,8 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_link_text('admin').click()
 
         # remove self
-        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[2]/text()="%s"]'
-                                % user.user_name).click()
+        b.find_element_by_xpath('//td[preceding-sibling::td[2]/text()="%s"]' % user.user_name)\
+                .find_element_by_link_text('Remove').click()
 
         # admin should not be in groups/mine
         b.get(get_server_base() + 'groups/mine')
@@ -341,8 +329,8 @@ class TestGroupsWD(WebDriverTestCase):
         b.get(get_server_base() + 'groups/edit?group_id=1')
         for usr in group_users:
             if usr.user_id != 1:
-                b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[2]/text()="%s"]'
-                                        % usr.user_name).click()
+                b.find_element_by_xpath('//td[preceding-sibling::td[2]/text()="%s"]' % usr.user_name)\
+                        .find_element_by_link_text('Remove').click()
 
         # attempt to remove admin user
         b.find_element_by_xpath('//a[@href="removeUser?group_id=1&id=1"]').click()
@@ -395,8 +383,7 @@ class TestGroupsWD(WebDriverTestCase):
         # form to add new users should be absent
         b.find_element_by_xpath('//body[not(.//label[text()="User"])]')
         # "Remove" link should be absent from "User Members" table
-        b.find_element_by_xpath('//table[thead/tr/th[1]/text()="User Members"]'
-                '/tbody/tr[not(.//a[text()="Remove (-)"])]')
+        b.find_element_by_xpath('//table[@id="group_members_grid" and not(.//text()="Remove")]')
 
     def _edit_group_details(self, browser, new_group_name, new_display_name):
         b = browser
@@ -406,7 +393,7 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="Group_group_name"]').clear()
         b.find_element_by_xpath('//input[@id="Group_group_name"]').\
             send_keys(new_group_name)
-        b.find_element_by_xpath('//input[@value="Save"]').click()
+        b.find_element_by_id('Group').submit()
 
     def test_edit_display_group_names(self):
         with session.begin():
@@ -480,20 +467,20 @@ class TestGroupsWD(WebDriverTestCase):
 
         # remove self (as only owner)
         b.find_element_by_link_text(group.group_name).click()
-        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]'
-                                % user.user_name).click()
+        b.find_element_by_xpath('//td[preceding-sibling::td/text()="%s"]' % user.user_name)\
+                .find_element_by_link_text('Remove').click()
 
         flash_text = b.find_element_by_class_name('flash').text
         self.assert_("Cannot remove the only owner" in flash_text)
 
         # add a new user as owner
         b.find_element_by_xpath('//input[@id="GroupUser_user_text"]').send_keys(user1.user_name)
-        b.find_element_by_xpath('//input[@value="Add"]').click()
+        b.find_element_by_id('GroupUser').submit()
         b.find_element_by_xpath('//td[text()="%s"]' % user1.user_name)
-        b.find_element_by_xpath('//td/a[text()="Add (+)" and ../preceding-sibling::td[text()="%s"]]'
-                                % user1.user_name).click()
-        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]'
-                                % user1.user_name)
+        b.find_element_by_xpath('//td[preceding-sibling::td/text()="%s"]' % user1.user_name)\
+                .find_element_by_link_text('Add').click()
+        b.find_element_by_xpath('//td[preceding-sibling::td/text()="%s"]' % user1.user_name)\
+                .find_element_by_link_text('Remove')
         logout(b)
 
         # login as the new user and check for ownership
@@ -513,8 +500,8 @@ class TestGroupsWD(WebDriverTestCase):
             self.assertEquals(group.activity[-1].service, u'WEBUI')
 
         # remove self as owner
-        b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]'
-                                % user1.user_name).click()
+        b.find_element_by_xpath('//td[preceding-sibling::td/text()="%s"]' % user1.user_name)\
+                .find_element_by_link_text('Remove').click()
         b.find_element_by_xpath('//title[text()="My Groups"]')
 
         with session.begin():
@@ -549,13 +536,13 @@ class TestGroupsWD(WebDriverTestCase):
             send_keys('A really long group display name'*20)
         b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
             send_keys('areallylonggroupname'*20)
-        b.find_element_by_xpath('//input[@value="Save"]').click()
-        error_text = b.find_element_by_xpath('//input[@id="Group_group_name"]/'
-            'following-sibling::span[@class="fielderror"]').text
+        b.find_element_by_id('Group').submit()
+        error_text = b.find_element_by_xpath('//span[contains(@class, "error") '
+                'and preceding-sibling::input/@name="group_name"]').text
         self.assertEquals(u'Enter a value less than %r characters long' % max_length_group_name,
                           error_text)
-        error_text = b.find_element_by_xpath('//input[@id="Group_display_name"]/'
-            'following-sibling::span[@class="fielderror"]').text
+        error_text = b.find_element_by_xpath('//span[contains(@class, "error") '
+                'and preceding-sibling::input/@name="display_name"]').text
         self.assertEquals(u'Enter a value less than %r characters long' %
                           max_length_group_name, error_text)
 
@@ -566,12 +553,12 @@ class TestGroupsWD(WebDriverTestCase):
         b.get(get_server_base() + 'groups/edit?group_id=%s' % group.group_id)
         self._edit_group_details(b, 'areallylonggroupname'*20,
                                  'A really long group display name'*20)
-        error_text = b.find_element_by_xpath('//input[@id="Group_group_name"]/'
-            'following-sibling::span[@class="fielderror"]').text
+        error_text = b.find_element_by_xpath('//span[contains(@class, "error") '
+                'and preceding-sibling::input/@name="group_name"]').text
         self.assertEquals(u'Enter a value less than %r characters long' % max_length_group_name,
                           error_text)
-        error_text = b.find_element_by_xpath('//input[@id="Group_display_name"]/'
-            'following-sibling::span[@class="fielderror"]').text
+        error_text = b.find_element_by_xpath('//span[contains(@class, "error") '
+                'and preceding-sibling::input/@name="display_name"]').text
         self.assertEquals(u'Enter a value less than %r characters long' %
                           max_length_disp_name, error_text)
 
@@ -590,14 +577,14 @@ class TestGroupsWD(WebDriverTestCase):
         b.get(get_server_base() + 'groups/edit?group_id=%d' % group.group_id)
 
         # the first entry should always be the owner(s)
-        user_name, ownership = b.find_element_by_xpath('//table[@id="widget"]//tr[1]/td[1]').text, \
-            b.find_element_by_xpath('//table[@id="widget"]//tr[1]/td[2]').text
+        user_name, ownership = b.find_element_by_xpath('//table[@id="group_members_grid"]//tr[1]/td[1]').text, \
+            b.find_element_by_xpath('//table[@id="group_members_grid"]//tr[1]/td[2]').text
 
         self.assertTrue(user_name, owner.user_name)
         self.assertTrue(ownership, 'Yes')
 
-        user_name, ownership = b.find_element_by_xpath('//table[@id="widget"]//tr[2]/td[1]').text, \
-            b.find_element_by_xpath('//table[@id="widget"]//tr[2]/td[2]').text
+        user_name, ownership = b.find_element_by_xpath('//table[@id="group_members_grid"]//tr[2]/td[1]').text, \
+            b.find_element_by_xpath('//table[@id="group_members_grid"]//tr[2]/td[2]').text
 
         self.assertTrue(user_name in [member1.user_name, member2.user_name])
         self.assertTrue(ownership, 'No')
@@ -660,7 +647,7 @@ class GroupSystemTest(WebDriverTestCase):
         login(b)
         b.get(get_server_base() + 'groups/edit?group_id=%s' % self.group.group_id)
         delete_and_confirm(b, '//td[preceding-sibling::td[.//text()="%s"]]' % system.fqdn,
-                'Remove (-)')
+                'Remove')
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 '%s Removed' % system.fqdn)
         with session.begin():
@@ -676,7 +663,7 @@ class GroupSystemTest(WebDriverTestCase):
         login(b, user=self.group_owner.user_name, password='password')
         b.get(get_server_base() + 'groups/edit?group_id=%s' % self.group.group_id)
         delete_and_confirm(b, '//td[preceding-sibling::td[.//text()="%s"]]' % system.fqdn,
-                'Remove (-)')
+                'Remove')
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 '%s Removed' % system.fqdn)
         with session.begin():

@@ -33,6 +33,12 @@ h3 small { font-size: @baseFontSize * 1.25; }
 // ruins the row height.
 td form { margin: 0; }
 
+// By default, table cells are top-aligned. If every cell in a row has only one 
+// (notional) line, it makes more sense to middle-align them.
+.table-one-line-per-row td {
+    vertical-align: middle;
+}
+
 // elements from master.kid
 .container {
     padding-top: 20px;

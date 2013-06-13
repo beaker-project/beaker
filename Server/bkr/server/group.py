@@ -6,12 +6,13 @@ from turbogears.database import session
 from sqlalchemy.orm.exc import NoResultFound
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from kid import Element
+from kid import XML
 from bkr.server.validators import StrongPassword
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
-    GroupPermissions, DeleteLinkWidgetForm, LocalJSLink, AutoCompleteField
+    GroupPermissions, DeleteLinkWidgetForm, LocalJSLink, AutoCompleteField, \
+    HorizontalForm, InlineForm, InlineRemoteForm
 from bkr.server.admin_page import AdminPage
 from bkr.server.bexceptions import BX 
 from bkr.server.controller_utilities import restrict_http_method
@@ -46,8 +47,7 @@ class GroupFormSchema(validators.Schema):
     root_password = StrongPassword()
     ldap = validators.StringBool(if_empty=False)
 
-class GroupForm(widgets.TableForm):
-    name = 'Group'
+class GroupForm(HorizontalForm):
     fields = [
         widgets.HiddenField(name='group_id'),
         widgets.TextField(name='group_name', label=_(u'Group Name')),
@@ -57,6 +57,7 @@ class GroupForm(widgets.TableForm):
         widgets.CheckBox(name='ldap', label=_(u'LDAP'),
                 help_text=_(u'Populate group membership from LDAP?')),
     ]
+    name = 'Group'
     action = 'save_data'
     submit_text = _(u'Save')
     validator = GroupFormSchema()
@@ -92,7 +93,7 @@ class Groups(AdminPage):
 
     group_form = GroupForm()
 
-    permissions_form = widgets.RemoteForm(
+    permissions_form = InlineRemoteForm(
         'Permissions',
         fields = [search_permissions, group_id],
         submit_text = _(u'Add'),
@@ -102,14 +103,14 @@ class Groups(AdminPage):
         after = 'after_group_permission_submit()',
     )
 
-    group_user_form = widgets.TableForm(
+    group_user_form = InlineForm(
         'GroupUser',
         fields = [group_id, auto_users],
         action = 'save_data',
         submit_text = _(u'Add'),
     )
 
-    group_system_form = widgets.TableForm(
+    group_system_form = InlineForm(
         'GroupSystem',
         fields = [group_id, auto_systems],
         action = 'save_data',
@@ -187,26 +188,32 @@ class Groups(AdminPage):
             is_owner = member.is_owner
             if can_edit:
                 if is_owner:
-                    return make_link('revoke_owner?group_id=%s&id=%s' % (group.group_id, member.user_id),
-                                 'Remove (-)',elem_class='change_ownership_remove')
+                    return XML('<a class="btn change_ownership_remove" '
+                            'href="revoke_owner?group_id=%s&amp;id=%s">'
+                            '<i class="icon-remove"/> Remove</a>'
+                            % (group.group_id, member.user_id))
                 else:
-                    return make_link('grant_owner?group_id=%s&id=%s' % (group.group_id, member.user_id),
-                                     'Add (+)',elem_class='change_ownership_add')
+                    return XML('<a class="btn change_ownership_add" '
+                            'href="grant_owner?group_id=%s&amp;id=%s">'
+                            '<i class="icon-plus"/> Add</a>'
+                            % (group.group_id, member.user_id))
             else:
                 is_owner = 'Yes' if is_owner else 'No'
                 return is_owner
 
+        def remove_button(member):
+            return XML('<a class="btn" href="removeUser?group_id=%s&amp;id=%s">'
+                    '<i class="icon-remove"/> Remove</a>' % (group.group_id, member.user_id))
+
         user_fields = [
-            ('User Members', lambda x: x.user.user_name)
+            ('User', lambda x: x.user.user_name)
         ]
 
         user_fields.append(('Group Ownership', show_ownership_status))
         if can_edit:
-            user_fields.append(('Group Membership', lambda x: make_link(
-                        'removeUser?group_id=%s&id=%s' % (group.group_id, x.user_id),
-                        u'Remove (-)')))
+            user_fields.append(('Group Membership', remove_button))
 
-        return widgets.DataGrid(fields=user_fields)
+        return BeakerDataGrid(name='group_members_grid', fields=user_fields)
 
     @expose(template='bkr.server.templates.grid')
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
@@ -239,7 +246,7 @@ class Groups(AdminPage):
         if identity.current.user:
             can_edit = group.can_edit(identity.current.user)
 
-        systems_fields = [('System Members', lambda x: x.link)]
+        systems_fields = [('System', lambda x: x.link)]
         if can_edit:
             system_remove_widget = DeleteLinkWidgetForm(action='removeSystem',
                     hidden_fields=[widgets.HiddenField(name='group_id'),
@@ -247,13 +254,14 @@ class Groups(AdminPage):
                     action_text=u'Remove (-)')
             systems_fields.append((' ', lambda x: system_remove_widget.display(
                 dict(group_id=group_id, id=x.id))))
-        systemgrid = widgets.DataGrid(fields=systems_fields)
+        systemgrid = BeakerDataGrid(fields=systems_fields)
 
-        permissions_fields = [('Permissions', lambda x: x.permission_name)]
+        permissions_fields = [('Permission', lambda x: x.permission_name)]
         if can_edit:
-            permissions_fields.append((' ', lambda x: make_fake_link('',
-                    'remove_permission_%s' % x.permission_id, 'Remove (-)')))
-        group_permissions_grid = widgets.DataGrid(name='group_permission_grid',
+            permissions_fields.append((' ', lambda x: XML(
+                    '<a class="btn" href="#" id="remove_permission_%s">'
+                    '<i class="icon-remove"/> Remove</a>' % x.permission_id)))
+        group_permissions_grid = BeakerDataGrid(name='group_permission_grid',
                 fields=permissions_fields)
         group_permissions = GroupPermissions()
 
@@ -261,7 +269,7 @@ class Groups(AdminPage):
             form = self.group_form,
             system_form = self.group_system_form,
             user_form = self.group_user_form,
-            group_edit_js = LocalJSLink('bkr', '/static/javascript/group_users.js'),
+            group_edit_js = LocalJSLink('bkr', '/static/javascript/group_users_v2.js'),
             action = './save',
             system_action = './save_system',
             user_action = './save_user',
