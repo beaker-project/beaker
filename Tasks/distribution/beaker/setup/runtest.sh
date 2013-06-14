@@ -24,14 +24,15 @@ function BuildBeaker ()
     rlPhaseStartTest "Build Beaker from git"
     rlRun "git clone git://git.beaker-project.org/beaker"
     rlRun "pushd beaker"
+    rlRun "git checkout ${BEAKER_GIT_REF:-develop}"
     if [[ -n "$BEAKER_GIT_REMOTE" ]] ; then
-        rlRun "git fetch $BEAKER_GIT_REMOTE ${BEAKER_GIT_REF:-master} && git checkout FETCH_HEAD"
-    else
-        rlRun "git checkout ${BEAKER_GIT_REF:-master}"
+        rlRun "git fetch $BEAKER_GIT_REMOTE ${BEAKER_GIT_REMOTE_REF:-develop}"
+        rlRun "git ${BEAKER_GIT_REMOTE_MERGE:-checkout} FETCH_HEAD" \
+            || rlDie "Git checkout/merge failed"
     fi
     rlRun "yum-builddep -y ./beaker.spec"
     rlRun "yum -y install tito"
-    rlRun "tito build --rpm --test"
+    rlRun "tito build --rpm --test" || rlDie "Tito RPM build failed"
     rlRun "popd"
     rlRun "createrepo /tmp/tito/noarch/"
     cat >/etc/yum.repos.d/beaker-local-builds.repo <<"EOF"
@@ -128,7 +129,7 @@ function Inventory()
     rlPhaseEnd
 
     rlPhaseStartTest "Install Beaker server"
-    InstallInventory$SOURCE
+    InstallInventory$SOURCE || rlDie "Installing Beaker server failed"
     rlPhaseEnd
 
     rlPhaseStartTest "Configure Beaker server"
@@ -218,7 +219,7 @@ EOF
 function LabController()
 {
     rlPhaseStartTest "Install Beaker lab controller"
-    InstallLabController$SOURCE
+    InstallLabController$SOURCE || rlDie "Installing lab controller failed"
     rlPhaseEnd
 
     rlPhaseStartTest "Configure Beaker lab controller"
