@@ -1,34 +1,27 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate
-from turbogears.widgets import AutoCompleteField
-from turbogears import identity, redirect, config
-from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
+from turbogears import url, expose, flash, validate, error_handler, \
+                       identity, redirect, paginate, config
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
+from bkr.server.helpers import make_link, make_edit_link
 from bkr.server.util import total_seconds
 from bkr.server.widgets import LabControllerDataGrid, LabControllerForm
 from bkr.server.distrotrees import DistroTrees
-from xmlrpclib import ProtocolError
-from sqlalchemy.orm import contains_eager, joinedload
-import itertools
+from sqlalchemy.orm import contains_eager
 import cherrypy
-import time
-from datetime import datetime
-import re
+from datetime import datetime, timedelta
 import urlparse
 
-from BasicAuthTransport import BasicAuthTransport
-import xmlrpclib
-import bkr.timeout_xmlrpclib
+from bkr.server.model import \
+    LabController, LabControllerActivity, User, Group, OSMajor, OSVersion, \
+    Arch, Distro, DistroTree, DistroTreeRepo, DistroTreeImage, \
+    DistroTreeActivity, LabControllerDistroTree, ImageType, KernelType, \
+    System, SystemStatus, SystemActivity, system_table, \
+    Watchdog, CommandActivity, CommandStatus, command_queue_table, \
+    NoResultFound, InvalidRequestError
 
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-#import model
-from model import *
-import string
+import logging
+log = logging.getLogger(__name__)
 
 class LabControllers(RPCRoot):
     # For XMLRPC methods in this class.
@@ -326,7 +319,7 @@ class LabControllers(RPCRoot):
         distro_tree_url = cmd.distro_tree.url_in_lab(cmd.system.lab_controller, 'http')
         if not distro_tree_url:
             raise ValueError('No usable URL found for distro tree %s in lab %s'
-                    % (cmd.distro_tree.id, lab_controller.fqdn))
+                    % (cmd.distro_tree.id, cmd.system.lab_controller.fqdn))
 
         if cmd.system.kernel_type.uboot:
             by_kernel = ImageType.uimage
@@ -418,15 +411,37 @@ class LabControllers(RPCRoot):
         Called by beaker-provision on startup. Any commands which are Running
         at this point must be left over from an earlier crash.
         """
+        # If the connection between the LCs and the main server is unreliable
+        # commands may end up stuck in "running" state. We mitigate the
+        # effects of this by purging all stale commands (those more than a
+        # day old) whenever a lab controller restarts and tries to clear the
+        # possibly interrupted commands for that lab.
+        # We deliberately bypass the callbacks on these old commands, since
+        # the affected systems may now be running unrelated recipes. Longer
+        # term, we'll likely update the command system to remember the
+        # associated recipe, not just the associated system
+        # See https://bugzilla.redhat.com/show_bug.cgi?id=974319 and
+        # https://bugzilla.redhat.com/show_bug.cgi?id=974352 for more
+        # details.
         lab_controller = identity.current.user.lab_controller
+        purged = (
+            command_queue_table.update()
+            .where(command_queue_table.c.status == CommandStatus.running)
+            .where(command_queue_table.c.updated <
+                       datetime.utcnow() - timedelta(days=1))
+            .values(status=CommandStatus.aborted)
+            .execute()
+        )
+        if purged.rowcount:
+            msg = ("Aborted %d stale commands before aborting "
+                   "recent running commands for %s")
+            log.warn(msg, purged.rowcount, lab_controller.fqdn)
         running_commands = CommandActivity.query\
                 .join(CommandActivity.system)\
                 .filter(System.lab_controller == lab_controller)\
                 .filter(CommandActivity.status == CommandStatus.running)
         for cmd in running_commands:
-            cmd.status = CommandStatus.failed
-            cmd.new_value = message
-            cmd.log_to_system_history()
+            cmd.abort(message)
         return True
 
     @cherrypy.expose
