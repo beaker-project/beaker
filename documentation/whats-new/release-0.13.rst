@@ -282,3 +282,15 @@ Miscellaneous changes
 * :issue:`950895`: Mitigated the negative effects of interference between
   processing of queued recipes and completion of recipes.
 
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 0.13 maintenance updates.
+
+
+Beaker 0.13.1
+~~~~~~~~~~~~~
+
+* :issue:`974382`: Distro trees for Red Hat Enterprise Linux 4 can once again
+  be imported into Beaker.
