@@ -270,6 +270,20 @@ class NewJobTestWD(WebDriverTestCase):
         self.assert_('Success!' in flash_text, flash_text)
         self.assertEqual(b.title, 'My Jobs')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=972412
+    def test_invalid_utf8_chars(self):
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'jobs/new')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('\x89')
+        xml_file.flush()
+        b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
+        b.find_element_by_xpath("//input[@value='Submit Data']").click()
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assertEquals(flash_text,
+                "Invalid job XML: 'utf8' codec can't decode byte 0x89 "
+                "in position 0: invalid start byte")
 
 class NewJobTest(SeleniumTestCase):
 
