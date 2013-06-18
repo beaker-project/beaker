@@ -590,6 +590,34 @@ EOF
         compare_expected('RedHatEnterpriseLinux7-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_rhel7_manual(self):
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                                          fqdn='test-manual-1.test-kickstart.invalid',
+                                          lab_controller=self.lab_controller)
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
+                ks_meta=u'manual')
+
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+
+        compare_expected('RedHatEnterpriseLinux7-scheduler-manual', recipe.id,
+                         recipe.rendered_kickstart.kickstart)
+
     def test_rhel7_repos(self):
         recipe = self.provision_recipe('''
             <job>
@@ -778,9 +806,10 @@ EOF
                 in recipe.rendered_kickstart.kickstart.splitlines(),
                 recipe.rendered_kickstart.kickstart)
 
-    def test_manual(self):
+    def test_rhel6_manual(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
-                lab_controller=self.lab_controller)
+                                          fqdn='test-manual-1.test-kickstart.invalid',
+                                          lab_controller=self.lab_controller)
         system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
                 ks_meta=u'manual')
         recipe = self.provision_recipe('''
@@ -800,14 +829,9 @@ EOF
                 </recipeSet>
             </job>
             ''', system)
-        self.assert_(
-                r'''ignoredisk --interactive'''
-                in recipe.rendered_kickstart.kickstart.splitlines(),
-                recipe.rendered_kickstart.kickstart)
-        self.assert_(
-                r'''%packages'''
-                not in recipe.rendered_kickstart.kickstart.splitlines(),
-                recipe.rendered_kickstart.kickstart)
+
+        compare_expected('RedHatEnterpriseLinux6-scheduler-manual', recipe.id,
+                         recipe.rendered_kickstart.kickstart)
 
     def test_leavebootorder(self):
         system = data_setup.create_system(arch=u'ppc64', status=u'Automated',
