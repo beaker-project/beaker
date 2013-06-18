@@ -59,9 +59,17 @@ part swap --recommended
 {% endif %}
 {% set partname = partition[0].lstrip('/') %}
 {% if partition[1] == 'part' %}
+{% if myfstype %} 
+{% if myfstype == 'btrfs' %}
+{% set btrfs_vol_label = partname.replace('/', '_') %}
+part btrfs.{{ btrfs_vol_label }} --size={{ size }}
+btrfs /{{ partname }} --label={{ btrfs_vol_label}} btrfs.{{ btrfs_vol_label }}
+{% else %}
+part /{{ partname }} --size={{ size }} --fstype {{ myfstype }}
+{% endif %}
+{% else %}
 part /{{ partname }} --size={{ size }}
-{%- if myfstype %} --fstype {{ myfstype }}{% endif %}
-
+{% endif %}
 {% elif partition[1] == 'lvm' %}
 {% set is_lvm = is_lvm + 1 %}
 {% set lvmname = partname.replace('/', '_') %}
