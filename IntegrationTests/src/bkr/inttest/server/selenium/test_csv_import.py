@@ -102,5 +102,12 @@ class CSVImportTest(WebDriverTestCase):
                 .encode('utf8'))
         self.assert_(is_text_present(self.browser, 'Too many fields on line 2 (expecting 4)'))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=972411
+    def test_malformed(self):
+        self.import_csv('gar\x00bage')
+        self.assertEquals(self.browser.find_element_by_xpath(
+                '//table[@id="csv-import-log"]//td').text,
+                'Error parsing CSV file: line contains NULL byte')
+
 if __name__ == "__main__":
     unittest.main()

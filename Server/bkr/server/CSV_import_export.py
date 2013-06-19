@@ -89,64 +89,68 @@ class CSV(RPCRoot):
         TurboGears method to import data from csv
         """
         log = []
-        # ... process CSV file contents here ...
-        missing = object()
-        reader = csv.DictReader(csv_file.file, restkey=missing, restval=missing)
-        for data in reader:
-            if missing in data:
-                log.append('Too many fields on line %s (expecting %s)'
-                        % (reader.line_num, len(reader.fieldnames)))
-                continue
-            if any(value is missing for value in data.itervalues()):
-                missing_fields = [field for field, value in data.iteritems()
-                        if value is missing]
-                log.append('Missing fields on line %s: %s' % (reader.line_num,
-                        ', '.join(missing_fields)))
-                continue
-            if 'csv_type' in data:
-                if data['csv_type'] in system_types and \
-                  'fqdn' in data:
-                    try:
-                        system = System.query.filter(System.fqdn == data['fqdn']).one()
-                    except InvalidRequestError:
-                        # Create new system with some defaults
-                        # Assume the system is broken until proven otherwise.
-                        # Also assumes its a machine.  we have to pick something
-                        system = System(fqdn=data['fqdn'],
-                                        owner=identity.current.user,
-                                        type=SystemType.machine,
-                                        status=SystemStatus.broken)
-                    if system.can_admin(identity.current.user):
-                        # Remove fqdn, can't change that via csv.
-                        data.pop('fqdn')
-                        if not self.from_csv(system, data, log):
-                            if system.id:
-                                # System already existed but some or all of the
-                                #  import data was invalid.
-                                session.expire(system)
+        try:
+            # ... process CSV file contents here ...
+            missing = object()
+            reader = csv.DictReader(csv_file.file, restkey=missing, restval=missing)
+            for data in reader:
+                if missing in data:
+                    log.append('Too many fields on line %s (expecting %s)'
+                            % (reader.line_num, len(reader.fieldnames)))
+                    continue
+                if any(value is missing for value in data.itervalues()):
+                    missing_fields = [field for field, value in data.iteritems()
+                            if value is missing]
+                    log.append('Missing fields on line %s: %s' % (reader.line_num,
+                            ', '.join(missing_fields)))
+                    continue
+                if 'csv_type' in data:
+                    if data['csv_type'] in system_types and \
+                      'fqdn' in data:
+                        try:
+                            system = System.query.filter(System.fqdn == data['fqdn']).one()
+                        except InvalidRequestError:
+                            # Create new system with some defaults
+                            # Assume the system is broken until proven otherwise.
+                            # Also assumes its a machine.  we have to pick something
+                            system = System(fqdn=data['fqdn'],
+                                            owner=identity.current.user,
+                                            type=SystemType.machine,
+                                            status=SystemStatus.broken)
+                        if system.can_admin(identity.current.user):
+                            # Remove fqdn, can't change that via csv.
+                            data.pop('fqdn')
+                            if not self.from_csv(system, data, log):
+                                if system.id:
+                                    # System already existed but some or all of the
+                                    #  import data was invalid.
+                                    session.expire(system)
+                                else:
+                                    # System didn't exist before import but some
+                                    #  or all of the import data was invalid.
+                                    session.expunge(system)
+                                    del(system)
                             else:
-                                # System didn't exist before import but some
-                                #  or all of the import data was invalid.
-                                session.expunge(system)
-                                del(system)
+                                # Save out our system.  If we created it above we
+                                # want to make sure its found on subsequent lookups
+                                session.add(system)
+                                session.flush([system])
                         else:
-                            # Save out our system.  If we created it above we
-                            # want to make sure its found on subsequent lookups
-                            session.add(system)
-                            session.flush([system])
+                            log.append("You are not the owner of %s" % system.fqdn)
+                    elif data['csv_type'] == 'user_group' and \
+                      'user' in data:
+                        user = User.by_user_name(data['user'])
+                        if user:
+                            CSV_GroupUser.from_csv(user, data, log)
+                        else:
+                            log.append('%s is not a valid user' % data['user'])
                     else:
-                        log.append("You are not the owner of %s" % system.fqdn)
-                elif data['csv_type'] == 'user_group' and \
-                  'user' in data:
-                    user = User.by_user_name(data['user'])
-                    if user:
-                        CSV_GroupUser.from_csv(user, data, log)
-                    else:
-                        log.append('%s is not a valid user' % data['user'])
+                        log.append("Invalid csv_type %s or missing required fields" % data['csv_type'])
                 else:
-                    log.append("Invalid csv_type %s or missing required fields" % data['csv_type'])
-            else:
-                log.append("Missing csv_type from record")
+                    log.append("Missing csv_type from record")
+        except csv.Error, e:
+            session.rollback()
+            log.append('Error parsing CSV file: %s' % e)
 
         if log:
             logger.debug('CSV import failed with errors: %r', log)
