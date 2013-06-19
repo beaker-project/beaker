@@ -35,6 +35,28 @@ class DistroImportTest(unittest.TestCase):
 
     def setUp(self):
         self.import_args = ['python', _command, '--dry-run', '--quiet', '--json']
+
+        self.i386_rhel4 = {u'arch': u'i386',
+                          u'arches': [],
+                          u'images': [{u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
+                                      {u'path': u'images/pxeboot/initrd.img', u'type': u'initrd'}],
+                          u'kernel_options': None,
+                          u'kernel_options_post': None,
+                          u'ks_meta': None,
+                          u'name': u'RHEL4-U9',
+                          u'osmajor': u'RedHatEnterpriseLinux4',
+                          u'osminor': u'9',
+                          u'repos': [{u'path': u'../repo-debug-AS-i386',
+                                      u'repoid': u'AS-debuginfo',
+                                      u'type': u'debug'},
+                                     {u'path': u'../repo-AS-i386',
+                                      u'repoid': u'AS',
+                                      u'type': u'variant'}],
+                          u'tree_build_time': 0.0,
+                          u'tags': [u'RELEASED'],
+                          u'urls': [u'http://localhost:19998/RHEL-4/U9/AS/i386/tree/'],
+                          u'variant': u'AS'}
+
         self.x86_64_rhel5 = {u'osmajor': u'RedHatEnterpriseLinuxServer5',
                             u'tree_build_time': u'1352937955.19',
                             u'name': u'RHEL5.9-Server-20121114.2',
@@ -510,6 +532,12 @@ class DistroImportTest(unittest.TestCase):
         # Naked imports return the current time
         tree['tree_build_time'] = 1366007531.817827
         self.assertEquals(tree, self.x86_64_rhel6_naked)
+
+    def test_rhel4_tree_import_compose(self):
+        trees = self._import_trees(['%sRHEL-4/U9/AS/' % self.distro_url])
+        self.assertTrue(len(trees) == 1)
+        tree = trees.pop()
+        self.assertEquals(tree, self.i386_rhel4)
 
     def test_rhel5_tree_import_compose(self):
         trees = self._import_trees(['%sRHEL5-Server/' % self.distro_url])

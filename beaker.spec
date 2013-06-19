@@ -17,8 +17,8 @@
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.13.0
-Release:        3%{?dist}
+Version:        0.13.1
+Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
@@ -380,6 +380,12 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Mon Jun 17 2013 Raymond Mancy <rmancy@redhat.com> 0.13.1-1
+- 974382 Fixes RHEL4 import problems (rmancy@redhat.com)
+
+* Mon Jun 17 2013 Raymond Mancy <rmancy@redhat.com>
+- 974382 Fixes RHEL4 import problems (rmancy@redhat.com)
+
 * Thu Jun 13 2013 Amit Saha <asaha@redhat.com> 0.13.0-3
 - 972255 Fix LDAP group modification changes via the CLI. (asaha@redhat.com)
 - 972290 Display error message when job cannot be cancelled. (asaha@redhat.com)

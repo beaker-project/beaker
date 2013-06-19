@@ -69,11 +69,10 @@ unsupported_hardware
 {% snippet 'rhts_packages' %}
 {% endif %}
 {% snippet 'packages' %}
-
+%end
 {% endif %}{# manual #}
 
 {% endif %}{# sysprofile #}
-%end
 
 %pre --log=/dev/console
 {% snippet 'rhts_pre' %}

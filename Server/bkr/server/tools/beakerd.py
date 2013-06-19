@@ -723,13 +723,17 @@ def processed_recipesets_loop(*args, **kwargs):
 @log_traceback(log)
 def metrics_loop(*args, **kwargs):
     while running:
+        start = time.time()
         try:
-            start = time.time()
             recipe_count_metrics()
             system_count_metrics()
         except Exception:
             log.exception('Exception in metrics loop')
-        time.sleep(max(30.0 + start - time.time(), 5.0))
+        end = time.time()
+        duration = end - start
+        if duration >= 30.0:
+            log.debug("Metrics collection took %d seconds", duration)
+        time.sleep(max(30.0 - duration, 5.0))
 
 @log_traceback(log)
 def main_recipes_loop(*args, **kwargs):

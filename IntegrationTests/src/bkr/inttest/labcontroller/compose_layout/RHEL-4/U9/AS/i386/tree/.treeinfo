@@ -1,0 +1,10 @@
+[general]
+family = Red Hat Enterprise Linux
+variant = AS
+label = RELEASED
+version = 4.9
+arch = i386
+
+[images-xen]
+kernel = images/xen/vmlinuz
+initrd = images/xen/initrd.img

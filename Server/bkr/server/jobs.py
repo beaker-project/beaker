@@ -374,7 +374,11 @@ class Jobs(RPCRoot):
             textxml = recipeset.to_xml(clone=True,from_job=False).toprettyxml()
         elif isinstance(filexml, cgi.FieldStorage):
             # Clone from file
-            textxml = filexml.value.decode('utf8')
+            try:
+                textxml = filexml.value.decode('utf8')
+            except UnicodeDecodeError, e:
+                flash(_(u'Invalid job XML: %s') % e)
+                redirect('.')
         elif textxml:
             try:
                 # xml.sax (and thus, xmltramp) expect raw bytes, not unicode

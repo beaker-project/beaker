@@ -91,3 +91,33 @@ class WorkflowSimpleTest(unittest.TestCase):
                 '--family', self.distro.osversion.osmajor.osmajor,
                 '--task', self.task.name])
         self.assert_('<hostlabcontroller op="=" value="lab.example.com"/>' in out, out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=972417
+    def test_servers_default_zero(self):
+        out = run_client(['bkr', 'workflow-simple', '--distro', self.distro.name,
+                '--task', '/distribution/reservesys',
+                '--clients', '2'])
+        self.assertTrue(out.startswith('Submitted:'), out)
+        m = re.search('J:(\d+)', out)
+        job_id = m.group(1)
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEquals(len(job.recipesets), 1)
+            self.assertEquals(len(job.recipesets[0].recipes), 2)
+            self.assertEquals(job.recipesets[0].recipes[0].tasks[1].role, 'CLIENTS')
+            self.assertEquals(job.recipesets[0].recipes[1].tasks[1].role, 'CLIENTS')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=972417
+    def test_clients_default_zero(self):
+        out = run_client(['bkr', 'workflow-simple', '--distro', self.distro.name,
+                '--task', '/distribution/reservesys',
+                '--servers', '2'])
+        self.assertTrue(out.startswith('Submitted:'), out)
+        m = re.search('J:(\d+)', out)
+        job_id = m.group(1)
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEquals(len(job.recipesets), 1)
+            self.assertEquals(len(job.recipesets[0].recipes), 2)
+            self.assertEquals(job.recipesets[0].recipes[0].tasks[1].role, 'SERVERS')
+            self.assertEquals(job.recipesets[0].recipes[1].tasks[1].role, 'SERVERS')
