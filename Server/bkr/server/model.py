@@ -6807,6 +6807,10 @@ class Task(MappedObject):
 
         if len(task.name) > 255:
             raise BX(_("Task name should be <= 255 characters"))
+        if task.name.endswith('/'):
+            raise BX(_(u'Task name must not end with slash'))
+        if '//' in task.name:
+            raise BX(_(u'Task name must not contain redundant slashes'))
 
         # RPM is the same version we have. don't process
         if task.version == raw_taskinfo['hdr']['ver']:

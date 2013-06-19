@@ -24,7 +24,7 @@ class SystemReturnTestWD(WebDriverTestCase):
         b.get(get_server_base() + 'view/%s' % system.fqdn)
         b.find_element_by_link_text('(Return)').click()
         self.assertEquals(b.find_element_by_css_selector('.flash').text,
-            "Failed to return %s: u'Currently running R:%s'" % (system.fqdn, self.recipe.id))
+            "Failed to return %s: Currently running R:%s" % (system.fqdn, self.recipe.id))
 
 
 class SystemReturnTest(SeleniumTestCase):
