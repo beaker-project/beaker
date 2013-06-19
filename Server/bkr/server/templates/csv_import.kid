@@ -9,7 +9,7 @@
  </head>
 
  <body class="flora">
-   <table class="list">
+   <table class="list" id="csv-import-log">
     <tr class="list">
      <th class="list">Error Log</th>
     </tr>
