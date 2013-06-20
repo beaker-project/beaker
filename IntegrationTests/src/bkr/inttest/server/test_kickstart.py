@@ -1711,3 +1711,47 @@ done
         self.assert_('export BEAKER_RECIPE_ID=%s' % recipe.id in k, k)
         self.assert_('export BEAKER_HUB_URL="%s"' % get_server_base() in k, k)
         self.assert_('yum -y install my-alternative-harness' in k, k)
+
+    def test_btrfs_volume(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="btrfs" name="mnt/testarea1" size="10" type="part"/>
+                            <partition fs="btrfs" name="mnt/testarea2" size="10" type="part"/>
+                        </partitions>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        self.assert_('''part /boot --size 200 --recommended --asprimary
+part / --size 1024 --grow
+part swap --recommended
+'''
+                    in recipe.rendered_kickstart.kickstart,
+                    recipe.rendered_kickstart.kickstart)
+
+        self.assert_('''
+part btrfs.mnt_testarea1 --size=10240
+btrfs /mnt/testarea1 --label=mnt_testarea1 btrfs.mnt_testarea1
+'''
+                     in recipe.rendered_kickstart.kickstart,
+                     recipe.rendered_kickstart.kickstart)
+
+        self.assert_('''
+part btrfs.mnt_testarea2 --size=10240
+btrfs /mnt/testarea2 --label=mnt_testarea2 btrfs.mnt_testarea2
+'''
+                     in recipe.rendered_kickstart.kickstart,
+                     recipe.rendered_kickstart.kickstart)
