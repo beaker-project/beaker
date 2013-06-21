@@ -1,88 +1,119 @@
 from selenium.webdriver.support.ui import Select
 from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
     Device, DeviceClass, Disk
-from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, login, \
         search_for_system, wait_for_animation
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup, with_transaction, get_server_base
 import unittest, time, re, os, datetime
 from turbogears.database import session
 
-class SearchColumns(SeleniumTestCase):
+def check_search_results(browser, present, absent):
+    for system in absent:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                'not(.//td[1]/a/text()="%s")]' % system.fqdn)
+    for system in present:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                './/td[1]/a/text()="%s"]' % system.fqdn)
+
+class SearchColumns(WebDriverTestCase):
 
     @classmethod
-    @with_transaction
-    def setUpClass(cls): 
-        cls.group = data_setup.create_group()
-        cls.system_with_group = data_setup.create_system(shared=True)
-        cls.system_with_group.groups.append(cls.group)
-        cls.system_with_numa = data_setup.create_system(shared=True)
-        cls.system_with_numa.numa = Numa(nodes=2)
-        cls.system_with_serial = data_setup.create_system()
-        cls.system_with_serial.serial = u'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        cls.selenium = cls.get_selenium()
-        cls.selenium.start()
+    def setUpClass(cls):
+        cls.browser = cls.get_browser()
 
     def test_group_column(self):
-        sel = self.selenium
-        sel.open('')
-        sel.wait_for_page_to_load('30000')
-        sel.click("advancedsearch")
-        sel.select("systemsearch_0_table", "label=System/Group")
-        sel.select("systemsearch_0_operation", "label=is")
-        sel.type('systemsearch_0_value', self.group.group_name)
-        sel.click("customcolumns")
-        sel.click("selectnone")
-        sel.click("systemsearch_column_System/Group")
-        sel.click("Search")
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'Systems')
-        self.failUnless(sel.is_text_present("%s" % self.system_with_group.groups[0].group_name))
+        with session.begin():
+            group = data_setup.create_group()
+            system_with_group = data_setup.create_system(shared=True)
+            system_with_group.groups.append(group)
+            system_without_group = data_setup.create_system(shared=True)
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Group')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-0.value').send_keys(group.group_name)
+        b.find_element_by_link_text('Toggle Result Columns').click()
+        wait_for_animation(b, '#selectablecolumns')
+        b.find_element_by_link_text('Select None').click()
+        b.find_element_by_name('systemsearch_column_System/Name').click()
+        b.find_element_by_name('systemsearch_column_System/Group').click()
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[system_with_group],
+                absent=[system_without_group])
+        b.find_element_by_xpath('//table[@id="widget"]'
+                '//td[2][normalize-space(text())="%s"]' % group.group_name)
 
     def test_numa_column(self):
-        sel = self.selenium
-        sel.open('')
-        sel.wait_for_page_to_load('30000')
-        sel.click("advancedsearch")
-        sel.select("systemsearch_0_table", "label=System/NumaNodes")
-        sel.select("systemsearch_0_operation", "label=is not")
-        sel.click("customcolumns")
-        sel.click("selectnone")
-        sel.click("systemsearch_column_System/NumaNodes")
-        sel.click("Search")
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'Systems')
-        self.failUnless(sel.is_text_present(str(self.system_with_numa.numa)))
+        with session.begin():
+            system_with_numa = data_setup.create_system(shared=True)
+            system_with_numa.numa = Numa(nodes=2)
+            system_without_numa = data_setup.create_system()
+            system_without_numa.numa = None
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/NumaNodes')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is not')
+        b.find_element_by_link_text('Toggle Result Columns').click()
+        wait_for_animation(b, '#selectablecolumns')
+        b.find_element_by_link_text('Select None').click()
+        b.find_element_by_name('systemsearch_column_System/Name').click()
+        b.find_element_by_name('systemsearch_column_System/NumaNodes').click()
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[system_with_numa],
+                absent=[system_without_numa])
+        b.find_element_by_xpath('//table[@id="widget"]'
+                '//td[2][normalize-space(text())="2"]')
 
     def test_serial_number_column(self):
-        sel = self.selenium
-        sel.open('')
-        sel.wait_for_page_to_load('30000')
-        sel.click('advancedsearch')
-        sel.select('systemsearch_0_table', 'label=System/SerialNumber')
-        sel.select('systemsearch_0_operation', 'label=is')
+        with session.begin():
+            system_with_serial = data_setup.create_system()
+            system_with_serial.serial = u'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            system_without_serial = data_setup.create_system()
+            system_without_serial.serial = None
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/SerialNumber')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
         # This also tests that whitespace does not foil us
-        sel.type('systemsearch_0_value', ' %s ' % self.system_with_serial.serial)
-        sel.click('customcolumns')
-        sel.click('selectnone')
-        sel.click('systemsearch_column_System/SerialNumber')
-        sel.click('Search')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'Systems')
-        self.failUnless(sel.is_text_present(self.system_with_serial.serial))
+        b.find_element_by_name('systemsearch-0.value').send_keys(
+                ' %s ' % system_with_serial.serial)
+        b.find_element_by_link_text('Toggle Result Columns').click()
+        wait_for_animation(b, '#selectablecolumns')
+        b.find_element_by_link_text('Select None').click()
+        b.find_element_by_name('systemsearch_column_System/Name').click()
+        b.find_element_by_name('systemsearch_column_System/SerialNumber').click()
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[system_with_serial],
+                absent=[system_without_serial])
+        b.find_element_by_xpath('//table[@id="widget"]'
+                '//td[2][normalize-space(text())="%s"]' % system_with_serial.serial)
 
     @classmethod
     def tearDownClass(cls):
-        cls.selenium.stop()
+        cls.browser.quit()
 
 
 
-class Search(SeleniumTestCase):
+class Search(WebDriverTestCase):
 
     @classmethod
     @with_transaction
-    def setupClass(cls):
-        cls.selenium = cls.get_selenium()
+    def setUpClass(cls):
+        cls.browser = cls.get_browser()
+        login(cls.browser)
         cls.system_one_details = { 'fqdn' : u'a1',
                                     'type' : u'Machine',
                                     'arch' : u'i386',
@@ -138,262 +169,261 @@ class Search(SeleniumTestCase):
                                       device_class_id = device_class.id,
                                       description = 'blah')
         cls.system_three.devices.append(device2)
-        cls.selenium.start()
 
     @classmethod
     def tearDownClass(cls):
-        cls.selenium.stop()
-
-    def setUp(self):
-        self.verificationErrors = []
+        cls.browser.quit()
 
     def test_loaned_not_free(self):
-        sel = self.selenium
-        self.login()
-        sel.open('free')
-        sel.wait_for_page_to_load("30000")
-        self.assertEquals(sel.get_title(), 'Free Systems')
-        self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
+        b = self.browser
+        b.get(get_server_base() + 'free')
+        self.assertEquals(b.title, 'Free Systems')
+        check_search_results(b, present=[], absent=[self.system_one])
 
         with session.begin():
-            self.system_one.loaned = User.by_user_name(self.BEAKER_LOGIN_USER)
-        sel.open('free')
-        sel.wait_for_page_to_load("30000")
-        self.assertEquals(sel.get_title(), 'Free Systems')
-        self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
+            self.system_one.loaned = User.by_user_name(data_setup.ADMIN_USER)
+        b.get(get_server_base() + 'free')
+        self.assertEquals(b.title, 'Free Systems')
+        check_search_results(b, present=[self.system_one], absent=[])
 
+    def test_by_device(self):
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('Devices/Subsys_device_id')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-0.value').send_keys('1112')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.system_three],
+                absent=[self.system_one, self.system_two])
 
-    def test_system_search(self):
-        sel = self.selenium
-        sel.open('')
-        sel.wait_for_page_to_load("30000")
-        sel.select("systemsearch_0_table", "label=Devices/Subsys_device_id")
-        sel.select("systemsearch_0_operation", "label=is")
-        sel.type("systemsearch_0_value", "1112")
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
-        self.failUnless(not sel.is_text_present("%s" % self.system_two.fqdn))
-        self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('Devices/Subsys_vendor_id')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is not')
+        b.find_element_by_name('systemsearch-0.value').send_keys('1111')
+        b.find_element_by_id('doclink').click()
+        Select(b.find_element_by_name('systemsearch-1.table'))\
+            .select_by_visible_text('Devices/Subsys_device_id')
+        Select(b.find_element_by_name('systemsearch-1.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-1.value').send_keys('2224')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.system_two],
+                absent=[self.system_one, self.system_three])
 
+    def test_by_name(self):
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Name')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-0.value').send_keys(self.system_one.fqdn)
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.system_one],
+                absent=[self.system_two, self.system_three])
 
-        sel.select("systemsearch_0_table", "label=Devices/Subsys_vendor_id")
-        sel.select("systemsearch_0_operation", "label=is not")
-        sel.type("systemsearch_0_value", "1111")
-        sel.click("doclink")
+    def test_by_type(self):
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Type')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is not')
+        Select(b.find_element_by_name('systemsearch-0.value'))\
+            .select_by_visible_text(self.system_three_details['type'])
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.system_one, self.system_two],
+                absent=[self.system_three])
 
-        sel.select("systemsearch_1_table", "label=Devices/Subsys_device_id")
-        sel.select("systemsearch_1_operation", "label=is")
-        sel.type("systemsearch_1_value", "2224")
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        self.failUnless(sel.is_text_present("%s" % self.system_two.fqdn))
-        self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
-        self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
+    def test_by_status(self):
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Status')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        Select(b.find_element_by_name('systemsearch-0.value'))\
+            .select_by_visible_text(self.system_two_details['status'])
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.system_two],
+                absent=[self.system_one, self.system_three])
 
-        sel.open('')
-        sel.select("systemsearch_0_table", "label=System/Name")
-        sel.select("systemsearch_0_operation", "label=is")
-        sel.type("systemsearch_0_value", "%s" % self.system_one.fqdn)
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(1))
-        try: self.failUnless(not sel.is_text_present("%s" % self.system_two.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(2))
-        try: self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(3))
+    def test_by_date_added(self):
+        with session.begin():
+            new_system = data_setup.create_system()
+            new_system.date_added = datetime.datetime(2020, 6, 21, 11, 30, 0)
+            old_system = data_setup.create_system()
+            old_system.date_added = datetime.datetime(2001, 1, 15, 14, 12, 0)
 
-        sel.select("systemsearch_0_table", "label=System/Type")
-        sel.select("systemsearch_0_operation", "label=is not")
-        sel.select("systemsearch_0_value", "label=%s" % self.system_three_details['type'])
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(4))
-        try: self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(5))
-        
-        sel.select("systemsearch_0_table", "label=System/Status")  
-        sel.select("systemsearch_0_operation", "label=is")
-        sel.select("systemsearch_0_value", "label=%s" % self.system_two_details['status'])
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        try: self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(6))
-        try: self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(7))
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Added')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-0.value').send_keys('2001-01-15')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[old_system], absent=[new_system])
 
-        tomorrow_date = datetime.datetime.utcnow().date() + datetime.timedelta(days=1)
-        tomorrow = tomorrow_date.isoformat()
-        yesterday_date = datetime.datetime.utcnow().date() - datetime.timedelta(days=1)
-        yesterday = yesterday_date.isoformat()
-        sel.select("systemsearch_0_table", "label=System/Added")
-        sel.select("systemsearch_0_operation", "label=is")
-        sel.type("systemsearch_0_value", "%s" % datetime.datetime.utcnow().date().isoformat())
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(8))
-        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(9))
-        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(10))
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Added')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('before')
+        b.find_element_by_name('systemsearch-0.value').clear()
+        b.find_element_by_name('systemsearch-0.value').send_keys('2001-01-16')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[old_system], absent=[new_system])
 
-        sel.select("systemsearch_0_table", "label=System/Added")
-        sel.select("systemsearch_0_operation", "label=before")
-        sel.type("systemsearch_0_value", "%s" % tomorrow)
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(11))
-        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(12))
-        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(13))
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Added')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('after')
+        b.find_element_by_name('systemsearch-0.value').clear()
+        b.find_element_by_name('systemsearch-0.value').send_keys('2020-12-31')
+        b.find_element_by_id('searchform').submit()
+        # no results
+        b.find_element_by_xpath('//table[@id="widget" and not(.//td)]')
 
-        sel.select("systemsearch_0_table", "label=System/Added")
-        sel.select("systemsearch_0_operation", "label=after")
-        sel.type("systemsearch_0_value", "%s" % tomorrow)
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        try: self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(14))
-        try: self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(15))
-        try: self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(16))
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Added')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('after')
+        b.find_element_by_name('systemsearch-0.value').clear()
+        b.find_element_by_name('systemsearch-0.value').send_keys('2020-06-20')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[new_system], absent=[old_system])
 
-        sel.select("systemsearch_0_table", "label=System/Added")
-        sel.select("systemsearch_0_operation", "label=after")
-        sel.type("systemsearch_0_value", "%s" % yesterday)
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(17))
-        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(18))
-        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(19))
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Added')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('after')
+        b.find_element_by_name('systemsearch-0.value').clear()
+        b.find_element_by_name('systemsearch-0.value').send_keys('2020-06-20')
+        b.find_element_by_id('doclink').click()
+        Select(b.find_element_by_name('systemsearch-1.table'))\
+            .select_by_visible_text('System/Added')
+        Select(b.find_element_by_name('systemsearch-1.operation'))\
+            .select_by_visible_text('before')
+        b.find_element_by_name('systemsearch-1.value').send_keys('2020-06-22')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[new_system], absent=[old_system])
 
-        sel.select("systemsearch_0_table", "label=System/Added")
-        sel.select("systemsearch_0_operation", "label=after")
-        sel.type("systemsearch_0_value", "%s" % yesterday)
-        sel.click("doclink")
-        sel.select("systemsearch_1_table", "label=System/Added")
-        sel.select("systemsearch_1_operation", "label=before")
-        sel.type("systemsearch_1_value", "%s" % tomorrow)
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        try: self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(20))
-        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(21))
-        try: self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
-        except AssertionError, e: self.verificationErrors.append(str(22))
+    def test_by_key_value_is(self):
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('Key/Value')
+        Select(b.find_element_by_name('systemsearch-0.keyvalue'))\
+            .select_by_visible_text('CPUMODEL')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-0.value').send_keys('foocodename')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.system_one],
+                absent=[self.system_two, self.system_three])
 
-    def test_can_search_by_key_value(self):
-        sel = self.selenium
-        sel.open('')
-        sel.select("systemsearch_0_table", "label=Key/Value")
-        sel.select("systemsearch_0_keyvalue", "label=CPUMODEL")
-        sel.select("systemsearch_0_operation", "label=is")
-        sel.type("systemsearch_0_value", "foocodename")
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
-        self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
-        self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
-        self.failUnless(sel.is_text_present("Items found: 1"))
+    def test_by_key_value_is_not(self):
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('Key/Value')
+        Select(b.find_element_by_name('systemsearch-0.keyvalue'))\
+            .select_by_visible_text('CPUMODEL')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is not')
+        b.find_element_by_name('systemsearch-0.value').send_keys('foocodename')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.system_two, self.system_three],
+                absent=[self.system_one])
 
-        sel.open('')
-        sel.select("systemsearch_0_table", "label=Key/Value")
-        sel.select("systemsearch_0_keyvalue", "label=CPUMODEL")
-        sel.select("systemsearch_0_operation", "label=is not")
-        sel.type("systemsearch_0_value", "foocodename")
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        self.failUnless(not sel.is_text_present("%s" % self.system_one.fqdn))
-        self.failUnless(sel.is_text_present("%s" % self.system_two.fqdn))
-        self.failUnless(sel.is_text_present("%s" % self.system_three.fqdn))
+    def test_by_multiple_key_values(self):
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('Key/Value')
+        Select(b.find_element_by_name('systemsearch-0.keyvalue'))\
+            .select_by_visible_text('HVM')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-0.value').send_keys('1')
+        b.find_element_by_id('doclink').click()
+        Select(b.find_element_by_name('systemsearch-1.table'))\
+            .select_by_visible_text('Key/Value')
+        Select(b.find_element_by_name('systemsearch-1.keyvalue'))\
+            .select_by_visible_text('CPUMODEL')
+        Select(b.find_element_by_name('systemsearch-1.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-1.value').send_keys('foocodename')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.system_one],
+                absent=[self.system_two, self.system_three])
 
-        sel.open('')
-        sel.select("systemsearch_0_table", "label=Key/Value")
-        sel.select("systemsearch_0_keyvalue", "label=HVM")
-        sel.select("systemsearch_0_operation", "label=is")
-        sel.type("systemsearch_0_value", "1")
-        sel.click("doclink")
-        sel.select("systemsearch_1_table", "label=Key/Value")
-        sel.select("systemsearch_1_keyvalue", "label=CPUMODEL")
-        sel.select("systemsearch_1_operation", "label=is")
-        sel.type("systemsearch_1_value", "foocodename")
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
-        self.failUnless(not sel.is_text_present("%s" % self.system_two.fqdn))
-        self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
-        self.failUnless(sel.is_text_present("Items found: 1"))
-
-        # Search by Key_Value_Int and Key_Value_String and make
-        # sure the right results are returned
-        sel.open('')
-        sel.select("systemsearch_0_table", "label=Key/Value")
-        sel.select("systemsearch_0_keyvalue", "label=HVM")
-        sel.select("systemsearch_0_operation", "label=is")
-        sel.type("systemsearch_0_value", "1")
-        sel.click("doclink")
-        sel.select("systemsearch_1_table", "label=Key/Value")
-        sel.select("systemsearch_1_keyvalue", "label=DISKSPACE")
-        sel.select("systemsearch_1_operation", "label=greater than")
-        sel.type("systemsearch_1_value", "1000")
-        sel.click("Search")
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual(sel.get_title(), 'Systems')
-        self.failUnless(sel.is_text_present("%s" % self.system_one.fqdn))
-        self.failUnless(not sel.is_text_present("%s" % self.system_two.fqdn))
-        self.failUnless(not sel.is_text_present("%s" % self.system_three.fqdn))
-        self.failUnless(sel.is_text_present("Items found: 1"))
+    def test_by_multiple_key_values_again(self):
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('Key/Value')
+        Select(b.find_element_by_name('systemsearch-0.keyvalue'))\
+            .select_by_visible_text('HVM')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-0.value').send_keys('1')
+        b.find_element_by_id('doclink').click()
+        Select(b.find_element_by_name('systemsearch-1.table'))\
+            .select_by_visible_text('Key/Value')
+        Select(b.find_element_by_name('systemsearch-1.keyvalue'))\
+            .select_by_visible_text('DISKSPACE')
+        Select(b.find_element_by_name('systemsearch-1.operation'))\
+            .select_by_visible_text('greater than')
+        b.find_element_by_name('systemsearch-1.value').send_keys('1000')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.system_one],
+                absent=[self.system_two, self.system_three])
 
     def test_can_search_by_numa_node_count(self):
-        sel = self.selenium
-        sel.open('')
-        sel.select('systemsearch_0_table', 'label=System/NumaNodes')
-        sel.select('systemsearch_0_operation', 'label=greater than')
-        sel.type('systemsearch_0_value', '1')
-        sel.click('Search')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'Systems')
-        self.assert_(sel.is_text_present(self.system_one.fqdn))
-        self.assert_(not sel.is_text_present(self.system_two.fqdn))
-        self.assert_(not sel.is_text_present(self.system_three.fqdn))
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/NumaNodes')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('greater than')
+        b.find_element_by_name('systemsearch-0.value').send_keys('1')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.system_one],
+                absent=[self.system_two, self.system_three])
 
-        sel.select('systemsearch_0_table', 'label=System/NumaNodes')
-        sel.select('systemsearch_0_operation', 'label=less than')
-        sel.type('systemsearch_0_value', '2')
-        sel.click('Search')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'Systems')
-        self.assert_(not sel.is_text_present(self.system_one.fqdn))
-        self.assert_(not sel.is_text_present(self.system_two.fqdn))
-        self.assert_(sel.is_text_present(self.system_three.fqdn))
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('less than')
+        b.find_element_by_name('systemsearch-0.value').clear()
+        b.find_element_by_name('systemsearch-0.value').send_keys('2')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.system_three],
+                absent=[self.system_one, self.system_two])
 
-    def tearDown(self):
-        self.assertEqual([], self.verificationErrors)
-
-class SearchWDTest(WebDriverTestCase):
+class SystemVisibilityTest(WebDriverTestCase):
 
     def setUp(self):
         with session.begin():
@@ -427,7 +457,7 @@ class SearchWDTest(WebDriverTestCase):
         b.find_element_by_xpath('//table[@id="widget"]'
                 '//tr/td[1][./a/text()="%s"]' % secret_system.fqdn)
 
-class HypervisorSearchTest(SeleniumTestCase):
+class HypervisorSearchTest(WebDriverTestCase):
 
     def setUp(self):
         with session.begin():
@@ -435,59 +465,53 @@ class HypervisorSearchTest(SeleniumTestCase):
             self.kvm = data_setup.create_system(loaned=self.user, hypervisor=u'KVM')
             self.xen = data_setup.create_system(loaned=self.user, hypervisor=u'Xen')
             self.phys = data_setup.create_system(loaned=self.user, hypervisor=None)
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-        self.login(user=self.user.user_name, password=u'hypervisin')
+        self.browser = self.get_browser()
+        login(self.browser, user=self.user.user_name, password=u'hypervisin')
 
     def tearDown(self):
-        self.selenium.stop()
+        self.browser.quit()
 
     def test_search_hypervisor_is(self):
-        sel = self.selenium
-        sel.open('mine')
-        sel.select('systemsearch_0_table', 'label=System/Hypervisor')
-        self.wait_for_condition(lambda: sel.is_element_present('//select[@id="systemsearch_0_value"]'))
-        sel.select('systemsearch_0_operation', 'label=is')
-        sel.select('systemsearch_0_value', 'KVM')
-        sel.click('Search')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'My Systems')
-        row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
-        self.assertEquals(row_count, 1)
-        self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[1]/td[1]'),
-                self.kvm.fqdn)
+        b = self.browser
+        b.get(get_server_base() + 'mine')
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Hypervisor')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        Select(b.find_element_by_name('systemsearch-0.value'))\
+            .select_by_visible_text('KVM')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.kvm], absent=[self.xen, self.phys])
 
     def test_search_hypervisor_is_not(self):
-        sel = self.selenium
-        sel.open('mine')
-        sel.select('systemsearch_0_table', 'label=System/Hypervisor')
-        self.wait_for_condition(lambda: sel.is_element_present('//select[@id="systemsearch_0_value"]'))
-        sel.select('systemsearch_0_operation', 'label=is not')
-        sel.select('systemsearch_0_value', 'KVM')
-        sel.click('Search')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'My Systems')
-        row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
-        self.assertEquals(row_count, 2)
-        self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[1]/td[1]'),
-                self.xen.fqdn)
-        self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[2]/td[1]'),
-                self.phys.fqdn)
+        b = self.browser
+        b.get(get_server_base() + 'mine')
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Hypervisor')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is not')
+        Select(b.find_element_by_name('systemsearch-0.value'))\
+            .select_by_visible_text('KVM')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.xen, self.phys], absent=[self.kvm])
 
     def test_search_hypervisor_is_blank(self):
-        sel = self.selenium
-        sel.open('mine')
-        sel.select('systemsearch_0_table', 'label=System/Hypervisor')
-        self.wait_for_condition(lambda: sel.is_element_present('//select[@id="systemsearch_0_value"]'))
-        sel.select('systemsearch_0_operation', 'label=is')
-        sel.select('systemsearch_0_value', '')
-        sel.click('Search')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'My Systems')
-        row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr'))
-        self.assertEquals(row_count, 1)
-        self.assertEquals(sel.get_text('//table[@id="widget"]/tbody/tr[1]/td[1]'),
-                self.phys.fqdn)
+        b = self.browser
+        b.get(get_server_base() + 'mine')
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Hypervisor')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        Select(b.find_element_by_name('systemsearch-0.value'))\
+            .select_by_visible_text('')
+        b.find_element_by_id('searchform').submit()
+        check_search_results(b, present=[self.phys], absent=[self.kvm, self.xen])
 
 class DiskSearchTest(WebDriverTestCase):
 
@@ -513,14 +537,6 @@ class DiskSearchTest(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
-    def check_search_results(self, present, absent):
-        for system in absent:
-            self.browser.find_element_by_xpath('//table[@id="widget" and '
-                    'not(.//td[1]/a/text()="%s")]' % system.fqdn)
-        for system in present:
-            self.browser.find_element_by_xpath('//table[@id="widget" and '
-                    './/td[1]/a/text()="%s"]' % system.fqdn)
-
     def test_search_size_greater_than(self):
         b = self.browser
         b.get(get_server_base() + 'mine')
@@ -533,7 +549,7 @@ class DiskSearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys('10000000000')
         b.find_element_by_name('Search').click()
-        self.check_search_results(present=[self.big_disk, self.two_disks],
+        check_search_results(b, present=[self.big_disk, self.two_disks],
                 absent=[self.small_disk, self.no_disks])
 
     def test_sector_size_is_not_for_multiple_disks(self):
@@ -552,14 +568,14 @@ class DiskSearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys('512')
         b.find_element_by_name('Search').click()
-        self.check_search_results(present=[self.big_disk, self.no_disks],
+        check_search_results(b, present=[self.big_disk, self.no_disks],
                 absent=[self.small_disk, self.two_disks])
 
 
 #https://bugzilla.redhat.com/show_bug.cgi?id=949777
 # we visit the 'mine' page, so that we have substantially
 # less systems to deal with
-class InventorySearchTest(WebDriverTestCase):
+class InventoriedSearchTest(WebDriverTestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -594,15 +610,6 @@ class InventorySearchTest(WebDriverTestCase):
         cls.browser = cls.get_browser()
         login(cls.browser, user=cls.user.user_name, password='pass')
 
-    def check_search_results(self, present, absent):
-
-        for system in absent:
-            self.browser.find_element_by_xpath('//table[@id="widget" and '
-                    'not(.//td[1]/a/text()="%s")]' % system.fqdn)
-        for system in present:
-            self.browser.find_element_by_xpath('//table[@id="widget" and '
-                    './/td[1]/a/text()="%s"]' % system.fqdn)
-
     @classmethod
     def tearDownClass(cls):
         cls.browser.quit()
@@ -620,9 +627,8 @@ class InventorySearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys(' ')
         b.find_element_by_name('Search').click()
-        self.check_search_results(present=[self.not_inv], \
-                                      absent=[self.inv1, self.inv2,
-                                              self.inv3, self.inv4])
+        check_search_results(b, present=[self.not_inv],
+                absent=[self.inv1, self.inv2, self.inv3, self.inv4])
 
     def test_inventoried_search_after(self):
 
@@ -637,9 +643,8 @@ class InventorySearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
         b.find_element_by_name('Search').click()
-        self.check_search_results(present=[self.inv3], \
-                                      absent=[self.not_inv,
-                                              self.inv1, self.inv2, self.inv4])
+        check_search_results(b, present=[self.inv3],
+                absent=[self.not_inv, self.inv1, self.inv2, self.inv4])
 
     def test_inventoried_search_is(self):
 
@@ -654,9 +659,8 @@ class InventorySearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
         b.find_element_by_name('Search').click()
-
-        self.check_search_results(present=[self.inv1, self.inv2],\
-                                      absent=[self.not_inv, self.inv3, self.inv4])
+        check_search_results(b, present=[self.inv1, self.inv2],
+                absent=[self.not_inv, self.inv3, self.inv4])
 
     def test_inventoried_search_before(self):
 
@@ -671,9 +675,8 @@ class InventorySearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
         b.find_element_by_name('Search').click()
-        self.check_search_results(present=[self.inv4], \
-                                      absent=[self.not_inv, self.inv1,
-                                              self.inv2, self.inv3])
+        check_search_results(b, present=[self.inv4],
+                absent=[self.not_inv, self.inv1, self.inv2, self.inv3])
 
     def test_inventoried_search_range(self):
 
@@ -701,6 +704,5 @@ class InventorySearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_1_value').send_keys(self.date_tomorrow)
 
         b.find_element_by_name('Search').click()
-        self.check_search_results(present=[self.inv1, self.inv2], \
-                                      absent=[self.not_inv,
-                                              self.inv3, self.inv4])
+        check_search_results(b, present=[self.inv1, self.inv2],
+                absent=[self.not_inv, self.inv3, self.inv4])
