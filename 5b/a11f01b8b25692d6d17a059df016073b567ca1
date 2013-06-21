@@ -1,0 +1,8 @@
+Change-Id: I5ba11f01b8b25692d6d17a059df016073b567ca1
+Verified+1: Raymond Mancy <rmancy@redhat.com>
+Code-Review+2: Nick Coghlan <ncoghlan@redhat.com>
+Submitted-by: Raymond Mancy <rmancy@redhat.com>
+Submitted-at: Fri, 21 Jun 2013 04:48:08 +0000
+Reviewed-on: http://gerrit.beaker-project.org/2038
+Project: beaker
+Branch: refs/heads/release-0.13
