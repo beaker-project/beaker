@@ -70,6 +70,9 @@ fi
 #}
 if [ -e "/boot/grub/grub.conf" ]; then
     /bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)$/\1--port={{ grubport }}\2/' /boot/grub/grub.conf
+elif [ -e "/etc/default/grub" ]; then
+    /bin/sed -i '/^GRUB_SERIAL_COMMAND="serial/ {s/--unit=[0-9]\+//; s/"$/ --port={{ grubport }}"/}' /etc/default/grub
+    /sbin/grub2-mkconfig -o /boot/grub2/grub.cfg
 fi
 {% endif %}
 

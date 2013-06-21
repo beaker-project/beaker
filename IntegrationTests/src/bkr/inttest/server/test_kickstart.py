@@ -886,6 +886,11 @@ EOF
                 in recipe.rendered_kickstart.kickstart.splitlines(),
                 recipe.rendered_kickstart.kickstart)
 
+        self.assert_(
+                r'''    /bin/sed -i '/^GRUB_SERIAL_COMMAND="serial/ {s/--unit=[0-9]\+//; s/"$/ --port=0x02f8"/}' /etc/default/grub'''
+                in recipe.rendered_kickstart.kickstart.splitlines(),
+                recipe.rendered_kickstart.kickstart)
+
     def test_rhel5_devices(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
