@@ -203,6 +203,10 @@ class Tasks(RPCRoot):
         """
         rpm_path = Task.get_rpm_path(task_rpm.filename)
 
+        if not task_rpm.filename:
+            flash(_(u'No task RPM specified'))
+            redirect(url("./new"))
+
         if os.path.exists("%s" % rpm_path):
             flash(_(u'Failed to import because we already have %s' % 
                                                      task_rpm.filename ))

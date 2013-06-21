@@ -1,6 +1,7 @@
 #!/usr/bin/python
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest import data_setup, get_server_base
 from bkr.common.helpers import unlink_ignore
 import unittest, time, re, os, shutil, turbogears
 import pkg_resources
@@ -191,6 +192,23 @@ class TestSubmitTask(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), "Failed to import task: "
                   "'Task name should be <= 255 characters'")
+
+class TestSubmitTaskWD(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+
+    def tearDown(self):
+        self.browser.quit()
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=972407
+    def test_submit_no_task(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'tasks/new')
+        b.find_element_by_xpath('//input[@value="Submit Data"]').click()
+        self.assertEquals(b.find_element_by_xpath('//div[@class="flash"]').text, 
+                          "No task RPM specified")
 
 if __name__ == "__main__":
     unittest.main()
