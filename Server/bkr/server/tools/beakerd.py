@@ -700,27 +700,6 @@ def system_count_metrics():
 # exceptions instead of letting them be written to stderr and lost to the ether
 
 @log_traceback(log)
-def update_dirty_jobs_loop(*args, **kwargs):
-    while running:
-        if not update_dirty_jobs():
-            event.wait()
-    log.debug("update_dirty_jobs thread exiting")
-
-@log_traceback(log)
-def new_recipes_loop(*args, **kwargs):
-    while running:
-        if not process_new_recipes():
-            event.wait()
-    log.debug("new recipes thread exiting")
-
-@log_traceback(log)
-def processed_recipesets_loop(*args, **kwargs):
-    while running:
-        if not queue_processed_recipesets():
-            event.wait()
-    log.debug("processed recipesets thread exiting")
-
-@log_traceback(log)
 def metrics_loop(*args, **kwargs):
     while running:
         start = time.time()
@@ -735,17 +714,26 @@ def metrics_loop(*args, **kwargs):
             log.debug("Metrics collection took %d seconds", duration)
         time.sleep(max(30.0 - duration, 5.0))
 
+def _main_recipes():
+    work_done = update_dirty_jobs()
+    work_done |= abort_dead_recipes()
+    if _virt_enabled():
+        work_done |= provision_virt_recipes()
+    work_done |= update_dirty_jobs()
+    work_done |= process_new_recipes()
+    work_done |= update_dirty_jobs()
+    work_done |= queue_processed_recipesets()
+    work_done |= update_dirty_jobs()
+    work_done |= schedule_queued_recipes()
+    work_done |= update_dirty_jobs()
+    work_done |= provision_scheduled_recipesets()
+    return work_done
+
 @log_traceback(log)
 def main_recipes_loop(*args, **kwargs):
     while running:
-        abort_dead_recipes()
-        if _virt_enabled():
-            virt = provision_virt_recipes()
-        else:
-            virt = False
-        queued = schedule_queued_recipes()
-        scheduled = provision_scheduled_recipesets()
-        if not virt and not queued and not scheduled:
+        work_done = _main_recipes()
+        if not work_done:
             event.wait()
     log.debug("main recipes thread exiting")
 
@@ -760,26 +748,7 @@ def schedule():
         metrics_thread.daemon = True
         metrics_thread.start()
 
-    beakerd_threads = set(["update_dirty_jobs", "new_recipes",
-            "processed_recipesets", "main_recipes"])
-
-    log.debug("starting update_dirty_jobs thread")
-    update_dirty_jobs_thread = threading.Thread(target=update_dirty_jobs_loop,
-            name="update_dirty_jobs")
-    update_dirty_jobs_thread.daemon = True
-    update_dirty_jobs_thread.start()
-
-    log.debug("starting new recipes thread")
-    new_recipes_thread = threading.Thread(target=new_recipes_loop,
-                                          name="new_recipes")
-    new_recipes_thread.daemon = True
-    new_recipes_thread.start()
-
-    log.debug("starting processed_recipes thread")
-    processed_recipesets_thread = threading.Thread(target=processed_recipesets_loop,
-                                                   name="processed_recipesets")
-    processed_recipesets_thread.daemon = True
-    processed_recipesets_thread.start()
+    beakerd_threads = set(["main_recipes"])
 
     log.debug("starting main recipes thread")
     main_recipes_thread = threading.Thread(target=main_recipes_loop,
@@ -805,9 +774,6 @@ def schedule():
        event.set()
        rc = 0
 
-    update_dirty_jobs_thread.join(10)
-    new_recipes_thread.join(10)
-    processed_recipesets_thread.join(10)
     main_recipes_thread.join(10)
 
     sys.exit(rc)
