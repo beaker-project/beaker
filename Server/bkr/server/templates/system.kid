@@ -58,9 +58,10 @@
       ${widgets['power'].display(method='get', action=widgets_action['power'], value=value, options=widgets_options['power'])}
      </span>
      <span py:if="not value.lab_controller">
-      System must be associated to a lab controller to edit power.
+      System must be associated to a lab controller to edit power settings.
      </span>
     </fieldset>
+    <span py:if="readonly">You do not have access to edit power settings for this system.</span>
    </div>
    <div py:if="widgets.has_key('console')" class="tabbertab"><h2>Console</h2>
    </div> 
