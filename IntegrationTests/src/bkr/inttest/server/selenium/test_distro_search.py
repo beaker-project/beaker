@@ -7,6 +7,7 @@ from bkr.inttest.server.webdriver_utils import get_server_base, is_text_present,
 from bkr.inttest import data_setup, with_transaction
 from turbogears.database import session
 
+
 class Search(WebDriverTestCase):
     
     @classmethod
@@ -49,6 +50,15 @@ class Search(WebDriverTestCase):
 
     def setUp(self):
         self.browser = self.get_browser()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=972397
+    def test_sort_grid_doesnt_blow_up(self):
+        b = self.browser
+        b.get(get_server_base() + 'distros/')
+        # See if they blow up (They shouldn't)
+        b.find_element_by_xpath("//a[@class='head_list' and normalize-space(text())='OS Major Version']").click()
+        b.find_element_by_xpath("//a[@class='head_list' and normalize-space(text())='OS Minor Version']").click()
+        b.find_element_by_xpath("//title[text()='Distros']")
 
     def test_correct_items_count(self):
         with session.begin():
