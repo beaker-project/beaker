@@ -2,9 +2,9 @@
 %{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
 
 # The server, lab controller, and integration test subpackages can be conditionally built.
-# They are only enabled on RHEL 6 (for now).
+# Enabled on RHEL 6 and F18+
 # Use rpmbuild --with/--without to override.
-%if 0%{?rhel} == 6
+%if 0%{?rhel} == 6 || 0%{?fedora} >= 18
 %bcond_without server
 %bcond_without labcontroller
 %bcond_without inttests
@@ -12,6 +12,12 @@
 %bcond_with server
 %bcond_with labcontroller
 %bcond_with inttests
+%endif
+# systemd?
+%if 0%{?fedora} >= 18 || 0%{?rhel} >= 7
+%global with_systemd 1
+%else
+%global with_systemd 0
 %endif
 
 # Note: While some parts of this file use "%{name}, "beaker" is still
@@ -112,6 +118,9 @@ Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
 Requires:       ovirt-engine-sdk
 Requires:  	kobo-client >= 0.3
+%if %{with_systemd}
+Requires:       systemd-units
+%endif
 %endif
 
 
@@ -162,6 +171,9 @@ Requires:       python-concurrentloghandler
 Requires:       python-gevent >= 1.0
 Requires:       python-daemon
 Requires:       python-werkzeug
+%if %{with_systemd}
+Requires:       systemd-units
+%endif
 
 %package lab-controller-addDistro
 Summary:        addDistro scripts for Lab Controller
@@ -221,6 +233,13 @@ DESTDIR=$RPM_BUILD_ROOT make \
     %{?with_labcontroller:WITH_LABCONTROLLER=1} \
     %{?with_inttests:WITH_INTTESTS=1} \
     install
+
+%if %{with_systemd}
+mkdir -p  $RPM_BUILD_ROOT%{_tmpfilesdir}
+cp -p Server/tmpfiles.d/beaker-server.conf $RPM_BUILD_ROOT%{_tmpfilesdir}/beaker-server.conf
+cp -p LabController/tmpfiles.d/beaker-lab-controller.conf $RPM_BUILD_ROOT%{_tmpfilesdir}/beaker-lab-controller.conf
+%endif
+
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -318,6 +337,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
+%if %{with_systemd}
+%attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
+%endif
 %endif
 
 %if %{with inttests}
@@ -372,6 +394,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_sysconfdir}/init.d/%{name}-provision
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %attr(0440,root,root) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
+%if %{with_systemd}
+%attr(0644,apache,apache) %{_tmpfilesdir}/beaker-lab-controller.conf
+%endif
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)
