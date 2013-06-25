@@ -186,6 +186,8 @@ def main():
     if opts.foreground:
         main_loop(proxy=proxy, conf=conf, foreground=True)
     else:
+        # See BZ#977269
+        proxy.close()
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
                 pid_file, acquire_timeout=0)):
             main_loop(proxy=proxy, conf=conf, foreground=False)

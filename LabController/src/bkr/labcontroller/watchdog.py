@@ -121,6 +121,8 @@ def main():
     if opts.foreground:
         main_loop(watchdog, conf, foreground=True)
     else:
+        # See BZ#977269
+        watchdog.close()
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
                 pid_file, acquire_timeout=0)):
             main_loop(watchdog, conf, foreground=False)
