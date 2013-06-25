@@ -10,7 +10,7 @@ them in XML files and save them as regression test suites and such.
 
 The various elements along with their attributes and the values they can
 take are described in the RELAX NG schema described in the file
-`beaker-job.rng <http://beaker-project.org/schema/beaker-job.rng>`_. 
+`beaker-job.rng <http://beaker-project.org/schema/beaker-job.rng>`_.
 
 .. _job-workflow-details:
 
@@ -21,15 +21,18 @@ workflow. Each job has a root node called the job element:
 
 ::
 
-    <job>
+    <job group='product-QA'>
     </job>
+
+This is an optional attribute that indicates the job is being
+submitted on behalf of a particular group.
 
 A direct child is the "whiteboard" element. The content is normally a
 mnemonic piece of text describing the job:
 
 ::
 
-    <job>
+    <job group='product-QA'>
     <whiteboard>
             Apache 2.2 test
     </whiteboard>
@@ -53,7 +56,7 @@ be managed (e.g. submitted, cancelled) as a single unit.
 
 ::
 
-    <job>
+    <job group='product-QA'>
       <whiteboard>
         Apache 2.2 test
       </whiteboard>
@@ -62,68 +65,22 @@ be managed (e.g. submitted, cancelled) as a single unit.
     </job>
 
 As noted above, the "recipeSet" element contains "recipe" elements.
-Individual recipes can have the following attributes
+Individual recipes can have the following attributes:
 
--  "kernel\_options"
+``kernel_options``, ``kernel_options_post``, ``ks_meta``
+    Install options for this recipe. See :ref:`install-options`.
 
-   -  **vnc** Setting this will do a vnc install
+``role``
+    In a multihost environment, it could be either ``SERVERS``,
+    ``CLIENT`` or ``STANDALONE``. If it is not important, it can be
+    ``None``.
 
--  "kernel\_options\_post"
-
--  "ks\_meta"
-
-   -  **manual** minimal kickstart, should also use mode=vnc
-
-   -  **mode=text\|cmdline\|graphical\|vnc** Specify what mode to use
-      for install, default is either text or cmdline
-
-   -  **firewall=port:protocol<,port:protocol>** Default is firewall
-      disabled, Example: firewall=imap:tcp,1234:ucp,47
-
-   -  **keyboard=us** Specify Keyboard, Default is us
-
-   -  **lang=en\_US.UTF-8** Specify install language, Default is
-      en\_US.UTF-8
-
-   -  **password=<encrypted>** Override default password value, must be
-      encrypted
-
-   -  **selinux=--enforcing** Selinux is enabled by default, --disabled
-      or --permissive are valid choices
-
-   -  **timezone=America/New\_York** TimeZone to use, default to
-      America/New\_York
-
-   -  **scsidevices=qla2xxx,megaraid\_mbox** Only load these scsi
-      modules if set
-
-   -  **ethdevices=tg3,e1000** Only load these network modules if set
-
-   -  **no\_TYPE\_repos** If this option is specified it will omit repos
-      of TYPE from the kickstart, TYPE can be one of debug, optional,
-      adddon or variant. You can see the different types of repos
-      available for a distro on the /distrotrees page under the repo
-      tab.
-
-   -  **skipx** Do the install without setting up graphics. This is
-      needed for headless systems.
-
-   -  **ignoredisk** Use this to ignore certain disks for install. For
-      example: ignoredisk=--only-use=sda
-
-   -  **rootfstype** Specifies root filesystem type
-
-   -  **fstype** Specifies filesystem type for all volumes
-
--  **role** In a Multihost environment, it could be either ``SERVERS``,
-   ``CLIENT`` or ``STANDALONE``. If it is not important, it can be
-   ``None``.
-
--  **whiteboard** Text that describes the Recipe
+``whiteboard``
+    Free-form text which describes the recipe.
 
 Here is an example::
 
-    <job>
+    <job group='product-QA'>
       <whiteboard>
         Apache 2.2 test
       </whiteboard>
@@ -148,7 +105,7 @@ installed on top of anything that comes installed by default.
 
 ::
 
-    <job>
+    <job group='product-QA'>
       <whiteboard>
         Apache 2.2 test
       </whiteboard>
@@ -172,7 +129,7 @@ You can use any text you like for the name attribute.
 
 ::
 
-    <job>
+    <job group='product-QA'>
      <whiteboard>
         Apache 2.2 test
       </whiteboard>
@@ -207,7 +164,7 @@ machine or not.
 
 ::
 
-    <job>
+    <job group='product-QA'>
       <whiteboard>
         Apache 2.2 test
       </whiteboard>
@@ -241,7 +198,7 @@ machine or not.
 
 ::
 
-    <job>
+    <job group='product-QA'>
       <whiteboard>
         Apache 2.2 test
       </whiteboard>
@@ -361,7 +318,7 @@ assigned to a new environment variable specified by ``name``.
 
 ::
 
-    <job>
+    <job group='product-QA'>
       <whiteboard>
         Apache 2.2 test
       </whiteboard>

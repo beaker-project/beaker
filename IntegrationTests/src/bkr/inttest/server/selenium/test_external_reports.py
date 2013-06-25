@@ -18,8 +18,7 @@ class ExternalReportTest(WebDriverTestCase):
         b = self.browser
         login(b)
         self._insert(b, 'New Report', 'http://blah.com', 'Description is this')
-        self.assertEquals(b.find_element_by_xpath('//head/title').text,
-            'External Reports')
+        b.find_element_by_xpath('//h2[text()="External Reports"]')
         self.assertEquals(b.find_element_by_class_name('flash').text, 'New Report saved')
         # Check the following element exists
         b.find_element_by_xpath("//div[@class='external-report']/h3/a[text()='New Report']")
@@ -34,8 +33,7 @@ class ExternalReportTest(WebDriverTestCase):
         page_text = b.find_element_by_xpath('//body').text
         # This should cover determining if the report is really gone
         self.assertTrue('UniqueDescription1' not in page_text)
-        self.assertEquals(b.find_element_by_xpath('//head/title').text,
-            'External Reports')
+        b.find_element_by_xpath('//h2[text()="External Reports"]')
         self.assertEquals(b.find_element_by_class_name('flash').text, 'Deleted report ToDelete')
 
     def test_can_edit(self):

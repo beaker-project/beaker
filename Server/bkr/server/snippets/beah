@@ -1,7 +1,4 @@
-# Install old rhts commands
-yum -y install rhts-test-env-lab rhts-legacy
-# Install new harness
-yum -y install beah
+yum -y install beah rhts-test-env beakerlib
 # This may fail if you are outside of Red Hat..
 yum -y install beakerlib-redhat
 

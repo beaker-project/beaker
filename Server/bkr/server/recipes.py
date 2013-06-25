@@ -71,17 +71,21 @@ class Recipes(RPCRoot):
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def by_log_server(self, server, limit=50):
-       """
-       Return a list of recipes which have logs which belong to server
-       default limit of 50 at a time.
-       Only return recipes where the whole recipeset has completed.
-       """
-       recipes = Recipe.query.join(Recipe.recipeset)\
-                        .filter(not_(RecipeSet.recipes.any(
-                                               Recipe.finish_time == None)))\
-                        .filter(Recipe.log_server == server)\
-                        .limit(limit)
-       return [recipe_id for recipe_id, in recipes.values(Recipe.id)]
+        """
+        Returns a list of recipe IDs which have logs stored on the given 
+        server. By default, returns at most 50 at a time.
+
+        Only returns recipes where the whole recipe set has completed. Also 
+        excludes recently completed recipe sets, since the system may continue 
+        uploading logs for a short while until beaker-provision powers it off.
+        """
+        finish_threshold = datetime.utcnow() - timedelta(minutes=2)
+        recipes = Recipe.query.join(Recipe.recipeset)\
+                .filter(RecipeSet.status.in_([s for s in TaskStatus if s.finished]))\
+                .filter(not_(RecipeSet.recipes.any(Recipe.finish_time >= finish_threshold)))\
+                .filter(Recipe.log_server == server)\
+                .limit(limit)
+        return [recipe_id for recipe_id, in recipes.values(Recipe.id)]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
@@ -93,6 +97,9 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        if recipe.is_finished():
+            raise BX('Cannot register file for finished recipe %s'
+                    % recipe.t_id)
 
         # Add the log to the DB if it hasn't been recorded yet.
         log_recipe = LogRecipe.lazy_create(parent=recipe,

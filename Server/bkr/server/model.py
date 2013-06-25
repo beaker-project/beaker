@@ -4,7 +4,7 @@ from turbogears.database import metadata, session
 from turbogears.config import get
 from turbogears import url
 from copy import copy
-import ldap
+import ldap, ldap.filter
 from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         String, Unicode, Integer, BigInteger, DateTime,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
@@ -54,8 +54,6 @@ import cracklib
 import lxml.etree
 import uuid
 import netaddr
-from bkr.common.helpers import Flock, makedirs_ignore, unlink_ignore
-import subprocess
 from turbogears import identity
 import ovirtsdk.api
 from collections import defaultdict
@@ -63,6 +61,16 @@ from datetime import timedelta, date, datetime
 from hashlib import md5
 import xml.dom.minidom
 from xml.dom.minidom import Node, parseString
+
+# These are only here for TaskLibrary. It would be nice to factor that out,
+# but there's a circular dependency between Task and TaskLibrary
+import subprocess
+import rpm
+from rhts import testinfo
+from rhts.testinfo import ParserError, ParserWarning
+from bkr.common.helpers import (AtomicFileReplacement, Flock,
+                                makedirs_ignore, unlink_ignore)
+
 
 import logging
 log = logging.getLogger(__name__)
@@ -716,14 +724,6 @@ visit_identity_table = Table('visit_identity', metadata,
     mysql_engine='InnoDB',
 )
 
-groups_table = Table('tg_group', metadata,
-    Column('group_id', Integer, primary_key=True),
-    Column('group_name', Unicode(16), unique=True),
-    Column('display_name', Unicode(255)),
-    Column('created', DateTime, default=datetime.utcnow),
-    mysql_engine='InnoDB',
-)
-
 users_table = Table('tg_user', metadata,
     Column('user_id', Integer, primary_key=True),
     Column('user_name', Unicode(255), unique=True),
@@ -750,6 +750,7 @@ user_group_table = Table('user_group', metadata,
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    Column('is_owner', Boolean, nullable=False, default=False),
     mysql_engine='InnoDB',
 )
 
@@ -941,13 +942,15 @@ job_table = Table('job',metadata,
         Column('clean_version', UUID, nullable=False),
         Column('owner_id', Integer,
                 ForeignKey('tg_user.user_id'), index=True),
+        Column('group_id', Integer, ForeignKey('tg_group.group_id', \
+            name='job_group_id_fk'), default=None),
         Column('whiteboard',Unicode(2000)),
         Column('retention_tag_id', Integer, ForeignKey('retention_tag.id'), nullable=False),
         Column('product_id', Integer, ForeignKey('product.id'),nullable=True),
         Column('result', TaskResult.db_type(), nullable=False,
-                default=TaskResult.new),
+                default=TaskResult.new, index=True),
         Column('status', TaskStatus.db_type(), nullable=False,
-                default=TaskStatus.new),
+                default=TaskStatus.new, index=True),
         Column('deleted', DateTime, default=None, index=True),
         Column('to_delete', DateTime, default=None, index=True),
         # Total tasks
@@ -977,12 +980,12 @@ recipe_set_table = Table('recipe_set',metadata,
         Column('job_id', Integer,
                 ForeignKey('job.id'), nullable=False),
         Column('priority', TaskPriority.db_type(), nullable=False,
-                default=TaskPriority.default_priority()),
+                default=TaskPriority.default_priority(), index=True),
         Column('queue_time',DateTime, nullable=False, default=datetime.utcnow),
         Column('result', TaskResult.db_type(), nullable=False,
-                default=TaskResult.new),
+                default=TaskResult.new, index=True),
         Column('status', TaskStatus.db_type(), nullable=False,
-                default=TaskStatus.new),
+                default=TaskStatus.new, index=True),
         Column('lab_controller_id', Integer,
                 ForeignKey('lab_controller.id')),
         # Total tasks
@@ -1085,9 +1088,9 @@ recipe_table = Table('recipe',metadata,
         Column('rendered_kickstart_id', Integer, ForeignKey('rendered_kickstart.id',
                 name='recipe_rendered_kickstart_id_fk', ondelete='SET NULL')),
         Column('result', TaskResult.db_type(), nullable=False,
-                default=TaskResult.new),
+                default=TaskResult.new, index=True),
         Column('status', TaskStatus.db_type(), nullable=False,
-                default=TaskStatus.new),
+                default=TaskStatus.new, index=True),
         Column('start_time',DateTime),
         Column('finish_time',DateTime),
         Column('_host_requires',UnicodeText()),
@@ -1443,11 +1446,13 @@ class MappedObject(object):
     def lazy_create(cls, **kwargs):
         """
         Returns the instance identified by the given uniquely-identifying 
-        attributes. If it doesn't exist yet, it is inserted first.
+        attributes. If it doesn't exist yet, it is inserted first. If it is
+        not in the session, it is added.
         """
         session.begin_nested()
         try:
             item = cls(**kwargs)
+            session.add(item)
             session.commit()
         except IntegrityError:
             session.rollback()
@@ -1483,6 +1488,49 @@ class MappedObject(object):
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
 
+class ActivityMixin(object):
+    """Helper to create activity records and append them to an activity log
+
+    Subclasses must have an "activity" attribute that references the relevant
+    activity table, as well as an "activity_type" attribute that references
+    the type of object to create for individual activities.
+    """
+
+    _fields = ('service', 'field', 'action', 'old', 'new', 'user')
+    _field_fmt = ', '.join('{0}=%({0})r'.format(name) for name in _fields)
+    _log_fmt = 'Tentative %(kind)s: ' + _field_fmt
+
+    def record_activity(self, **kwds):
+        """Helper to record object activity to the relevant history log.
+
+        For readability at call sites, only accepts keyword arguments:
+
+        *service* - service used to trigger the activity (required)
+        *field* - which field was affected by the activity (required)
+        *action* - what activity occurred (default is "Changed")
+        *old* - field value before the activity (if applicable)
+        *new* - field value before the activity (if applicable)
+        *user* - user responsible for activity (if applicable)
+
+        The default action is "Changed".
+        Activities where the old and new values are the same are permitted
+        """
+        # This trick of using an inner functions lets us force the use of
+        # keyword arguments without needing to do our own argument parsing
+        self._record_activity_inner(**kwds)
+
+    def _record_activity_inner(self, service, field, action=u'Changed',
+                               old=None, new=None, user=None):
+        entry = self.activity_type(user, service, action=action,
+                                   field_name=field,
+                                   old_value=old, new_value=new)
+        self.activity.append(entry)
+        log_details = dict(kind=self.activity_type.__name__, user=user,
+                           service=service, action=action,
+                           field=field, old=old, new=new)
+        log.debug(self._log_fmt, log_details)
+
+
 # the identity model
 class Visit(MappedObject):
     """
@@ -1505,13 +1553,9 @@ class User(MappedObject):
     Reasonably basic User definition.
     Probably would want additional attributes.
     """
-    ldapenabled = get("identity.ldap.enabled",False)
-    if ldapenabled:
-        uri = get("identity.soldapprovider.uri", "ldaps://localhost")
-        basedn  = get("identity.soldapprovider.basedn", "dc=localhost")
-        autocreate = get("identity.soldapprovider.autocreate", False)
-        # Only needed for devel.  comment out for Prod.
-        ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+
+    # XXX we probably shouldn't be doing this!
+    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 
     def permissions(self):
         perms = set()
@@ -1552,36 +1596,40 @@ class User(MappedObject):
         # Try to look up the user via local DB first.
         user = cls.query.filter_by(user_name=user_name).first()
         # If user doesn't exist in DB check ldap if enabled.
+        ldapenabled = get('identity.ldap.enabled', False)
+        autocreate = get('identity.soldapprovider.autocreate', False)
         # Presence of '/' indicates a Kerberos service principal.
-        if not user and cls.ldapenabled and '/' not in user_name:
-            filter = "(uid=%s)" % user_name
-            ldapcon = ldap.initialize(cls.uri)
-            rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
-            objects = ldapcon.result(rc)[1]
+        if not user and ldapenabled and autocreate and '/' not in user_name:
+            filter = ldap.filter.filter_format('(uid=%s)', [user_name])
+            ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
+            objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
+                    ldap.SCOPE_SUBTREE, filter,
+                    timeout=get('identity.soldapprovider.timeout', 20))
             # no match
             if(len(objects) == 0):
                 return None
             # need exact match
             elif(len(objects) > 1):
                 return None
-            if cls.autocreate:
-                user = User()
-                user.user_name = user_name
-                user.display_name = objects[0][1]['cn'][0]
-	        user.email_address = objects[0][1]['mail'][0]
-                session.add(user)
-                session.flush([user])
+            user = User()
+            user.user_name = user_name
+            user.display_name = objects[0][1]['cn'][0].decode('utf8')
+            user.email_address = objects[0][1]['mail'][0].decode('utf8')
+            session.add(user)
+            session.flush()
         return user
 
     @classmethod
     def list_by_name(cls, username,find_anywhere=False,find_ldap_users=True):
         ldap_users = []
-        if cls.ldapenabled and find_ldap_users is True:
-            filter = "(uid=%s*)" % username
-            ldapcon = ldap.initialize(cls.uri)
-            rc = ldapcon.search(cls.basedn, ldap.SCOPE_SUBTREE, filter)
-            objects = ldapcon.result(rc)[1]
-            ldap_users = [object[0].split(',')[0].split('=')[1] for object in objects]
+        ldapenabled = get('identity.ldap.enabled', False)
+        if ldapenabled and find_ldap_users is True:
+            filter = ldap.filter.filter_format('(uid=%s*)', [username])
+            ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
+            objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
+                    ldap.SCOPE_SUBTREE, filter,
+                    timeout=get('identity.soldapprovider.timeout', 20))
+            ldap_users = [object[1]['uid'][0].decode('utf8') for object in objects]
         if find_anywhere:
             f = User.user_name.like('%%%s%%' % username)
         else:
@@ -1671,6 +1719,13 @@ class User(MappedObject):
             return True
         return False
 
+    groups = association_proxy('group_user_assocs','group',
+            creator=lambda group: UserGroup(group=group))
+
+
+class UserGroup(MappedObject):
+    pass
+
 
 class Permission(MappedObject):
     """
@@ -1739,10 +1794,26 @@ class SystemObject(MappedObject):
         return cls.mapper.c.keys()
     get_fields = classmethod(get_fields)
 
-class Group(MappedObject):
+class Group(DeclBase, MappedObject, ActivityMixin):
     """
-    An ultra-simple group definition.
+    A group definition that records changes to the group
     """
+
+    __tablename__ = 'tg_group'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+
+    group_id = Column(Integer, primary_key=True)
+    group_name = Column(Unicode(16), unique=True, nullable=False)
+    display_name = Column(Unicode(255))
+    _root_password = Column('root_password', String(255), nullable=True,
+        default=None)
+    ldap = Column(Boolean, default=False, nullable=False, index=True)
+    created = Column(DateTime, default=datetime.utcnow)
+
+    @property
+    def activity_type(self):
+        return GroupActivity
+
     @classmethod
     def by_name(cls, name):
         return cls.query.filter_by(group_name=name).one()
@@ -1751,8 +1822,14 @@ class Group(MappedObject):
     def by_id(cls, id):
         return cls.query.filter_by(group_id=id).one()
 
-    def __repr__(self):
+    def __unicode__(self):
         return self.display_name
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __repr__(self):
+        return 'Group(group_name=%r, display_name=%r)' % (self.group_name, self.display_name)
 
     @classmethod
     def list_by_name(cls, name, find_anywhere=False):
@@ -1766,17 +1843,158 @@ class Group(MappedObject):
             q = cls.query.filter(Group.group_name.like('%s%%' % name))
         return q
 
-    @classmethod
-    def by_user(cls,user):
-        try:
-            groups = Group.query.join('users').filter(User.user_id == user.user_id)
-            return groups
-        except Exception, e: 
-            log.error(e)
-            return
+    @property
+    def root_password(self):
+        """
+        returns password
+        """
+        return self._root_password
+
+    @root_password.setter
+    def root_password(self, password):
+        """Set group job password
+
+           Set the root password to be used by group jobs.
+
+        """
+        if password:
+            if len(password.split('$')) != 4:
+                salt = ''.join([random.choice(string.digits + string.ascii_letters)
+                                for i in range(8)])
+                try:
+                    # If you change VeryFascistCheck, please also modify
+                    # bkr.server.validators.StrongPassword
+                    self._root_password = crypt.crypt(cracklib.VeryFascistCheck(password), "$1$%s$" % salt)
+                except ValueError, msg:
+                    msg = re.sub(r'^it is', 'the password is', str(msg))
+                    raise ValueError(msg)
+            else:
+                self._root_password = password
+        else:
+            self._root_password = None
+
+
+    def owners(self):
+        return UserGroup.query.filter_by(group_id=self.group_id,
+                                         is_owner=True).all()
+
+    def has_owner(self, user):
+        if user is None:
+            return False
+        return bool(UserGroup.query.filter_by(group_id=self.group_id,
+                user_id=user.user_id, is_owner=True).count())
+
+    def can_edit(self, user):
+        return self.has_owner(user) or user.is_admin()
+
+    def can_remove_member(self, user, member_id):
+        if user.is_admin():
+            if self.group_name == 'admin':
+                if len(self.users)==1:
+                    return False
+        else:
+            group_owners = self.owners()
+            if len(group_owners)==1 and group_owners[0].user_id == int(member_id):
+                return False
+
+        return True
+
+    def is_protected_group(self):
+        """Some group names are predefined by Beaker and cannot be modified"""
+        return self.group_name in (u'admin', u'queue_admin', u'lab_controller')
+
+    def set_root_password(self, user, service, password):
+        if len(password.split('$')) == 4:
+            # Password is hashed
+            hashed_root_password = password
+        else:
+            # Password is cleartext
+            hashed_root_password = crypt.crypt(password, self.root_password)
+        if self.root_password != hashed_root_password:
+            self.root_password = password
+            self.record_activity(user=user, service=service,
+                field=u'Root Password', old='*****', new='*****')
+
+    def set_name(self, user, service, group_name):
+        """Set a group's name and record any change as group activity
+
+        Passing None or the empty string means "leave this value unchanged"
+        """
+        old_group_name = self.group_name
+        if group_name and group_name != old_group_name:
+            if self.is_protected_group():
+                raise BX(_(u'Cannot rename protected group %r as %r'
+                                              % (old_group_name, group_name)))
+            self.group_name = group_name
+            self.record_activity(user=user, service=service,
+                                 field=u'Name',
+                                 old=old_group_name, new=group_name)
+
+    def set_display_name(self, user, service, display_name):
+        """Set a group's display name and record any change as group activity
+
+        Passing None or the empty string means "leave this value unchanged"
+        """
+        old_display_name = self.display_name
+        if display_name and display_name != old_display_name:
+            self.display_name = display_name
+            self.record_activity(user=user, service=service,
+                                 field=u'Display Name',
+                                 old=old_display_name, new=display_name)
+
+    def can_modify_membership(self, user):
+        return not self.ldap and (self.has_owner(user) or user.is_admin())
+
+    def refresh_ldap_members(self, ldapcon=None):
+        """Refresh the group from LDAP and record changes as group activity"""
+        assert self.ldap
+        assert get('identity.ldap.enabled', False)
+        if ldapcon is None:
+            ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
+        log.debug('Refreshing LDAP group %s' % self.group_name)
+        existing = set(self.users)
+        refreshed = set(self._ldap_members(ldapcon))
+        added_members = refreshed.difference(existing)
+        removed_members = existing.difference(refreshed)
+        for user in removed_members:
+            log.debug('Removing %r from %r', user, self)
+            self.users.remove(user)
+            self.activity.append(GroupActivity(user=None, service=u'LDAP',
+                    action=u'Removed', field_name=u'User',
+                    old_value=user.user_name, new_value=None))
+        for user in added_members:
+            log.debug('Adding %r to %r', user, self)
+            self.users.append(user)
+            self.activity.append(GroupActivity(user=None, service=u'LDAP',
+                    action=u'Added', field_name=u'User', old_value=None,
+                    new_value=user.user_name))
+
+    def _ldap_members(self, ldapcon):
+        # Supports only RFC2307 style, with group members listed by username in
+        # the memberUid attribute.
+        filter = ldap.filter.filter_format(
+                '(&(cn=%s)(objectClass=posixGroup))', [self.group_name])
+        result = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
+                ldap.SCOPE_SUBTREE, filter,
+                timeout=get('identity.soldapprovider.timeout', 20))
+        if not result:
+            log.warning('LDAP group %s not found in LDAP directory', self.group_name)
+            return []
+        dn, attrs = result[0] # should never be more than one result
+        users = []
+        for username in attrs.get('memberUid', []):
+            log.debug('LDAP group %s has member %s', self.group_name, username)
+            user = User.by_user_name(username.decode('utf8'))
+            if user is not None:
+                users.append(user)
+        return users
 
     systems = association_proxy('system_assocs', 'system',
             creator=lambda system: SystemGroup(system=system))
+
+    users = association_proxy('user_group_assocs','user',
+            creator=lambda user: UserGroup(user=user))
+
 
 class System(SystemObject):
 
@@ -2726,13 +2944,34 @@ class SystemStatusAttributeExtension(AttributeExtension):
         if child == oldchild:
             return child
         if oldchild in (None, NEVER_SET):
+            # First time system.status has been set, there will be no duration 
+            # rows yet.
             assert not obj.status_durations
-        else:
-            assert obj.status_durations[0].finish_time is None
-            assert obj.status_durations[0].status == oldchild
-            obj.status_durations[0].finish_time = datetime.utcnow()
-        obj.status_durations.insert(0,
-                SystemStatusDuration(system=obj, status=child))
+            obj.status_durations.insert(0, SystemStatusDuration(status=child))
+            return child
+        # Otherwise, there should be exactly one "open" duration row, 
+        # with NULL finish_time.
+        open_sd = obj.status_durations[0]
+        assert open_sd.finish_time is None
+        assert open_sd.status == oldchild
+        if open_sd in session.new:
+            # The current open row is not actually persisted yet. This 
+            # happens when system.status is set more than once in 
+            # a session. In this case we can just update the same row and 
+            # return, no reason to insert another.
+            open_sd.status = child
+            return child
+        # Need to close the open row using a conditional UPDATE to ensure 
+        # we don't race with another transaction
+        now = datetime.utcnow()
+        if session.query(SystemStatusDuration)\
+                .filter_by(finish_time=None, id=open_sd.id)\
+                .update({'finish_time': now}, synchronize_session=False) \
+                != 1:
+            raise RuntimeError('System status updated in another transaction')
+        # Make the ORM aware of it as well
+        open_sd.finish_time = now
+        obj.status_durations.insert(0, SystemStatusDuration(status=child))
         return child
 
 class SystemCc(SystemObject):
@@ -3048,7 +3287,7 @@ class LabInfo(SystemObject):
 
 class Cpu(SystemObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
-        super(Cpu, self).__init__()
+        # Intentionally not chaining to super(), to avoid session.add(self)
         self.vendor = vendor
         self.model = model
         self.model_name = model_name
@@ -3888,15 +4127,7 @@ class TaskBase(MappedObject):
 
         return span
     progress_bar = property(progress_bar)
-    
-    def access_rights(self,user):
-        if not user:
-            return
-        try:
-            if self.owner == user or (user.in_group(['admin','queue_admin'])):
-                return True
-        except Exception:
-            return
+
 
     def t_id(self):
         for t, class_ in self.t_id_types.iteritems():
@@ -3910,10 +4141,11 @@ class Job(TaskBase):
     """
 
     def __init__(self, ttasks=0, owner=None, whiteboard=None,
-            retention_tag=None, product=None):
+            retention_tag=None, product=None, group=None):
         # Intentionally not chaining to super(), to avoid session.add(self)
         self.ttasks = ttasks
         self.owner = owner
+        self.group = group
         self.whiteboard = whiteboard
         self.retention_tag = retention_tag
         self.product = product
@@ -3926,9 +4158,14 @@ class Job(TaskBase):
     @classmethod
     def mine(cls, owner):
         """
-        A class method that can be used to search for Jobs that belong to a user
+        A class method that can be used to search for Jobs that belong to a
+        user or associated to a user's group.
         """
-        return cls.query.filter(Job.owner==owner)
+        if owner.groups:
+            return cls.query.outerjoin(Job.group).filter(or_(Job.owner==owner,
+                Group.group_id.in_([g.group_id for g in owner.groups])))
+        else:
+            return cls.query.filter(Job.owner==owner)
 
     @classmethod
     def get_nacks(self,jobs):
@@ -4359,6 +4596,8 @@ class Job(TaskBase):
                 notify.appendChild(node('cc', email_address))
             job.appendChild(notify)
         job.setAttribute("retention_tag", "%s" % self.retention_tag.tag)
+        if self.group:
+            job.setAttribute("group", "%s" % self.group.group_name)
         if self.product:
             job.setAttribute("product", "%s" % self.product.name)
         job.appendChild(node("whiteboard", self.whiteboard or ''))
@@ -4465,11 +4704,67 @@ class Job(TaskBase):
     def link(self):
         return make_link(url='/jobs/%s' % self.id, text=self.t_id)
 
-    def can_admin(self, user=None):
-        """Returns True iff the given user can administer this Job."""
-        if user:
-            return self.owner == user or user.is_admin() or self.owner.in_group([g.group_name for g in user.groups])
-        return False
+    def can_stop(self, user=None):
+        """Return True iff the given user can stop the job"""
+        can_stop = self._can_administer(user)
+        if not can_stop and user:
+            can_stop = user.has_permission('stop_task')
+        return can_stop
+
+    def can_change_priority(self, user=None):
+        """Return True iff the given user can change the priority"""
+        can_change = self._can_administer(user) or self._can_administer_old(user)
+        if not can_change and user:
+            can_change = user.in_group(['admin','queue_admin'])
+        return can_change
+
+    def can_change_whiteboard(self, user=None):
+        """Returns True iff the given user can change the whiteboard"""
+        return self._can_administer(user) or self._can_administer_old(user)
+
+    def can_change_product(self, user=None):
+        """Returns True iff the given user can change the product"""
+        return self._can_administer(user) or self._can_administer_old(user)
+
+    def can_change_retention_tag(self, user=None):
+        """Returns True iff the given user can change the retention tag"""
+        return self._can_administer(user) or self._can_administer_old(user)
+
+    def can_delete(self, user=None):
+        """Returns True iff the given user can delete the job"""
+        return self._can_administer(user) or self._can_administer_old(user)
+
+    def can_cancel(self, user=None):
+        """Returns True iff the given user can cancel the job"""
+        return self._can_administer(user)
+
+    def can_set_response(self, user=None):
+        """Returns True iff the given user can set the response to this job"""
+        return self._can_administer(user) or self._can_administer_old(user)
+
+    def _can_administer(self, user=None):
+        """Returns True iff the given user can administer the Job.
+
+        Admins, group job members and job owners can administer a job.
+        """
+        if user is None:
+            return False
+        if self.group:
+            return self.is_owner(user) or user.is_admin() or \
+                self.group in user.groups
+        else:
+            return self.is_owner(user) or user.is_admin()
+
+    def _can_administer_old(self, user):
+        """
+        This fills the gap between the new permissions system with group
+        jobs and the old permission model without it.
+
+        XXX Remove this the next release AFTER 0.13
+        """
+        if not user:
+            return False
+        return bool(set(user.groups).intersection(set(self.owner.groups)))
 
     cc = association_proxy('_job_ccs', 'email_address')
 
@@ -4551,7 +4846,7 @@ class RetentionTag(BeakerTag):
             except InvalidRequestError, e: pass
         self.is_default = is_default
     default = property(get_default_val,set_default_val)
-        
+
     @classmethod
     def get_default(cls, *args, **kw):
         return cls.query.filter(cls.is_default==True).one()
@@ -4595,7 +4890,7 @@ class RecipeSetResponse(MappedObject):
     """
     An acknowledgment of a RecipeSet's results. Can be used for filtering reports
     """
-    
+
     def __init__(self,type=None,response_id=None,comment=None):
         super(RecipeSetResponse, self).__init__()
         if response_id is not None:
@@ -4657,6 +4952,18 @@ class RecipeSet(TaskBase):
         if self.owner == user:
             return True
         return False
+
+    def can_set_response(self, user=None):
+        """Return True iff the given user can change the response to this recipeset"""
+        return self.job.can_set_response(user)
+
+    def can_stop(sel, user=None):
+        """Returns True iff the given user can stop this recipeset"""
+        return self.job.can_stop(user)
+
+    def can_cancel(self, user=None):
+        """Returns True iff the given user can cancel this recipeset"""
+        return self.job.can_cancel(user)
 
     def build_ancestors(self, *args, **kw):
         """
@@ -4860,10 +5167,6 @@ class Recipe(TaskBase):
     @property
     def harnesspath(self):
         return get('basepath.harness', '/var/www/beaker/harness')
-
-    @property
-    def rpmspath(self):
-        return get('basepath.rpms', '/var/www/beaker/rpms')
 
     @property
     def repopath(self):
@@ -5157,47 +5460,16 @@ class Recipe(TaskBase):
         # purely as an optimisation
         self._change_status(TaskStatus.processed)
 
-    def _link_rpms(self, dst):
-        """
-        Hardlink the task rpms into dst
-        """
-        names = os.listdir(self.rpmspath)
-        makedirs_ignore(dst, 0755)
-        for name in names:
-            srcname = os.path.join(self.rpmspath, name)
-            dstname = os.path.join(dst, name)
-            if os.path.isdir(srcname):
-                continue
-            else:
-                unlink_ignore(dstname)
-                os.link(srcname, dstname)
-
     def createRepo(self):
         """
         Create Recipe specific task repo based on the tasks requested.
         """
-        directory = os.path.join(self.repopath, str(self.id))
-        try:
-            os.makedirs(directory)
-        except OSError:
-            # This can happen when beakerd.virt_recipes() creates a repo
-            # but the subsequent virt provisioning fails and the recipe
-            # falls back to being queued on a regular system
-            if not os.path.isdir(directory):
-                #something else must have gone wrong
-                raise
-        # This should only run if we are missing repodata in the rpms path
-        # since this should normally be updated when new tasks are uploaded
-        if not os.path.isdir(os.path.join(self.rpmspath, 'repodata')):
-            log.info("repodata missing, generating...")
-            Task.update_repo()
-        if not os.path.isdir(os.path.join(directory, 'repodata')):
-            # Copy updated repo to recipe specific repo
-            with Flock(self.rpmspath):
-                self._link_rpms(directory)
-                shutil.copytree(os.path.join(self.rpmspath, 'repodata'),
-                                os.path.join(directory, 'repodata')
-                               )
+        snapshot_repo = os.path.join(self.repopath, str(self.id))
+        # The repo may already exist if beakerd.virt_recipes() creates a
+        # repo but the subsequent virt provisioning fails and the recipe
+        # falls back to being queued on a regular system
+        makedirs_ignore(snapshot_repo, 0755)
+        Task.make_snapshot_repo(snapshot_repo)
         return True
 
     def destroyRepo(self):
@@ -5891,8 +6163,8 @@ class RecipeTask(TaskBase):
         """
         Record a result 
         """
-        if not self.recipe.watchdog:
-            raise BX(_('No watchdog exists for recipe %s' % self.recipe.id))
+        if self.is_finished():
+            raise ValueError('Cannot record result for finished task %s' % self.t_id)
         recipeTaskResult = RecipeTaskResult(recipetask=self,
                                    path=path,
                                    result=result,
@@ -5901,7 +6173,7 @@ class RecipeTask(TaskBase):
         self.results.append(recipeTaskResult)
         # Flush the result to the DB so we can return the id.
         session.add(recipeTaskResult)
-        session.flush([recipeTaskResult])
+        session.flush()
         return recipeTaskResult.id
 
     def task_info(self):
@@ -5955,6 +6227,10 @@ class RecipeTask(TaskBase):
                     system.setAttribute("value", "%s" % recipetask.recipe.resource.fqdn)
                     role.appendChild(system)
             yield(role)
+
+    def can_stop(self, user=None):
+        """Returns True iff the given user can stop this recipe task"""
+        return self.recipe.recipeset.job.can_stop(user)
 
 
 class RecipeTaskParam(MappedObject):
@@ -6300,14 +6576,182 @@ class RenderedKickstart(MappedObject):
                            labdomain=True)
         return url
 
+# Helper for manipulating the task library
+
+class TaskLibrary(object):
+
+    @property
+    def rpmspath(self):
+        # Lazy lookup so module can be imported prior to configuration
+        return get("basepath.rpms", "/var/www/beaker/rpms")
+
+    def get_rpm_path(self, rpm_name):
+        return os.path.join(self.rpmspath, rpm_name)
+
+    def _unlink_locked_rpm(self, rpm_name):
+        # Internal call that assumes the flock is already held
+        unlink_ignore(self.get_rpm_path(rpm_name))
+
+    def unlink_rpm(self, rpm_name):
+        """
+        Ensures an RPM is no longer present in the task library
+        """
+        with Flock(self.rpmspath):
+            self._unlink_locked_rpm(rpm_name)
+
+    def _update_locked_repo(self):
+        # Internal call that assumes the flock is already held
+        # Removed --baseurl, if upgrading you will need to manually
+        # delete repodata directory before this will work correctly.
+        p = subprocess.Popen(['createrepo', '-q', '--update',
+                '--checksum', 'sha', '.'], cwd=self.rpmspath,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, err = p.communicate()
+        if output:
+           log.debug("stdout from createrepo: %s", output)
+        if err:
+           log.warn("stderr from createrepo: %s", err)
+        retcode = p.poll()
+        if retcode:
+            raise ValueError('createrepo failed with exit status %d:\n%s'
+                    % (retcode, err))
+
+    def update_repo(self):
+        """Update the task library yum repo metadata"""
+        with Flock(self.rpmspath):
+            self._update_locked_repo()
+
+    def _all_rpms(self):
+        """Iterator over the task RPMs currently on disk"""
+        basepath = self.rpmspath
+        for name in os.listdir(basepath):
+            if not name.endswith("rpm"):
+                continue
+            srcpath = os.path.join(basepath, name)
+            if os.path.isdir(srcpath):
+                continue
+            yield srcpath, name
+
+    def _link_rpms(self, dst):
+        """Hardlink the task rpms into dst"""
+        makedirs_ignore(dst, 0755)
+        for srcpath, name in self._all_rpms():
+            dstpath = os.path.join(dst, name)
+            unlink_ignore(dstpath)
+            os.link(srcpath, dstpath)
+
+    def make_snapshot_repo(self, repo_dir):
+        """Create a snapshot of the current state of the task library"""
+        # This should only run if we are missing repodata in the rpms path
+        # since this should normally be updated when new tasks are uploaded
+        src_meta = os.path.join(self.rpmspath, 'repodata')
+        if not os.path.isdir(src_meta):
+            log.info("Task library repodata missing, generating...")
+            self.update_repo()
+        dst_meta = os.path.join(repo_dir, 'repodata')
+        if os.path.isdir(dst_meta):
+            log.info("Destination repodata already exists, skipping snapshot")
+        else:
+            # Copy updated repo to recipe specific repo
+            log.debug("Generating task library snapshot")
+            with Flock(self.rpmspath):
+                self._link_rpms(repo_dir)
+                shutil.copytree(src_meta, dst_meta)
+
+    def update_task(self, rpm_name, write_rpm):
+        """Updates the specified task
+
+           write_rpm must be a callable that takes a file object as its
+           sole argument and populates it with the raw task RPM contents
+
+           Expects to be called in a transaction, and for that transaction
+           to be rolled back if an exception is thrown.
+        """
+        # XXX (ncoghlan): How do we get rid of that assumption about the
+        # transaction handling? Assuming we're *not* already in a transaction
+        # won't work either.
+        rpm_path = self.get_rpm_path(rpm_name)
+        upgrade = AtomicFileReplacement(rpm_path)
+        f = upgrade.create_temp()
+        try:
+            write_rpm(f)
+            f.flush()
+            f.seek(0)
+            task = Task.create_from_taskinfo(self.read_taskinfo(f))
+            old_rpm_name = task.rpm
+            task.rpm = rpm_name
+            with Flock(self.rpmspath):
+                upgrade.replace_dest()
+                try:
+                    self._update_locked_repo()
+                except:
+                    # We assume the current transaction is going to be rolled back,
+                    # so the Task possibly defined above, or changes to an existing
+                    # task, will never by written to the database (even if it was
+                    # the _update_locked_repo() call that failed).
+                    # Accordingly, we also throw away the newly created RPM.
+                    self._unlink_locked_rpm(rpm_name)
+                    raise
+                # New task has been added, throw away the old one
+                if old_rpm_name:
+                    self._unlink_locked_rpm(old_rpm_name)
+                    # Since it existed when we called _update_locked_repo()
+                    # above, this RPM will still be referenced from the
+                    # metadata, albeit not as the latest version.
+                    # However, it's too expensive (several seconds of IO
+                    # with the task repo locked) to do it twice for every
+                    # task update, so we rely on the fact that tasks are
+                    # referenced by name rather than requesting specific
+                    # versions, and thus will always grab the latest.
+        finally:
+            # This is a no-op if we successfully replaced the destination
+            upgrade.destroy_temp()
+        return task
+
+    def get_rpm_info(self, fd):
+        """Returns rpm information by querying a rpm"""
+        ts = rpm.ts()
+        fd.seek(0)
+        try:
+            hdr = ts.hdrFromFdno(fd.fileno())
+        except rpm.error:
+            ts.setVSFlags(rpm._RPMVSF_NOSIGNATURES)
+            fd.seek(0)
+            hdr = ts.hdrFromFdno(fd.fileno())
+        return { 'name': hdr[rpm.RPMTAG_NAME], 
+                    'ver' : "%s-%s" % (hdr[rpm.RPMTAG_VERSION],
+                                    hdr[rpm.RPMTAG_RELEASE]), 
+                    'epoch': hdr[rpm.RPMTAG_EPOCH],
+                    'arch': hdr[rpm.RPMTAG_ARCH] , 
+                    'files': hdr['filenames']}
+
+    def read_taskinfo(self, fd):
+        """Retrieve Beaker task details from an RPM"""
+        taskinfo = dict(desc = '',
+                        hdr  = '',
+                        )
+        taskinfo['hdr'] = self.get_rpm_info(fd)
+        taskinfo_file = None
+        for file in taskinfo['hdr']['files']:
+            if file.endswith('testinfo.desc'):
+                taskinfo_file = file
+        if taskinfo_file:
+            fd.seek(0)
+            p1 = subprocess.Popen(["rpm2cpio"],
+                                  stdin=fd.fileno(), stdout=subprocess.PIPE)
+            p2 = subprocess.Popen(["cpio", "--quiet", "--extract",
+                                   "--to-stdout", ".%s" % taskinfo_file],
+                                  stdin=p1.stdout, stdout=subprocess.PIPE)
+            taskinfo['desc'] = p2.communicate()[0]
+        return taskinfo
+
+
 class Task(MappedObject):
     """
     Tasks that are available to schedule
     """
 
-    @property
-    def task_dir(self):
-        return get("basepath.rpms", "/var/www/beaker/rpms")
+    library = TaskLibrary()
 
     @classmethod
     def by_name(cls, name, valid=None):
@@ -6336,19 +6780,97 @@ class Task(MappedObject):
         return query.join('runfor').filter(TaskPackage.package==package)
 
     @classmethod
-    def update_repo(cls):
-        basepath = get("basepath.rpms", "/var/www/beaker/rpms")
-        with Flock(basepath):
-            # Removed --baseurl, if upgrading you will need to manually
-            # delete repodata directory before this will work correctly.
-            p = subprocess.Popen(['createrepo', '-q', '--update',
-                    '--checksum', 'sha', '.'], cwd=basepath,
-                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            output, unused_err = p.communicate()
-            retcode = p.poll()
-            if retcode:
-                raise ValueError('createrepo failed with exit status %d:\n%s'
-                        % (retcode, output))
+    def get_rpm_path(cls, rpm_name):
+        return cls.library.get_rpm_path(rpm_name)
+
+    @classmethod
+    def update_task(cls, rpm_name, write_rpm):
+        return cls.library.update_task(rpm_name, write_rpm)
+
+    @classmethod
+    def make_snapshot_repo(cls, repo_dir):
+        return cls.library.make_snapshot_repo(repo_dir)
+
+    @classmethod
+    def create_from_taskinfo(cls, raw_taskinfo):
+        """Create a new task object based on details retrieved from an RPM"""
+
+        tinfo = testinfo.parse_string(raw_taskinfo['desc'])
+        task = cls.lazy_create(name=tinfo.test_name)
+
+        if len(task.name) > 255:
+            raise BX(_("Task name should be <= 255 characters"))
+
+        # RPM is the same version we have. don't process
+        if task.version == raw_taskinfo['hdr']['ver']:
+            raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
+
+        task.version = raw_taskinfo['hdr']['ver']
+        task.description = tinfo.test_description
+        task.types = []
+        task.bugzillas = []
+        task.required = []
+        task.runfor = []
+        task.needs = []
+        task.excluded_osmajor = []
+        task.excluded_arch = []
+        includeFamily=[]
+        for family in tinfo.releases:
+            if family.startswith('-'):
+                try:
+                    if family.lstrip('-') not in task.excluded_osmajor:
+                        task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family.lstrip('-'))))
+                except InvalidRequestError:
+                    pass
+            else:
+                try:
+                    includeFamily.append(OSMajor.by_name_alias(family).osmajor)
+                except InvalidRequestError:
+                    pass
+        families = set([ '%s' % family.osmajor for family in OSMajor.query])
+        if includeFamily:
+            for family in families.difference(set(includeFamily)):
+                if family not in task.excluded_osmajor:
+                    task.excluded_osmajor.append(TaskExcludeOSMajor(osmajor=OSMajor.by_name_alias(family)))
+        if tinfo.test_archs:
+            arches = set([ '%s' % arch.arch for arch in Arch.query])
+            for arch in arches.difference(set(tinfo.test_archs)):
+                if arch not in task.excluded_arch:
+                    task.excluded_arch.append(TaskExcludeArch(arch=Arch.by_name(arch)))
+        task.avg_time = tinfo.avg_test_time
+        for type in tinfo.types:
+            ttype = TaskType.lazy_create(type=type)
+            task.types.append(ttype)
+        for bug in tinfo.bugs:
+            task.bugzillas.append(TaskBugzilla(bugzilla_id=bug))
+        task.path = tinfo.test_path
+        # Bug 772882. Remove duplicate required package here
+        # Avoid ORM insert in task_packages_required_map twice.
+        tinfo.runfor = list(set(tinfo.runfor))
+        for runfor in tinfo.runfor:
+            package = TaskPackage.lazy_create(package=runfor)
+            task.runfor.append(package)
+        task.priority = tinfo.priority
+        task.destructive = tinfo.destructive
+        # Bug 772882. Remove duplicate required package here
+        # Avoid ORM insert in task_packages_required_map twice.
+        tinfo.requires = list(set(tinfo.requires))
+        for require in tinfo.requires:
+            package = TaskPackage.lazy_create(package=require)
+            task.required.append(package)
+        for need in tinfo.needs:
+            task.needs.append(TaskPropertyNeeded(property=need))
+        task.license = tinfo.license
+        task.owner = tinfo.owner
+
+        try:
+            task.uploader = identity.current.user
+        except IdentityException:
+            task.uploader = User.query.get(1)
+
+        task.valid = True
+
+        return task
 
     def to_dict(self):
         """ return a dict of this object """
@@ -6453,7 +6975,6 @@ class Task(MappedObject):
             task.append(excluded)
         return lxml.etree.tostring(task, pretty_print=pretty)
 
-
     def elapsed_time(self, suffixes=[' year',' week',' day',' hour',' minute',' second'], add_s=True, separator=', '):
         """
         Takes an amount of seconds and turns it into a human-readable amount of 
@@ -6490,10 +7011,8 @@ class Task(MappedObject):
         """
         Disable task so it can't be used.
         """
-        rpm_path = os.path.join(self.task_dir, self.rpm)
-        if os.path.exists(rpm_path):
-            os.unlink(rpm_path)
-        self.valid=False
+        self.library.unlink_rpm(self.rpm)
+        self.valid = False
         return
 
 
@@ -7009,9 +7528,11 @@ mapper(User, users_table,
       'lab_controller' : relation(LabController, uselist=False),
 })
 
-mapper(Group, groups_table,
-    properties=dict(users=relation(User, uselist=True, secondary=user_group_table, backref='groups'),
-    ))
+mapper(UserGroup, user_group_table, properties={
+        'group': relation(Group, backref=backref('user_group_assocs', cascade='all, delete-orphan')),
+        'user': relation(User, backref=backref('group_user_assocs', cascade='all, delete-orphan'))
+        })
+
 
 mapper(SystemGroup, system_group_table, properties={
     'system': relation(System, backref=backref('group_assocs', cascade='all, delete-orphan')),
@@ -7118,6 +7639,8 @@ mapper(TaskBugzilla, task_bugzilla_table)
 mapper(Job, job_table,
         properties = {'recipesets':relation(RecipeSet, backref='job'),
                       'owner':relation(User, uselist=False,
+                        backref=backref('jobs', cascade_backrefs=False)),
+                      'group': relation(Group, uselist=False,
                         backref=backref('jobs', cascade_backrefs=False)),
                       'retention_tag':relation(RetentionTag, uselist=False,
                         backref=backref('jobs', cascade_backrefs=False)),

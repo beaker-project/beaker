@@ -10,7 +10,7 @@ Server/build
 Server/build.out
 Server/devdata.sqlite
 Server/setup.py
-Common/bkr/__init__.py
+Common/bkr/common/__init__.py
 Common/build
 Common/setup.py
 Client/build
@@ -24,4 +24,4 @@ documentation/_build
 documentation/man/bkr-*.rst
 *.diff
 selenium.log
-/Tasks/distribution/beaker/dogfood/selenium-server-standalone-2.21.0.jar
+/Tasks/distribution/beaker/dogfood/selenium-server-standalone-*.jar

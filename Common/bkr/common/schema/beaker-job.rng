@@ -10,6 +10,14 @@
     <element name="job">
       <interleave>
         <optional>
+          <attribute name="group">
+          <a:documentation xml:lang="en">
+          Specifies the group this job was submitted on behalf of.
+          This will allow other group members to view and modify this job.
+          </a:documentation>
+          </attribute>
+        </optional>
+        <optional>
           <attribute name="retention_tag">
           <a:documentation xml:lang="en">
             Specifies the data retention policy for the job. See http://your-beaker-server/retentiontag/
@@ -677,6 +685,24 @@
       <ref name="op" />
       <attribute name="value">
         <data type="date"/>
+      </attribute>
+    </element>
+    <element name="last_inventoried">
+      <a:documentation xml:lang="en">
+        Date on which the system was last inventoried.
+      </a:documentation>
+      <ref name="op" />
+      <attribute name="value">
+        <a:documentation xml:lang="en">
+          The date should be specified as "YYYY-MM-DD". It can be
+          specified as "" to be used in conjunction with the '=' or
+          '!=' operators - the former matching only uninventoried
+          machines and the latter only inventoried machines.
+         </a:documentation>
+         <choice>
+           <data type="date"/>
+           <value></value>
+         </choice>
       </attribute>
     </element>
     <element name="arch">

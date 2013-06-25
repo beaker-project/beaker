@@ -17,7 +17,7 @@
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.12.1
+Version:        0.13.1
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -108,8 +108,8 @@ Requires:       rhts-python
 Requires:       cracklib-python
 Requires:       python-jinja2
 Requires:       python-netaddr
-# Kerberos support was added to requests in 0.13.4
-Requires:       python-requests >= 0.13.4
+Requires:       python-requests >= 1.0
+Requires:       python-requests-kerberos
 Requires:       ovirt-engine-sdk
 Requires:  	kobo-client >= 0.3
 %endif
@@ -130,7 +130,9 @@ Requires:       java-openjdk >= 1:1.6.0
 Requires:       Xvfb
 Requires:       firefox
 Requires:       lsof
-Requires:       python-requests >= 0.11
+Requires:       python-requests >= 1.0
+Requires:       python-requests-kerberos
+Requires:       openldap-servers
 %endif
 
 
@@ -146,6 +148,7 @@ Requires:       cobbler >= 1.4
 Requires:       yum-utils
 Requires:       fence-agents
 Requires:       ipmitool
+Requires:       wsmancli
 Requires:       telnet
 Requires:       sudo
 Requires:       python-cpio
@@ -301,6 +304,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-repo-update
 %{_bindir}/beaker-sync-tasks
 %{_bindir}/%{name}-cleanup-visits
+%{_bindir}/beaker-refresh-ldap
 %{_sysconfdir}/init.d/%{name}d
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %attr(0755,root,root)%{_bindir}/%{name}d
@@ -376,6 +380,24 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Mon Jun 17 2013 Raymond Mancy <rmancy@redhat.com> 0.13.1-1
+- 974382 Fixes RHEL4 import problems (rmancy@redhat.com)
+
+* Mon Jun 17 2013 Raymond Mancy <rmancy@redhat.com>
+- 974382 Fixes RHEL4 import problems (rmancy@redhat.com)
+
+* Thu Jun 13 2013 Amit Saha <asaha@redhat.com> 0.13.0-3
+- 972255 Fix LDAP group modification changes via the CLI. (asaha@redhat.com)
+- 972290 Display error message when job cannot be cancelled. (asaha@redhat.com)
+
+* Fri Jun 07 2013 Amit Saha <asaha@redhat.com> 0.13.0-2
+- need to import simplejson on RHEL5 (dcallagh@redhat.com)
+
+* Fri Jun 07 2013 Amit Saha <asaha@redhat.com> 0.13.0-1
+- new release 0.13.0:
+  http://beaker-project.org/releases/#beaker-0.13.0-1
+  http://beaker-project.org/docs/whats-new/release-0.13.html
+
 * Tue Apr 23 2013 Dan Callaghan <dcallagh@redhat.com> 0.12.1-1
 - 951283 remove duplicate FQDNs in peer roles (dcallagh@redhat.com)
 - 951981 Fixes problems importing naked distro tree. (rmancy@redhat.com)

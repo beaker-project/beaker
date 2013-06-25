@@ -18,7 +18,7 @@ from socket import gethostname
 from threading import Thread, Event
 from xml.sax.saxutils import escape as xml_escape, quoteattr as xml_quoteattr
 from werkzeug.wrappers import Response
-from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound
+from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound, LengthRequired
 from werkzeug.utils import redirect
 from werkzeug.http import parse_content_range_header
 from werkzeug.wsgi import wrap_file
@@ -66,7 +66,8 @@ class ProxyHelper(object):
         self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
                 transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
         self.log_storage = LogStorage(self.conf.get("CACHEPATH"),
-                "http://%s/beaker/logs" % self.conf.get("SERVER", gethostname()),
+                "%s://%s/beaker/logs" % (self.conf.get('URL_SCHEME',
+                'http'), self.conf.get_url_domain()),
                 self.hub)
 
     def recipe_upload_file(self, 
@@ -263,10 +264,17 @@ class WatchFile(object):
                 return False
             else:
                 self.where = now
-                with self.proxy.log_storage.recipe(
-                        str(self.watchdog['recipe_id']),
-                        self.filename) as log_file:
-                    log_file.update_chunk(line, where)
+                try:
+                    log_file = self.proxy.log_storage.recipe(
+                            str(self.watchdog['recipe_id']),
+                            self.filename, create=where == 0)
+                    with log_file:
+                        log_file.update_chunk(line, where)
+                except (OSError, IOError), e:
+                    if e.errno == errno.ENOENT:
+                        pass # someone has removed our log, discard the update
+                    else:
+                        raise
                 return True
         return False
 
@@ -288,7 +296,7 @@ class Watchdog(ProxyHelper):
     def transfer_logs(self):
         logger.info("Entering transfer_logs")
         transfered = False
-        server = self.conf.get("SERVER", gethostname())
+        server = self.conf.get_url_domain()
         for recipe_id in self.hub.recipes.by_log_server(server):
             transfered = True
             self.transfer_recipe_logs(recipe_id)
@@ -645,10 +653,18 @@ class ProxyHTTP(object):
         result = req.form['result'].lower()
         if result not in self._result_types:
             raise BadRequest('Unknown result type %r' % req.form['result'])
-        result_id = self.hub.recipes.tasks.result(task_id,
-                self._result_types[result],
-                req.form.get('path'), req.form.get('score'),
-                req.form.get('message'))
+        try:
+            result_id = self.hub.recipes.tasks.result(task_id,
+                    self._result_types[result],
+                    req.form.get('path'), req.form.get('score'),
+                    req.form.get('message'))
+        except xmlrpclib.Fault, fault:
+            # XXX need to find a less fragile way to do this
+            if 'Cannot record result for finished task' in fault.faultString:
+                return Response(status=409, response=fault.faultString,
+                        content_type='text/plain')
+            else:
+                raise
         return redirect('/recipes/%s/tasks/%s/results/%s' % (
                 recipe_id, task_id, result_id), code=201)
 
@@ -699,8 +715,8 @@ class ProxyHTTP(object):
     # big files without chunking
 
     def _put_log(self, log_file, req):
-        if not req.content_length:
-            raise BadRequest('Missing "Content-Length" header')
+        if req.content_length is None:
+            raise LengthRequired()
         content_range = parse_content_range_header(req.headers.get('Content-Range'))
         if content_range:
             # a few sanity checks
@@ -708,15 +724,23 @@ class ProxyHTTP(object):
                 raise BadRequest('Content length does not match range length')
             if content_range.length and content_range.length < content_range.stop:
                 raise BadRequest('Total length is smaller than range end')
-        with log_file:
-            if content_range:
-                if content_range.length: # length may be '*' meaning unspecified
-                    log_file.truncate(content_range.length)
-                log_file.update_chunk(req.data, content_range.start)
+        try:
+            with log_file:
+                if content_range:
+                    if content_range.length: # length may be '*' meaning unspecified
+                        log_file.truncate(content_range.length)
+                    log_file.update_chunk(req.data, content_range.start)
+                else:
+                    # no Content-Range, therefore the request is the whole file
+                    log_file.truncate(req.content_length)
+                    log_file.update_chunk(req.data, 0)
+        # XXX need to find a less fragile way to do this
+        except xmlrpclib.Fault, fault:
+            if 'Cannot register file for finished ' in fault.faultString:
+                return Response(status=409, response=fault.faultString,
+                        content_type='text/plain')
             else:
-                # no Content-Range, therefore the request is the whole file
-                log_file.truncate(req.content_length)
-                log_file.update_chunk(req.data, 0)
+                raise
         return Response(status=204)
 
     def _get_log(self, log_file, req):

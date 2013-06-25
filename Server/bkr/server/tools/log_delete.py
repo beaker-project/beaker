@@ -11,8 +11,9 @@ import errno
 import shutil
 import datetime
 import urlparse
-import requests, requests.auth
-from bkr import __version__ as bkr_version
+import requests
+import requests_kerberos
+from bkr.common import __version__
 from optparse import OptionParser
 from bkr.server.model import Job
 from bkr.server.util import load_config, log_to_stream
@@ -28,7 +29,7 @@ def main():
     parser = OptionParser('usage: %prog [options]',
             description='Permanently deletes log files from Beaker and/or '
                 'archive server',
-            version=bkr_version)
+            version=__version__)
     parser.add_option('-c', '--config', metavar='FILENAME',
             help='Read configuration from FILENAME')
     parser.add_option('-v', '--verbose', action='store_true',
@@ -55,8 +56,9 @@ def log_delete(print_logs=False, dry=False, limit=None):
 
     failed = False
     if not dry:
-        requests_session = requests.session(
-                auth=requests.auth.HTTPKerberosAuth(require_mutual_auth=False))
+        requests_session = requests.Session()
+        requests_session.auth = requests_kerberos.HTTPKerberosAuth(
+                             mutual_authentication=requests_kerberos.OPTIONAL)
     for job, logs in Job.expired_logs(limit):
         logger.info('Deleting logs for %s', job.t_id)
         try:

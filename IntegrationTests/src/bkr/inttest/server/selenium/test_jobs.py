@@ -29,9 +29,10 @@ from turbogears.database import session
 from sqlalchemy import and_
 
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, is_text_present, logout
 from bkr.inttest import data_setup, with_transaction, get_server_base
-from bkr.server.model import RetentionTag, Product, Distro, Job, GuestRecipe
+from bkr.server.model import RetentionTag, Product, Distro, Job, GuestRecipe, \
+    User
 
 class TestViewJob(WebDriverTestCase):
 
@@ -40,6 +41,16 @@ class TestViewJob(WebDriverTestCase):
 
     def tearDown(self):
         self.browser.quit()
+
+    def test_group_job(self):
+        with session.begin():
+            user = data_setup.create_user()
+            group = data_setup.create_group()
+            job = data_setup.create_job(group=group)
+        b = self.browser
+        b.get(get_server_base() + 'jobs/%s' % job.id)
+        b.find_element_by_link_text("%s" % job.group).click()
+        b.find_element_by_xpath('//h1[text()="%s"]' % group.display_name)
 
     def test_cc_list(self):
         with session.begin():
@@ -146,6 +157,134 @@ class TestViewJob(WebDriverTestCase):
                 '//a[@class="list recipe-id"]')]
         self.assertEquals(recipe_order, [host.t_id, guest.t_id])
 
+class NewJobTestWD(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+        with session.begin():
+            self.user = data_setup.create_user(password=u'password')
+            if not Distro.by_name(u'BlueShoeLinux5-5'):
+                data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
+            data_setup.create_product(product_name=u'the_product')
+
+    def tearDown(self):
+        self.browser.quit()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=949777
+    def test_invalid_inventory_date_with_equal(self):
+
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'jobs/new')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with invalid date value with equal op</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires>
+                           <system>
+                              <last_inventoried op="=" value="2010-10-10 10:10:10"/>
+                           </system>
+                           <system_type value="Machine"/>
+                        </hostRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
+        b.find_element_by_xpath("//input[@value='Submit Data']").click()
+        b.find_element_by_xpath("//input[@value='Queue']").click()
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assert_('Job failed schema validation' in flash_text, flash_text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=949777
+    def test_invalid_inventory_date_with_not_equal(self):
+
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'jobs/new')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with invalid date value with equal op</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires>
+                           <system>
+                              <last_inventoried op="!=" value="2010-10-10 10:10:10"/>
+                           </system>
+                           <system_type value="Machine"/>
+                        </hostRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
+        b.find_element_by_xpath("//input[@value='Submit Data']").click()
+        b.find_element_by_xpath("//input[@value='Queue']").click()
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assert_('Job failed schema validation' in flash_text, flash_text)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=949777
+    def test_valid_inventory_date(self):
+
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'jobs/new')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with invalid date value with equal op</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires>
+                           <system>
+                              <last_inventoried op="&gt;" value="2010-10-10"/>
+                           </system>
+                           <system_type value="Machine"/>
+                        </hostRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
+        b.find_element_by_xpath("//input[@value='Submit Data']").click()
+        b.find_element_by_xpath("//input[@value='Queue']").click()
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assert_('Success!' in flash_text, flash_text)
+        self.assertEqual(b.title, 'My Jobs')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=972412
+    def test_invalid_utf8_chars(self):
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'jobs/new')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('\x89')
+        xml_file.flush()
+        b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
+        b.find_element_by_xpath("//input[@value='Submit Data']").click()
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assertEquals(flash_text,
+                "Invalid job XML: 'utf8' codec can't decode byte 0x89 "
+                "in position 0: invalid start byte")
+
 class NewJobTest(SeleniumTestCase):
 
     @with_transaction
@@ -218,7 +357,12 @@ class NewJobTest(SeleniumTestCase):
         self.assert_('Failed to import job' in sel.get_text('css=.flash'))
 
     def test_valid_job_xml_doesnt_trigger_xsd_warning(self):
-        self.login()
+        with session.begin():
+            group = data_setup.create_group(group_name='somegroup')
+            user = data_setup.create_user(password=u'hornet')
+            user.groups.append(group)
+
+        self.login(user=user.user_name, password='hornet')
         sel = self.selenium
         sel.open('')
         sel.click('link=New Job')
@@ -636,3 +780,78 @@ class CloneJobTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         cloned_from_rs = sel.get_text('//textarea[@id="job_textxml"]')
         self.assertEqual(cloned_from_job, cloned_from_rs)
+
+class TestJobsGrid(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+
+    def tearDown(self):
+        self.browser.quit()
+
+    def check_job_row(self, rownum, job_t_id, group):
+        b = self.browser
+        job_id = b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[1]' % rownum).text
+        group_name = b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[3]' % rownum).text
+        self.assertEquals(job_id, job_t_id)
+        if group:
+            self.assertEquals(group_name, group.group_name)
+        else:
+            self.assertEquals(group_name, "")
+
+    def test_myjobs_group(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            user2 = data_setup.create_user(password='password')
+            group = data_setup.create_group()
+            user.groups.append(group)
+            user2.groups.append(group)
+            job = data_setup.create_job(owner=user, group=group)
+        b = self.browser
+        login(b, user=user2.user_name, password='password')
+        b.find_element_by_link_text('My Jobs').click()
+        b.find_element_by_xpath('//title[normalize-space(text())="My Jobs"]')
+        self.assertTrue(is_text_present(b, job.t_id))
+        logout(b)
+        login(b, user=user.user_name, password='password')
+        b.find_element_by_link_text('My Jobs').click()
+        b.find_element_by_xpath('//title[normalize-space(text())="My Jobs"]')
+        self.assertTrue(is_text_present(b, job.t_id))
+
+    def test_myjobs_individual(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            job = data_setup.create_job(owner=user, group=None)
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+        b.find_element_by_link_text('My Jobs').click()
+        b.find_element_by_xpath('//title[normalize-space(text())="My Jobs"]')
+        self.assertTrue(is_text_present(b, job.t_id))
+
+    def test_jobs_group_column(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            group1 = data_setup.create_group(owner=user)
+            group2 = data_setup.create_group()
+            user.groups.append(group2)
+            job1 = data_setup.create_job(owner=user, group=None)
+            job2 = data_setup.create_job(owner=user, group=group1)
+            job3 = data_setup.create_job(owner=user, group=group2)
+
+        b = self.browser
+
+        # jobs/mine
+        login(b, user=user.user_name, password='password')
+        b.find_element_by_link_text('My Jobs').click()
+        b.find_element_by_xpath('//title[normalize-space(text())="My Jobs"]')
+
+        self.check_job_row(rownum=1, job_t_id=job3.t_id, group=group2)
+        self.check_job_row(rownum=2, job_t_id=job2.t_id, group=group1)
+        self.check_job_row(rownum=3, job_t_id=job1.t_id, group=None)
+
+        # jobs
+        logout(b)
+        b.get(get_server_base() + 'jobs/')
+        self.check_job_row(rownum=1, job_t_id=job3.t_id, group=group2)
+        self.check_job_row(rownum=2, job_t_id=job2.t_id, group=group1)
+        self.check_job_row(rownum=3, job_t_id=job1.t_id, group=None)

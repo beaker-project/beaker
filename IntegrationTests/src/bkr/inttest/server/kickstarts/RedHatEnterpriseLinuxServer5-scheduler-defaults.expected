@@ -113,14 +113,25 @@ LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
 __EOT__
 
 
-/sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
-/sbin/chkconfig ntpd on >/dev/null 2>&1 || :
+if [ -e /etc/sysconfig/ntpdate ] ; then
+    /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
+fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
+    /sbin/chkconfig ntpd on >/dev/null 2>&1 || :
     GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
     if [ -z "$GOT_G" ]; then
         /bin/sed -i -r 's/(^OPTIONS\s*=\s*)(['\''|"])(.+)$/\1\2\-x \3 /' /etc/sysconfig/ntpd
     fi
+fi
+if [ -e /etc/chrony.conf ] ; then
+    cp /etc/chrony.conf{,.orig}
+    # use only DHCP-provided time servers, no default pool servers
+    sed -i '/^server /d' /etc/chrony.conf
+    cp /etc/sysconfig/network{,.orig}
+    # setting iburst should speed up initial sync
+    # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
+    echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
 fi
 
 
@@ -210,10 +221,7 @@ EOF
 # This speeds up yum because of a bug where it will update stdout too often.
 # http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
 yum check-update > /dev/null 2>&1 || true
-# Install old rhts commands
-yum -y install rhts-test-env-lab rhts-legacy
-# Install new harness
-yum -y install beah
+yum -y install beah rhts-test-env beakerlib
 # This may fail if you are outside of Red Hat..
 yum -y install beakerlib-redhat
 

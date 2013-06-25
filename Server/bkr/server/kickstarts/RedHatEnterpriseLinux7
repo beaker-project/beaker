@@ -14,6 +14,9 @@ bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} 
 # Use text mode install
 {{ mode|default('text') }}
 {% snippet 'network' %}
+{% if no_clock_sync is undefined %}
+services --enabled=chronyd,chrony-wait
+{% endif %}
 {% snippet 'print_anaconda_repos' %}
 
 {#
@@ -35,8 +38,7 @@ keyboard {{ keyboard|default('us') }}
 lang {{ lang|default('en_US.UTF-8') }}
 
 reboot
-#Root password
-rootpw --iscrypted {{ password|default(user.root_password, True) }}
+{% snippet 'password' %}
 # SELinux configuration
 selinux {{ selinux|default('--enforcing') }}
 
@@ -63,6 +65,10 @@ install
 @server-platform-devel
 {% endif %}
 {% snippet 'packages' %}
+{% if no_clock_sync is undefined %}
+chrony
+-ntp
+{% endif %}
 %end
 
 {% endif %}{# manual #}

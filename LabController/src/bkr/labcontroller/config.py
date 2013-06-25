@@ -1,10 +1,20 @@
 import copy
+import socket
 import os
 import kobo.conf
 
 __all__ = ['load_conf', 'get_conf']
 
-_conf = kobo.conf.PyConfigParser()
+
+class Config(kobo.conf.PyConfigParser):
+
+    def get_url_domain(self):
+        # URL_DOMAIN used to be called SERVER
+        return self.get('URL_DOMAIN',
+            self.get('SERVER', socket.gethostname()))
+
+
+_conf = Config()
 default_config = os.path.abspath(os.path.join(os.path.dirname(__file__), "default.conf"))
 _conf.load_from_file(default_config)
 default_system_conf_file = "/etc/beaker/labcontroller.conf"

@@ -18,6 +18,7 @@ bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_option
 {{ mode|default('cmdline') }}
 
 {% snippet 'network' %}
+services --enabled=ntpd
 {#
 ## Firewall configuration
 ## firewall in kickstart metadata will enable the firewall
@@ -33,10 +34,9 @@ firewall
 keyboard {{ keyboard|default('us') }}
 # System language
 lang {{ lang|default('en_US.UTF-8') }}
-logging --level=info
+
 reboot
-#Root password
-rootpw --iscrypted {{ password|default(user.root_password, True) }}
+{% snippet 'password' %}
 # SELinux configuration
 selinux {{ selinux|default('--disabled') }}
 
@@ -59,30 +59,22 @@ install
 {% snippet 'RedHatStorage2' %}
 {% snippet 'system' %}
 
-%packages --nobase --ignoremissing
-@core
-@rhs-tools
-glusterfs
-glusterfs-server
-glusterfs-fuse
-glusterfs-rdma
-glusterfs-geo-replication
-@glusterfs-swift
-@scalable-file-systems
-xfsprogs
-xfsdump
-# bz 798027
-mdadm
-# bz 798304
-tuned
-tuned-utils
-redhat-lsb
+{% if unsupported_hardware is defined %}
+unsupported_hardware
+{% endif %}
+
+%packages --ignoremissing
+{% if packages is defined %}
 {% snippet 'rhts_packages' %}
+{% endif %}
 {% snippet 'packages' %}
+%end
 
 {% endif %}{# manual #}
 
 {% endif %}{# sysprofile #}
+
+%include {{ distro_tree.url_in_lab(lab_controller, scheme='http', required=True) }}kickstarts/ksappend.cfg
 
 %pre --log=/dev/console
 {% snippet 'rhts_pre' %}
@@ -94,26 +86,6 @@ redhat-lsb
 {% snippet 'rhts_post' %}
 {% snippet 'RedHatStorage2_post' %}
 {% snippet 'system_post' %}
-%end
-
-%post --nochroot
-## bz 796193
-for f in /mnt/sysimage/etc/sysconfig/network-scripts/ifcfg-*; do
-    if echo $f | grep -q 'ifcfg-lo$'; then
-        continue
-    fi
-    if ! grep -q '^BOOTPROTO' $f; then
-        echo 'BOOTPROTO="dhcp"' >> $f
-    fi
-    if grep -q '^ONBOOT' $f; then
-        sed -i -e '/^ONBOOT/c ONBOOT="yes"' $f
-    else
-        echo 'ONBOOT="yes"' >> $f
-    fi
-done
-
-# bz 798597
-sed -i -e '/^Red Hat Enterprise Linux/c Red Hat Storage release 2.0' /mnt/sysimage/etc/issue /mnt/sysimage/etc/issue.net
 %end
 
 {{ ks_appends|join('\n') }}

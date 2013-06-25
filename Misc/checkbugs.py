@@ -39,18 +39,37 @@ def all(iterable):
             return False
     return True
 
-def get_bugs(milestone, release):
+def get_bz_proxy():
     bz = bugzilla.Bugzilla(url=BUGZILLA_URL)
     # Make sure the user has logged themselves in properly, otherwise we might 
     # accidentally omit private bugs from the list
-    assert bz.user, 'Configure your username in ~/.bugzillarc'
-    assert bz._proxy.User.valid_cookie(dict(login=bz.user))['cookie_isvalid'] == 1
+    if not bz.user:
+        raise RuntimeError('Configure your username in ~/.bugzillarc')
+    if bz._proxy.User.valid_cookie(dict(login=bz.user))['cookie_isvalid'] != 1:
+        raise RuntimeError('Invalid BZ credentials, try running "bugzilla login"')
+    return bz
+
+def get_bugs(milestone, release, sprint, states):
+    bz = get_bz_proxy()
     criteria = {'product': 'Beaker'}
     if milestone:
         criteria['target_milestone'] = milestone
+    if sprint:
+        criteria['devel_whiteboard'] = sprint
     if release:
         criteria['flag'] = ['beaker-%s+' % release]
+    if states:
+        criteria['status'] = list(states)
     return bz.query(bz.build_query(**criteria))
+
+def get_bug(bug_id):
+    bz = get_bz_proxy()
+    criteria = {'bug_id': bug_id}
+    result = bz.query(bz.build_query(**criteria))
+    if not result:
+        raise RuntimeError("No bug found with ID %r" % bug_id)
+    return result[0]
+
 
 def get_gerrit_changes(bug_ids):
     p = subprocess.Popen(['ssh',
@@ -106,31 +125,56 @@ def problem(message):
     else:
         print '** %s' % message
 
+_status_order = [
+    'NEW',
+    'ASSIGNED',
+    'POST',
+    'MODIFIED',
+    'ON_QA',
+    'VERIFIED',
+    'RELEASE_PENDING',
+    'CLOSED'
+]
+_status_keys = dict((v, str(k)) for k, v in enumerate(_status_order))
+
+def bug_sort_key(bug):
+    status_key = _status_keys.get(bug.status, bug.status)
+    return status_key, bug.assigned_to, bug.bug_id
+
 def main():
-    parser = OptionParser('usage: %prog [options] --milestone=MILESTONE',
+    parser = OptionParser('usage: %prog [options]',
             description='Reports on the state of Beaker bugs for a given milestone')
     parser.add_option('-m', '--milestone', metavar='MILESTONE',
             help='Check bugs slated for MILESTONE')
     parser.add_option('-r', '--release', metavar='RELEASE',
             help='Check bugs approved for RELEASE (using flags)')
+    parser.add_option('-s', '--sprint', metavar='SPRINT',
+            help='Check bugs approved for SPRINT (using devel whiteboard)')
+    parser.add_option('-i', '--include', metavar='STATE', action="append",
+            help='Include bugs in the specified state (may be given multiple times')
     parser.add_option('-q', '--quiet', action="store_false",
             dest="verbose", default=True,
             help='Only display problem reports')
     options, args = parser.parse_args()
-    if not options.milestone and not options.release:
-        parser.error('Specify a milestone or release')
+    if not (options.milestone or options.release or options.sprint):
+        parser.error('Specify a milestone, release or sprint')
 
     if options.verbose:
         print "Building git revision list for HEAD"
     build_git_revlist()
     if options.verbose:
         print "Retrieving bug list from Bugzilla"
-    bugs = get_bugs(options.milestone, options.release)
+    bugs = get_bugs(options.milestone, options.release, options.sprint,
+                    options.include)
+    bug_ids = set(bug.bug_id for bug in bugs)
     if options.verbose:
+        print "  Retrieved %d bugs" % len(bugs)
         print "Retrieving code review details from Gerrit"
-    changes = get_gerrit_changes(bug.bug_id for bug in bugs)
+    changes = get_gerrit_changes(bug_ids)
+    if options.verbose:
+        print "  Retrieved %d patch reviews" % len(changes)
 
-    for bug in sorted(bugs, key=lambda b: (b.assigned_to, b.bug_id)):
+    for bug in sorted(bugs, key=bug_sort_key):
         if options.verbose:
             print 'Bug %-13d %-17s %-10s <%s>' % (bug.bug_id, bug.bug_status,
                     abbrev_user(bug.assigned_to), bug.url)
@@ -162,7 +206,16 @@ def main():
             else:
                 problem('Bug %s should be ASSIGNED, not %s' % (bug.bug_id, bug.bug_status))
         elif bug.bug_status in ('MODIFIED', 'ON_DEV', 'ON_QA', 'VERIFIED', 'RELEASE_PENDING', 'CLOSED'):
-            if not bug_changes:
+            if bug.bug_status == 'CLOSED' and bug.resolution == 'DUPLICATE':
+                if bug.dupe_of not in bug_ids:
+                    dupe = get_bug(bug.dupe_of)
+                    if dupe.bug_status != 'CLOSED':
+                        for target_kind in "release", "milestone", "sprint":
+                            if getattr(options, target_kind, False):
+                                break
+                        problem('Bug %s marked as DUPLICATE of %s, which is not in this %s'
+                                                  % (bug.bug_id, bug.dupe_of, target_kind))
+            elif not bug_changes:
                 problem('Bug %s should be ASSIGNED, not %s' % (bug.bug_id, bug.bug_status))
             elif not all(change['status'] in ('ABANDONED', 'MERGED') for change in bug_changes):
                 problem('Bug %s should be POST, not %s' % (bug.bug_id, bug.bug_status))
@@ -184,7 +237,7 @@ def main():
 
     if options.release:
         # check for bugs which have target milestone set but aren't approved for the release
-        target_bugs = get_bugs(options.release, None)
+        target_bugs = get_bugs(options.release, None, None, options.include)
         approved_bug_ids = set(b.bug_id for b in bugs)
         for unapproved in [b for b in target_bugs if b.bug_id not in approved_bug_ids]:
             problem('Bug %s target milestone is set, but bug is not approved' %

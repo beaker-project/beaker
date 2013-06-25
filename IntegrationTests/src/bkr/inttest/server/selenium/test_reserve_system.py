@@ -150,7 +150,7 @@ class ReserveSystem(WebDriverTestCase):
         b.find_element_by_link_text('Select All').click()
         b.find_element_by_xpath("//form[@id='searchform']").submit()
         columns = b.find_elements_by_xpath("//table[@id='widget']//th")
-        self.assertEquals(len(columns), 30)
+        self.assertEquals(len(columns), 31)
 
     def test_exluded_distro_system_not_there(self):
         with session.begin():

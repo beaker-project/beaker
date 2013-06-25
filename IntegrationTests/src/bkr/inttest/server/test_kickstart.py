@@ -90,6 +90,9 @@ EOF
         cls.system_s390x.provisions[s390x] = Provision(arch=s390x)
         cls.system_s390x.provisions[s390x].provision_families[rhel7] = \
                 ProvisionFamily(osmajor=rhel7, ks_meta=u'postreboot')
+        cls.system_armhfp = data_setup.create_system(arch=u'armhfp',
+                fqdn=u'test03.test-kickstart.invalid', status=u'Automated',
+                lab_controller=cls.lab_controller)
 
         cls.rhel39 = data_setup.create_distro(name=u'RHEL3-U9',
                 osmajor=u'RedHatEnterpriseLinux3', osminor=u'9')
@@ -225,25 +228,16 @@ EOF
             DistroTreeRepo(repo_id=u'repos_Server', repo_type=u'os', path=u'.'),
         ]
 
-        cls.f16 = data_setup.create_distro(name=u'Fedora-16',
-                osmajor=u'Fedora16', osminor=u'0')
-        cls.f16_x86_64 = data_setup.create_distro_tree(
-                distro=cls.f16, variant=u'Fedora', arch=u'x86_64',
+        cls.f17 = data_setup.create_distro(name=u'Fedora-17',
+                osmajor=u'Fedora17', osminor=u'0')
+        cls.f17_armhfp = data_setup.create_distro_tree(
+                distro=cls.f17, variant=u'Fedora', arch=u'armhfp',
                 lab_controllers=[cls.lab_controller],
-                urls=[u'http://lab.test-kickstart.invalid/distros/F-16/GOLD/Fedora/x86_64/os/',
-                      u'nfs://lab.test-kickstart.invalid:/distros/F-16/GOLD/Fedora/x86_64/os/'])
-        cls.f16_x86_64.repos[:] = [
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-17/GOLD/Fedora/armhfp/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-17/GOLD/Fedora/armhfp/os/'])
+        cls.f17_armhfp.repos[:] = [
             DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
         ]
-        cls.f16_armhfp = data_setup.create_distro_tree(
-                distro=cls.f16, variant=u'Fedora', arch=u'armhfp',
-                lab_controllers=[cls.lab_controller],
-                urls=[u'http://lab.test-kickstart.invalid/distros/F-16/GOLD/Fedora/armhfp/os/',
-                      u'nfs://lab.test-kickstart.invalid:/distros/F-16/GOLD/Fedora/armhfp/os/'])
-        cls.f16_armhfp.repos[:] = [
-            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
-        ]
-
 
         cls.f18 = data_setup.create_distro(name=u'Fedora-18',
                 osmajor=u'Fedora18', osminor=u'0')
@@ -253,6 +247,14 @@ EOF
                 urls=[u'http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/x86_64/os/',
                       u'nfs://lab.test-kickstart.invalid:/distros/F-18/GOLD/Fedora/x86_64/os/'])
         cls.f18_x86_64.repos[:] = [
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+        ]
+        cls.f18_armhfp = data_setup.create_distro_tree(
+                distro=cls.f18, variant=u'Fedora', arch=u'armhfp',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/armhfp/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/F-18/GOLD/Fedora/armhfp/os/'])
+        cls.f18_armhfp.repos[:] = [
             DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
         ]
 
@@ -588,6 +590,34 @@ EOF
         compare_expected('RedHatEnterpriseLinux7-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_rhel7_manual(self):
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                                          fqdn='test-manual-1.test-kickstart.invalid',
+                                          lab_controller=self.lab_controller)
+        system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
+                ks_meta=u'manual')
+
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+
+        compare_expected('RedHatEnterpriseLinux7-scheduler-manual', recipe.id,
+                         recipe.rendered_kickstart.kickstart)
+
     def test_rhel7_repos(self):
         recipe = self.provision_recipe('''
             <job>
@@ -644,14 +674,14 @@ EOF
         self.assert_(r'''vmcp ipl''' not in recipe.rendered_kickstart.kickstart,
                      recipe.rendered_kickstart.kickstart)
 
-    def test_fedora16_defaults(self):
+    def test_fedora18_defaults(self):
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
                 <recipeSet>
                     <recipe>
                         <distroRequires>
-                            <distro_name op="=" value="Fedora-16" />
+                            <distro_name op="=" value="Fedora-18" />
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
@@ -661,7 +691,7 @@ EOF
                 </recipeSet>
             </job>
             ''', self.system)
-        compare_expected('Fedora16-scheduler-defaults', recipe.id,
+        compare_expected('Fedora18-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
     def test_fedora_repos(self):
@@ -689,6 +719,36 @@ EOF
         self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/Fedora18/'''
                      in recipe.rendered_kickstart.kickstart.splitlines(),
                      recipe.rendered_kickstart.kickstart)
+
+    def test_job_group_password(self):
+        group = data_setup.create_group(group_name='group1', root_password='blappy7')
+        self.user.groups.append(group)
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        session.commit()
+        session.begin()
+
+        recipe = self.provision_recipe('''
+            <job group='group1'>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assert_(
+                'rootpw --iscrypted %s' % group.root_password
+                in recipe.rendered_kickstart.kickstart.splitlines(),
+                recipe.rendered_kickstart.kickstart)
 
 
 
@@ -746,9 +806,10 @@ EOF
                 in recipe.rendered_kickstart.kickstart.splitlines(),
                 recipe.rendered_kickstart.kickstart)
 
-    def test_manual(self):
+    def test_rhel6_manual(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
-                lab_controller=self.lab_controller)
+                                          fqdn='test-manual-1.test-kickstart.invalid',
+                                          lab_controller=self.lab_controller)
         system.provisions[system.arch[0]] = Provision(arch=system.arch[0],
                 ks_meta=u'manual')
         recipe = self.provision_recipe('''
@@ -768,14 +829,9 @@ EOF
                 </recipeSet>
             </job>
             ''', system)
-        self.assert_(
-                r'''ignoredisk --interactive'''
-                in recipe.rendered_kickstart.kickstart.splitlines(),
-                recipe.rendered_kickstart.kickstart)
-        self.assert_(
-                r'''%packages'''
-                not in recipe.rendered_kickstart.kickstart.splitlines(),
-                recipe.rendered_kickstart.kickstart)
+
+        compare_expected('RedHatEnterpriseLinux6-scheduler-manual', recipe.id,
+                         recipe.rendered_kickstart.kickstart)
 
     def test_leavebootorder(self):
         system = data_setup.create_system(arch=u'ppc64', status=u'Automated',
@@ -937,6 +993,45 @@ logvol /butter --name=butter --vgname=TestVolume001 --size=25600 --fstype btrfs
                 in recipe.rendered_kickstart.kickstart,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_sshkeys_group(self):
+        self.user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'neveroddoreven', u'description'))
+        user2 = data_setup.create_user()
+        user2.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'murderforajarofredrum', u'description'))
+        group = data_setup.create_group(group_name=data_setup.unique_name('group%s'))
+        self.user.groups.append(group)
+        user2.groups.append(group)
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        recipe = self.provision_recipe('''
+            <job group="%s">
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''' % group.group_name, system)
+
+        self.assert_('''
+mkdir -p /root/.ssh
+cat >>/root/.ssh/authorized_keys <<"__EOF__"
+ssh-rsa neveroddoreven description
+ssh-rsa murderforajarofredrum description
+__EOF__
+restorecon -R /root/.ssh
+chmod go-w /root /root/.ssh /root/.ssh/authorized_keys
+'''
+                in recipe.rendered_kickstart.kickstart,
+                recipe.rendered_kickstart.kickstart)
+
     def test_sshkeys(self):
         self.user.root_password = '$1$beaker$yMeLK4p1IVkFa80RyTkpE.'
         self.user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'lolthisismykey', u'description'))
@@ -1079,7 +1174,7 @@ bootloader --location=mbr
         self.assert_('# Check in with Beaker Server' in klines, k)
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
-        self.assert_('yum -y install beah' in klines, k)
+        self.assert_('yum -y install beah rhts-test-env beakerlib' in klines, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=801676
     def test_custom_kickstart_ssh_keys(self):
@@ -1433,7 +1528,7 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
                 <recipeSet>
                     <recipe>
                         <distroRequires>
-                            <distro_name op="=" value="Fedora-16" />
+                            <distro_name op="=" value="Fedora-18" />
                             <distro_arch op="=" value="armhfp" />
                         </distroRequires>
                         <hostRequires/>
@@ -1456,7 +1551,7 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
                 <recipeSet>
                     <recipe>
                         <distroRequires>
-                            <distro_name op="=" value="Fedora-16" />
+                            <distro_name op="=" value="Fedora-18" />
                             <distro_arch op="=" value="armhfp" />
                         </distroRequires>
                         <hostRequires/>
@@ -1468,6 +1563,27 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
         k = recipe.rendered_kickstart.kickstart
         self.assert_('# Install U-Boot boot.scr' in k.splitlines(), k)
         self.assert_('Yosemite Fedora' in k, k)
+
+    def test_f17_arm(self):
+        # Fedora 17 ARM had some special one-off hacks
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-17" />
+                            <distro_arch op="=" value="armhfp" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system_armhfp)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('http://dmarlin.fedorapeople.org/yum/f17/arm/os/Packages/' in k, k)
+        self.assert_('%packages --ignoremissing\nuboot-tools' in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=728410
     def test_per_system_packages(self):
@@ -1595,3 +1711,47 @@ done
         self.assert_('export BEAKER_RECIPE_ID=%s' % recipe.id in k, k)
         self.assert_('export BEAKER_HUB_URL="%s"' % get_server_base() in k, k)
         self.assert_('yum -y install my-alternative-harness' in k, k)
+
+    def test_btrfs_volume(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="btrfs" name="mnt/testarea1" size="10" type="part"/>
+                            <partition fs="btrfs" name="mnt/testarea2" size="10" type="part"/>
+                        </partitions>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        self.assert_('''part /boot --size 200 --recommended --asprimary
+part / --size 1024 --grow
+part swap --recommended
+'''
+                    in recipe.rendered_kickstart.kickstart,
+                    recipe.rendered_kickstart.kickstart)
+
+        self.assert_('''
+part btrfs.mnt_testarea1 --size=10240
+btrfs /mnt/testarea1 --label=mnt_testarea1 btrfs.mnt_testarea1
+'''
+                     in recipe.rendered_kickstart.kickstart,
+                     recipe.rendered_kickstart.kickstart)
+
+        self.assert_('''
+part btrfs.mnt_testarea2 --size=10240
+btrfs /mnt/testarea2 --label=mnt_testarea2 btrfs.mnt_testarea2
+'''
+                     in recipe.rendered_kickstart.kickstart,
+                     recipe.rendered_kickstart.kickstart)

@@ -7,9 +7,13 @@ from bkr.common.helpers import makedirs_ignore
 
 class LogFile(object):
 
-    def __init__(self, path, register_func):
+    def __init__(self, path, register_func, create=True):
         self.path = path #: absolute path where the log will be stored
         self.register_func = register_func #: called only if the file was created
+        self.create = create #: create the file if it doesn't exist
+
+    def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__, self.path)
 
     def open_ro(self):
         """
@@ -20,23 +24,31 @@ class LogFile(object):
     def __enter__(self):
         makedirs_ignore(os.path.dirname(self.path), 0755)
         created = False
-        try:
-            # stdio does not have any mode string which corresponds to this 
-            # combination of flags, so we have to use raw os.open :-(
-            fd = os.open(self.path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0644)
-            created = True
-        except (OSError, IOError), e:
-            if e.errno != errno.EEXIST:
-                raise
+        if self.create:
+            try:
+                # stdio does not have any mode string which corresponds to this 
+                # combination of flags, so we have to use raw os.open :-(
+                fd = os.open(self.path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0644)
+                created = True
+            except (OSError, IOError), e:
+                if e.errno != errno.EEXIST:
+                    raise
+                fd = os.open(self.path, os.O_RDWR)
+        else:
             fd = os.open(self.path, os.O_RDWR)
         try:
             self.f = os.fdopen(fd, 'r+')
+        except Exception:
+            os.close(fd)
+            raise
+        try:
             if created:
                 # first time we have touched this file, need to register it
                 self.register_func()
             return self
         except Exception:
-            os.close(fd)
+            self.f.close()
+            del self.f
             raise
 
     def __exit__(self, type, value, traceback):
@@ -72,7 +84,7 @@ class LogStorage(object):
         self.base_url = base_url
         self.hub = hub
 
-    def recipe(self, recipe_id, path):
+    def recipe(self, recipe_id, path, create=True):
         path = os.path.normpath(path.lstrip('/'))
         if path.startswith('../'):
             raise ValueError('Upload path not allowed: %s' % path)
@@ -83,9 +95,10 @@ class LogStorage(object):
         return LogFile(os.path.join(recipe_base_dir, path),
                 lambda: self.hub.recipes.register_file(recipe_base_url,
                     recipe_id, os.path.dirname(path), os.path.basename(path),
-                    recipe_base_dir))
+                    recipe_base_dir),
+                create=create)
 
-    def task(self, task_id, path):
+    def task(self, task_id, path, create=True):
         path = os.path.normpath(path.lstrip('/'))
         if path.startswith('../'):
             raise ValueError('Upload path not allowed: %s' % path)
@@ -96,9 +109,10 @@ class LogStorage(object):
         return LogFile(os.path.join(task_base_dir, path),
                 lambda: self.hub.recipes.tasks.register_file(task_base_url,
                     task_id, os.path.dirname(path), os.path.basename(path),
-                    task_base_dir))
+                    task_base_dir),
+                create=create)
 
-    def result(self, result_id, path):
+    def result(self, result_id, path, create=True):
         path = os.path.normpath(path.lstrip('/'))
         if path.startswith('../'):
             raise ValueError('Upload path not allowed: %s' % path)
@@ -109,4 +123,5 @@ class LogStorage(object):
         return LogFile(os.path.join(result_base_dir, path),
                 lambda: self.hub.recipes.tasks.register_result_file(result_base_url,
                     result_id, os.path.dirname(path), os.path.basename(path),
-                    result_base_dir))
+                    result_base_dir),
+                create=create)

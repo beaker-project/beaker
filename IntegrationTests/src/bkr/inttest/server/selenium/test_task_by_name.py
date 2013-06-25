@@ -1,32 +1,27 @@
 #!/usr/bin/python
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
-import unittest, time, re, os
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest import data_setup, get_server_base
+from bkr.inttest.server.webdriver_utils import is_text_present
+import unittest
 from turbogears.database import session
 
-class TaskByName(SeleniumTestCase):
+class TaskByName(WebDriverTestCase):
 
-    @with_transaction
     def setUp(self):
-        self.my_task = data_setup.create_task()
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-
-    def test_task_redirect(self):
-        sel = self.selenium
-        task_id = self.my_task.id
-        task_name = self.my_task.name
-        sel.open('tasks%s' % task_name)
-        sel.wait_for_page_to_load('30000')
-        self.failUnless(sel.is_text_present("Tasks - %s" % task_name))
-        data_from_name = sel.get_text("//body")
-
-        sel.open('tasks/%s' % task_id)
-        sel.wait_for_page_to_load('30000')
-        self.failUnless(sel.is_text_present("Tasks - %s" % task_name))
-        data_from_id = sel.get_text("//body")
-
-        self.assertEqual(data_from_id, data_from_name)
+        with session.begin():
+            self.my_task = data_setup.create_task()
+        self.browser = self.get_browser()
 
     def tearDown(self):
-        self.selenium.stop()
+        self.browser.quit()
+
+    def test_task_redirect(self):
+        b = self.browser
+        task_id = self.my_task.id
+        task_name = self.my_task.name
+
+        b.get(get_server_base() + 'tasks%s' % task_name)
+        self.assert_('Tasks - %s' % task_name in b.find_element_by_xpath('//body').text)
+
+        b.get(get_server_base() + 'tasks/%s' % task_id)
+        self.assert_('Tasks - %s' % task_name in b.find_element_by_xpath('//body').text)

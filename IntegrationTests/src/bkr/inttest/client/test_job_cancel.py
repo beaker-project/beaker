@@ -2,13 +2,28 @@
 import unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError, \
+    create_client_config
 
 class JobCancelTest(unittest.TestCase):
 
     @with_transaction
     def setUp(self):
         self.job = data_setup.create_job()
+
+    def test_can_cancel_group_job(self):
+        with session.begin():
+            group = data_setup.create_group()
+            user = data_setup.create_user(password='password')
+            user2 = data_setup.create_user()
+            user.groups.append(group)
+            user2.groups.append(group)
+            self.job.group = group
+            self.job.owner = user2
+        client_config = create_client_config(username=user.user_name,
+            password='password')
+        out = run_client(['bkr', 'job-cancel',
+            self.job.t_id], config=client_config)
 
     def test_cannot_cancel_recipe(self):
         try:

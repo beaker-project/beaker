@@ -519,7 +519,7 @@ result of the XSLT processing"""
         """Returns the internal XML document as a libxml2.xmlDoc, used for the
 XSLT parsing.  This is most useful for debugging only"""
         if self.internalxml is None:
-            raise Exception('Beaker XML has not been generated yet  - hint: JobConfig::GenerateXML()')
+            return self.__generate_internal_xml()
         return self.internalxml
 
 
@@ -725,20 +725,20 @@ class Workflow_XSLT(BeakerCommand):
         self.__job_cfg.PrintJobArguments()
         print '-' * 75
 
+        # Do we want to save the internal XML used for the XSLT processing?
+        saved = False
+        if globalargs['internalxml']:
+            self.__job_cfg.GetInternalXMLdoc().saveFormatFileEnc(globalargs['internalxml'], 'UTF-8', 1)
+            saved = True
+
         # Do the main work - this does the XSLT processing
         self.__job_cfg.GenerateXML()
 
         # Fetch the result and do something with it
 
         # Do we want to save the Beaker XML in addition?
-        saved = False
         if globalargs['beakerxml']:
             self.__job_cfg.SaveBeakerXML(globalargs['beakerxml'])
-            saved = True
-
-        # Do we want to save the internal XML used for the XSLT processing?
-        if globalargs['internalxml']:
-            self.__job_cfg.GetInternalXMLdoc().saveFormatFileEnc(globalargs['internalxml'], 'UTF-8', 1)
             saved = True
 
         # Send the job to Beaker, if it's not a dry-run.

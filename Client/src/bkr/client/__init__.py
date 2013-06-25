@@ -67,8 +67,6 @@ class BeakerWorkflow(BeakerCommand):
         """ Initialize Workflow """
         super(BeakerWorkflow, self).__init__(*args, **kwargs)
         self.multi_host = False
-        self.n_clients = 1
-        self.n_servers = 1
 
     def options(self):
         """ Default options that all Workflows use """
@@ -223,6 +221,10 @@ class BeakerWorkflow(BeakerCommand):
 
         job_options = OptionGroup(self.parser, 'Options for job configuration')
         job_options.add_option(
+             "--job-group",
+             help="Associate a group to this job"
+        )
+        job_options.add_option(
             "--whiteboard",
             default="",
             help="Set the whiteboard for this job",
@@ -301,15 +303,15 @@ class BeakerWorkflow(BeakerCommand):
         multihost_options = OptionGroup(self.parser, 'Options for multi-host testing')
         multihost_options.add_option(
             "--clients", metavar="NUMBER",
-            default=None,
+            default=0,
             type=int,
-            help="Include NUMBER client hosts in multi-host test",
+            help="Include NUMBER client hosts in multi-host test [default: %default]",
         )
         multihost_options.add_option(
             "--servers", metavar="NUMBER",
-            default=None,
+            default=0,
             type=int,
-            help="Include NUMBER server hosts in multi-host test",
+            help="Include NUMBER server hosts in multi-host test [default: %default]",
         )
         self.parser.add_option_group(multihost_options)
 
@@ -359,8 +361,8 @@ class BeakerWorkflow(BeakerCommand):
 
         types    = kwargs.get("type", None)
         packages = kwargs.get("package", None)
-        self.n_clients = kwargs.get("clients", None)
-        self.n_servers = kwargs.get("servers", None)
+        self.n_clients = kwargs.get("clients", 0)
+        self.n_servers = kwargs.get("servers", 0)
         quiet = kwargs.get("quiet", False)
 
         if not hasattr(self,'hub'):
@@ -491,6 +493,8 @@ class BeakerJob(BeakerBase):
             self.node.setAttribute('retention_tag', kwargs.get('retention_tag'))
         if kwargs.get('product'):
             self.node.setAttribute('product', kwargs.get('product'))
+        if kwargs.get('job_group'):
+            self.node.setAttribute('group', kwargs.get('job_group'))
 
     def addRecipeSet(self, recipeSet=None):
         """ properly add a recipeSet to this job """

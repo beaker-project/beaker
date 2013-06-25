@@ -507,7 +507,7 @@ class Root(RPCRoot):
                                     {su.Disk:{'all':[]}},
                                     {su.Key:{'all':[]}}]),
                                search_controller=url("/get_search_options"),
-                               date_picker = ['system/added'],
+                               date_picker = ['system/added', 'system/lastinventoried'],
                                table_search_controllers = {'key/value':url('/get_keyvalue_search_options')},)
 
         if 'quick_search' in kw:
@@ -543,7 +543,11 @@ class Root(RPCRoot):
                                   'System/Model','System/Arch', 'System/User', 'System/Type') 
 
         if kw.get('xmlsearch'):
-            systems = needpropertyxml.apply_system_filter('<and>%s</and>' % kw['xmlsearch'], systems)
+            try:
+                systems = needpropertyxml.apply_system_filter('<and>%s</and>' % kw['xmlsearch'], systems)
+            except ValueError,e:
+                response.status = 400
+                return e.message
 
         if kw.get("systemsearch"):
             searchvalue = kw['systemsearch']

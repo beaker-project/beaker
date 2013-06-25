@@ -127,7 +127,7 @@ class Jobs(RPCRoot):
     def _check_job_deletability(self, job):
         if not isinstance(job, Job):
             raise TypeError('%s is not of type %s' % (t_id, Job.__name__))
-        if not job.can_admin(identity.current.user):
+        if not job.can_delete(identity.current.user):
             raise BeakerException(_(u'You do not have permission to delete %s' % t_id))
 
     def _delete_job(self, t_id):
@@ -304,7 +304,7 @@ class Jobs(RPCRoot):
                 job = TaskBase.get_by_t_id(j_id)
                 if not isinstance(job,Job):
                     raise BeakerException('Incorrect task type passed %s' % j_id )
-                if not job.can_admin(identity.current.user):
+                if not job.can_delete(identity.current.user):
                     raise BeakerException("You don't have permission to delete job %s" % j_id)
                 jobs_to_try_to_del.append(job)
             delete_jobs_kw = dict(jobs=jobs_to_try_to_del)
@@ -374,7 +374,11 @@ class Jobs(RPCRoot):
             textxml = recipeset.to_xml(clone=True,from_job=False).toprettyxml()
         elif isinstance(filexml, cgi.FieldStorage):
             # Clone from file
-            textxml = filexml.value.decode('utf8')
+            try:
+                textxml = filexml.value.decode('utf8')
+            except UnicodeDecodeError, e:
+                flash(_(u'Invalid job XML: %s') % e)
+                redirect('.')
         elif textxml:
             try:
                 # xml.sax (and thus, xmltramp) expect raw bytes, not unicode
@@ -480,11 +484,20 @@ class Jobs(RPCRoot):
 
         if user.rootpw_expired:
             raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
-
+        group_name =  xmljob.get_xml_attr('group', unicode, None)
+        group = None
+        if group_name:
+            try:
+                group = Group.by_name(group_name)
+            except NoResultFound, e:
+                raise ValueError('%s is not a valid group' % group_name)
+            if group not in user.groups:
+                raise BX(_(u'You are not a member of the %s group' % group_name))
         job_retention = xmljob.get_xml_attr('retention_tag',unicode,None)
         job_product = xmljob.get_xml_attr('product',unicode,None)
         tag, product = self._process_job_tag_product(retention_tag=job_retention, product=job_product)
-        job = Job(whiteboard=unicode(xmljob.whiteboard), ttasks=0, owner=user)
+        job = Job(whiteboard=unicode(xmljob.whiteboard), ttasks=0, owner=user,
+            group=group)
         job.product = product
         job.retention_tag = tag
         email_validator = validators.Email(not_empty=True)
@@ -622,7 +635,8 @@ class Jobs(RPCRoot):
     @identity.require(identity.not_anonymous())
     def set_retention_product(self, job_t_id, retention_tag_name, product_name):
         job = TaskBase.get_by_t_id(job_t_id)
-        if job.can_admin(identity.current.user):
+        if job.can_change_product(identity.current.user) and \
+            job.can_change_retention_tag(identity.current.user):
             if retention_tag_name:
                 try:
                     retention_tag = RetentionTag.by_name(retention_tag_name)
@@ -666,13 +680,7 @@ class Jobs(RPCRoot):
     @identity.require(identity.not_anonymous())
     def set_response(self, job_t_id, response):
         job = TaskBase.get_by_t_id(job_t_id)
-        try: # See if we are a 'RecipeSet'
-            owner_groups = ([g.group_name for g in job.job.owner.groups])
-        except AttributeError: #We are a 'Job'
-            owner_groups = ([g.group_name for g in job.owner.groups])
-        if job.is_owner(identity.current.user) or \
-            'admin' in identity.current.groups or \
-            identity.current.user.in_group(owner_groups):
+        if job.can_set_response(identity.current.user):
             job.set_response(response)
         else:
             raise BeakerException('No permission to modify %s' % job)
@@ -744,6 +752,13 @@ class Jobs(RPCRoot):
                 searchvalue = jobs_return['searchvalue']
             if 'simplesearch' in jobs_return:
                 search_options['simplesearch'] = jobs_return['simplesearch']
+
+        def get_group(x):
+            if x.group:
+                return make_link(url = '../groups/edit?group_id=%d' % x.group.group_id, text=x.group.group_name)
+            else:
+                return None
+
         PDC = widgets.PaginateDataGrid.Column
         jobs_grid = myPaginateDataGrid(
             fields=[
@@ -752,6 +767,9 @@ class Jobs(RPCRoot):
                     title='ID', options=dict(sortable=True)),
                 PDC(name='whiteboard',
                     getter=lambda x:x.whiteboard, title='Whiteboard',
+                    options=dict(sortable=True)),
+                PDC(name='group',
+                    getter=get_group, title='Group',
                     options=dict(sortable=True)),
                 PDC(name='owner',
                     getter=lambda x:x.owner.email_link, title='Owner',
@@ -804,12 +822,20 @@ class Jobs(RPCRoot):
         except InvalidRequestError:
             flash(_(u"Invalid job id %s" % id))
             redirect(".")
-        if not identity.current.user.is_admin() and job.owner != identity.current.user:
+        if not job.can_cancel(identity.current.user):
             flash(_(u"You don't have permission to cancel job id %s" % id))
             redirect(".")
-        job.cancel(msg)
-        flash(_(u"Successfully cancelled job %s" % id))
-        redirect('/jobs/mine')
+
+        try:
+            job.cancel(msg)
+        except StaleTaskStatusException, e:
+            log.warn(str(e))
+            session.rollback()
+            flash(_(u"Could not cancel job id %s. Please try later" % id))
+            redirect(".")
+        else:
+            flash(_(u"Successfully cancelled job %s" % id))
+            redirect('/jobs/mine')
 
     @identity.require(identity.not_anonymous())
     @expose(template="bkr.server.templates.form")
@@ -822,7 +848,7 @@ class Jobs(RPCRoot):
         except InvalidRequestError:
             flash(_(u"Invalid job id %s" % id))
             redirect(".")
-        if not identity.current.user.is_admin() and job.owner != identity.current.user:
+        if not job.can_cancel(identity.current.user):
             flash(_(u"You don't have permission to cancel job id %s" % id))
             redirect(".")
         return dict(
@@ -843,7 +869,8 @@ class Jobs(RPCRoot):
             job = Job.by_id(id)
         except InvalidRequestError:
             raise cherrypy.HTTPError(status=400, message='Invalid job id %s' % id)
-        if not job.can_admin(identity.current.user):
+        if not job.can_change_product(identity.current.user) or not \
+            job.can_change_retention_tag(identity.current.user):
             raise cherrypy.HTTPError(status=403,
                     message="You don't have permission to update job id %s" % id)
         returns = {'success' : True, 'vars':{}}

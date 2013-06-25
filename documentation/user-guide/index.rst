@@ -23,9 +23,11 @@ Contents
 --------
 
 .. toctree::
+   :maxdepth: 2
 
    bkr-client
    interface
-   makefile
+   job-design
    workflow
-   tests
+   writing-tasks
+   beaker-provided-tasks

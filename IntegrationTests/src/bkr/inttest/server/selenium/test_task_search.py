@@ -63,7 +63,8 @@ class ExecutedTasksTest(WebDriverTestCase):
     def test_executed_tasks_system_filter(self):
         with session.begin():
             task = data_setup.create_task()
-            system = data_setup.create_system()
+            system = data_setup.create_system(
+                    lab_controller=data_setup.create_labcontroller())
             job = data_setup.create_completed_job(task_name=task.name,
                     system=system)
         b = self.browser

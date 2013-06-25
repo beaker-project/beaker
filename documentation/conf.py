@@ -6,14 +6,15 @@ project = u'Beaker'
 copyright = u'2013, Red Hat, Inc'
 
 try:
-    import bkr
-    release = bkr.__version__
+    import bkr.common
+    release = bkr.common.__version__
     version = '.'.join(release.split('.')[:2])
 except ImportError:
     release = 'dev'
     version = 'dev'
 
 html_title = 'Beaker %s' % version
+html_short_title = 'Beaker'
 html_use_index = False
 html_domain_indices = False
 

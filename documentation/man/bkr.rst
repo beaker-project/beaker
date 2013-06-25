@@ -235,6 +235,11 @@ Options for selecting tasks:
 
 Options for job configuration:
 
+.. option:: --job-group <group>
+
+   Associate the job with <group>. This will allow other group members to 
+   modify the job.
+
 .. option:: --whiteboard <whiteboard>
 
    Set the job's whiteboard to <whiteboard>.

@@ -783,7 +783,7 @@ class TreeInfoBase(object):
                        '../debug'),
                       ('optional-debuginfo',
                        'debug',
-                       '../optional/%s/debug' % arch),
+                       '../../optional/%s/debug' % arch),
                       ('optional',
                        'optional',
                        '../../optional/%s/os' % arch),
@@ -890,7 +890,7 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
         ../repo-srpm-<VARIANT>-<ARCH>/repodata
         arch = ppc64 = ppc
         """
-        repos = super(TreeInfoLegacy, self).find_repos(*args, **kw)
+        repos = []
         # ppc64 arch uses ppc for the repos
         arch = self.tree['arch'].replace('ppc64','ppc')
 

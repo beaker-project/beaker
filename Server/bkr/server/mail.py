@@ -159,3 +159,34 @@ def broken_system_notify(system, reason, recipe=None):
                      ('X-Vendor', system.vendor or ''),
                      ('X-Type', system.type)] +
                     [('X-Arch', arch) for arch in system.arch])
+
+
+def group_membership_notify(user, group, agent, action):
+    """ Send a group membership change notification to the user """
+
+    sender = config.get('beaker_email')
+    if not sender:
+        log.warning("beaker_email not defined in app.cfg; unable to send mail")
+        return
+
+    email_data = {'Added': {'Subject':'Added to Beaker group %s' % group.group_name,
+                            'Body': 'You have been %s to %s group by %s <%s>.'
+                            % (action.lower(), group.group_name, agent.user_name, agent.email_address)
+                            },
+                  'Removed': {'Subject':'Removed from Beaker group %s' % group.group_name,
+                              'Body': 'You have been %s from %s group by %s <%s>.'
+                              % (action.lower(), group.group_name, agent.user_name, agent.email_address)
+                              }}
+    try:
+        subject = email_data[action]['Subject']
+        body = email_data[action]['Body']
+    except KeyError:
+        raise ValueError('Unknown action: %s. (Expected one of %r)' %
+                         (action, email_data.keys()))
+    else:
+        send_mail(sender=sender, to=user.email_address,
+                  subject='[Group Membership] %s' % subject,
+                  body=body,
+                  headers=[('X-Beaker-Notification', 'group-membership'),
+                           ('X-Beaker-Group', group.group_name),
+                           ('X-Beaker-Group-Action',action)])

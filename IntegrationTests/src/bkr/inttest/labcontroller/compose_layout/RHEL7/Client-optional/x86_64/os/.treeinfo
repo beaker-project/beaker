@@ -1,0 +1,12 @@
+[checksums]
+repodata/repomd.xml = sha256:522500d4c9ef45d58e9d7768676d5389af5541311c807c9f563bacad9f5904f6
+
+[general]
+arch = x86_64
+family = Red Hat Enterprise Linux
+packages = Packages
+repository = 
+timestamp = 1342048154.878000
+variant = Client-optional
+version = 7.0
+

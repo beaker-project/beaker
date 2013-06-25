@@ -11,7 +11,8 @@ class SystemDeleteTest(unittest.TestCase):
         self.user = data_setup.create_user(password=u'asdf')
         self.user2 = data_setup.create_user(password=u'qwerty')
 
-        self.system = data_setup.create_system(owner=self.user)
+        self.system = data_setup.create_system(owner=self.user,
+                lab_controller=data_setup.create_labcontroller())
 
         self.client_config = create_client_config(username=self.user.user_name,
                 password='asdf')

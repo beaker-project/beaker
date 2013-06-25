@@ -22,7 +22,6 @@ else
     rhts-run-simple-test $TEST/yum_install "yum install -y beaker-integration-tests$VERSION"
 fi
 rhts-run-simple-test $TEST/update_config "./update-config.sh"
-rhts-run-simple-test $TEST/httpd_reload "/sbin/service httpd reload"
 
 if echo $SERVERS | grep -q $HOSTNAME ; then
     echo "Running with remote lab controller: ${CLIENTS}"

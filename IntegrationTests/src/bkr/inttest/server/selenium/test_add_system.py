@@ -129,8 +129,8 @@ class AddSystem(SeleniumTestCase):
         self.assert_system_view_text('private', 'True')
 
     def test_case_5(self):
-        data_setup.create_system(fqdn=u'preexisting-system')
-        session.flush()
+        with session.begin():
+            data_setup.create_system(fqdn=u'preexisting-system')
         system_details = dict(fqdn = 'preexisting-system', #should fail as system is already in db
                               lender = 'lender',
                               serial = '444g!!!444',

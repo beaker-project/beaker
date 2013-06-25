@@ -4,7 +4,7 @@ from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase, \
     WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_activity_row_present
-from bkr.inttest import data_setup, get_server_base
+from bkr.inttest import data_setup, get_server_base, fix_beakerd_repodata_perms
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
         System, SystemStatus, TaskStatus, CommandActivity, CommandStatus, \
         KernelType, LabController
@@ -291,10 +291,10 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
 
     def test_clear_running_commands(self):
         with session.begin():
+            system = data_setup.create_system(lab_controller=self.lc)
             command = CommandActivity(
                     user=None, service=u'testdata', action=u'on',
                     status=CommandStatus.running)
-            system = data_setup.create_system(lab_controller=self.lc)
             system.command_queue.append(command)
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         self.server.labcontrollers.clear_running_commands(u'Staleness')
@@ -331,6 +331,10 @@ class TestPowerFailures(XmlRpcTestCase):
         self.server = self.get_server()
         self.server.auth.login_password(self.lab_controller.user.user_name,
                 u'logmein')
+
+    @classmethod
+    def tearDownClass(cls):
+        fix_beakerd_repodata_perms()
 
     def test_automated_system_marked_broken(self):
         with session.begin():

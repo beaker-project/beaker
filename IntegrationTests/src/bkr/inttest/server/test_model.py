@@ -5,6 +5,7 @@ import unittest
 import pkg_resources
 import lxml.etree
 import email
+import inspect
 from turbogears.database import session
 from bkr.server.installopts import InstallOptions
 from bkr.server import model
@@ -14,7 +15,9 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
-        RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult
+        RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
+        Group, User, ActivityMixin
+from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
@@ -31,6 +34,26 @@ class SchemaSanityTest(unittest.TestCase):
                     'SELECT engine FROM information_schema.tables '
                     'WHERE table_schema = DATABASE() AND table_name = %s',
                     table), 'InnoDB')
+
+class ActivityMixinTest(unittest.TestCase):
+
+    def test_field_names_correct(self):
+        # Ensure ActivityMixin._fields stays in sync with the parameters
+        # accepted by ActivityMixin._record_activity_inner
+        argspec = inspect.getargspec(ActivityMixin._record_activity_inner)
+        params = tuple(argspec[0][1:]) # skip 'self'
+        self.assertEqual(ActivityMixin._fields, params)
+
+    def test_log_formatting(self):
+        # Ensure ActivityMixin._log_fmt works as expected
+        entries = dict((v, k) for k, v in enumerate(ActivityMixin._fields))
+        entries['kind'] = 'ActivityKind'
+        text = ActivityMixin._log_fmt % entries
+        self.assert_(text.startswith('Tentative ActivityKind:'))
+        entries.pop('kind')
+        for name, value in entries.items():
+            self.assert_(('%s=%r' % (name, value)) in text, text)
+
 
 class TestSystem(unittest.TestCase):
 
@@ -133,8 +156,8 @@ class TestBrokenSystemDetection(unittest.TestCase):
 
     def setUp(self):
         session.begin()
-        self.system = data_setup.create_system()
-        self.system.status = SystemStatus.automated
+        self.system = data_setup.create_system(status=SystemStatus.automated,
+                lab_controller=data_setup.create_labcontroller())
         data_setup.create_completed_job(system=self.system)
         session.flush()
         time.sleep(1)
@@ -222,7 +245,8 @@ class TestJob(unittest.TestCase):
         data_setup.mark_job_complete(job)
 
     def test_stopping_completed_job_doesnt_unreserve_system(self):
-        system = data_setup.create_system()
+        system = data_setup.create_system(
+                lab_controller=data_setup.create_labcontroller())
         admin  = data_setup.create_admin()
         job = data_setup.create_job(owner=admin)
         data_setup.mark_job_complete(job, system=system)
@@ -466,6 +490,13 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
     def tearDown(self):
         session.commit()
 
+    def check_systems(self, present, absent, systems):
+        for system in present:
+            self.assert_(system in systems)
+
+        for system in absent:
+            self.assert_(system not in systems)
+
     # test cases for <group/> are in bkr.server.test.test_group_xml
 
     def test_autoprov(self):
@@ -618,21 +649,193 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
         self.assert_(excluded not in systems)
         self.assert_(included in systems)
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=955868
     def test_system_added(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.manual,
-                date_added=datetime.datetime(2011, 9, 1, 0, 0, 0))
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.automated,
-                date_added=datetime.datetime(2012, 9, 1, 0, 0, 0))
+
+        # date times
+        today = datetime.date.today()
+        time_now = datetime.datetime.combine(today, datetime.time(0, 0))
+        time_delta1 = datetime.datetime.combine(today, datetime.time(0, 30))
+        time_tomorrow = time_now + datetime.timedelta(days=2)
+
+        # today date
+        date_today = time_now.date().isoformat()
+        date_tomorrow = time_tomorrow.date().isoformat()
+
+        sys_today1 = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc, date_added=time_now)
+        sys_today2 = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc, date_added=time_delta1)
+        sys_tomorrow = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc, date_added=time_tomorrow)
+
         session.flush()
+
+        # on a date
         systems = self.distro_tree.systems_filter(self.user, """
             <hostRequires>
-                <system><date_added op="&gt;" value="2012-01-01" /></system>
+                <system><added op="=" value="%s" /></system>
             </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
+            """% date_today).all()
+
+        self.assert_(sys_today1 in systems)
+        self.assert_(sys_today2 in systems)
+        self.assert_(sys_tomorrow not in systems)
+
+        # not on a date
+        systems = self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <system><added op="!=" value="%s" /></system>
+            </hostRequires>
+            """% date_today).all()
+
+        self.assert_(sys_today1 not in systems)
+        self.assert_(sys_today2 not in systems)
+        self.assert_(sys_tomorrow in systems)
+
+        # after a date
+        systems = self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <system><added op="&gt;" value="%s" /></system>
+            </hostRequires>
+            """% date_today).all()
+
+        self.assert_(sys_tomorrow in systems)
+        self.assert_(sys_today1 not in systems)
+        self.assert_(sys_today2 not in systems)
+
+        # before a date
+        systems = self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <system><added op="&lt;" value="%s" /></system>
+            </hostRequires>
+            """% date_tomorrow).all()
+
+        self.assert_(sys_tomorrow not in systems)
+        self.assert_(sys_today1 in systems)
+        self.assert_(sys_today2 in systems)
+
+
+        # on a date time
+        try:
+            systems = self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <system><added op="=" value="%s" /></system>
+            </hostRequires>
+            """% time_now).all()
+            self.fail('Fail or Die')
+        except ValueError,e:
+            self.assert_('Invalid date format' in str(e), e)
+
+    # https://bugzillaOA.redhat.com/show_bug.cgi?id=949777
+    def test_system_inventory_filter(self):
+
+        # date times
+        today = datetime.date.today()
+        time_now = datetime.datetime.combine(today, datetime.time(0, 0))
+        time_delta1 = datetime.datetime.combine(today, datetime.time(0, 30))
+        time_tomorrow = time_now + datetime.timedelta(days=1)
+        time_dayafter = time_now + datetime.timedelta(days=2)
+
+        # dates
+        date_today = time_now.date().isoformat()
+        date_tomorrow = time_tomorrow.date().isoformat()
+        date_dayafter = time_dayafter.date().isoformat()
+
+        not_inv = data_setup.create_system()
+        inv1 = data_setup.create_system()
+        inv1.date_lastcheckin = time_now
+        inv2 = data_setup.create_system()
+        inv2.date_lastcheckin = time_delta1
+        inv3 = data_setup.create_system()
+        inv3.date_lastcheckin = time_tomorrow
+
+        session.flush()
+
+        # not inventoried
+        systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="=" value="" /> </system>
+                </hostRequires>
+                """).all()
+
+        self.check_systems(present=[not_inv],
+                           absent=[inv1,inv2,inv3],
+                           systems=systems)
+        # inventoried
+        systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="!=" value="" /> </system>
+                </hostRequires>
+                """).all()
+
+        self.check_systems(present=[inv1,inv2,inv3],
+                           absent=[not_inv],
+                           systems=systems)
+
+        # on a particular day
+        systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="=" value="%s" /> </system>
+                </hostRequires>
+                """ %date_today).all()
+
+        self.check_systems(present=[inv1,inv2],
+                           absent=[not_inv, inv3],
+                           systems=systems)
+
+        # on a particular day on which no machines have been inventoried
+        systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="=" value="%s" /> </system>
+                </hostRequires>
+                """ %date_dayafter).all()
+
+        self.assertEquals(len(systems),0)
+
+        # not on a particular day
+        systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="!=" value="%s" /> </system>
+                </hostRequires>
+                """ %date_today).all()
+
+        self.check_systems(present=[inv3],
+                           absent=[not_inv,inv1,inv2],
+                           systems=systems)
+
+        # after a particular day
+        systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="&gt;" value="%s" /> </system>
+                </hostRequires>
+                """ %date_today).all()
+
+        self.check_systems(present=[inv3],
+                           absent=[not_inv, inv1, inv2],
+                           systems=systems)
+
+        # Invalid date with &gt;
+        try:
+            systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="&gt;" value="foo-bar-baz f:b:z" /> </system>
+                </hostRequires>
+                """).all()
+            self.fail('Must Fail or Die')
+        except ValueError, e:
+            self.assert_('Invalid date format' in str(e), e)
+
+        # Invalid date format with =
+        try:
+            systems = self.distro_tree.systems_filter(self.user, """
+                <hostRequires>
+                    <system> <last_inventoried op="=" value="2013-10-10 00:00:10" /> </system>
+                </hostRequires>
+                """).all()
+            self.fail('Must Fail or Die')
+        except ValueError, e:
+            self.assert_('Invalid date format' in str(e), e)
 
     def test_system_loaned(self):
         user1 = data_setup.create_user()
@@ -1473,6 +1676,135 @@ class UserTest(unittest.TestCase):
         except ValueError:
             pass
 
+class GroupTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.rollback()
+
+    def test_add_user(self):
+        owner = data_setup.create_user()
+        member = data_setup.create_user()
+        group = data_setup.create_group(owner=owner)
+        group.users.append(member)
+        session.flush()
+
+        self.assert_(group.has_owner(owner))
+        self.assert_(owner in group.users)
+        self.assert_(not group.has_owner(member))
+        self.assert_(member in group.users)
+
+    def check_activity(self, activity, user, service, action,
+                       field, old, new):
+        self.assertEquals(activity.user, user)
+        self.assertEquals(activity.service, service)
+        self.assertEquals(activity.action, action)
+        self.assertEquals(activity.field_name, field)
+        self.assertEquals(activity.old_value, old)
+        self.assertEquals(activity.new_value, new)
+
+    def test_set_name(self):
+        orig_name = u'beakerdevs'
+        group = Group(group_name=orig_name,
+                      display_name=u'Beaker Developers')
+        session.flush()
+        self.assertFalse(group.is_protected_group())
+        # Setting the same name is a no-op
+        group.set_name(None, u'TEST', orig_name)
+        self.assertEquals(len(group.activity), 0)
+        # As is setting None
+        group.set_name(None, u'TEST', None)
+        self.assertEquals(len(group.activity), 0)
+        # Now check changing the name is properly recorded
+        new_name = u'beakerteam'
+        group.set_name(None, u'TEST', new_name)
+        self.assertEquals(group.group_name, new_name)
+        self.assertEquals(group.display_name, u'Beaker Developers')
+        self.assertEquals(len(group.activity), 1)
+        self.check_activity(group.activity[0], None, u'TEST', u'Changed',
+                            u'Name', orig_name, new_name)
+
+    def test_set_display_name(self):
+        orig_display_name = u'Beaker Developers'
+        group = Group(group_name=u'beakerdevs',
+                      display_name=orig_display_name)
+        session.flush()
+        # Setting the same name is a no-op
+        group.set_display_name(None, u'TEST', orig_display_name)
+        self.assertEquals(len(group.activity), 0)
+        # As is setting None
+        group.set_display_name(None, u'TEST', None)
+        self.assertEquals(len(group.activity), 0)
+        # Now check changing the name is properly recorded
+        new_display_name = u'Beaker Team'
+        group.set_display_name(None, u'TEST', new_display_name)
+        self.assertEquals(group.group_name, u'beakerdevs')
+        self.assertEquals(group.display_name, new_display_name)
+        self.assertEquals(len(group.activity), 1)
+        self.check_activity(group.activity[0], None, u'TEST', u'Changed',
+                            u'Display Name',
+                            orig_display_name, new_display_name)
+
+    def test_cannot_rename_protected_groups(self):
+        # The admin and lab_controller groups exist by default
+        groups = [Group.by_name(u'admin')]
+        groups.append(Group.by_name(u'lab_controller'))
+        # The queue_admin group is also special, but not created by default
+        groups.append(data_setup.create_group(group_name=u'queue_admin'))
+        for group in groups:
+            self.assert_(group.is_protected_group())
+            orig_name = group.group_name
+            orig_display_name = group.display_name
+            # Can't change the real name
+            self.assertRaises(BeakerException, group.set_name,
+                              None, u'TEST', u'bad_rename')
+            self.assertEquals(group.group_name, orig_name)
+            self.assertEquals(group.display_name, orig_display_name)
+            # Can change just the display name
+            group.set_display_name(None, u'TEST', u'New display name')
+            self.assertEquals(group.group_name, orig_name)
+            self.assertEquals(group.display_name, u'New display name')
+
+
+    def test_populate_ldap_group(self):
+        group = Group(group_name=u'beakerdevs',
+                display_name=u'Beaker Developers', ldap=True)
+        session.flush()
+        group.refresh_ldap_members()
+        session.flush()
+        session.expire_all()
+        self.assertEquals(group.users, [User.by_user_name(u'dcallagh')])
+        self.assertEquals(group.activity[0].action, u'Added')
+        self.assertEquals(group.activity[0].field_name, u'User')
+        self.assertEquals(group.activity[0].old_value, None)
+        self.assertEquals(group.activity[0].new_value, u'dcallagh')
+        self.assertEquals(group.activity[0].service, u'LDAP')
+
+    def test_add_remove_ldap_members(self):
+        # billybob will be removed, dcallagh will be added
+        group = Group(group_name=u'beakerdevs',
+                display_name=u'Beaker Developers', ldap=True)
+        old_member = data_setup.create_user(user_name=u'billybob')
+        group.users.append(old_member)
+        self.assertEquals(group.users, [old_member])
+        session.flush()
+        group.refresh_ldap_members()
+        session.flush()
+        session.expire_all()
+        self.assertEquals(group.users, [User.by_user_name(u'dcallagh')])
+        self.assertEquals(group.activity[0].action, u'Removed')
+        self.assertEquals(group.activity[0].field_name, u'User')
+        self.assertEquals(group.activity[0].old_value, u'billybob')
+        self.assertEquals(group.activity[0].new_value, None)
+        self.assertEquals(group.activity[0].service, u'LDAP')
+        self.assertEquals(group.activity[1].action, u'Added')
+        self.assertEquals(group.activity[1].field_name, u'User')
+        self.assertEquals(group.activity[1].old_value, None)
+        self.assertEquals(group.activity[1].new_value, u'dcallagh')
+        self.assertEquals(group.activity[1].service, u'LDAP')
+
 
 class TaskTypeTest(unittest.TestCase):
 
@@ -1700,14 +2032,14 @@ class GuestRecipeTest(unittest.TestCase):
     def test_guestname(self):
         job_1 = data_setup.create_job(num_guestrecipes=1)
         guest_recipe_1 = job_1.recipesets[0].recipes[0].guests[0]
-        job_2 = data_setup.create_job(num_guestrecipes=1, guestname="blueguest")
+        job_2 = data_setup.create_job(num_guestrecipes=1, guestname=u'blueguest')
         guest_recipe_2 = job_2.recipesets[0].recipes[0].guests[0]
         session.flush()
 
         guestxml_1 = guest_recipe_1.to_xml().toxml()
         guestxml_2 = guest_recipe_2.to_xml().toxml()
-        self.assert_('guestname=""' in guestxml_1, guestxml_1)
-        self.assert_('guestname="blueguest"' in guestxml_2, guestxml_2)
+        self.assert_(u'guestname=""' in guestxml_1, guestxml_1)
+        self.assert_(u'guestname="blueguest"' in guestxml_2, guestxml_2)
 
 class MACAddressAllocationTest(unittest.TestCase):
 

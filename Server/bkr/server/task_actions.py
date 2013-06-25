@@ -19,7 +19,7 @@ values for *type*:
 from turbogears.database import session
 from turbogears import expose
 from bkr.server.model import *
-from bkr.server.bexceptions import BX
+from bkr.server.bexceptions import BX, StaleTaskStatusException
 from bkr.server.xmlrpccontroller import RPCRoot
 import cherrypy
 
@@ -101,14 +101,15 @@ class TaskActions(RPCRoot):
         if stop_type not in task.stop_types:
             raise BX(_('Invalid stop_type: %s, must be one of %s' %
                              (stop_type, task.stop_types)))
-        # only allow those with stop_task permission or owners of the 
-        # task to stop a task.
-        if not identity.current.user.has_permission('stop_task') and \
-           getattr(task,'owner') != identity.current.user:
+        if not task.can_stop(identity.current.user):
             raise BX(_("You don't have permission to %s %s" % (stop_type,
                                                                taskid)))
         kwargs = dict(msg = msg)
-        return getattr(task,stop_type)(**kwargs)
+
+        try:
+            return getattr(task,stop_type)(**kwargs)
+        except StaleTaskStatusException:
+            raise BX(_(u"Could not cancel job id %s. Please try later" % task_id))
 
 # for sphinx
 taskactions = TaskActions

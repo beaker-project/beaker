@@ -26,7 +26,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session
 from bkr.server import model
-from bkr.server.model import LabController, User, Group, Distro, DistroTree, Arch, \
+from bkr.server.model import LabController, User, Group, UserGroup, Distro, DistroTree, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
         Device, TaskResult, TaskStatus, Job, RecipeSet, TaskPriority, \
@@ -87,9 +87,9 @@ def create_labcontroller(fqdn=None, user=None):
         lc = LabController.by_name(fqdn)  
     except NoResultFound:
         if user is None:
-            user = create_user()
-            session.flush()
-        lc = LabController.lazy_create(fqdn=fqdn, user=user)
+            user = User(user_name='host/%s' % fqdn)
+        lc = LabController(fqdn=fqdn)
+        lc.user = user
         user.groups.append(Group.by_name(u'lab_controller'))
         return lc
     log.debug('labcontroller %s already exists' % fqdn)
@@ -103,10 +103,7 @@ def create_user(user_name=None, password=None, display_name=None,
         display_name = user_name
     if email_address is None:
         email_address = u'%s@example.com' % user_name
-    # XXX use User.lazy_create
-    user = User.by_user_name(user_name)
-    if user is None:
-        user = User(user_name=user_name)
+    user = User.lazy_create(user_name=user_name)
     user.display_name = display_name
     user.email_address = email_address
     if password:
@@ -122,10 +119,24 @@ def create_admin(**kwargs):
 def add_system_lab_controller(system,lc): 
     system.lab_controller = lc
 
-def create_group(permissions=None):
+def create_group(permissions=None, group_name=None, owner=None, ldap=False,
+    root_password=None):
     # tg_group.group_name column is VARCHAR(16)
-    suffix = unique_name('%s')
-    group = Group(group_name=u'group%s' % suffix, display_name=u'Group %s' % suffix)
+    if group_name is None:
+        group_name = unique_name(u'group%s')
+    assert len(group_name) <= 16
+    group = Group.lazy_create(group_name=group_name)
+    group.root_password = root_password
+    group.display_name = u'Group %s' % group_name
+    group.ldap = ldap
+    if ldap:
+        assert owner is None, 'LDAP groups cannot have owners'
+    if owner:
+        add_owner_to_group(owner, group)
+    else:
+        group_owner = create_user(user_name=unique_name(u'group_owner_%s'))
+        add_owner_to_group(group_owner, group)
+
     if permissions:
         group.permissions.extend(Permission.by_name(name) for name in permissions)
     return group
@@ -137,6 +148,15 @@ def create_permission(name=None):
 
 def add_user_to_group(user,group):
     user.groups.append(group)
+
+def add_owner_to_group(user, group):
+
+    if user not in group.users:
+        group.user_group_assocs.append(UserGroup(user=user, is_owner=True))
+    else:
+        for assoc in group.user_group_assocs:
+            if assoc.user == user:
+                assoc.is_owner = True
 
 def add_group_to_system(system, group, admin=False):
     system.group_assocs.append(SystemGroup(group=group, admin=admin))
@@ -338,7 +358,7 @@ def create_retention_tag(name=None, default=False, needs_product=False):
     return new_tag
 
 def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,
-        retention_tag=None, **kwargs):
+        retention_tag=None, group=None, **kwargs):
     if retention_tag is None:
         retention_tag = RetentionTag.by_tag(u'scratch') # Don't use default, unpredictable
     else:
@@ -348,7 +368,8 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
         owner = create_user()
     if whiteboard is None:
         whiteboard = unique_name(u'job %s')
-    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,retention_tag = retention_tag, product=product)
+    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,
+        retention_tag=retention_tag, group=group, product=product)
     if cc is not None:
         job.cc = cc
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),
@@ -390,6 +411,7 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
     session.flush()
 
     if not server_log:
+        recipe.log_server = recipe.recipeset.lab_controller.fqdn
         recipe.logs = [LogRecipe(path=u'recipe_path',filename=u'dummy.txt')]
     else:
         recipe.log_server = u'dummy-archive-server'
@@ -442,12 +464,14 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
                 recipe.resource = VirtResource(
                         system_name=u'testdata_recipe_%s' % recipe.id)
                 if not lab_controller:
-                    lab_controller = LabController.query.first()
+                    lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
                 recipe.recipeset.lab_controller = lab_controller
                 with model.VirtManager() as manager:
                     recipe.resource.allocate(manager, [lab_controller])
             else:
                 if not system:
+                    if not lab_controller:
+                        lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
                     system = create_system(arch=recipe.arch,
                             lab_controller=lab_controller)
                 recipe.resource = SystemResource(system=system)

@@ -10,9 +10,9 @@ class UserPrefs(WebDriverTestCase):
 
     def setUp(self):
         self.browser = self.get_browser()
-        self.user = data_setup.create_user(password='password')
-        self.user2 = data_setup.create_user()
-        session.flush()
+        with session.begin():
+            self.user = data_setup.create_user(password='password')
+            self.user2 = data_setup.create_user()
         login(self.browser, user=self.user.user_name, password='password')
         self.browser.get(get_server_base() + 'prefs')
 
@@ -36,8 +36,7 @@ class UserPrefs(WebDriverTestCase):
         logout(b)
         login(b, user=self.user.user_name, password='AlbiDoubleyou')
         self.browser.get(get_server_base() + 'prefs')
-        self.assertEquals(b.find_element_by_xpath('//head/title').text,
-            'User Prefs')
+        b.find_element_by_xpath('//h2[text()="Preferences"]')
 
     def test_modifying_email(self):
         current_user_email = self.user.email_address

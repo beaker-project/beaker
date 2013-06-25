@@ -194,7 +194,7 @@ logged in as either the owner of the System, or an admin.
 
 -  *Date Checkin*: When the machine was added to the inventory.
 
--  *Last Checkin*: Last time this machine had its inventory updated
+-  *Last Inventoried*: Last time this machine had its inventory updated
 
 -  *Lender*: Name of the organization that has lent this system to
    beaker's inventory.
@@ -283,6 +283,7 @@ Notes
 Install Options
     These are default options which will be used when a system is provisioned. 
     You can create different options per Arch/Distro combination.
+    See :ref:`install-options` for details about the meaning of these options.
 Provision
     Allows the user of this System to install a Distro on it. 
 Lab Info

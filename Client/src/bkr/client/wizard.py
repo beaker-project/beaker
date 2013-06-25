@@ -328,7 +328,7 @@ Bugs
 If you encounter an issue or have an idea for enhancement, please `file a new bug`_.
 See also `open bugs`_.
 
-.. _file a new bug: https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker&component=command+line&short_desc=beaker-wizard:+&assigned_to=psplicha@redhat.com
+.. _file a new bug: https://bugzilla.redhat.com/enter_bug.cgi?product=Beaker&component=command+line&short_desc=beaker-wizard:+&status_whiteboard=BeakerWizard&assigned_to=psplicha@redhat.com
 .. _open bugs: https://bugzilla.redhat.com/buglist.cgi?product=Beaker&bug_status=__open__&short_desc=beaker-wizard&short_desc_type=allwordssubstr
 
 See also
@@ -1783,9 +1783,14 @@ class Bugs(MultipleChoice):
 
     def getComponent(self):
         """ Return bug component fetched from bugzilla """
-        # ... and ignore generic CVE component "vulnerability"
-        if self.bug and self.bug.component[0] != 'vulnerability':
-            return self.bug.component[0]
+        if self.bug:
+            component = self.bug.component
+            # Use the first component if component list given
+            if isinstance(component, list):
+                component = component[0]
+            # Ignore generic CVE component "vulnerability"
+            if component != 'vulnerability':
+                return component
 
     def getLink(self):
         """ Return URL of the first bug """
@@ -1908,17 +1913,21 @@ class Reproducers(MultipleChoice):
         print "Examining attachments for possible reproducers"
         for attachment in self.bug.attachments:
             # skip obsolete and patch attachments
-            if attachment['ispatch'] == 0 and attachment['isobsolete'] == 0:
-                self.list.append(attachment['filename'])
+            is_patch = attachment.get("is_patch", attachment.get("ispatch"))
+            filename = attachment.get("file_name", attachment.get("filename"))
+            is_obsolete = attachment.get(
+                    "is_obsolete", attachment.get("isobsolete"))
+            if is_patch == 0 and is_obsolete == 0:
+                self.list.append(filename)
                 # add to suggested attachments if it looks like a reproducer
                 if RegExpReproducer.search(attachment['description']) or \
-                        RegExpReproducer.search(attachment['filename']):
-                    self.data.append(attachment['filename'])
-                    self.pref.append(attachment['filename'])
+                        RegExpReproducer.search(filename):
+                    self.data.append(filename)
+                    self.pref.append(filename)
                     print "Adding",
                 else:
                     print "Skipping",
-                print "%s (%s)" % (attachment['filename'], attachment['description'])
+                print "%s (%s)" % (filename, attachment['description'])
                 sleep(1)
 
     def download(self, path):
@@ -1926,17 +1935,20 @@ class Reproducers(MultipleChoice):
         if not self.bug:
             return False
         for attachment in self.bug.attachments:
-            if attachment['filename'] in self.data \
-                    and attachment['isobsolete'] == 0:
-                print "Attachment", attachment['filename'],
+            attachment_filename = attachment.get(
+                    "file_name", attachment.get("filename"))
+            is_obsolete = attachment.get(
+                    "is_obsolete", attachment.get("isobsolete"))
+            if attachment_filename in self.data and is_obsolete == 0:
+                print "Attachment", attachment_filename,
                 try:
                     dirfiles = os.listdir(path)
-                    filename = path + "/" + attachment['filename']
+                    filename = path + "/" + attachment_filename
                     remote = self.options.bugzilla.openattachment(
                             attachment['id'])
                     # rename the attachment if it has the same name as one
                     # of the files in the current directory
-                    if attachment['filename'] in dirfiles:
+                    if attachment_filename in dirfiles:
                         print "- file already exists in {0}/".format(path)
                         new_name = ""
                         while new_name == "":

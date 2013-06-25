@@ -3,7 +3,7 @@
 Jobs
 ~~~~
 
-The purpose of a Job is to provide an encapsulation for :ref:`tasks`. It is to
+The purpose of a Job is to provide an encapsulation for tasks. It is to
 provide a single point of submission for one or more of these tasks
 and also reviewing the output and results of running them. The tasks
 within a Job may or may not be related to each other; although it would make

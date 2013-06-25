@@ -1,4 +1,3 @@
-
 import unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
@@ -12,6 +11,22 @@ class JobDeleteTest(unittest.TestCase):
         self.job = data_setup.create_completed_job(owner=self.user)
         self.client_config = create_client_config(username=self.user.user_name,
                 password='asdf')
+
+    def test_delete_group_job(self):
+        with session.begin():
+            group = data_setup.create_group()
+            user = data_setup.create_user(password='password')
+            user2 = data_setup.create_user()
+            user.groups.append(group)
+            user2.groups.append(group)
+            self.job.group = group
+            self.job.owner = user2
+        client_config = create_client_config(username=user.user_name,
+            password='password')
+        out = run_client(['bkr', 'job-delete', self.job.t_id],
+                config=client_config)
+        self.assert_(out.startswith('Jobs deleted:'), out)
+        self.assert_(self.job.t_id in out, out)
 
     def test_delete_job(self):
         out = run_client(['bkr', 'job-delete', self.job.t_id],

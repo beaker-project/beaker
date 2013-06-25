@@ -123,6 +123,8 @@ the request body must be given as HTML form data
    :mailheader:`Location` header in the form 
    ``/recipes/(recipe_id)/tasks/(task_id)/results/(result_id)``.
 
+   Results may not be recorded against a task after it has finished.
+
    :form result: The result. Must be *Pass*, *Warn*, *Fail*, or *None*.
    :form path: Path of the result. Conventionally the top-level result will be 
         recorded as ``$TEST``, with sub-results as ``$TEST/suffix``, but this 
@@ -134,6 +136,7 @@ the request body must be given as HTML form data
         Use the log uploading mechanism to record test output.
    :status 201: New result recorded.
    :status 400: Bad parameters given.
+   :status 409: Task is already finished.
 
 .. http:put::
    /recipes/(recipe_id)/logs/(path:path)
@@ -142,7 +145,10 @@ the request body must be given as HTML form data
 
    Stores a log file.
 
+   Log files may not be stored against a recipe or task after it has finished.
+
    :status 204: The log file was updated.
+   :status 409: The recipe or task is already finished.
 
    Use the :mailheader:`Content-Range` header to upload part of a file.
 

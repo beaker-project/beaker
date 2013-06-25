@@ -117,7 +117,7 @@ $(document).ready(function() {
         $(this).datepicker({ dateFormat: 'yy-mm-dd', 
                              changeMonth: true,
                              changeYear: true,
-                             yearRange: '2008:2012' 
+                             yearRange: '-5:0' 
                             }); 
     });
     $('#advancedsearch').click(function () {

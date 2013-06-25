@@ -1,0 +1,30 @@
+[checksums]
+generic.ins = sha256:a5c38204422ae7f176b7f73adf496fbc876fcf30366a6bc7c5064c12e480c6bf
+images/generic.prm = sha256:ceba2331929035423f3597e04b4a3a0820b282294e2b624bf49f648dd10a9d77
+images/initrd.addrsize = sha256:749b5f039bf3508fa95245e4e7bc7bae86260f195dcfb2cb4d9b8ea45f5c924c
+images/initrd.img = sha256:c4ea792eb533baf76c34ddd340b7c34260a813623b3d4b1a30a500c8ac03d2e4
+images/install.img = sha256:75d4d479a47e8595fc16e544545112bed8299c7625c316d0b842476e1d821513
+images/kernel.img = sha256:b5e4da79b5029cb4ee215453e9d08055f6601e87483d512654142b4c8ccc621d
+images/product.img = sha256:9ad2d5eb6446883cf04dc1ce0f752ba1a4cc1a6e27d318b1bf020aaf9224d0e8
+repodata/repomd.xml = sha256:ecde38b5c97c29941c8f6ca8b49ffd87aeba6b1194d9027ac4a54fa15970da9b
+
+[general]
+arch = s390x
+family = Red Hat Enterprise Linux
+packages = Packages
+repository = 
+timestamp = 1342048144.836192
+variant = Server
+version = 7.0
+
+[images-s390x]
+generic.ins = generic.ins
+generic.prm = images/generic.prm
+initrd = images/initrd.img
+initrd.addrsize = images/initrd.addrsize
+kernel = images/kernel.img
+product.img = images/product.img
+
+[stage2]
+mainimage = images/install.img
+

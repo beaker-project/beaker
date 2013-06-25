@@ -1,4 +1,5 @@
 from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import wait_for_animation
 from bkr.inttest import data_setup, with_transaction, get_server_base
 from turbogears.database import session
 from bkr.server.model import Product, RetentionTag
@@ -19,6 +20,52 @@ class SearchJobsWD(WebDriverTestCase):
     @classmethod
     def teardownClass(cls):
         cls.browser.quit()
+
+    def check_search_results(self, present=None, absent=None):
+        b = self.browser
+        if present is None:
+            present = []
+        if absent is None:
+            absent = []
+        for job in absent:
+            b.find_element_by_xpath('//table[@id="widget" and '
+                    'not(.//td[1]/a/text()="%s")]' % job.t_id)
+        for job in present:
+            b.find_element_by_xpath('//table[@id="widget" and '
+                    './/td[1]/a/text()="%s"]' % job.t_id)
+        return True
+
+    def test_search_group(self):
+        with session.begin():
+            group = data_setup.create_group()
+            whiteboard = data_setup.unique_name(u'whiteboard%s')
+            job = data_setup.create_job(group=group, whiteboard=whiteboard)
+            job2 = data_setup.create_job(whiteboard=whiteboard)
+
+        b = self.browser
+        # Ensures that both jobs are present
+        b.get(get_server_base() + 'jobs')
+        b.find_element_by_id('advancedsearch').click()
+        wait_for_animation(b, '#searchform')
+        b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
+            /option[@value='Whiteboard']").click()
+        b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
+            /option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='jobsearch_0_value']"). \
+            send_keys(whiteboard)
+        b.find_element_by_name('Search').click()
+        self.check_search_results(present=[job, job2])
+
+        # Now do the actual test
+        b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
+            /option[@value='Group']").click()
+        b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
+            /option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='jobsearch_0_value']").clear()
+        b.find_element_by_xpath("//input[@id='jobsearch_0_value']"). \
+            send_keys(job.group.group_name)
+        b.find_element_by_name('Search').click()
+        self.check_search_results(present=[job], absent=[job2])
 
     def test_search_tag(self):
         with session.begin():

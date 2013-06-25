@@ -25,6 +25,7 @@ import os
 import time
 import threading
 import subprocess
+import shutil
 from StringIO import StringIO
 import logging, logging.config
 import signal
@@ -81,6 +82,19 @@ class DummyVirtManager(object):
         pass
     def start_install(self, name, distro_tree, kernel_options, lab_controller):
         pass
+
+def fix_beakerd_repodata_perms():
+    # This is ugly, but I can't come up with anything better...
+    # Any tests which invoke beakerd code directly will create 
+    # /var/www/beaker/rpms/repodata if it doesn't already exist. But the 
+    # tests might be running as root (as in the dogfood task, for example) 
+    # so the repodata directory could end up owned by root, whereas it 
+    # needs to be owned by apache.
+    # The hacky fix is to just delete the repodata at the end of the test, and 
+    # let the application (running as apache) re-create it later.
+    # Call this in a tearDown or tearDownClass method.
+    repodata = os.path.join(turbogears.config.get('basepath.rpms'), 'repodata')
+    shutil.rmtree(repodata, ignore_errors=True)
 
 def check_listen(port):
     """
@@ -164,6 +178,52 @@ class CommunicateThread(threading.Thread):
             if not data: break
             sys.stdout.write(data)
 
+def setup_slapd():
+    config_dir = '/tmp/beaker-tests-slapd-config'
+    data_dir = '/tmp/beaker-tests-slapd-data'
+    if os.path.exists(config_dir):
+        shutil.rmtree(config_dir)
+    if os.path.exists(data_dir):
+        shutil.rmtree(data_dir)
+    os.mkdir(config_dir)
+    os.mkdir(data_dir)
+    log.info('Populating slapd config')
+    slapadd = subprocess.Popen(['slapadd', '-F', config_dir, '-n0'],
+            stdin=subprocess.PIPE)
+    slapadd.communicate("""
+dn: cn=config
+objectClass: olcGlobal
+cn: config
+
+dn: cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: schema
+
+include: file:///etc/openldap/schema/core.ldif
+include: file:///etc/openldap/schema/cosine.ldif
+include: file:///etc/openldap/schema/inetorgperson.ldif
+include: file:///etc/openldap/schema/nis.ldif
+
+dn: olcDatabase=config,cn=config
+objectClass: olcDatabaseConfig
+olcDatabase: config
+olcAccess: to * by * none
+
+dn: olcDatabase=bdb,cn=config
+objectClass: olcDatabaseConfig
+objectClass: olcBdbConfig
+olcDatabase: bdb
+olcSuffix: dc=example,dc=invalid
+olcDbDirectory: %s
+olcDbIndex: objectClass eq
+olcAccess: to * by * read
+""" % data_dir)
+    assert slapadd.returncode == 0
+    log.info('Populating slapd data')
+    subprocess.check_call(['slapadd', '-F', config_dir, '-n1', '-l',
+            pkg_resources.resource_filename('bkr.inttest', 'ldap-data.ldif')],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
 processes = []
 
 def setup_package():
@@ -192,6 +252,8 @@ def setup_package():
     if not os.path.exists(turbogears.config.get('basepath.rpms')):
         os.mkdir(turbogears.config.get('basepath.rpms'))
 
+    setup_slapd()
+
     turbogears.testutil.make_app(Root)
     turbogears.testutil.start_server()
 
@@ -203,6 +265,11 @@ def setup_package():
                     listen_port=turbogears.config.get('server.socket_port'),
                     stop_signal=signal.SIGINT)
         ])
+    processes.extend([
+        Process('slapd', args=['slapd', '-d0', '-F/tmp/beaker-tests-slapd-config',
+                '-hldap://127.0.0.1:3899/'],
+                listen_port=3899, stop_signal=signal.SIGINT),
+    ])
     try:
         for process in processes:
             process.start()

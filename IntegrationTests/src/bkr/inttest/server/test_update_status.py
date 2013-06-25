@@ -6,7 +6,7 @@ import pkg_resources
 from turbogears.database import session
 from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX, StaleTaskStatusException
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, fix_beakerd_repodata_perms
 from bkr.server.model import TaskStatus, TaskResult, Watchdog, RecipeSet, Distro, \
         Job, Recipe, System, SystemResource
 from bkr.server.tools import beakerd
@@ -197,6 +197,10 @@ class TestUpdateStatus(unittest.TestCase):
         self.assertEquals(len(watchdogs_for_job(job)), 0)
 
 class ConcurrentUpdateTest(unittest.TestCase):
+
+    @classmethod
+    def tearDownClass(cls):
+        fix_beakerd_repodata_perms()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=807237
     def test_concurrent_recipe_completion(self):

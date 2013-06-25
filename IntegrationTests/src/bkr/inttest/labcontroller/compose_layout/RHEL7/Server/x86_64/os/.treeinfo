@@ -19,24 +19,32 @@ packages = addons/ResilientStorage
 repository = addons/ResilientStorage
 uid = Server-ResilientStorage
 
+[addon-ScalableFileSystem]
+id = ScalableFileSystem
+name = Scalable Filesystem Support
+packages = addons/ScalableFileSystem
+repository = addons/ScalableFileSystem
+uid = Server-ScalableFileSystem
+
 [checksums]
-LiveOS/squashfs.img = sha256:969b05ef3454f4aaa0097bbef54b41b300ae337ece86023d23b1ac35fa659d71
-addons/HighAvailability/repodata/repomd.xml = sha256:75fbdae979cbf0b5173427075f1209f8dab94e501dcd31199345898ae4515487
-addons/LoadBalancer/repodata/repomd.xml = sha256:cbb9055f0b40291cf5ffbb9b0fc2fe1f140a2daddb90a03d4f662a9424378daf
-addons/ResilientStorage/repodata/repomd.xml = sha256:0a6279ff45be7b36881766a7c346c2b17ad26a95cd9e3ccdffb3fc96af29f365
-images/boot.iso = sha256:723c89372e0cfa545258ee373d35bbb7114be17dccf2c1a776fef718d2470154
-images/product.img = sha256:cadc65f540769d783cec2c76ebc9c129819f8e89989a8e75e3b3a09da3a9855a
-images/pxeboot/initrd.img = sha256:7d986287a63132197da2ac4b1840b2be70f2679338ac70a0fbe1b22d9de8a539
-images/pxeboot/vmlinuz = sha256:520955effe5b7824c68d087f80f2a6cd874c5825f42d4436f3aab2c0abb42d38
-repodata/repomd.xml = sha256:31c5ea4ac9f9cdea92a7bb31ba0c73511190461b566637460d1f25c9af5cdc39
+LiveOS/squashfs.img = sha256:b51333cbe3efc2f8c249aef6f4d5da2b244b209776257a38203ee8bfc9e7f65f
+addons/HighAvailability/repodata/repomd.xml = sha256:c7884bcd85bf1e0c83ecfe1c37c37a7267eb499bb1a5a4dbcb1ea4703bc1a0a2
+addons/LoadBalancer/repodata/repomd.xml = sha256:9ff9f96e8395d75f69b8208f63fafcf55f96259a65f106bab764e471ff85ad68
+addons/ResilientStorage/repodata/repomd.xml = sha256:539fa146d5a4c18d5e61f4ee3c5d120bc80cfd50e3675959f9a47ff80f8fdc5c
+addons/ScalableFileSystem/repodata/repomd.xml = sha256:83cdd6edb52a4f3ddc4ef6e19613ad1040fd37944392ed385d5f6db4a0fcda47
+images/boot.iso = sha256:d966d16aae734e3e4cce6516141d56d1d753e5aad2b100356ae7bfa47a1525df
+images/product.img = sha256:9ad2d5eb6446883cf04dc1ce0f752ba1a4cc1a6e27d318b1bf020aaf9224d0e8
+images/pxeboot/initrd.img = sha256:014635032d8d36fd02c66706e50198d16e8c12b73a170866a4c52d79dc687cd6
+images/pxeboot/vmlinuz = sha256:1c25c38d8596b0ff36e777bdd04b4bda03f81c30d0eb2ecb01acc03b2ed282f9
+repodata/repomd.xml = sha256:9bb1a927f1856db7e00c7267694fecac55460cc6e56fafe49b85c7b8a0a7c726
 
 [general]
-addons = HighAvailability,LoadBalancer,ResilientStorage
+addons = HighAvailability,LoadBalancer,ResilientStorage,ScalableFileSystem
 arch = x86_64
 family = Red Hat Enterprise Linux
 packages = Packages
 repository = 
-timestamp = 1362589479.252791
+timestamp = 1342048149.346675
 variant = Server
 version = 7.0
 
