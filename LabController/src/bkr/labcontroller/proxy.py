@@ -25,8 +25,7 @@ from werkzeug.wsgi import wrap_file
 import kobo.conf
 from kobo.client import HubProxy
 from kobo.exceptions import ShutdownException
-from kobo.xmlrpc import retry_request_decorator, CookieTransport, \
-        SafeCookieTransport
+from kobo.xmlrpc import CookieTransport, SafeCookieTransport
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
 from kobo.process import kill_process_group
@@ -60,9 +59,9 @@ class ProxyHelper(object):
 
         # self.hub is created here
         if self.conf['HUB_URL'].startswith('https://'):
-            TransportClass = retry_request_decorator(SafeCookieTransport)
+            TransportClass = SafeCookieTransport
         else:
-            TransportClass = retry_request_decorator(CookieTransport)
+            TransportClass = CookieTransport
         self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
                 transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
         self.log_storage = LogStorage(self.conf.get("CACHEPATH"),
