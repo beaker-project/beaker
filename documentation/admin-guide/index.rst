@@ -28,6 +28,7 @@ Contents
    chronological-overview
    system-requirements
    installation
+   upgrading
    distro-import
    interface
    kickstarts
