@@ -95,9 +95,9 @@ class OSVersions(AdminPage):
             redirect(".")
         if osmajor.alias != alias:
             osmajor.alias = alias
-            flash(_(u"Changes Saved for %s" % osmajor))
+            flash(_(u"Changes saved for %s" % osmajor))
         else:
-            flash(_(u"No Changes for %s" % osmajor))
+            flash(_(u"No changes for %s" % osmajor))
         redirect(".")
 
     @identity.require(identity.in_group('admin'))

@@ -27,7 +27,8 @@
 </table>
 
 <h2>Details</h2>
-${form.display(action=action)}
+
+${form.display(value=value, action=action)}
 
 <h2>Install Options</h2>
 <form action="save_osmajor_installopts" method="post">
