@@ -50,7 +50,8 @@ Beaker 0.13
 -----------
 
 Beaker 0.13 includes a number of new features and bug fixes, focusing on
-the :ref:`proposal-enhanced-user-groups` design proposal.
+the `Enhanced User Groups <../../dev/proposals/enhanced-user-groups.html>`__ 
+design proposal.
 
 .. toctree::
    :maxdepth: 2
