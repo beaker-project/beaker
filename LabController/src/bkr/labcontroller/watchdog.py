@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 def daemon_shutdown(*args, **kwargs):
     raise ShutdownException()
 
-def main_loop(conf=None, foreground=False):
+def main_loop(watchdog, conf, foreground=False):
     """infinite daemon loop"""
 
     # define custom signal handlers
@@ -41,12 +41,6 @@ def main_loop(conf=None, foreground=False):
         log_file = conf["WATCHDOG_LOG_FILE"]
         add_rotating_file_logger(logging.getLogger(), log_file,
                 log_level=log_level, format=conf["VERBOSE_LOG_FORMAT"])
-
-    try:
-        watchdog = Watchdog(conf=conf)
-    except Exception, ex:
-        sys.stderr.write("Error initializing Watchdog: %s\n" % ex)
-        sys.exit(1)
 
     time_of_last_check = 0
     while True:
@@ -118,12 +112,18 @@ def main():
     if pid_file is None:
         pid_file = conf.get("WATCHDOG_PID_FILE", "/var/run/beaker-lab-controller/beaker-watchdog.pid")
 
+    try:
+        watchdog = Watchdog(conf=conf)
+    except Exception, ex:
+        sys.stderr.write("Error initializing Watchdog: %s\n" % ex)
+        sys.exit(1)
+
     if opts.foreground:
-        main_loop(conf=conf, foreground=True)
+        main_loop(watchdog, conf, foreground=True)
     else:
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
                 pid_file, acquire_timeout=0)):
-            main_loop(conf=conf, foreground=False)
+            main_loop(watchdog, conf, foreground=False)
 
     print 'exiting program'
 
