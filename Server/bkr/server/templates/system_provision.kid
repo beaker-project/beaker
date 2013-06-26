@@ -77,10 +77,10 @@
   </span>
  </span>
   <span py:if="not will_provision and provision_now_rights">
-   You can only provision if you have reserved the machine.
+   You can only provision if you have reserved the system.
   </span>
   <span py:if="not will_provision and not provision_now_rights">
-   You do not have access required to provision or scheduler a provision job on this machine.
+   You do not have access to provision or schedule a job on this system.
   </span>
 
  <span py:if="not lab_controller">
