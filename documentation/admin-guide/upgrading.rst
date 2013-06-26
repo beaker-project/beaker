@@ -36,9 +36,20 @@ When upgrading to a new *x.y* release of Beaker, some database changes may be
 required. These will be detailed in the release notes.
 
 Database schema changes can interfere with Beaker's normal operation, so you 
-should stop all Beaker services and the Apache server before beginning the 
-upgrade. Then use Yum to upgrade the relevant packages, perform the database 
-changes, and start all Beaker services.
+should stop all Beaker services before beginning the upgrade. The sequence of 
+events in this case is:
+
+1. Stop Beaker daemons on the lab controllers.
+2. Stop Apache and beakerd on the Beaker server.
+3. Use Yum to upgrade all relevant packages.
+4. Apply database changes and perform any other steps in the release notes.
+5. Start Apache and beakerd on the Beaker server.
+6. Start Beaker daemons on the lab controllers.
+
+Note that during the outage period, running jobs will be affected. The harness 
+will be unable to report in to Beaker, so the effects may include missing 
+results, missing logs, and recipes terminated by the external watchdog even 
+though they ran successfully.
 
 New harness packages
 --------------------
