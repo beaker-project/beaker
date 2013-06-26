@@ -9,6 +9,7 @@ import xmlrpclib
 
 from kobo.cli import CommandOptionParser
 from kobo.client import ClientCommandContainer
+from bkr.common import __version__
 
 
 __all__ = (
@@ -19,6 +20,15 @@ __all__ = (
 class BeakerCommandContainer(ClientCommandContainer):
     pass
 
+class BeakerOptionParser(CommandOptionParser):
+    standard_option_list = [
+        Option('--hub', metavar='URL',
+            help='Connect to Beaker server at URL (overrides config file)'),
+        Option('--username',
+            help='Use USERNAME for password authentication (overrides config file)'),
+        Option('--password',
+            help='Use PASSWORD for password authentication (overrides config file)'),
+    ]
 
 # register default command plugins
 import bkr.client.commands
@@ -29,19 +39,10 @@ BeakerCommandContainer.register_module(bkr.client.commands, prefix="cmd_")
 def main():
     global conf
     command_container = BeakerCommandContainer(conf=conf)
-
-    option_list = [
-        Option('--hub', metavar='URL',
-            help='Connect to Beaker server at URL (overrides config file)'),
-        Option('--username',
-            help='Use USERNAME for password authentication (overrides config file)'),
-        Option('--password',
-            help='Use PASSWORD for password authentication (overrides config file)'),
-    ]
-
     formatter = IndentedHelpFormatter(max_help_position=60, width=120)
-    parser = CommandOptionParser(command_container=command_container, default_command="help", formatter=formatter)
-    parser._populate_option_list(option_list, add_help=False)
+    parser = BeakerOptionParser(version=__version__,
+            command_container=command_container,
+            default_command="help", formatter=formatter)
 
     # This is parser.run(), but with more sensible error handling
     cmd, cmd_opts, cmd_args = parser.parse_args()
