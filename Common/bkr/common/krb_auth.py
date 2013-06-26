@@ -27,6 +27,11 @@ class AuthManager:
             self.primary_principal = self.ccache.principal()
         if self.keytab: self.reinit()
 
+    def _create_request(self, sprinc, ac):
+        _, req = self.context.mk_req(server=sprinc, client=self.primary_principal,
+            auth_context=ac, ccache=self.ccache, options=krbV.AP_OPTS_MUTUAL_REQUIRED)
+        return req
+
     def get_encoded_request(self, full_principal):
         sprinc = krbV.Principal(name=full_principal, context=self.context)
         ac = krbV.AuthContext(context=self.context)
@@ -34,8 +39,14 @@ class AuthManager:
         ac.rcache = self.context.default_rcache()
 
         # create and encode the authentication request
-        ac, req = self.context.mk_req(server=sprinc, client=self.primary_principal,
-            auth_context=ac, ccache=self.ccache, options=krbV.AP_OPTS_MUTUAL_REQUIRED)
+        try:
+            req = self._create_request(sprinc, ac)
+        except krbV.Krb5Error, e:
+            if 'Ticket expired' in str(e):
+                self.reinit()
+                req = self._create_request(sprinc)
+            else:
+                raise
         return base64.encodestring(req)
 
     def reinit(self):
