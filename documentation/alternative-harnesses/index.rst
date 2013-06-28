@@ -79,6 +79,9 @@ the request body must be given as HTML form data
 
    Returns recipe details. Response is in Beaker job results XML format, with 
    :mimetype:`application/xml` content type.
+   The root node of the returned XML will be ``<job/>``, which will contain
+   the requested recipe element. Note that guest recipes will be nested within
+   a partially populated ``<recipe/>``.
 
 .. http:post:: /recipes/(recipe_id)/watchdog
 

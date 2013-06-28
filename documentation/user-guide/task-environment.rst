@@ -348,6 +348,12 @@ system as a user over SSH or on the console.
 
    The role for the current task. See :doc:`multihost`.
 
+.. envvar:: HYPERVISOR_HOSTNAME
+
+   The hostname of a guest recipe's host. This is retrieved at recipe run time,
+   and is not dynamically updated (i.e if you migrate your guest
+   this variable will not be updated).
+
 Additionally, one environment variable will be set for each recipe role defined 
 in the recipe set. The name of the environment variable is the role name, and 
 its value is a space-separated list of FQDNs of the systems performing that 
