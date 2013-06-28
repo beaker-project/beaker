@@ -12,6 +12,7 @@ import re
 import shutil
 import tempfile
 import xmlrpclib
+import socket
 import subprocess
 from cStringIO import StringIO
 from socket import gethostname
@@ -40,6 +41,37 @@ logger = logging.getLogger(__name__)
 def replace_with_blanks(match):
     return ' ' * (match.end() - match.start() - 1) + '\n'
 
+# Based on kobo.xmlrpc.retry_request_decorator
+def retry_transport(transport_class, retry_count=5, retry_delay=30,
+                    exceptions=(socket.error, socket.herror,
+                                socket.gaierror, socket.timeout)):
+    """Wrap a Transport to implicitly retry requests."""
+    class RetryTransportClass(transport_class):
+        def request(self, *args, **kwargs):
+            dest_msg = "XML-RPC connection to %s failed" % args[0]
+            for i in xrange(retry_count + 1):
+                try:
+                    result = transport_class.request(self, *args, **kwargs)
+                    return result
+                except exceptions, ex:
+                    if i == retry_count:
+                        raise
+                    retries_left = retry_count - i
+                    if retries_left == 1:
+                        retry_msg = "%d retry left"
+                    else:
+                        retry_msg = "%d retries left"
+                    ex_args = " ".join(ex.args[1:])
+                    fail_msg = "%s: %s (%s)" % (dest_msg, ex_args, retry_msg)
+                    logger.warning(fail_msg, retries_left, exc_info=True)
+                    time.sleep(retry_delay)
+
+    RetryTransportClass._retry_count = retry_count
+    RetryTransportClass._retry_delay =  retry_delay
+    RetryTransportClass.__name__ = transport_class.__name__
+    RetryTransportClass.__doc__ = transport_class.__name__
+    return RetryTransportClass
+
 class ProxyHelper(object):
 
 
@@ -59,9 +91,9 @@ class ProxyHelper(object):
 
         # self.hub is created here
         if self.conf['HUB_URL'].startswith('https://'):
-            TransportClass = SafeCookieTransport
+            TransportClass = retry_transport(SafeCookieTransport)
         else:
-            TransportClass = CookieTransport
+            TransportClass = retry_transport(CookieTransport)
         self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
                 transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
         self.log_storage = LogStorage(self.conf.get("CACHEPATH"),
