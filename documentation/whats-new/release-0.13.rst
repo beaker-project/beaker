@@ -292,5 +292,41 @@ The following fixes have been included in Beaker 0.13 maintenance updates.
 Beaker 0.13.1
 ~~~~~~~~~~~~~
 
+Bug fixes:
+
 * :issue:`974382`: Distro trees for Red Hat Enterprise Linux 4 can once again
   be imported into Beaker.
+
+
+Beaker 0.13.2
+~~~~~~~~~~~~~
+
+Minor features:
+
+* :issue:`973092`: Setting "grubport=" in the kickstart metadata is now
+  supported
+* :issue:`973595`: btrfs volumes can now be created when installing with
+  recent anaconda versions
+* :issue:`973893`: The Administrator's Guide now covers how to upgrade an
+  existing Beaker installation to a new maintenance or feature release
+* :issue:`972417`: Beaker workflow commands now default the number of clients
+  and servers to zero, allowing the options to be used independently
+
+Bug fixes:
+
+* :issue:`952587`: Some steps in the job scheduler have been serialised
+  to eliminate scheduling anomalies seen with the previous approach.
+* :issue:`974352`: XML-RPC retries on lab controllers are now logged correctly
+* :issue:`974319`: Lab controller requests left over from a previous network
+  failure are now purged without aborting new recipes running on affected
+  systems
+* :issue:`972397`: Sorting certain combinations of data grid columns no
+  longer triggers an internal server error
+* :issue:`972411`: Submitting malformed CSV to CSV import no longer
+  triggers an internal server error
+* :issue:`972412`: Submitting invalid UTF-8 characters in job XML no
+  longer triggers an internal server error
+* :issue:`957011`: RHEL 6 Kickstarts are once again generated correctly when
+  provisioning systems in manual mode
+* :issue:`979999`: The link to the Relax NG schema from the docs home page
+  has been fixed.
