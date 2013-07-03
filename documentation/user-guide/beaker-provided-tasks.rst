@@ -96,6 +96,8 @@ and enter the desired extension to the reservation (relative to the current
 time).
 
 
+.. _inventory-task:
+
 /distribution/inventory
 =======================
 

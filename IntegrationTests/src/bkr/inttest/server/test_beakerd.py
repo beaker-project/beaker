@@ -56,6 +56,121 @@ class TestBeakerd(unittest.TestCase):
             task = Task.by_id(task_id)
             task.disable()
 
+    def test_serialized_scheduling(self):
+        # This tests that our main recipes loop will schedule
+        # systems correctly, without any need to manually clean
+        # jobs in the test:
+        #
+        # Create R1
+        # <run_loop>
+        # R1 schedules systemB
+        # Create R2, R3 (low priority)
+        # <run_loop>
+        # R3 schedules systemB, R2 waiting for systemA
+        # Create R4, R5 (high priority)
+        # Complete R1, release systemA
+        # <run_loop>
+        # R2 gets systemA over R4 as R2's recipeset already has a lab controller
+        # assert R2, R3 are scheduled. assert R4, R5 are queued.
+        orig_sqrs = beakerd.schedule_queued_recipes
+        orig_psrs = beakerd.provision_scheduled_recipesets
+        try:
+
+            with session.begin():
+                systemB = data_setup.create_system(lab_controller=self.lab_controller)
+                systemA = data_setup.create_system(lab_controller=self.lab_controller)
+                r1 = data_setup.create_recipe()
+                j1 = data_setup.create_job_for_recipes([r1])
+            session.expire_all()
+            r1_id = r1.id
+            j1_id = j1.id
+            sysA_id = systemA.id
+            sysB_id = systemB.id
+
+            def mock_sqrs(run_number):
+                with session.begin():
+                    systemA = System.by_id(sysA_id, User.by_user_name('admin'))
+                    systemB = System.by_id(sysB_id, User.by_user_name('admin'))
+                    if run_number == 1:
+                        r1 = Recipe.by_id(r1_id)
+                        r1.systems[:] = [systemB]
+                    if run_number == 2:
+                        r2 = Recipe.by_id(r2_id)
+                        r2.systems[:] = [systemA]
+                        r3 = Recipe.by_id(r3_id)
+                        r3.systems[:] = [systemB]
+                    if run_number == 3:
+                        r4 = Recipe.by_id(r4_id)
+                        r4.systems[:] = [systemA]
+                        r5 = Recipe.by_id(r5_id)
+                        r5.systems[:] = [systemB]
+                return orig_sqrs()
+
+            def mock_psrs(*args):
+                return False
+
+            def mock_sqrs_run_1():
+                return mock_sqrs(1)
+
+            beakerd.schedule_queued_recipes = mock_sqrs_run_1
+            beakerd.provision_scheduled_recipesets = mock_psrs
+            beakerd._main_recipes()
+            session.expire_all()
+            with session.begin():
+                r1 = Recipe.by_id(r1_id)
+                self.assertEqual(r1.status, TaskStatus.scheduled)
+                r2 = data_setup.create_recipe()
+                r3 = data_setup.create_recipe()
+                j2 = data_setup.create_job_for_recipes([r2, r3])
+                j2.recipesets[0].priority = TaskPriority.low
+            session.expire_all()
+            r2_id = r2.id
+            r3_id = r3.id
+
+            def mock_sqrs_run_2():
+                return mock_sqrs(2)
+
+            beakerd.schedule_queued_recipes = mock_sqrs_run_2
+            beakerd._main_recipes()
+            session.expire_all()
+            with session.begin():
+                r1 = Recipe.by_id(r1_id)
+                r2 = Recipe.by_id(r2_id)
+                r3 = Recipe.by_id(r3_id)
+                self.assertEqual(r1.status, TaskStatus.scheduled)
+                self.assertEqual(r2.status, TaskStatus.scheduled)
+                self.assertEqual(r3.status, TaskStatus.queued)
+                r4 = data_setup.create_recipe()
+                r5 = data_setup.create_recipe()
+                j2 = data_setup.create_job_for_recipes([r4, r5])
+                j2.recipesets[0].priority = TaskPriority.high
+            session.expire_all()
+            r4_id = r4.id
+            r5_id = r5.id
+
+            def mock_sqrs_run_3():
+                return mock_sqrs(3)
+
+            beakerd.schedule_queued_recipes = mock_sqrs_run_3
+            # Release systemA
+            j1 = Job.by_id(j1_id)
+            data_setup.mark_job_running(j1, only=True)
+            data_setup.mark_job_complete(j1, only=True)
+            beakerd._main_recipes()
+
+            with session.begin():
+                r2 = Recipe.by_id(r2_id)
+                r3 = Recipe.by_id(r3_id)
+                r4 = Recipe.by_id(r4_id)
+                r5 = Recipe.by_id(r5_id)
+                self.assertEquals(r4.status, TaskStatus.queued)
+                self.assertEquals(r5.status, TaskStatus.queued)
+                self.assertEquals(r3.status, TaskStatus.scheduled)
+                self.assertEquals(r2.status, TaskStatus.scheduled)
+        finally:
+            beakerd.schedule_queued_recipes = orig_sqrs
+            beakerd.provision_scheduled_recipesets = orig_psrs
+
     def test_schedule_bad_recipes_dont_fail_all(self):
         with session.begin():
             system = data_setup.create_system(lab_controller=self.lab_controller)

@@ -168,14 +168,14 @@ class Distros(RPCRoot):
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50)
     def index(self,*args,**kw):
-        distro_q = session.query(Distro).join(OSVersion, OSMajor)\
+        distro_q = session.query(Distro).outerjoin(Distro.osversion, OSVersion.osmajor)\
                 .filter(Distro.trees.any(DistroTree.lab_controller_assocs.any()))
         return self.distros(distros=distro_q, *args, **kw)
 
     @expose(template="bkr.server.templates.grid")
     @paginate('list',default_order='-date_created', limit=50)
     def name(self,*args,**kw):
-        distro_q = session.query(Distro).join(OSVersion, OSMajor)\
+        distro_q = session.query(Distro).join(Distro.osversion, OSVersion.osmajor)\
                 .filter(Distro.trees.any(DistroTree.lab_controller_assocs.any()))\
                 .filter(Distro.name.like(kw['name']))
         return self.distros(distros=distro_q, action='./name')
