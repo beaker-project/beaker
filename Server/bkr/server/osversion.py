@@ -51,7 +51,7 @@ class OSVersions(AdminPage):
         super(OSVersions,self).__init__(*args,**kw) 
 
         self.search_col = OSMajor.osmajor
-        self.join = ['osmajor']
+        self.join = [OSVersion.osmajor]
         self.search_mapper = OSVersion
         self.add = False
      

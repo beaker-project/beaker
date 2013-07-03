@@ -3773,7 +3773,7 @@ class CommandActivity(Activity):
         self.system.activity.append(sa)
 
     def abort(self, msg=None):
-        log.error('Command %s aborted: %s', (self.id, msg))
+        log.error('Command %s aborted: %s', self.id, msg)
         self.status = CommandStatus.aborted
         self.new_value = msg
         self.log_to_system_history()
@@ -5679,7 +5679,7 @@ class Recipe(TaskBase):
                     service=u'Scheduler',
                     callback=u'bkr.server.model.auto_cmd_handler')
             self.resource.system.action_power(action=u'reboot',
-                                     callback='bkr.server.model.auto_cmd_handler')
+                                     callback=u'bkr.server.model.auto_cmd_handler')
             self.resource.system.activity.append(SystemActivity(
                     user=self.recipeset.job.owner,
                     service=u'Scheduler', action=u'Provision',

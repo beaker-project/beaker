@@ -7,10 +7,9 @@ from bkr.inttest.server.webdriver_utils import login, is_activity_row_present
 from bkr.inttest import data_setup, get_server_base, fix_beakerd_repodata_perms
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
         System, SystemStatus, TaskStatus, CommandActivity, CommandStatus, \
-        KernelType, LabController
+        KernelType, LabController, Recipe, Activity
 from bkr.server.tools import beakerd
 from bkr.inttest.server.selenium.test_activity import is_activity_row_present
-
 
 class LabControllerViewTest(WebDriverTestCase):
 
@@ -296,11 +295,52 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
                     user=None, service=u'testdata', action=u'on',
                     status=CommandStatus.running)
             system.command_queue.append(command)
+            other_system = data_setup.create_system()
+            other_command = CommandActivity(
+                    user=None, service=u'testdata', action=u'on',
+                    status=CommandStatus.running)
+            other_system.command_queue.append(other_command)
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         self.server.labcontrollers.clear_running_commands(u'Staleness')
         with session.begin():
             session.refresh(command)
-            self.assertEquals(command.status, CommandStatus.failed)
+            self.assertEquals(command.status, CommandStatus.aborted)
+            self.assertEquals(other_command.status, CommandStatus.running)
+
+    def test_purge_stale_running_commands(self):
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            # Helper to build the commands
+            def _make_command(lc=None, creation_date=None):
+                job = data_setup.create_job(distro_tree=distro_tree)
+                recipe = job.recipesets[0].recipes[0]
+                system = data_setup.create_system(lab_controller=lc)
+                data_setup.mark_recipe_waiting(recipe, system=system)
+                command = CommandActivity(
+                        user=None, service=u'testdata', action=u'on',
+                        status=CommandStatus.running,
+                        callback=u'bkr.server.model.auto_cmd_handler')
+                if creation_date is not None:
+                    command.created = command.updated = creation_date
+                system.command_queue.append(command)
+                return recipe.tasks[0], command
+            # Normal command for the current LC
+            recent_task, recent_command = _make_command(lc=self.lc)
+            # Old command for a different LC
+            backdated = datetime.datetime.utcnow()
+            backdated -= datetime.timedelta(days=1, minutes=1)
+            old_task, old_command = _make_command(creation_date=backdated)
+
+        self.server.auth.login_password(self.lc.user.user_name, u'logmein')
+        self.server.labcontrollers.clear_running_commands(u'Staleness')
+        with session.begin():
+            session.expire_all()
+            # Recent commands have their callback invoked
+            self.assertEquals(recent_command.status, CommandStatus.aborted)
+            self.assertEquals(recent_task.status, TaskStatus.aborted)
+            # Stale commands just get dropped on the floor
+            self.assertEquals(old_command.status, CommandStatus.aborted)
+            self.assertEquals(old_task.status, TaskStatus.waiting)
 
     def test_add_completed_command(self):
         with session.begin():
