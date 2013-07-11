@@ -17,7 +17,7 @@ Resources
       Release notes <whats-new/index>
       glossary
 
-   * `Beaker Quick Start Guide: slides (PDF) <psss-beaker-quick-start-guide-slides.pdf>`__
+   * `Beaker Quick Start Guide: slides (PDF) <../psss-beaker-quick-start-guide-slides.pdf>`__
    * `RELAX NG schema for Beaker jobs <../schema/beaker-job.rng>`__
 
 .. container:: resourcesbox
