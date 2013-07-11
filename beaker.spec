@@ -17,7 +17,7 @@
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.13.1
+Version:        0.13.2
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -380,6 +380,11 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Wed Jul 03 2013 Amit Saha <asaha@redhat.com> 0.13.2-1
+- new release 0.13.2:
+  http://beaker-project.org/releases/#beaker-0.13
+  http://beaker-project.org/docs/whats-new/release-0.13.html
+
 * Mon Jun 17 2013 Raymond Mancy <rmancy@redhat.com> 0.13.1-1
 - 974382 Fixes RHEL4 import problems (rmancy@redhat.com)
 
