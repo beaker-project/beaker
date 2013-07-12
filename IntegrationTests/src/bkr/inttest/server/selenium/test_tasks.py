@@ -30,7 +30,7 @@ class TestSubmitTask(WebDriverTestCase):
 
     def assert_task_upload_flash_OK(self, name):
         expected = '%s Added/Updated' % name
-        actual = self.browser.find_element_by_css_selector('.flash').text
+        actual = self.browser.find_element_by_class_name('flash').text
         failure_msg = "%s not in %s" % (expected, actual)
         self.assert_(expected in actual, failure_msg)
 
@@ -144,7 +144,7 @@ class TestSubmitTask(WebDriverTestCase):
                 pkg_resources.resource_filename(self.__module__,
                 invalidtask))
         b.find_element_by_xpath('//input[@value="Submit Data"]').click()
-        self.assertEquals(b.find_element_by_css_selector('.flash').text,
+        self.assertEquals(b.find_element_by_class_name('flash').text,
                 'Failed to import task: error reading package header')
         rpms = tg.config.get('basepath.rpms')
         self.assertEqual(os.path.exists('%s/%s' % (rpms,invalidtask)),False)
@@ -157,7 +157,7 @@ class TestSubmitTask(WebDriverTestCase):
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker-dummy_for_bz617274-1.0-1.noarch.rpm'))
         b.find_element_by_xpath('//input[@value="Submit Data"]').click()
-        self.assertEquals(b.find_element_by_css_selector('.flash').text,
+        self.assertEquals(b.find_element_by_class_name('flash').text,
                 'Failed to import task: Owner field not defined')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=915549
@@ -168,7 +168,7 @@ class TestSubmitTask(WebDriverTestCase):
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker-long-task-RPM-1.0-1.noarch.rpm'))
         b.find_element_by_xpath('//input[@value="Submit Data"]').click()
-        self.assertEquals(b.find_element_by_css_selector('.flash').text,
+        self.assertEquals(b.find_element_by_class_name('flash').text,
                 'Failed to import task: Task name should be <= 255 characters')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=859796
@@ -179,7 +179,7 @@ class TestSubmitTask(WebDriverTestCase):
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker----redundant_slashes-1.0-0.noarch.rpm'))
         b.find_element_by_xpath('//input[@value="Submit Data"]').click()
-        self.assertEquals(b.find_element_by_css_selector('.flash').text,
+        self.assertEquals(b.find_element_by_class_name('flash').text,
                 "Failed to import task: Task name must not contain redundant slashes")
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=859796
@@ -190,7 +190,7 @@ class TestSubmitTask(WebDriverTestCase):
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker-trailing_slash--1.0-0.noarch.rpm'))
         b.find_element_by_xpath('//input[@value="Submit Data"]').click()
-        self.assertEquals(b.find_element_by_css_selector('.flash').text,
+        self.assertEquals(b.find_element_by_class_name('flash').text,
                 "Failed to import task: Task name must not end with slash")
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=972407
@@ -198,7 +198,7 @@ class TestSubmitTask(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'tasks/new')
         b.find_element_by_xpath('//input[@value="Submit Data"]').click()
-        self.assertEquals(b.find_element_by_xpath('//div[@class="flash"]').text, 
+        self.assertEquals(b.find_element_by_class_name('flash').text,
                           "No task RPM specified")
 
 if __name__ == "__main__":

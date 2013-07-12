@@ -33,7 +33,7 @@ class TestGroups(WebDriverTestCase):
         delete_and_confirm(b, "//td[preceding-sibling::td/a[normalize-space(text())='%s']]/form" % \
             self.group.group_name, delete_text='Remove (-)')
         self.assertEqual(
-            b.find_element_by_xpath('//div[@class="flash"]').text,
+            b.find_element_by_class_name('flash').text,
             '%s deleted' % self.group.display_name)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=968843
@@ -49,7 +49,7 @@ class TestGroups(WebDriverTestCase):
         delete_and_confirm(b, "//td[preceding-sibling::td/a[normalize-space(text())='%s']]/form" % \
                                group.group_name, delete_text='Remove (-)')
 
-        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        flash_text = b.find_element_by_class_name('flash').text
         self.assert_('Cannot delete a group which has associated jobs' in flash_text, flash_text)
 
     def test_group(self):

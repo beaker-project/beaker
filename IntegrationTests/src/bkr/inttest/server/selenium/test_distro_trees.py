@@ -66,13 +66,13 @@ class DistroTreeViewTest(WebDriverTestCase):
         b.find_element_by_link_text('Add ( + )').click()
         # A trailing '/' is added automatically if it's not present. RHBZ#912242
         self.assertEqual(
-            b.find_element_by_xpath('//div[@class="flash"]').text,
+            b.find_element_by_class_name('flash').text,
             'Added %s http://blah.com/' % lc.fqdn)
 
         # Delete
         delete_and_confirm(b, "//td[preceding-sibling::td/a[@href='http://blah.com/']]/form", delete_text='Delete ( - )')
         self.assertEqual(
-            b.find_element_by_xpath('//div[@class="flash"]').text,
+            b.find_element_by_class_name('flash').text,
             'Deleted %s http://blah.com/' % lc.fqdn)
 
     def test_update_install_options(self):
@@ -92,7 +92,7 @@ class DistroTreeViewTest(WebDriverTestCase):
         b.find_element_by_name('kernel_options_post').send_keys('rhgb')
         b.find_element_by_link_text('Save Changes').click()
         self.assertEqual(
-            b.find_element_by_xpath('//div[@class="flash"]').text,
+            b.find_element_by_class_name('flash').text,
             'Updated install options')
         self.assertEqual(
             b.find_element_by_xpath('//table[@id="install_options"]'

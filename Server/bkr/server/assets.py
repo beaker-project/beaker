@@ -26,10 +26,18 @@ def _create_env():
     env = webassets.Environment(directory=directory, url='/assets',
             manifest='file', debug=debug, auto_build=auto_build)
     env.register('css',
-            'layout-uncompressed.css',
-            filters=[YCSSMin()],
+            'style.less',
+            filters=['less', 'cssrewrite', YCSSMin()],
             output='generated/beaker-%(version)s.css')
     env.register('js',
+            # third-party
+            'bootstrap/js/bootstrap-transition.js',
+            'bootstrap/js/bootstrap-modal.js',
+            'bootstrap/js/bootstrap-dropdown.js',
+            'bootstrap/js/bootstrap-tab.js',
+            'bootstrap/js/bootstrap-alert.js',
+            'bootstrap/js/bootstrap-typeahead.js',
+            # ours
             'local-datetime.js',
             filters=['uglifyjs'],
             output='generated/beaker-%(version)s.js')

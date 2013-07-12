@@ -106,7 +106,7 @@ class SystemManualProvisionInstallOptionsTest(WebDriverTestCase):
 
         # provision
         b.find_element_by_xpath("//form[@name='provision']//a[text()='Provision']").click()
-        b.find_element_by_xpath('//div[@class="flash"]').text.startswith('Success')
+        self.assert_(b.find_element_by_class_name('flash').text.startswith('Success'))
 
         # check
         self.assertEquals(self.system.command_queue[1].action, u'configure_netboot')

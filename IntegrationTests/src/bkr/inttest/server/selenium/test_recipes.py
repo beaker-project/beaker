@@ -53,7 +53,7 @@ class TestRecipesDataGrid(SeleniumTestCase):
 
         # log in
         sel.open('')
-        sel.click('link=Login')
+        sel.click('link=Log in')
         sel.wait_for_page_to_load('30000')
         sel.type('user_name', user.user_name)
         sel.type('password', 'password')

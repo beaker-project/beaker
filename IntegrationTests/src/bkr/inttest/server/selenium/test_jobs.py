@@ -292,7 +292,7 @@ class NewJobTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
         b.find_element_by_xpath("//input[@value='Submit Data']").click()
         b.find_element_by_xpath("//input[@value='Queue']").click()
-        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        flash_text = b.find_element_by_class_name('flash').text
         self.assert_('Job failed schema validation' in flash_text, flash_text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=949777
@@ -325,7 +325,7 @@ class NewJobTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
         b.find_element_by_xpath("//input[@value='Submit Data']").click()
         b.find_element_by_xpath("//input[@value='Queue']").click()
-        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        flash_text = b.find_element_by_class_name('flash').text
         self.assert_('Job failed schema validation' in flash_text, flash_text)
 
     def test_valid_submission_delegate(self):
@@ -358,7 +358,7 @@ class NewJobTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
         b.find_element_by_xpath("//input[@value='Submit Data']").click()
         b.find_element_by_xpath("//input[@value='Queue']").click()
-        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        flash_text = b.find_element_by_class_name('flash').text
         self.assert_('Success!' in flash_text, flash_text)
         self.assertEqual(b.title, 'My Jobs')
 
@@ -394,7 +394,7 @@ class NewJobTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
         b.find_element_by_xpath("//input[@value='Submit Data']").click()
         b.find_element_by_xpath("//input[@value='Queue']").click()
-        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        flash_text = b.find_element_by_class_name('flash').text
         self.assertEquals('Failed to import job because of: %s is not a valid'
             ' submission delegate for %s' % (invalid_delegate.user_name, user.user_name), flash_text, flash_text)
 
@@ -428,7 +428,7 @@ class NewJobTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
         b.find_element_by_xpath("//input[@value='Submit Data']").click()
         b.find_element_by_xpath("//input[@value='Queue']").click()
-        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        flash_text = b.find_element_by_class_name('flash').text
         self.assert_('Success!' in flash_text, flash_text)
         self.assertEqual(b.title, 'My Jobs')
 
@@ -442,7 +442,7 @@ class NewJobTestWD(WebDriverTestCase):
         xml_file.flush()
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
         b.find_element_by_xpath("//input[@value='Submit Data']").click()
-        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        flash_text = b.find_element_by_class_name('flash').text
         self.assertEquals(flash_text,
                 "Invalid job XML: 'utf8' codec can't decode byte 0x89 "
                 "in position 0: invalid start byte")

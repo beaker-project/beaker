@@ -4,7 +4,7 @@ from turbogears.database import session
 
 def make_link(url, text, **kwargs):
     # make an <a> element
-    a = Element('a', {'class': 'list'}, href=turbogears.url(url))
+    a = Element('a', href=turbogears.url(url))
     a.text = text
     if kwargs.get('elem_class', None):
         a.attrib['class']=kwargs.get('elem_class')

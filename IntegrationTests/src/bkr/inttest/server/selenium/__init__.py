@@ -72,7 +72,7 @@ class SeleniumTestCase(unittest.TestCase):
         if sel is not None:
             sel.open("")
             try:
-                sel.click("link=Logout")
+                sel.click("link=Log out")
             except Exception, e:
                 raise BX(unicode(e))
             sel.wait_for_page_to_load("30000")
@@ -89,7 +89,7 @@ class SeleniumTestCase(unittest.TestCase):
         if sel is not None:
             sel.open("")
             try:
-                sel.click("link=Login")
+                sel.click("link=Log in")
             except Exception, e:
                 raise BX(_(unicode(e)))
             sel.wait_for_page_to_load("30000")

@@ -108,7 +108,7 @@ class TestSystemGroups(WebDriverTestCase):
         group_just_added = b.find_element_by_xpath('//table[@id="systemgroups"]//tr[position()=last()]/td').text
         self.assert_(group_just_added == test_group.group_name)
         self.add_group_to_system(b, group=test_group)
-        self.assertEquals(b.find_element_by_xpath('//div[@class="flash"]').text,
+        self.assertEquals(b.find_element_by_class_name('flash').text,
                           "System '%s' is already in group '%s'" % (self.system.fqdn, test_group.group_name))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=797584

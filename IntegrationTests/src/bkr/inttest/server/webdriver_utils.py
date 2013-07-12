@@ -12,14 +12,14 @@ def delete_and_confirm(browser, ancestor_xpath, delete_text='Delete'):
 
 def logout(browser):
     browser.get(get_server_base())
-    browser.find_element_by_link_text('Logout').click()
+    browser.find_element_by_link_text('Log out').click()
 
 def login(browser, user=None, password=None):
     if user is None and password is None:
         user = data_setup.ADMIN_USER
         password = data_setup.ADMIN_PASSWORD
     browser.get(get_server_base())
-    browser.find_element_by_link_text('Login').click()
+    browser.find_element_by_link_text('Log in').click()
     browser.find_element_by_name('user_name').click()
     browser.find_element_by_name('user_name').send_keys(user)
     browser.find_element_by_name('password').click()
@@ -28,7 +28,7 @@ def login(browser, user=None, password=None):
 
 def logout(browser):
     browser.get(get_server_base())
-    browser.find_element_by_link_text('Logout').click()
+    browser.find_element_by_link_text('Log out').click()
 
 def is_text_present(browser, text):
     return bool(browser.find_elements_by_xpath(
@@ -93,3 +93,9 @@ def check_distro_search_results(browser, present=[], absent=[]):
     for distro in present:
         browser.find_element_by_xpath('//table[@id="widget" and '
                     './/td[1]/a/text()="%s"]' % distro.id)
+
+def click_menu_item(browser, menu_item, submenu_item):
+    browser.find_element_by_link_text(menu_item).click()
+    browser.find_element_by_css_selector('.dropdown.open')\
+           .find_element_by_link_text(submenu_item)\
+           .click()

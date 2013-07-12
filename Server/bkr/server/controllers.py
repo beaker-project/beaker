@@ -55,6 +55,7 @@ from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
 import urllib
+import kid
 from kid import Element
 import cherrypy
 from hashlib import md5
@@ -73,6 +74,9 @@ import logging
 log = logging.getLogger("bkr.server.controllers")
 import breadcrumbs
 from datetime import datetime, timedelta
+
+# This ridiculous hack gets us an HTML5 doctype in our Kid template output.
+config.update({'kid.outputformat': kid.HTMLSerializer(doctype=('html',))})
 
 class Arches:
     @expose(format='json')

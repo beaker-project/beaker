@@ -62,7 +62,7 @@ class OSVersionsTest(WebDriverTestCase):
                 '/input').send_keys('six')
         b.find_element_by_link_text('Save Changes').click()
         self.assertEquals(
-                b.find_element_by_xpath('//div[@class="flash"]').text,
+                b.find_element_by_class_name('flash').text,
                 'Install options saved for LinuxLinux2.1')
         # check everything is saved
         with session.begin():
@@ -103,7 +103,7 @@ class OSVersionsTest(WebDriverTestCase):
         input.send_keys('something else')
         b.find_element_by_link_text('Save Changes').click()
         self.assertEquals(
-                b.find_element_by_xpath('//div[@class="flash"]').text,
+                b.find_element_by_class_name('flash').text,
                 'Install options saved for LinuxLinux2.1')
         # check they are updated
         with session.begin():
@@ -127,5 +127,5 @@ class OSVersionsTest(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="form_alias"]').send_keys('linux21')
         b.find_element_by_xpath('//input[@value="Edit OSMajor"]').submit()
         self.assertEquals(
-            b.find_element_by_xpath('//div[@class="flash"]').text,
+            b.find_element_by_class_name('flash').text,
             'Changes saved for LinuxLinux2.1')

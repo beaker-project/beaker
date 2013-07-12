@@ -109,7 +109,7 @@ class JobDeleteWD(WebDriverTestCase):
             "a[not(normalize-space(text())='%s')]" % job.t_id)
         recipe = job.recipesets[0].recipes[0]
         b.get(get_server_base() + 'recipes/%d' % recipe.id)
-        warn_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        warn_text = b.find_element_by_class_name('flash').text
         self.assertTrue('Invalid R:%s, has been deleted' %
             recipe.id in warn_text)
 

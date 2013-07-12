@@ -139,7 +139,7 @@ class TestGroupsWD(WebDriverTestCase):
         e.clear()
         e.send_keys(self.hashed_password)
         b.find_element_by_xpath('//input[@value="Save"]').click()
-        self.assertEquals(b.find_element_by_xpath('//div[@class="flash"]').text,
+        self.assertEquals(b.find_element_by_class_name('flash').text,
             u'OK')
         self._make_and_go_to_owner_page(self.user, self.group, set_owner=False)
         new_hash = b.find_element_by_xpath('//input[@id="Group_root_password"]').get_attribute('value')
@@ -153,7 +153,7 @@ class TestGroupsWD(WebDriverTestCase):
         e.clear()
         e.send_keys(self.clear_password)
         b.find_element_by_xpath('//input[@value="Save"]').click()
-        self.assertEquals(b.find_element_by_xpath('//div[@class="flash"]').text,
+        self.assertEquals(b.find_element_by_class_name('flash').text,
             u'OK')
         b.get(get_server_base() + 'groups/mine')
         b.find_element_by_link_text(self.group.group_name).click()
@@ -223,7 +223,7 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="Group_root_password"]'). \
             send_keys('blapppy7')
         b.find_element_by_xpath('//input[@value="Save"]').click()
-        self.assertEquals(b.find_element_by_xpath('//div[@class="flash"]').text,
+        self.assertEquals(b.find_element_by_class_name('flash').text,
             u'OK')
         session.expire(self.group)
         self.failUnless(crypt.crypt('blapppy7', self.group.root_password) ==
@@ -446,7 +446,7 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_link_text(group2.group_name).click()
         self._edit_group_details(b, group1.group_name, group2.display_name)
 
-        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        flash_text = b.find_element_by_class_name('flash').text
         self.assert_('Group name already exists' in flash_text, flash_text)
 
     def test_cannot_rename_protected_group(self):
@@ -464,7 +464,7 @@ class TestGroupsWD(WebDriverTestCase):
         self._edit_group_details(b, new_group_name, new_display_name)
 
         # check
-        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        flash_text = b.find_element_by_class_name('flash').text
         self.assert_('Cannot rename protected group' in flash_text, flash_text)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=908174
@@ -483,7 +483,7 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//td/a[text()="Remove (-)" and ../preceding-sibling::td[text()="%s"]]'
                                 % user.user_name).click()
 
-        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        flash_text = b.find_element_by_class_name('flash').text
         self.assert_("Cannot remove the only owner" in flash_text)
 
         # add a new user as owner

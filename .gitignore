@@ -11,6 +11,8 @@ Server/build
 Server/build.out
 Server/devdata.sqlite
 Server/setup.py
+Server/bkr/server/static/.webassets-cache/
+Server/bkr/server/static/webassets-external/
 Common/bkr/common/__init__.py
 Common/build
 Common/setup.py
