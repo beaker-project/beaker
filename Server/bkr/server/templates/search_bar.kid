@@ -49,7 +49,7 @@
     <script language="JavaScript" type="text/JavaScript">
 
         ${field_id}_${repetition} = new SearchBar(
-                [${to_json(fields)}], '${search_controller}',
+                ${tg.to_json(fields)}, '${search_controller}',
                 '${value_for('operation')}', ${extra_callbacks_stringified},
                 ${table_search_controllers_stringified},
                 '${value_for('value')}', '${value_for('keyvalue')}',

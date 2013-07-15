@@ -97,27 +97,6 @@ class ValidEnumValue(validators.FancyValidator):
     def _from_python(self, value, state):
         return value.value
 
-class UtilJSON:
-     @classmethod
-     def dynamic_json(cls):
-         return lambda param: cls.__return_array_of_json(param)
-
-     @classmethod
-     def __return_array_of_json(cls,x):
-         if x:
-             jsonified_fields = [jsonify.encode(elem) for elem in x]
-             return ','.join(jsonified_fields)
-             """
-             FIXME Add in here support for non-lists, something like:
-             if isinstance(x, list):
-                 jsonified_fields = [jsonify.encode(elem) for elem in x]
-                 return_json = ','.join(jsonified_fields)
-             else:
-                 jsonified_fields = jsonify.encode(x)
-                 return_json = jsonified_fields
-             return return_json
-             """
-
 class LocalJSLink(JSLink):
     """
     Link to local Javascript files
@@ -843,7 +822,6 @@ class SearchBar(RepeatingFormField):
 
     def update_params(self, d):
         super(SearchBar, self).update_params(d)
-        d['to_json'] = UtilJSON.dynamic_json()
         d['button_widget'] = MyButton(name='quick_search')
 
 class ProvisionForm(RepeatingFormField):
