@@ -56,6 +56,16 @@ Anything that can be described inside a recipe can also be described
 inside a guestrecipe. This allows the testers to run any existing Beaker
 test inside the guest just like it'd be run inside a baremetal machine.
 
+.. admonition:: Guest console logging
+
+   The contents of the guest's console log depends on what Operating System the
+   host is running. Anything from Red Hat Enterprise Linux 5 (or equivalent)
+   and up (except 5.3) will log the console output from the start of
+   installation. Earlier versions will not.
+
+   If the guest is running Red Hat Enterprise Linux 6, the console logging
+   will be directed to both ttyS0 and ttyS1
+
 When Beaker encounters a guestrecipe it does create an environmental
 variable to be passed on to virtinstall test. The tester-supplied
 elements of this variable all come from the guestrecipe element.
