@@ -569,6 +569,45 @@ EOF
         self.assert_(r'''unsupported_hardware''' in recipe.rendered_kickstart.kickstart.splitlines(),
                      recipe.rendered_kickstart.kickstart)
 
+    def test_rhel6_guest_console(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <guestrecipe guestargs="--ram=1024 vcpus=1">
+                            <distroRequires>
+                                <distro_name op="=" value="RHEL-6.2" />
+                            </distroRequires>
+                            <hostRequires/>
+                            <task name="/distribution/install" />
+                            <task name="/distribution/reservesys" />
+                        </guestrecipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>''')
+        guest = recipe.guests[0]
+        data_setup.mark_recipe_waiting(guest)
+        guest.provision()
+        ks = guest.rendered_kickstart.kickstart
+        self.assert_(r'''bootloader --location=mbr  --append="console=ttyS0,115200 console=ttyS1,115200"''' in ks.splitlines(), ks)
+        self.assert_('cat << EOF >/etc/init/ttyS0.conf\n'
+            '# start ttyS0\nstart on runlevel [2345]\n'
+            'stop on runlevel [S016]\ninstance ttyS0\n'
+            'respawn\npre-start exec /sbin/securetty ttyS0\n'
+            'exec /sbin/agetty /dev/ttyS0 115200 vt100-nav\nEOF\n'
+            'initctl start ttyS0\n\ncat << EOF >/etc/init/ttyS1.conf\n'
+            '# start ttyS1\nstart on runlevel [2345]\nstop on runlevel [S016]\n'
+            'instance ttyS1\nrespawn\npre-start exec /sbin/securetty ttyS1\n'
+            'exec /sbin/agetty /dev/ttyS1 115200 vt100-nav\nEOF\n'
+            'initctl start ttyS1\n' in ks, ks)
+
     def test_rhel7_defaults(self):
         recipe = self.provision_recipe('''
             <job>

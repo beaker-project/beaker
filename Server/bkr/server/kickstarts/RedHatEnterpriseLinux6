@@ -13,7 +13,7 @@ ignoredisk --interactive
 {% endif %}
 {% if manual is undefined %}
 # System bootloader configuration
-bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
+bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}{% if recipe.systemtype == 'Virtual' %}  --append="console=ttyS0,115200 console=ttyS1,115200"{% endif %}
 
 {{ mode|default('cmdline') }}
 
@@ -84,6 +84,9 @@ unsupported_hardware
 {% snippet 'rhts_post' %}
 {% snippet 'RedHatEnterpriseLinux6_post' %}
 {% snippet 'system_post' %}
+{% if recipe.systemtype == 'Virtual' %}
+{% snippet 'virt_console_post' %}
+{% endif %}
 %end
 
 {{ ks_appends|join('\n') }}
