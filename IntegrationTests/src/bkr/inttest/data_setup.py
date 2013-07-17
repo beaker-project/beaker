@@ -358,7 +358,7 @@ def create_retention_tag(name=None, default=False, needs_product=False):
     return new_tag
 
 def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,
-        retention_tag=None, group=None, **kwargs):
+        retention_tag=None, group=None, submitter=None, **kwargs):
     if retention_tag is None:
         retention_tag = RetentionTag.by_tag(u'scratch') # Don't use default, unpredictable
     else:
@@ -369,7 +369,8 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
     if whiteboard is None:
         whiteboard = unique_name(u'job %s')
     job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,
-        retention_tag=retention_tag, group=group, product=product)
+        retention_tag=retention_tag, group=group, product=product,
+        submitter=submitter)
     if cc is not None:
         job.cc = cc
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),

@@ -236,6 +236,76 @@ class NewJobTestWD(WebDriverTestCase):
         flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
         self.assert_('Job failed schema validation' in flash_text, flash_text)
 
+    def test_valid_submission_delegate(self):
+        with session.begin():
+            user = data_setup.create_user()
+            submission_delegate = data_setup.create_user(password='password')
+            user.submission_delegates[:] = [submission_delegate]
+
+        b = self.browser
+        login(b, user=submission_delegate.user_name, password='password')
+        b.get(get_server_base() + 'jobs/new')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job user="%s">
+                <whiteboard>job with submission delegate who is allowed</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires>
+                           <system_type value="Machine"/>
+                        </hostRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''' % user.user_name)
+        xml_file.flush()
+        b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
+        b.find_element_by_xpath("//input[@value='Submit Data']").click()
+        b.find_element_by_xpath("//input[@value='Queue']").click()
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assert_('Success!' in flash_text, flash_text)
+        self.assertEqual(b.title, 'My Jobs')
+
+    def test_invalid_submission_delegate(self):
+        with session.begin():
+            user = data_setup.create_user()
+            invalid_delegate = data_setup.create_user(password='password')
+
+        b = self.browser
+        login(b, user=invalid_delegate.user_name, password='password')
+        b.get(get_server_base() + 'jobs/new')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job user="%s">
+                <whiteboard>job with submission delegate who is not allowed</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires>
+                           <system>
+                              <last_inventoried op="&gt;" value="2010-10-10"/>
+                           </system>
+                           <system_type value="Machine"/>
+                        </hostRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''' % user.user_name)
+        xml_file.flush()
+        b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
+        b.find_element_by_xpath("//input[@value='Submit Data']").click()
+        b.find_element_by_xpath("//input[@value='Queue']").click()
+        flash_text = b.find_element_by_xpath('//div[@class="flash"]').text
+        self.assertEquals('Failed to import job because of: %s is not a valid'
+            ' submission delegate for %s' % (invalid_delegate.user_name, user.user_name), flash_text, flash_text)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=949777
     def test_valid_inventory_date(self):
 
@@ -824,6 +894,18 @@ class TestJobsGrid(WebDriverTestCase):
             job = data_setup.create_job(owner=user, group=None)
         b = self.browser
         login(b, user=user.user_name, password='password')
+        b.find_element_by_link_text('My Jobs').click()
+        b.find_element_by_xpath('//title[normalize-space(text())="My Jobs"]')
+        self.assertTrue(is_text_present(b, job.t_id))
+
+    def test_myjobs_submission_delegate(self):
+        with session.begin():
+            user = data_setup.create_user()
+            submission_delegate = data_setup.create_user(password='password')
+            user.submission_delegates[:] = [submission_delegate]
+            job = data_setup.create_job(owner=user, group=None, submitter=submission_delegate)
+        b = self.browser
+        login(b, user=submission_delegate.user_name, password='password')
         b.find_element_by_link_text('My Jobs').click()
         b.find_element_by_xpath('//title[normalize-space(text())="My Jobs"]')
         self.assertTrue(is_text_present(b, job.t_id))

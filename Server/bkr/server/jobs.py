@@ -481,9 +481,22 @@ class Jobs(RPCRoot):
             return tag, None
 
     def process_xmljob(self, xmljob, user, ignore_missing_tasks=False):
-
+        # We start with the assumption that the owner == 'submitting user', until
+        # we see otherwise.
+        submitter = user
         if user.rootpw_expired:
             raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
+        owner_name = xmljob.get_xml_attr('user', unicode, None)
+        if owner_name:
+            try:
+                owner = User.by_user_name(owner_name)
+            except NoResultFound, e:
+                raise ValueError('%s is not a valid user name' % owner_name)
+            if not submitter.is_delegate_for(owner):
+                raise ValueError('%s is not a valid submission delegate for %s' % (submitter, owner))
+        else:
+            owner = user
+
         group_name =  xmljob.get_xml_attr('group', unicode, None)
         group = None
         if group_name:
@@ -491,13 +504,13 @@ class Jobs(RPCRoot):
                 group = Group.by_name(group_name)
             except NoResultFound, e:
                 raise ValueError('%s is not a valid group' % group_name)
-            if group not in user.groups:
-                raise BX(_(u'You are not a member of the %s group' % group_name))
+            if group not in owner.groups:
+                raise BX(_(u'User %s is not a member of group %s' % (owner.user_name, group.group_name)))
         job_retention = xmljob.get_xml_attr('retention_tag',unicode,None)
         job_product = xmljob.get_xml_attr('product',unicode,None)
         tag, product = self._process_job_tag_product(retention_tag=job_retention, product=job_product)
-        job = Job(whiteboard=unicode(xmljob.whiteboard), ttasks=0, owner=user,
-            group=group)
+        job = Job(whiteboard=unicode(xmljob.whiteboard), ttasks=0, owner=owner,
+            group=group, submitter=submitter)
         job.product = product
         job.retention_tag = tag
         email_validator = validators.Email(not_empty=True)
@@ -507,7 +520,7 @@ class Jobs(RPCRoot):
             except Invalid, e:
                 raise BX(_('Invalid e-mail address %r in <cc/>: %s') % (addr, str(e)))
         for xmlrecipeSet in xmljob.iter_recipeSets():
-            recipe_set = self._handle_recipe_set(xmlrecipeSet, user,
+            recipe_set = self._handle_recipe_set(xmlrecipeSet, owner,
                     ignore_missing_tasks=ignore_missing_tasks)
             job.recipesets.append(recipe_set)
             job.ttasks += recipe_set.ttasks

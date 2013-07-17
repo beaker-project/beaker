@@ -10,6 +10,15 @@
     <element name="job">
       <interleave>
         <optional>
+          <attribute name="user">
+          <a:documentation xml:lang="en">
+          Specifies the user who will be the owner of this job.
+          This requires that the submitting user is a valid delegate of
+          the user.
+          </a:documentation>
+          </attribute>
+        </optional>
+        <optional>
           <attribute name="group">
           <a:documentation xml:lang="en">
           Specifies the group this job was submitted on behalf of.

@@ -22,6 +22,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 
 from bkr.common.bexceptions import *
 
+class NoChangeException(BeakerException):
+    """This is raised when we want to signal we are doing a NOP"""
+    pass
+
 class VMCreationFailedException(BeakerException):
     pass
 
