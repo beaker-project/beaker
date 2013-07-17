@@ -14,6 +14,7 @@ def bash_completion_dir():
 setup(
     name = "bkr.client",
     version = "@VERSION@",
+    license = "GPLv2+",
 
     packages=find_packages('src'),
     package_dir = {'':'src'},
@@ -22,6 +23,13 @@ setup(
 
     data_files = [
         (bash_completion_dir(), ['bash-completion/bkr']),
+    ],
+
+    classifiers = [
+        'Development Status :: 5 - Production/Stable',
+        'Operating System :: POSIX :: Linux',
+        'Programming Language :: Python',
+        'License :: OSI Approved :: GNU General Public License (GPL)',
     ],
 
     entry_points = {
