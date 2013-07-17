@@ -56,7 +56,6 @@ BuildRequires:  python-lxml
 BuildRequires:  python-ldap
 BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  cracklib-python
-BuildRequires:  python-concurrentloghandler
 BuildRequires:  rpm-python
 BuildRequires:  rhts-python
 BuildRequires:  python-netaddr
@@ -109,7 +108,6 @@ Requires:	%{name} = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
 Requires:	createrepo
 Requires:	yum-utils
-Requires:       python-concurrentloghandler
 Requires:       rhts-python
 Requires:       cracklib-python
 Requires:       python-jinja2
@@ -167,7 +165,6 @@ Requires:	kobo-client
 Requires:	python-setuptools
 Requires:	python-xmltramp
 Requires:       python-krbV
-Requires:       python-concurrentloghandler
 Requires:       python-gevent >= 1.0
 Requires:       python-daemon
 Requires:       python-werkzeug
@@ -260,17 +257,27 @@ cp -p LabController/tmpfiles.d/beaker-lab-controller.conf $RPM_BUILD_ROOT%{_tmpf
 %if %{with server}
 %postun server
 if [ "$1" -ge "1" ]; then
-        /sbin/service beakerd condrestart >/dev/null 2>&1 || :
+    /sbin/service beakerd condrestart >/dev/null 2>&1 || :
+    # Restart rsyslog so that it notices the config which we ship
+    /sbin/service rsyslog condrestart >/dev/null 2>&1 || :
+    # Migrate ConcurrentLogHandler -> syslog
+    rm -f %{_localstatedir}/log/%{name}/*.lock 2>&1 || :
+    chown root:root %{_localstatedir}/log/%{name}/*.log 2>&1 || :
 fi
 %endif
 
 %if %{with labcontroller}
 %postun lab-controller
 if [ "$1" -ge "1" ]; then
-        /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
-        /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
-        /sbin/service beaker-transfer condrestart >/dev/null 2>&1 || :
-        /sbin/service beaker-provision condrestart >/dev/null 2>&1 || :
+    /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
+    /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
+    /sbin/service beaker-transfer condrestart >/dev/null 2>&1 || :
+    /sbin/service beaker-provision condrestart >/dev/null 2>&1 || :
+    # Restart rsyslog so that it notices the config which we ship
+    /sbin/service rsyslog condrestart >/dev/null 2>&1 || :
+    # Migrate ConcurrentLogHandler -> syslog
+    rm -f %{_localstatedir}/log/%{name}/*.lock 2>&1 || :
+    chown root:root %{_localstatedir}/log/%{name}/*.log 2>&1 || :
 fi
 %endif
 
@@ -326,13 +333,15 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-refresh-ldap
 %{_sysconfdir}/init.d/%{name}d
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
+%config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-server.conf
+%config(noreplace) %{_sysconfdir}/logrotate.d/beaker
 %attr(0755,root,root)%{_bindir}/%{name}d
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-server.conf
 %attr(-,apache,root) %dir %{_datadir}/bkr
 %attr(-,apache,root) %{_datadir}/bkr/%{name}-server.wsgi
 %attr(-,apache,root) %{_datadir}/bkr/server
 %attr(-,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
-%attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
+%dir %{_localstatedir}/log/%{name}
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
@@ -387,13 +396,15 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_sysconfdir}/cron.hourly/beaker_expire_distros
 %attr(-,apache,root) %dir %{_var}/www/beaker
 %attr(-,apache,root) %dir %{_var}/www/beaker/logs
-%attr(-,apache,root) %dir %{_localstatedir}/log/%{name}
+%dir %{_localstatedir}/log/%{name}
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
 %{_sysconfdir}/init.d/%{name}-provision
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %attr(0440,root,root) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
+%config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-lab-controller.conf
+%config(noreplace) %{_sysconfdir}/logrotate.d/beaker
 %if %{with_systemd}
 %attr(0644,apache,apache) %{_tmpfilesdir}/beaker-lab-controller.conf
 %endif

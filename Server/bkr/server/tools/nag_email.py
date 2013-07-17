@@ -9,8 +9,9 @@ import sys
 import datetime
 from sqlalchemy.sql import and_
 from sqlalchemy.orm import contains_eager, joinedload
+from bkr.log import log_to_stream
 from bkr.server.model import System, Reservation
-from bkr.server.util import load_config, log_to_stream
+from bkr.server.util import load_config
 from turbogears import config
 from turbogears.database import session, get_engine
 from turbomail.control import interface

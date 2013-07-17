@@ -14,9 +14,10 @@ import urlparse
 import requests
 import requests_kerberos
 from bkr.common import __version__
+from bkr.log import log_to_stream
 from optparse import OptionParser
 from bkr.server.model import Job
-from bkr.server.util import load_config, log_to_stream
+from bkr.server.util import load_config
 from turbogears.database import session
 import logging
 

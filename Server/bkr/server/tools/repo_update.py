@@ -6,8 +6,9 @@
 # (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
 __requires__ = ['CherryPy < 3.0']
 
+from bkr.log import log_to_stream
 from bkr.server.model import OSMajor
-from bkr.server.util import load_config, log_to_stream
+from bkr.server.util import load_config
 from optparse import OptionParser
 from turbogears.database import session
 from turbogears.config import get

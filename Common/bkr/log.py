@@ -2,134 +2,51 @@
 
 
 import os
+import syslog
+import codecs
 import logging
-import logging.handlers
-try:
-    from cloghandler import ConcurrentRotatingFileHandler as RFHandler
-except ImportError:
-    # Next 2 lines are optional:  issue a warning to the user
-    from warnings import warn
-    warn("ConcurrentLogHandler package not installed.  Using builtin log handler")
-    from logging.handlers import RotatingFileHandler as RFHandler
 
-
-
-
-__all__ = (
-    "BRIEF_LOG_FORMAT",
-    "VERBOSE_LOG_FORMAT",
-    "add_stderr_logger",
-    "add_file_logger",
-    "add_rotating_file_logger",
-    "LoggingBase",
-)
-
-
-BRIEF_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] %(message)s"
-VERBOSE_LOG_FORMAT = "%(asctime)s [%(levelname)-8s] {%(process)5d} %(name)s:%(lineno)4d %(message)s"
-
-
-###########
-# Following hack enables 'VERBOSE' log level in the python logging module and Logger class.
-# This means you need to import bkr.log before you can use 'VERBOSE' logging.
-
-
-logging.VERBOSE = 15
-logging.addLevelName(15, "VERBOSE")
-
-
-def verbose(self, msg, *args, **kwargs):
+def log_to_stream(stream, level=logging.WARNING):
     """
-    Log 'msg % args' with severity 'VERBOSE'.
+    Configures the logging module to send messages to the given stream (for
+    example, sys.stderr). By default only WARNING and ERROR level messages are
+    logged; pass the level argument to override this.
 
-    To pass exception information, use the keyword argument exc_info with
-    a true value, e.g.
-
-    logger.info("Houston, we have a %s", "interesting problem", exc_info=1)
+    Suitable for use in command-line programs.
     """
-    if self.manager.disable >= logging.VERBOSE:
-        return
-    if logging.VERBOSE >= self.getEffectiveLevel():
-        self._log(*(logging.VERBOSE, msg, args), **kwargs)
-logging.Logger.verbose = verbose
+    stream_handler = logging.StreamHandler(stream)
+    stream_handler.setLevel(level)
+    stream_handler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s'))
+    logging.getLogger().handlers = [stream_handler]
 
+def log_to_syslog(program_name, facility=syslog.LOG_DAEMON):
+    syslog.openlog(program_name, syslog.LOG_PID, facility)
+    syslog_handler = SysLogHandler()
+    syslog_handler.setLevel(logging.DEBUG) # syslog can do the filtering instead
+    syslog_handler.setFormatter(logging.Formatter('%(name)s %(levelname)s %(message)s'))
+    logging.getLogger().handlers = [syslog_handler]
 
-def verbose(msg, *args, **kwargs):
-    """
-    Log a message with severity 'VERBOSE' on the root logger.
-    """
-    if len(logging.root.handlers) == 0:
-        logging.basicConfig()
-    logging.root.verbose(*((msg, ) + args), **kwargs)
-logging.verbose = verbose
-del verbose
+# Like logging.handlers.SysLogHandler, but uses libc syslog(3) and splits
+# multi-line messages into separate log entries.
+class SysLogHandler(logging.Handler):
 
+    _level_to_priority = {
+        logging.CRITICAL: syslog.LOG_CRIT,
+        logging.ERROR: syslog.LOG_ERR,
+        logging.WARNING: syslog.LOG_WARNING,
+        logging.INFO: syslog.LOG_INFO,
+        logging.DEBUG: syslog.LOG_DEBUG,
+    }
 
-# end of hack
-###########
-
-
-def add_stderr_logger(logger, log_level=None, format=None):
-    """Add a stderr logger to the logger."""
-    log_level = log_level or logging.DEBUG
-    format = format or BRIEF_LOG_FORMAT
-
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter(format, datefmt="%Y-%m-%d %H:%M:%S"))
-    handler.setLevel(log_level)
-    logger.addHandler(handler)
-
-
-def add_file_logger(logger, logfile, log_level=None, format=None, mode="a"):
-    """Add a file logger to the logger."""
-    log_level = log_level or logging.DEBUG
-    format = format or BRIEF_LOG_FORMAT
-
-    # touch the logfile
-    if not os.path.exists(logfile):
-        try:
-            fo = open(logfile, "w")
-            fo.close()
-        except (ValueError, IOError):
-            return
-
-    # is the logfile really a file?
-    if not os.path.isfile(logfile):
-        return
-
-    # check if the logfile is writable
-    if not os.access(logfile, os.W_OK):
-        return
-
-    handler = logging.FileHandler(logfile, mode=mode)
-    handler.setFormatter(logging.Formatter(format, datefmt="%Y-%m-%d %H:%M:%S"))
-    handler.setLevel(log_level)
-    logger.addHandler(handler)
-
-
-def add_rotating_file_logger(logger, logfile, log_level=None, format=None, mode="a", 
-    maxBytes=10*(1024**2), backupCount=5):
-    """Add a rotating file logger to the logger."""
-    log_level = log_level or logging.DEBUG
-    format = format or BRIEF_LOG_FORMAT
-
-    # touch the logfile
-    if not os.path.exists(logfile):
-        try:
-            fo = open(logfile, "w")
-            fo.close()
-        except (ValueError, IOError):
-            return
-
-    # is the logfile really a file?
-    if not os.path.isfile(logfile):
-        return
-
-    # check if the logfile is writable
-    if not os.access(logfile, os.W_OK):
-        return
-
-    handler = RFHandler(logfile, maxBytes=maxBytes, backupCount=backupCount, mode=mode)
-    handler.setFormatter(logging.Formatter(format, datefmt="%Y-%m-%d %H:%M:%S"))
-    handler.setLevel(log_level)
-    logger.addHandler(handler)
+    def emit(self, record):
+        priority = self._level_to_priority.get(record.levelno, syslog.LOG_WARNING)
+        msg = self.format(record)
+        for i, line in enumerate(msg.splitlines()):
+            if isinstance(line, unicode):
+                line = codecs.BOM_UTF8 + line.encode('utf8')
+            if i > 0:
+                line = ' ' + line
+            try:
+                syslog.syslog(priority, line)
+            except Exception:
+                self.handleError(record)

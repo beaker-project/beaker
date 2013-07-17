@@ -34,7 +34,7 @@ import turbogears
 from turbogears import update_config
 from turbogears.database import session
 from bkr.server.controllers import Root
-from bkr.server.util import log_to_stream
+from bkr.log import log_to_stream
 
 # hack to make turbogears.testutil not do dumb stuff at import time
 orig_cwd = os.getcwd()
@@ -230,10 +230,7 @@ def setup_package():
     log.info('Loading test configuration from %s', CONFIG_FILE)
     assert os.path.exists(CONFIG_FILE), 'Config file %s must exist' % CONFIG_FILE
     update_config(configfile=CONFIG_FILE, modulename='bkr.server.config')
-
-    # Override loaded logging config, in case we are using the server's config file
-    # (we really always want our tests' logs to go to stdout, not /var/log/beaker/)
-    log_to_stream(sys.stdout, level=logging.NOTSET)
+    log_to_stream(sys.stdout, level=logging.DEBUG)
 
     from bkr.inttest import data_setup
     if not 'BEAKER_SKIP_INIT_DB' in os.environ:

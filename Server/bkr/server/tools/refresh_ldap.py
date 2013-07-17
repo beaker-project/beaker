@@ -14,7 +14,8 @@ import optparse
 import ldap
 from turbogears import config
 from bkr.common import __version__
-from bkr.server.util import load_config, log_to_stream
+from bkr.log import log_to_stream
+from bkr.server.util import load_config
 from bkr.server.model import session, Group
 
 def refresh_ldap():
