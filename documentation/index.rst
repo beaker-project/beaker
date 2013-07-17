@@ -16,6 +16,7 @@ Resources
       man/index
       Release notes <whats-new/index>
       glossary
+      architecture-guide/index
 
    * `Beaker Quick Start Guide: slides (PDF) <../psss-beaker-quick-start-guide-slides.pdf>`__
    * `RELAX NG schema for Beaker jobs <../schema/beaker-job.rng>`__
@@ -32,6 +33,7 @@ Resources
       :maxdepth: 1
 
       admin-guide/index
+      architecture-guide/index
 
    * `Migrating from Cobbler (pre-Beaker 0.9) <../cobbler-migration.html>`_
 
@@ -46,6 +48,7 @@ Resources
 
       Beaker server API documentation <server-api/index>
       alternative-harnesses/index
+      architecture-guide/index
 
 Search this site
 ================

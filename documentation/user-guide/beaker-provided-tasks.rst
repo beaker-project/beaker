@@ -27,6 +27,8 @@ error logs, a file containing the list of packages which were
 installed and other files. If there is a problem in the installation,
 the data in these files can often be used to determine the cause.
 
+.. _reservesys-task:
+
 /distribution/reservesys
 ========================
 
@@ -64,6 +66,14 @@ in your job description, you would use the following::
         <param name="RESERVETIME" value="172800" />
       </params>
     </task>
+
+.. note::
+
+   Due to an unfortunate race condition, conditional reservation may be
+   unreliable if the immediately preceding task is the only one that fails
+   in the recipe. Inserting :ref:`dummy-task` prior to this task may help if
+   the problem of failing to reserve the system occurs regularly.
+
 
 Notification
 ~~~~~~~~~~~~
@@ -126,6 +136,15 @@ recent released version.
 This task is used by the Beaker developers to run the test suite
 every time a new patch is pushed to the development branch to help
 prevent any regressions in the code base.
+
+.. _dummy-task:
+
+/distribution/utils/dummy
+=========================
+
+This is a placeholder task used to align task execution across different
+recipes in a multi-host recipe set. See :ref:`multihost-tasks` for details.
+
 
 Other tasks
 ===========

@@ -1,3 +1,5 @@
+.. _multihost-tasks:
+
 Multihost tasks
 ===============
 
