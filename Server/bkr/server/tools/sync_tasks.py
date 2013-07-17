@@ -173,7 +173,7 @@ class TaskLibrarySync:
             # https://bugzilla.redhat.com/show_bug.cgi?id=915549
             # we do our best to continue anyway...
             self.logger.error('Could not get task XML for %s from %s. Continuing.' % (task, server))
-            self.logger.error('Error message: %s' % e.faultString)
+            self.logger.error('Error message: %s' % e)
             return None
 
     def update_db(self):
