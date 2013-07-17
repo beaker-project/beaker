@@ -39,10 +39,10 @@ Unreleased changes
 The following changes will appear in the next Beaker release.
 
 .. toctree::
-:maxdepth: 2
-:glob:
+   :maxdepth: 2
+   :glob:
 
-next/*
+   next/*
 
 Beaker 0.13
 -----------
