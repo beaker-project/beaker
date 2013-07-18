@@ -151,6 +151,7 @@ latexpdf:
 	@echo "pdflatex finished; the PDF files are in $(BUILDDIR)/latex."
 
 text:
+	@echo "For 'Unknown node: container', see https://bitbucket.org/birkenfeld/sphinx/issue/1018/"
 	$(SPHINXBUILD) -b text $(ALLSPHINXOPTS) $(BUILDDIR)/text
 	@echo
 	@echo "Build finished. The text files are in $(BUILDDIR)/text."
