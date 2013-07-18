@@ -5,6 +5,8 @@ import json
 import pkg_resources
 from copy import copy
 from bkr.inttest import Process
+from bkr.server.model import OSMajor
+from turbogears.database import session
 
 _current_dir = os.path.dirname(__file__)
 _compose_test_dir = pkg_resources.resource_filename('bkr.inttest.labcontroller', 'compose_layout')
@@ -16,6 +18,13 @@ if os.path.exists(os.path.join(_git_root_dir, '.git')):
 else:
     _command = '/usr/bin/beaker-import'
 
+class TreeImportError(Exception):
+
+    def __init__(self, command, status, stderr_output):
+        Exception.__init__(self, 'Distro import failed: %r '
+                           'with exit status %s:\n%s' % (command, status, stderr_output))
+        self.status = status
+        self.stderr_output = stderr_output
 
 class DistroImportTest(unittest.TestCase):
 
@@ -491,13 +500,14 @@ class DistroImportTest(unittest.TestCase):
                              env=dict(os.environ.items() + [('PYTHONUNBUFFERED', '1')]))
         return p
 
-    def _import_trees(self, additional_import_args):
-        import_args = copy(self.import_args)
+    def _import_trees(self, additional_import_args, import_args=None):
+        if not import_args:
+            import_args = copy(self.import_args)
         import_args.extend(additional_import_args)
         p = self._run_import(import_args)
         stdout, stderr = p.communicate()
-        self.assertEquals(p.returncode, 0,
-            'Returned nonzero, stderr: %s' % stderr)
+        if p.returncode:
+            raise TreeImportError(import_args, p.returncode, stderr)
         json_trees = stdout.split('\n')
         del json_trees[-1] # Empty string
         trees = [json.loads(t) for t in json_trees]
@@ -666,3 +676,32 @@ class DistroImportTest(unittest.TestCase):
         self.assertTrue(len(trees) == 1)
         tree = trees.pop()
         self.assertEquals(tree, self.i386_rhel6)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=907242
+    def test_cannot_import_osmajor_existing_alias(self):
+
+        # really import, not dry run
+        import_args = ['python',_command,'--json','--debug']
+
+        trees = self._import_trees(['%sRHEL6-Server/' % self.distro_url], import_args=import_args)
+        self.assertTrue(len(trees) == 2) # Expecting two trees
+
+        # set an alias
+        myalias = 'RHEL6'
+        with session.begin():
+            distro1 = OSMajor.by_name('RedHatEnterpriseLinux6')
+            distro1.alias = myalias
+            self.assert_(distro1.alias is myalias)
+
+        # import the same tree with osmajor same as myalias
+        # beaker-import constructs the osmajor from family name and version
+        # so, we just supply RHEL (and the osmajor will be RHEL6)
+        try:
+            trees = self._import_trees(['--family','RHEL',
+                                        '%sRHEL6-Server/' % self.distro_url],
+                                       import_args=import_args)
+            self.fail('Must fail or die')
+        except TreeImportError as e:
+            self.assert_('Cannot import distro as RHEL6: '
+                         'it is configured as an alias for RedHatEnterpriseLinux6' in
+                         e.stderr_output, e.stderr_output)

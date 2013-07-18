@@ -268,6 +268,8 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
         self.check_variants(options.variant, single=False)
 
     def process(self, urls, options):
+        exit_status = 0
+
         self.options = options
         self.scheduler = SchedulerProxy(self.options)
         self.distro_trees = []
@@ -285,8 +287,11 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
                 build.process(urls_arch, options)
                 self.distro_trees.append(build.tree)
             except BX, err:
+                exit_status = 1
                 if not options.ignore_missing:
                     logging.warn(err)
+
+        return exit_status
 
 class ComposeInfo(ComposeInfoBase, Importer):
     """
@@ -632,6 +637,8 @@ sources = Workstation/source/SRPMS
         return repos
 
     def process(self, urls, options):
+        exit_status = 0
+
         self.options = options
         self.scheduler = SchedulerProxy(self.options)
         self.distro_trees = []
@@ -658,8 +665,10 @@ sources = Workstation/source/SRPMS
                     build.process(urls_variant_arch, options, repos)
                     self.distro_trees.append(build.tree)
                 except BX, err:
+                    exit_status = 1
                     if not options.ignore_missing:
                         logging.warn(err)
+        return exit_status
 
 
 class TreeInfoBase(object):
@@ -1853,7 +1862,7 @@ def main():
         log_level = logging.CRITICAL
     else:
         log_level = logging.INFO
-    log_to_stream(sys.stdout, level=log_level)
+    log_to_stream(sys.stderr, level=log_level)
 
     if not urls:
         logging.critical('No location(s) specified!')
@@ -1865,20 +1874,27 @@ def main():
         sys.exit(2)
     if opts.dry_run:
         logging.info('Dry Run only, no data will be sent to beaker')
+    exit_status = []
     try:
         build = Build(primary_url, options=opts)
         try:
             build.check_input(opts)
-            build.process(urls, opts)
+            exit_status.append(build.process(urls, opts))
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
             logging.critical(str(e))
             sys.exit(3)
-    except BX, err:
+    except (xmlrpclib.Fault,BX), err:
         logging.critical(err)
         sys.exit(127)
     if opts.run_jobs:
         logging.info('running jobs.')
         build.run_jobs()
 
+    # if the list of exit_status-es contain any non-zero
+    # value it means that at least one tree failed to import
+    # correctly, and hence set the exit status of the script 
+    # accordingly
+    return bool(any(exit_status))
+
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

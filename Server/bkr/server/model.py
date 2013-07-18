@@ -3090,6 +3090,10 @@ class OSMajor(MappedObject):
         return cls.query.filter_by(osmajor=osmajor).one()
 
     @classmethod
+    def by_alias(cls, alias):
+        return cls.query.filter_by(alias=alias).one()
+
+    @classmethod
     def by_name_alias(cls, name_alias):
         return cls.query.filter(or_(OSMajor.osmajor==name_alias,
                                     OSMajor.alias==name_alias)).one()
