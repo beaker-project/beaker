@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
+.. _bkr-workflow-simple:
+
 bkr workflow-simple: Simple workflow to generate Beaker jobs
 ============================================================
 

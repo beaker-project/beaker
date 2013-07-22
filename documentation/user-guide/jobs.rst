@@ -23,33 +23,21 @@ change which recipe set is run sooner, and vice a versa (See: :ref:`recipes`).
    respectively.
 
 
-Job workflow
-^^^^^^^^^^^^
+Creating your job XML
+^^^^^^^^^^^^^^^^^^^^^
 
-To create a simple Job workflow, see the ``bkr workflow-simple`` command in
-:ref:`bkr client <bkr-client>`.
+Beaker jobs are defined using an XML format. For details, see :doc:`job-xml`.
 
-.. _job-searching:
-
-Job searching
-^^^^^^^^^^^^^
-
-To search for a Job, navigate to "Scheduler>Jobs" at the top of the page. To 
-look up the "Job ID", enter a number in the search box and press the "Lookup ID 
-button". See :ref:`system-searching` for further details on searching.
-
-.. admonition:: Quick Searches
-
-   By pressing the "Running", "Queued", or "Completed" buttons you can quickly 
-   display Recipes that have a status of running,queued, and completed 
-   respectively. 
+You can use the :ref:`bkr workflow-simple <bkr-workflow-simple>` client command 
+to generate simple jobs. For more complicated logic, you can write a custom 
+workflow command in Python.
 
 .. _job-submission:
 
 Job submission
 ^^^^^^^^^^^^^^
 
-There are two ways of submitting a Job through the web UI.They are
+There are two ways of submitting a Job through the web UI. They are
 outlined below.
 
 .. _submitting-a-new-job:
@@ -88,10 +76,31 @@ shows the structure of the Job in the XML.
    Beaker,you can use the Clone button to change details of a previous Job
    and resubmit it!
 
+.. _job-searching:
+
+Searching for jobs
+^^^^^^^^^^^^^^^^^^
+
+You can search all Beaker jobs from the jobs page. Select 
+:menuselection:`Scheduler --> Jobs` from the menu. Jobs are listed with the 
+most recent at the top. You can click the :guilabel:`Running`, 
+:guilabel:`Queued`, or :guilabel:`Completed` buttons to filter the list to 
+running, queued, or completed jobs respectively. If you want to look up 
+a specific job, enter its ID in the search box and click :guilabel:`Lookup ID`. 
+Otherwise, you can click :guilabel:`Toggle Search` to search the jobs.
+
+The "My Jobs" page behaves the same as the jobs page, except it is limited to 
+jobs where you are the owner. Select :menuselection:`Hello --> My Jobs` from 
+the menu.
+
+Similarly, the "My Group Jobs" page is limited to jobs submitted for any group 
+of which you are a member. Select :menuselection:`Hello --> My Group Jobs` from 
+the menu.
+
 .. _job-results:
 
 Job results
-'''''''''''
+^^^^^^^^^^^
 
 The whole purpose of Jobs is to view the output of the Job, and more to
 the point, tasks that ran within the Job. To do this, you must first go
