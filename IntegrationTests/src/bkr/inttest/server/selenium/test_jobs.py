@@ -809,13 +809,13 @@ class TestJobsGrid(WebDriverTestCase):
             job = data_setup.create_job(owner=user, group=group)
         b = self.browser
         login(b, user=user2.user_name, password='password')
-        b.find_element_by_link_text('My Jobs').click()
-        b.find_element_by_xpath('//title[normalize-space(text())="My Jobs"]')
+        b.get(get_server_base() + 'jobs/mygroups')
+        b.find_element_by_xpath('//title[normalize-space(text())="My Group Jobs"]')
         self.assertTrue(is_text_present(b, job.t_id))
         logout(b)
         login(b, user=user.user_name, password='password')
-        b.find_element_by_link_text('My Jobs').click()
-        b.find_element_by_xpath('//title[normalize-space(text())="My Jobs"]')
+        b.get(get_server_base() + 'jobs/mygroups')
+        b.find_element_by_xpath('//title[normalize-space(text())="My Group Jobs"]')
         self.assertTrue(is_text_present(b, job.t_id))
 
     def test_myjobs_individual(self):

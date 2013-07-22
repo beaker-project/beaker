@@ -15,7 +15,7 @@ from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
         relationship
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
-from sqlalchemy.sql import exists, union
+from sqlalchemy.sql import exists, union, literal
 from sqlalchemy.sql.expression import join
 from sqlalchemy.exc import InvalidRequestError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
@@ -4158,14 +4158,21 @@ class Job(TaskBase):
     @classmethod
     def mine(cls, owner):
         """
-        A class method that can be used to search for Jobs that belong to a
-        user or associated to a user's group.
+        Returns a query of all jobs which are owned by the given user.
+        """
+        return cls.query.filter(Job.owner==owner)
+
+    @classmethod
+    def my_groups(cls, owner):
+        """
+        ... as in, "my groups' jobs". Returns a query of all jobs which were 
+        submitted for any of the given user's groups.
         """
         if owner.groups:
-            return cls.query.outerjoin(Job.group).filter(or_(Job.owner==owner,
-                Group.group_id.in_([g.group_id for g in owner.groups])))
+            return cls.query.outerjoin(Job.group)\
+                    .filter(Group.group_id.in_([g.group_id for g in owner.groups]))
         else:
-            return cls.query.filter(Job.owner==owner)
+            return cls.query.filter(literal(False))
 
     @classmethod
     def get_nacks(self,jobs):

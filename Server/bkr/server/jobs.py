@@ -733,13 +733,21 @@ class Jobs(RPCRoot):
     def index(self,*args,**kw): 
         return self.jobs(jobs=session.query(Job).join('owner'),*args,**kw)
 
-    @identity.require(identity.not_anonymous()) 
+    @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50)
-    def mine(self,*args,**kw): 
-        return self.jobs(jobs=Job.mine(identity.current.user),action='./mine',
-                title=u'My Jobs', *args, **kw)
- 
+    def mine(self, *args, **kw):
+        query = Job.mine(identity.current.user)
+        return self.jobs(jobs=query, action='./mine', title=u'My Jobs', *args, **kw)
+
+    @identity.require(identity.not_anonymous())
+    @expose(template='bkr.server.templates.grid')
+    @paginate('list',default_order='-id', limit=50)
+    def mygroups(self, *args, **kw):
+        query = Job.my_groups(identity.current.user)
+        return self.jobs(jobs=query, action='./mygroups', title=u'My Group Jobs',
+                *args, **kw)
+
     def jobs(self,jobs,action='.', title=u'Jobs', *args, **kw):
         jobs = jobs.filter(and_(Job.deleted == None, Job.to_delete == None))
         jobs_return = self._jobs(jobs, **kw)
