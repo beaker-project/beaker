@@ -244,6 +244,9 @@ cp -p LabController/tmpfiles.d/beaker-lab-controller.conf $RPM_BUILD_ROOT%{_tmpf
 %if %{with server}
 %post server
 /sbin/chkconfig --add beakerd
+# Migrate ConcurrentLogHandler -> syslog
+rm -f %{_localstatedir}/log/%{name}/*.lock 2>&1 || :
+chown root:root %{_localstatedir}/log/%{name}/*.log 2>&1 || :
 # Restart rsyslog so that it notices the config which we ship
 /sbin/service rsyslog condrestart >/dev/null 2>&1 || :
 %endif
@@ -254,6 +257,9 @@ cp -p LabController/tmpfiles.d/beaker-lab-controller.conf $RPM_BUILD_ROOT%{_tmpf
 /sbin/chkconfig --add beaker-watchdog
 /sbin/chkconfig --add beaker-transfer
 /sbin/chkconfig --add beaker-provision
+# Migrate ConcurrentLogHandler -> syslog
+rm -f %{_localstatedir}/log/%{name}/*.lock 2>&1 || :
+chown root:root %{_localstatedir}/log/%{name}/*.log 2>&1 || :
 # Restart rsyslog so that it notices the config which we ship
 /sbin/service rsyslog condrestart >/dev/null 2>&1 || :
 %endif
@@ -262,9 +268,6 @@ cp -p LabController/tmpfiles.d/beaker-lab-controller.conf $RPM_BUILD_ROOT%{_tmpf
 %postun server
 if [ "$1" -ge "1" ]; then
     /sbin/service beakerd condrestart >/dev/null 2>&1 || :
-    # Migrate ConcurrentLogHandler -> syslog
-    rm -f %{_localstatedir}/log/%{name}/*.lock 2>&1 || :
-    chown root:root %{_localstatedir}/log/%{name}/*.log 2>&1 || :
 fi
 %endif
 
@@ -275,9 +278,6 @@ if [ "$1" -ge "1" ]; then
     /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
     /sbin/service beaker-transfer condrestart >/dev/null 2>&1 || :
     /sbin/service beaker-provision condrestart >/dev/null 2>&1 || :
-    # Migrate ConcurrentLogHandler -> syslog
-    rm -f %{_localstatedir}/log/%{name}/*.lock 2>&1 || :
-    chown root:root %{_localstatedir}/log/%{name}/*.log 2>&1 || :
 fi
 %endif
 
