@@ -7,6 +7,7 @@ from bkr.server.helpers import make_link, make_edit_link
 from bkr.server.util import total_seconds
 from bkr.server.widgets import LabControllerDataGrid, LabControllerForm
 from bkr.server.distrotrees import DistroTrees
+from bkr.common.bexceptions import BX
 from sqlalchemy.orm import contains_eager
 import cherrypy
 from datetime import datetime, timedelta
@@ -115,7 +116,13 @@ class LabControllers(RPCRoot):
 
         # osmajor is required
         if 'osmajor' in new_distro:
-            osmajor = OSMajor.lazy_create(osmajor=new_distro['osmajor'])
+            try:
+                osmajor = OSMajor.by_alias(new_distro['osmajor'])
+            except NoResultFound:
+                osmajor = OSMajor.lazy_create(osmajor=new_distro['osmajor'])
+            else:
+                raise BX(_('Cannot import distro as %s: it is configured as an alias for %s' 
+                           % (new_distro['osmajor'], osmajor.osmajor)))
         else:
             return ''
 
