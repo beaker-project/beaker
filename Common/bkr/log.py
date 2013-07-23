@@ -41,9 +41,9 @@ class SysLogHandler(logging.Handler):
     def emit(self, record):
         priority = self._level_to_priority.get(record.levelno, syslog.LOG_WARNING)
         msg = self.format(record)
+        if isinstance(msg, unicode):
+            msg = msg.encode('utf8')
         for i, line in enumerate(msg.splitlines()):
-            if isinstance(line, unicode):
-                line = codecs.BOM_UTF8 + line.encode('utf8')
             if i > 0:
                 line = ' ' + line
             try:
