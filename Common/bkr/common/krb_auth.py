@@ -44,7 +44,7 @@ class AuthManager:
         except krbV.Krb5Error, e:
             if 'Ticket expired' in str(e):
                 self.reinit()
-                req = self._create_request(sprinc)
+                req = self._create_request(sprinc, ac)
             else:
                 raise
         return base64.encodestring(req)
