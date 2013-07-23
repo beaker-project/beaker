@@ -7,7 +7,6 @@ respawn
 pre-start exec /sbin/securetty ttyS0
 exec /sbin/agetty /dev/ttyS0 115200 vt100-nav
 EOF
-initctl start ttyS0
 
 cat << EOF >/etc/init/ttyS1.conf
 # start ttyS1
@@ -18,4 +17,3 @@ respawn
 pre-start exec /sbin/securetty ttyS1
 exec /sbin/agetty /dev/ttyS1 115200 vt100-nav
 EOF
-initctl start ttyS1

@@ -602,11 +602,10 @@ EOF
             'stop on runlevel [S016]\ninstance ttyS0\n'
             'respawn\npre-start exec /sbin/securetty ttyS0\n'
             'exec /sbin/agetty /dev/ttyS0 115200 vt100-nav\nEOF\n'
-            'initctl start ttyS0\n\ncat << EOF >/etc/init/ttyS1.conf\n'
+            '\ncat << EOF >/etc/init/ttyS1.conf\n'
             '# start ttyS1\nstart on runlevel [2345]\nstop on runlevel [S016]\n'
             'instance ttyS1\nrespawn\npre-start exec /sbin/securetty ttyS1\n'
-            'exec /sbin/agetty /dev/ttyS1 115200 vt100-nav\nEOF\n'
-            'initctl start ttyS1\n' in ks, ks)
+            'exec /sbin/agetty /dev/ttyS1 115200 vt100-nav\nEOF\n' in ks, ks)
 
     def test_rhel7_defaults(self):
         recipe = self.provision_recipe('''
