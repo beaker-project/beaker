@@ -23,6 +23,65 @@ class UserPrefs(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
+    def test_adding_duplicate_delegate(self):
+        with session.begin():
+            submission_delegate = data_setup.create_user()
+            self.user.submission_delegates[:] = [submission_delegate]
+        b = self.browser
+        delegate_field = b.find_element_by_id('SubmissionDelegates_user_text')
+        # Add the submission delegate again
+        delegate_field.send_keys(submission_delegate.user_name)
+        b.find_element_by_xpath("//input[@value='Add' and"
+            " ../../../tr/td/span[@id='SubmissionDelegates_user']]").click()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+            '%s is already a submission delegate for %s' % (submission_delegate, self.user))
+        # Check that it hasn't changed our list of submission delegates
+        self.assertEquals(self.user.submission_delegates, [submission_delegate])
+
+    def test_removing_submission_delegate(self):
+        with session.begin():
+            submission_delegate = data_setup.create_user()
+            self.user.submission_delegates[:] = [submission_delegate]
+        b = self.browser
+        b.get(get_server_base() + 'prefs')
+        b.find_element_by_xpath("//a[normalize-space(text())='Remove (-)' and"
+            " ../../preceding-sibling::td[text()='%s']]" % submission_delegate).click()
+        b.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+            '%s removed as a submission delegate' % submission_delegate)
+        # Check they have been removed in DB
+        session.expire(self.user)
+        with session.begin():
+            self.assertEquals(self.user.submission_delegates, [])
+            activity = self.user.user_activity[-1]
+            self.assertEqual(activity.action, u'Removed')
+            self.assertEqual(activity.field_name, u'Submission delegate')
+            self.assertEqual(activity.user.user_id, self.user.user_id)
+            self.assertEqual(activity.old_value, submission_delegate.user_name)
+            self.assertEqual(activity.new_value, None)
+
+    def test_adding_submission_delegate(self):
+        with session.begin():
+            submission_delegate = data_setup.create_user()
+        b = self.browser
+        delegate_field = b.find_element_by_id('SubmissionDelegates_user_text')
+        delegate_field.send_keys(submission_delegate.user_name)
+        b.find_element_by_xpath("//input[@value='Add' and"
+            " ../../../tr/td/span[@id='SubmissionDelegates_user']]").click()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+            'Added %s as a submission delegate' % submission_delegate)
+        session.expire(self.user)
+        # Check user has indeed been added, and activity updated
+        with session.begin():
+            self.assertEqual(self.user.submission_delegates, [submission_delegate])
+            activity = self.user.user_activity[-1]
+            self.assertEqual(activity.action, u'Added')
+            self.assertEqual(activity.field_name,
+                u'Submission delegate')
+            self.assertEqual(activity.user_id, self.user.user_id)
+            self.assertEqual(activity.new_value, submission_delegate.user_name)
+            self.assertEqual(activity.old_value, None)
+
     def test_modifying_beaker_password(self):
         b = self.browser
         pass_field = b.find_element_by_name("password")

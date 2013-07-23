@@ -59,7 +59,14 @@ ${rootpw_grid.display(rootpw_values)}
 
 <div>
   <p py:content="ssh_key_form(method='POST', action=tg.url(ssh_key_form.action), value=value, options=options)">Form goes here</p>
+</div>
 
+<h2>Submission delegates</h2>
+<div>
+ ${submission_delegates_grid.display(value.submission_delegates)}
+ <div py:content="submission_delegate_form(method='POST',
+       action=tg.url('add_submission_delegate'), value=value)">
+ </div>
 </div>
 </body>
 </html>

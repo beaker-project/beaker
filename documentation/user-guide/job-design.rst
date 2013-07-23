@@ -10,8 +10,8 @@ levels of the job schema.
 
 Access control for jobs
 ^^^^^^^^^^^^^^^^^^^^^^^
-When submitting a job, you can optionally submit it on behalf of a group.
-This allows the possibility for group management of jobs.
+When submitting a job, you can optionally submit it on behalf of a group, or on
+behalf of another user.
 
 By default the submitter is the only person who can modify the job (except for
 any member of any group the submitter belongs to; they can ack/nack the job).
@@ -24,3 +24,15 @@ Specifying a group will give members of that group the following access:-
 - Full control over the job, equivalent to that of the owner.
 
 To learn how to set the group value, see :ref:`job-workflow-details`.
+
+Submitting a job on behalf of another user means that, aside from allowing
+the submitter to retain administrative access to the job, Beaker will treat
+the job as being owned by the named user (the user named in the user
+attribute) rather than the submitter. Since this gives the submitter access to
+systems for scheduling purposes as if they were the named user, this is only
+permitted if the submitter has been :ref:`configured as a submission
+delegate<submission-delegates>` by that user. This is intended primarily to
+grant automated tools the ability to submit and manage jobs on behalf of users,
+without needing access to those users' credentials, and without granting them
+the ability to perform other activities as that user (like managing systems or user groups).
+

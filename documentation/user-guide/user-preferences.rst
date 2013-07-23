@@ -2,7 +2,8 @@ User preferences
 ----------------
 
 The preferences page allows the user to configure their email address,
-SSH public keys and root password for provisioned systems.
+submission delegates, SSH public keys, and root password for provisioned
+systems.
 
 Either a hashed password (in crypt format) or a cleartext password may
 be entered as a root password. If a plaintext password is entered, it
@@ -20,3 +21,15 @@ instead.
 SSH public keys (e.g. the contents of ``~/.ssh/id_rsa.pub``) may be
 added to a users account. These will be added to the ``authorized_keys``
 file for the root user on provisioned hosts.
+
+.. _submission-delegates:
+
+
+Submission delegates are other users that are given the ability to submit and
+manage jobs on behalf of the user. This is intended primarily to grant
+automated tools the ability to submit and manage jobs on behalf of users,
+without needing access to those users' credentials, and without granting them
+the ability to perform other activities as that user (like managing systems
+or user groups).
+
+

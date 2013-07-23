@@ -33,7 +33,7 @@ from kid import Element
 from bkr.server.bexceptions import BeakerException, BX, \
         VMCreationFailedException, StaleTaskStatusException, \
         InsufficientSystemPermissions, StaleSystemUserException, \
-        StaleCommandStatusException
+        StaleCommandStatusException, NoChangeException
 from bkr.server.enum import DeclEnum
 from bkr.server.helpers import *
 from bkr.server.util import unicode_truncate, absolute_url
@@ -867,6 +867,13 @@ group_activity_table = Table('group_activity', metadata,
     mysql_engine='InnoDB',
 )
 
+user_activity_table = Table('user_activity', metadata,
+    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('tg_user.user_id'),
+        nullable=False),
+    mysql_engine='InnoDB'
+)
+
 distro_activity_table = Table('distro_activity', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
     Column('distro_id', Integer, ForeignKey('distro.id')),
@@ -942,6 +949,8 @@ job_table = Table('job',metadata,
         Column('clean_version', UUID, nullable=False),
         Column('owner_id', Integer,
                 ForeignKey('tg_user.user_id'), index=True),
+        Column('submitter_id', Integer,
+                ForeignKey('tg_user.user_id')),
         Column('group_id', Integer, ForeignKey('tg_group.group_id', \
             name='job_group_id_fk'), default=None),
         Column('whiteboard',Unicode(2000)),
@@ -1548,7 +1557,23 @@ class VisitIdentity(MappedObject):
     pass
 
 
-class User(MappedObject):
+class SubmissionDelegate(DeclBase, MappedObject):
+
+    """
+    A simple N:N mapping between users and their submission delegates
+    """
+    __tablename__ = 'submission_delegate'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'delegate_id'), {'mysql_engine': 'InnoDB'})
+
+    id = Column(Integer, nullable=False, primary_key=True)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id',
+        name='tg_user_id_fk1'), nullable=False)
+    delegate_id = Column(Integer, ForeignKey('tg_user.user_id',
+        name='tg_user_id_fk2'), nullable=False)
+
+
+class User(MappedObject, ActivityMixin):
     """
     Reasonably basic User definition.
     Probably would want additional attributes.
@@ -1557,12 +1582,39 @@ class User(MappedObject):
     # XXX we probably shouldn't be doing this!
     ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 
+    @property
+    def activity_type(self):
+        return UserActivity
+
     def permissions(self):
         perms = set()
         for g in self.groups:
             perms |= set(g.permissions)
         return perms
     permissions = property(permissions)
+
+    # XXX I would rather do this as a setter on 'submission_delegates'
+    # but don't think I can with non declarative
+    def add_submission_delegate(self, delegate, service=u'WEBUI'):
+        if delegate.is_delegate_for(self):
+            raise NoChangeException('%s is already a'
+                ' submission delegate for %s' % (delegate, self))
+        else:
+            self.submission_delegates.append(delegate)
+            self.record_activity(user=self, service=service,
+                field=u'Submission delegate', action=u'Added', old=None,
+                new=delegate.user_name)
+
+    def remove_submission_delegate(self, delegate, service=u'WEBUI'):
+        self.submission_delegates.remove(delegate)
+        self.record_activity(user=self, service=service,
+            field=u'Submission delegate', action=u'Removed',
+            old=delegate.user_name, new=None)
+
+    def is_delegate_for(self, user):
+        """Return True if we can delegate jobs on behalf of user"""
+        return SubmissionDelegate.query.filter_by(delegate_id=self.user_id,
+            user_id=user.user_id).first() is not None
 
     def by_email_address(cls, email):
         """
@@ -3742,6 +3794,10 @@ class GroupActivity(Activity):
     def object_name(self):
         return "Group: %s" % self.object.display_name
 
+class UserActivity(Activity):
+    def object_name(self):
+        return "User: %s" % self.object.display_name
+
 class DistroActivity(Activity):
     def object_name(self):
         return "Distro: %s" % self.object.name
@@ -4145,10 +4201,14 @@ class Job(TaskBase):
     """
 
     def __init__(self, ttasks=0, owner=None, whiteboard=None,
-            retention_tag=None, product=None, group=None):
+            retention_tag=None, product=None, group=None, submitter=None):
         # Intentionally not chaining to super(), to avoid session.add(self)
         self.ttasks = ttasks
         self.owner = owner
+        if submitter is None:
+            self.submitter = owner
+        else:
+            self.submitter = submitter
         self.group = group
         self.whiteboard = whiteboard
         self.retention_tag = retention_tag
@@ -4164,7 +4224,7 @@ class Job(TaskBase):
         """
         Returns a query of all jobs which are owned by the given user.
         """
-        return cls.query.filter(Job.owner==owner)
+        return cls.query.filter(or_(Job.owner==owner, Job.submitter==owner))
 
     @classmethod
     def my_groups(cls, owner):
@@ -4756,7 +4816,8 @@ class Job(TaskBase):
     def _can_administer(self, user=None):
         """Returns True iff the given user can administer the Job.
 
-        Admins, group job members and job owners can administer a job.
+        Admins, group job members, job owners, and submitters
+        can administer a job.
         """
         if user is None:
             return False
@@ -4764,7 +4825,8 @@ class Job(TaskBase):
             return self.is_owner(user) or user.is_admin() or \
                 self.group in user.groups
         else:
-            return self.is_owner(user) or user.is_admin()
+            return self.is_owner(user) or user.is_admin() or \
+                self.submitter == user
 
     def _can_administer_old(self, user):
         """
@@ -7554,6 +7616,9 @@ mapper(User, users_table,
       '_password' : users_table.c.password,
       '_root_password' : users_table.c.root_password,
       'lab_controller' : relation(LabController, uselist=False),
+      'submission_delegates': relation(User, secondary=SubmissionDelegate.__table__,
+          primaryjoin=users_table.c.user_id == SubmissionDelegate.user_id,
+          secondaryjoin=users_table.c.user_id == SubmissionDelegate.delegate_id),
 })
 
 mapper(UserGroup, user_group_table, properties={
@@ -7593,6 +7658,10 @@ mapper(GroupActivity, group_activity_table, inherits=Activity,
         polymorphic_identity=u'group_activity',
         properties=dict(object=relation(Group, uselist=False,
                         backref=backref('activity', cascade='all, delete-orphan'))))
+
+mapper(UserActivity, user_activity_table, inherits=Activity,
+        polymorphic_identity=u'user_activity',
+        properties=dict(object=relation(User, uselist=False, backref='user_activity')))
 
 mapper(DistroActivity, distro_activity_table, inherits=Activity,
        polymorphic_identity=u'distro_activity')
@@ -7667,13 +7736,18 @@ mapper(TaskBugzilla, task_bugzilla_table)
 mapper(Job, job_table,
         properties = {'recipesets':relation(RecipeSet, backref='job'),
                       'owner':relation(User, uselist=False,
-                        backref=backref('jobs', cascade_backrefs=False)),
+                          backref=backref('jobs', cascade_backrefs=False),
+                          primaryjoin=users_table.c.user_id ==  \
+                          job_table.c.owner_id, foreign_keys=job_table.c.owner_id),
+                      'submitter': relation(User, uselist=False,
+                          primaryjoin=users_table.c.user_id == \
+                          job_table.c.submitter_id),
                       'group': relation(Group, uselist=False,
-                        backref=backref('jobs', cascade_backrefs=False)),
+                          backref=backref('jobs', cascade_backrefs=False)),
                       'retention_tag':relation(RetentionTag, uselist=False,
-                        backref=backref('jobs', cascade_backrefs=False)),
+                          backref=backref('jobs', cascade_backrefs=False)),
                       'product':relation(Product, uselist=False,
-                        backref=backref('jobs', cascade_backrefs=False)),
+                          backref=backref('jobs', cascade_backrefs=False)),
                       '_job_ccs': relation(JobCc, backref='job')})
 
 mapper(JobCc, job_cc_table)

@@ -1,12 +1,17 @@
 import cherrypy
+import sys
 from datetime import datetime
 from turbogears import widgets, expose, identity, validators, \
-	error_handler, validate, flash, redirect
+	error_handler, validate, flash, redirect, url
 from turbogears.database import session
-from bkr.server.model import ConfigItem, SSHPubKey
+from sqlalchemy.orm.exc import NoResultFound
+from bkr.server.model import ConfigItem, SSHPubKey, User
 from bkr.server import validators as beaker_validators
-from bkr.server.widgets import BeakerDataGrid, DeleteLinkWidgetForm
+from bkr.server.widgets import BeakerDataGrid, DeleteLinkWidgetForm, \
+    DoAndConfirmForm
 from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.bexceptions import NoChangeException
+from bkr.server.helpers import make_link
 
 from bexceptions import *
 
@@ -44,6 +49,28 @@ class Preferences(RPCRoot):
                     ('Effective from', lambda x: x.valid_from)
                  ])
 
+    auto_users = widgets.AutoCompleteField(name='user',
+                                   search_controller = url("../users/by_name"),
+                                   search_param = "input",
+                                   result_name = "matches")
+    submission_delegate_form = widgets.TableForm(
+        'SubmissionDelegates',
+        fields = [auto_users],
+        action = 'save_data',
+        submit_text = _(u'Add'),
+    )
+    remove_submission_delegate_link = DoAndConfirmForm()
+
+    def show_submission_delegates(self, user):
+        user_fields = [
+            ('Submission Delegate', lambda x: x.display_name),
+            ('Action', lambda x: self.remove_submission_delegate_link. \
+                display({'delegate_id': x.user_id},
+                action=url('remove_submission_delegate'), look='link',
+                msg='Are you sure you want to remove %s as a submitter' % x,
+                action_text='Remove (-)')),]
+        return widgets.DataGrid(fields=user_fields)
+
     @expose(template='bkr.server.templates.prefs')
     @identity.require(identity.not_anonymous())
     def index(self, *args, **kw):
@@ -67,7 +94,75 @@ class Preferences(RPCRoot):
             rootpw       = rootpw.current_value(),
             rootpw_grid  = self.rootpw_grid,
             rootpw_values = rootpw_values,
-            options      = None)
+            options      = None, 
+            #Hack, to insert static content for submission_delegate
+            remove_submission_delegate = self.remove_submission_delegate_link,
+            submission_delegates_grid = self.show_submission_delegates(user),
+            submission_delegate_form = self.submission_delegate_form)
+
+    # XMLRPC interface
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def remove_submission_delegate_by_name(self, delegate_name, service=u'XMLRPC'):
+        user = identity.current.user
+        try:
+           submission_delegate = User.by_user_name(delegate_name)
+        except NoResultFound:
+            raise BX(_(u'%s is not a valid user name' % delegate_name))
+        try:
+            user.remove_submission_delegate(submission_delegate, service=service)
+        except ValueError:
+            raise BX(_(u'%s is not a submission delegate of %s' % \
+                (delegate_name, user)))
+        return delegate_name
+
+    # UI interface
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def remove_submission_delegate(self, delegate_id, service=u'WEBUI'):
+        user = identity.current.user
+        try:
+           submission_delegate = User.by_id(delegate_id)
+        except NoResultFound:
+            flash(_(u'%s is not a valid user id' % delegate_id))
+            redirect('.')
+        user.remove_submission_delegate(submission_delegate, service=service)
+        flash(_(u'%s removed as a submission delegate' % submission_delegate))
+        redirect('.')
+
+    # XMLRPC Interface
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def add_submission_delegate_by_name(self, new_delegate_name,
+        service=u'XMLRPC'):
+        user = identity.current.user
+        new_delegate = User.by_user_name(new_delegate_name)
+        if not new_delegate:
+            raise BX(_(u'%s is not a valid user' % new_delegate_name))
+        user.add_submission_delegate(new_delegate, service)
+        return new_delegate_name
+
+    # UI Interface
+    @expose()
+    @identity.require(identity.not_anonymous())
+    def add_submission_delegate(self, **kwargs):
+        user = identity.current.user
+        new_delegate_name = kwargs['user']['text']
+        new_delegate = User.by_user_name(new_delegate_name)
+        if not new_delegate:
+            msg = u'%s is not a valid user' % new_delegate_name
+            log.warn(msg)
+            flash(_(msg))
+            redirect('.')
+
+        try:
+            user.add_submission_delegate(new_delegate, u'WEBUI')
+        except NoChangeException, e:
+            flash(_(unicode(e)))
+            redirect('.')
+
+        flash(_(u'Added %s as a submission delegate' % new_delegate_name))
+        redirect('.')
 
     @expose()
     @identity.require(identity.not_anonymous())
