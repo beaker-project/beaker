@@ -50,8 +50,9 @@ class WorkflowSimpleTest(unittest.TestCase):
                     '--task', self.task.name], config=config2)
             fail('should raise')
         except ClientError, e:
-            self.assertTrue('You are not a member of the %s group' % \
-                group.group_name in e.stderr_output, e)
+            self.assertTrue('User %s is not a member of group %s' % \
+                (user_not_in_group.user_name, group.group_name) in \
+                e.stderr_output, e)
 
     def test_submit_job(self):
         out = run_client(['bkr', 'workflow-simple', '--random',
