@@ -5353,15 +5353,18 @@ class Recipe(TaskBase):
         for t in self.tasks:
             recipe.appendChild(t.to_xml(clone))
         if not from_recipeset and not from_machine:
-            recipeSet = xmldoc.createElement("recipeSet")
-            recipeSet.appendChild(recipe)
-            job = xmldoc.createElement("job")
-            if not clone:
-                job.setAttribute("owner", "%s" % self.recipeset.job.owner.email_address)
-            job.appendChild(node("whiteboard", self.recipeset.job.whiteboard or ''))
-            job.appendChild(recipeSet)
-            return job
+            recipe = self._add_to_job_element(recipe, clone)
         return recipe
+
+    def _add_to_job_element(self, recipe, clone):
+        recipeSet = xmldoc.createElement("recipeSet")
+        recipeSet.appendChild(recipe)
+        job = xmldoc.createElement("job")
+        if not clone:
+            job.setAttribute("owner", "%s" % self.recipeset.job.owner.email_address)
+        job.appendChild(node("whiteboard", self.recipeset.job.whiteboard or ''))
+        job.appendChild(recipeSet)
+        return job
 
     def _get_duration(self):
         try:
@@ -5816,6 +5819,7 @@ class Recipe(TaskBase):
 
 class GuestRecipe(Recipe):
     systemtype = 'Virtual'
+
     def to_xml(self, clone=False, from_recipeset=False, from_machine=False):
         recipe = xmldoc.createElement("guestrecipe")
         recipe.setAttribute("guestname", "%s" % (self.guestname or ""))
@@ -5831,7 +5835,16 @@ class GuestRecipe(Recipe):
                     scheme = urlparse.urlparse(lca.url).scheme
                     attr = '%s_location' % re.sub(r'[^a-z0-9]+', '_', scheme.lower())
                     recipe.setAttribute(attr, lca.url)
+
         return Recipe.to_xml(self, recipe, clone, from_recipeset, from_machine)
+
+    def _add_to_job_element(self, guestrecipe, clone):
+        recipe = xmldoc.createElement('recipe')
+        if self.resource and not clone:
+            recipe.setAttribute('system', '%s' % self.hostrecipe.resource.fqdn)
+        recipe.appendChild(guestrecipe)
+        job = super(GuestRecipe, self)._add_to_job_element(recipe, clone)
+        return job
 
     def _get_distro_requires(self):
         try:
@@ -7723,7 +7736,7 @@ mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
         polymorphic_identity=u'guest_recipe')
 mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
         polymorphic_identity=u'machine_recipe',
-        properties = {'guests':relation(Recipe, backref='hostmachine',
+        properties = {'guests':relation(Recipe, backref=backref('hostrecipe', uselist=False),
                                         secondary=machine_guest_map)})
 
 mapper(RecipeResource, recipe_resource_table,
