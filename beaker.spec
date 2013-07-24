@@ -247,6 +247,7 @@ cp -p LabController/tmpfiles.d/beaker-lab-controller.conf $RPM_BUILD_ROOT%{_tmpf
 # Migrate ConcurrentLogHandler -> syslog
 rm -f %{_localstatedir}/log/%{name}/*.lock 2>&1 || :
 chown root:root %{_localstatedir}/log/%{name}/*.log 2>&1 || :
+chmod 0644 %{_localstatedir}/log/%{name}/*.log 2>&1 || :
 # Restart rsyslog so that it notices the config which we ship
 /sbin/service rsyslog condrestart >/dev/null 2>&1 || :
 %endif
@@ -260,6 +261,7 @@ chown root:root %{_localstatedir}/log/%{name}/*.log 2>&1 || :
 # Migrate ConcurrentLogHandler -> syslog
 rm -f %{_localstatedir}/log/%{name}/*.lock 2>&1 || :
 chown root:root %{_localstatedir}/log/%{name}/*.log 2>&1 || :
+chmod 0644 %{_localstatedir}/log/%{name}/*.log 2>&1 || :
 # Restart rsyslog so that it notices the config which we ship
 /sbin/service rsyslog condrestart >/dev/null 2>&1 || :
 %endif
