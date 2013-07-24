@@ -14,6 +14,7 @@ import subprocess
 import gevent, gevent.hub, gevent.socket, gevent.event, gevent.monkey
 from kobo.exceptions import ShutdownException
 from bkr.log import log_to_stream, log_to_syslog
+from bkr.common.helpers import SensitiveUnicode
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.labcontroller.proxy import ProxyHelper
 from bkr.labcontroller import netboot
@@ -28,7 +29,11 @@ class CommandQueuePoller(ProxyHelper):
         self.greenlets = {} #: dict of (command id -> greenlet which is running it)
 
     def get_queued_commands(self):
-        return self.hub.labcontrollers.get_queued_command_details()
+        commands = self.hub.labcontrollers.get_queued_command_details()
+        for command in commands:
+            if 'power' in command and 'passwd' in command['power']:
+                command['power']['passwd'] = SensitiveUnicode(command['power']['passwd'])
+        return commands
 
     def mark_command_running(self, id):
         self.hub.labcontrollers.mark_command_running(id)

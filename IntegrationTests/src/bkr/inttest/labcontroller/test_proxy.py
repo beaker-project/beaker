@@ -17,7 +17,7 @@ from bkr.labcontroller.config import get_conf
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import assert_datetime_within
 from bkr.inttest.labcontroller import LabControllerTestCase, processes, \
-    config_file, running_dogfood_task
+    config_file, daemons_running_externally
 
 class GetRecipeGuestXML(LabControllerTestCase):
 
@@ -441,7 +441,7 @@ class LogUploadTestRestartProxy(LabControllerTestCase):
 
     @classmethod
     def setupClass(cls):
-        if running_dogfood_task:
+        if daemons_running_externally():
             raise SkipTest('Too hard to control daemon process')
 
     def setUp(self):

@@ -19,13 +19,12 @@ log.info('Loading LC test configuration from %s', config_file)
 assert os.path.exists(config_file) , 'Config file %s must exist' % config_file
 load_conf(config_file)
 
-if 'BEAKER_LABCONTROLLER_HOSTNAME' in os.environ:
-    running_dogfood_task = True
-else:
-    running_dogfood_task = False
-
 processes = []
 lc_fqdn = None
+_daemons_running_externally = False
+
+def daemons_running_externally():
+    return _daemons_running_externally
 
 class LabControllerTestCase(unittest.TestCase):
 
@@ -44,10 +43,10 @@ class LabControllerTestCase(unittest.TestCase):
         return '%s://%s' % (protocol, server_name)
 
 def setup_package():
-    global lc_fqdn
+    global lc_fqdn, _daemons_running_externally
     conf = get_conf()
 
-    if not running_dogfood_task:
+    if not 'BEAKER_LABCONTROLLER_HOSTNAME' in os.environ:
         # Need to start the lab controller daemons ourselves
         with session.begin():
             user = data_setup.create_user(user_name=conf.get('USERNAME').decode('utf8'), password=conf.get('PASSWORD'))
@@ -69,6 +68,7 @@ def setup_package():
         ])
         lc_fqdn = u'localhost'
     else:
+        _daemons_running_externally = True
         # We have been passed a space seperated list of LCs
         lab_controllers = os.environ.get('BEAKER_LABCONTROLLER_HOSTNAME').decode('utf8')
         lab_controllers_list = lab_controllers.split()
