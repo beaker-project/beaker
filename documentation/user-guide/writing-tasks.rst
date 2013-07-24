@@ -31,6 +31,7 @@ carry out these and other related functions.
    example-task
    task-environment
    task-metadata
+   task-makefile-targets
    multihost
 
 .. todo::
