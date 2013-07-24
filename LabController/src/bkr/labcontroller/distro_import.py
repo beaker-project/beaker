@@ -1856,6 +1856,7 @@ def main():
                       
     (opts, urls) = parser.parse_args()
 
+    logging.getLogger().setLevel(logging.DEBUG)
     if opts.debug:
         log_level = logging.DEBUG
     elif opts.quiet:
