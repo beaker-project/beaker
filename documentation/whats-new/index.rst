@@ -33,16 +33,34 @@ being upgraded to a new version.
 
        release-1.0/*
 
-Unreleased changes
-------------------
+.. uncomment this once we have some pending changes for 0.15
 
-The following changes will appear in the next Beaker release.
+    Unreleased changes
+    ------------------
+
+    The following changes will appear in the next Beaker release.
+
+    .. toctree::
+       :maxdepth: 2
+       :glob:
+
+       next/*
+
+Beaker 0.14
+-----------
+
+Beaker 0.14 introduces the concept of "submission delegates", completing
+the development of the
+`Enhanced User Groups <../../dev/proposals/enhanced-user-groups.html>`__
+design proposal. It also includes a number of other new features and bug
+fixes.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   next/*
+   release-0.14
+   upgrade-0.14
+
 
 Beaker 0.13
 -----------
