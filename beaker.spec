@@ -140,6 +140,7 @@ Requires:       lsof
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
 Requires:       openldap-servers
+Requires:       python-unittest2
 %endif
 
 
