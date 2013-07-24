@@ -87,6 +87,18 @@ def curry(f, *arg, **kw):
         return f(*(arg + more_args), **dict(kw, **more_kw))
     return curried
 
+class SensitiveUnicode(unicode):
+    def __repr__(self):
+        return '<repr blocked>'
+    def encode(self, *args, **kwargs):
+        return SensitiveStr(super(SensitiveUnicode, self).encode(*args, **kwargs))
+
+class SensitiveStr(str):
+    def __repr__(self):
+        return '<repr blocked>'
+    def decode(self, *args, **kwargs):
+        return SensitiveUnicode(super(SensitiveUnicode, self).decode(*args, **kwargs))
+
 # Would be nice if Python did this for us: http://bugs.python.org/issue8604
 class AtomicFileReplacement(object):
     """Replace a file atomically
