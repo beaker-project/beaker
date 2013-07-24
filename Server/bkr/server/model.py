@@ -950,7 +950,7 @@ job_table = Table('job',metadata,
         Column('owner_id', Integer,
                 ForeignKey('tg_user.user_id'), index=True),
         Column('submitter_id', Integer,
-                ForeignKey('tg_user.user_id')),
+                ForeignKey('tg_user.user_id', name='job_submitter_id_fk')),
         Column('group_id', Integer, ForeignKey('tg_group.group_id', \
             name='job_group_id_fk'), default=None),
         Column('whiteboard',Unicode(2000)),
