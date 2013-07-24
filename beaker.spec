@@ -13,6 +13,7 @@
 %bcond_with labcontroller
 %bcond_with inttests
 %endif
+%global _lc_services beaker-proxy beaker-provision beaker-watchdog beaker-transfer
 # systemd?
 %if 0%{?fedora} >= 18 || 0%{?rhel} >= 7
 %global with_systemd 1
@@ -60,6 +61,10 @@ BuildRequires:  rpm-python
 BuildRequires:  rhts-python
 BuildRequires:  python-netaddr
 BuildRequires:  ovirt-engine-sdk
+%if %{with_systemd}
+BuildRequires:  systemd
+%endif
+
 %endif
 
 # As above, these client dependencies are needed in build because of sphinx
@@ -118,6 +123,9 @@ Requires:       ovirt-engine-sdk
 Requires:  	kobo-client >= 0.3
 %if %{with_systemd}
 Requires:       systemd-units
+Requires(post): systemd
+Requires(pre):  systemd
+Requires(postun):  systemd
 %endif
 %endif
 
@@ -171,6 +179,9 @@ Requires:       python-daemon
 Requires:       python-werkzeug
 %if %{with_systemd}
 Requires:       systemd-units
+Requires(post): systemd
+Requires(pre):  systemd
+Requires(postun):  systemd
 %endif
 
 %package lab-controller-addDistro
@@ -243,8 +254,13 @@ cp -p LabController/tmpfiles.d/beaker-lab-controller.conf $RPM_BUILD_ROOT%{_tmpf
 %{__rm} -rf %{buildroot}
 
 %if %{with server}
+
 %post server
+%if %{with_systemd}
+%systemd_post beakerd.service
+%else
 /sbin/chkconfig --add beakerd
+%endif
 # Migrate ConcurrentLogHandler -> syslog
 rm -f %{_localstatedir}/log/%{name}/*.lock 2>&1 || :
 chown root:root %{_localstatedir}/log/%{name}/*.log 2>&1 || :
@@ -254,11 +270,15 @@ chmod 0644 %{_localstatedir}/log/%{name}/*.log 2>&1 || :
 %endif
 
 %if %{with labcontroller}
+
 %post lab-controller
-/sbin/chkconfig --add beaker-proxy
-/sbin/chkconfig --add beaker-watchdog
-/sbin/chkconfig --add beaker-transfer
-/sbin/chkconfig --add beaker-provision
+%if %{with_systemd}
+%systemd_post %{_lc_services}
+%else
+for service in %{_lc_services}; do
+    /sbin/chkconfig --add $service
+done
+%endif
 # Migrate ConcurrentLogHandler -> syslog
 rm -f %{_localstatedir}/log/%{name}/*.lock 2>&1 || :
 chown root:root %{_localstatedir}/log/%{name}/*.log 2>&1 || :
@@ -269,42 +289,53 @@ chmod 0644 %{_localstatedir}/log/%{name}/*.log 2>&1 || :
 
 %if %{with server}
 %postun server
+%if %{with_systemd}
+%systemd_postun_with_restart beakerd.service
+%else
 if [ "$1" -ge "1" ]; then
     /sbin/service beakerd condrestart >/dev/null 2>&1 || :
 fi
 %endif
+%endif
 
 %if %{with labcontroller}
 %postun lab-controller
+%if %{with_systemd}
+%systemd_postun_with_restart %{_lc_services}
+%else
 if [ "$1" -ge "1" ]; then
-    /sbin/service beaker-proxy condrestart >/dev/null 2>&1 || :
-    /sbin/service beaker-watchdog condrestart >/dev/null 2>&1 || :
-    /sbin/service beaker-transfer condrestart >/dev/null 2>&1 || :
-    /sbin/service beaker-provision condrestart >/dev/null 2>&1 || :
+   for service in %{_lc_services}; do
+       /sbin/service $service condrestart >/dev/null 2>&1 || :
+   done
 fi
+%endif
 %endif
 
 %if %{with server}
 %preun server
+%if %{with_systemd}
+%systemd_preun beakerd.service
+%else
 if [ "$1" -eq "0" ]; then
         /sbin/service beakerd stop >/dev/null 2>&1 || :
         /sbin/chkconfig --del beakerd || :
 fi
 %endif
+%endif
 
 %if %{with labcontroller}
 %preun lab-controller
+%if %{with_systemd}
+%systemd_preun %{_lc_services}
+%else
 if [ "$1" -eq "0" ]; then
-        /sbin/service beaker-proxy stop >/dev/null 2>&1 || :
-        /sbin/service beaker-watchdog stop >/dev/null 2>&1 || :
-        /sbin/service beaker-transfer stop >/dev/null 2>&1 || :
-        /sbin/service beaker-provision stop >/dev/null 2>&1 || :
-        /sbin/chkconfig --del beaker-proxy || :
-        /sbin/chkconfig --del beaker-watchdog || :
-        /sbin/chkconfig --del beaker-transfer || :
-        /sbin/chkconfig --del beaker-provision || :
+      for service in %{_lc_services}; do
+          /sbin/service $service stop >/dev/null 2>&1 || :
+          /sbin/chkconfig --del $service || :
+      done
 fi
 rm -rf %{_var}/lib/beaker/osversion_data
+%endif
 %endif
 
 %files
@@ -334,7 +365,15 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-sync-tasks
 %{_bindir}/%{name}-cleanup-visits
 %{_bindir}/beaker-refresh-ldap
+
+%if %{with_systemd}
+%{_unitdir}/beakerd.service
+%exclude %{_sysconfdir}/init.d
+%else
 %{_sysconfdir}/init.d/%{name}d
+%exclude /usr/lib/systemd
+%endif
+
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-server.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/beaker
@@ -400,10 +439,21 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_var}/www/beaker
 %attr(-,apache,root) %dir %{_var}/www/beaker/logs
 %dir %{_localstatedir}/log/%{name}
+
+%if %{with_systemd}
+%{_unitdir}/beaker-proxy.service
+%{_unitdir}/beaker-provision.service
+%{_unitdir}/beaker-watchdog.service
+%{_unitdir}/beaker-transfer.service
+%exclude %{_sysconfdir}/init.d
+%else
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
 %{_sysconfdir}/init.d/%{name}-provision
+%exclude /usr/lib/systemd
+%endif
+
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %attr(0440,root,root) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-lab-controller.conf

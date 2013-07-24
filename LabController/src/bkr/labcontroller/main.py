@@ -183,7 +183,7 @@ def main():
         # See BZ#977269
         proxy.close()
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
-                pid_file, acquire_timeout=0)):
+                pid_file, acquire_timeout=0), detach_process=True):
             log_to_syslog('beaker-proxy')
             main_loop(proxy=proxy, conf=conf)
 

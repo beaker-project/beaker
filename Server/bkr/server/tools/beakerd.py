@@ -792,7 +792,8 @@ def main():
         pid_file = opts.pid_file
         if pid_file is None:
             pid_file = config.get("PID_FILE", "/var/run/beaker/beakerd.pid")
-        d = daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(pid_file, acquire_timeout=0),)
+        d = daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(pid_file, acquire_timeout=0),
+                                 detach_process=True)
         try:
             d.open()
         except pidlockfile.AlreadyLocked:
