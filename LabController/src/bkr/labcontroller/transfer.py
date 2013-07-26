@@ -97,7 +97,7 @@ def main():
         # See BZ#977269
         transfer.close()
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
-                pid_file, acquire_timeout=0)):
+                pid_file, acquire_timeout=0), detach_process=True):
             log_to_syslog('beaker-transfer')
             main_loop(transfer=transfer, conf=conf)
 

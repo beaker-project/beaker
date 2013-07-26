@@ -1,0 +1,14 @@
+[Unit]
+Description=Beaker scheduler
+After=mysqld.service
+
+[Service]
+Type=forking
+PIDFile=/var/run/beaker/beakerd.pid
+ExecStart=/usr/bin/beakerd
+User=apache
+Group=apache
+
+[Install]
+WantedBy=multi-user.target
+

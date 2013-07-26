@@ -22,6 +22,10 @@ setup(
                   ('/etc/httpd/conf.d', ['apache/beaker-lab-controller.conf']),
                   ('/etc/rsyslog.d', ['rsyslog.d/beaker-lab-controller.conf']),
                   # /etc/logrotate.d/beaker is in Server but applies to LCs too
+                  ('/usr/lib/systemd/system',['systemd/beaker-proxy.service', 
+                                              'systemd/beaker-provision.service',
+                                              'systemd/beaker-watchdog.service',
+                                              'systemd/beaker-transfer.service']),
                   ('/var/run/beaker-lab-controller', []),
                   ('/var/lib/beaker', ['addDistro/addDistro.sh']),
                   ('/var/lib/beaker/addDistro.d', glob('addDistro/addDistro.d/*')),

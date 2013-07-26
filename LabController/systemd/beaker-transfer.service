@@ -1,0 +1,14 @@
+[Unit]
+Description=Beaker log transfer daemon
+After=httpd.service
+
+[Service]
+Type=forking
+PIDFile=/var/run/beaker-lab-controller/beaker-transfer.pid
+ExecStart=/usr/bin/beaker-transfer
+User=apache
+Group=apache
+
+[Install]
+WantedBy=multi-user.target
+

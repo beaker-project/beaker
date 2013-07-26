@@ -1,0 +1,14 @@
+[Unit]
+Description=Beaker provisioning daemon
+After=httpd.service
+
+[Service]
+Type=forking
+PIDFile=/var/run/beaker-lab-controller/beaker-provision.pid
+ExecStart=/usr/bin/beaker-provision
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
+
