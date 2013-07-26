@@ -4822,11 +4822,10 @@ class Job(TaskBase):
         if user is None:
             return False
         if self.group:
-            return self.is_owner(user) or user.is_admin() or \
-                self.group in user.groups
-        else:
-            return self.is_owner(user) or user.is_admin() or \
-                self.submitter == user
+            if self.group in user.groups:
+               return True
+        return self.is_owner(user) or user.is_admin() or \
+            self.submitter == user
 
     def _can_administer_old(self, user):
         """

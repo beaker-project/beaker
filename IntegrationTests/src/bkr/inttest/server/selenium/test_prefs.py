@@ -23,6 +23,16 @@ class UserPrefs(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
+    def test_adding_invalid_delegate(self):
+        b = self.browser
+        delegate_field = b.find_element_by_id('SubmissionDelegates_user_text')
+        # Add an invalid user
+        delegate_field.send_keys('randuseriosgfsy89238')
+        b.find_element_by_xpath("//input[@value='Add' and"
+            " ../../../tr/td/span[@id='SubmissionDelegates_user']]").click()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+            'randuseriosgfsy89238 is not a valid user')
+
     def test_adding_duplicate_delegate(self):
         with session.begin():
             submission_delegate = data_setup.create_user()
