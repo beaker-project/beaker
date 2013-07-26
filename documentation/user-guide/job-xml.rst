@@ -24,11 +24,13 @@ workflow. Each job has a root node called the job element:
     <job group='product-QA'>
     </job>
 
-This is an optional attribute that indicates the job is being
-submitted on behalf of a particular group.
+The ``group`` attribute is an optional attribute that indicates the job
+is being submitted on behalf of a particular group, and will allow all
+members of the group full access to manipulate the job.
 
 A direct child is the "whiteboard" element. The content is normally a
-mnemonic piece of text describing the job:
+mnemonic piece of text describing the job, and can also be used to
+generate :ref:`matrix reports <matrix-report>` that cover multiple jobs:
 
 ::
 

@@ -28,6 +28,8 @@ page (see :ref:`distros`).
    ``beaker-repo-update`` on the server to populate the harness repo for the 
    new distro family.
 
+.. _stable-distro-tagging:
+
 Automated jobs for new distros
 ------------------------------
 
