@@ -26,7 +26,7 @@ PACKAGE_NAME=
 RELATIVE_PATH=inventory
 
 # Version of the Test. Used with make tag.
-export TESTVERSION=1.1
+export TESTVERSION=1.2
 
 # The combined namespace of the test.
 export TEST=/$(TOPLEVEL_NAMESPACE)/$(RELATIVE_PATH)
@@ -39,36 +39,17 @@ export TEST=/$(TOPLEVEL_NAMESPACE)/$(RELATIVE_PATH)
 # name, and to improve performance.
 .PHONY: all install download clean
 
-BINFILE=hvm_detect
-hvm_detect: hvm_detect.c
-	if which gcc; then \
-		gcc $(BINFILE).c -o ./$(BINFILE) ;\
-		chmod a+x ./$(BINFILE) ;\
-	fi;
-
-# executables to be built should be added here, they will be generated on the system under test.
-BUILT_FILES=
-ifeq ($(shell arch),x86_64)
-  BUILT_FILES+=hvm_detect
-endif
-
 # data files, .c files, scripts anything needed to either compile the test and/or run it.
-FILES=$(METADATA) runtest.sh Makefile PURPOSE \
-      software.py i18n.py disks.py pushInventory.py procfs.py \
-      utilist.py getdriver.sh hvm_detect.c
+FILES=$(METADATA) runtest.sh Makefile PURPOSE
 
 run: $(FILES) build
 	./runtest.sh
 
-build: $(BUILT_FILES)
+build:
 	chmod a+x ./runtest.sh
 
 clean: $(TARGET)-clean
-	rm -f *~ *.rpm $(BUILT_FILES)
-
-# You may need to add other targets e.g. to build executables from source code
-# Add them here:
-
+	rm -f *~ *.rpm
 
 # Include Common Makefile
 include /usr/share/rhts/lib/rhts-make.include
@@ -77,7 +58,7 @@ include /usr/share/rhts/lib/rhts-make.include
 $(METADATA): Makefile
 	@touch $(METADATA)
 # Change to the test owner's name
-	@echo "Owner:        Bill Peck <bpeck@redhat.com>" > $(METADATA)
+	@echo "Owner:        Beaker Developers <beaker-devel@lists.fedorahosted.org>" > $(METADATA)
 	@echo "Name:         $(TEST)" >> $(METADATA)
 	@echo "Path:         $(TEST_DIR)"	>> $(METADATA)
 	@echo "License:      GPL" >> $(METADATA)
@@ -85,12 +66,8 @@ $(METADATA): Makefile
 	@echo "TestVersion:  $(TESTVERSION)"	>> $(METADATA)
 	@echo "Description:  This refreshes the database with the hardware inventory of the machine its run on">> $(METADATA)
 	@echo "TestTime:     15m" >> $(METADATA)
-	@echo "Requires:     smolt" >> $(METADATA)
 	@echo "Requires:     kvm" >> $(METADATA)
-	@echo "Requires:     iasl" >> $(METADATA)
-	@echo "Requires:     gcc" >> $(METADATA)
 	@echo "Requires:     make" >> $(METADATA)
-	@echo "Requires:     device-mapper-multipath" >> $(METADATA)
-	@echo "Requires:     python-ctypes" >> $(METADATA)
+	@echo "Requires:     beaker-system-scan" >> $(METADATA)
 
 

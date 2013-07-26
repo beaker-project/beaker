@@ -33,16 +33,16 @@ rlJournalStart
         rlRun "modprobe kvm" 0,1
 	rlRun "modprobe kvm_amd" 0,1
 	rlRun "modprobe kvm_intel" 0,1
-	rlRun "yum -y install smolt"
-	rlAssertRpm "smolt"
+        rlRun "yum -y install beaker-system-scan"
+	rlAssertRpm "beaker-system-scan"
     rlPhaseEnd
 
     rlPhaseStartTest
         if [ -n "$INVENTORY_DEBUG" ] ; then
-            rlRun -l "./pushInventory.py -d >inventory.out"
+            rlRun -l "beaker-system-scan -d >inventory.out"
             rlFileSubmit inventory.out
         else
-            rlRun -l "./pushInventory.py --server $server -h $hostname"
+            rlRun -l "beaker-system-scan --server $server -h $hostname"
         fi
     rlPhaseEnd
 rlJournalPrintText
