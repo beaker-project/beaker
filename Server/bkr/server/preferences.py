@@ -67,7 +67,7 @@ class Preferences(RPCRoot):
             ('Action', lambda x: self.remove_submission_delegate_link. \
                 display({'delegate_id': x.user_id},
                 action=url('remove_submission_delegate'), look='link',
-                msg='Are you sure you want to remove %s as a submitter' % x,
+                msg='Are you sure you want to remove %s as a submitter?' % x,
                 action_text='Remove (-)')),]
         return widgets.DataGrid(fields=user_fields)
 
@@ -150,9 +150,7 @@ class Preferences(RPCRoot):
         new_delegate_name = kwargs['user']['text']
         new_delegate = User.by_user_name(new_delegate_name)
         if not new_delegate:
-            msg = u'%s is not a valid user' % new_delegate_name
-            log.warn(msg)
-            flash(_(msg))
+            flash(_(u'%s is not a valid user' % new_delegate_name))
             redirect('.')
 
         try:

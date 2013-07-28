@@ -46,6 +46,12 @@ class Cancel(WebDriverTestCase):
         self.assertTrue(is_text_present(b, "Successfully cancelled job %s"
             % self.job.id))
 
+    def test_submission_delegate_cancel_with_group(self):
+        with session.begin():
+            group = data_setup.create_group()
+            self.job.group = group
+        self.test_submission_delegate_cancel_job()
+
     def test_submission_delegate_cancel_job(self):
         with session.begin():
             submission_delegate = data_setup.create_user(password='password')
