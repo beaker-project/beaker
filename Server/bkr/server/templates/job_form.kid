@@ -24,6 +24,10 @@
         />
     </div>
     <table border="0" cellspacing="0" cellpadding="2">
+        <tr>
+            <td>&#160;</td>
+            <td py:content="submit.display(submit_text)" />
+        </tr>
         <tr py:for="i, field in enumerate(fields)" class="${i%2 and 'odd' or 'even'}">
             <th>
                 <label class="fieldlabel" for="${field.field_id}" py:content="field.label" />
