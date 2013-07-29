@@ -169,7 +169,6 @@ class OSVersions(AdminPage):
                     grid = osversions_grid, 
                     search_widget = self.search_widget_form,
                     addable = False,              
-                    object_count = osversions.count(), 
                     list = osversions)
 
     default = index

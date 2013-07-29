@@ -377,7 +377,6 @@ class Tasks(RPCRoot):
                            search_controller=url("/get_search_options_task"),
                            )
         return dict(title="Task Library",
-                    object_count=tasks.count(),
                     grid=tasks_grid,
                     list=tasks,
                     search_bar=search_bar,

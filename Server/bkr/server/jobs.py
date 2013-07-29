@@ -826,7 +826,6 @@ class Jobs(RPCRoot):
                             
 
         return dict(title=title,
-                    object_count = jobs.count(),
                     grid=jobs_grid,
                     list=jobs,
                     action_widget = self.job_list_action_widget,  #Hack,inserts JS for us.

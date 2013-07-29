@@ -28,7 +28,6 @@ class Tags(RPCRoot):
                               ])
         return dict(title="Tags", grid = tags_grid,
                                          search_bar = None,
-                                         object_count = tags.count(),
                                          list = tags)
 
     default = index

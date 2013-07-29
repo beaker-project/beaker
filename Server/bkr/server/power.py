@@ -125,7 +125,6 @@ class PowerTypes(AdminPage):
                     grid = powertypes_grid,
                     search_widget = self.search_widget_form,
                     alpha_nav_bar = AlphaNavBar(list_by_letters,'power'),
-                    object_count = powertypes.count(),
                     list = powertypes)
 
     @expose()

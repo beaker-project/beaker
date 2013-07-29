@@ -102,7 +102,6 @@ class Devices:
         return dict(title="", 
                     grid = device_grid, 
                     search_bar=None,
-                    object_count = systems.count(),
                     list = systems)
 
     @expose(template='bkr.server.templates.grid')
@@ -127,7 +126,6 @@ class Devices:
         return dict(title="Devices", 
                     grid = devices_grid, 
                     search_bar=None, 
-                    object_count = devices.count(),
                     list = devices)
 
 
@@ -568,7 +566,6 @@ class Root(RPCRoot):
         return dict(title=title,
                     grid = display_grid,
                     list = systems,
-                    object_count = systems.count(),
                     searchvalue = searchvalue,
                     options =  {'simplesearch' : simplesearch,'columns':col_data,
                                 'result_columns' : default_result_columns,

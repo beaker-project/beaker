@@ -140,7 +140,6 @@ class Activities(RPCRoot):
 
         return dict(title=title,
                     grid = activity_grid,
-                    object_count = activities.count(),
                     search_bar = search_bar,
                     searchvalue = searchvalue,
                     action = action,

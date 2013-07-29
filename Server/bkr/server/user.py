@@ -139,7 +139,6 @@ class Users(AdminPage):
                               add_action='./new')
         return dict(title="Users",
                     grid = users_grid,
-                    object_count = users.count(),
                     alpha_nav_bar = AlphaNavBar(list_by_letters,'user'),
                     search_widget = self.search_widget_form,
                     list = users)

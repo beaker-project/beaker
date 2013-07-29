@@ -87,7 +87,6 @@ class KeyTypes(AdminPage):
                     search_widget = self.search_widget_form,
                     alpha_nav_bar = AlphaNavBar(list_by_letters,self.search_name),
                     addable = self.add,
-                    object_count = keytypes.count(),
                     list = keytypes)
 
     @expose()

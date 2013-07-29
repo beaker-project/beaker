@@ -479,7 +479,6 @@ class LabControllers(RPCRoot):
         return dict(title="Lab Controllers", 
                     grid = labcontrollers_grid,
                     search_bar = None,
-                    object_count = labcontrollers.count(),
                     list = labcontrollers)
 
 

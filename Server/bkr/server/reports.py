@@ -90,7 +90,6 @@ class Reports(RPCRoot):
                     options = search_options,
                     action=action, 
                     searchvalue = searchvalue,
-                    object_count=len(reservations),
                     list=reservations)
 
     def _reserves(self,reserve,**kw):

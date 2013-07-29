@@ -37,7 +37,6 @@ class Watchdogs(RPCRoot):
         return dict(title="Watchdogs",
                 grid=watchdog_grid,
                 search_bar=None,
-                object_count=query.count(),
                 list=query)
 
 
