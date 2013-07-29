@@ -69,9 +69,11 @@ in your job description, you would use the following::
 
 .. note::
 
-   Due to an unfortunate race condition, conditional reservation may be
-   unreliable if the immediately preceding task is the only one that fails
-   in the recipe. Inserting :ref:`dummy-task` prior to this task may help if
+   Due to an `unfortunate race condition
+   <https://bugzilla.redhat.com/show_bug.cgi?id=989294>`__,
+   conditional reservation may be unreliable if the immediately preceding
+   task is the only one that fails in the recipe. Inserting
+   :ref:`dummy-task` prior to this task may help if
    the problem of failing to reserve the system occurs regularly.
 
 

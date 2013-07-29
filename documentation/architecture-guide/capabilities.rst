@@ -7,7 +7,7 @@ with the ability to manage a globally distributed network of test labs.
 .. note::
 
    This page describes Beaker's capabilities as they currently exist. For
-   more on how these changes are likely to evolve into the future, see
+   more on how these capabilities are likely to evolve into the future, see
    the :ref:`technical-roadmap`. In particular, we are actively working
    to reduce the reliance on Fedora specific technology (such as
    ``anaconda`` and ``yum``) by permitting dynamic provisioning through an
