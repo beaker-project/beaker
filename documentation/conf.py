@@ -98,6 +98,7 @@ def generate_client_subcommand_doc(app, module, cls):
 # <http://doughellmann.com/2010/05/defining-custom-roles-in-sphinx.html>.
 def beaker_bugzilla_issue_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     bz_url = 'https://bugzilla.redhat.com/show_bug.cgi?id=%s' % text
+    text = "#" + text
     node = docutils.nodes.reference(rawtext, text, refuri=bz_url, **options)
     return [node], []
 

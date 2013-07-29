@@ -100,9 +100,52 @@ RHEL 6 or later.
 (Final compatibility fix contributed by Amit Saha in :issue:`977269`)
 
 
-.. Fedora based Beaker-in-a-box (when merged)
+Fedora based fully virtualised Beaker quick start
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. Architecture Guide (when merged)
+With the introduction of Fedora as a supported platform, developers
+can now easily set up their own experimental Beaker instance using
+a pair of virtual machines on their development system.
+
+(Contributed by Amit Saha in :issue:`979211`)
+
+
+Architecture guide
+~~~~~~~~~~~~~~~~~~
+
+Beaker's documentation has previously lacked a good home for explanations
+of the concepts behind Beaker's various capabilities, or even a clear
+overview of those capabilities.
+
+The introduction of an :ref:`architecture-guide` (distinct from the
+existing User, Admin and Developer guides) is intended to address that
+limitation. This initial iteration provides a general overview of the
+purpose of Beaker and the tools it provides to support that purpose. In
+future releases, it will be enhanced with more detailed explanations of
+various Beaker components that aren't suited to any of the other guides.
+
+(Contributed by Nick Coghlan in :issue:`955521`)
+
+
+Security hardening for sensitive data handling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Historically, Beaker has assumed a system level security model for
+production servers and not taken any specific steps to prevent sensitive
+data leaking out through server log files.
+
+To better support the use of log aggregation systems for data analysis,
+this policy has now changed, and Beaker aims to ensure sensitive data does
+not leak out through these files.
+
+With Beaker 0.14 and later, all Beaker log files should be safe to include
+in a log aggregation system without leaking sensitive data.
+
+With prior versions of Beaker, the ``/var/log/beaker/server-debug.*`` logs
+(on the main server) and the ``/var/log/beaker/provision.*`` logs (on
+the lab controllers) should *not* be included in log aggregation systems.
+
+(Contributed by Dan Callaghan in :issue:`986108` and :issue:`989271`)
 
 
 Bug fixes and minor enhancements
