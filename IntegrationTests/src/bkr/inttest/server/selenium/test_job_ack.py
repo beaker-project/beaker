@@ -37,16 +37,16 @@ class JobAckTest(WebDriverTestCase):
         b.find_element_by_xpath("//td[normalize-space(text())='RS:%s' and "
             "not(./input[@name='response_box_%s'])]" % (
             self.job.recipesets[0].id, self.job.recipesets[0].id))
-        # Is there for job owner's group co-member.
+        # Is not there for job owner's group co-member.
         with session.begin():
             data_setup.add_user_to_group(self.user_1, self.group)
             data_setup.add_user_to_group(self.user_3, self.group)
         logout(b)
         login(b, user=self.user_3.user_name, password=self.password)
         b.get(get_server_base() + 'jobs/%d' % self.job.id)
-        b.find_element_by_xpath("//input[@name='response_box_%s']" %
-            self.job.recipesets[0].id)
-
+        b.find_element_by_xpath("//td[normalize-space(text())='RS:%s' and "
+            "not(./input[@name='response_box_%s'])]" % (
+            self.job.recipesets[0].id, self.job.recipesets[0].id))
         # There for job's group member
         with session.begin():
             self.job.group = self.group
