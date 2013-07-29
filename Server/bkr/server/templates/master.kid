@@ -214,9 +214,9 @@ from bkr.server.reports import Reports
     <?python
     from bkr.server import motd
     ?>
-    <div id='motd' py:if="motd.the_motd">
+    <div id='motd' py:if="motd.get_motd()">
     <p style='font-weight:bold;display:inline'>Message of the day</p>
-    ${XML(motd.the_motd)}
+    ${XML(motd.get_motd())}
     </div>
     <!-- header END -->
     <div id="fedora-middle-one">
