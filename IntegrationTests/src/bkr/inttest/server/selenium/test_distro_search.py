@@ -99,7 +99,7 @@ class Search(WebDriverTestCase):
     def test_search_by_osmajor(self):
         b = self.browser
         b.get(get_server_base() + 'distros')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='OSMajor']").click()
         b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is']").click()
@@ -113,7 +113,7 @@ class Search(WebDriverTestCase):
     def test_search_by_osminor(self):
         b = self.browser
         b.get(get_server_base() + 'distros')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='OSMinor']").click()
         b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is']").click()
@@ -126,7 +126,7 @@ class Search(WebDriverTestCase):
     def test_search_by_created(self):
         b = self.browser
         b.get(get_server_base() + 'distros')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='distrosearch_0_table']/option[@value='Created']").click()
         b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='after']").click()
@@ -154,7 +154,7 @@ class SearchOptionsTest(WebDriverTestCase):
     def test_search_options_are_maintained_after_submitting(self):
         b = self.browser
         b.get(get_server_base() + 'distros/')
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         Select(b.find_element_by_name('distrosearch-0.table'))\
                 .select_by_visible_text('Name')
         Select(b.find_element_by_name('distrosearch-0.operation'))\

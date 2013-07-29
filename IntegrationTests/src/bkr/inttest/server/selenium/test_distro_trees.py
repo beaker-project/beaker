@@ -210,7 +210,7 @@ class DistroTreeSearch(WebDriverTestCase):
     def test_search_by_name(self):
         b = self.browser
         b.get(get_server_base() + 'distrotrees')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='search_0_table']/"
             "option[@value='Name']").click()
@@ -226,7 +226,7 @@ class DistroTreeSearch(WebDriverTestCase):
     def test_search_by_osmajor(self):
         b = self.browser
         b.get(get_server_base() + 'distrotrees')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='search_0_table']/"
             "option[@value='OSMajor']").click()
@@ -242,7 +242,7 @@ class DistroTreeSearch(WebDriverTestCase):
     def test_search_by_osminor(self):
         b = self.browser
         b.get(get_server_base() + 'distrotrees')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='search_0_table']/"
             "option[@value='OSMinor']").click()
@@ -258,7 +258,7 @@ class DistroTreeSearch(WebDriverTestCase):
     def test_search_by_variant(self):
         b = self.browser
         b.get(get_server_base() + 'distrotrees')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='search_0_table']/"
             "option[@value='Variant']").click()
@@ -274,7 +274,7 @@ class DistroTreeSearch(WebDriverTestCase):
     def test_search_by_created(self):
         b = self.browser
         b.get(get_server_base() + 'distrotrees')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='search_0_table']/"
             "option[@value='Created']").click()
@@ -292,7 +292,7 @@ class DistroTreeSearch(WebDriverTestCase):
     def test_search_by_tag(self):
         b = self.browser
         b.get(get_server_base() + 'distrotrees')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='search_0_table']/"
             "option[@value='Tag']").click()

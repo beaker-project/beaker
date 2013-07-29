@@ -60,7 +60,7 @@ class Cancel(WebDriverTestCase):
         login(b, submission_delegate.user_name, password='password')
 
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_link_text("Toggle Search").click()
+        b.find_element_by_link_text("Show Search Options").click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('jobsearch-0.table'))\
                 .select_by_visible_text('Id')

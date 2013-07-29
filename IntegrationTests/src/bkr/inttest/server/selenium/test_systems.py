@@ -56,7 +56,7 @@ class TestSystemsGrid(SeleniumTestCase):
     def test_show_all_columns_works(self):
         sel = self.selenium
         sel.open('')
-        sel.click('advancedsearch')
+        sel.click('link=Show Search Options')
         sel.select('systemsearch_0_table', 'label=System/Name')
         sel.click('customcolumns')
         sel.click('selectall')
@@ -122,7 +122,7 @@ class TestSystemGridSorting(SeleniumTestCase):
     def go_to_search_results(self):
         sel = self.selenium
         sel.open('')
-        sel.click('link=Toggle Search')
+        sel.click('link=Show Search Options')
         sel.select('systemsearch_0_table', 'CPU/Cores')
         sel.select('systemsearch_0_operation', 'greater than')
         sel.type('systemsearch_0_value', '1')

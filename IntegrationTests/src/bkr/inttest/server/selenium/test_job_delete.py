@@ -38,7 +38,7 @@ class JobDeleteWD(WebDriverTestCase):
         job = self.job_to_delete
         b = self.browser
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_link_text("Toggle Search").click()
+        b.find_element_by_link_text("Show Search Options").click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('jobsearch-0.table'))\
                 .select_by_visible_text('Id')
@@ -92,7 +92,7 @@ class JobDeleteWD(WebDriverTestCase):
     def job_delete(self, job):
         b = self.browser
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_link_text("Toggle Search").click()
+        b.find_element_by_link_text("Show Search Options").click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('jobsearch-0.table'))\
                 .select_by_visible_text('Id')
