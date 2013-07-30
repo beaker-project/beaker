@@ -46,7 +46,7 @@ class ActivityTestWD(WebDriverTestCase):
     def test_can_search_by_distro_tree_specifics(self):
         b = self.browser
         b.get(get_server_base() + 'activity/distrotree')
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         # Make sure only distrotree1 is returned
         b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='DistroTree/Arch']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
@@ -73,7 +73,7 @@ class ActivityTestWD(WebDriverTestCase):
     def test_can_search_by_system_name(self):
         b = self.browser
         b.get(get_server_base() + 'activity/system')
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='System/Name']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.system.fqdn)
@@ -84,7 +84,7 @@ class ActivityTestWD(WebDriverTestCase):
     def test_can_search_by_distro_name(self):
         b = self.browser
         b.get(get_server_base() + 'activity/distro')
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath('//select[@id="activitysearch_0_table"]/option[@value="Distro/Name"]').click()
         b.find_element_by_xpath('//select[@id="activitysearch_0_operation"]/option[@value="is"]').click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.distro.name)
@@ -95,7 +95,7 @@ class ActivityTestWD(WebDriverTestCase):
     def test_can_search_by_group_name(self):
         b = self.browser
         b.get(get_server_base() + 'activity/group')
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Group/Name']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.group.display_name)
@@ -120,7 +120,7 @@ class ActivityTestWD(WebDriverTestCase):
 
         # Check it's recorded in System Activity
         b.get(get_server_base() + 'activity/system')
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Action']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys('Removed')

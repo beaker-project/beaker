@@ -1,5 +1,4 @@
 <div xmlns:py="http://purl.org/kid/ns#">
-<a id="advancedsearch" href="#">Toggle Search</a>
 <form
     id="simpleform"
     name="${name}_simple"
@@ -9,6 +8,7 @@
     py:attrs="form_attrs" 
     style="display:${simple}"
 >
+<a id="showadvancedsearch" href="#">Show Search Options</a>
 <span py:for="hidden in extra_hiddens or []">
     <input type='hidden' id='${hidden[0]}' name='${hidden[0]}' value='${hidden[1]}' />
 </span> 
@@ -36,7 +36,7 @@
     py:attrs="form_attrs"
     style="display:${advanced}"
 >
-
+<a id="hideadvancedsearch" href="#">Hide Search Options</a>
 <span py:for="hidden in extra_hiddens or []">
     <input type='hidden' id='${hidden[0]}' name='${hidden[0]}' value='${hidden[1]}' />
 </span> 
@@ -120,9 +120,14 @@ $(document).ready(function() {
                              yearRange: '-5:0' 
                             }); 
     });
-    $('#advancedsearch').click(function () {
-        $('#searchform').toggle('slow');
-        $('#simpleform').toggle('slow');
+    $('#showadvancedsearch').click(function () {
+        $('#searchform').show('slow');
+        $('#simpleform').hide('slow');
+        return false;
+    });
+    $('#hideadvancedsearch').click(function () {
+        $('#searchform').hide('slow');
+        $('#simpleform').show('slow');
         return false;
     });
     $('#customcolumns').click(function () {

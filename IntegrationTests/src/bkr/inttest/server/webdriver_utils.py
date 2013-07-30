@@ -54,7 +54,7 @@ def is_activity_row_present(b, via=u'testdata', object_=None, property_=None,
     return False
 
 def search_for_system(browser, system):
-    browser.find_element_by_link_text('Toggle Search').click()
+    browser.find_element_by_link_text('Show Search Options').click()
     Select(browser.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Name')
     Select(browser.find_element_by_name('systemsearch-0.operation'))\

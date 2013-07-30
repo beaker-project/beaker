@@ -87,7 +87,7 @@ most recent at the top. You can click the :guilabel:`Running`,
 :guilabel:`Queued`, or :guilabel:`Completed` buttons to filter the list to 
 running, queued, or completed jobs respectively. If you want to look up 
 a specific job, enter its ID in the search box and click :guilabel:`Lookup ID`. 
-Otherwise, you can click :guilabel:`Toggle Search` to search the jobs.
+Otherwise, you can click :guilabel:`Show Search Options` to search the jobs.
 
 The "My Jobs" page behaves the same as the jobs page, except it is limited to 
 jobs where you are the owner. Select :menuselection:`Hello --> My Jobs` from 

@@ -30,7 +30,7 @@ class SearchColumns(WebDriverTestCase):
             system_without_group = data_setup.create_system(shared=True)
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Group')
@@ -56,7 +56,7 @@ class SearchColumns(WebDriverTestCase):
             system_without_numa.numa = None
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/NumaNodes')
@@ -81,7 +81,7 @@ class SearchColumns(WebDriverTestCase):
             system_without_serial.serial = None
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/SerialNumber')
@@ -189,7 +189,7 @@ class Search(WebDriverTestCase):
     def test_by_device(self):
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('Devices/Subsys_device_id')
@@ -218,7 +218,7 @@ class Search(WebDriverTestCase):
     def test_by_name(self):
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Name')
@@ -232,7 +232,7 @@ class Search(WebDriverTestCase):
     def test_by_type(self):
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Type')
@@ -247,7 +247,7 @@ class Search(WebDriverTestCase):
     def test_by_status(self):
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Status')
@@ -268,7 +268,7 @@ class Search(WebDriverTestCase):
 
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Added')
@@ -324,7 +324,7 @@ class Search(WebDriverTestCase):
     def test_by_key_value_is(self):
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('Key/Value')
@@ -340,7 +340,7 @@ class Search(WebDriverTestCase):
     def test_by_key_value_is_not(self):
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('Key/Value')
@@ -356,7 +356,7 @@ class Search(WebDriverTestCase):
     def test_by_multiple_key_values(self):
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('Key/Value')
@@ -380,7 +380,7 @@ class Search(WebDriverTestCase):
     def test_by_multiple_key_values_again(self):
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('Key/Value')
@@ -404,7 +404,7 @@ class Search(WebDriverTestCase):
     def test_can_search_by_numa_node_count(self):
         b = self.browser
         b.get(get_server_base())
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/NumaNodes')
@@ -474,7 +474,7 @@ class HypervisorSearchTest(WebDriverTestCase):
     def test_search_hypervisor_is(self):
         b = self.browser
         b.get(get_server_base() + 'mine')
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Hypervisor')
@@ -488,7 +488,7 @@ class HypervisorSearchTest(WebDriverTestCase):
     def test_search_hypervisor_is_not(self):
         b = self.browser
         b.get(get_server_base() + 'mine')
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Hypervisor')
@@ -502,7 +502,7 @@ class HypervisorSearchTest(WebDriverTestCase):
     def test_search_hypervisor_is_blank(self):
         b = self.browser
         b.get(get_server_base() + 'mine')
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Hypervisor')
@@ -540,7 +540,7 @@ class DiskSearchTest(WebDriverTestCase):
     def test_search_size_greater_than(self):
         b = self.browser
         b.get(get_server_base() + 'mine')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_id('systemsearch_0_table'))\
             .select_by_visible_text('Disk/Size')
@@ -559,7 +559,7 @@ class DiskSearchTest(WebDriverTestCase):
         # size 1000".
         b = self.browser
         b.get(get_server_base() + 'mine')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_id('systemsearch_0_table'))\
             .select_by_visible_text('Disk/SectorSize')
@@ -618,7 +618,7 @@ class InventoriedSearchTest(WebDriverTestCase):
 
         b = self.browser
         b.get(get_server_base() + 'mine')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_id('systemsearch_0_table'))\
             .select_by_visible_text('System/LastInventoried')
@@ -634,7 +634,7 @@ class InventoriedSearchTest(WebDriverTestCase):
 
         b = self.browser
         b.get(get_server_base() + 'mine')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_id('systemsearch_0_table'))\
             .select_by_visible_text('System/LastInventoried')
@@ -650,7 +650,7 @@ class InventoriedSearchTest(WebDriverTestCase):
 
         b = self.browser
         b.get(get_server_base() + 'mine')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_id('systemsearch_0_table'))\
             .select_by_visible_text('System/LastInventoried')
@@ -666,7 +666,7 @@ class InventoriedSearchTest(WebDriverTestCase):
 
         b = self.browser
         b.get(get_server_base() + 'mine')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_id('systemsearch_0_table'))\
             .select_by_visible_text('System/LastInventoried')
@@ -682,7 +682,7 @@ class InventoriedSearchTest(WebDriverTestCase):
 
         b = self.browser
         b.get(get_server_base() + 'mine')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
 
         #after

@@ -38,8 +38,8 @@ System searches are conducted by clicking on one of the items of the
 
 The search panel has two modes; simple and advanced. The simple search
 is the default, and the default search is of the System name, using the
-"contains" operator. To toggle between the two search modes, press the
-"Toggle Search" link.
+"contains" operator. To show the advanced search options, click :guilabel:`Show 
+Search Options`.
 
 The first column ("Table") is the attribute on which the search is being
 performed; The second ("Operation") is the type of search, and the third

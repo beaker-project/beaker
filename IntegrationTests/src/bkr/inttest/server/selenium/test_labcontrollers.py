@@ -38,7 +38,7 @@ class LabControllerViewTest(WebDriverTestCase):
 
         # Search in activity
         b.get(get_server_base() + 'activity/labcontroller')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_table']/"
             "option[@value='LabController/Name']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/"
@@ -75,7 +75,7 @@ class LabControllerViewTest(WebDriverTestCase):
 
         # Search in  LC activity
         b.get(get_server_base() + 'activity/labcontroller')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_table']/"
             "option[@value='LabController/Name']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/"
@@ -92,7 +92,7 @@ class LabControllerViewTest(WebDriverTestCase):
 
         # Ensure System Actvity has been updated to note removal of LC
         b.get(get_server_base() + 'activity/system')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_table']/"
             "option[@value='System/Name']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/"

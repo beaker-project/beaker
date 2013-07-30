@@ -139,7 +139,7 @@ class ReserveSystem(WebDriverTestCase):
         login(b, user=user.user_name, password=pass_)
 
         go_to_reserve_systems(b, self.distro_tree)
-        b.find_element_by_link_text('Toggle Search').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='systemsearch_0_table']"
             + "/option[@value='System/Name']").click()
         b.find_element_by_xpath("//select[@id='systemsearch_0_operation']"

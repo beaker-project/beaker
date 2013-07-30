@@ -45,7 +45,7 @@ class SearchJobsWD(WebDriverTestCase):
         b = self.browser
         # Ensures that both jobs are present
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
             /option[@value='Whiteboard']").click()
@@ -76,7 +76,7 @@ class SearchJobsWD(WebDriverTestCase):
 
         # Test with tag.
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
             /option[@value='Tag']").click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
@@ -98,7 +98,7 @@ class SearchJobsWD(WebDriverTestCase):
 
         # Test with product.
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
             /option[@value='Product']").click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
@@ -138,7 +138,7 @@ class SearchJobsWD(WebDriverTestCase):
     def test_search_email(self):
         b = self.browser
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
             /option[@value='Owner/Email']").click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
@@ -154,7 +154,7 @@ class SearchJobsWD(WebDriverTestCase):
     def test_search_owner(self):
         b = self.browser
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
             /option[@value='Owner/Username']").click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
