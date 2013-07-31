@@ -2130,7 +2130,9 @@ class System(SystemObject):
         """
         Builds on available.  Only systems with no users, and not Loaned.
         """
-        return System.available(user,systems).filter(and_(System.user==None, or_(System.loaned==None, System.loaned==user)))
+        return System.available(user,systems).\
+            filter(and_(System.user==None, or_(System.loaned==None, System.loaned==user))). \
+            join(System.lab_controller).filter(LabController.disabled==False)
 
     @classmethod
     def available_for_schedule(cls, user, systems=None):

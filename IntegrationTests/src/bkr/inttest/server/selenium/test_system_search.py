@@ -188,6 +188,10 @@ class Search(WebDriverTestCase):
                 absent=[self.system_two, self.system_three])
 
     def test_loaned_not_free(self):
+        with session.begin():
+            lc1 = data_setup.create_labcontroller()
+            self.system_one.lab_controller=lc1
+
         b = self.browser
         b.get(get_server_base() + 'free')
         self.assertEquals(b.title, 'Free Systems')
