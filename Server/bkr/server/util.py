@@ -37,6 +37,7 @@ def load_config(configfile=None):
     # Well-behaved libraries will set their own log levels to something 
     # suitable (sqlalchemy sets it to WARNING, for example) but the TurboGears 
     # stuff leaves its unset.
+    logging.getLogger('turbomail').setLevel(logging.INFO)
     logging.getLogger('turbogears').setLevel(logging.INFO)
     logging.getLogger('turbokid').setLevel(logging.INFO)
     logging.getLogger('turbogears.access').setLevel(logging.WARN)
