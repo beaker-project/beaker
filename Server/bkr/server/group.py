@@ -38,8 +38,12 @@ class GroupOwnerModificationForbidden(BX, cherrypy.HTTPError):
         response.headers['content-type'] = 'application/json'
 
 class GroupFormSchema(validators.Schema):
-    display_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
-    group_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
+    display_name = validators.UnicodeString(not_empty=True,
+                                            max=Group.display_name.property.columns[0].type.length,
+                                            strip=True)
+    group_name = validators.UnicodeString(not_empty=True,
+                                          max=Group.group_name.property.columns[0].type.length,
+                                          strip=True)
     root_password = StrongPassword()
     ldap = validators.StringBool(if_empty=False)
 
@@ -278,6 +282,7 @@ class Groups(AdminPage):
         else:
             flash( _(u"Group %s already exists." % group_name) )
             redirect(".")
+
         group = Group()
         session.add(group)
         activity = Activity(user, u'WEBUI', u'Added', u'Group', u"", display_name)
@@ -735,6 +740,7 @@ class Groups(AdminPage):
         try:
             group = Group.by_name(group_name)
         except NoResultFound:
+            GroupFormSchema.fields['group_name'].to_python(group_name)
             group = Group()
             session.add(group)
             activity = Activity(identity.current.user, u'XMLRPC', u'Added', u'Group', u"", kw['display_name'] )
@@ -812,6 +818,8 @@ class Groups(AdminPage):
                 if group_name != group.group_name:
                     raise BX(_(u'Failed to update group %s: Group name already exists: %s' %
                                (group.group_name, group_name)))
+
+            GroupFormSchema.fields['group_name'].to_python(group_name)
 
         user = identity.current.user
         if not group.can_edit(user):

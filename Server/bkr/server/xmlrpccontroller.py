@@ -7,6 +7,7 @@ import turbogears
 from turbogears import controllers
 from turbogears.database import session
 from turbogears.identity.exceptions import IdentityFailure, get_identity_errors
+from formencode.api import Invalid
 
 log = logging.getLogger(__name__)
 
@@ -65,6 +66,9 @@ class RPCRoot(controllers.Controller):
             log.exception('Error handling XML-RPC method')
             # Can't marshal the result
             response = xmlrpclib.dumps(fault)
+        except Invalid, e:
+             session.rollback()
+             response = xmlrpclib.dumps(xmlrpclib.Fault(1, str(e)))
         except:
             session.rollback()
             log.exception('Error handling XML-RPC method')

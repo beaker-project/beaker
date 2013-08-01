@@ -1855,7 +1855,7 @@ class Group(DeclBase, MappedObject, ActivityMixin):
     __table_args__ = {'mysql_engine': 'InnoDB'}
 
     group_id = Column(Integer, primary_key=True)
-    group_name = Column(Unicode(16), unique=True, nullable=False)
+    group_name = Column(Unicode(255), unique=True, nullable=False)
     display_name = Column(Unicode(255))
     _root_password = Column('root_password', String(255), nullable=True,
         default=None)
