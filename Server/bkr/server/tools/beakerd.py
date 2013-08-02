@@ -732,6 +732,8 @@ def main_recipes_loop(*args, **kwargs):
 def schedule():
     global running
 
+    interface.start(config)
+
     if config.get('carbon.address'):
         log.debug('starting metrics thread')
         metrics_thread = threading.Thread(target=metrics_loop, name='metrics')
@@ -764,13 +766,10 @@ def schedule():
        event.set()
        rc = 0
 
+    interface.stop()
     main_recipes_thread.join(10)
 
     sys.exit(rc)
-
-@atexit.register
-def stop_interface():
-    interface.stop()
 
 def sigterm_handler(signal, frame):
     raise SystemExit("received SIGTERM")
