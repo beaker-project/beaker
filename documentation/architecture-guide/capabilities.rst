@@ -113,9 +113,9 @@ system.
 
 .. note::
 
-   There are currently no tasks for starting guest recipes provided with
-   the open source Beaker distribution. This will be rectified in a future
-   release.
+   The tasks that are currently provided for controlling guest recipes
+   are included in Beaker's git repository only as RPMs. This may
+   change in the future.
 
 
 Results
