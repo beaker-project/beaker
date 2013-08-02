@@ -163,3 +163,15 @@ release.
 * :issue:`985174`: License markers for Beaker's code (as opposed to task
   code) have been updated to consistently use the phrase "GPLv2 or later"
   or "GPLv2+" (a couple of locations inadvertently used the "GPLv2" notation)
+
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 0.14 maintenance updates.
+
+Beaker 0.14.1
+~~~~~~~~~~~~~
+
+* :issue:`990408`: TurboMail is now started in beakerd, so that it does not 
+  fail to send notification e-mails
