@@ -1,5 +1,6 @@
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import wait_for_animation
+from bkr.inttest.server.webdriver_utils import wait_for_animation, \
+    check_job_search_results
 from bkr.inttest import data_setup, with_transaction, get_server_base
 from turbogears.database import session
 from bkr.server.model import Product, RetentionTag
@@ -21,20 +22,6 @@ class SearchJobsWD(WebDriverTestCase):
     def teardownClass(cls):
         cls.browser.quit()
 
-    def check_search_results(self, present=None, absent=None):
-        b = self.browser
-        if present is None:
-            present = []
-        if absent is None:
-            absent = []
-        for job in absent:
-            b.find_element_by_xpath('//table[@id="widget" and '
-                    'not(.//td[1]/a/text()="%s")]' % job.t_id)
-        for job in present:
-            b.find_element_by_xpath('//table[@id="widget" and '
-                    './/td[1]/a/text()="%s"]' % job.t_id)
-        return True
-
     def test_search_group(self):
         with session.begin():
             group = data_setup.create_group()
@@ -54,7 +41,7 @@ class SearchJobsWD(WebDriverTestCase):
         b.find_element_by_xpath("//input[@id='jobsearch_0_value']"). \
             send_keys(whiteboard)
         b.find_element_by_name('Search').click()
-        self.check_search_results(present=[job, job2])
+        check_job_search_results(b, present=[job, job2])
 
         # Now do the actual test
         b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
@@ -65,7 +52,7 @@ class SearchJobsWD(WebDriverTestCase):
         b.find_element_by_xpath("//input[@id='jobsearch_0_value']"). \
             send_keys(job.group.group_name)
         b.find_element_by_name('Search').click()
-        self.check_search_results(present=[job], absent=[job2])
+        check_job_search_results(b, present=[job], absent=[job2])
 
     def test_search_tag(self):
         with session.begin():

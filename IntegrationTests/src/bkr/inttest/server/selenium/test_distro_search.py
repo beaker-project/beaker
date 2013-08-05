@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, is_text_present, \
-        wait_for_animation
+        wait_for_animation, check_distro_search_results
 from bkr.inttest import data_setup, with_transaction
 from turbogears.database import session
 
@@ -80,21 +80,13 @@ class Search(WebDriverTestCase):
         b.find_element_by_name('search').click()
         self.assert_(is_text_present(b, 'Items found: 1'))
 
-    def check_search_results(self, present, absent):
-        for distro in absent:
-            self.browser.find_element_by_xpath('//table[@id="widget" and '
-                    'not(.//td[1]/a/text()="%s")]' % distro.id)
-        for distro in present:
-            self.browser.find_element_by_xpath('//table[@id="widget" and '
-                    './/td[1]/a/text()="%s"]' % distro.id)
-
     def test_simple_search(self):
         b = self.browser
         b.get(get_server_base() + 'distros')
         b.find_element_by_name('simplesearch').send_keys(self.distro_one.name)
         b.find_element_by_name('search').click()
-        self.check_search_results(present=[self.distro_one],
-                absent=[self.distro_two, self.distro_three])
+        check_distro_search_results(b, present=[self.distro_one],
+                                    absent=[self.distro_two, self.distro_three])
 
     def test_search_by_osmajor(self):
         b = self.browser
@@ -107,8 +99,8 @@ class Search(WebDriverTestCase):
         # This also tests that whitespace does not foil us
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys('  osmajortest1 ')
         b.find_element_by_name('Search').click()
-        self.check_search_results(present=[self.distro_one],
-                absent=[self.distro_two, self.distro_three])
+        check_distro_search_results(b, present=[self.distro_one],
+                                         absent=[self.distro_two, self.distro_three])
 
     def test_search_by_osminor(self):
         b = self.browser
@@ -120,8 +112,8 @@ class Search(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys('1')
         b.find_element_by_name('Search').click()
-        self.check_search_results(present=[self.distro_one],
-                absent=[self.distro_two, self.distro_three])
+        check_distro_search_results(b, present=[self.distro_one],
+                                    absent=[self.distro_two, self.distro_three])
 
     def test_search_by_created(self):
         b = self.browser
@@ -135,8 +127,8 @@ class Search(WebDriverTestCase):
         now_and_1_string = now_and_1.strftime('%Y-%m-%d')
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys(now_and_1_string)
         b.find_element_by_name('Search').click()
-        self.check_search_results(present=[self.distro_one],
-                absent=[self.distro_two, self.distro_three])
+        check_distro_search_results(b, present=[self.distro_one],
+                                    absent=[self.distro_two, self.distro_three])
 
     def tearDown(self):
         self.browser.quit()

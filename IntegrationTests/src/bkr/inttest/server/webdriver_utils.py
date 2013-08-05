@@ -69,3 +69,27 @@ def wait_for_animation(browser, selector):
     WebDriverWait(browser, 10).until(lambda browser: browser.execute_script(
             'return jQuery(%s).is(":animated")' % json.dumps(selector))
             == False)
+
+def check_system_search_results(browser, present=[], absent=[]):
+    for system in absent:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                'not(.//td[1]/a/text()="%s")]' % system.fqdn)
+    for system in present:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                './/td[1]/a/text()="%s"]' % system.fqdn)
+
+def check_job_search_results(browser, present=[], absent=[]):
+    for job in absent:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                    'not(.//td[1]/a/text()="%s")]' % job.t_id)
+    for job in present:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                    './/td[1]/a/text()="%s"]' % job.t_id)
+
+def check_distro_search_results(browser, present=[], absent=[]):
+    for distro in absent:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                    'not(.//td[1]/a/text()="%s")]' % distro.id)
+    for distro in present:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                    './/td[1]/a/text()="%s"]' % distro.id)
