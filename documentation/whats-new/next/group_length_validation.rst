@@ -1,5 +1,5 @@
-Group name length changes
--------------------------
+Group name and display name changes
+-----------------------------------
 
 The maximum group name length has now been increased to 255 characters
 from 16 characters.
@@ -12,8 +12,8 @@ To rollback::
 
     ALTER TABLE tg_group MODIFY group_name VARCHAR(16);
 
-Validation has also been added to the the XML-RPC interface so
-that it reports an appropriate error message when the specified name
-exceeds the limit.
+Validation has also been added to the the XML-RPC interfaces so
+that it reports an appropriate error message when the specified group
+name or display name exceeds the limit.
 
-(Contributed by Amit Saha in :issue:`990349`)
+(Contributed by Amit Saha in :issue:`990349` and :issue:`990821`)

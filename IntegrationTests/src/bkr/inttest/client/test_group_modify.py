@@ -118,6 +118,17 @@ class GroupModifyTest(unittest.TestCase):
             self.assertEquals(group.activity[-1].new_value, display_name)
             self.assertEquals(group.activity[-1].service, u'XMLRPC')
 
+        try:
+            out = run_client(['bkr', 'group-modify',
+                              '--display-name', 'A really long display name'*20,
+                              self.group.group_name],
+                             config = self.client_config)
+            self.fail('Must fail or die')
+        except ClientError,e:
+            max_length = Group.display_name.property.columns[0].type.length
+            self.assertIn('Enter a value less than %r characters long' %
+                          max_length, e.stderr_output)
+
     def test_group_modify_group_name(self):
         group_name = 'mynewgroup'
         out = run_client(['bkr', 'group-modify',

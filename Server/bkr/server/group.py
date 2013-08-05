@@ -740,7 +740,10 @@ class Groups(AdminPage):
         try:
             group = Group.by_name(group_name)
         except NoResultFound:
+            #validate
             GroupFormSchema.fields['group_name'].to_python(group_name)
+            GroupFormSchema.fields['display_name'].to_python(display_name)
+
             group = Group()
             session.add(group)
             activity = Activity(identity.current.user, u'XMLRPC', u'Added', u'Group', u"", kw['display_name'] )
@@ -808,6 +811,10 @@ class Groups(AdminPage):
             if kw.get('add_member', None) or kw.get('remove_member', None):
                 raise BX(_(u'Cannot edit membership of an LDAP group'))
 
+        user = identity.current.user
+        if not group.can_edit(user):
+            raise BX(_('You are not an owner of group %s' % group_name))
+
         group_name = kw.get('group_name', None)
         if group_name:
             try:
@@ -820,13 +827,13 @@ class Groups(AdminPage):
                                (group.group_name, group_name)))
 
             GroupFormSchema.fields['group_name'].to_python(group_name)
+            group.set_name(user, u'XMLRPC', kw.get('group_name', None))
 
-        user = identity.current.user
-        if not group.can_edit(user):
-            raise BX(_('You are not an owner of group %s' % group_name))
+        display_name = kw.get('display_name', None)
+        if display_name:
+            GroupFormSchema.fields['display_name'].to_python(display_name)
+            group.set_display_name(user, u'XMLRPC', display_name)
 
-        group.set_display_name(user, u'XMLRPC', kw.get('display_name', None))
-        group.set_name(user, u'XMLRPC', kw.get('group_name', None))
         root_password = kw.get('root_password', None)
         if root_password:
             group.set_root_password(user, u'XMLRPC', root_password)

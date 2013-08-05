@@ -529,13 +529,15 @@ class TestGroupsWD(WebDriverTestCase):
 
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=990349
+    #https://bugzilla.redhat.com/show_bug.cgi?id=990821
     #XXX: the error message "enter a value less than " is technically
     #wrong and has been corrected in a newer version of formencode
     #so, this test will need updating with the new error message when
     #that happens
-    def test_check_group_name_length(self):
+    def test_check_group_name_display_name_length(self):
 
-        max_length = Group.group_name.property.columns[0].type.length
+        max_length_group_name = Group.group_name.property.columns[0].type.length
+        max_length_disp_name = Group.display_name.property.columns[0].type.length
 
         b = self.browser
         login(b, user=self.user.user_name, password='password')
@@ -544,25 +546,34 @@ class TestGroupsWD(WebDriverTestCase):
         b.get(get_server_base() + 'groups/mine')
         b.find_element_by_link_text('Add ( + )').click()
         b.find_element_by_xpath('//input[@id="Group_display_name"]'). \
-            send_keys('Group FBZ')
+            send_keys('A really long group display name'*20)
         b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
             send_keys('areallylonggroupname'*20)
         b.find_element_by_xpath('//input[@value="Save"]').click()
         error_text = b.find_element_by_xpath('//input[@id="Group_group_name"]/'
             'following-sibling::span[@class="fielderror"]').text
-        self.assertEquals(u'Enter a value less than %r characters long' % max_length,
+        self.assertEquals(u'Enter a value less than %r characters long' % max_length_group_name,
                           error_text)
+        error_text = b.find_element_by_xpath('//input[@id="Group_display_name"]/'
+            'following-sibling::span[@class="fielderror"]').text
+        self.assertEquals(u'Enter a value less than %r characters long' %
+                          max_length_group_name, error_text)
 
         # modify existing group
         with session.begin():
             group = data_setup.create_group(owner=self.user)
 
         b.get(get_server_base() + 'groups/edit?group_id=%s' % group.group_id)
-        self._edit_group_details(b, 'areallylonggroupname'*20, group.display_name)
+        self._edit_group_details(b, 'areallylonggroupname'*20,
+                                 'A really long group display name'*20)
         error_text = b.find_element_by_xpath('//input[@id="Group_group_name"]/'
             'following-sibling::span[@class="fielderror"]').text
-        self.assertEquals(u'Enter a value less than %r characters long' % max_length,
+        self.assertEquals(u'Enter a value less than %r characters long' % max_length_group_name,
                           error_text)
+        error_text = b.find_element_by_xpath('//input[@id="Group_display_name"]/'
+            'following-sibling::span[@class="fielderror"]').text
+        self.assertEquals(u'Enter a value less than %r characters long' %
+                          max_length_disp_name, error_text)
 
 class GroupSystemTest(WebDriverTestCase):
 
