@@ -3,18 +3,10 @@ from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
     Device, DeviceClass, Disk
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, login, \
-        search_for_system, wait_for_animation
+        search_for_system, wait_for_animation, check_system_search_results
 from bkr.inttest import data_setup, with_transaction, get_server_base
 import unittest, time, re, os, datetime
 from turbogears.database import session
-
-def check_search_results(browser, present, absent):
-    for system in absent:
-        browser.find_element_by_xpath('//table[@id="widget" and '
-                'not(.//td[1]/a/text()="%s")]' % system.fqdn)
-    for system in present:
-        browser.find_element_by_xpath('//table[@id="widget" and '
-                './/td[1]/a/text()="%s"]' % system.fqdn)
 
 class SearchColumns(WebDriverTestCase):
 
@@ -43,7 +35,7 @@ class SearchColumns(WebDriverTestCase):
         b.find_element_by_name('systemsearch_column_System/Name').click()
         b.find_element_by_name('systemsearch_column_System/Group').click()
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[system_with_group],
+        check_system_search_results(b, present=[system_with_group],
                 absent=[system_without_group])
         b.find_element_by_xpath('//table[@id="widget"]'
                 '//td[2][normalize-space(text())="%s"]' % group.group_name)
@@ -68,7 +60,7 @@ class SearchColumns(WebDriverTestCase):
         b.find_element_by_name('systemsearch_column_System/Name').click()
         b.find_element_by_name('systemsearch_column_System/NumaNodes').click()
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[system_with_numa],
+        check_system_search_results(b, present=[system_with_numa],
                 absent=[system_without_numa])
         b.find_element_by_xpath('//table[@id="widget"]'
                 '//td[2][normalize-space(text())="2"]')
@@ -96,7 +88,7 @@ class SearchColumns(WebDriverTestCase):
         b.find_element_by_name('systemsearch_column_System/Name').click()
         b.find_element_by_name('systemsearch_column_System/SerialNumber').click()
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[system_with_serial],
+        check_system_search_results(b, present=[system_with_serial],
                 absent=[system_without_serial])
         b.find_element_by_xpath('//table[@id="widget"]'
                 '//td[2][normalize-space(text())="%s"]' % system_with_serial.serial)
@@ -178,13 +170,13 @@ class Search(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'free')
         self.assertEquals(b.title, 'Free Systems')
-        check_search_results(b, present=[], absent=[self.system_one])
+        check_system_search_results(b, present=[], absent=[self.system_one])
 
         with session.begin():
             self.system_one.loaned = User.by_user_name(data_setup.ADMIN_USER)
         b.get(get_server_base() + 'free')
         self.assertEquals(b.title, 'Free Systems')
-        check_search_results(b, present=[self.system_one], absent=[])
+        check_system_search_results(b, present=[self.system_one])
 
     def test_by_device(self):
         b = self.browser
@@ -197,7 +189,7 @@ class Search(WebDriverTestCase):
             .select_by_visible_text('is')
         b.find_element_by_name('systemsearch-0.value').send_keys('1112')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.system_three],
+        check_system_search_results(b, present=[self.system_three],
                 absent=[self.system_one, self.system_two])
 
         Select(b.find_element_by_name('systemsearch-0.table'))\
@@ -212,7 +204,7 @@ class Search(WebDriverTestCase):
             .select_by_visible_text('is')
         b.find_element_by_name('systemsearch-1.value').send_keys('2224')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.system_two],
+        check_system_search_results(b, present=[self.system_two],
                 absent=[self.system_one, self.system_three])
 
     def test_by_name(self):
@@ -226,7 +218,7 @@ class Search(WebDriverTestCase):
             .select_by_visible_text('is')
         b.find_element_by_name('systemsearch-0.value').send_keys(self.system_one.fqdn)
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.system_one],
+        check_system_search_results(b, present=[self.system_one],
                 absent=[self.system_two, self.system_three])
 
     def test_by_type(self):
@@ -241,7 +233,7 @@ class Search(WebDriverTestCase):
         Select(b.find_element_by_name('systemsearch-0.value'))\
             .select_by_visible_text(self.system_three_details['type'])
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.system_one, self.system_two],
+        check_system_search_results(b, present=[self.system_one, self.system_two],
                 absent=[self.system_three])
 
     def test_by_status(self):
@@ -256,7 +248,7 @@ class Search(WebDriverTestCase):
         Select(b.find_element_by_name('systemsearch-0.value'))\
             .select_by_visible_text(self.system_two_details['status'])
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.system_two],
+        check_system_search_results(b, present=[self.system_two],
                 absent=[self.system_one, self.system_three])
 
     def test_by_date_added(self):
@@ -276,7 +268,7 @@ class Search(WebDriverTestCase):
             .select_by_visible_text('is')
         b.find_element_by_name('systemsearch-0.value').send_keys('2001-01-15')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[old_system], absent=[new_system])
+        check_system_search_results(b, present=[old_system], absent=[new_system])
 
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Added')
@@ -285,7 +277,7 @@ class Search(WebDriverTestCase):
         b.find_element_by_name('systemsearch-0.value').clear()
         b.find_element_by_name('systemsearch-0.value').send_keys('2001-01-16')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[old_system], absent=[new_system])
+        check_system_search_results(b, present=[old_system], absent=[new_system])
 
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Added')
@@ -304,7 +296,7 @@ class Search(WebDriverTestCase):
         b.find_element_by_name('systemsearch-0.value').clear()
         b.find_element_by_name('systemsearch-0.value').send_keys('2020-06-20')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[new_system], absent=[old_system])
+        check_system_search_results(b, present=[new_system], absent=[old_system])
 
         Select(b.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Added')
@@ -319,7 +311,7 @@ class Search(WebDriverTestCase):
             .select_by_visible_text('before')
         b.find_element_by_name('systemsearch-1.value').send_keys('2020-06-22')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[new_system], absent=[old_system])
+        check_system_search_results(b, present=[new_system], absent=[old_system])
 
     def test_by_key_value_is(self):
         b = self.browser
@@ -334,7 +326,7 @@ class Search(WebDriverTestCase):
             .select_by_visible_text('is')
         b.find_element_by_name('systemsearch-0.value').send_keys('foocodename')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.system_one],
+        check_system_search_results(b, present=[self.system_one],
                 absent=[self.system_two, self.system_three])
 
     def test_by_key_value_is_not(self):
@@ -350,7 +342,7 @@ class Search(WebDriverTestCase):
             .select_by_visible_text('is not')
         b.find_element_by_name('systemsearch-0.value').send_keys('foocodename')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.system_two, self.system_three],
+        check_system_search_results(b, present=[self.system_two, self.system_three],
                 absent=[self.system_one])
 
     def test_by_multiple_key_values(self):
@@ -374,7 +366,7 @@ class Search(WebDriverTestCase):
             .select_by_visible_text('is')
         b.find_element_by_name('systemsearch-1.value').send_keys('foocodename')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.system_one],
+        check_system_search_results(b, present=[self.system_one],
                 absent=[self.system_two, self.system_three])
 
     def test_by_multiple_key_values_again(self):
@@ -398,7 +390,7 @@ class Search(WebDriverTestCase):
             .select_by_visible_text('greater than')
         b.find_element_by_name('systemsearch-1.value').send_keys('1000')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.system_one],
+        check_system_search_results(b, present=[self.system_one],
                 absent=[self.system_two, self.system_three])
 
     def test_can_search_by_numa_node_count(self):
@@ -412,7 +404,7 @@ class Search(WebDriverTestCase):
             .select_by_visible_text('greater than')
         b.find_element_by_name('systemsearch-0.value').send_keys('1')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.system_one],
+        check_system_search_results(b, present=[self.system_one],
                 absent=[self.system_two, self.system_three])
 
         Select(b.find_element_by_name('systemsearch-0.operation'))\
@@ -420,7 +412,7 @@ class Search(WebDriverTestCase):
         b.find_element_by_name('systemsearch-0.value').clear()
         b.find_element_by_name('systemsearch-0.value').send_keys('2')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.system_three],
+        check_system_search_results(b, present=[self.system_three],
                 absent=[self.system_one, self.system_two])
 
 class SystemVisibilityTest(WebDriverTestCase):
@@ -483,7 +475,7 @@ class HypervisorSearchTest(WebDriverTestCase):
         Select(b.find_element_by_name('systemsearch-0.value'))\
             .select_by_visible_text('KVM')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.kvm], absent=[self.xen, self.phys])
+        check_system_search_results(b, present=[self.kvm], absent=[self.xen, self.phys])
 
     def test_search_hypervisor_is_not(self):
         b = self.browser
@@ -497,7 +489,7 @@ class HypervisorSearchTest(WebDriverTestCase):
         Select(b.find_element_by_name('systemsearch-0.value'))\
             .select_by_visible_text('KVM')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.xen, self.phys], absent=[self.kvm])
+        check_system_search_results(b, present=[self.xen, self.phys], absent=[self.kvm])
 
     def test_search_hypervisor_is_blank(self):
         b = self.browser
@@ -511,7 +503,7 @@ class HypervisorSearchTest(WebDriverTestCase):
         Select(b.find_element_by_name('systemsearch-0.value'))\
             .select_by_visible_text('')
         b.find_element_by_id('searchform').submit()
-        check_search_results(b, present=[self.phys], absent=[self.kvm, self.xen])
+        check_system_search_results(b, present=[self.phys], absent=[self.kvm, self.xen])
 
 class DiskSearchTest(WebDriverTestCase):
 
@@ -549,7 +541,7 @@ class DiskSearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys('10000000000')
         b.find_element_by_name('Search').click()
-        check_search_results(b, present=[self.big_disk, self.two_disks],
+        check_system_search_results(b, present=[self.big_disk, self.two_disks],
                 absent=[self.small_disk, self.no_disks])
 
     def test_sector_size_is_not_for_multiple_disks(self):
@@ -568,7 +560,7 @@ class DiskSearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys('512')
         b.find_element_by_name('Search').click()
-        check_search_results(b, present=[self.big_disk, self.no_disks],
+        check_system_search_results(b, present=[self.big_disk, self.no_disks],
                 absent=[self.small_disk, self.two_disks])
 
 
@@ -627,7 +619,7 @@ class InventoriedSearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys(' ')
         b.find_element_by_name('Search').click()
-        check_search_results(b, present=[self.not_inv],
+        check_system_search_results(b, present=[self.not_inv],
                 absent=[self.inv1, self.inv2, self.inv3, self.inv4])
 
     def test_inventoried_search_after(self):
@@ -643,7 +635,7 @@ class InventoriedSearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
         b.find_element_by_name('Search').click()
-        check_search_results(b, present=[self.inv3],
+        check_system_search_results(b, present=[self.inv3],
                 absent=[self.not_inv, self.inv1, self.inv2, self.inv4])
 
     def test_inventoried_search_is(self):
@@ -659,7 +651,7 @@ class InventoriedSearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
         b.find_element_by_name('Search').click()
-        check_search_results(b, present=[self.inv1, self.inv2],
+        check_system_search_results(b, present=[self.inv1, self.inv2],
                 absent=[self.not_inv, self.inv3, self.inv4])
 
     def test_inventoried_search_before(self):
@@ -675,7 +667,7 @@ class InventoriedSearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
         b.find_element_by_name('Search').click()
-        check_search_results(b, present=[self.inv4],
+        check_system_search_results(b, present=[self.inv4],
                 absent=[self.not_inv, self.inv1, self.inv2, self.inv3])
 
     def test_inventoried_search_range(self):
@@ -704,5 +696,5 @@ class InventoriedSearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_1_value').send_keys(self.date_tomorrow)
 
         b.find_element_by_name('Search').click()
-        check_search_results(b, present=[self.inv1, self.inv2],
+        check_system_search_results(b, present=[self.inv1, self.inv2],
                 absent=[self.not_inv, self.inv3, self.inv4])
