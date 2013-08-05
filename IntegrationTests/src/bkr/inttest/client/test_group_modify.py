@@ -1,4 +1,4 @@
-import unittest
+import unittest2 as unittest
 import email
 import crypt
 from bkr.inttest import data_setup, with_transaction, mail_capture
@@ -136,6 +136,17 @@ class GroupModifyTest(unittest.TestCase):
             self.assertEquals(group.activity[-1].new_value, group_name)
             self.assertEquals(group.activity[-1].service, u'XMLRPC')
 
+        try:
+            out = run_client(['bkr', 'group-modify',
+                              '--group-name', 'areallylonggroupname'*20,
+                              self.group.group_name],
+                             config = self.client_config)
+            self.fail('Must fail or die')
+        except ClientError,e:
+            max_length = Group.group_name.property.columns[0].type.length
+            self.assertIn('Enter a value less than %r characters long' %
+                          max_length, e.stderr_output)
+
     def test_group_modify_password(self):
         # Test successful hashed password change
         hashed_password = '$1$NaCl$O34mAzBXtER6obhoIodu8.'
@@ -220,7 +231,7 @@ class GroupModifyTest(unittest.TestCase):
         # Run command as the default admin user
         try:
             out = run_client(['bkr', 'group-modify',
-                              '--group-name', 'cannot_rename_admin',
+                              '--group-name', 'new_admin',
                               '--display-name', 'this is also unchanged',
                               protected_group_name])
             self.fail('Must fail or die')
