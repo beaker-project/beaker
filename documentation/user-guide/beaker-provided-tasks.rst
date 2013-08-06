@@ -148,6 +148,39 @@ This is a placeholder task used to align task execution across different
 recipes in a multi-host recipe set. See :ref:`multihost-tasks` for details.
 
 
+.. _virt-install-task:
+
+/distribution/virt/install
+==========================
+
+The ``/distribution/virt/install`` task is responsible for installing
+a virtual machine (defined as a 'guest recipe' in Beaker). It does this via
+``virt-install``. The task is defined in the host recipe, often along with
+``/distribution/virt/start``. For example::
+
+  <task name="/distribution/install" role="SERVERS">
+    <params/>
+  </task>
+  <task name="/distribution/virt/install" role="SERVERS">
+    <params/>
+  </task>
+  <task name="/distribution/virt/start" role="SERVERS">
+    <params/>
+  </task>
+
+Be aware that ``/distribution/virt/start`` and ``/distribution/virt/install``
+should never be defined in the guest recipe itself.
+
+
+.. _virt-start-task:
+
+/distribution/virt/start
+========================
+
+The ``/distribution/virt/start`` task is used for starting a virtual machine,
+via ``virsh start``. Please see :ref:`virt-install-task` for examples on how to
+use it with ``/distribution/virt/install``.
+
 Other tasks
 ===========
 
