@@ -33,7 +33,7 @@ from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System,
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
         SystemStatus
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, check_system_search_results
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.assertions import wait_for_condition
 
@@ -113,6 +113,31 @@ class SystemViewTestWD(WebDriverTestCase):
         wait_for_condition(provision_ks_meta_populated)
         wait_for_condition(provision_koptions_populated)
         wait_for_condition(provision_koptions_post_populated)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=920018
+    def test_system_not_visible_available_free_when_lc_disabled(self):
+        with session.begin():
+            lc1 = data_setup.create_labcontroller()
+            lc2 = data_setup.create_labcontroller()
+            system1 = data_setup.create_system(fqdn=data_setup.unique_name(u'aaaa%s.testdata'))
+            system1.lab_controller = lc1
+            system2 = data_setup.create_system(fqdn=data_setup.unique_name(u'aaaa%s.testdata'))
+            system2.lab_controller = lc2
+
+            # set lc2 to disabled
+            lc2.disabled = True
+
+        b = self.browser
+        login(b)
+
+        b.get(get_server_base())
+        check_system_search_results(b, present=[system1,system2], absent=[])
+
+        b.get(get_server_base()+'available')
+        check_system_search_results(b, present=[system1, system2], absent=[])
+
+        b.get(get_server_base()+'free')
+        check_system_search_results(b, present=[system1], absent=[system2])
 
 class SystemViewTest(SeleniumTestCase):
 
