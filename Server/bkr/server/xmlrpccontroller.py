@@ -73,7 +73,10 @@ class RPCRoot(controllers.Controller):
                 xmlrpclib.Fault(1, "%s:%s" % sys.exc_info()[:2])
                 )
 
-        log.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
+        if str(method).startswith('auth.'):
+            log.debug('Time: %s %s', datetime.utcnow() - start, str(method))
+        else:
+            log.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
         cherrypy.response.headers["Content-Type"] = "text/xml"
         return response
 

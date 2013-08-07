@@ -17,7 +17,40 @@ from bkr.labcontroller.config import get_conf
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import assert_datetime_within
 from bkr.inttest.labcontroller import LabControllerTestCase, processes, \
-    config_file, running_dogfood_task
+    config_file, daemons_running_externally
+
+class GetRecipeGuestXML(LabControllerTestCase):
+
+    def setUp(self):
+        with session.begin():
+            dt = data_setup.create_distro_tree()
+            self.system = data_setup. \
+                create_system(lab_controller=self.get_lc())
+            self.system_recipe = data_setup.create_recipe()
+            self.guest_recipe = data_setup. \
+                create_guestrecipe(host=self.system_recipe)
+            self.job = data_setup.create_job_for_recipes([self.system_recipe,
+                self.guest_recipe])
+            data_setup.mark_job_running(self.job)
+
+    def tearDown(self):
+        pass
+
+    def test_GET_guests_host(self):
+        url = '%srecipes/%s/' % (self.get_proxy_url(), self.guest_recipe.id)
+        response = requests.get(url, headers={'Accept': 'application/xml'})
+        response.raise_for_status()
+        self.assertEquals(response.headers['Content-Type'], 'application/xml')
+        # should work without the Accept header as well
+        response = requests.get(url)
+        response.raise_for_status()
+        self.assertEquals(response.headers['Content-Type'], 'application/xml')
+        # Call through our API
+        # Check the results are what we expect
+        root = lxml.etree.fromstring(response.content)
+        reported_host_fqdn = root.find('./recipeSet/recipe').get('system')
+        self.assertEqual(self.system_recipe.resource.fqdn, reported_host_fqdn)
+
 
 class GetRecipeTest(LabControllerTestCase):
 
@@ -408,7 +441,7 @@ class LogUploadTestRestartProxy(LabControllerTestCase):
 
     @classmethod
     def setupClass(cls):
-        if running_dogfood_task:
+        if daemons_running_externally():
             raise SkipTest('Too hard to control daemon process')
 
     def setUp(self):

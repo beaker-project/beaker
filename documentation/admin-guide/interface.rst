@@ -75,6 +75,19 @@ Alias
     obsolete name in the ``Releases`` field (for example ``RHEL3`` instead of 
     ``RedHatEnterpriseLinux3``).
 
+.. note::
+
+   If you set an alias for an existing OS major version, you cannot import distros
+   under the aliased name. For example, if you set "RHEL6" as an alias
+   for "RedHatEnterpriseLinux6", then attempts to import a new distro
+   whose OS major version is "RHEL6" will fail with the following
+   error message::
+
+      Cannot import distro as RHEL6: it is configured as an alias for RedHatEnterpriseLinux6
+
+   To fix the problem, either unset the alias or correct the OS major
+   version in the distro tree you are trying to import.
+
 Install Options
     These are the default install options when provisioning a distro from this 
     major version. Options may be set for all arches or for each arch 

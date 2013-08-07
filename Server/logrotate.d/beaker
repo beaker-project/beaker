@@ -1,0 +1,12 @@
+/var/log/beaker/*.log {
+    size 10485760
+    rotate 5
+    # We set nodateext purely to mimic the old log rotation behaviour from 
+    # ConcurrentLogHandler in Beaker < 0.14, even though date-based suffixes 
+    # are actually nicer.
+    nodateext
+    sharedscripts
+    postrotate
+	/bin/kill -HUP `cat /var/run/syslogd.pid 2> /dev/null` 2> /dev/null || true
+    endscript
+}

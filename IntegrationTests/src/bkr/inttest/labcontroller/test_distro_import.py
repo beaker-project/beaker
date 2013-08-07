@@ -1,10 +1,12 @@
 import os
-import unittest
+import unittest2 as unittest
 import subprocess
 import json
 import pkg_resources
 from copy import copy
 from bkr.inttest import Process
+from bkr.server.model import OSMajor
+from turbogears.database import session
 
 _current_dir = os.path.dirname(__file__)
 _compose_test_dir = pkg_resources.resource_filename('bkr.inttest.labcontroller', 'compose_layout')
@@ -16,6 +18,13 @@ if os.path.exists(os.path.join(_git_root_dir, '.git')):
 else:
     _command = '/usr/bin/beaker-import'
 
+class TreeImportError(Exception):
+
+    def __init__(self, command, status, stderr_output):
+        Exception.__init__(self, 'Distro import failed: %r '
+                           'with exit status %s:\n%s' % (command, status, stderr_output))
+        self.status = status
+        self.stderr_output = stderr_output
 
 class DistroImportTest(unittest.TestCase):
 
@@ -34,8 +43,6 @@ class DistroImportTest(unittest.TestCase):
         cls.distro_server.stop()
 
     def setUp(self):
-        self.import_args = ['python', _command, '--dry-run', '--quiet', '--json']
-
         self.i386_rhel4 = {u'arch': u'i386',
                           u'arches': [],
                           u'images': [{u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
@@ -489,40 +496,51 @@ class DistroImportTest(unittest.TestCase):
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
                              env=dict(os.environ.items() + [('PYTHONUNBUFFERED', '1')]))
-        return p
-
-    def _import_trees(self, additional_import_args):
-        import_args = copy(self.import_args)
-        import_args.extend(additional_import_args)
-        p = self._run_import(import_args)
         stdout, stderr = p.communicate()
-        self.assertEquals(p.returncode, 0,
-            'Returned nonzero, stderr: %s' % stderr)
-        json_trees = stdout.split('\n')
-        del json_trees[-1] # Empty string
+        if p.returncode:
+            raise TreeImportError(import_args, p.returncode, stderr)
+        json_trees = stdout.splitlines()
         trees = [json.loads(t) for t in json_trees]
+        return trees, stderr
+
+    def dry_run_import_trees(self, additional_import_args):
+        trees, stderr = self._run_import(
+                ['python', _command, '--debug', '--json', '--dry-run']
+                + additional_import_args)
+        # check logging is working correctly
+        self.assertIn('Dry Run only', stderr)
+        self.assertIn('Attempting to import: ', stderr)
+        # return dumped JSON tree info
         return trees
 
+    def import_trees(self, additional_import_args):
+        trees, stderr = self._run_import(
+                ['python', _command, '--debug', '--json']
+                + additional_import_args)
+        # check logging is working correctly
+        self.assertIn('Attempting to import: ', stderr)
+        # return dumped JSON tree info
+        return trees
 
     def test_invalid_arch(self):
-        rhel7_trees = self._import_trees(['--arch', 'i386', '--arch', 'x86_64',
+        rhel7_trees = self.dry_run_import_trees(['--arch', 'i386', '--arch', 'x86_64',
             '%sRHEL7/' % self.distro_url])
         self.assertEquals(len(rhel7_trees), 4)
 
-        f18_trees = self._import_trees(['--arch', 'CISC', '--arch', 'x86_64',
+        f18_trees = self.dry_run_import_trees(['--arch', 'CISC', '--arch', 'x86_64',
             '%sF-18/GOLD/Fedora' % self.distro_url])
         self.assertEquals(len(f18_trees), 1)
 
-        rhel6_trees = self._import_trees(['--arch', 'AVR', '--arch', 'x86_64',
+        rhel6_trees = self.dry_run_import_trees(['--arch', 'AVR', '--arch', 'x86_64',
             '%sRHEL6-Server/' % self.distro_url])
         self.assertEquals(len(rhel6_trees), 1)
 
-        rhel5_trees = self._import_trees(['--arch', 'RISC', '--arch', 'x86_64',
+        rhel5_trees = self.dry_run_import_trees(['--arch', 'RISC', '--arch', 'x86_64',
             '%sRHEL5-Server/' % self.distro_url])
         self.assertEquals(len(rhel5_trees), 1)
 
     def test_rhel6_naked_import(self):
-        trees = self._import_trees(['%sRHEL-6-Server-RHEV/6.4/6.4.1.1/' % \
+        trees = self.dry_run_import_trees(['%sRHEL-6-Server-RHEV/6.4/6.4.1.1/' % \
             self.distro_url, "--name", "RHEVH-6.4-20130318.1", "--family", \
             "RHEVH", "--variant", "Server", "--version", "6.4", "--kernel", \
             "/RHEL-6-Server-RHEV/6.4/6.4.1.1/vmlinuz0", "--initrd", \
@@ -534,13 +552,13 @@ class DistroImportTest(unittest.TestCase):
         self.assertEquals(tree, self.x86_64_rhel6_naked)
 
     def test_rhel4_tree_import_compose(self):
-        trees = self._import_trees(['%sRHEL-4/U9/AS/' % self.distro_url])
+        trees = self.dry_run_import_trees(['%sRHEL-4/U9/AS/' % self.distro_url])
         self.assertTrue(len(trees) == 1)
         tree = trees.pop()
         self.assertEquals(tree, self.i386_rhel4)
 
     def test_rhel5_tree_import_compose(self):
-        trees = self._import_trees(['%sRHEL5-Server/' % self.distro_url])
+        trees = self.dry_run_import_trees(['%sRHEL5-Server/' % self.distro_url])
         self.assertTrue(len(trees) == 2) # Expecting two trees
         for tree in trees:
             if tree['arch'] == u'i386':
@@ -551,7 +569,7 @@ class DistroImportTest(unittest.TestCase):
         self.assertEquals(x86_64_tree, self.x86_64_rhel5)
 
     def test_rhel6_tree_import_compose(self):
-        trees = self._import_trees(['%sRHEL6-Server/' % self.distro_url])
+        trees = self.dry_run_import_trees(['%sRHEL6-Server/' % self.distro_url])
         self.assertTrue(len(trees) == 2) # Expecting two trees
         for tree in trees:
             if tree['arch'] == u'i386':
@@ -562,7 +580,7 @@ class DistroImportTest(unittest.TestCase):
         self.assertEquals(x86_64_tree, self.x86_64_rhel6)
 
     def test_rhel5_tree_import_tree(self):
-        trees = self._import_trees(['%sRHEL5-Server/i386/os/'
+        trees = self.dry_run_import_trees(['%sRHEL5-Server/i386/os/'
             % self.distro_url])
         self.assertTrue(len(trees) == 1)
         tree = trees.pop()
@@ -573,7 +591,7 @@ class DistroImportTest(unittest.TestCase):
         self.assertEquals(tree, self.i386_rhel5)
 
     def test_rhel6_tree_import_tree(self):
-        trees = self._import_trees(['%sRHEL6-Server/x86_64/os/'
+        trees = self.dry_run_import_trees(['%sRHEL6-Server/x86_64/os/'
             % self.distro_url])
         self.assertTrue(len(trees) == 1)
         tree = trees.pop()
@@ -584,7 +602,7 @@ class DistroImportTest(unittest.TestCase):
         self.assertEquals(tree, self.x86_64_rhel6)
 
     def test_rhel7_tree_import_compose(self):
-        trees = self._import_trees(['%sRHEL7/'% self.distro_url])
+        trees = self.dry_run_import_trees(['%sRHEL7/'% self.distro_url])
 
         self.assertTrue(len(trees) == 6)
         for tree in trees:
@@ -602,7 +620,7 @@ class DistroImportTest(unittest.TestCase):
 
     def test_f17_tree_import_i386(self):
 
-        trees = self._import_trees(['%sF-17/GOLD/Fedora/i386/os'
+        trees = self.dry_run_import_trees(['%sF-17/GOLD/Fedora/i386/os'
                                     % self.distro_url])
         self.assertTrue(len(trees) == 1)
         tree = trees.pop()
@@ -610,7 +628,7 @@ class DistroImportTest(unittest.TestCase):
 
     def test_f17_tree_import_x86_64(self):
 
-        trees = self._import_trees(['%sF-17/GOLD/Fedora/x86_64/os'
+        trees = self.dry_run_import_trees(['%sF-17/GOLD/Fedora/x86_64/os'
                                     % self.distro_url])
         self.assertTrue(len(trees) == 1)
         tree = trees.pop()
@@ -618,7 +636,7 @@ class DistroImportTest(unittest.TestCase):
 
     def test_f17_tree_import_compose(self):
 
-        trees = self._import_trees(['%sF-17/GOLD/Fedora/' % self.distro_url])
+        trees = self.dry_run_import_trees(['%sF-17/GOLD/Fedora/' % self.distro_url])
         self.assertTrue(len(trees) == 2) # Expecting two trees
         for tree in trees:
             if tree['arch'] == u'i386':
@@ -632,7 +650,7 @@ class DistroImportTest(unittest.TestCase):
 
     def test_f18_tree_import_i386(self):
 
-        trees = self._import_trees(['%sF-18/GOLD/Fedora/i386/os'
+        trees = self.dry_run_import_trees(['%sF-18/GOLD/Fedora/i386/os'
                                     % self.distro_url])
         self.assertTrue(len(trees) == 1)
         tree = trees.pop()
@@ -640,7 +658,7 @@ class DistroImportTest(unittest.TestCase):
 
     def test_f18_tree_import_x86_64(self):
 
-        trees = self._import_trees(['%sF-18/GOLD/Fedora/x86_64/os'
+        trees = self.dry_run_import_trees(['%sF-18/GOLD/Fedora/x86_64/os'
                                     % self.distro_url])
         self.assertTrue(len(trees) == 1)
         tree = trees.pop()
@@ -648,7 +666,7 @@ class DistroImportTest(unittest.TestCase):
 
     def test_f18_tree_import_compose(self):
 
-        trees = self._import_trees(['%sF-18/GOLD/Fedora/' % self.distro_url])
+        trees = self.dry_run_import_trees(['%sF-18/GOLD/Fedora/' % self.distro_url])
         self.assertTrue(len(trees) == 2) # Expecting two trees
         for tree in trees:
             if tree['arch'] == u'i386':
@@ -661,8 +679,32 @@ class DistroImportTest(unittest.TestCase):
 
 
     def test_selective_compose_import(self):
-        trees = self._import_trees(['--arch', 'i386',
+        trees = self.dry_run_import_trees(['--arch', 'i386',
             '%sRHEL6-Server/' % self.distro_url])
         self.assertTrue(len(trees) == 1)
         tree = trees.pop()
         self.assertEquals(tree, self.i386_rhel6)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=907242
+    def test_cannot_import_osmajor_existing_alias(self):
+        trees = self.import_trees(['%sRHEL6-Server/' % self.distro_url])
+        self.assertTrue(len(trees) == 2) # Expecting two trees
+
+        # set an alias
+        myalias = 'RHEL6'
+        with session.begin():
+            distro1 = OSMajor.by_name('RedHatEnterpriseLinux6')
+            distro1.alias = myalias
+            self.assert_(distro1.alias is myalias)
+
+        # import the same tree with osmajor same as myalias
+        # beaker-import constructs the osmajor from family name and version
+        # so, we just supply RHEL (and the osmajor will be RHEL6)
+        try:
+            trees = self.import_trees(['--family','RHEL',
+                                        '%sRHEL6-Server/' % self.distro_url])
+            self.fail('Must fail or die')
+        except TreeImportError as e:
+            self.assert_('Cannot import distro as RHEL6: '
+                         'it is configured as an alias for RedHatEnterpriseLinux6' in
+                         e.stderr_output, e.stderr_output)

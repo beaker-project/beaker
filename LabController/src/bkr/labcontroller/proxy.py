@@ -101,6 +101,10 @@ class ProxyHelper(object):
                 'http'), self.conf.get_url_domain()),
                 self.hub)
 
+    def close(self):
+        if sys.version_info >= (2, 7):
+            self.hub._hub('close')()
+
     def recipe_upload_file(self, 
                          recipe_id, 
                          path, 

@@ -116,3 +116,16 @@ class OSVersionsTest(WebDriverTestCase):
                     'something else')
             self.assertEquals(o.install_options_by_arch[ppc64].kernel_options_post,
                     'something else')
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=975644
+    def test_edit_osmajor_alias(self):
+        with session.begin():
+            data_setup.create_distro_tree(osmajor=u'LinuxLinux2.1', arch=u'ia64')
+
+        b = self.browser
+        go_to_edit_osmajor(b, 'LinuxLinux2.1')
+        b.find_element_by_xpath('//input[@id="form_alias"]').send_keys('linux21')
+        b.find_element_by_xpath('//input[@value="Edit OSMajor"]').submit()
+        self.assertEquals(
+            b.find_element_by_xpath('//div[@class="flash"]').text,
+            'Changes saved for LinuxLinux2.1')

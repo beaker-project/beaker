@@ -28,6 +28,7 @@ __requires__ = ['CherryPy < 3.0']
 import sys
 import os
 import random
+from bkr.log import log_to_stream, log_to_syslog
 from bkr.server import needpropertyxml, utilisation
 from bkr.server.bexceptions import BX, VMCreationFailedException, \
     StaleTaskStatusException, InsufficientSystemPermissions, \
@@ -55,7 +56,7 @@ import os
 
 import logging
 
-log = logging.getLogger("beakerd")
+log = logging.getLogger(__name__)
 running = True
 event = threading.Event()
 
@@ -69,21 +70,12 @@ def get_parser():
     usage = "usage: %prog [options]"
     parser = OptionParser(usage, description=__description__,
                           version=__version__)
-
-    ## Defaults
-    parser.set_defaults(daemonize=True, log_level=None)
-    ## Actions
     parser.add_option("-f", "--foreground", default=False, action="store_true",
                       help="run in foreground (do not spawn a daemon)")
     parser.add_option("-p", "--pid-file",
                       help="specify a pid file")
-    parser.add_option('-l', '--log-level', dest='log_level', metavar='LEVEL',
-                      help='log level (ie. INFO, WARNING, ERROR, CRITICAL)')
     parser.add_option("-c", "--config", action="store", type="string",
                       dest="configfile", help="location of config file.")
-    parser.add_option("-u", "--user", action="store", type="string",
-                      dest="user_name", help="username of Admin account")
-
     return parser
 
 def _virt_enabled():
@@ -740,7 +732,7 @@ def main_recipes_loop(*args, **kwargs):
 def schedule():
     global running
 
-    reload_config()
+    interface.start(config)
 
     if config.get('carbon.address'):
         log.debug('starting metrics thread')
@@ -774,83 +766,39 @@ def schedule():
        event.set()
        rc = 0
 
+    interface.stop()
     main_recipes_thread.join(10)
 
     sys.exit(rc)
 
-@atexit.register
-def stop_interface():
-    interface.stop()
-
-def sighup_handler(signal, frame):
-    log.info("received SIGHUP, reloading")
-    reload_config()
-    log.info("configuration reloaded")
-
 def sigterm_handler(signal, frame):
     raise SystemExit("received SIGTERM")
-
-def purge_handlers():
-    # Remove handlers
-    for (_, logger) in logging.root.manager.loggerDict.items():
-        if hasattr(logger, 'handlers'):
-            for handler in logger.handlers:
-                logger.removeHandler(handler)
-                handler.close()
-
-    #clear out logging's internal handler list
-    logging._handlerList = []
-
-
-def reload_config():
-    purge_handlers()
-
-    if interface.running:
-        interface.stop()
-
-    load_config(opts.configfile)
-    interface.start(config)
 
 def main():
     global opts
     parser = get_parser()
     opts, args = parser.parse_args()
 
-    # First look on the command line for a desired config file,
-    # if it's not on the command line, then look for 'setup.py'
-    # in the current directory. If there, load configuration
-    # from a file called 'dev.cfg'. If it's not there, the project
-    # is probably installed and we'll look first for a file called
-    # 'prod.cfg' in the current directory and then for a default
-    # config file called 'default.cfg' packaged in the egg.
     load_config(opts.configfile)
 
-    signal.signal(signal.SIGHUP, sighup_handler)
     signal.signal(signal.SIGINT, sigterm_handler)
     signal.signal(signal.SIGTERM, sigterm_handler)
 
-    if not opts.foreground:
-        log.debug("Launching beakerd daemon")
+    if opts.foreground:
+        log_to_stream(sys.stderr, level=logging.DEBUG)
+    else:
+        log_to_syslog('beakerd')
         pid_file = opts.pid_file
         if pid_file is None:
             pid_file = config.get("PID_FILE", "/var/run/beaker/beakerd.pid")
-        d = daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(pid_file, acquire_timeout=0),)
-        util_logger = logging.getLogger('bkr.server.util')
-        util_logger.disabled = True
-
-        purge_handlers()
-
+        d = daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(pid_file, acquire_timeout=0),
+                                 detach_process=True)
         try:
             d.open()
         except pidlockfile.AlreadyLocked:
-            reload_config() # reopen logfiles
             log.fatal("could not acquire lock on %s, exiting" % pid_file)
             sys.stderr.write("could not acquire lock on %s" % pid_file)
             sys.exit(1)
-    else:
-        signal.signal(signal.SIGHUP, sighup_handler)
-        signal.signal(signal.SIGTERM, sigterm_handler)
-        signal.signal(signal.SIGINT, sigterm_handler)
 
     schedule()
 

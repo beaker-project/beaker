@@ -12,11 +12,9 @@ from optparse import OptionParser
 from bkr.common.helpers import RepeatTimer
 from bkr.labcontroller.proxy import Watchdog
 from bkr.labcontroller.config import load_conf, get_conf
-
+from bkr.log import log_to_stream, log_to_syslog
 from kobo.exceptions import ShutdownException
 from kobo.tback import Traceback, set_except_hook
-from bkr.log import add_stderr_logger
-from bkr.labcontroller.utils import add_rotating_file_logger
 
 set_except_hook()
 
@@ -25,28 +23,11 @@ logger = logging.getLogger(__name__)
 def daemon_shutdown(*args, **kwargs):
     raise ShutdownException()
 
-def main_loop(conf=None, foreground=False):
+def main_loop(watchdog, conf):
     """infinite daemon loop"""
 
     # define custom signal handlers
     signal.signal(signal.SIGTERM, daemon_shutdown)
-
-    # set up logging
-    log_level_string = conf.get("WATCHDOG_LOG_LEVEL") or conf["LOG_LEVEL"]
-    log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
-    logging.getLogger().setLevel(log_level)
-    if foreground:
-        add_stderr_logger(logging.getLogger(), log_level=log_level)
-    else:
-        log_file = conf["WATCHDOG_LOG_FILE"]
-        add_rotating_file_logger(logging.getLogger(), log_file,
-                log_level=log_level, format=conf["VERBOSE_LOG_FORMAT"])
-
-    try:
-        watchdog = Watchdog(conf=conf)
-    except Exception, ex:
-        sys.stderr.write("Error initializing Watchdog: %s\n" % ex)
-        sys.exit(1)
 
     time_of_last_check = 0
     while True:
@@ -112,18 +93,33 @@ def main():
     (opts, args) = parser.parse_args()
     if opts.config:
         load_conf(opts.config)
+    logging.getLogger().setLevel(logging.DEBUG)
 
     conf = get_conf()
     pid_file = opts.pid_file
     if pid_file is None:
         pid_file = conf.get("WATCHDOG_PID_FILE", "/var/run/beaker-lab-controller/beaker-watchdog.pid")
 
+    # kobo.client.HubProxy will try to log some stuff, even though we 
+    # haven't configured our logging handlers yet. So we send logs to stderr 
+    # temporarily here, and configure it again below.
+    log_to_stream(sys.stderr, level=logging.WARNING)
+    try:
+        watchdog = Watchdog(conf=conf)
+    except Exception, ex:
+        sys.stderr.write("Error initializing Watchdog: %s\n" % ex)
+        sys.exit(1)
+
     if opts.foreground:
-        main_loop(conf=conf, foreground=True)
+        log_to_stream(sys.stderr, level=logging.DEBUG)
+        main_loop(watchdog, conf)
     else:
+        # See BZ#977269
+        watchdog.close()
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
-                pid_file, acquire_timeout=0)):
-            main_loop(conf=conf, foreground=False)
+                pid_file, acquire_timeout=0), detach_process=True):
+            log_to_syslog('beaker-watchdog')
+            main_loop(watchdog, conf)
 
     print 'exiting program'
 

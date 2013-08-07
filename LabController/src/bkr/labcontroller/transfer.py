@@ -12,8 +12,7 @@ from bkr.labcontroller.proxy import Watchdog
 from bkr.labcontroller.config import get_conf, load_conf
 from kobo.exceptions import ShutdownException
 from kobo.tback import Traceback, set_except_hook
-from bkr.log import add_stderr_logger
-from bkr.labcontroller.utils import add_rotating_file_logger
+from bkr.log import log_to_stream, log_to_syslog
 
 set_except_hook()
 
@@ -22,22 +21,11 @@ logger = logging.getLogger(__name__)
 def daemon_shutdown(*args, **kwargs):
     raise ShutdownException()
 
-def main_loop(transfer, conf=None, foreground=False):
+def main_loop(transfer, conf=None):
     """infinite daemon loop"""
 
     # define custom signal handlers
     signal.signal(signal.SIGTERM, daemon_shutdown)
-
-    # set up logging
-    log_level_string = conf.get("TRANSFER_LOG_LEVEL") or conf["LOG_LEVEL"]
-    log_level = getattr(logging, log_level_string.upper(), logging.DEBUG)
-    logging.getLogger().setLevel(log_level)
-    if foreground:
-        add_stderr_logger(logging.getLogger(), log_level=log_level)
-    else:
-        log_file = conf["TRANSFER_LOG_FILE"]
-        add_rotating_file_logger(logging.getLogger(), log_file,
-                log_level=log_level, format=conf["VERBOSE_LOG_FORMAT"])
 
     while True:
         try:
@@ -83,6 +71,7 @@ def main():
     if opts.config:
         load_conf(opts.config)
     conf = get_conf()
+    logging.getLogger().setLevel(logging.DEBUG)
 
     pid_file = opts.pid_file
     if pid_file is None:
@@ -91,6 +80,10 @@ def main():
     if not conf.get('ARCHIVE_SERVER'):
         sys.stderr.write('Archive server settings are missing from config file\n')
         sys.exit(1)
+    # kobo.client.HubProxy will try to log some stuff, even though we 
+    # haven't configured our logging handlers yet. So we send logs to stderr 
+    # temporarily here, and configure it again below.
+    log_to_stream(sys.stderr, level=logging.WARNING)
     try:
         transfer = Watchdog(conf=conf)
     except Exception, ex:
@@ -98,11 +91,15 @@ def main():
         sys.exit(1)
 
     if opts.foreground:
-        main_loop(transfer=transfer, conf=conf, foreground=True)
+        log_to_stream(sys.stderr, level=logging.DEBUG)
+        main_loop(transfer=transfer, conf=conf)
     else:
+        # See BZ#977269
+        transfer.close()
         with daemon.DaemonContext(pidfile=pidfile.TimeoutPIDLockFile(
-                pid_file, acquire_timeout=0)):
-            main_loop(transfer=transfer, conf=conf, foreground=False)
+                pid_file, acquire_timeout=0), detach_process=True):
+            log_to_syslog('beaker-transfer')
+            main_loop(transfer=transfer, conf=conf)
 
 if __name__ == '__main__':
     main()

@@ -19,6 +19,7 @@ Random functions that don't fit elsewhere
 import os
 import sys
 import logging
+import socket
 import datetime
 import time
 from sqlalchemy.orm import create_session
@@ -27,15 +28,24 @@ from turbogears import config, url
 from turbogears.database import get_engine
 import socket
 
-# Importing ConcurrentRotatingFileHandler will result in 
-# it adding itself into the logging.handlers __dict__,
-# thus allowing it to be found in turbogears.update_config()
-from cloghandler import ConcurrentRotatingFileHandler
-
 log = logging.getLogger(__name__)
 
 def load_config(configfile=None):
-    """ Load beaker's configuration """
+    """ Loads Beaker's configuration and configures logging. """
+    # In general, we want all messages from application code.
+    logging.getLogger().setLevel(logging.DEBUG)
+    # Well-behaved libraries will set their own log levels to something 
+    # suitable (sqlalchemy sets it to WARNING, for example) but the TurboGears 
+    # stuff leaves its unset.
+    logging.getLogger('turbomail').setLevel(logging.INFO)
+    logging.getLogger('turbogears').setLevel(logging.INFO)
+    logging.getLogger('turbokid').setLevel(logging.INFO)
+    logging.getLogger('turbogears.access').setLevel(logging.WARN)
+    # Note that the actual level of log output is controlled by the handlers, 
+    # not the loggers (for example command line tools will typically log to 
+    # stderr at WARNING level). The main entry point for the program should 
+    # call bkr.log.log_to_{syslog,stream} to set up a handler.
+
     setupdir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     curdir = os.getcwd()
     if configfile and os.path.exists(configfile):
@@ -50,30 +60,18 @@ def load_config(configfile=None):
     elif os.path.exists('/etc/beaker/server.cfg'):
         configfile = '/etc/beaker/server.cfg'
     else:
-        log.error("Unable to find configuration to load!")
-        return
-    log.debug("Loading configuration: %s" % configfile)
+        raise RuntimeError("Unable to find configuration to load!")
+
+    # We do not want TurboGears to touch the logging config, so let's 
+    # double-check the user hasn't left an old [logging] section in their 
+    # config file.
+    from configobj import ConfigObj
+    configdata = ConfigObj(configfile, unrepr=True)
+    if configdata.has_key('logging'):
+        raise RuntimeError('TurboGears logging configuration is not supported, '
+                'remove [logging] section from config file %s' % configfile)
 
     turbogears.update_config(configfile=configfile, modulename="bkr.server.config")
-
-def log_to_stream(stream, level=logging.WARNING):
-    """
-    Configures the logging module to send messages to the given stream (for
-    example, sys.stderr). By default only WARNING and ERROR level messages are
-    logged; pass the level argument to override this. All existing logging
-    config is replaced.
-
-    Suitable for use in command-line programs which shouldn't write to server
-    log files.
-    """
-    stream_handler = logging.StreamHandler(stream)
-    stream_handler.setLevel(level)
-    stream_handler.setFormatter(logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s'))
-    # XXX terrible hack, but there is no better way in Python 2.4 :-(
-    logging.Logger.manager.root.handlers = [stream_handler]
-    for logger in logging.Logger.manager.loggerDict.itervalues():
-        if getattr(logger, 'handlers', None):
-            logger.handlers = [stream_handler]
 
 def to_unicode(obj, encoding='utf-8'):
     if isinstance(obj, basestring):

@@ -34,7 +34,7 @@ import turbogears
 from turbogears import update_config
 from turbogears.database import session
 from bkr.server.controllers import Root
-from bkr.server.util import log_to_stream
+from bkr.log import log_to_stream
 
 # hack to make turbogears.testutil not do dumb stuff at import time
 orig_cwd = os.getcwd()
@@ -132,7 +132,8 @@ class Process(object):
             env.update(self.env)
         self.popen = subprocess.Popen(self.args, stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT, env=env, cwd=self.exec_dir)
-        CommunicateThread(popen=self.popen).start()
+        self.communicate_thread = CommunicateThread(popen=self.popen)
+        self.communicate_thread.start()
         if self.listen_port:
             self._wait_for_listen(self.listen_port)
 
@@ -160,6 +161,12 @@ class Process(object):
             os.kill(self.popen.pid, self.stop_signal)
             self.popen.wait()
 
+    def start_output_capture(self):
+        self.communicate_thread.start_capture()
+
+    def finish_output_capture(self):
+        return self.communicate_thread.finish_capture()
+
 class CommunicateThread(threading.Thread):
     """
     Nose has support for capturing stdout during tests, by fiddling with sys.stdout.
@@ -171,12 +178,27 @@ class CommunicateThread(threading.Thread):
     def __init__(self, popen, **kwargs):
         super(CommunicateThread, self).__init__(**kwargs)
         self.popen = popen
+        self.capturing = False
 
     def run(self):
         while True:
             data = self.popen.stdout.readline()
-            if not data: break
-            sys.stdout.write(data)
+            if not data:
+                break
+            if self.capturing:
+                self.captured.append(data)
+            else:
+                sys.stdout.write(data)
+
+    def start_capture(self):
+        self.captured = []
+        self.capturing = True
+
+    def finish_capture(self):
+        self.capturing = False
+        result = ''.join(self.captured)
+        del self.captured
+        return result
 
 def setup_slapd():
     config_dir = '/tmp/beaker-tests-slapd-config'
@@ -230,10 +252,7 @@ def setup_package():
     log.info('Loading test configuration from %s', CONFIG_FILE)
     assert os.path.exists(CONFIG_FILE), 'Config file %s must exist' % CONFIG_FILE
     update_config(configfile=CONFIG_FILE, modulename='bkr.server.config')
-
-    # Override loaded logging config, in case we are using the server's config file
-    # (we really always want our tests' logs to go to stdout, not /var/log/beaker/)
-    log_to_stream(sys.stdout, level=logging.NOTSET)
+    log_to_stream(sys.stdout, level=logging.DEBUG)
 
     from bkr.inttest import data_setup
     if not 'BEAKER_SKIP_INIT_DB' in os.environ:

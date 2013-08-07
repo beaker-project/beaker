@@ -13,7 +13,15 @@ from distutils.dep_util import newer
 from setuptools.command.install import install as _install
 from setuptools.command.install_lib import install_lib as _install_lib
 
-execfile(os.path.join("bkr/server", "release.py"))
+description = (
+  "Beaker is a system for full stack software integration testing "
+  "(including hardware compatibility testing)."
+)
+author = "Red Hat, Inc."
+email = "beaker-devel@lists.fedorahosted.org"
+copyright = "2008-2013 Red Hat, Inc."
+url = "http://beaker-project.org/"
+license = "GPLv2+"
 
 poFiles = filter(os.path.isfile, glob.glob('po/*.po'))
 
@@ -147,6 +155,9 @@ data_files = \
     ("/etc/httpd/conf.d", ["apache/beaker-server.conf"]),
     ("/etc/init.d", ["init.d/beakerd"]),
     ("/etc/cron.d", ["cron.d/beaker"]),
+    ("/etc/rsyslog.d", ["rsyslog.d/beaker-server.conf"]),
+    ("/etc/logrotate.d", ["logrotate.d/beaker"]),
+    ('/usr/lib/systemd/system',['systemd/beakerd.service']),
     ("/usr/share/bkr", filter(os.path.isfile, glob.glob("apache/*.wsgi"))),
     ("/var/log/beaker", []),
     ("/var/www/beaker/logs", []),
@@ -188,12 +199,12 @@ setup(
         'turbogears.app',
     ],
     classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Operating System :: OS Independent',
+        'Development Status :: 5 - Production/Stable',
+        'Operating System :: POSIX :: Linux',
         'Programming Language :: Python',
-        'Topic :: Software Development :: Libraries :: Python Modules',
         'Framework :: TurboGears',
         'Framework :: TurboGears :: Applications',
+        'License :: OSI Approved :: GNU General Public License (GPL)',
     ],
     test_suite='nose.collector',
     entry_points = {

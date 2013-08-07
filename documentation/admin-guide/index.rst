@@ -29,6 +29,7 @@ Contents
    system-requirements
    installation
    upgrading
+   config-files
    distro-import
    interface
    kickstarts

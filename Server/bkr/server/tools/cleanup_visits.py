@@ -30,6 +30,7 @@ __requires__ = ['CherryPy < 3.0']
 import sys
 import datetime
 from optparse import OptionParser
+from bkr.log import log_to_stream
 
 # http://docs.turbogears.org/1.0/UsingVisitFramework#housekeeping
 def cleanup_visits(keep_days):
@@ -60,7 +61,7 @@ def main():
     parser.set_defaults(keep=7)
     options, args = parser.parse_args()
 
-    from bkr.server.util import load_config, log_to_stream
+    from bkr.server.util import load_config
     load_config(options.config)
     log_to_stream(sys.stderr)
 

@@ -13,8 +13,16 @@ from setuptools import setup, find_packages
 setup(
     name = "bkr",
     version = "@VERSION@",
+    license = "GPLv2+",
 
     packages=find_packages('.'),
     package_dir = {'':'.'},
     package_data={'bkr.common': ['schema/*.rng', 'schema/*.ttl']},
-    )
+
+    classifiers = [
+        'Development Status :: 5 - Production/Stable',
+        'Operating System :: POSIX :: Linux',
+        'Programming Language :: Python',
+        'License :: OSI Approved :: GNU General Public License (GPL)',
+    ],
+)

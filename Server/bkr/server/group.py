@@ -30,7 +30,7 @@ class GroupOwnerModificationForbidden(BX, cherrypy.HTTPError):
 
     def __init__(self, message):
         self._message = message
-        self.value = message
+        self.args = [message]
 
     def set_response(self):
         response.status = 403

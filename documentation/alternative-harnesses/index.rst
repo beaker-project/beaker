@@ -75,10 +75,15 @@ When using the :http:method:`POST` method with the resources described below,
 the request body must be given as HTML form data 
 (:mimetype:`application/x-www-form-urlencoded`).
 
+.. _lc-api-get-recipe:
+
 .. http:get:: /recipes/(recipe_id)/
 
    Returns recipe details. Response is in Beaker job results XML format, with 
    :mimetype:`application/xml` content type.
+   The root node of the returned XML will be ``<job/>``, which will contain
+   the requested recipe element. Note that guest recipes will be nested within
+   a partially populated ``<recipe/>``.
 
 .. http:post:: /recipes/(recipe_id)/watchdog
 
