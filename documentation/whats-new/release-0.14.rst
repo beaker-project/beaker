@@ -3,7 +3,8 @@ What's New in Beaker 0.14?
 
 The principle feature added in Beaker 0.14 is the introduction of
 "submission delegates", completing the
-:ref:`proposal-enhanced-user-groups` design proposal.
+`Enhanced User Groups <../../dev/proposals/enhanced-user-groups.html>`_ 
+design proposal.
 
 
 Migrating to Beaker 0.14
