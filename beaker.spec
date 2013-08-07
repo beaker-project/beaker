@@ -24,7 +24,7 @@
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.14.0
+Version:        0.14.1
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -469,6 +469,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %changelog
+* Fri Aug 02 2013 Dan Callaghan <dcallagh@redhat.com> 0.14.1-1
+- 990408 start TurboMail in beakerd (dcallagh@redhat.com)
+
 * Tue Jul 30 2013 Dan Callaghan <dcallagh@redhat.com> 0.14.0-1
 - new release 0.14.0:
   http://beaker-project.org/releases/#beaker-0.14

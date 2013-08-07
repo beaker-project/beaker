@@ -86,28 +86,18 @@ serial console while still collecting the console logs for Beaker.
 (Contributed by Gurhan Ozen in :issue:`978419`.)
 
 
-Fedora 19+ compatibility
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-While Beaker has long supported installing Fedora when provisioning a
-system, this is the first Beaker release to officially support the use of
-Fedora as the server environment for the main Beaker server and the lab
-controllers.
-
-The supported server environments for Beaker are now Fedora 19 or later and
-RHEL 6 or later.
-
-(Final compatibility fix contributed by Amit Saha in :issue:`977269`)
-
-
 Fedora based fully virtualised Beaker quick start
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-With the introduction of Fedora as a supported platform, developers
-can now easily set up their own experimental Beaker instance using
+The developer guide now includes instructions that should allow developers
+to easily set up their own Fedora based experimental Beaker instance using
 a pair of virtual machines on their development system.
 
-(Contributed by Amit Saha in :issue:`979211`)
+While there are still some known compatibility issues when running Beaker
+on Fedora 19+ (see :issue:`989902`), this configuration is sufficient to
+allow users to submit and run jobs on the test VM.
+
+(Contributed by Amit Saha in :issue:`977269` and :issue:`979211`)
 
 
 Architecture guide
@@ -173,3 +163,15 @@ release.
 * :issue:`985174`: License markers for Beaker's code (as opposed to task
   code) have been updated to consistently use the phrase "GPLv2 or later"
   or "GPLv2+" (a couple of locations inadvertently used the "GPLv2" notation)
+
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 0.14 maintenance updates.
+
+Beaker 0.14.1
+~~~~~~~~~~~~~
+
+* :issue:`990408`: TurboMail is now started in beakerd, so that it does not 
+  fail to send notification e-mails

@@ -8,12 +8,12 @@ with the ability to manage a globally distributed network of test labs.
 
    This page describes Beaker's capabilities as they currently exist. For
    more on how these capabilities are likely to evolve into the future, see
-   the :ref:`technical-roadmap`. In particular, we are actively working
-   to reduce the reliance on Fedora specific technology (such as
-   ``anaconda`` and ``yum``) by permitting dynamic provisioning through an
-   associated OpenStack instance and by allowing tasks to be provided as
-   direct references to source repositories rather than requiring that they
-   be published in advance through the task library.
+   the `technical roadmap <../../dev/tech-roadmap.html>`__. In particular,
+   we already allow the use of alternative test harnesses (notably
+   ``autotest``) that shouldn't need to rely on the RPM based task library
+   and are planning to further reduce the reliance on Fedora specific
+   technology (such as ``anaconda`` and ``yum``) by permitting dynamic
+   provisioning through an associated OpenStack instance.
 
 Beaker serves two primary purposes:
 
