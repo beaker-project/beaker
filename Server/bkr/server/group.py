@@ -3,7 +3,6 @@ from turbogears import redirect, config, controllers, expose, \
         flash, widgets, validate, error_handler, validators, redirect, \
         paginate, url
 from turbogears.database import session
-from turbogears.widgets import AutoCompleteField
 from sqlalchemy.orm.exc import NoResultFound
 from cherrypy import request, response
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
@@ -12,7 +11,7 @@ from bkr.server.validators import StrongPassword
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
-    GroupPermissions, DeleteLinkWidgetForm, LocalJSLink
+    GroupPermissions, DeleteLinkWidgetForm, LocalJSLink, AutoCompleteField
 from bkr.server.admin_page import AdminPage
 from bkr.server.bexceptions import BX 
 from bkr.server.controller_utilities import restrict_http_method

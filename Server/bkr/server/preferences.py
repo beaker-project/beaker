@@ -9,7 +9,7 @@ from bkr.server import identity
 from bkr.server.model import ConfigItem, SSHPubKey, User
 from bkr.server import validators as beaker_validators
 from bkr.server.widgets import BeakerDataGrid, DeleteLinkWidgetForm, \
-    DoAndConfirmForm
+    DoAndConfirmForm, AutoCompleteField
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.bexceptions import NoChangeException
 from bkr.server.helpers import make_link
@@ -52,10 +52,10 @@ class Preferences(RPCRoot):
             getter=lambda x: x.valid_from, options=dict(datetime=True)),
     ])
 
-    auto_users = widgets.AutoCompleteField(name='user',
-                                   search_controller = url("../users/by_name"),
-                                   search_param = "input",
-                                   result_name = "matches")
+    auto_users = AutoCompleteField(name='user',
+        search_controller = url("../users/by_name"),
+        search_param = "input", result_name = "matches")
+
     submission_delegate_form = widgets.TableForm(
         'SubmissionDelegates',
         fields = [auto_users],

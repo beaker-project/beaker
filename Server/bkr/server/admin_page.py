@@ -1,9 +1,9 @@
 from turbogears import url
 from turbogears.database import session
-from turbogears.widgets import AutoCompleteField, TableForm
+from turbogears.widgets import TableForm
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.bexceptions import BeakerException
-from bkr.server.widgets import AlphaNavBar
+from bkr.server.widgets import AlphaNavBar, AutoCompleteField
 
 class AdminPage(RPCRoot):
     exposed = False

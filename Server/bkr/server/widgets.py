@@ -10,8 +10,9 @@ import random
 import search_utility
 from decimal import Decimal
 from itertools import chain
+from turbogears import widgets
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
-                                AutoCompleteField, SingleSelectField, CheckBox, 
+                                SingleSelectField, CheckBox, 
                                 HiddenField, RemoteForm, LinkRemoteFunction, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, DataGrid, RepeatingFormField,
@@ -26,6 +27,47 @@ from bkr.server.helpers import make_fake_link, make_link
 from bkr.server.validators import UniqueLabControllerEmail
 import logging
 log = logging.getLogger(__name__)
+
+class AutoCompleteTextField(widgets.AutoCompleteTextField):
+
+
+    template="""
+    <span xmlns:py="http://purl.org/kid/ns#" class="${field_class}">
+    <script type="text/javascript">
+        AutoCompleteManager${field_id} = new AutoCompleteManager('${field_id}', '${field_id}', null,
+        '${search_controller}', '${search_param}', '${result_name}', ${str(only_suggest).lower()},
+        '${show_spinner and tg.url('/tg_widgets/turbogears.widgets/spinner.gif') or None}',
+        ${complete_delay}, ${str(take_focus).lower()}, ${min_chars});
+        addLoadEvent(AutoCompleteManager${field_id}.initialize);
+    </script>
+    <input type="text" name="${name}" class="${field_class}" id="${field_id}"
+        value="${value}" py:attrs="attrs"/>
+    <img py:if="show_spinner" id="autoCompleteSpinner${field_id}"
+        src="${tg.url('/tg_widgets/turbogears.widgets/spinnerstopped.png')}" alt=""/>
+    <span class="autoTextResults" id="autoCompleteResults${field_id}"/>
+    </span>
+    """
+
+class AutoCompleteField(widgets.AutoCompleteField):
+    """Text field with auto complete functionality and hidden key field."""
+
+    template = """
+    <span xmlns:py="http://purl.org/kid/ns#" id="${field_id}" class="${field_class}">
+    <script type="text/javascript">
+        AutoCompleteManager${field_id} = new AutoCompleteManager('${field_id}',
+        '${text_field.field_id}', '${hidden_field.field_id}',
+        '${search_controller}', '${search_param}', '${result_name}',${str(only_suggest).lower()},
+        '${show_spinner and tg.url('/tg_widgets/turbogears.widgets/spinner.gif') or None}',
+        ${complete_delay}, ${str(take_focus).lower()}, ${min_chars});
+        addLoadEvent(AutoCompleteManager${field_id}.initialize);
+    </script>
+    ${text_field.display(value_for(text_field), **params_for(text_field))}
+    <img py:if="show_spinner" id="autoCompleteSpinner${field_id}"
+        src="${tg.url('/tg_widgets/turbogears.widgets/spinnerstopped.png')}" alt=""/>
+    <span class="autoTextResults" id="autoCompleteResults${field_id}"/>
+    ${hidden_field.display(value_for(hidden_field), **params_for(hidden_field))}
+    </span>
+    """
 
 
 class Hostname(validators.Regex):
