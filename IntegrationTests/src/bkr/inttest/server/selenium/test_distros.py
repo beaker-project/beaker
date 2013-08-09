@@ -3,6 +3,7 @@ import xmlrpclib
 from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase
 from bkr.inttest import data_setup, with_transaction
+from bkr.server.model import Permission, User
 
 def go_to_distro_view(sel, distro):
     sel.open('distros/view?id=%s' % distro.id)
@@ -134,6 +135,29 @@ class DistroViewTest(SeleniumTestCase):
                 sel.get_text('//table[@class="list"]/tbody/tr[td[1]/a/text()="%s"]/td[4]'
                 % expired_tree.id),
                 '')
+
+
+class DistroExpireXmlRpcTest(XmlRpcTestCase):
+
+    @with_transaction
+    def setUp(self):
+        self.lc = data_setup.create_labcontroller()
+        self.distro = data_setup.create_distro()
+        self.distro_tree = data_setup.create_distro_tree(distro=self.distro,
+            arch='x86_64', lab_controllers=[self.lc])
+        self.server = self.get_server()
+        user = User.by_user_name(data_setup.ADMIN_USER)
+        user.groups[0].permissions[:] = user.groups[0].permissions + [ Permission.by_name('distro_expire')]
+
+    def test_activity_created_with_expire(self):
+        self.server.auth.login_password(data_setup.ADMIN_USER,
+            data_setup.ADMIN_PASSWORD)
+        self.server.distros.expire(self.distro.name, 'CUSTOMSERVICE')
+        session.expire_all()
+        with session.begin():
+            activity = self.distro_tree.activity[0]
+            self.assertEquals(activity.service, u'CUSTOMSERVICE')
+
 
 class DistroTaggingXmlRpcTest(XmlRpcTestCase):
 
