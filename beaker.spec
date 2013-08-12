@@ -62,6 +62,7 @@ BuildRequires:  rhts-python
 BuildRequires:  python-netaddr
 BuildRequires:  ovirt-engine-sdk
 BuildRequires:  python-itsdangerous
+BuildRequires:  python-flask
 %if %{with_systemd}
 BuildRequires:  systemd
 %endif
