@@ -307,6 +307,7 @@ class TestBeakerd(unittest.TestCase):
     def test_just_in_time_systems_multihost(self):
         with session.begin():
             systemA = data_setup.create_system(lab_controller=self.lab_controller)
+            systemB = data_setup.create_system(lab_controller=self.lab_controller)
             r1 = data_setup.create_recipe()
             j1 = data_setup.create_job_for_recipes([r1])
             j1_id = j1.id
@@ -322,7 +323,7 @@ class TestBeakerd(unittest.TestCase):
             r1 = Recipe.by_id(r1_id)
             data_setup.mark_recipe_running(r1)
             systemA = System.by_fqdn(systemA.fqdn, User.by_user_name('admin'))
-            systemB = data_setup.create_system(lab_controller=self.lab_controller)
+            systemB = System.by_fqdn(systemB.fqdn, User.by_user_name('admin'))
             r2 = data_setup.create_recipe()
             r3 = data_setup.create_recipe()
             j2 = data_setup.create_job_for_recipes([r2,r3])
@@ -446,7 +447,8 @@ class TestBeakerd(unittest.TestCase):
             system2.lab_controller = lc2
             system3 = data_setup.create_system(arch=u'i386', shared=True)
             system3.lab_controller = lc3
-            job = data_setup.create_job(owner=user)
+            distro_tree = data_setup.create_distro_tree(lab_controllers=[lc1, lc2, lc3])
+            job = data_setup.create_job(owner=user, distro_tree=distro_tree)
             job.recipesets[0].recipes[0]._host_requires = (u"""
                    <hostRequires>
                     <or>

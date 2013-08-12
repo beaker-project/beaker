@@ -368,7 +368,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
     def setUp(self):
         self.lab_controller = data_setup.create_labcontroller()
         self.distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora',
-                arch=u'i386')
+                arch=u'i386', lab_controllers=[self.lab_controller])
         self.usable_system = data_setup.create_system(arch=u'i386',
                 owner=User.by_user_name(data_setup.ADMIN_USER),
                 status=u'Manual', shared=True)

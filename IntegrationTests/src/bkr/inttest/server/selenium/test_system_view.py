@@ -44,7 +44,8 @@ class SystemViewTestWD(WebDriverTestCase):
             self.lab_controller = data_setup.create_labcontroller()
             self.user = data_setup.create_user(password=u'password')
             self.system = data_setup.create_system(lab_controller=self.lab_controller)
-            self.distro_tree = data_setup.create_distro_tree()
+            self.distro_tree = data_setup.create_distro_tree(
+                    lab_controllers=[self.lab_controller])
 
         self.browser = self.get_browser()
 
@@ -146,7 +147,8 @@ class SystemViewTest(SeleniumTestCase):
         self.lab_controller = data_setup.create_labcontroller()
         self.system_owner = data_setup.create_user()
         self.unprivileged_user = data_setup.create_user(password=u'password')
-        self.distro_tree = data_setup.create_distro_tree()
+        self.distro_tree = data_setup.create_distro_tree(
+                lab_controllers=[self.lab_controller])
         self.system = data_setup.create_system(owner=self.system_owner,
                 status=u'Automated', arch=u'i386')
         self.system.shared = True

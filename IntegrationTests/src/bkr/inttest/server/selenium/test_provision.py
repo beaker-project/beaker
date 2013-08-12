@@ -17,7 +17,7 @@ class SystemManualProvisionTest(SeleniumTestCase):
             self.lab_controller = data_setup.create_labcontroller()
             self.user = data_setup.create_user(password=u'password')
             self.distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora',
-                    arch=u'i386')
+                    arch=u'i386', lab_controllers=[self.lab_controller])
             self.system = data_setup.create_system(arch=u'i386',
                     owner=self.user, status=u'Manual', shared=True)
             self.system.lab_controller = self.lab_controller
@@ -72,7 +72,8 @@ class SystemManualProvisionInstallOptionsTest(WebDriverTestCase):
             self.system = data_setup.create_system(lab_controller=self.lab_controller, \
                                                        owner=self.user,status=u'Manual', shared=True)
             self.system.user = self.user
-            self.distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora', arch=u'i386')
+            self.distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora', arch=u'i386',
+                    lab_controllers=[self.lab_controller])
             self.system.provisions[self.distro_tree.arch] = \
                 Provision(arch=self.distro_tree.arch,
                           kernel_options=u'key1=value1 key1=value2 key1 key2=value key3')
