@@ -46,9 +46,11 @@ class Preferences(RPCRoot):
     )
 
     rootpw_grid = BeakerDataGrid(fields=[
-                    ('Root Password', lambda x: x.value),
-                    ('Effective from', lambda x: x.valid_from)
-                 ])
+        BeakerDataGrid.Column('root_password', title=_(u'Root Password'),
+            getter=lambda x: x.value),
+        BeakerDataGrid.Column('effective_from', title=_(u'Effective from'),
+            getter=lambda x: x.valid_from, options=dict(datetime=True)),
+    ])
 
     auto_users = widgets.AutoCompleteField(name='user',
                                    search_controller = url("../users/by_name"),
