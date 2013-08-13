@@ -63,7 +63,6 @@ class NetBootTestCase(unittest.TestCase):
         self.tftp_root = tempfile.mkdtemp(prefix='test_netboot', suffix='tftproot')
         self.fake_conf = {
             'TFTP_ROOT': self.tftp_root,
-            'IMAGE_CACHE': True,
         }
         self._orig_get_conf = netboot.get_conf
         netboot.get_conf = lambda: self.fake_conf
