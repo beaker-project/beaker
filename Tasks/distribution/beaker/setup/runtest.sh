@@ -31,7 +31,7 @@ function BuildBeaker ()
             || rlDie "Git checkout/merge failed"
     fi
     rlRun "yum-builddep -y ./beaker.spec"
-    rlRun "yum -y install tito"
+    rlRun "yum -y install tito createrepo"
     rlRun "tito build --rpm --test" || rlDie "Tito RPM build failed"
     rlRun "popd"
     rlRun "createrepo /tmp/tito/noarch/"
@@ -115,7 +115,7 @@ function Inventory()
     # Backup /etc/my.cnf and make INNODB the default engine.
     rlRun "cp /etc/my.cnf /etc/my.cnf-orig" 0
     cat /etc/my.cnf-orig | awk '
-        {print $1};
+        {print $0};
         /\[mysqld\]/ {
             print "default-storage-engine=INNODB";
             print "max_allowed_packet=50M";
