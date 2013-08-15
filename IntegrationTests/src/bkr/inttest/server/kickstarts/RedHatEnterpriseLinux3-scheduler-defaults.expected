@@ -140,11 +140,9 @@ fi
 # If efibootmgr exists then re-order boot options
 if [ -x '/usr/sbin/efibootmgr' ]; then
     BOOT=$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print $2}' | awk -F, '{print $1}')
-    EFI=$(/usr/sbin/efibootmgr -v | grep Boot$BOOT | awk '{print $NF}')
-    PXE_SLOT=$(/usr/sbin/efibootmgr -v | grep -Ei '(netboot|pxe)' |head -n 1 |cut -c5-8)
-    # If There is no Netboot Entry we can't continue
-    # You have to manually setup a Netboot entry first
-    # from EFI maint menu.
+    PXE_SLOT=$(/usr/sbin/efibootmgr -v | grep -i BootCurrent | awk '{print $2}')
+    # This will put the boot order back to what it was before the install.
+    # When first setting up a system make sure you put the netboot entry first.
     if [ ! -z $PXE_SLOT ]; then
        NEWBOOT=$(echo $BOOT| sed -e 's/$PXE_SLOT,//')
        # its cheesy. but it works.
