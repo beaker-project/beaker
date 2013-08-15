@@ -32,6 +32,7 @@ Contents
    config-files
    distro-import
    interface
+   broken-system-detection
    kickstarts
    power-commands
    ovirt
