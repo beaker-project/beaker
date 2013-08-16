@@ -63,6 +63,7 @@ BuildRequires:  python-netaddr
 BuildRequires:  ovirt-engine-sdk
 BuildRequires:  python-itsdangerous
 BuildRequires:  python-flask
+BuildRequires:  python-markdown
 %if %{with_systemd}
 BuildRequires:  systemd
 %endif
@@ -125,6 +126,7 @@ Requires:       ovirt-engine-sdk
 Requires:  	kobo-client >= 0.3
 Requires:       python-itsdangerous
 Requires:       python-flask
+Requires:       python-markdown
 %if %{with_systemd}
 Requires:       systemd-units
 Requires(post): systemd
