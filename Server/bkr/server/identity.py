@@ -3,7 +3,7 @@ import os
 import errno
 import logging
 import string
-from functools import wraps
+from decorator import decorator
 import urllib
 import itsdangerous
 import cherrypy
@@ -238,10 +238,8 @@ class HasPermissionPredicate(IdentityPredicate):
 has_permission = HasPermissionPredicate
 
 def require(predicate):
-    def _decorator(func):
-        @wraps(func)
-        def _decorated(*args, **kwargs):
-            predicate.check()
-            return func(*args, **kwargs)
-        return _decorated
-    return _decorator
+    @decorator
+    def require(func, *args, **kwargs):
+        predicate.check()
+        return func(*args, **kwargs)
+    return require

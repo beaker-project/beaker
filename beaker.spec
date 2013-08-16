@@ -62,6 +62,7 @@ BuildRequires:  rhts-python
 BuildRequires:  python-netaddr
 BuildRequires:  ovirt-engine-sdk
 BuildRequires:  python-itsdangerous
+BuildRequires:  python-decorator
 BuildRequires:  python-flask
 %if %{with_systemd}
 BuildRequires:  systemd
@@ -124,6 +125,7 @@ Requires:       python-requests-kerberos
 Requires:       ovirt-engine-sdk
 Requires:  	kobo-client >= 0.3
 Requires:       python-itsdangerous
+Requires:       python-decorator
 Requires:       python-flask
 %if %{with_systemd}
 Requires:       systemd-units
