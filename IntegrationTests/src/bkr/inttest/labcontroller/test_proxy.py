@@ -9,6 +9,7 @@ import xmlrpclib
 import lxml.etree, lxml.html
 import urlparse
 import requests
+import time
 from nose.plugins.skip import SkipTest
 from bkr.server.model import session, TaskResult, TaskStatus, LogRecipe, \
         LogRecipeTask, LogRecipeTaskResult
@@ -372,7 +373,7 @@ class InstallStartTest(LabControllerTestCase):
         with session.begin():
             self.recipe = data_setup.create_recipe()
             data_setup.create_job_for_recipes([self.recipe])
-            data_setup.mark_recipe_running(self.recipe)
+            data_setup.mark_recipe_waiting(self.recipe)
 
     def test_install_start(self):
         s = xmlrpclib.ServerProxy(self.get_proxy_url())
@@ -388,6 +389,29 @@ class InstallStartTest(LabControllerTestCase):
         with session.begin():
             session.expire_all()
             self.assertEqual(self.recipe.tasks[0].results[0].path, u'/start')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=954219
+    def test_install_start_faulty(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_waiting(recipe)
+
+        s.install_start(recipe.id)
+        with session.begin():
+            session.expire_all()
+            start1_kill_time = recipe.watchdog.kill_time
+
+        # a buggy second start report
+        time.sleep(1)
+        s.install_start(recipe.id)
+        with session.begin():
+            session.expire_all()
+            start2_kill_time = recipe.watchdog.kill_time
+
+        self.assertTrue(start1_kill_time == start2_kill_time)
 
 class InstallDoneTest(LabControllerTestCase):
 
