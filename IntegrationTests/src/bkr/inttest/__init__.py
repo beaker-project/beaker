@@ -282,7 +282,7 @@ def setup_package():
         processes.extend([
             Process('gunicorn', args=['gunicorn',
                 '--bind', ':%s' % turbogears.config.get('server.socket_port'),
-                '--workers', '8', '--preload',
+                '--workers', '8', '--access-logfile', '-', '--preload',
                 'bkr.server.wsgi:application'],
                 listen_port=turbogears.config.get('server.socket_port')),
         ])
