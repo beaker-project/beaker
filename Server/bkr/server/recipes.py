@@ -204,19 +204,23 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
-        recipe.resource.install_started = datetime.utcnow()
 
-        # extend watchdog by 3 hours 60 * 60 * 3
-        kill_time = 10800
-        # XXX In future releases where 'Provisioning'
-        # is a valid recipe state, we will no longer
-        # need the following block.
         first_task = recipe.first_task
-        log.debug('Extending watchdog for %s', first_task.t_id)
-        first_task.extend(kill_time)
-        log.debug('Recording /start for %s', first_task.t_id)
-        first_task.pass_(path=u'/start', score=0, summary=u'Install Started')
-        return True
+        if not recipe.resource.install_started:
+            recipe.resource.install_started = datetime.utcnow()
+            # extend watchdog by 3 hours 60 * 60 * 3
+            kill_time = 10800
+            # XXX In future releases where 'Provisioning'
+            # is a valid recipe state, we will no longer
+            # need the following block.
+            log.debug('Extending watchdog for %s', first_task.t_id)
+            first_task.extend(kill_time)
+            log.debug('Recording /start for %s', first_task.t_id)
+            first_task.pass_(path=u'/start', score=0, summary=u'Install Started')
+            return True
+        else:
+            log.debug('Already recorded /start for %s', first_task.t_id)
+            return False
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
