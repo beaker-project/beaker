@@ -28,7 +28,8 @@ from sqlalchemy.ext.declarative import declarative_base
 import socket
 from xmlrpclib import ProtocolError
 import time
-from kid import Element
+from kid import Element, XML
+from markdown import markdown
 from bkr.server.bexceptions import BeakerException, BX, \
         VMCreationFailedException, StaleTaskStatusException, \
         InsufficientSystemPermissions, StaleSystemUserException, \
@@ -3867,6 +3868,13 @@ class Note(MappedObject):
     @classmethod
     def all(cls):
         return cls.query
+
+    @property
+    def html(self):
+        """
+        The note's text rendered to HTML using Markdown.
+        """
+        return XML(markdown(self.text))
 
 
 class Key(SystemObject):

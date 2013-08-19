@@ -64,6 +64,7 @@ BuildRequires:  ovirt-engine-sdk
 BuildRequires:  python-itsdangerous
 BuildRequires:  python-decorator
 BuildRequires:  python-flask
+BuildRequires:  python-markdown
 %if %{with_systemd}
 BuildRequires:  systemd
 %endif
@@ -127,6 +128,7 @@ Requires:  	kobo-client >= 0.3
 Requires:       python-itsdangerous
 Requires:       python-decorator
 Requires:       python-flask
+Requires:       python-markdown
 %if %{with_systemd}
 Requires:       systemd-units
 Requires(post): systemd

@@ -23,7 +23,7 @@
    <tr>
     <th class="list">Note</th>
     <td class="list" colspan="3">
-      <pre>${note.text}</pre>
+      <div py:content="note.html" />
       <span py:if="not readonly" py:strip="1">
        <script type='text/javascript'>
         function delete_note(id) {
@@ -57,7 +57,7 @@
    <tr>
     <th class="list">Note</th>
     <td class="list" colspan="3">
-      <pre>${note.text}</pre>
+      <div py:content="note.html" />
     </td>
    </tr>
    <tr>
