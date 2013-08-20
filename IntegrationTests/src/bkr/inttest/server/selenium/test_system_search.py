@@ -1,6 +1,6 @@
 from selenium.webdriver.support.ui import Select
 from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
-    Device, DeviceClass, Disk
+    Device, DeviceClass, Disk, Cpu
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, login, \
         search_for_system, wait_for_animation, check_system_search_results
@@ -118,6 +118,7 @@ class Search(WebDriverTestCase):
             Key.by_name(u'CPUMODEL'), 'foocodename'))
         cls.system_one.key_values_string.append(Key_Value_String(
             Key.by_name(u'HVM'), '1'))
+        cls.system_one.cpu = Cpu(flags=['flag1', 'flag2'])
 
         cls.system_one.key_values_int.append(Key_Value_Int(
             Key.by_name(u'DISKSPACE'), '1024'))
@@ -165,6 +166,26 @@ class Search(WebDriverTestCase):
     @classmethod
     def tearDownClass(cls):
         cls.browser.quit()
+
+    def test_multiple_cpu_flags(self):
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Toggle Search').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('CPU/Flags')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-0.value').send_keys('flag1')
+        b.find_element_by_id('doclink').click()
+        Select(b.find_element_by_name('systemsearch-1.table'))\
+            .select_by_visible_text('CPU/Flags')
+        Select(b.find_element_by_name('systemsearch-1.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-1.value').send_keys('flag2')
+        b.find_element_by_id('searchform').submit()
+        check_system_search_results(b, present=[self.system_one],
+                absent=[self.system_two, self.system_three])
 
     def test_loaned_not_free(self):
         b = self.browser
