@@ -89,7 +89,7 @@ class CpuColumn(MyColumn):
         if not kw.has_key('relations'):
             kw['relations'] = 'cpu'
         super(CpuColumn,self).__init__(**kw)
-        
+
 class DeviceColumn(MyColumn):
     """
     DeviceColumn defines a relationship to system
@@ -1463,18 +1463,32 @@ class Cpu(SystemObject):
     display_name = 'CPU'   
     search_values_dict = { 'Hyper' : lambda: ['True','False'] }
     searchable_columns = {
-                          'Vendor'      : CpuColumn(col_type='string', column = model.Cpu.vendor),
-                          'Processors'  : CpuColumn(col_type='numeric',column = model.Cpu.processors),
-                          'Hyper'       : CpuColumn(col_type='boolean',column = model.Cpu.hyper),
-                          'Cores'       : CpuColumn(col_type='numeric',column = model.Cpu.cores),
-                          'Sockets'     : CpuColumn(col_type='numeric',column = model.Cpu.sockets),
-                          'Model'       : CpuColumn(col_type='numeric',column = model.Cpu.model),
-                          'ModelName'   : CpuColumn(col_type='string',column = model.Cpu.model_name),
-                          'Family'      : CpuColumn(col_type='numeric',column = model.Cpu.family),
-                          'Stepping'    : CpuColumn(col_type='numeric',column = model.Cpu.stepping),
-                          'Speed'       : CpuColumn(col_type='numeric',column = model.Cpu.speed),
-                          'Flags'       : CpuColumn(col_type='string',column = model.CpuFlag.flag, relations=['cpu','flags']) 
-                         }  
+                          'Vendor'      : CpuColumn(col_type='string',
+                                              column = model.Cpu.vendor),
+                          'Processors'  : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.processors),
+                          'Hyper'       : CpuColumn(col_type='boolean',
+                                              column = model.Cpu.hyper),
+                          'Cores'       : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.cores),
+                          'Sockets'     : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.sockets),
+                          'Model'       : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.model),
+                          'ModelName'   : CpuColumn(col_type='string',
+                                              column = model.Cpu.model_name),
+                          'Family'      : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.family),
+                          'Stepping'    : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.stepping),
+                          'Speed'       : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.speed),
+                          'Flags'       : AliasedColumn(col_type='string',
+                                              eagerload=False,
+                                              target_table=[model.CpuFlag],
+                                              column_name = 'flag',
+                                              relations= lambda: [model.System.cpu, model.CpuFlag])
+                         }
 
     @classmethod
     def flags_is_not_filter(cls,col,val,**kw):
