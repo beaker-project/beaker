@@ -13,9 +13,13 @@
          py:content="form(method='POST', action=action, value=value, options=options, disabled_fields=disabled_fields)" />
     &nbsp;
     <div>
-       ${usergrid.display(value.users)}
+       ${usergrid.display(sorted(value.user_group_assocs, key=lambda ug: not ug.is_owner))}
        <div py:if="tg.identity.user and value.can_modify_membership(tg.identity.user)"
             py:content="user_form(method='POST', action=user_action, value=value)" />
+    </div>
+      <div py:if="value.ldap">
+	<br/>
+      <i>Members populated from LDAP</i>
     </div>
     &nbsp;
     <div>

@@ -527,6 +527,34 @@ class TestGroupsWD(WebDriverTestCase):
             self.assertEquals(group.activity[-1].old_value, user1.user_name)
             self.assertEquals(group.activity[-1].service, u'WEBUI')
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=990860
+    def test_show_group_owners(self):
+        with session.begin():
+            owner = data_setup.create_user(user_name='zzzz', password='password')
+            group = data_setup.create_group(owner=owner)
+            member1 = data_setup.create_user(user_name='aaaa', password='password')
+            member1.groups.append(group)
+            member2 = data_setup.create_user(user_name='bbbb', password='password')
+            member2.groups.append(group)
+
+        b = self.browser
+        login(b, user=member1.user_name, password='password')
+        b.get(get_server_base() + 'groups/edit?group_id=%d' % group.group_id)
+
+        # the first entry should always be the owner(s)
+        user_name, ownership = b.find_element_by_xpath('//table[@id="widget"]//tr[1]/td[1]').text, \
+            b.find_element_by_xpath('//table[@id="widget"]//tr[1]/td[2]').text
+
+        self.assertTrue(user_name, owner.user_name)
+        self.assertTrue(ownership, 'Yes')
+
+        user_name, ownership = b.find_element_by_xpath('//table[@id="widget"]//tr[2]/td[1]').text, \
+            b.find_element_by_xpath('//table[@id="widget"]//tr[2]/td[2]').text
+
+        self.assertTrue(user_name in [member1.user_name, member2.user_name])
+        self.assertTrue(ownership, 'No')
+
+
 class GroupSystemTest(WebDriverTestCase):
 
     def setUp(self):
