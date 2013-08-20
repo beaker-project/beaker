@@ -84,7 +84,6 @@ function do_action(action,data,callback) {
 }
 
 function show_field(id, title) {
-    $('#'+id).dialog('destroy');
     $('#'+id).attr('title', title).dialog({
             resizable: false,
             height: 300,

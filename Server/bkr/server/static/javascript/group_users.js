@@ -21,7 +21,7 @@ $(document).ready(function() {
     }
 
     // Handle add owner operation
-    $(".change_ownership_add").live("click", function(event) {
+    $(document).on('click', '.change_ownership_add', function (event) {
 
         event.preventDefault();
         var post_url = this.href;
@@ -39,7 +39,7 @@ $(document).ready(function() {
     });
 
     // Handle remove owner operation
-    $(".change_ownership_remove").live("click", function(event) {
+    $(document).on('click', '.change_ownership_remove', function (event) {
 
         event.preventDefault();
         var post_url = this.href;

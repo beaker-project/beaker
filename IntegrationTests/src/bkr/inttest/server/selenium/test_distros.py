@@ -40,7 +40,7 @@ class DistroViewTest(SeleniumTestCase):
                 '[normalize-space(preceding-sibling::td[1]/text())="SAD"]'
                 '//a[text()="Delete ( - )"]')
         self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure")))
-        sel.click("//button[@type='button' and text()='Yes']")
+        sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'Removed Tag SAD')
         self.assert_(not sel.is_element_present(
@@ -102,7 +102,7 @@ class DistroViewTest(SeleniumTestCase):
                 '//a[text()="Delete ( - )"]')
 
         self.wait_and_try(lambda: self.failUnless(sel.is_text_present("Are you sure")))
-        sel.click("//button[@type='button' and text()='Yes']")
+        sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'Removed Tag SAD')
         with session.begin():

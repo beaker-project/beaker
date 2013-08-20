@@ -113,11 +113,11 @@
 <script type="text/javascript">
 $(document).ready(function() {
 
-    $('.datepicker').live('mouseover', function(event) { 
+    $(document).on('mouseover', '.datepicker', function(event) {
         $(this).datepicker({ dateFormat: 'yy-mm-dd', 
                              changeMonth: true,
                              changeYear: true,
-                             yearRange: '-5:0' 
+                             yearRange: '-5:+0'
                             }); 
     });
     $('#showadvancedsearch').click(function () {

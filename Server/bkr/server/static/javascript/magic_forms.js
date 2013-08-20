@@ -1,6 +1,6 @@
 function populate_form_elements (form) {
     // We have created hidden inputs with no value,
-    var hiddens_need_value = $(form).children("input['type=hidden']").not("[value]")
+    var hiddens_need_value = $(form).children("input[type=hidden]").not("[value]")
     var get_names_of = []
     for (i=0; i < hiddens_need_value.length;i++) {
         var child = hiddens_need_value[i]

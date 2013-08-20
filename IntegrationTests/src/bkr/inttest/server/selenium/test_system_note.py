@@ -1,5 +1,5 @@
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, logout
+from bkr.inttest.server.webdriver_utils import login, logout, delete_and_confirm
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest import data_setup, with_transaction, get_server_base
 from turbogears.database import session
@@ -35,12 +35,8 @@ class SystemNoteTests(WebDriverTestCase):
     def delete_note(self, note):
         b = self.browser
         b.find_element_by_link_text('Notes').click()
-        b.find_element_by_xpath('//a[text()="(Delete this note)" and '
-            'preceding-sibling::div/p/text()="%s"]' % note).click()
-        # Test confirmation dialogue
-        b.find_element_by_xpath(
-                '//div[.//p/text()="Are you sure you want to delete this?"]'
-                '//button[text()="Yes"]').click()
+        delete_and_confirm(b, '//td[div/p/text()="%s"]' % note,
+                '(Delete this note)')
         # Test that it is hidden
         wait_for_condition(lambda: not b.find_element_by_xpath(
                 '//tr[th/text()="Note" and td/div/p/text()="%s"]' % note)

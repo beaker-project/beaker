@@ -8,7 +8,7 @@ from bkr.inttest import data_setup, get_server_base
 
 def delete_and_confirm(browser, ancestor_xpath, delete_text='Delete'):
     browser.find_element_by_xpath("%s//a[normalize-space(text())='%s']" % (ancestor_xpath, delete_text)).click()
-    browser.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
+    browser.find_element_by_xpath("//button[@type='button' and .//text()='Yes']").click()
 
 def logout(browser):
     browser.get(get_server_base())

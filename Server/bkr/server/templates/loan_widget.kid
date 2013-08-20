@@ -3,7 +3,6 @@
 <a id='loan-settings' href="#" onclick="show_loan_actions()" class='link'>(Loan Settings)</a>
 <script type='text/javascript'>
     function show_loan_actions() {
-        $('#${name}').dialog('destroy');
         $('#${name}').attr('title', 'Loan').dialog({
             resizable: false,
             minWidth: 200,
