@@ -17,6 +17,10 @@
        <div py:if="tg.identity.user and value.can_modify_membership(tg.identity.user)"
             py:content="user_form(method='POST', action=user_action, value=value)" />
     </div>
+      <div py:if="value.ldap">
+	<br/>
+      <i>Members populated from LDAP</i>
+    </div>
     &nbsp;
     <div>
        ${systemgrid.display(value.systems)}

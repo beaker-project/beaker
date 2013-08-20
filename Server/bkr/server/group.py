@@ -180,26 +180,33 @@ class Groups(AdminPage):
         )
 
     def show_members(self, group):
-
-        def show_ownership_status(member):
-            if group.has_owner(member):
-                return make_link('revoke_owner?group_id=%s&id=%s' % (group.group_id, member.user_id),
-                                 'Remove (-)',elem_class='change_ownership_remove')
-            else:
-                return make_link('grant_owner?group_id=%s&id=%s' % (group.group_id, member.user_id),
-                                 'Add (+)',elem_class='change_ownership_add')
-
-        user_fields = [
-            ('User Members', lambda x: x.display_name),
-        ]
         can_edit = False
         if identity.current.user:
             can_edit = group.can_modify_membership(identity.current.user)
+
+        def show_ownership_status(member):
+            is_owner = group.has_owner(member)
+            if can_edit:
+                if is_owner:
+                    return make_link('revoke_owner?group_id=%s&id=%s' % (group.group_id, member.user_id),
+                                 'Remove (-)',elem_class='change_ownership_remove')
+                else:
+                    return make_link('grant_owner?group_id=%s&id=%s' % (group.group_id, member.user_id),
+                                     'Add (+)',elem_class='change_ownership_add')
+            else:
+                is_owner = 'Yes' if is_owner else 'No'
+                return is_owner
+
+        user_fields = [
+            ('User Members', lambda x: x.user_name)
+        ]
+
+        user_fields.append(('Group Ownership', show_ownership_status))
         if can_edit:
-            user_fields.append(('Group Ownership', show_ownership_status))
             user_fields.append(('Group Membership', lambda x: make_link(
-                    'removeUser?group_id=%s&id=%s' % (group.group_id, x.user_id),
-                    u'Remove (-)')))
+                        'removeUser?group_id=%s&id=%s' % (group.group_id, x.user_id),
+                        u'Remove (-)')))
+
         return widgets.DataGrid(fields=user_fields)
 
     @expose(template='bkr.server.templates.grid')
