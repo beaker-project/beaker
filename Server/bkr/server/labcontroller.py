@@ -39,6 +39,7 @@ class LabControllers(RPCRoot):
             action = './save',
             options = {},
             value = kw,
+            title='New Lab Controller'
         )
 
     @identity.require(identity.in_group("admin"))
@@ -56,6 +57,7 @@ class LabControllers(RPCRoot):
             action = './save',
             options = options,
             value = labcontroller,
+            title='Edit Lab Controller'
         )
 
     @identity.require(identity.in_group("admin"))
