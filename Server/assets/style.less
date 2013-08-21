@@ -31,7 +31,9 @@ h3 small { font-size: @baseFontSize * 1.25; }
 
 // We have some forms in table cells, and the bottom margin (from Bootstrap) 
 // ruins the row height.
-td form { margin: 0; }
+td form, td input, td select {
+    margin-bottom: 0 !important;
+}
 
 // By default, table cells are top-aligned. If every cell in a row has only one 
 // (notional) line, it makes more sense to middle-align them.
@@ -48,6 +50,12 @@ td form { margin: 0; }
         float: left;
         padding: 4px 12px;
     }
+}
+
+// Use <div class="controls text-controls" /> if you have only 
+// regular text, not form controls.
+.text-controls {
+    padding-top: 5px; // corresponds to .control-label
 }
 
 // buttons in grid cells

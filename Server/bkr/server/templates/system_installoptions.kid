@@ -9,7 +9,7 @@
  <p>Kernel Options Post are also command line options but they are for after the installation has completed.</p>
  <p>Commands are inherited from least specific to most specific. ARCH->FAMILY->UPDATE</p>
  <form  name="${name}" action="${tg.url(action)}" method="POST">
-  <table class="list" py:if="not readonly">
+  <table py:if="not readonly">
    <tr>
     <th>Arch</th><td>${display_field_for("prov_arch")}</td>
     <th>Family</th><td>${display_field_for("prov_osmajor")}</td>
@@ -28,91 +28,90 @@
       <td colspan="4">${display_field_for("prov_koptionspost")}</td>
       <td>
        ${display_field_for("id")}
-       <a class="button" href="javascript:document.${name}.submit();">Add ( + )</a>
+       <a class="btn btn-primary" href="javascript:document.${name}.submit();"><i class="icon-plus"/> Add</a>
       </td>
     </tr>
   </table>
  </form>
- <table class="list">
+ <table class="table">
   <span py:for="arch in provisions.keys()">
-   <tr class="list" bgcolor="#F1F1F1">
-    <th colspan="3" class="list">Architecture</th><td class="list">${arch}</td>
+   <tr bgcolor="#F1F1F1">
+    <th colspan="3">Architecture</th><td>${arch}</td>
     <td>
      <span py:if='not readonly' py:strip='1'>
       ${delete_link(dict(system_id=value_for('id'), arch_id=arch.id), 
-          attrs=dict(class_='link'), 
           action=tg.url('/remove_install'))}
      </span>
     </td>
    </tr>
    <tr>
-    <th colspan="3" class="list">Kickstart Metadata</th>
-    <td class="list">
+    <th colspan="3">Kickstart Metadata</th>
+    <td>
      ${provisions[arch].ks_meta} 
     </td>
+    <td/>
    </tr>
    <tr>
-    <th colspan="3" class="list">Kernel Options</th>
-    <td class="list">
+    <th colspan="3">Kernel Options</th>
+    <td>
      ${provisions[arch].kernel_options}
     </td>
+    <td/>
    </tr>
    <tr>
-    <th colspan="3" class="list">Kernel Options Post</th>
-    <td class="list">
+    <th colspan="3">Kernel Options Post</th>
+    <td>
      ${provisions[arch].kernel_options_post}
     </td>
-   </tr>
-   <tr>
-    <td>&nbsp;</td>
+    <td/>
    </tr>
    <span py:for="family in provisions[arch].provision_families.keys()">
     <tr class="list" bgcolor="#F1F1F1">
      <td>&nbsp;</td>
-     <th colspan="2" class="list">Family</th>
-     <td class="list">${family}</td>
+     <th colspan="2">Family</th>
+     <td>${family}</td>
      <td>
       <span py:if='not readonly' py:strip='1'>
        ${delete_link(dict(system_id=value_for('id'), arch_id=arch.id, 
-           osmajor_id=family.id), attrs=dict(class_='link'), 
+           osmajor_id=family.id),
            action=tg.url('/remove_install'))}
       </span>
      </td>
     </tr>
     <tr>
      <td>&nbsp;</td>
-     <th colspan="2" class="list">Kickstart Metadata</th>
-     <td class="list">
+     <th colspan="2">Kickstart Metadata</th>
+     <td>
       ${provisions[arch].provision_families[family].ks_meta} 
      </td>
+     <td/>
     </tr>
     <tr>
      <td>&nbsp;</td>
-     <th colspan="2" class="list">Kernel Options</th>
-     <td class="list">
+     <th colspan="2">Kernel Options</th>
+     <td>
       ${provisions[arch].provision_families[family].kernel_options} 
      </td>
+     <td/>
     </tr>
     <tr>
      <td>&nbsp;</td>
-     <th colspan="2" class="list">Kernel Options Post</th>
-     <td class="list">
+     <th colspan="2">Kernel Options Post</th>
+     <td>
       ${provisions[arch].provision_families[family].kernel_options_post} 
      </td>
-    </tr>
-    <tr>
-     <td>&nbsp;</td>
+     <td/>
     </tr>
     <span py:for="update in provisions[arch].provision_families[family].provision_family_updates.keys()">
      <tr class="list" bgcolor="#F1F1F1">
       <td>&nbsp;</td>
       <td>&nbsp;</td>
-      <th class="list">Update</th>
-      <td class="list">${update}</td>
+      <th>Update</th>
+      <td>${update}</td>
       <td>
        <span py:if='not readonly' py:strip='1'>
         ${delete_link(dict(system_id=value_for('id'), arch_id=arch.id,
-            osversion_id=update.id), attrs=dict(class_='link'), 
+            osversion_id=update.id),
             action=tg.url('/remove_install'))}
        </span>
       </td>
@@ -120,32 +119,32 @@
      <tr>
       <td>&nbsp;</td>
       <td>&nbsp;</td>
-      <th class="list">Kickstart Metadata</th>
-      <td class="list">
+      <th>Kickstart Metadata</th>
+      <td>
        ${provisions[arch].provision_families[family].provision_family_updates[update].ks_meta} 
       </td>
+      <td/>
      </tr>
      <tr>
       <td>&nbsp;</td>
       <td>&nbsp;</td>
-      <th class="list">Kernel Options</th>
-      <td class="list">
+      <th>Kernel Options</th>
+      <td>
        ${provisions[arch].provision_families[family].provision_family_updates[update].kernel_options} 
       </td>
+      <td/>
      </tr>
      <tr>
       <td>&nbsp;</td>
       <td>&nbsp;</td>
-      <th class="list">Kernel Options Post</th>
-      <td class="list">
+      <th>Kernel Options Post</th>
+      <td>
        ${provisions[arch].provision_families[family].provision_family_updates[update].kernel_options_post} 
       </td>
+      <td/>
      </tr>
     </span>
    </span>
-    <tr>
-     <td>&nbsp;</td>
-    </tr>
   </span>
  </table>
 </span>

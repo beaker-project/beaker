@@ -1,5 +1,4 @@
 <div xmlns:py="http://purl.org/kid/ns#">
-<script type="text/javascript" src="${tg.url('/static/javascript/jquery.cookie.js')}"></script>
 <script type='text/javascript'>
 var matrix = new JobMatrix("${job_ids.field_id}","${whiteboard.field_id}","${whiteboard_filter.field_id}")
 connect(document,'onsubmit', matrix.submit_changes);

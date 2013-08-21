@@ -6,7 +6,6 @@
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
 
     <title>Recipe ${recipe.t_id} - ${recipe.recipeset.job.whiteboard}/${recipe.whiteboard} | ${recipe.status} | ${recipe.result}</title>
-    <script type="text/javascript" src="${tg.url('/static/javascript/jquery.cookie.js')}"></script>
 </head>
 
 <body class="flora">

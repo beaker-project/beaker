@@ -37,8 +37,10 @@ def _create_env():
             'bootstrap/js/bootstrap-tab.js',
             'bootstrap/js/bootstrap-alert.js',
             'bootstrap/js/bootstrap-typeahead.js',
+            'jquery.cookie.js',
             # ours
             'local-datetime.js',
+            'link-tabs-to-anchor.js',
             filters=['uglifyjs'],
             output='generated/beaker-%(version)s.js')
     return env

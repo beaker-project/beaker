@@ -70,7 +70,7 @@ class DistroTreeViewTest(WebDriverTestCase):
             'Added %s http://blah.com/' % lc.fqdn)
 
         # Delete
-        delete_and_confirm(b, "//td[preceding-sibling::td/a[@href='http://blah.com/']]/form", delete_text='Delete ( - )')
+        delete_and_confirm(b, "//td[preceding-sibling::td/a[@href='http://blah.com/']]/form")
         self.assertEqual(
             b.find_element_by_class_name('flash').text,
             'Deleted %s http://blah.com/' % lc.fqdn)

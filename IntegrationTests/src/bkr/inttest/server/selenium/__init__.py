@@ -102,8 +102,11 @@ class SeleniumTestCase(unittest.TestCase):
 
     def assert_system_view_text(self, field, val):
         sel = self.selenium
-        text = sel.get_text("//td[preceding-sibling::"
-            "th/label[@for='form_%s']]" % field)
+        if field == 'fqdn':
+            text = sel.get_text('//h1')
+        else:
+            text = sel.get_text('//div[@class="controls" and '
+                    'preceding-sibling::label/@for="form_%s"]/span' % field)
         self.assertEqual(text.strip(), val)
 
 class WebDriverTestCase(unittest.TestCase):

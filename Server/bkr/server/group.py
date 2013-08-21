@@ -251,7 +251,7 @@ class Groups(AdminPage):
             system_remove_widget = DeleteLinkWidgetForm(action='removeSystem',
                     hidden_fields=[widgets.HiddenField(name='group_id'),
                         widgets.HiddenField(name='id')],
-                    action_text=u'Remove (-)')
+                    action_text=u'Remove')
             systems_fields.append((' ', lambda x: system_remove_widget.display(
                 dict(group_id=group_id, id=x.id))))
         systemgrid = BeakerDataGrid(fields=systems_fields)

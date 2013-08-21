@@ -87,7 +87,7 @@ class SystemAction(WebDriverTestCase):
             system = data_setup.create_system()
         b = self.browser
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_link_text('(Contact Owner)').click()
+        b.find_element_by_link_text('Contact Owner').click()
         b.find_element_by_xpath('//button[.//text()=\'Report Problem\']').click()
         b.find_element_by_name('problem.description').send_keys(u'a' + u'\u044f' * 100)
         b.find_element_by_xpath('//input[@value=\'Report\']').click()
@@ -101,7 +101,7 @@ class SystemAction(WebDriverTestCase):
             system.cc = [interested_party_email]
         b = self.browser
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_link_text('(Contact Owner)').click()
+        b.find_element_by_link_text('Contact Owner').click()
         b.find_element_by_xpath('//button[.//text()=\'Report Problem\']').click()
         b.find_element_by_name('problem.description').send_keys('I broke it')
         b.find_element_by_xpath('//input[@value=\'Report\']').click()
@@ -141,7 +141,7 @@ class SystemAction(WebDriverTestCase):
 
         # Test can send problem report succesfully
         b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('(Contact Owner)').click()
+        b.find_element_by_link_text('Contact Owner').click()
         b.find_element_by_xpath('//button[.//text()=\'Report Problem\']').click()
         b.find_element_by_name('problem.description').send_keys('testing problem')
         b.find_element_by_xpath('//input[@value=\'Report\']').click()
@@ -165,7 +165,7 @@ class SystemAction(WebDriverTestCase):
 
         # Test can send loan request succesfully
         b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('(Contact Owner)').click()
+        b.find_element_by_link_text('Contact Owner').click()
         b.find_element_by_xpath('//button[.//text()=\'Request Loan\']').click()
         b.find_element_by_name('loan.message').send_keys('request loan')
         b.find_element_by_xpath('//input[@value=\'Request\']').click()

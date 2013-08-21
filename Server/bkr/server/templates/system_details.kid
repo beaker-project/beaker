@@ -1,203 +1,174 @@
 <div xmlns:py="http://purl.org/kid/ns#">
- &nbsp;&nbsp;<b>System</b>
- <table class="list">
-     <tr class="list">   
-         <th class="list" style="width: 20%;"><!-- !just a hack to prevent the next column from sitting way off in the middle of the page -->
-             <b>Memory</b>
-         </th>
-         <th class="list" py:if="system.numa">
-             <b>NUMA Nodes</b>
-         </th>
-     </tr>
-    <tr class="list" bgcolor="#FFFFFF">
-      <td class="list">
-          <span py:if="system.memory">${system.memory} MB</span>
-      </td>
-      <td class="list" py:if="system.numa">
-          ${system.numa.nodes}
-      </td>
+<h3>System</h3>
+<table class="table table-bordered" style="max-width: 20em;">
+  <tbody>
+    <tr>
+      <th>Memory</th>
+      <td><span py:if="system.memory">${system.memory} MB</span></td>
     </tr>
- </table>
+    <tr>
+      <th>NUMA Nodes</th>
+      <td><span py:if="system.numa">${system.numa.nodes}</span></td>
+    </tr>
+  </tbody>
+</table>
+
 <span py:if="system.cpu">
- &nbsp;&nbsp;<b>Cpu</b>
- <table class="list">
-  <tr class="list">
-      <th class="list">
-          <b>Vendor</b>
-      </th>
-      <th class="list">
-          <b>Model Name</b>
-      </th>
-      <th class="list">
-          <b>Family</b>
-      </th>
-      <th class="list">
-          <b>Model</b>
-      </th>
-      <th class="list">
-          <b>Stepping</b>
-      </th>
-      <th class="list">
-          <b>Speed</b>
-      </th>
-      <th class="list">
-          <b>Processors</b>
-      </th>
-      <th class="list">
-          <b>Cores</b>
-      </th>
-      <th class="list">
-          <b>Sockets</b>
-      </th>
-      <th class="list">
-          <b>Hyper</b>
-      </th>
-  </tr>
-  <tr class="list" bgcolor="#FFFFFF">
-      <td class="list">
+<h3>CPU</h3>
+<table class="table table-bordered">
+  <tbody>
+    <tr>
+      <th>Vendor</th>
+      <td>
           ${system.cpu.vendor}
       </td>
-      <td class="list">
+    </tr>
+    <tr>
+      <th style="white-space: nowrap;">Model Name</th>
+      <td>
           ${system.cpu.model_name}
       </td>
-      <td class="list">
+    </tr>
+    <tr>
+      <th>Family</th>
+      <td>
           ${system.cpu.family}
       </td>
-      <td class="list">
+    </tr>
+    <tr>
+      <th>Model</th>
+      <td>
           ${system.cpu.model}
       </td>
-      <td class="list">
+    </tr>
+    <tr>
+      <th>Stepping</th>
+      <td>
           ${system.cpu.stepping}
       </td>
-      <td class="list">
+    </tr>
+    <tr>
+      <th>Speed</th>
+      <td>
           ${system.cpu.speed}
       </td>
-      <td class="list">
+    </tr>
+    <tr>
+      <th>Processors</th>
+      <td>
           ${system.cpu.processors}
       </td>
-      <td class="list">
+    </tr>
+    <tr>
+      <th>Cores</th>
+      <td>
           ${system.cpu.cores}
       </td>
-      <td class="list">
+    </tr>
+    <tr>
+      <th>Sockets</th>
+      <td>
           ${system.cpu.sockets}
       </td>
-      <td class="list">
+    </tr>
+    <tr>
+      <th>Hyper</th>
+      <td>
           ${system.cpu.hyper}
       </td>
-  </tr>
-  <tr class="list">
-      <th class="list">
-          <b>Flags</b>
-      </th>
-      <td class="list" colspan="9" BGCOLOR="#f1f1f1">
+    </tr>
+    <tr>
+      <th>Flags</th>
+      <td>
         <span py:for="flag in system.cpu.flags">
          ${flag.flag}
         </span>
       </td>
-  </tr>
-  <tr class="list">
-      <th class="list">
-          <b>Arch(s)</b>
-      </th>
-      <td class="list" colspan="9" BGCOLOR="#ffffff">
+    </tr>
+    <tr>
+      <th>Arch(s)</th>
+      <td>
          <span py:for="arch in system.arch">
             ${arch.arch}
          </span>
       </td>
-  </tr>
- </table>
-</span>
-<span py:if="hasattr(system, 'disks')">
-&nbsp;&nbsp;<b>Disks</b>
-<table class="list">
-    <tr class="list">
-        <th class="list">
-            <b>Model</b>
-        </th>
-        <th class="list">
-            <b>Size</b>
-        </th>
-        <th class="list">
-            <b>Logical sector size</b>
-        </th>
-        <th class="list">
-            <b>Physical sector size</b>
-        </th>
     </tr>
-    <?python row_color = "#FFFFFF" ?>
-    <tr class="list" bgcolor="${row_color}" py:for="disk in system.disks" id="disk-${disk.id}">
-        <td class="list">
+  </tbody>
+</table>
+</span>
+
+<span py:if="system.disks" py:strip="True">
+<h3>Disks</h3>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Model</th>
+      <th>Size</th>
+      <th>Logical sector size</th>
+      <th>Physical sector size</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr py:for="disk in system.disks" id="disk-${disk.id}">
+        <td>
             ${disk.model}
         </td>
-        <td class="list">
+        <td>
             ${'%0.2f' % (disk.size / 1000.**3)} GB /
             ${'%0.2f' % (disk.size / 1024.**3)} GiB
         </td>
-        <td class="list">
+        <td>
             ${disk.sector_size} bytes
         </td>
-        <td class="list">
+        <td>
             ${disk.phys_sector_size} bytes
         </td>
-        <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
     </tr>
+  </tbody>
 </table>
 </span>
-&nbsp;&nbsp;<b>Devices</b>
-<table class="list">
-    <tr class="list">
-        <th class="list">
-            <b>Description</b>
-        </th>
-        <th class="list">
-            <b>Type</b>
-        </th>
-        <th class="list">
-            <b>Bus</b>
-        </th>
-        <th class="list">
-            <b>Driver</b>
-        </th>
-        <th class="list">
-            <b>Vendor ID</b>
-        </th>
-        <th class="list">
-            <b>Device ID</b>
-        </th>
-        <th class="list">
-            <b>Subsys Vendor ID</b>
-        </th>
-        <th class="list">
-            <b>Subsys Device ID</b>
-        </th>
+
+<h3>Devices</h3>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Description</th>
+      <th>Type</th>
+      <th>Bus</th>
+      <th>Driver</th>
+      <th>Vendor ID</th>
+      <th>Device ID</th>
+      <th>Subsys Vendor ID</th>
+      <th>Subsys Device ID</th>
     </tr>
-    <?python row_color = "#FFFFFF" ?>
-    <tr class="list" bgcolor="${row_color}" py:for="device in system.devices">
-        <td class="list">
-            <a class="list" href="${tg.url('/devices/view/%s' % device.id)}">${device.description}</a>
+  </thead>
+  <tbody>
+    <tr py:for="device in system.devices">
+        <td>
+            <a href="${tg.url('/devices/view/%s' % device.id)}">${device.description}</a>
         </td>
-        <td class="list">
+        <td>
             ${device.device_class}
         </td>
-        <td class="list" align="center">
+        <td>
             ${device.bus}
         </td>
-        <td class="list">
+        <td>
             ${device.driver}
         </td>
-        <td class="list">
+        <td>
             ${device.vendor_id}
         </td>
-        <td class="list">
+        <td>
             ${device.device_id}
         </td>
-        <td class="list">
+        <td>
             ${device.subsys_vendor_id}
         </td>
-        <td class="list">
+        <td>
             ${device.subsys_device_id}
         </td>
-        <?python row_color = (row_color == "#f1f1f1") and "#FFFFFF" or "#f1f1f1" ?>
     </tr>
+  </tbody>
 </table>
 </div>

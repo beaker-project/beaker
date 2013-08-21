@@ -31,8 +31,8 @@ class SystemOwnerTake(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.manual_system.fqdn)
         sel.wait_for_page_to_load("30000")
-        self.assert_(sel.is_text_present("(Take)"))
-        sel.click("link=(Take)")
+        self.assert_(sel.is_text_present("Take"))
+        sel.click("link=Take")
         sel.wait_for_page_to_load('30000')
         self.assert_("Reserved %s" % self.manual_system.fqdn in sel.get_text('//body'))
 
@@ -103,7 +103,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.automated_system.fqdn)
         sel.wait_for_page_to_load("30000")
-        try: self.failUnless(not sel.is_text_present("(Take)")) #Automated should not have Take for this user
+        try: self.failUnless(not sel.is_text_present("Take")) #Automated should not have Take for this user
         except AssertionError, e: self.verificationErrors.append('Take is present on automated machine with no groups')
 
         # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
@@ -120,7 +120,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.manual_system.fqdn)
         sel.wait_for_page_to_load("30000")
-        try: self.failUnless(sel.is_text_present("(Take)")) #Should have Take for this machine
+        try: self.failUnless(sel.is_text_present("Take")) #Should have Take for this machine
         except AssertionError, e: self.verificationErrors.append('Take is not present on manual machine with no groups')
         self._do_take(self.manual_system.fqdn)
 
@@ -135,7 +135,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.automated_system.fqdn)
         sel.wait_for_page_to_load("30000")
-        try: self.failUnless(not sel.is_text_present("(Take)")) #Should not be here
+        try: self.failUnless(not sel.is_text_present("Take")) #Should not be here
         except AssertionError, e: self.verificationErrors.append('Take is present on automated machine with group')
 
         # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
@@ -161,7 +161,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.manual_system.fqdn)
         sel.wait_for_page_to_load("30000")
-        try: self.failUnless(not sel.is_text_present("(Take)")) #Should not be here
+        try: self.failUnless(not sel.is_text_present("Take")) #Should not be here
         except AssertionError, e: self.verificationErrors.append('Take is present on manual machine with group')
 
         # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
@@ -192,7 +192,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel.click("link=%s" % self.automated_system.fqdn) #this tests the click! 
         sel.wait_for_page_to_load("30000")
         self.assertEqual("%s" % self.automated_system.fqdn, sel.get_title()) #ensure the page has opened
-        try: self.failUnless(not sel.is_text_present("(Take)")) #Should be not here
+        try: self.failUnless(not sel.is_text_present("Take")) #Should be not here
         except AssertionError, e: self.verificationErrors.\
             append('Take is available to automated machine with system group privs' )
 
@@ -210,7 +210,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.automated_system.fqdn)
         sel.wait_for_page_to_load("30000")
-        try: self.failUnless(sel.is_text_present("(Take)")) #Should be here
+        try: self.failUnless(sel.is_text_present("Take")) #Should be here
         except AssertionError, e: self.verificationErrors.\
             append('Take is not available to automated machine with system group pirvs' )
         self._do_schedule_provision(self.automated_system.fqdn)
@@ -234,7 +234,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.manual_system.fqdn)
         sel.wait_for_page_to_load("30000")
-        try: self.failUnless(sel.is_text_present("(Take)")) #Should be here
+        try: self.failUnless(sel.is_text_present("Take")) #Should be here
         except AssertionError, e: self.verificationErrors.append('Take is not here for manual machine with system group privs')
         self._do_schedule_provision(self.manual_system.fqdn)
 
@@ -249,7 +249,7 @@ class SystemGroupUserTake(SeleniumTestCase):
 
     def _do_take(self, system_fqdn):
         sel = self.selenium
-        sel.click('link=(Take)')
+        sel.click('link=Take')
         sel.wait_for_page_to_load("30000")
         try:
             self.assertEquals(sel.get_text('css=.flash'), 'Reserved %s' % system_fqdn)
@@ -268,7 +268,7 @@ class SystemGroupUserTake(SeleniumTestCase):
                 raise
             self.verificationErrors.append('No Schedule provision option for system %s' % system_fqdn)
         sel.select("provision_prov_install", "label=%s" % self.distro_tree)
-        sel.click("link=Schedule provision")
+        sel.click("//button[text()='Schedule provision']")
         sel.wait_for_page_to_load("30000")
         try:
             self.failUnless(sel.is_text_present("Success!"))

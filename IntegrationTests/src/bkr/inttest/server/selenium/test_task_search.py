@@ -115,14 +115,14 @@ class Search(SeleniumTestCase):
         self.login(user=user.user_name, password=u'password')
         sel.open(u'tasks%s' % self.task_three.name)
         sel.wait_for_page_to_load('30000')
-        sel.click("//input[@type='submit']")
+        sel.click("//button[text()='Submit Query']")
         self.wait_and_try(lambda: self.assert_(sel.is_text_present(u"T:%s" % r.tasks[0].id)), wait_time=10)
 
         with session.begin():
             j.soft_delete()
         sel.open(u'tasks%s' % self.task_three.name)
         sel.wait_for_page_to_load('30000')
-        sel.click("//input[@type='submit']")
+        sel.click("//button[text()='Submit Query']")
         try:
             self.wait_and_try(lambda: self.assert_(sel.is_text_present(u"T:%s" % r.tasks[0].id)), wait_time=10)
         except AssertionError:

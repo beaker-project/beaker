@@ -22,7 +22,7 @@ class SystemReturnTestWD(WebDriverTestCase):
         system = self.recipe.resource.system
         login(b)
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_link_text('(Return)').click()
+        b.find_element_by_link_text('Return').click()
         self.assertEquals(b.find_element_by_css_selector('.flash').text,
             "Failed to return %s: Currently running R:%s" % (system.fqdn, self.recipe.id))
 
@@ -44,7 +44,7 @@ class SystemReturnTest(SeleniumTestCase):
         sel = self.selenium
         sel.open('view/%s' % self.system.fqdn)
         sel.wait_for_page_to_load(30000)
-        sel.click('link=(Take)')
+        sel.click('link=Take')
         sel.wait_for_page_to_load(30000)
 
         self.logout()
@@ -63,7 +63,7 @@ class SystemReturnTest(SeleniumTestCase):
         self.login(user=self.user.user_name, password='password')
         sel.open('view/%s' % self.system.fqdn)
         sel.wait_for_page_to_load('30000')
-        sel.click('link=(Take)')
+        sel.click('link=Take')
         sel.wait_for_page_to_load('30000')
 
         # Let's remove the LC
@@ -78,7 +78,7 @@ class SystemReturnTest(SeleniumTestCase):
         self.login(user=self.user.user_name, password='password')
         sel.open('view/%s' % self.system.fqdn)
         sel.wait_for_page_to_load('30000')
-        sel.click('link=(Return)')
+        sel.click('link=Return')
         sel.wait_for_page_to_load('30000')
         text = sel.get_text('//body')
         self.assert_('Returned %s' % self.system.fqdn in text)

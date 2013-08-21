@@ -16,8 +16,8 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 HiddenField, RemoteForm, LinkRemoteFunction, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, DataGrid, RepeatingFormField,
-                                CompoundWidget, AjaxGrid, Tabber, CSSLink,
-                                RadioButtonList, MultipleSelectField, Button,
+                                CompoundWidget, AjaxGrid, CSSLink,
+                                MultipleSelectField, Button,
                                 RepeatingFieldSet, SelectionField, WidgetsList,
                                 PasswordField)
 
@@ -195,6 +195,23 @@ class InlineRemoteForm(RPC, InlineForm):
             d.get("update", ''), jsonify.encode(self.get_options(d)))
 
 
+class RadioButtonList(SelectionField):
+    template = """
+    <div xmlns:py="http://purl.org/kid/ns#" py:strip="True">
+        <label py:for="value, desc, attrs in options" class="radio">
+            <input type="radio"
+                name="${name}"
+                id="${field_id}_${value}"
+                value="${value}"
+                py:attrs="attrs"
+            />
+            ${desc}
+        </label>
+    </div>
+    """
+    _selected_verb = 'checked'
+
+
 class UnmangledHiddenField(HiddenField):
 
     @property
@@ -256,11 +273,12 @@ class DeleteLinkWidgetForm(Form, DeleteLinkWidget):
           py:replace="field.display()"/>
             <a href="#" onclick="javascript:job_delete(this.parentNode);return false;" 
                class="btn">
-              <i class="icon-remove" py:if="show_icon"/> ${action_text}
+              <i class="icon-remove"/> ${action_text}
             </a>
       </form>
     </span>
     """
+    params = ['msg', 'action_text']
 
     def update_params(self, d):
         super(DeleteLinkWidgetForm, self).update_params(d)
@@ -273,7 +291,7 @@ class DeleteLinkWidgetForm(Form, DeleteLinkWidget):
 
 class DeleteLinkWidgetAJAX(DeleteLinkWidget):
 
-    template="""<a xmlns:py='http://purl.org/kid/ns#' href="#"
+    template="""<a xmlns:py='http://purl.org/kid/ns#' class="btn" href="#"
         onclick="javascript:do_and_confirm_ajax('${action}', ${data}, ${callback},
         '${msg}', '${action_type}');return false">
             <i class="icon-remove" py:if="show_icon"/> ${action_text}
@@ -310,56 +328,6 @@ class GroupPermissions(Widget):
                  py:content="form.display(action='./save_group_permissions', value=value)" />
         </div>
         """
-
-class PowerTypeForm(CompoundFormField):
-    """Dynmaically modifies power arguments based on Power Type Selection"""
-    javascript = [LocalJSLink('bkr', '/static/javascript/power.js')]
-    template = """
-    <div xmlns:py="http://purl.org/kid/ns#" id="${field_id}">
-    <script language="JavaScript" type="text/JavaScript">
-        PowerManager${field_id} = new PowerManager(
-        '${field_id}', '${key_field.field_id}', 
-        '${powercontroller_field.field_id}',  
-        '${search_controller}', '${system_id}');
-        addLoadEvent(PowerManager${field_id}.initialize);
-    </script>
-
-    ${key_field.display(value_for(key_field), **params_for(key_field))}
-     <table class="powerControlArgs">
-      <tr>
-       <td><label class="fieldlabel"
-                  for="${powercontroller_field.field_id}"
-                  py:content="powercontroller_field.label"/>
-       </td>
-       <td>
-        <font color="red">
-         <span py:if="error_for(powercontroller_field)"
-               class="fielderror"
-               py:content="error_for(powercontroller_field)" />
-        </font>
-        ${powercontroller_field.display(value_for(powercontroller_field), **params_for(powercontroller_field))}
-        <span py:if="powercontroller_field.help_text"
-              class="fieldhelp"
-              py:content="powercontroller_field.help_text" />
-       </td>
-      </tr>
-      <tr>
-       <td colspan="2">
-        <div class="powerControlArgs" id="powerControlArgs${field_id}"/>
-       </td>
-      </tr>
-     </table>
-    </div>
-    """
-    member_widgets = ["powercontroller_field", "key_field"]
-    params = ['search_controller', 'system_id']
-    params_doc = {'powertypes_callback' : ''}
-
-    def __init__(self, callback, search_controller, *args, **kw):
-        super(PowerTypeForm,self).__init__(*args, **kw)
-        self.search_controller=search_controller
-        self.powercontroller_field = SingleSelectField(name="powercontroller", options=callback)
-        self.key_field = HiddenField(name="key")
 
 class ReserveSystem(TableForm):
     fields = [ 
@@ -620,7 +588,6 @@ class AckPanel(RadioButtonList):
     <ul xmlns:py="http://purl.org/kid/ns#"
         class="${field_class}"
         id="${field_id}"
-        py:attrs="list_attrs"
     >
         <li py:for="value, desc, attrs in options">
             <input type="radio" name="${widget_name}" py:if="unreal_response != value" id="${field_id}_${value}" value="${value}" py:attrs="attrs" />
@@ -932,6 +899,7 @@ class TaskSearchForm(RemoteForm):
              ]
     before = 'task_search_before()'
     on_complete = 'task_search_complete()'
+    submit_text = _(u'Submit Query')
 
     def __init__(self, *args, **kw):
         super(TaskSearchForm,self).__init__(*args,**kw)
@@ -942,27 +910,23 @@ class TaskSearchForm(RemoteForm):
         if 'arch_id' in d['options']:
             d['arch_id'] = d['options']['arch_id']
 
-class LabInfoForm(Form):
-    template = "bkr.server.templates.system_labinfo"
-    member_widgets = ["id", "labinfo", "orig_cost", "curr_cost", "dimensions",
-                      "weight", "wattage", "cooling"]
-    params = ['options']
-
-    def __init__(self, *args, **kw):
-        super(LabInfoForm, self).__init__(*args, **kw)
-        self.id = HiddenField(name="id")
-        self.labinfo = HiddenField(name="labinfo")
-        self.orig_cost = TextField(name='orig_cost', label=_(u'Original Cost'),
-                                   validator=validators.Money())
-        self.curr_cost = TextField(name='curr_cost', label=_(u'Current Cost'),
-                                   validator=validators.Money())
-        self.dimensions = TextField(name='dimensions', label=_(u'Dimensions'))
-        self.weight = TextField(name='weight', label=_(u'Weight'),
-                                   validator=validators.Int())
-        self.wattage = TextField(name='wattage', label=_(u'Wattage'),
-                                   validator=validators.Int())
-        self.cooling = TextField(name='cooling', label=_(u'Cooling'),
-                                   validator=validators.Int())
+class LabInfoForm(HorizontalForm):
+    fields = [
+        HiddenField(name="id"),
+        HiddenField(name="labinfo"),
+        TextField(name='orig_cost', label=_(u'Original Cost'),
+            validator=validators.Money()),
+        TextField(name='curr_cost', label=_(u'Current Cost'),
+            validator=validators.Money()),
+        TextField(name='dimensions', label=_(u'Dimensions')),
+        TextField(name='weight', label=_(u'Weight'),
+            validator=validators.Int()),
+        TextField(name='wattage', label=_(u'Wattage'),
+            validator=validators.Int()),
+        TextField(name='cooling', label=_(u'Cooling'),
+            validator=validators.Int()),
+    ]
+    submit_text = _(u'Save Lab Info Changes')
 
     def update_params(self, d):
         super(LabInfoForm, self).update_params(d)
@@ -976,35 +940,29 @@ class LabInfoForm(Form):
                 d['value']['wattage'] = labinfo.wattage
                 d['value']['cooling'] = labinfo.cooling
 
-class PowerForm(Form):
-    template = "bkr.server.templates.system_power"
-    member_widgets = ["id", "power", "power_type_id", "power_address", 
-                      "power_user", "power_passwd", "power_id",
-                       "release_action", "reprovision_distro_tree_id"]
-    params = []
-    params_doc = {}
-
-    def __init__(self, *args, **kw):
-        super(PowerForm, self).__init__(*args, **kw)
-        self.id = HiddenField(name="id")
-        self.power = HiddenField(name="power")
-        self.power_type_id = SingleSelectField(name='power_type_id',
-                                           label=_(u'Power Type'),
-                                           options=model.PowerType.get_all,
-                                           validator=validators.NotEmpty())
-        self.power_address = TextField(name='power_address', label=_(u'Power Address'))
-        self.power_user = TextField(name='power_user', label=_(u'Power Login'))
-        self.power_passwd = TextField(name='power_passwd', label=_(u'Power Password'))
-        self.power_id = TextField(name='power_id', label=_(u'Power Port/Plug/etc'))
-        self.release_action = RadioButtonList(name='release_action',
-                label=_(u'Release Action'),
-                options=[(ra, unicode(ra)) for ra in model.ReleaseAction],
-                default=model.ReleaseAction.power_off,
-                validator=ValidEnumValue(model.ReleaseAction))
-        self.reprovision_distro_tree_id = SingleSelectField(name='reprovision_distro_tree_id',
-                                                label=_(u'Reprovision Distro'),
-                                                options=[],
-                                             validator=validators.NotEmpty())
+class PowerForm(HorizontalForm):
+    fields = [
+        HiddenField(name="id"),
+        HiddenField(name="power"),
+        SingleSelectField(name='power_type_id',
+            label=_(u'Power Type'),
+            options=model.PowerType.get_all,
+            validator=validators.NotEmpty()),
+        TextField(name='power_address', label=_(u'Power Address')),
+        TextField(name='power_user', label=_(u'Power Login')),
+        TextField(name='power_passwd', label=_(u'Power Password')),
+        TextField(name='power_id', label=_(u'Power Port/Plug/etc')),
+        RadioButtonList(name='release_action',
+            label=_(u'Release Action'),
+            options=[(ra, unicode(ra)) for ra in model.ReleaseAction],
+            default=model.ReleaseAction.power_off,
+            validator=ValidEnumValue(model.ReleaseAction)),
+        SingleSelectField(name='reprovision_distro_tree_id',
+            label=_(u'Reprovision Distro'),
+            options=[],
+            validator=validators.NotEmpty()),
+    ]
+    submit_text = _(u'Save Power Changes')
 
     def update_params(self, d):
         super(PowerForm, self).update_params(d)
@@ -1026,33 +984,37 @@ class ExcludedFamilies(FormField):
         py:attrs="list_attrs"
     >
      <li py:for="arch, a_options in options">
-      <label for="${field_id}_${arch}" py:content="arch" />
+      ${arch}
       <ul xmlns:py="http://purl.org/kid/ns#"
           class="${field_class}"
           id="${field_id}_${arch}"
           py:attrs="list_attrs"
       >
        <li py:for="value, desc, subsection, attrs in a_options">
+        <label class="checkbox">
         <input type="checkbox"
                name="${name}.${arch}"
                id="${field_id}_${value}_${arch}"
                value="${value}"
                py:attrs="attrs"
         />
-        <label for="${field_id}_${value}_${arch}" py:content="desc" />
+        ${desc}
+        </label>
         <ul xmlns:py="http://purl.org/kid/ns#"
             class="${field_class}"
             id="${field_id}_${value}_sub"
             py:attrs="list_attrs"
         >
          <li py:for="subvalue, subdesc, attrs  in subsection">
+          <label class="checkbox">
           <input type="checkbox"
                  name="${name}_subsection.${arch}"
                  id="${field_id}_${value}_sub_${subvalue}_${arch}"
                  value="${subvalue}"
                  py:attrs="attrs"
           />
-          <label for="${field_id}_${value}_sub_${subvalue}_${arch}" py:content="subdesc" />
+          ${subdesc}
+          </label>
          </li>
         </ul>
        </li>
@@ -1236,7 +1198,7 @@ class SystemProvision(Form):
         self.prov_install = SingleSelectField(name='prov_install',
                                              label=_(u'Distro'),
                                              options=[],
-                                             attrs=dict(size=10),
+                                             attrs={'size': 12, 'class': 'input-block-level'},
                                              validator=validators.NotEmpty())
         self.ks_meta       = TextField(name='ks_meta', attrs=dict(size=50),
                                        label=_(u'KickStart MetaData'))
@@ -1328,7 +1290,7 @@ class SystemExclude(Form):
           method="${method}" width="100%">
      ${display_field_for("id")}
      ${display_field_for("excluded_families")}
-     <a py:if="not readonly" class="button" href="javascript:document.${name}.submit();">Save Exclude Changes</a>
+     <a py:if="not readonly" class="btn btn-primary" href="javascript:document.${name}.submit();">Save Exclude Changes</a>
     </form>
     """
     member_widgets = ["id", "excluded_families"]
@@ -1438,7 +1400,6 @@ class SystemForm(Form):
                CheckBox(name='private', label=_(u'Secret (NDA)'),
                         help_text=_(u'Should this system be invisible to '
                             'all other users?')),
-               Tabber(use_cookie=True),
                AutoCompleteField(name='group',
                                       search_controller=url("/groups/by_name"),
                                       search_param="name",
@@ -1494,7 +1455,10 @@ class SystemForm(Form):
         else:
             property_value = getattr(value, item, None)
 
-        return property_value
+        span = Element('span', {'class': 'uneditable-input'})
+        if property_value is not None:
+            span.text = unicode(property_value)
+        return span
 
     def update_params(self, d):
         super(SystemForm, self).update_params(d)

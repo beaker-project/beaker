@@ -16,7 +16,6 @@
     id="${not use_name and name or None}"
     action="${tg.url(action)}"
     method="${method}"
-    class="tableform"
     py:attrs="form_attrs"
 >
 <?python
@@ -30,10 +29,8 @@
             py:replace="field.display(value_for(field), **params_for(field))"
         />
     </div>
-    <fieldset>
-     <legend>Filter</legend>
     <table border="0" cellspacing="0" cellpadding="2" py:attrs="table_attrs">
-        <tr py:for="i in range(0,len(vfields)/4 + len(vfields)%4)" class="odd">
+        <tr py:for="i in range(0,len(vfields)/4 + len(vfields)%4)">
             <th py:for="j in range((i*4),4+(i*4))">
               <span py:if="j.__cmp__(len(vfields)) == -1">
                 <label class="fieldlabel" for="${vfields[j].field_id}" py:content="vfields[j].label" />
@@ -51,9 +48,10 @@
         </tr>
         <tr>
             <td>&#160;</td>
-            <td py:content="submit.display(submit_text)" />
+            <td>
+                <button type="submit" class="btn">${submit_text}</button>
+            </td>
         </tr>
     </table>
-   </fieldset>
 </form>
 </div>

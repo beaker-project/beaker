@@ -30,7 +30,7 @@ from bkr.server.widgets import TaskSearchForm, SystemArches, SearchBar, \
     SystemForm, SystemProvision, SystemInstallOptions, SystemGroups, \
     SystemNotes, SystemKeys, SystemExclude, SystemHistory, SystemDetails, \
     ReportProblemForm, PowerActionForm, LabInfoForm, PowerActionHistory, \
-    PowerTypeForm, DoAndConfirmForm, LoanWidget, BeakerDataGrid,\
+    DoAndConfirmForm, LoanWidget, BeakerDataGrid,\
     myPaginateDataGrid, PowerForm, AutoCompleteTextField, SystemActions
 from bkr.server.preferences import Preferences
 from bkr.server.authentication import Auth
@@ -686,7 +686,7 @@ class Root(RPCRoot):
             flash(_(u"Group ID not found"))
         redirect("./view/%s" % system.fqdn)
 
-    @expose(template="bkr.server.templates.system")
+    @expose(template="bkr.server.templates.form-post")
     @identity.require(identity.not_anonymous())
     def new(self, **kwargs):
         options = {}
@@ -703,17 +703,17 @@ class Root(RPCRoot):
         options = {}
         our_user = identity.current.user
         if system.can_admin(user=our_user):
-            options['owner_change_text'] = ' (Change)'
+            options['owner_change_text'] = 'Change'
 
         options['loan_widget'] = LoanWidget()
 
         # Has privs and machine is available, can take
         if system.can_share(our_user) and \
             system.can_provision_now(our_user):
-                options['user_change_text'] = ' (Take)'
+                options['user_change_text'] = 'Take'
 
         if system.current_user(our_user):
-            options['user_change_text'] = ' (Return)'
+            options['user_change_text'] = 'Return'
         if system.open_reservation is not None and \
             system.open_reservation.recipe:
                 job_id = system.open_reservation.recipe.recipeset.job.id
