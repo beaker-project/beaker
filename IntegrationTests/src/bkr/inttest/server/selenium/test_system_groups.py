@@ -3,7 +3,8 @@ from bkr.server.model import session, SystemGroup
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.server.selenium import WebDriverTestCase
 from selenium.webdriver.support.ui import WebDriverWait
-from bkr.inttest.server.webdriver_utils import login, is_text_present
+from bkr.inttest.server.webdriver_utils import login, is_text_present, \
+        delete_and_confirm
 
 
 class TestSystemGroups(WebDriverTestCase):
@@ -42,8 +43,7 @@ class TestSystemGroups(WebDriverTestCase):
             group = self.group
         b.get(get_server_base() + 'view/%s' % system.fqdn)
         b.find_element_by_link_text('Groups').click()
-        b.find_element_by_link_text('Delete ( - )').click()
-        b.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
+        delete_and_confirm(b, '//table[@id="systemgroups"]', 'Delete ( - )')
         self.assert_(is_text_present(b, '%s Removed' % group.display_name))
 
     def test_remove_system_group_admin_privs(self):

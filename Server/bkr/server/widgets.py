@@ -94,7 +94,7 @@ class LocalCSSLink(CSSLink):
         d["link"] = self.name
 
 
-jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js',
+jquery = LocalJSLink('bkr', '/static/javascript/jquery-2.0.2.min.js',
         order=1) # needs to come after MochiKit
 
 local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime_v2.js')
@@ -112,7 +112,7 @@ class UnmangledHiddenField(HiddenField):
 
 
 class DeleteLinkWidget(Widget):
-    javascript = [LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js'),
         LocalJSLink('bkr', '/static/javascript/util.js')]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
 
@@ -144,7 +144,7 @@ class DoAndConfirmForm(Form):
     params = ['msg', 'action_text', 'look']
 
     def __init__(self, *args, **kw):
-        self.javascript.extend([LocalJSLink('bkr', '/static/javascript/jquery-ui.js'), 
+        self.javascript.extend([LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js'), 
             LocalJSLink('bkr', '/static/javascript/util.js'),])
         self.css.append(LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css'))
 
@@ -209,7 +209,7 @@ class GroupPermissions(Widget):
 
     javascript = [LocalJSLink('bkr', '/static/javascript/group_permission_v2.js'),
         LocalJSLink('bkr', '/static/javascript/util.js'),
-        LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),]
+        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js'),]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     member_widgets = ['form', 'grid']
     template = """
@@ -444,7 +444,7 @@ class myPaginateDataGrid(PaginateDataGrid):
 
 class LabControllerDataGrid(myPaginateDataGrid):
     javascript = [LocalJSLink('bkr','/static/javascript/lab_controller_remove.js'),
-                  LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),]
+                  LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js'),]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
 
 class SingleSelectFieldJSON(SingleSelectField):
@@ -523,7 +523,7 @@ class JobQuickSearch(CompoundWidget):
 
 class AckPanel(RadioButtonList): 
 
-    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui.js'),
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js'),
                   LocalJSLink('bkr','/static/javascript/loader_v2.js'),
                   LocalJSLink('bkr','/static/javascript/response_v3.js')]
 
@@ -608,7 +608,7 @@ class AckPanel(RadioButtonList):
         return super(AckPanel,self).display(value,*args,**params)
  
 class JobMatrixReport(Form):     
-    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui.js'),
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js'),
                   LocalJSLink('bkr', '/static/javascript/job_matrix_v2.js')]
     css = [LocalCSSLink('bkr','/static/css/job_matrix.css'),
         LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
@@ -654,7 +654,7 @@ class SearchBar(RepeatingFormField):
     css = [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     javascript = [LocalJSLink('bkr', '/static/javascript/search_object.js'),
                   LocalJSLink('bkr', '/static/javascript/searchbar_v8.js'),
-                  LocalJSLink('bkr','/static/javascript/jquery-ui.js'),]
+                  LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js'),]
     template = "bkr.server.templates.search_bar"
 
     params = ['repetitions', 'search_object', 'form_attrs', 'search_controller',
@@ -1543,7 +1543,7 @@ class ReportProblemForm(RemoteForm):
 class RecipeActionWidget(CompoundWidget):
     template = 'bkr.server.templates.recipe_action'
     javascript = [LocalJSLink('bkr', '/static/javascript/util.js'),
-        LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),]
+        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js'),]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     problem_form = ReportProblemForm()
     params = ['report_problem_options', 'report_link']

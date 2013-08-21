@@ -1,6 +1,7 @@
 #!/usr/bin/python
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, logout, is_text_present
+from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, \
+        delete_and_confirm
 from bkr.inttest import data_setup, get_server_base
 import unittest, time, re, os
 from turbogears.database import session
@@ -54,9 +55,8 @@ class UserPrefs(WebDriverTestCase):
             self.user.submission_delegates[:] = [submission_delegate]
         b = self.browser
         b.get(get_server_base() + 'prefs')
-        b.find_element_by_xpath("//a[normalize-space(text())='Remove (-)' and"
-            " ../../preceding-sibling::td[text()='%s']]" % submission_delegate).click()
-        b.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
+        delete_and_confirm(b, '//td[preceding-sibling::td/text()="%s"]'
+                % submission_delegate, 'Remove (-)')
         self.assertEquals(b.find_element_by_class_name('flash').text,
             '%s removed as a submission delegate' % submission_delegate)
         # Check they have been removed in DB

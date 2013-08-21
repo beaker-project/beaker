@@ -60,7 +60,7 @@ class SystemViewTestWD(WebDriverTestCase):
         clear = b.find_element_by_xpath('//button[normalize-space(text())='
             '"Clear Netboot"]')
         clear.click()
-        b.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
+        b.find_element_by_xpath("//button[@type='button' and .//text()='Yes']").click()
         flash_text = b.find_element_by_class_name('flash').text
         self.assertEqual(flash_text, u'Clear netboot command enqueued')
 
@@ -403,7 +403,7 @@ class SystemViewTest(SeleniumTestCase):
                 '//table[@class="list"]//td'
                 '[normalize-space(preceding-sibling::td[1]/text())="i386"]'
                 '//a[text()="Delete ( - )"]')
-        sel.click("//button[@type='button' and text()='Yes']")
+        sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'i386 Removed')
         self.assertEquals(sel.get_xpath_count(
@@ -449,7 +449,7 @@ class SystemViewTest(SeleniumTestCase):
                 'normalize-space(preceding-sibling::td[2]/text())="NR_DISKS" and '
                 'normalize-space(preceding-sibling::td[1]/text())="100"'
                 ']//a[text()="Delete ( - )"]')
-        sel.click("//button[@type='button' and text()='Yes']")
+        sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'removed NR_DISKS/100')
         self.assertEquals(sel.get_xpath_count(
@@ -508,7 +508,7 @@ class SystemViewTest(SeleniumTestCase):
                 '//table[@class="list"]'
                 '//td[normalize-space(preceding-sibling::td[3]/text())="%s"]'
                 '//a[text()="Delete ( - )"]' % group.group_name)
-        sel.click("//button[@type='button' and text()='Yes']")
+        sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'),
                 '%s Removed' % group.display_name)
@@ -560,7 +560,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.click('//ul[@class="tabbernav"]//a[text()="Install Options"]')
         sel.click('//tr[th/text()="Architecture"]'
                 '//a[text()="Delete ( - )"]')
-        sel.click("//button[@type='button' and text()='Yes']")
+        sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), self.system.fqdn)
         with session.begin():

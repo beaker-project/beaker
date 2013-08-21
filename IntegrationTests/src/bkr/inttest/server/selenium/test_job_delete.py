@@ -149,7 +149,7 @@ class JobDelete(SeleniumTestCase):
             "/div/a[normalize-space(text())='Delete']" % self.job_to_delete.t_id)
         self.wait_and_try(lambda:
             self.failUnless(sel.is_text_present("Are you sure")))
-        sel.click("//button[@type='button' and text()='Yes']")
+        sel.click("//button[@type='button' and .//text()='Yes']")
         self.wait_and_try(lambda:
             self.assert_(self.job_to_delete.t_id not in sel.get_text('//body')))
         sel.open('recipes/%s' % self.recipe_to_delete.id)
@@ -166,7 +166,7 @@ class JobDelete(SeleniumTestCase):
         self.wait_and_try(lambda:
             self.failUnless(sel.is_text_present(
             "Are you sure you want to delete this?")))
-        sel.click("//button[@type='button' and text()='Yes']")
+        sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.failUnless(sel.is_text_present(
             "Succesfully deleted J:%s" % self.job_to_delete_2.id))

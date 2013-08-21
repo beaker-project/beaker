@@ -1,5 +1,5 @@
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, delete_and_confirm
 from bkr.inttest import get_server_base
 
 class ExternalReportTest(WebDriverTestCase):
@@ -27,9 +27,9 @@ class ExternalReportTest(WebDriverTestCase):
         b = self.browser
         login(b)
         self._insert(b, 'ToDelete', 'http://unique1', 'UniqueDescription1')
-        delete_link =  b.find_element_by_xpath("//div[@class='external-report']/form[preceding-sibling::h3/a[text()='ToDelete']]/a[text()='Delete ( - )']")
-        delete_link.click()
-        b.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
+        delete_and_confirm(b, "//div[@class='external-report']"
+                "/form[preceding-sibling::h3/a[text()='ToDelete']]",
+                "Delete ( - )")
         page_text = b.find_element_by_xpath('//body').text
         # This should cover determining if the report is really gone
         self.assertTrue('UniqueDescription1' not in page_text)

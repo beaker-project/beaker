@@ -4,7 +4,6 @@
 <a href="#" onclick="show_system_actions()" class='link'>(Contact Owner)</a>
 <script type='text/javascript'>
     function show_system_actions() {
-       $('#system_action').dialog('destroy');
        $('#system_action').attr('title', 'System Action').dialog({
             buttons : {
                 "${problem.desc}" : function () {
@@ -24,7 +23,6 @@
     }
 
         function show_field (id, title) {
-            $('#'+id).dialog('destroy');
             $('#'+id).attr('title', title).dialog({
                 resizable: false,
                 height: 300,

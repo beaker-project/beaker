@@ -1,6 +1,6 @@
 <table xmlns:py="http://purl.org/kid/ns#" id="${name}" cellpadding="0" cellspacing="0" border="0" >
-<script type='text/javascript' src='/static/javascript/jquery.dataTables.js' />
-<script type='text/javascript' src='/static/javascript/FixedColumns.js' />
+<script type='text/javascript' src='/static/javascript/jquery.dataTables-1.9.4.min.js' />
+<script type='text/javascript' src='/static/javascript/dataTables.fixedColumns-3429ac3.js' />
 
 <script type='text/javascript'>
 
@@ -10,9 +10,17 @@ var oTable = $('#matrix_datagrid').dataTable( {
         "sScrollX": "100%",
         "sScrollY" : "600px",
         "bScrollCollapse": true,
+        "bSort": false,
         "bPaginate": false,
         "bFilter": false,
-        "sDom": '&lt;"top"&gt;rt&lt;"bottom"flp&gt;&lt;"clear"&gt;'
+        "sDom": '&lt;"top"&gt;rt&lt;"bottom"flp&gt;&lt;"clear"&gt;',
+        "fnRowCallback": function (row, data, index, index_full) {
+            $(row).addClass(i % 2 ? 'odd' : 'even');
+        },
+        "fnDrawCallback": function () {
+            // hack to fix horizontal scrollbars (bug in FixedColumns?)
+            $('.dataTables_scrollBody').css('overflow-x', 'hidden');
+        },
     } );
 
     new FixedColumns( oTable );
@@ -30,7 +38,7 @@ var oTable = $('#matrix_datagrid').dataTable( {
   </tr>
 </thead>
 <tbody>
-  <tr py:for="i, row in enumerate(value)" class="${i%2 and 'odd' or 'even'}">
+  <tr py:for="row in value">
     <td py:for="pos,col in enumerate(columns)" py:if="pos == TASK_POS" align="${col.get_option('align', None)}" py:content="col.get_field(row)"  class='task-name cell-border' />
     <td py:for="pos,col in enumerate(columns)" py:if="pos != TASK_POS" align="${col.get_option('align', None)}" py:content="col.get_field(row)"  class='cell-border results' />
   </tr>
