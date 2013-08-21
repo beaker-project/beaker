@@ -82,7 +82,7 @@ class RecipesXmlRpcTest(XmlRpcTestCase):
             system = data_setup.create_system(lab_controller=self.lc)
             recipe = data_setup.create_recipe()
             data_setup.create_job_for_recipes([recipe])
-            data_setup.mark_recipe_running(recipe, system=system)
+            data_setup.mark_recipe_waiting(recipe, system=system)
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         self.server.recipes.install_start(recipe.id)
         with session.begin():
