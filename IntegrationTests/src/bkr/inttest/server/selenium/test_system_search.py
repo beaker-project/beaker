@@ -565,7 +565,7 @@ class DiskSearchTest(WebDriverTestCase):
             .select_by_visible_text('greater than')
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys('10000000000')
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_system_search_results(b, present=[self.big_disk, self.two_disks],
                 absent=[self.small_disk, self.no_disks])
 
@@ -584,7 +584,7 @@ class DiskSearchTest(WebDriverTestCase):
             .select_by_visible_text('is not')
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys('512')
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_system_search_results(b, present=[self.big_disk, self.no_disks],
                 absent=[self.small_disk, self.two_disks])
 
@@ -643,7 +643,7 @@ class InventoriedSearchTest(WebDriverTestCase):
             .select_by_visible_text('is')
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys(' ')
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_system_search_results(b, present=[self.not_inv],
                 absent=[self.inv1, self.inv2, self.inv3, self.inv4])
 
@@ -659,7 +659,7 @@ class InventoriedSearchTest(WebDriverTestCase):
             .select_by_visible_text('after')
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_system_search_results(b, present=[self.inv3],
                 absent=[self.not_inv, self.inv1, self.inv2, self.inv4])
 
@@ -675,7 +675,7 @@ class InventoriedSearchTest(WebDriverTestCase):
             .select_by_visible_text('is')
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_system_search_results(b, present=[self.inv1, self.inv2],
                 absent=[self.not_inv, self.inv3, self.inv4])
 
@@ -691,7 +691,7 @@ class InventoriedSearchTest(WebDriverTestCase):
             .select_by_visible_text('before')
         b.find_element_by_id('systemsearch_0_value').clear()
         b.find_element_by_id('systemsearch_0_value').send_keys(self.date_today)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_system_search_results(b, present=[self.inv4],
                 absent=[self.not_inv, self.inv1, self.inv2, self.inv3])
 
@@ -720,6 +720,6 @@ class InventoriedSearchTest(WebDriverTestCase):
         b.find_element_by_id('systemsearch_1_value').clear()
         b.find_element_by_id('systemsearch_1_value').send_keys(self.date_tomorrow)
 
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_system_search_results(b, present=[self.inv1, self.inv2],
                 absent=[self.not_inv, self.inv3, self.inv4])

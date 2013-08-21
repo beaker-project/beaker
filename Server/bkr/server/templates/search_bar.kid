@@ -4,35 +4,28 @@
     name="${name}_simple"
     action="${action}"
     method="${method}"
-    class="searchbar_form"
+    class="form-search"
     py:attrs="form_attrs" 
     style="display:${simple}"
 >
-<a id="showadvancedsearch" href="#">Show Search Options</a>
+<div><a id="showadvancedsearch" href="#">Show Search Options</a></div>
 <span py:for="hidden in extra_hiddens or []">
     <input type='hidden' id='${hidden[0]}' name='${hidden[0]}' value='${hidden[1]}' />
 </span> 
-<table>
-    <tr>
-    <td><input type="text" name="simplesearch" value="${simplesearch}" class="textfield"/>
-    </td>
-<td><input type="submit" name="search" value="${simplesearch_label}"/>
+<input type="text" name="simplesearch" value="${simplesearch}" class="search-query"/>
+<button type="submit" class="btn">${simplesearch_label}</button>
 
-    <span style="margin:0 0.5em 0.5em 0.5em;" py:for="quickly_search in quickly_searches">
+<div py:if="quickly_searches" class="btn-group">
+  <span py:for="quickly_search in quickly_searches" py:strip="True">
     ${button_widget.display(value=quickly_search[1],options=dict(label=quickly_search[0]))}
-    </span>
-    </td>
-
-
-    </tr>
-</table> 
+  </span>
+</div>
 </form>
 <form 
     id="searchform"
     name="${name}"
     action="${action}"
     method="${method}"
-    class="searchbar_form"
     py:attrs="form_attrs"
     style="display:${advanced}"
 >
@@ -40,17 +33,13 @@
 <span py:for="hidden in extra_hiddens or []">
     <input type='hidden' id='${hidden[0]}' name='${hidden[0]}' value='${hidden[1]}' />
 </span> 
-<fieldset>
-    <legend>Search</legend>
     <table>
     <tr>
     <td>
     <table id="${field_id}">
     <thead>
     <tr> 
-    <th  py:for="field in fields"> 
-        <span class="fieldlabel" py:content="field.label" />
-    </th>
+      <th py:for="field in fields" py:content="field.label" />
     </tr>
     </thead> 
     <tbody>
@@ -78,19 +67,20 @@
     </td>
 
     <td>
-        <a 
-        href="javascript:SearchBarForm.removeItem('${field_id}_${repetition}')">Remove (-)</a>
+        <a class="btn"
+        href="javascript:SearchBarForm.removeItem('${field_id}_${repetition}')"><i class="icon-remove"/> Remove</a>
     </td>
     </tr>
     </tbody>
     </table></td><td>
-    <input type="submit" name="Search" value="Search"/> 
+      <button class="btn btn-primary" type="submit">Search</button>
     </td>
 
     </tr>
     <tr>
     <td colspan="2">
-    <a id="doclink" href="javascript:SearchBarForm.addItem('${field_id}');">Add ( + )</a>
+      <a id="doclink" class="btn"
+         href="javascript:SearchBarForm.addItem('${field_id}');"><i class="icon-plus"/> Add</a>
     </td>
     </tr>
     </table>
@@ -108,7 +98,6 @@
 <a style='margin-left:10px' id="selectall" href="#">Select All</a>
 <a style='margin-left:10px' id="selectdefault" href="#">Select Default</a>
 </div> 
-    </fieldset>  
 </form>
 <script type="text/javascript">
 $(document).ready(function() {

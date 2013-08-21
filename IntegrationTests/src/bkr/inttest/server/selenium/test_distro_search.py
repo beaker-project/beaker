@@ -77,14 +77,14 @@ class Search(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'distros')
         b.find_element_by_name('simplesearch').send_keys(distro.name)
-        b.find_element_by_name('search').click()
+        b.find_element_by_id('simpleform').submit()
         self.assert_(is_text_present(b, 'Items found: 1'))
 
     def test_simple_search(self):
         b = self.browser
         b.get(get_server_base() + 'distros')
         b.find_element_by_name('simplesearch').send_keys(self.distro_one.name)
-        b.find_element_by_name('search').click()
+        b.find_element_by_id('simpleform').submit()
         check_distro_search_results(b, present=[self.distro_one],
                                     absent=[self.distro_two, self.distro_three])
 
@@ -98,7 +98,7 @@ class Search(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
         # This also tests that whitespace does not foil us
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys('  osmajortest1 ')
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_one],
                                          absent=[self.distro_two, self.distro_three])
 
@@ -111,7 +111,7 @@ class Search(WebDriverTestCase):
         b.find_element_by_xpath("//select[@id='distrosearch_0_operation']/option[@value='is']").click()
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys('1')
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_one],
                                     absent=[self.distro_two, self.distro_three])
 
@@ -126,7 +126,7 @@ class Search(WebDriverTestCase):
         now_and_1 = datetime.utcnow() + timedelta(days=1)
         now_and_1_string = now_and_1.strftime('%Y-%m-%d')
         b.find_element_by_xpath('//input[@id="distrosearch_0_value"]').send_keys(now_and_1_string)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_one],
                                     absent=[self.distro_two, self.distro_three])
 
@@ -152,7 +152,7 @@ class SearchOptionsTest(WebDriverTestCase):
         Select(b.find_element_by_name('distrosearch-0.operation'))\
                 .select_by_visible_text('is not')
         b.find_element_by_name('distrosearch-0.value').send_keys('RHEL-6.2')
-        b.find_element_by_xpath('//form[@name="distrosearch"]//input[@type="submit"]').click()
+        b.find_element_by_id('searchform').submit()
 
         self.assertEquals(Select(b.find_element_by_name('distrosearch-0.table'))
                 .first_selected_option.text,

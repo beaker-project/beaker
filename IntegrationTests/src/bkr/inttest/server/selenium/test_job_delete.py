@@ -47,7 +47,7 @@ class JobDeleteWD(WebDriverTestCase):
         b.find_element_by_name('jobsearch-0.value').clear()
         b.find_element_by_name('jobsearch-0.value'). \
             send_keys('%s' % job.id)
-        b.find_element_by_xpath("//input[@value='Search']").click()
+        b.find_element_by_id('searchform').submit()
         # We are only a submission delegate, not the submitter,
         # check we cannot delete
         action_text = b.find_element_by_xpath("//td[preceding-sibling::td/"
@@ -101,7 +101,7 @@ class JobDeleteWD(WebDriverTestCase):
         b.find_element_by_name('jobsearch-0.value').clear()
         b.find_element_by_name('jobsearch-0.value'). \
             send_keys('%s' % job.id)
-        b.find_element_by_xpath("//input[@value='Search']").click()
+        b.find_element_by_id('searchform').submit()
 
         delete_and_confirm(b, "//td[preceding-sibling::td/"
             "a[normalize-space(text())='%s']]/div" % job.t_id)

@@ -126,11 +126,11 @@ class TestSystemGridSorting(SeleniumTestCase):
         sel.select('systemsearch_0_table', 'CPU/Cores')
         sel.select('systemsearch_0_operation', 'greater than')
         sel.type('systemsearch_0_value', '1')
-        sel.click('//form[@name="systemsearch"]//a[text()="Add ( + )"]')
+        sel.click('link=Add')
         sel.select('systemsearch_1_table', 'System/Name')
         sel.select('systemsearch_1_operation', 'is not')
         sel.type('systemsearch_1_value', 'bob')
-        sel.click('Search')
+        sel.submit('id=searchform')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Systems')
 

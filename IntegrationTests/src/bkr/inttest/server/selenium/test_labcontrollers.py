@@ -49,7 +49,7 @@ class LabControllerViewTest(WebDriverTestCase):
             "option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']"). \
             send_keys(lc_name)
-        b.find_element_by_xpath("//input[@name='Search']").click()
+        b.find_element_by_id('searchform').submit()
 
         self.assert_(is_activity_row_present(b,
             object_='LabController: %s' % lc_name, via='WEBUI',
@@ -86,7 +86,7 @@ class LabControllerViewTest(WebDriverTestCase):
             "option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']"). \
             send_keys(lc_name)
-        b.find_element_by_xpath("//input[@name='Search']").click()
+        b.find_element_by_id('searchform').submit()
         self.assert_(is_activity_row_present(b,
             object_='LabController: %s' % lc_name, via='WEBUI',
             property_='Disabled', action='Changed', new_value='True'))
@@ -103,7 +103,7 @@ class LabControllerViewTest(WebDriverTestCase):
             "option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']"). \
             send_keys(sys.fqdn)
-        b.find_element_by_xpath("//input[@name='Search']").click()
+        b.find_element_by_id('searchform').submit()
         self.assert_(is_activity_row_present(b,
             object_='System: %s' % sys.fqdn, via='WEBUI',
             property_='lab_controller', action='Changed', new_value=''))

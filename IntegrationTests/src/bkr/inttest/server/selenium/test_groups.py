@@ -29,7 +29,7 @@ class TestGroups(WebDriverTestCase):
         b.get(get_server_base() + 'groups/')
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
-        b.find_element_by_xpath("//input[@value='Search']").submit()
+        b.find_element_by_id('Search').submit()
         delete_and_confirm(b, "//td[preceding-sibling::td/a[normalize-space(text())='%s']]/form" % \
             self.group.group_name, delete_text='Remove (-)')
         self.assertEqual(

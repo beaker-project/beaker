@@ -69,7 +69,7 @@ class Cancel(WebDriverTestCase):
         b.find_element_by_name('jobsearch-0.value').clear()
         b.find_element_by_name('jobsearch-0.value'). \
             send_keys('%s' % self.job.id)
-        b.find_element_by_xpath("//input[@value='Search']").click()
+        b.find_element_by_id('searchform').submit()
         # We are only a submission delegate, but not the submitter,
         # check we cannot Cancel
         action_text = b.find_element_by_xpath("//td[preceding-sibling::td/"

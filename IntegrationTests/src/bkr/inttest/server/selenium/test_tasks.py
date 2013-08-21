@@ -47,7 +47,7 @@ class TestSubmitTask(WebDriverTestCase):
         self.assert_task_upload_flash_OK(test_package_name)
         # ...and make sure it worked...
         b.find_element_by_name('simplesearch').send_keys(test_package_name)
-        b.find_element_by_name('search').click()
+        b.find_element_by_id('simpleform').submit()
         b.find_element_by_link_text(test_package_name).click()
         self.assert_task_correct_v1_1()
         self.assertEqual(self.get_task_info_field('Uploader'), self.uploader.user_name)
@@ -63,7 +63,7 @@ class TestSubmitTask(WebDriverTestCase):
         self.assert_task_upload_flash_OK(test_package_name)
         # ...and make sure everything was updated
         b.find_element_by_name('simplesearch').send_keys(test_package_name)
-        b.find_element_by_name('search').click()
+        b.find_element_by_id('simpleform').submit()
         b.find_element_by_link_text(test_package_name).click()
         self.assert_task_correct_v2_0()
 
@@ -131,7 +131,7 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_xpath('//input[@value="Submit Data"]').click()
         self.assert_task_upload_flash_OK(test_package_name)
         b.find_element_by_name('simplesearch').send_keys(test_package_name)
-        b.find_element_by_name('search').click()
+        b.find_element_by_id('simpleform').submit()
         b.find_element_by_link_text(test_package_name).click()
         # Should have openCryptoki in correct case:
         self.assertEqual(self.get_task_info_field('Run For'), 'openCryptoki')

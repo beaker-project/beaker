@@ -27,7 +27,7 @@ class SystemOwnerTake(SeleniumTestCase):
         sel = self.selenium
         sel.open("")
         sel.type("simplesearch", "%s" % self.manual_system.fqdn)
-        sel.click("search")
+        sel.submit('id=simpleform')
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.manual_system.fqdn)
         sel.wait_for_page_to_load("30000")
@@ -99,7 +99,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel = self.selenium
         sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
-        sel.click("search")
+        sel.submit('id=simpleform')
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.automated_system.fqdn)
         sel.wait_for_page_to_load("30000")
@@ -116,7 +116,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         #import pdb;pdb.set_trace()
         sel.open("")
         sel.type("simplesearch", "%s" % self.manual_system.fqdn)
-        sel.click("search")
+        sel.submit('id=simpleform')
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.manual_system.fqdn)
         sel.wait_for_page_to_load("30000")
@@ -131,7 +131,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel = self.selenium
         sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
-        sel.click("search")
+        sel.submit('id=simpleform')
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.automated_system.fqdn)
         sel.wait_for_page_to_load("30000")
@@ -157,7 +157,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel = self.selenium
         sel.open("")
         sel.type("simplesearch", "%s" % self.manual_system.fqdn)
-        sel.click("search")
+        sel.submit('id=simpleform')
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.manual_system.fqdn)
         sel.wait_for_page_to_load("30000")
@@ -187,7 +187,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         self.login(user=self.user.user_name, password='password')
         sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
-        sel.click("search")
+        sel.submit('id=simpleform')
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.automated_system.fqdn) #this tests the click! 
         sel.wait_for_page_to_load("30000")
@@ -206,7 +206,7 @@ class SystemGroupUserTake(SeleniumTestCase):
 
         sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
-        sel.click("search")
+        sel.submit('id=simpleform')
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.automated_system.fqdn)
         sel.wait_for_page_to_load("30000")
@@ -218,7 +218,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         # Now can I actually take it?
         sel.open("")
         sel.type("simplesearch", "%s" % self.automated_system.fqdn)
-        sel.click("search")
+        sel.submit('id=simpleform')
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.automated_system.fqdn)
         sel.wait_for_page_to_load("30000")
@@ -230,7 +230,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         sel = self.selenium
         sel.open("")
         sel.type("simplesearch", "%s" % self.manual_system.fqdn)
-        sel.click("search")
+        sel.submit('id=simpleform')
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.manual_system.fqdn)
         sel.wait_for_page_to_load("30000")
@@ -241,7 +241,7 @@ class SystemGroupUserTake(SeleniumTestCase):
         # Now can I actually take it?
         sel.open("")
         sel.type("simplesearch", "%s" % self.manual_system.fqdn)
-        sel.click("search")
+        sel.submit('id=simpleform')
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % self.manual_system.fqdn)
         sel.wait_for_page_to_load("30000")

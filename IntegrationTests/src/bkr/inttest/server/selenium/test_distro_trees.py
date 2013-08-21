@@ -211,7 +211,7 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('%s' % self.distro_three_name)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_tree_three],
                                     absent=[self.distro_tree_one, self.distro_tree_two])
 
@@ -227,7 +227,7 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('%s' % self.distro_one_osmajor)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_tree_one],
                                     absent=[self.distro_tree_two, self.distro_tree_three])
 
@@ -243,7 +243,7 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('1')
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_tree_one],
                                     absent=[self.distro_tree_two, self.distro_tree_three])
 
@@ -259,7 +259,7 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('%s' % self.distro_one_variant)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_tree_one],
                                     absent=[self.distro_tree_two, self.distro_tree_three])
 
@@ -277,7 +277,7 @@ class DistroTreeSearch(WebDriverTestCase):
         now_and_1_string = now_and_1.strftime('%Y-%m-%d')
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys(now_and_1_string)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_tree_two],
                                     absent=[self.distro_tree_one, self.distro_tree_three])
 
@@ -292,6 +292,6 @@ class DistroTreeSearch(WebDriverTestCase):
             "option[@value='is']").click()
         b.find_element_by_xpath("//select[@id='search_0_value']/"
             "option[@value='%s']" % self.distro_one_tag[0]).click()
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_tree_one],
                                     absent=[self.distro_tree_two, self.distro_tree_three])
