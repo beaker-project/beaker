@@ -115,9 +115,9 @@ class Distros(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.has_permission('distro_expire'))
-    def expire(self, name):
+    def expire(self, name, service=u'XMLRPC'):
         distro = Distro.by_name(name)
-        distro.expire()
+        distro.expire(service)
 
     @expose()
     @identity.require(identity.has_permission('tag_distro'))

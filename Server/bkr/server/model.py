@@ -3548,7 +3548,7 @@ class Distro(MappedObject):
         return make_link(url = '/distros/view?id=%s' % self.id,
                          text = self.name)
 
-    def expire(self, service='XMLRPC'):
+    def expire(self, service=u'XMLRPC'):
         for tree in self.trees:
             tree.expire(service=service)
 
