@@ -575,6 +575,29 @@ class TestGroupsWD(WebDriverTestCase):
         self.assertEquals(u'Enter a value less than %r characters long' %
                           max_length_disp_name, error_text)
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=990860
+    def test_show_group_owners(self):
+        with session.begin():
+            owner = data_setup.create_user(password='password')
+            group = data_setup.create_group(owner=owner)
+            member = data_setup.create_user(password='password')
+            member.groups.append(group)
+
+        b = self.browser
+        login(b, user=member.user_name, password='password')
+        b.get(get_server_base() + 'groups/edit?group_id=%d' % group.group_id)
+
+        for i in range(1,len(group.users)):
+            user_name, ownership = b.find_element_by_xpath('//table[@id="widget"]//tr[%r]/td[1]' % i).text, \
+                b.find_element_by_xpath('//table[@id="widget"]//tr[%r]/td[2]' % i).text
+
+            with session.begin():
+                is_owner = group.has_owner(User.by_user_name(user_name))
+                if is_owner:
+                    self.assertTrue(ownership == 'Yes')
+                else:
+                    self.assertTrue(ownership == 'No')
+
 class GroupSystemTest(WebDriverTestCase):
 
     def setUp(self):
