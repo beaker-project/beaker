@@ -1,10 +1,11 @@
 from turbogears import validators, url, config
 import model
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
-                                AutoCompleteField, SingleSelectField, CheckBox,
+                                SingleSelectField, CheckBox,
                                 HiddenField, RemoteForm, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid)
+from bkr.server.widgets import AutoCompleteField
 
 
 class LocalJSLink(JSLink):

@@ -1,12 +1,12 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from turbogears.widgets import AutoCompleteField
 from cherrypy import request, response
 from kid import Element
 from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, BeakerDataGrid
+from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, \
+    BeakerDataGrid, AutoCompleteField
 from bkr.server.admin_page import AdminPage
 from bkr.server import validators as beaker_validators
 

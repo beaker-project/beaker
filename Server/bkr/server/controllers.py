@@ -26,27 +26,12 @@ from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
 from bkr.server.systems import SystemsController
 from bkr.server.system_action import SystemAction as SystemActionController
-from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid
-from bkr.server.widgets import LoanWidget
-from bkr.server.widgets import DoAndConfirmForm
-from bkr.server.widgets import PowerTypeForm
-from bkr.server.widgets import PowerForm
-from bkr.server.widgets import PowerActionHistory
-from bkr.server.widgets import LabInfoForm
-from bkr.server.widgets import PowerActionForm
-from bkr.server.widgets import ReportProblemForm
-from bkr.server.widgets import SystemDetails
-from bkr.server.widgets import SystemHistory
-from bkr.server.widgets import SystemExclude
-from bkr.server.widgets import SystemKeys
-from bkr.server.widgets import SystemNotes
-from bkr.server.widgets import SystemGroups
-from bkr.server.widgets import SystemInstallOptions
-from bkr.server.widgets import SystemProvision
-from bkr.server.widgets import SearchBar, SystemForm
-from bkr.server.widgets import SystemArches
-from bkr.server.widgets import TaskSearchForm
-from bkr.server.widgets import SystemActions
+from bkr.server.widgets import TaskSearchForm, SystemArches, SearchBar, \
+    SystemForm, SystemProvision, SystemInstallOptions, SystemGroups, \
+    SystemNotes, SystemKeys, SystemExclude, SystemHistory, SystemDetails, \
+    ReportProblemForm, PowerActionForm, LabInfoForm, PowerActionHistory, \
+    PowerTypeForm, DoAndConfirmForm, LoanWidget, BeakerDataGrid,\
+    myPaginateDataGrid, PowerForm, AutoCompleteTextField, SystemActions
 from bkr.server.preferences import Preferences
 from bkr.server.authentication import Auth
 from bkr.server.xmlrpccontroller import RPCRoot
@@ -181,10 +166,9 @@ class Root(RPCRoot):
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
 
-    autoUsers  = widgets.AutoCompleteTextField(name='user',
-                                           search_controller=url("/users/by_name"),
-                                           search_param="input",
-                                           result_name="matches")
+    autoUsers = AutoCompleteTextField(name='user',
+        search_controller=url("/users/by_name"), search_param="input",
+        result_name="matches")
 
     loan_form     = widgets.TableForm(
         'Loan',
