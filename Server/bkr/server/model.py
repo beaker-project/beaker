@@ -12,17 +12,19 @@ from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
 
 from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
         query, object_mapper, mapper, column_property, contains_eager, \
-        relationship
+        relationship, class_mapper
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
-from sqlalchemy.sql import exists, union, literal
-from sqlalchemy.sql.expression import join
+from sqlalchemy.orm.util import has_identity
+from sqlalchemy.sql import exists, union, literal, Insert
+from sqlalchemy.sql.expression import join, Executable, ClauseElement
 from sqlalchemy.exc import InvalidRequestError, IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.types import TypeDecorator, BINARY
 from bkr.server.installopts import InstallOptions, global_install_options
 from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
 from sqlalchemy.util import OrderedDict
+from sqlalchemy.ext import compiler
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
 import socket
@@ -96,6 +98,41 @@ def decl_base_constructor(self, **kwargs):
 
 DeclBase = declarative_base(constructor=decl_base_constructor,
                             metadata=metadata)
+
+
+class ConditionalInsert(Insert):
+    def __init__(self, table, unique_values, extra_values={}):
+        """
+        An INSERT statement which will atomically insert a row with the given 
+        values if one does not exist, or otherwise do nothing. extra_values are 
+        values which do not participate in the unique identity of the row.
+
+        unique_values and extra_values are dicts of (column -> scalar).
+        """
+        values = dict(unique_values)
+        values.update(extra_values)
+        super(ConditionalInsert, self).__init__(table, values)
+        self.unique_condition = and_(*[col == value
+                for col, value in unique_values.iteritems()])
+
+@compiler.compiles(ConditionalInsert)
+def visit_conditional_insert(element, compiler, **kwargs):
+    # magic copied from sqlalchemy.sql.compiler.SQLCompiler.visit_insert
+    compiler.isinsert = True
+    colparams = compiler._get_colparams(element)
+    text = 'INSERT INTO %s' % compiler.process(element.table, asfrom=True)
+    text += ' (%s)\n' % ', '.join(compiler.process(c[0]) for c in colparams)
+    text += 'SELECT %s\n' % ', '.join(c[1] for c in colparams)
+    text += 'FROM DUAL\n'
+    # We need FOR UPDATE in the inner SELECT for MySQL, to ensure we acquire an 
+    # exclusive lock immediately, instead of acquiring a shared lock and then 
+    # subsequently upgrading it to an exclusive lock, which is subject to 
+    # deadlocks if another transaction is doing the same thing.
+    text += 'WHERE NOT EXISTS (SELECT 1 FROM %s\nWHERE %s FOR UPDATE)' % (
+            compiler.process(element.table, asfrom=True),
+            compiler.process(element.unique_condition))
+    return text
+
 
 class TaskStatus(DeclEnum):
 
@@ -1432,21 +1469,69 @@ class MappedObject(object):
     query = session.query_property()
 
     @classmethod
-    def lazy_create(cls, **kwargs):
+    def _convert_attr_and_value(cls, table, key, value):
+        # This is kind of a reimplementation of some bits of the ORM... we 
+        # probably shouldn't be playing with this magic, but it makes things 
+        # much nicer for the callers of lazy_create.
+        prop = class_mapper(cls).get_property(key)
+        if hasattr(prop, 'columns'):
+            # ColumnProperties are pretty easy...
+            assert len(prop.columns) == 1
+            assert prop.columns[0].table == table
+            return prop.columns[0], value
+        elif hasattr(prop, 'remote_side'):
+            # we can handle simple RelationshipProperties too...
+            assert len(prop.local_side) == 1
+            assert len(prop.remote_side) == 1
+            assert has_identity(value), 'Value %r must be persisted' % value
+            attr_name = prop.mapper.get_property_by_column(prop.remote_side[0]).key
+            return prop.local_side[0], getattr(value, attr_name)
+        else:
+            # ... but anything else is too hard
+            raise AssertionError('Unknown property type %r' % prop)
+
+    @classmethod
+    def lazy_create(cls, _extra_attrs={}, **kwargs):
         """
         Returns the instance identified by the given uniquely-identifying 
-        attributes. If it doesn't exist yet, it is inserted first. If it is
-        not in the session, it is added.
+        attributes. If it doesn't exist yet, it is inserted first.
+
+        _extra_attrs is for attributes which do not make up the unique 
+        identity, but which need to be specified during creation because they 
+        are not NULLable. Subclasses should override this and pass attributes 
+        up in _extra_attrs if needed.
+
+        BEWARE: this method bypasses SQLAlchemy's ORM machinery. It makes some 
+        attempts to understand relationship properties, but anything other than 
+        simple many-to-one relationships onto persistent instances will raise 
+        AssertionError. Pass column properties instead of relationship 
+        properties (for example, osmajor_id not osmajor) if that is an issue.
         """
-        session.begin_nested()
-        try:
-            item = cls(**kwargs)
-            session.add(item)
-            session.commit()
-        except IntegrityError:
-            session.rollback()
-            item = cls.query.filter_by(**kwargs).one()
-        return item
+        # We do a conditional INSERT, which will always succeed or 
+        # silently have no effect.
+        # http://stackoverflow.com/a/6527838/120202
+        # Note that (contrary to that StackOverflow answer) on InnoDB the 
+        # INSERT must come before the UPDATE to avoid deadlocks.
+        unique_params = {}
+        extra_params = {}
+        assert len(class_mapper(cls).tables) == 1
+        table = class_mapper(cls).tables[0]
+        for k, v in kwargs.iteritems():
+            col, value = cls._convert_attr_and_value(table, k, v)
+            unique_params[col] = value
+        for k, v in _extra_attrs.iteritems():
+            col, value = cls._convert_attr_and_value(table, k, v)
+            extra_params[col] = value
+
+        session.connection(cls).execute(ConditionalInsert(table,
+                unique_params, extra_params))
+
+        if extra_params:
+            session.connection(cls).execute(table.update()
+                    .values(extra_params)
+                    .where(and_(*[col == value for col, value in unique_params.iteritems()])))
+
+        return cls.query.with_lockmode('update').filter_by(**kwargs).one()
 
     def __init__(self, **kwargs):
         for k, v in kwargs.iteritems():
@@ -3266,7 +3351,14 @@ class OSVersion(MappedObject):
     def __repr__(self):
         return "%s.%s" % (self.osmajor,self.osminor)
 
-    
+    def add_arch(self, arch):
+        """
+        Adds the given arch to this OSVersion if it's not already present.
+        """
+        session.connection(self.__class__).execute(ConditionalInsert(
+                osversion_arch_map,
+                {osversion_arch_map.c.osversion_id: self.id,
+                 osversion_arch_map.c.arch_id: arch.id}))
 
 
 class LabControllerDistroTree(MappedObject):
@@ -3514,20 +3606,8 @@ class Distro(MappedObject):
 
     @classmethod
     def lazy_create(cls, name, osversion):
-        """
-        Distro is unique on name only, but osversion_id also needs to be
-        supplied on insertion because it is not NULLable. So this is
-        a specialisation of the usual lazy_create method.
-        """
-        session.begin_nested()
-        try:
-            item = cls(name=name, osversion=osversion)
-            session.commit()
-        except IntegrityError:
-            session.rollback()
-            item = cls.query.filter_by(name=name).one()
-            item.osversion = osversion
-        return item
+        return super(Distro, cls).lazy_create(name=name,
+                _extra_attrs=dict(osversion=osversion))
 
     @classmethod
     def by_name(cls, name):
@@ -3724,11 +3804,21 @@ class DistroTree(MappedObject):
 
 class DistroTreeRepo(MappedObject):
 
-    pass
+    @classmethod
+    def lazy_create(cls, distro_tree, repo_id, repo_type, path):
+        return super(DistroTreeRepo, cls).lazy_create(
+                distro_tree=distro_tree,
+                repo_id=repo_id,
+                _extra_attrs=dict(repo_type=repo_type, path=path))
 
 class DistroTreeImage(MappedObject):
 
-    pass
+    @classmethod
+    def lazy_create(cls, distro_tree, image_type, kernel_type, path):
+        return super(DistroTreeImage, cls).lazy_create(
+                distro_tree=distro_tree,
+                image_type=image_type, kernel_type=kernel_type,
+                _extra_attrs=dict(path=path))
 
 class DistroTag(MappedObject):
     def __init__(self, tag=None):
@@ -3983,21 +4073,7 @@ class Log(MappedObject):
 
     @classmethod
     def lazy_create(cls, path=None, **kwargs):
-        """
-        Unlike the "real" lazy_create above, we can't rely on unique
-        constraints here because 'path' and 'filename' are TEXT columns and
-        MySQL can't index those. :-(
-
-        So we just use a query-then-insert approach. There is a race window
-        between querying and inserting, but it's about the best we can do.
-        """
-        item = cls.query.filter_by(path=cls._normalized_path(path),
-                **kwargs).first()
-        if item is None:
-            item = cls(path=path, **kwargs)
-            session.add(item)
-            session.flush()
-        return item
+        return super(Log, cls).lazy_create(path=cls._normalized_path(path), **kwargs)
 
     def __init__(self, path=None, filename=None,
                  server=None, basepath=None, parent=None):
@@ -6897,14 +6973,15 @@ class Task(MappedObject):
         """Create a new task object based on details retrieved from an RPM"""
 
         tinfo = testinfo.parse_string(raw_taskinfo['desc'])
-        task = cls.lazy_create(name=tinfo.test_name)
 
-        if len(task.name) > 255:
+        if len(tinfo.test_name) > 255:
             raise BX(_("Task name should be <= 255 characters"))
-        if task.name.endswith('/'):
+        if tinfo.test_name.endswith('/'):
             raise BX(_(u'Task name must not end with slash'))
-        if '//' in task.name:
+        if '//' in tinfo.test_name:
             raise BX(_(u'Task name must not contain redundant slashes'))
+
+        task = cls.lazy_create(name=tinfo.test_name)
 
         # RPM is the same version we have. don't process
         if task.version == raw_taskinfo['hdr']['ver']:

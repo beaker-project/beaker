@@ -1,5 +1,7 @@
 
+import time
 import datetime
+from threading import Thread, Event
 from turbogears.database import session
 from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase, \
     WebDriverTestCase
@@ -7,8 +9,10 @@ from bkr.inttest.server.webdriver_utils import login, is_activity_row_present
 from bkr.inttest import data_setup, get_server_base, fix_beakerd_repodata_perms
 from bkr.server.model import Distro, DistroTree, Arch, ImageType, Job, \
         System, SystemStatus, TaskStatus, CommandActivity, CommandStatus, \
-        KernelType, LabController, Recipe, Activity
+        KernelType, LabController, Recipe, Activity, User, OSMajor, OSVersion
 from bkr.server.tools import beakerd
+from bkr.server.wsgi import app
+from bkr.server import identity
 from bkr.inttest.server.selenium.test_activity import is_activity_row_present
 
 class LabControllerViewTest(WebDriverTestCase):
@@ -231,6 +235,118 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
             self.assertEquals(distro.osversion.osmajor.osmajor,
                     u'RedHatEnterpriseLinux6')
             self.assertEquals(distro.osversion.osminor, u'1')
+
+    def add_distro_trees_concurrently(self, distro_data1, distro_data2):
+        # This doesn't actually call through XML-RPC, it calls the 
+        # controller directly in two separate threads, in order to simulate two 
+        # lab controllers importing the same distro tree at the same instant.
+        from bkr.server.labcontroller import LabControllers
+        controller = LabControllers()
+        class DistroImportThread(Thread):
+            def __init__(self, lc_user_name=None, distro_data=None, **kwargs):
+                super(DistroImportThread, self).__init__(**kwargs)
+                self.lc_user_name = lc_user_name
+                self.distro_data = distro_data
+                self.ready_evt = Event()
+                self.start_evt = Event()
+                self.commit_evt = Event()
+                self.success = False
+            def run(self):
+                with app.test_request_context('/RPC2'):
+                    session.begin()
+                    self.ready_evt.set()
+                    self.start_evt.wait()
+                    lc_user = User.by_user_name(self.lc_user_name)
+                    identity.set_authentication(lc_user)
+                    controller.add_distro_tree(self.distro_data)
+                    self.commit_evt.wait()
+                    session.commit()
+                self.success = True
+
+        thread1 = DistroImportThread(name='add_distro_trees_thread1',
+                lc_user_name=self.lc.user.user_name,
+                distro_data=distro_data1)
+        thread2 = DistroImportThread(name='add_distro_trees_thread2',
+                lc_user_name=self.lc2.user.user_name,
+                distro_data=distro_data2)
+        thread1.start()
+        thread2.start()
+        thread1.ready_evt.wait()
+        thread2.ready_evt.wait()
+        # If you're debugging this test, uncommenting these prints and sleeps, 
+        # and enabling logging for sqlalchemy.engine, will help.
+        #print '\n\n\n*********** THREAD 1 GO'
+        thread1.start_evt.set()
+        #time.sleep(1)
+        #print '\n\n\n*********** THREAD 2 GO'
+        thread2.start_evt.set()
+        #time.sleep(1)
+        #print '\n\n*********** THREAD 1 COMMIT'
+        thread1.commit_evt.set()
+        #time.sleep(1)
+        #print '\n\n*********** THREAD 2 COMMIT'
+        thread2.commit_evt.set()
+        thread1.join()
+        thread2.join()
+        self.assert_(thread1.success)
+        self.assert_(thread2.success)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=874386
+    def test_concurrent_different_trees(self):
+        distro_data = dict(self.distro_data)
+        # ensure osmajor, osversion, and distro already exist
+        with session.begin():
+            osmajor = OSMajor.lazy_create(osmajor=distro_data['osmajor'])
+            osversion = OSVersion.lazy_create(osmajor=osmajor,
+                    osminor=distro_data['osminor'])
+            osversion.arches = [Arch.lazy_create(arch=arch)
+                    for arch in distro_data['arches']]
+            Distro.lazy_create(name=distro_data['name'], osversion=osversion)
+        # ensure two different trees
+        distro_data['variant'] = u'Workstation'
+        distro_data2 = dict(distro_data)
+        distro_data2['variant'] = u'Server'
+        self.add_distro_trees_concurrently(distro_data, distro_data2)
+
+    def test_concurrent_same_tree(self):
+        distro_data = dict(self.distro_data)
+        # ensure osmajor, osversion, and distro already exist
+        with session.begin():
+            osmajor = OSMajor.lazy_create(osmajor=distro_data['osmajor'])
+            osversion = OSVersion.lazy_create(osmajor=osmajor,
+                    osminor=distro_data['osminor'])
+            osversion.arches = [Arch.lazy_create(arch=arch)
+                    for arch in distro_data['arches']]
+            Distro.lazy_create(name=distro_data['name'], osversion=osversion)
+        self.add_distro_trees_concurrently(distro_data, distro_data)
+
+    def test_concurrent_new_distro(self):
+        distro_data = dict(self.distro_data)
+        # ensure osmajor and osversion already exist
+        with session.begin():
+            osmajor = OSMajor.lazy_create(osmajor=distro_data['osmajor'])
+            osversion = OSVersion.lazy_create(osmajor=osmajor,
+                    osminor=distro_data['osminor'])
+            osversion.arches = [Arch.lazy_create(arch=arch)
+                    for arch in distro_data['arches']]
+        # ... but distro is new
+        distro_data['name'] = 'concurrent-new-distro'
+        self.add_distro_trees_concurrently(distro_data, distro_data)
+
+    def test_concurrent_new_osversion(self):
+        distro_data = dict(self.distro_data)
+        # ensure osmajor already exists
+        with session.begin():
+            osmajor = OSMajor.lazy_create(osmajor=distro_data['osmajor'])
+        # ... but osversion is new
+        distro_data['osminor'] = '6969'
+        self.add_distro_trees_concurrently(distro_data, distro_data)
+
+    def test_concurrent_new_osmajor(self):
+        distro_data = dict(self.distro_data)
+        # ensure osmajor is new
+        distro_data['osmajor'] = 'ConcurrentEnterpriseLinux6'
+        self.add_distro_trees_concurrently(distro_data, distro_data)
 
 class GetDistroTreesXmlRpcTest(XmlRpcTestCase):
 

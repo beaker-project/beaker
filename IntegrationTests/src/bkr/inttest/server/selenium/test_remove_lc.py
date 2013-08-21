@@ -10,7 +10,7 @@ class RemoveLabController(SeleniumTestCase):
         self.lc = data_setup.create_labcontroller(
             fqdn=data_setup.unique_name(u'%d1111'))
         self.system.lab_controller = self.lc
-        self.distro_tree = data_setup.create_distro_tree()
+        self.distro_tree = data_setup.create_distro_tree(lab_controllers=[self.lc])
         self.selenium = self.get_selenium()
         self.selenium.start()
         self.login()

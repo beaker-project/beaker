@@ -123,7 +123,8 @@ class ReserveSystem(WebDriverTestCase):
         with session.begin():
             self.lc = data_setup.create_labcontroller()
             self.system = data_setup.create_system(arch=u'i386')
-            self.distro_tree = data_setup.create_distro_tree(arch=u'i386')
+            self.distro_tree = data_setup.create_distro_tree(arch=u'i386',
+                    lab_controllers=[self.lc])
             self.system.lab_controller = self.lc
             self.system.shared = True
         self.browser = self.get_browser()

@@ -117,57 +117,41 @@ class LabControllers(RPCRoot):
     def add_distro_tree(self, new_distro):
         lab_controller = identity.current.user.lab_controller
 
-        # osmajor is required
-        if 'osmajor' in new_distro:
-            try:
-                osmajor = OSMajor.by_alias(new_distro['osmajor'])
-            except NoResultFound:
-                osmajor = OSMajor.lazy_create(osmajor=new_distro['osmajor'])
-            else:
-                raise BX(_('Cannot import distro as %s: it is configured as an alias for %s' 
-                           % (new_distro['osmajor'], osmajor.osmajor)))
-        else:
-            return ''
+        variant = new_distro.get('variant')
+        arch = Arch.lazy_create(arch=new_distro['arch'])
 
-        if 'osminor' in new_distro:
-            osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=new_distro['osminor'])
+        osmajor = OSMajor.lazy_create(osmajor=new_distro['osmajor'])
+        try:
+            osmajor = OSMajor.by_alias(new_distro['osmajor'])
+        except NoResultFound:
+            pass
         else:
-            return ''
+            raise BX(_('Cannot import distro as %s: it is configured as an alias for %s' 
+                       % (new_distro['osmajor'], osmajor.osmajor)))
 
+        osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=new_distro['osminor'])
         if 'arches' in new_distro:
             for arch_name in new_distro['arches']:
-                try:
-                   arch = Arch.by_name(arch_name)
-                   if arch not in osversion.arches:
-                       osversion.arches.append(arch)
-                except NoResultFound:
-                   pass
+                osversion.add_arch(Arch.lazy_create(arch=arch_name))
+        osversion.add_arch(arch)
 
         distro = Distro.lazy_create(name=new_distro['name'], osversion=osversion)
-        arch = Arch.lazy_create(arch=new_distro['arch'])
-        variant = new_distro.get('variant')
-        distro_tree = DistroTree.lazy_create(distro=distro,
-                variant=variant, arch=arch)
-
         # Automatically tag the distro if tags exists
         if 'tags' in new_distro:
             for tag in new_distro['tags']:
                 if tag not in distro.tags:
                     distro.tags.append(tag)
-
-        if arch not in distro.osversion.arches:
-            distro.osversion.arches.append(arch)
-        distro_tree.date_created = datetime.utcfromtimestamp(float(new_distro['tree_build_time']))
         distro.date_created = datetime.utcfromtimestamp(float(new_distro['tree_build_time']))
+
+        distro_tree = DistroTree.lazy_create(distro=distro,
+                variant=variant, arch=arch)
+        distro_tree.date_created = datetime.utcfromtimestamp(float(new_distro['tree_build_time']))
 
         if 'repos' in new_distro:
             for repo in new_distro['repos']:
-                dtr = distro_tree.repo_by_id(repo['repoid'])
-                if dtr is None:
-                    dtr = DistroTreeRepo(repo_id=repo['repoid'])
-                    distro_tree.repos.append(dtr)
-                dtr.repo_type = repo['type']
-                dtr.path = repo['path']
+                dtr = DistroTreeRepo.lazy_create(distro_tree=distro_tree,
+                        repo_id=repo['repoid'], repo_type=repo['type'],
+                        path=repo['path'])
 
         if 'kernel_options' in new_distro:
             distro_tree.kernel_options = new_distro['kernel_options']
@@ -190,12 +174,9 @@ class LabControllers(RPCRoot):
                     kernel_type = KernelType.by_name(image['kernel_type'])
                 except NoResultFound:
                     continue # ignore
-                dti = distro_tree.image_by_type(image_type, kernel_type)
-                if dti is None:
-                    dti = DistroTreeImage(image_type=image_type,
-                                          kernel_type=kernel_type)
-                    distro_tree.images.append(dti)
-                dti.path = image['path']
+                dti = DistroTreeImage.lazy_create(distro_tree=distro_tree,
+                        image_type=image_type, kernel_type=kernel_type,
+                        path=image['path'])
 
         new_urls_by_scheme = dict((urlparse.urlparse(url).scheme, url)
                 for url in new_distro['urls'])
