@@ -33,6 +33,7 @@ from bkr.server.bexceptions import BeakerException, BX, \
         InsufficientSystemPermissions, StaleSystemUserException, \
         StaleCommandStatusException, NoChangeException
 from bkr.server.enum import DeclEnum
+from bkr.server.hybrid import hybrid_property, hybrid_method
 from bkr.server.helpers import make_link, make_fake_link
 from bkr.server.util import unicode_truncate, absolute_url
 from bkr.server import mail, metrics, identity
@@ -3139,6 +3140,115 @@ class Hypervisor(SystemObject):
     @classmethod
     def by_name(cls, hvisor):
         return cls.query.filter_by(hypervisor=hvisor).one()
+
+
+class SystemAccessPolicy(DeclBase, MappedObject):
+
+    """
+    A list of rules controlling who is allowed to do what to a system.
+    """
+    __tablename__ = 'system_access_policy'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, nullable=False, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id',
+            name='system_access_policy_system_id_fk'))
+    system = relationship(System,
+            backref=backref('custom_access_policy', uselist=False))
+
+    @hybrid_method
+    def grants(self, user, permission):
+        """
+        Does this policy grant the given permission to the given user?
+        """
+        return any(rule.permission == permission and
+                (rule.user == user or rule.group in user.groups or rule.everybody)
+                for rule in self.rules)
+
+    @grants.expression
+    def grants(cls, user, permission):
+        # need to avoid passing an empty list to in_
+        clauses = [SystemAccessPolicyRule.user == user, SystemAccessPolicyRule.everybody]
+        if user.groups:
+            clauses.append(SystemAccessPolicyRule.group_id.in_(
+                    [g.group_id for g in user.groups]))
+        return cls.rules.any(and_(SystemAccessPolicyRule.permission == permission,
+                or_(*clauses)))
+
+    @hybrid_method
+    def grants_everybody(self, permission):
+        """
+        Does this policy grant the given permission to all users?
+        """
+        return any(rule.permission == permission and rule.everybody
+                for rule in self.rules)
+
+    @grants_everybody.expression
+    def grants_everybody(cls, permission):
+        return cls.rules.any(and_(SystemAccessPolicyRule.permission == permission,
+                SystemAccessPolicyRule.everybody))
+
+    def add_rule(self, permission, user=None, group=None, everybody=False):
+        """
+        Pass either user, or group, or everybody=True.
+        """
+        if user is not None and group is not None:
+            raise RuntimeError('Rules are for a user or a group, not both')
+        if user is None and group is None and not everybody:
+            raise RuntimeError('Did you mean to pass everybody=True to add_rule?')
+        session.flush() # make sure self is persisted, for lazy_create
+        self.rules.append(SystemAccessPolicyRule.lazy_create(policy=self,
+                permission=permission, user=user, group=group))
+        return self.rules[-1]
+
+class SystemPermission(DeclEnum):
+
+    symbols = [
+        ('edit_policy',    u'edit_policy',    dict(label=_(u'Edit this policy'))),
+        ('edit_system',    u'edit_system',    dict(label=_(u'Edit system details'))),
+        ('loan_any',       u'loan_any',       dict(label=_(u'Loan to anyone'))),
+        ('loan_self',      u'loan_self',      dict(label=_(u'Loan to self'))),
+        ('control_system', u'control_system', dict(label=_(u'Control power'))),
+        ('reserve',        u'reserve',        dict(label=_(u'Reserve'))),
+    ]
+
+class SystemAccessPolicyRule(DeclBase, MappedObject):
+
+    """
+    A single rule in a system access policy. Policies can have one or more of these.
+
+    The existence of a row in this table means that the given permission is 
+    granted to the given user or group in this policy.
+    """
+    __tablename__ = 'system_access_policy_rule'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+
+    # It would be nice to have a constraint like:
+    #    UniqueConstraint('policy_id', 'user_id', 'group_id', 'permission')
+    # but we can't because user_id and group_id are NULLable and MySQL has
+    # non-standard behaviour for that which makes the constraint useless :-(
+
+    id = Column(Integer, nullable=False, primary_key=True)
+    policy_id = Column(Integer, ForeignKey('system_access_policy.id',
+            name='system_access_policy_rule_policy_id_fk'), nullable=False)
+    policy = relationship(SystemAccessPolicy, backref=backref('rules',
+            cascade='all, delete, delete-orphan'))
+    # Either user or group is set, to indicate who the rule applies to.
+    # If both are NULL, the rule applies to everyone.
+    user_id = Column(Integer, ForeignKey('tg_user.user_id',
+            name='system_access_policy_rule_user_id_fk'))
+    user = relationship(User)
+    group_id = Column(Integer, ForeignKey('tg_group.group_id',
+            name='system_access_policy_rule_group_id_fk'))
+    group = relationship(Group)
+    permission = Column(SystemPermission.db_type())
+
+    def __repr__(self):
+        return '<grant %s to %s>' % (self.permission,
+                self.group or self.user or 'everybody')
+
+    @hybrid_property
+    def everybody(self):
+        return (self.user == None) & (self.group == None)
 
 
 class Arch(MappedObject):

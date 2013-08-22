@@ -16,7 +16,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
-        Group, User, ActivityMixin
+        Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 import netaddr
@@ -217,6 +217,79 @@ class TestBrokenSystemDetection(unittest.TestCase):
         self.abort_recipe()
         self.assertEqual(self.system.status, SystemStatus.broken)
         self.assert_(self.system.date_modified > orig_date_modified)
+
+class SystemAccessPolicyTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+        self.system = data_setup.create_system()
+        self.system.custom_access_policy = SystemAccessPolicy()
+        self.policy = self.system.custom_access_policy
+
+    def tearDown(self):
+        session.rollback()
+
+    def test_add_rule_for_user(self):
+        perm = SystemPermission.reserve
+        user = data_setup.create_user()
+        self.policy.add_rule(perm, user=user)
+
+        self.assertEquals(len(self.policy.rules), 1)
+        self.assertEquals(self.policy.rules[0].permission, perm)
+        self.assertEquals(self.policy.rules[0].user, user)
+        self.assert_(self.policy.rules[0].group is None)
+
+        self.assertTrue(self.policy.grants(user, perm))
+        self.assert_(SystemAccessPolicy.query
+                .filter(SystemAccessPolicy.id == self.policy.id)
+                .filter(SystemAccessPolicy.grants(user, perm)).count())
+        other_user = data_setup.create_user()
+        self.assertFalse(self.policy.grants(other_user, perm))
+        self.assert_(not SystemAccessPolicy.query
+                .filter(SystemAccessPolicy.id == self.policy.id)
+                .filter(SystemAccessPolicy.grants(other_user, perm)).count())
+
+    def test_add_rule_for_group(self):
+        perm = SystemPermission.reserve
+        group = data_setup.create_group()
+        member = data_setup.create_user()
+        member.groups.append(group)
+        self.policy.add_rule(perm, group=group)
+
+        self.assertEquals(len(self.policy.rules), 1)
+        self.assertEquals(self.policy.rules[0].permission, perm)
+        self.assert_(self.policy.rules[0].user is None)
+        self.assertEquals(self.policy.rules[0].group, group)
+
+        self.assertTrue(self.policy.grants(member, perm))
+        self.assert_(SystemAccessPolicy.query
+                .filter(SystemAccessPolicy.id == self.policy.id)
+                .filter(SystemAccessPolicy.grants(member, perm)).count())
+        non_member = data_setup.create_user()
+        self.assertFalse(self.policy.grants(non_member, perm))
+        self.assert_(not SystemAccessPolicy.query
+                .filter(SystemAccessPolicy.id == self.policy.id)
+                .filter(SystemAccessPolicy.grants(non_member, perm)).count())
+
+    def test_add_rule_for_everybody(self):
+        perm = SystemPermission.reserve
+        self.policy.add_rule(perm, everybody=True)
+
+        self.assertEquals(len(self.policy.rules), 1)
+        self.assertEquals(self.policy.rules[0].permission, perm)
+        self.assert_(self.policy.rules[0].user is None
+                and self.policy.rules[0].group is None)
+        self.assertTrue(self.policy.rules[0].everybody)
+
+        self.assertTrue(self.policy.grants_everybody(perm))
+        self.assert_(SystemAccessPolicy.query
+                .filter(SystemAccessPolicy.id == self.policy.id)
+                .filter(SystemAccessPolicy.grants_everybody(perm)).count())
+        user = data_setup.create_user()
+        self.assertTrue(self.policy.grants(user, perm))
+        self.assert_(SystemAccessPolicy.query
+                .filter(SystemAccessPolicy.id == self.policy.id)
+                .filter(SystemAccessPolicy.grants(user, perm)).count())
 
 class TestJob(unittest.TestCase):
 
