@@ -184,7 +184,7 @@ class Groups(AdminPage):
             can_edit = group.can_modify_membership(identity.current.user)
 
         def show_ownership_status(member):
-            is_owner = group.has_owner(member)
+            is_owner = member.is_owner
             if can_edit:
                 if is_owner:
                     return make_link('revoke_owner?group_id=%s&id=%s' % (group.group_id, member.user_id),
@@ -197,7 +197,7 @@ class Groups(AdminPage):
                 return is_owner
 
         user_fields = [
-            ('User Members', lambda x: x.user_name)
+            ('User Members', lambda x: x.user.user_name)
         ]
 
         user_fields.append(('Group Ownership', show_ownership_status))
