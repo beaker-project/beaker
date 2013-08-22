@@ -20,7 +20,9 @@ services --enabled=chronyd,chrony-wait
 
 {% if distro.osversion.osmajor.osmajor.startswith('Fedora') %}
 {% set releasever = distro.osversion.osmajor.osmajor[6:] %}
+{% if releasever != 'rawhide' %}
 repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f{{ releasever }}&arch={{ distro_tree.arch.arch }}
+{% endif %}
 {% endif %}
 {% if distro is osmajor('Fedora17') and distro_tree is arch('armhfp') %}
 # Fedora17 Arm needs an additional repo in order to install.
@@ -101,7 +103,7 @@ chrony
 # Disable rhts-compat for Fedora15 and newer.
 {% if distro.osversion.osmajor.osmajor.startswith('Fedora') %}
 {% set releasever = distro.osversion.osmajor.osmajor[6:] %}
-{% if releasever|int >= 15 %}
+{% if releasever|int >= 15 or releasever == 'rawhide' %}
 %post --log=/dev/console
 cat >> /etc/profile.d/task-overrides-rhts.sh <<END
 export RHTS_OPTION_COMPATIBLE=

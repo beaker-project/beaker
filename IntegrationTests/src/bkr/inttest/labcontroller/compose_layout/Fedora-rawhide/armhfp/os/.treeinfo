@@ -1,0 +1,32 @@
+[general]
+name = Fedora-rawhide
+family = Fedora
+timestamp = 1378390877.19
+variant = 
+version = rawhide
+packagedir = 
+arch = armhfp
+
+[stage2]
+mainimage = LiveOS/squashfs.img
+
+[armhfp]
+platforms = 
+
+[images-armhfp]
+kernel = images/pxeboot/vmlinuz
+uinitrd = images/pxeboot/uInitrd
+upgrade = images/pxeboot/upgrade.img
+uimage = images/pxeboot/uImage
+initrd = images/pxeboot/initrd.img
+uupgrade = images/pxeboot/uUpgrade
+
+[checksums]
+images/pxeboot/initrd.img = sha256:ec749125e7b5da854c6dd3ba37cbcbf0c2e0ea51728e99d3d8872f1c78829139
+images/pxeboot/uImage = sha256:d8bcc2e8cb63102af847d9142ad156146b9bd3f169d34058d418607ac283a4f5
+images/pxeboot/uUpgrade = sha256:ccee240babba22340fdfccb3f8ac264f0d32b348455cda667efa7d316bf1c449
+images/pxeboot/vmlinuz = sha256:6a4291f9df5c65eb8f258ba2ba171411adb5c0be1585d504dfd573f4c4a658da
+images/pxeboot/upgrade.img = sha256:e2d72447fb75f04dc2b89413765b3056e0ca4a54f573a1e53a22ceb5f5ef45f9
+images/pxeboot/uInitrd = sha256:739a994261b09024d1e82f91111528cc18d9bd72c5a5fa9fbedbc7dc66e2b074
+repodata/repomd.xml = sha256:1a658099857aa9c22b6a31d14975dae32df5c7d257da6cfa99da0e544f116928
+
