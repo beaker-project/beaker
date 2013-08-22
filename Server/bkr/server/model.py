@@ -1483,6 +1483,8 @@ class MappedObject(object):
             # we can handle simple RelationshipProperties too...
             assert len(prop.local_side) == 1
             assert len(prop.remote_side) == 1
+            if value is None:
+                return prop.local_side[0], None
             assert has_identity(value), 'Value %r must be persisted' % value
             attr_name = prop.mapper.get_property_by_column(prop.remote_side[0]).key
             return prop.local_side[0], getattr(value, attr_name)
