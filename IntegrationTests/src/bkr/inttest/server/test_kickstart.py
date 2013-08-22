@@ -258,6 +258,17 @@ EOF
             DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
         ]
 
+        cls.frawhide = data_setup.create_distro(name=u'Fedora-rawhide',
+                osmajor=u'Fedorarawhide', osminor=u'0')
+        cls.frawhide_x86_64 = data_setup.create_distro_tree(
+                distro=cls.frawhide, variant=u'Fedora', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/development/rawhide/x86_64/os/',
+                      u'nfs://lab.test-kickstart.invalid/distros/development/rawhide/x86_64/os/'])
+        cls.frawhide_x86_64.repos[:] = [
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+        ]
+
         session.flush()
 
     def setUp(self):
@@ -882,6 +893,26 @@ EOF
         self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/Fedora18/'''
                      in recipe.rendered_kickstart.kickstart.splitlines(),
                      recipe.rendered_kickstart.kickstart)
+
+    def test_fedora_rawhide_defaults(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('Fedorarawhide-scheduler-defaults', recipe.id,
+                         recipe.rendered_kickstart.kickstart)
 
     def test_job_group_password(self):
         group = data_setup.create_group(group_name='group1', root_password='blappy7')
