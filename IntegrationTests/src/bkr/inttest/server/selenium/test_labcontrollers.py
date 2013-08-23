@@ -127,7 +127,8 @@ class AddDistroTreeXmlRpcTest(XmlRpcTestCase):
             images=[
                 dict(type='kernel', path='images/pxeboot/vmlinuz'),
                 dict(type='initrd', path='images/pxeboot/initrd.img'),
-            ])
+            ],
+            tags=['RELEASED'])
 
     def setUp(self):
         with session.begin():

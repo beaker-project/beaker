@@ -139,8 +139,7 @@ class LabControllers(RPCRoot):
         # Automatically tag the distro if tags exists
         if 'tags' in new_distro:
             for tag in new_distro['tags']:
-                if tag not in distro.tags:
-                    distro.tags.append(tag)
+                distro.add_tag(tag)
         distro.date_created = datetime.utcfromtimestamp(float(new_distro['tree_build_time']))
 
         distro_tree = DistroTree.lazy_create(distro=distro,
