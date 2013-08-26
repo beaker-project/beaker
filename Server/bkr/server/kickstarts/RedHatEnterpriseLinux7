@@ -5,9 +5,10 @@
 {% endfor  %}
 {% else %}
 {% snippet 'install_method' %}
-
 {% if manual is undefined %}
-auth --useshadow --enablemd5
+{% if auth %}
+auth {{ auth }}
+{% endif %}
 # System bootloader configuration
 bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}{% if distro_tree is arch('ppc', 'ppc64') %} --leavebootorder{% endif %}
 

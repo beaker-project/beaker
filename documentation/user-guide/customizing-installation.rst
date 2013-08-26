@@ -43,6 +43,11 @@ Kickstart metadata
 The following variables are supported. In many cases, these variables 
 correspond to the similarly-named kickstart option.
 
+``auth=<authentication configuration options>``
+    Authentication configuration to use. For example,
+    ``auth='--enableshadow --enablemd5'``. See
+    :manpage:`authconfig(8)` to learn more.
+
 ``ethdevices=<module>[,<module>...]``
     Comma-separated list of network modules to be loaded during installation.
 

@@ -1,7 +1,6 @@
 nfs --server lab.test-kickstart.invalid --dir /distros/development/rawhide/x86_64/os/
 #url --url=nfs://lab.test-kickstart.invalid/distros/development/rawhide/x86_64/os/
 
-auth --useshadow --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
 # Use text mode install

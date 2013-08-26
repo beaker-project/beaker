@@ -1,6 +1,4 @@
 url --url=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/
-
-auth --useshadow --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
 # Use text mode install
