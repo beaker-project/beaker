@@ -23,7 +23,7 @@ class OSVersionsTest(WebDriverTestCase):
     def test_sort_grid_doesnt_blow_up(self):
         b = self.browser
         b.get(get_server_base() + 'osversions/')
-        b.find_element_by_xpath("//a[@class='head_list' and normalize-space(text())='Alias']").click()
+        b.find_element_by_xpath("//th/a[normalize-space(text())='Alias']").click()
         b.find_element_by_xpath("//title[text()='OS Versions']")
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=860870

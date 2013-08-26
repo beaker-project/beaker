@@ -26,7 +26,7 @@ class LabControllerViewTest(WebDriverTestCase):
 
     def _add_lc(self, b, lc_name, lc_email, user_name,):
         b.get(get_server_base() + 'labcontrollers')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
         b.find_element_by_name('fqdn').send_keys(lc_name)
         b.find_element_by_name('email').send_keys(lc_email)
         b.find_element_by_name('lusername').send_keys(user_name)

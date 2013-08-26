@@ -464,15 +464,14 @@ class Groups(AdminPage):
             flash( _(u"User %s is already in Group %s" %(user.user_name, group.group_name)))
             redirect("./edit?group_id=%s" % kw['group_id'])
 
-    @expose(template="bkr.server.templates.grid_add")
+    @expose(template="bkr.server.templates.grid")
     @paginate('list', default_order='group_name', limit=20)
     def index(self, *args, **kw):
         groups = self.process_search(*args, **kw)
         template_data = self.groups(groups, *args, **kw)
-        template_data['addable'] = True
         return template_data
 
-    @expose(template="bkr.server.templates.grid_add")
+    @expose(template="bkr.server.templates.grid")
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='group_name', limit=20)
     def mine(self,*args,**kw):
@@ -480,7 +479,6 @@ class Groups(AdminPage):
         groups = groups.filter(Group.users.contains(identity.current.user))
         template_data = self.groups(groups, *args, **kw)
         template_data['title'] = 'My Groups'
-        template_data['addable'] = True
         return template_data
 
     def groups(self, groups=None, *args,**kw):
@@ -498,7 +496,7 @@ class Groups(AdminPage):
                 if x.can_edit(identity.current.user):
                     return self.delete_link.display(dict(group_id=x.group_id),
                                              action=url('remove'),
-                                             action_text='Remove (-)')
+                                             action_text='Remove')
                 else:
                     return ''
             except AttributeError:
@@ -511,7 +509,8 @@ class Groups(AdminPage):
         remove_link = ('', get_remove_link)
 
         grid_fields =  [group_name, display_name, systems, remove_link]
-        grid = myPaginateDataGrid(fields=grid_fields)
+        grid = myPaginateDataGrid(fields=grid_fields,
+                add_action='./new' if not identity.current.anonymous else None)
         return_dict = dict(title=u"Groups",
                            grid=grid,
                            object_count = groups.count(),

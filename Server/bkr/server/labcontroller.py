@@ -466,7 +466,7 @@ class LabControllers(RPCRoot):
             return a
 
     @identity.require(identity.in_group("admin"))
-    @expose(template="bkr.server.templates.grid_add")
+    @expose(template="bkr.server.templates.grid")
     @paginate('list', limit=None)
     def index(self):
         labcontrollers = session.query(LabController)
@@ -476,7 +476,8 @@ class LabControllers(RPCRoot):
                                   ('Disabled', lambda x: x.disabled),
                                   ('Removed', lambda x: x.removed),
                                   (' ', lambda x: self.make_lc_remove_link(x)),
-                              ])
+                              ],
+                              add_action='./new')
         return dict(title="Lab Controllers", 
                     grid = labcontrollers_grid,
                     search_bar = None,

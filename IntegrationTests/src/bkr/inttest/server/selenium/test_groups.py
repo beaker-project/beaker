@@ -30,8 +30,8 @@ class TestGroups(WebDriverTestCase):
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
         b.find_element_by_id('Search').submit()
-        delete_and_confirm(b, "//td[preceding-sibling::td/a[normalize-space(text())='%s']]/form" % \
-            self.group.group_name, delete_text='Remove (-)')
+        delete_and_confirm(b, "//tr[td/a[normalize-space(text())='%s']]" %
+            self.group.group_name, delete_text='Remove')
         self.assertEqual(
             b.find_element_by_class_name('flash').text,
             '%s deleted' % self.group.display_name)
@@ -47,7 +47,7 @@ class TestGroups(WebDriverTestCase):
         login(b, user=user.user_name, password='password')
         b.get(get_server_base() + 'groups/mine')
         delete_and_confirm(b, "//td[preceding-sibling::td/a[normalize-space(text())='%s']]/form" % \
-                               group.group_name, delete_text='Remove (-)')
+                               group.group_name, delete_text='Remove')
 
         flash_text = b.find_element_by_class_name('flash').text
         self.assert_('Cannot delete a group which has associated jobs' in flash_text, flash_text)
@@ -56,7 +56,7 @@ class TestGroups(WebDriverTestCase):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
         b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_xpath('//h2[text()="My Groups"]')
+        b.find_element_by_xpath('//h1[text()="My Groups"]')
         self.assert_(not is_text_present(b, self.rand_group.group_name))
         b.find_element_by_link_text('System count: 1').click()
         self.assert_(is_text_present(b, 'Systems in Group %s' % self.group.group_name))
@@ -76,7 +76,7 @@ class TestGroups(WebDriverTestCase):
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
         b.find_element_by_xpath("//input[@value='Search']").submit()
-        self.assert_('Remove (-)' in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
+        self.assert_('Remove' in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
                                                              % self.group.group_name).text)
         logout(b)
 
@@ -86,10 +86,10 @@ class TestGroups(WebDriverTestCase):
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
         b.find_element_by_xpath("//input[@value='Search']").submit()
-        self.assert_('Remove (-)' not in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
+        self.assert_('Remove' not in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
                                                                  % self.group.group_name).text)
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(group.group_name)
         b.find_element_by_xpath("//input[@value='Search']").submit()
-        self.assert_('Remove (-)' in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
+        self.assert_('Remove' in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
                                                                  % group.group_name).text)

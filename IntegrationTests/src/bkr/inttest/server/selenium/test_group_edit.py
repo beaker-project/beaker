@@ -153,7 +153,7 @@ class TestGroupsWD(WebDriverTestCase):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
         b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
         b.find_element_by_xpath('//input[@id="Group_display_name"]'). \
             send_keys('Group FBZ')
         b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
@@ -186,7 +186,7 @@ class TestGroupsWD(WebDriverTestCase):
         group_name = data_setup.unique_name('group%s')
         login(b, user=self.user.user_name, password='password')
         b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
         b.find_element_by_xpath('//input[@id="Group_display_name"]'). \
             send_keys(group_name)
         b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
@@ -234,7 +234,7 @@ class TestGroupsWD(WebDriverTestCase):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
         b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
         b.find_element_by_xpath('//input[@id="Group_display_name"]'). \
             send_keys('Group FBZ 1')
         b.find_element_by_xpath('//input[@id="Group_group_name"]'). \
@@ -260,7 +260,7 @@ class TestGroupsWD(WebDriverTestCase):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
         b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
         b.find_element_by_xpath('//input[@id="Group_display_name"]').send_keys(display_name)
         b.find_element_by_xpath('//input[@id="Group_group_name"]').send_keys(group_name)
         b.find_element_by_id('Group').submit()
@@ -531,7 +531,7 @@ class TestGroupsWD(WebDriverTestCase):
 
         # for new group
         b.get(get_server_base() + 'groups/mine')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
         b.find_element_by_xpath('//input[@id="Group_display_name"]'). \
             send_keys('A really long group display name'*20)
         b.find_element_by_xpath('//input[@id="Group_group_name"]'). \

@@ -210,19 +210,10 @@ class DeleteLinkWidget(Widget):
     javascript = [LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js'),
         LocalJSLink('bkr', '/static/javascript/util.js')]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
-
-    def update_params(self, d):
-        if not d.get('action_text', None):
-            d['action_text'] = 'Delete ( - )'
-        # 'class' cannot be interpolated in our templates
-        # so we use 'class_' before changing it back
-        if d.get('attrs', None):
-            class_ = d['attrs'].pop('class_', None)
-            if class_:
-                d['attrs']['class'] = class_
-        else:
-            d['attrs']= {'class' : 'link'}
-        super(DeleteLinkWidget, self).update_params(d)
+    params = ['msg', 'action_text', 'show_icon']
+    msg = None
+    action_text = _(u'Delete')
+    show_icon = True
 
 class DoAndConfirmForm(Form):
     """Generic confirmation dialogue
@@ -264,11 +255,12 @@ class DeleteLinkWidgetForm(Form, DeleteLinkWidget):
         <span py:for="field in hidden_fields"
           py:replace="field.display()"/>
             <a href="#" onclick="javascript:job_delete(this.parentNode);return false;" 
-               py:attrs='attrs'>${action_text}</a>
+               class="btn">
+              <i class="icon-remove" py:if="show_icon"/> ${action_text}
+            </a>
       </form>
     </span>
     """
-    params = ['attrs', 'msg', 'action_text']
 
     def update_params(self, d):
         super(DeleteLinkWidgetForm, self).update_params(d)
@@ -283,8 +275,10 @@ class DeleteLinkWidgetAJAX(DeleteLinkWidget):
 
     template="""<a xmlns:py='http://purl.org/kid/ns#' href="#"
         onclick="javascript:do_and_confirm_ajax('${action}', ${data}, ${callback},
-        '${msg}', '${action_type}');return false" py:attrs='attrs'>${action_text}</a>"""
-    params = ['data', 'callback', 'action_type', 'msg', 'action_text']
+        '${msg}', '${action_type}');return false">
+            <i class="icon-remove" py:if="show_icon"/> ${action_text}
+        </a>"""
+    params = ['data', 'callback', 'action_type']
 
     def display(self, value=None, **params):
         missing = [(i, True) for i in ['action', 'data', 'callback']
@@ -293,9 +287,6 @@ class DeleteLinkWidgetAJAX(DeleteLinkWidget):
             raise ValueError('Missing arguments to %s: %s' %
                 (self.__class__.__name__, ','.join(dict(missing).keys())))
         params['action_type'] = params.get('action_type', 'delete')
-        params['msg'] = params.get('msg', None)
-        if not params.get('action_text', None):
-            params['action_text'] = 'Delete'
         params['data'] = jsonify.encode(params['data'])
         return super(DeleteLinkWidgetAJAX, self).display(value, **params)
 
@@ -536,6 +527,7 @@ class MatrixDataGrid(DataGrid):
 
 class myPaginateDataGrid(PaginateDataGrid):
     template = "bkr.server.templates.my_paginate_datagrid"
+    params = ['add_action']
 
 class LabControllerDataGrid(myPaginateDataGrid):
     javascript = [LocalJSLink('bkr','/static/javascript/lab_controller_remove.js'),
@@ -1896,7 +1888,7 @@ class TaskActionWidget(RPC):
 
     def update_params(self, d):
         super(TaskActionWidget, self).update_params(d)
-        d['task_details']['onclick'] = "TaskDisable('%s',%s, %s)" % (
+        d['task_details']['onclick'] = "TaskDisable('%s',%s, %s); return false;" % (
             d.get('action'),
             jsonify.encode({'t_id': d['task_details'].get('t_id')}),
             jsonify.encode(self.get_options(d)),
@@ -1920,10 +1912,9 @@ class JobActionWidget(CompoundWidget):
 
         job_data = {'t_id' : params['job_details'].get('t_id')}
         params['job_delete_attrs'] = {'data' : job_data,
-                                      'action_text' : 'Delete',
                                       'action' : params['delete_action'],
                                       'callback' : 'job_delete_success',
-                                      'attrs' : {'class' : 'list job-action'} }
+                                      'show_icon': False}
         return super(JobActionWidget, self).display(task, **params)
 
 
@@ -1937,8 +1928,6 @@ class JobPageActionWidget(JobActionWidget):
         super(JobPageActionWidget, self).update_params(d)
         value = {'t_id' : d['job_details'].get('t_id') }
         d['job_delete_attrs'] = { 'value' : value,
-                                  'action_text' : 'Delete',
-                                  'attrs' : { 'class' : 'list' },
                                   'action' : d['job_delete_attrs'].get('action') }
 
 

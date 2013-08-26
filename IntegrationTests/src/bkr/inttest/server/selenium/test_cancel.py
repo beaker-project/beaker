@@ -41,7 +41,7 @@ class Cancel(WebDriverTestCase):
             self.job.group = group
         login(b, user.user_name, 'password')
         b.get(get_server_base() + 'jobs/%s' % self.job.id)
-        b.find_element_by_xpath('//div[@class="job-action-container"]//a[text()="Cancel"]').click()
+        b.find_element_by_xpath('//div[contains(@class, "job-action-container")]//a[text()="Cancel"]').click()
         b.find_element_by_xpath("//input[@value='Yes']").click()
         self.assertTrue(is_text_present(b, "Successfully cancelled job %s"
             % self.job.id))
@@ -74,7 +74,7 @@ class Cancel(WebDriverTestCase):
         # check we cannot Cancel
         action_text = b.find_element_by_xpath("//td[preceding-sibling::td/"
             "a[normalize-space(text())='%s']]/"
-            "div[@class='job-action-container']" % self.job.t_id).text
+            "div[contains(@class, 'job-action-container')]" % self.job.t_id).text
         self.assertTrue('Cancel' not in action_text)
 
         # Add as submitting user and refresh, try to cancel.
@@ -92,7 +92,7 @@ class Cancel(WebDriverTestCase):
         b = self.browser
         login(b, self.user.user_name, self.password)
         b.get(get_server_base() + 'jobs/%s' % self.job.id)
-        b.find_element_by_xpath('//div[@class="job-action-container"]//a[text()="Cancel"]').click()
+        b.find_element_by_xpath('//div[contains(@class, "job-action-container")]//a[text()="Cancel"]').click()
         b.find_element_by_xpath("//input[@value='Yes']").click()
         self.assertTrue(is_text_present(b, "Successfully cancelled job %s"
             % self.job.id))

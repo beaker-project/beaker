@@ -28,9 +28,9 @@ class DistroTreeViewTest(WebDriverTestCase):
     def test_sort_grid_doesnt_blow_up(self):
         b = self.browser
         b.get(get_server_base() + 'distrotrees/')
-        b.find_element_by_xpath("//a[@class='head_list' and normalize-space(text())='Arch']").click()
-        b.find_element_by_xpath("//a[@class='head_list' and normalize-space(text())='Distro']").click()
-        b.find_element_by_xpath("//a[@class='head_list' and normalize-space(text())='OS Minor Version']").click()
+        b.find_element_by_xpath("//th/a[normalize-space(text())='Arch']").click()
+        b.find_element_by_xpath("//th/a[normalize-space(text())='Distro']").click()
+        b.find_element_by_xpath("//th/a[normalize-space(text())='OS Minor Version']").click()
         b.find_element_by_xpath('//title[text()="Distro Trees"]')
 
     def test_install_options(self):

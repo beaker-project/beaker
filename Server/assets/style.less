@@ -39,6 +39,37 @@ td form { margin: 0; }
     vertical-align: middle;
 }
 
+// To put stuff inline beside the pagination doodads
+// Use <div class="pagination-beside"><span>Extra stuff</span></div>
+.pagination-beside {
+    display: inline-block;
+    span {
+        // matches .pagination ul li a
+        float: left;
+        padding: 4px 12px;
+    }
+}
+
+// buttons in grid cells
+.table td .btn {
+    white-space: nowrap;
+    padding: @paddingSmall;
+}
+
+// progress bars in grid cells
+.table td .progress {
+    min-width: 100px;
+    height: 12px;
+    margin-bottom: 0;
+}
+
+// colour-coded status and result in jobs/recipes grid
+.statusCompleted, .resultPass { color: @green; }
+.statusAborted, .resultFail { color: @red; }
+.statusCancelled, .resultWarn { color: @orange; }
+.statusRunning { color: @blueDark; }
+.statusDirty { font-style: italic; }
+
 // elements from master.kid
 .container {
     padding-top: 20px;

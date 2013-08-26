@@ -56,8 +56,8 @@ class Search(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'distros/')
         # See if they blow up (They shouldn't)
-        b.find_element_by_xpath("//a[@class='head_list' and normalize-space(text())='OS Major Version']").click()
-        b.find_element_by_xpath("//a[@class='head_list' and normalize-space(text())='OS Minor Version']").click()
+        b.find_element_by_xpath("//th/a[normalize-space(text())='OS Major Version']").click()
+        b.find_element_by_xpath("//th/a[normalize-space(text())='OS Minor Version']").click()
         b.find_element_by_xpath("//title[text()='Distros']")
 
     def test_correct_items_count(self):

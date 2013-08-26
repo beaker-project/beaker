@@ -342,7 +342,7 @@ class Root(RPCRoot):
         recipeset.activity.append(activity)
         return {'success' : True } 
 
-    @expose(template='bkr.server.templates.grid_add')
+    @expose(template='bkr.server.templates.grid')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
@@ -560,7 +560,8 @@ class Root(RPCRoot):
         if 'direct_columns' in kw: #Let's add our direct columns here
             for index,col in kw['direct_columns']:
                 my_fields.insert(index - 1, col)
-        display_grid = myPaginateDataGrid(fields=my_fields)
+        display_grid = myPaginateDataGrid(fields=my_fields,
+                add_action='/new' if not identity.current.anonymous else None)
         col_data = Utility.result_columns(columns)
         return dict(title=title,
                     grid = display_grid,
