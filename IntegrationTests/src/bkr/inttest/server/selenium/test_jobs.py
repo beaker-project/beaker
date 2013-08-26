@@ -28,7 +28,6 @@ import pkg_resources
 from turbogears.database import session
 from sqlalchemy import and_
 
-from selenium.webdriver.support.ui import Select, WebDriverWait
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present, logout
 from bkr.inttest import data_setup, with_transaction, get_server_base
@@ -42,97 +41,6 @@ class TestViewJob(WebDriverTestCase):
 
     def tearDown(self):
         self.browser.quit()
-
-    def test_change_product(self):
-        with session.begin():
-            the_group = data_setup.create_group()
-            user_one = data_setup.create_user(password='password')
-            user_two = data_setup.create_user(password='password')
-            user_three = data_setup.create_user(password='password')
-            user_one.groups.append(the_group)
-            user_two.groups.append(the_group)
-            the_job  = data_setup.create_job(owner=user_one)
-            p1 = Product(u'first_product')
-            p2 = Product(u'second_product')
-            the_job.product = p1
-            the_job.retention_tag = RetentionTag.query.filter(
-                RetentionTag.needs_product==True).first()
-
-        #With Owner
-        b = self.browser
-        login(b, user_one.user_name, 'password')
-        b.get(get_server_base() + 'jobs/%s' % the_job.id)
-        Select(b.find_element_by_id("job_product")).select_by_visible_text(p2.name)
-        WebDriverWait(b, 10).until(lambda b: is_text_present(b, "Product has been updated"))
-
-        #With group member (non group job)
-        logout(b)
-        login(b, user_two.user_name, 'password')
-        b.get(get_server_base() + 'jobs/%s' % the_job.id)
-        b.find_element_by_xpath("//select[@id='job_product' and @disabled]")
-
-        # With group job and group member
-        with session.begin():
-            the_job.group = the_group
-        logout(b)
-        login(b, user_two.user_name, 'password')
-        b.get(get_server_base() + 'jobs/%s' % the_job.id)
-        Select(b.find_element_by_id("job_product")).select_by_visible_text(p1.name)
-        WebDriverWait(b, 10).until(lambda b: is_text_present(b, "Product has been updated"))
-
-        # With Non group member
-        logout(b)
-        login(b, user_three.user_name, 'password')
-        b.get(get_server_base() + 'jobs/%s' % the_job.id)
-        b.find_element_by_xpath("//select[@id='job_product' and @disabled]")
-
-    def test_change_retention_tag(self):
-        with session.begin():
-            the_group = data_setup.create_group()
-            user_one = data_setup.create_user(password='password')
-            user_two = data_setup.create_user(password='password')
-            user_three = data_setup.create_user(password='password')
-            user_one.groups.append(the_group)
-            user_two.groups.append(the_group)
-            the_job  = data_setup.create_job(owner=user_one)
-
-        b = self.browser
-        login(b, user_one.user_name, 'password')
-        #With Owner
-        b.get(get_server_base() + 'jobs/%s' % the_job.id)
-        current_tag = b.find_element_by_xpath("//select[@id='job_retentiontag']/option[@selected='']").text
-        with session.begin():
-            new_tag = RetentionTag.query.filter(and_(RetentionTag.tag != current_tag,
-                RetentionTag.needs_product==False)).first()
-        Select(b.find_element_by_id("job_retentiontag")).select_by_visible_text(new_tag.tag)
-        WebDriverWait(b, 10).until(lambda b: is_text_present(b, "Tag has been updated"))
-
-        #With group member (non group job)
-        logout(b)
-        login(b, user_two.user_name, 'password')
-        b.get(get_server_base() + 'jobs/%s' % the_job.id)
-        b.find_element_by_xpath("//select[@id='job_retentiontag' and @disabled]")
-
-        #With group member (group job)
-        with session.begin():
-            the_job.group = the_group
-        logout(b)
-        login(b, user_two.user_name, 'password')
-        b.get(get_server_base() + 'jobs/%s' % the_job.id)
-        current_tag = b.find_element_by_xpath("//select[@id='job_retentiontag']/option[@selected='']").text
-        with session.begin():
-            new_tag = RetentionTag.query.filter(and_(RetentionTag.tag != current_tag,
-                RetentionTag.needs_product==False)).first()
-        Select(b.find_element_by_id("job_retentiontag")).select_by_visible_text(new_tag.tag)
-        WebDriverWait(b, 10).until(lambda b: is_text_present(b, "Tag has been updated"))
-        with session.begin():
-            the_job.group = None
-
-        #With non group member
-        logout(b)
-        login(b, user_three.user_name, 'password')
-        b.get(get_server_base() + 'jobs/%s' % the_job.id)
-        b.find_element_by_xpath("//select[@id='job_retentiontag' and @disabled]")
 
     def test_group_job(self):
         with session.begin():
@@ -815,6 +723,96 @@ class NewJobTest(SeleniumTestCase):
         self.assert_(flash.startswith('Success!'), flash)
         self.assertEqual(sel.get_title(), 'My Jobs')
 
+
+class JobAttributeChange(SeleniumTestCase):
+
+    @with_transaction
+    def setUp(self):
+        self.password = 'password'
+        self.the_group = data_setup.create_group()
+
+        self.user_one = data_setup.create_user(password=self.password)
+        self.user_two = data_setup.create_user(password=self.password)
+        self.user_three = data_setup.create_user(password=self.password)
+
+        self.user_one.groups.append(self.the_group)
+        self.user_two.groups.append(self.the_group)
+        self.the_job  = data_setup.create_job(owner=self.user_one)
+
+        self.selenium = self.get_selenium()
+        self.selenium.start()
+
+    def tearDown(self):
+        self.selenium.stop()
+
+    def test_change_product(self):
+        with session.begin():
+            p1 = Product(u'first_product')
+            p2 = Product(u'second_product')
+
+            self.the_job.product = p1
+            self.the_job.retention_tag = RetentionTag.query.filter(
+                RetentionTag.needs_product==True).first()
+
+        #With Owner
+        sel = self.selenium
+        self.login(user=self.user_one.user_name, password=self.password)
+        sel.open('jobs/%s' % self.the_job.id)
+        sel.wait_for_page_to_load('30000')
+        sel.select("job_product", "label=%s" % p2.name )
+        self.wait_and_try(lambda: self.assert_(sel.is_text_present("Product has been updated")), wait_time=10)
+
+        #With Group member
+        self.logout()
+        self.login(user=self.user_two.user_name, password=self.password)
+        sel.open('jobs/%s' % self.the_job.id)
+        sel.wait_for_page_to_load('30000')
+        sel.select("job_product", "label=%s" % p1.name )
+        self.wait_and_try(lambda: self.assert_(sel.is_text_present("Product has been updated")), wait_time=10)
+
+        # With Non group member
+        self.logout()
+        self.login(user=self.user_three.user_name, password=self.password)
+        sel.open('jobs/%s' % self.the_job.id)
+        sel.wait_for_page_to_load('30000')
+        disabled_product = sel.get_text("//select[@id='job_product' and @disabled]")
+        self.assert_(disabled_product is not None)
+
+
+    def test_change_retention_tag(self):
+        sel = self.selenium
+
+        #With Owner
+        self.login(user=self.user_one.user_name, password=self.password)
+        sel.open('jobs/%s' % self.the_job.id)
+        sel.wait_for_page_to_load('30000')
+        current_tag = sel.get_text("//select[@id='job_retentiontag']/option[@selected='']")
+        with session.begin():
+            new_tag = RetentionTag.query.filter(and_(RetentionTag.tag != current_tag,
+                RetentionTag.needs_product==False)).first()
+        sel.select("job_retentiontag", "label=%s" % new_tag.tag)
+        self.wait_and_try(lambda: self.assert_(sel.is_text_present("Tag has been updated")), wait_time=10)
+
+        #With Group member
+        self.logout()
+        self.login(user=self.user_two.user_name, password=self.password)
+        sel.open('jobs/%s' % self.the_job.id)
+        sel.wait_for_page_to_load('30000')
+        current_tag = sel.get_text("//select[@id='job_retentiontag']/option[@selected='']")
+        with session.begin():
+            new_tag = RetentionTag.query.filter(and_(RetentionTag.tag != current_tag,
+                RetentionTag.needs_product==False)).first()
+        sel.select("job_retentiontag", "label=%s" % new_tag.tag)
+        self.wait_and_try(lambda: self.assert_(sel.is_text_present("Tag has been updated")), wait_time=10)
+
+        #With Non Group member
+        self.logout()
+        self.login(user=self.user_three.user_name, password=self.password)
+        sel.open('jobs/%s' % self.the_job.id)
+        sel.wait_for_page_to_load('30000')
+        disabled_tag = sel.get_text("//select[@id='job_retentiontag' and @disabled]")
+        self.assert_(disabled_tag is not None)
+ 
 
 class CloneJobTest(SeleniumTestCase):
 
