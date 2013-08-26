@@ -1,5 +1,5 @@
 
-import unittest
+import unittest2 as unittest
 import urlparse
 import tempfile
 import re
@@ -307,6 +307,27 @@ EOF
         compare_expected('RedHatEnterpriseLinux3-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_rhel3_auth(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="auth='--enableshadow --enablemd5'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL3-U9" />
+                            <distro_variant op="=" value="AS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('\nauthconfig --enableshadow --enablemd5\n',
+                      recipe.rendered_kickstart.kickstart)
+
     def test_rhel4_defaults(self):
         recipe = self.provision_recipe('''
             <job>
@@ -328,6 +349,27 @@ EOF
         compare_expected('RedHatEnterpriseLinux4-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_rhel4_auth(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="auth='--enableshadow --enablemd5'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL4-U9" />
+                            <distro_variant op="=" value="AS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('\nauthconfig --enableshadow --enablemd5\n',
+                     recipe.rendered_kickstart.kickstart)
+
     def test_rhel5server_defaults(self):
         recipe = self.provision_recipe('''
             <job>
@@ -347,6 +389,27 @@ EOF
             ''', self.system)
         compare_expected('RedHatEnterpriseLinuxServer5-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
+
+    def test_rhel5server_auth(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="auth='--useshadow --enablemd5'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL5-Server-U8" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        self.assertIn('\nauth --useshadow --enablemd5\n',
+                      recipe.rendered_kickstart.kickstart)
 
     def test_rhel5server_repos(self):
         recipe = self.provision_recipe('''
@@ -400,6 +463,27 @@ EOF
             ''', self.system)
         compare_expected('RedHatEnterpriseLinux6-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
+
+    def test_rhel6_auth(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="auth='--useshadow --enablemd5'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('\nauth --useshadow --enablemd5\n',
+                      recipe.rendered_kickstart.kickstart)
 
     def test_rhel6_http(self):
         recipe = self.provision_recipe('''
@@ -628,6 +712,27 @@ EOF
         compare_expected('RedHatEnterpriseLinux7-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_rhel7_auth(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="auth='--useshadow --enablemd5'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('\nauth --useshadow --enablemd5\n',
+                      recipe.rendered_kickstart.kickstart)
+
     def test_rhel7_manual(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                                           fqdn='test-manual-1.test-kickstart.invalid',
@@ -731,6 +836,26 @@ EOF
             ''', self.system)
         compare_expected('Fedora18-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
+
+    def test_fedora18_auth(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="auth='--useshadow --enablemd5'">
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('\nauth --useshadow --enablemd5\n',
+                     recipe.rendered_kickstart.kickstart)
 
     def test_fedora_repos(self):
         recipe = self.provision_recipe('''

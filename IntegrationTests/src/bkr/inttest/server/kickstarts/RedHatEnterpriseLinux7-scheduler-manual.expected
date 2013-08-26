@@ -1,7 +1,6 @@
 url --url=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/
 
 
-
 %pre --log=/dev/console
 set -x
 # Check in with Beaker Server

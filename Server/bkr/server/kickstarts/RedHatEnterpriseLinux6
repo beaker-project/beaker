@@ -12,6 +12,9 @@ key --skip
 ignoredisk --interactive
 {% endif %}
 {% if manual is undefined %}
+{% if auth %}
+auth {{ auth }}
+{% endif %}
 # System bootloader configuration
 bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}{% if recipe.systemtype == 'Virtual' %}  --append="console=ttyS0,115200 console=ttyS1,115200"{% endif %}
 
