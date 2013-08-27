@@ -4937,8 +4937,11 @@ class Job(TaskBase):
         This fills the gap between the new permissions system with group
         jobs and the old permission model without it.
 
-        XXX Remove this the next release AFTER 0.13
+        XXX Using a config option to enable this deprecated function.
+        This code will be removed. Eventually. See BZ#1000861
         """
+        if not get('beaker.deprecated_job_group_permissions.on', True):
+            return False
         if not user:
             return False
         return bool(set(user.groups).intersection(set(self.owner.groups)))

@@ -26,6 +26,8 @@ import time
 import threading
 import subprocess
 import shutil
+import tempfile
+import re
 from StringIO import StringIO
 import logging, logging.config
 import signal
@@ -248,6 +250,34 @@ olcAccess: to * by * read
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 processes = []
+
+def edit_file(file, old_text, new_text):
+    with open(file, 'r') as f:
+        contents = f.read()
+    contents = re.sub(old_text, new_text, contents)
+    tmp_config = tempfile.NamedTemporaryFile()
+    tmp_config.write(contents)
+    tmp_config.flush()
+    return tmp_config
+
+def start_process(name, env=None):
+    found = False
+    for p in processes:
+        if name == p.name:
+            p.env = env
+            found = True
+            p.start()
+    if found is False:
+        raise ValueError('%s is not a valid process name')
+
+def stop_process(name):
+    found = False
+    for p in processes:
+        if name == p.name:
+            found = True
+            p.stop()
+    if found is False:
+        raise ValueError('%s is not a valid process name')
 
 def setup_package():
     log.info('Loading test configuration from %s', CONFIG_FILE)
