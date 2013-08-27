@@ -3593,17 +3593,6 @@ class Install(MappedObject):
         self.name = name
 
 
-def _create_tag(tag):
-    """A creator function."""
-    try:
-        tag = DistroTag.by_tag(tag)
-    except InvalidRequestError:
-        tag = DistroTag(tag=tag)
-        session.add(tag)
-        session.flush([tag])
-    return tag
-
-
 class Distro(MappedObject):
 
     @classmethod
@@ -3634,7 +3623,18 @@ class Distro(MappedObject):
         for tree in self.trees:
             tree.expire(service=service)
 
-    tags = association_proxy('_tags', 'tag', creator=_create_tag)
+    tags = association_proxy('_tags', 'tag',
+            creator=lambda tag: DistroTag.lazy_create(tag=tag))
+
+    def add_tag(self, tag):
+        """
+        Adds the given tag to this distro if it's not already present.
+        """
+        tagobj = DistroTag.lazy_create(tag=tag)
+        session.connection(self.__class__).execute(ConditionalInsert(
+                distro_tag_map,
+                {distro_tag_map.c.distro_id: self.id,
+                 distro_tag_map.c.distro_tag_id: tagobj.id}))
 
 class DistroTree(MappedObject):
 
