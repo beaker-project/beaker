@@ -1,7 +1,6 @@
 nfs --server lab.test-kickstart.invalid --dir /distros/F-18/GOLD/Fedora/x86_64/os/
 #url --url=nfs://lab.test-kickstart.invalid:/distros/F-18/GOLD/Fedora/x86_64/os/
 
-auth --useshadow --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
 # Use text mode install

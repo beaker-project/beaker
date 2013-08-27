@@ -3,7 +3,6 @@ nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-5-Server/U8/x86_64/o
 
 key 49af89414d147589
 
-auth --useshadow --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
 
