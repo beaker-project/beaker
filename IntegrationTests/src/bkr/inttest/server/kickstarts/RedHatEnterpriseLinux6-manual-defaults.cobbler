@@ -149,8 +149,7 @@ echo 'OPTIONS="$OPTIONS -x"' >>/etc/sysconfig/ntpd
 # If efibootmgr exists then re-order boot options
 if [ -x '/usr/sbin/efibootmgr' ]; then
     BOOT=$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print $2}' | awk -F, '{print $1}')
-    EFI=$(/usr/sbin/efibootmgr -v | grep Boot$BOOT | awk '{print $NF}')
-    PXE_SLOT=$(/usr/sbin/efibootmgr -v | grep -i Netboot |cut -c5-8)
+    PXE_SLOT=$(/usr/sbin/efibootmgr -v | grep -i BootCurrent | awk '{print $2}')
     # If There is no Netboot Entry we can't continue
     # You have to manually setup a Netboot entry first
     # from EFI maint menu.
