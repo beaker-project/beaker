@@ -233,6 +233,7 @@ class WatchFile(object):
             self.strip_cntrl = None
             self.panic = None
         self.where = 0
+        self.ignore_panic = False
 
     def __cmp__(self,other):
         """
@@ -269,17 +270,27 @@ class WatchFile(object):
                 if panic:
                     logger.info("Panic detected for recipe %s, system %s",
                             self.watchdog['recipe_id'], self.watchdog['system'])
-                    recipeset = xmltramp.parse(self.proxy.get_my_recipe(
-                            dict(recipe_id=self.watchdog['recipe_id']))).recipeSet
-                    try:
-                        recipe = recipeset.recipe
-                    except AttributeError:
-                        recipe = recipeset.guestrecipe
-                    watchdog = recipe.watchdog()
-                    if 'panic' in watchdog and watchdog['panic'] == 'ignore':
-                        # Don't Report the panic
-                        logger.info("Not reporting panic, recipe set to ignore")
+                    # If we have already decided we will ignore this panic
+                    # due to already seeing a panic
+                    if self.ignore_panic:
+                        logger.info("Not reporting panic")
                     else:
+                        # Let's get our <recipe/> and <watchdog/>, see
+                        # if we can ignore the panic this way
+                        recipeset = xmltramp.parse(self.proxy.get_my_recipe(
+                            dict(recipe_id=self.watchdog['recipe_id']))).recipeSet
+                        try:
+                            recipe = recipeset.recipe
+                        except AttributeError:
+                            recipe = recipeset.guestrecipe
+                        watchdog = recipe.watchdog()
+                        if watchdog and 'panic' in watchdog and \
+                            watchdog['panic'] == 'ignore':
+                            # Don't Report the panic
+                            logger.info("Not reporting panic")
+                            self.ignore_panic = True
+
+                    if not self.ignore_panic:
                         # Report the panic
                         # Look for active task, worst case it records it on the last task
                         for task in recipe['task':]:
@@ -291,6 +302,7 @@ class WatchFile(object):
                         # this may abort the recipe depending on what the recipeSets
                         # watchdog behaviour is set to.
                         self.proxy.extend_watchdog(task()['id'], 60 * 10)
+                        self.ignore_panic = True
             if not line:
                 return False
             # If we didn't read our full blocksize and we are still growing
