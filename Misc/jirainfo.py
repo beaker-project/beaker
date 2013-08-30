@@ -139,8 +139,11 @@ class JiraInfo(object):
     def derive_bz_issue_details(self, bug):
         summary = bug.summary
         # Strip the two most common RFE prefixes, don't worry about others
-        if summary.startswith(("RFE:", "[RFE]")):
-           summary = summary[4:]
+        # TODO: copy the regex from BugBot's RFE detection
+        if summary.startswith("RFE:"):
+            summary = summary[4:]
+        elif summary.startswith("[RFE]"):
+            summary = summary[5:]
         summary = summary.strip()
         issue_summary = 'BZ#%s %s' % (bug.bug_id, summary)
         if 'FutureFeature' in bug.keywords:
