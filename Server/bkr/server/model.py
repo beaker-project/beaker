@@ -4889,26 +4889,26 @@ class Job(TaskBase):
 
     def can_change_priority(self, user=None):
         """Return True iff the given user can change the priority"""
-        can_change = self._can_administer(user)
+        can_change = self._can_administer(user) or self._can_administer_old(user)
         if not can_change and user:
             can_change = user.in_group(['admin','queue_admin'])
         return can_change
 
     def can_change_whiteboard(self, user=None):
         """Returns True iff the given user can change the whiteboard"""
-        return self._can_administer(user)
+        return self._can_administer(user) or self._can_administer_old(user)
 
     def can_change_product(self, user=None):
         """Returns True iff the given user can change the product"""
-        return self._can_administer(user)
+        return self._can_administer(user) or self._can_administer_old(user)
 
     def can_change_retention_tag(self, user=None):
         """Returns True iff the given user can change the retention tag"""
-        return self._can_administer(user)
+        return self._can_administer(user) or self._can_administer_old(user)
 
     def can_delete(self, user=None):
         """Returns True iff the given user can delete the job"""
-        return self._can_administer(user)
+        return self._can_administer(user) or self._can_administer_old(user)
 
     def can_cancel(self, user=None):
         """Returns True iff the given user can cancel the job"""
@@ -4916,7 +4916,7 @@ class Job(TaskBase):
 
     def can_set_response(self, user=None):
         """Returns True iff the given user can set the response to this job"""
-        return self._can_administer(user)
+        return self._can_administer(user) or self._can_administer_old(user)
 
     def _can_administer(self, user=None):
         """Returns True iff the given user can administer the Job.
@@ -4931,6 +4931,20 @@ class Job(TaskBase):
                return True
         return self.is_owner(user) or user.is_admin() or \
             self.submitter == user
+
+    def _can_administer_old(self, user):
+        """
+        This fills the gap between the new permissions system with group
+        jobs and the old permission model without it.
+
+        XXX Using a config option to enable this deprecated function.
+        This code will be removed. Eventually. See BZ#1000861
+        """
+        if not get('beaker.deprecated_job_group_permissions.on', True):
+            return False
+        if not user:
+            return False
+        return bool(set(user.groups).intersection(set(self.owner.groups)))
 
     cc = association_proxy('_job_ccs', 'email_address')
 

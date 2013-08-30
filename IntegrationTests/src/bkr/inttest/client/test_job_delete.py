@@ -1,6 +1,9 @@
+import os
 import unittest2 as unittest
+from nose.plugins.skip import SkipTest
 from turbogears.database import session
-from bkr.inttest import data_setup, with_transaction
+from bkr.inttest import data_setup, with_transaction, start_process, \
+    stop_process, CONFIG_FILE, edit_file
 from bkr.inttest.client import run_client, create_client_config, ClientError
 
 class JobDeleteTest(unittest.TestCase):
@@ -11,22 +14,6 @@ class JobDeleteTest(unittest.TestCase):
         self.job = data_setup.create_completed_job(owner=self.user)
         self.client_config = create_client_config(username=self.user.user_name,
                 password='asdf')
-
-    def test_cant_delete_group_mates_job(self):
-        with session.begin():
-            group = data_setup.create_group()
-            mate = data_setup.create_user(password=u'asdf')
-            test_job = data_setup.create_completed_job(owner=mate)
-            data_setup.add_user_to_group(self.user, group)
-            data_setup.add_user_to_group(mate, group)
-        try:
-            run_client(['bkr', 'job-delete', test_job.t_id],
-                config=self.client_config)
-            self.fail('We should not have permission to delete %s' % \
-                test_job.t_id)
-        except ClientError, e:
-           self.assertIn("You don't have permission to delete job %s" %
-            test_job.t_id, e.stderr_output)
 
     def test_delete_group_job(self):
         with session.begin():
@@ -60,6 +47,47 @@ class JobDeleteTest(unittest.TestCase):
             fail('should raise')
         except ClientError, e:
             self.assert_("don't have permission" in e.stderr_output)
+
+    def test_cant_delete_group_mates_job(self):
+        # XXX This whole test can go away with BZ#1000861
+        try:
+            stop_process('gunicorn')
+        except ValueError:
+            # It seems gunicorn is not a running process
+            raise SkipTest('Can only run this test against gunicorn')
+        try:
+            tmp_config = edit_file(CONFIG_FILE, 'beaker.deprecated_job_group_permissions.on = True',
+                'beaker.deprecated_job_group_permissions.on = False')
+            start_process('gunicorn', env={'BEAKER_CONFIG_FILE': tmp_config.name})
+            with session.begin():
+                group = data_setup.create_group()
+                mate = data_setup.create_user(password=u'asdf')
+                test_job = data_setup.create_completed_job(owner=mate)
+                data_setup.add_user_to_group(self.user, group)
+                data_setup.add_user_to_group(mate, group)
+            try:
+                run_client(['bkr', 'job-delete', test_job.t_id],
+                    config=self.client_config)
+                self.fail('We should not have permission to delete %s' % \
+                    test_job.t_id)
+            except ClientError, e:
+                self.assertIn("You don't have permission to delete job %s" %
+                test_job.t_id, e.stderr_output)
+        finally:
+            stop_process('gunicorn')
+            start_process('gunicorn')
+
+    def test_delete_group_mates_job(self):
+        with session.begin():
+            group = data_setup.create_group()
+            mate = data_setup.create_user(password=u'asdf')
+            test_job = data_setup.create_completed_job(owner=mate)
+            data_setup.add_user_to_group(self.user, group)
+            data_setup.add_user_to_group(mate, group)
+        out = run_client(['bkr', 'job-delete', test_job.t_id],
+                         config=self.client_config)
+        self.assert_(out.startswith('Jobs deleted:'), out)
+        self.assert_(test_job.t_id in out, out)
 
     def test_delete_job_with_admin(self):
         with session.begin():
