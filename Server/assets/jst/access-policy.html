@@ -16,7 +16,7 @@
     <% if (!readonly) { %>
       <tr>
         <td>
-          <input type="text" placeholder="Group name" autocomplete="off" />
+          <input type="text" placeholder="Group name" />
         </td>
         <td colspan="<%- possible_permissions.length %>"></td>
       </tr>
@@ -29,7 +29,7 @@
     <!-- user rows go here -->
     <% if (!readonly) { %>
       <tr>
-        <td><input type="text" placeholder="Username" autocomplete="off"/></td>
+        <td><input type="text" placeholder="Username" /></td>
         <td colspan="<%- possible_permissions.length %>"></td>
       </tr>
     <% } %>

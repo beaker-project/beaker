@@ -37,10 +37,14 @@ window.AccessPolicyView = Backbone.View.extend({
     template: JST['access-policy'],
     events: {
         'change   input[type=checkbox]': 'changed_checkbox',
-        'blur     .group-rows input[type=text]': 'typed_group',
         'keypress .group-rows input[type=text]': blur_on_enter,
-        'blur     .user-rows input[type=text]': 'typed_user',
+        'blur     .group-rows input[type=text]': 'typed_group',
+        'typeahead:selected      .group-rows input[type=text]': 'typed_group',
+        'typeahead:autocompleted .group-rows input[type=text]': 'typed_group',
         'keypress .user-rows input[type=text]': blur_on_enter,
+        'blur     .user-rows input[type=text]': 'typed_user',
+        'typeahead:selected      .user-rows input[type=text]': 'typed_user',
+        'typeahead:autocompleted .user-rows input[type=text]': 'typed_user',
         'submit   form': 'submit',
         'reset    form': 'reset',
     },
@@ -75,6 +79,9 @@ window.AccessPolicyView = Backbone.View.extend({
         if (this.options.readonly) {
             this.$('input[type=checkbox]').prop('disabled', true);
         }
+        // set up typeaheads
+        this.$('.group-rows input[type=text]').beaker_typeahead('group-name');
+        this.$('.user-rows input[type=text]').beaker_typeahead('user-name');
     },
     update_button_state: function () {
         this.$('button').prop('disabled',
@@ -110,27 +117,29 @@ window.AccessPolicyView = Backbone.View.extend({
         this.model.fetch();
         return false;
     },
-    typed_group: function () {
-        var $input = this.$('.group-rows input[type=text]');
+    typed_group: function (evt) {
+        var $input = $(evt.target);
         var val = $input.val();
-        if (!val) return;
-        var $row = this.find_group_row(val);
-        if (!$row.length) {
-            var $row = this.add_group_row(val);
-        }
-        $row.find('input[type=checkbox]').first().focus();
-        $input.val('');
+        if (val && $input.data('typeahead_match')) {
+            var $row = this.find_group_row(val);
+            if (!$row.length) {
+                var $row = this.add_group_row(val);
+            }
+            $row.find('input[type=checkbox]').first().focus();
+            $input.typeahead('setQuery', '');
+        };
     },
-    typed_user: function () {
-        var $input = this.$('.user-rows input[type=text]');
+    typed_user: function (evt) {
+        var $input = $(evt.target);
         var val = $input.val();
-        if (!val) return;
-        var $row = this.find_user_row(val);
-        if (!$row.length) {
-            var $row = this.add_user_row(val);
+        if (val && $input.data('typeahead_match')) {
+            var $row = this.find_user_row(val);
+            if (!$row.length) {
+                var $row = this.add_user_row(val);
+            }
+            $row.find('input[type=checkbox]').first().focus();
+            $input.typeahead('setQuery', '');
         }
-        $row.find('input[type=checkbox]').first().focus();
-        $input.val('');
     },
     find_group_row: function (group) {
         return $('.group-rows tr').filter(

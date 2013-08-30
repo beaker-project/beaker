@@ -1719,15 +1719,17 @@ class User(MappedObject, ActivityMixin):
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,
                     timeout=get('identity.soldapprovider.timeout', 20))
-            ldap_users = [object[1]['uid'][0].decode('utf8') for object in objects]
+            ldap_users = [(object[1]['uid'][0].decode('utf8'),
+                    object[1]['cn'][0].decode('utf8'))
+                    for object in objects]
         if find_anywhere:
             f = User.user_name.like('%%%s%%' % username)
         else:
             f = User.user_name.like('%s%%' % username)
         # Don't return Removed Users
         # They may still be listed in ldap though.
-        db_users = [user.user_name for user in cls.query.filter(f).\
-                    filter(User.removed==None)]
+        db_users = [(user.user_name, user.display_name)
+                for user in cls.query.filter(f).filter(User.removed==None)]
         return list(set(db_users + ldap_users))
 
     def _hashed_password(self, raw_password):

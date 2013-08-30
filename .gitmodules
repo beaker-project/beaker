@@ -4,3 +4,6 @@
 [submodule "font-awesome"]
 	path = Server/assets/font-awesome
 	url = git://github.com/FortAwesome/Font-Awesome.git
+[submodule "typeahead.js"]
+	path = Server/assets/typeahead.js
+	url = https://github.com/twitter/typeahead.js.git

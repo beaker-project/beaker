@@ -1,6 +1,7 @@
 @import "bootstrap/less/bootstrap.less";
 @import "bootstrap/less/responsive.less";
 @import "font-awesome/less/font-awesome.less";
+@import "typeahead.js-bootstrap.less";
 
 // overrides for Bootstrap variables
 @sansFontFamily:  "Liberation Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -107,4 +108,13 @@ td form, td input, td select {
 footer {
     .muted;
     text-align: right;
+}
+
+// typeaheads
+.tt-dropdown-menu {
+    min-width: 240px;
+}
+.tt-suggestion small {
+    .muted;
+    margin-left: 0.5em;
 }

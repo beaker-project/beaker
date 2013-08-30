@@ -7,7 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import cherrypy
 from cherrypy import response
 from kid import XML
-
+from flask import jsonify
 from bkr.server.validators import StrongPassword
 from bkr.server.helpers import make_link
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
@@ -16,6 +16,7 @@ from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
 from bkr.server.admin_page import AdminPage
 from bkr.server.bexceptions import BX, BeakerException
 from bkr.server.controller_utilities import restrict_http_method
+from bkr.server.wsgi import app
 from bkr.server import mail, identity
 
 from bkr.server.model import (Group, Permission, System, User, UserGroup,
@@ -936,6 +937,13 @@ class Groups(AdminPage):
             users.append(user)
 
         return users
+
+@app.route('/groups/+typeahead')
+def groups_typeahead():
+    data = [{'group_name': group.group_name, 'display_name': group.display_name,
+             'tokens': [group.group_name]}
+            for group in Group.query]
+    return jsonify(data=data)
 
 # for sphinx
 groups = Groups
