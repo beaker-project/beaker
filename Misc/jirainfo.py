@@ -32,6 +32,15 @@ The JIRA support needs to know where to find the JIRA instance. Create a
   username=<JIRA username>
   project=<JIRA project name>
 
+  [bz2jira]
+  server=<JIRA server HTTPS URL>
+  verify=<custom CA cert if needed (leave out if default cert bundle is OK)>
+  username=<JIRA username>
+  project=<JIRA project name>
+
+checkbugs only needs read-only access, bz2jira needs write access (hence
+the separate config sections)
+
 Kerberos login is not currently supported, so checkbugs is configured to
 prompt for a password with getpass
 """
@@ -45,6 +54,11 @@ JIRA_CONFIG = os.path.expanduser("~/.beaker-jira.cfg")
 CONFIG_DIR = os.path.dirname(JIRA_CONFIG)
 BZ_ISSUE_CRITERIA = 'summary ~ "BZ#" or cf[10400] is not NULL'
 EXTERNAL_LINK_FIELD = "customfield_10400"
+
+TRACKING_ISSUE_DESCRIPTION = """\
+Bugzilla tracking issue for Beaker created by {{Misc/bz2jira.py}}.
+Use {{Misc/checkbugs.py}} to ensure bug and issue states are aligned.
+"""
 
 def relative_config_path(target):
     return os.path.normpath(os.path.join(CONFIG_DIR, target))
@@ -64,7 +78,7 @@ class JiraInfo(object):
         server = cfg.get(config_section, "server")
         verify = cfg.get(config_section, "verify")
         username = cfg.get(config_section, "username")
-        project = cfg.get(config_section, "project")
+        self._jira_project = project = cfg.get(config_section, "project")
         options = {"server": server}
         if verify:
             options["verify"] = relative_config_path(verify)
@@ -121,6 +135,34 @@ class JiraInfo(object):
             return self._bz_link_cache[bug_id]
         except KeyError:
             return self._bz_summary_cache[bug_id]
+
+    def derive_bz_issue_details(self, bug):
+        summary = bug.summary
+        # Strip the two most common RFE prefixes, don't worry about others
+        if summary.startswith(("RFE:", "[RFE]")):
+           summary = summary[4:]
+        summary = summary.strip()
+        issue_summary = 'BZ#%s %s' % (bug.bug_id, summary)
+        if 'FutureFeature' in bug.keywords:
+            issue_type = 'Improvement'
+        else:
+            issue_type = 'Bug'
+        issue_details = {
+            "project": {"key": self._jira_project},
+            "summary": issue_summary,
+            "issuetype": {"name": issue_type},
+            "description": TRACKING_ISSUE_DESCRIPTION,
+            EXTERNAL_LINK_FIELD: bug.weburl,
+        }
+        return issue_details
+
+    def create_bz_issue(self, bug):
+        details = self.derive_bz_issue_details(bug)
+        issue = self._jira.create_issue(fields=details)
+        return IssueSummary(issue.key, "To Do",
+                            details["summary"],
+                            details[EXTERNAL_LINK_FIELD],
+                            bug.bug_id, bug.bug_id)
 
 if __name__ == "__main__":
     from getpass import getpass

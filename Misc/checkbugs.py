@@ -65,6 +65,22 @@ def problem(message):
 # Bugzilla access
 ################################################
 
+_status_order = [
+    'NEW',
+    'ASSIGNED',
+    'POST',
+    'MODIFIED',
+    'ON_QA',
+    'VERIFIED',
+    'RELEASE_PENDING',
+    'CLOSED'
+]
+_status_keys = dict((v, str(k)) for k, v in enumerate(_status_order))
+
+def bug_sort_key(bug):
+    status_key = _status_keys.get(bug.status, bug.status)
+    return status_key, bug.assigned_to, bug.bug_id
+
 class BugzillaInfo(object):
 
     def __init__(self, url=BUGZILLA_URL):
@@ -97,7 +113,7 @@ class BugzillaInfo(object):
         bugs = bz.query(bz.build_query(**criteria))
         for bug in bugs:
             self._bz_cache[bug.bug_id] = bug
-        return bugs
+        return sorted(bugs, key=bug_sort_key)
 
     def get_bug(self, bug_id):
         try:
@@ -115,23 +131,6 @@ class BugzillaInfo(object):
 _bz_info = BugzillaInfo()
 get_bugs = _bz_info.get_bugs
 get_bug = _bz_info.get_bug
-
-_status_order = [
-    'NEW',
-    'ASSIGNED',
-    'POST',
-    'MODIFIED',
-    'ON_QA',
-    'VERIFIED',
-    'RELEASE_PENDING',
-    'CLOSED'
-]
-_status_keys = dict((v, str(k)) for k, v in enumerate(_status_order))
-
-def bug_sort_key(bug):
-    status_key = _status_keys.get(bug.status, bug.status)
-    return status_key, bug.assigned_to, bug.bug_id
-
 
 ################################################
 # Gerrit access
@@ -216,9 +215,10 @@ build_git_revlist = _git_info.build_git_revlist
 #  - Bugzilla (bugzilla.redhat.com)
 #  - Gerrit (gerrit.beaker-project.org)
 #  - Git (local clone of git.beaker-project.org/beaker)
+#  - JIRA (internal task progress tracking)
 #
 # Soon:
-#  - JIRA/Greenhopper (internal Scrum sprint tracking)
+#  - JIRA/Agile (internal Scrum sprint tracking)
 
 # Release tracking
 #  - filters based on the release flag in Bugzilla
@@ -260,7 +260,6 @@ def main():
         print "Retrieving bug list from Bugzilla"
     bugs = get_bugs(options.milestone, options.release, options.sprint,
                     options.include)
-    bugs = sorted(bugs, key=bug_sort_key)
     bug_ids = set(bug.bug_id for bug in bugs)
     if options.verbose:
         print "  Retrieved %d bugs" % len(bugs)
@@ -324,7 +323,7 @@ def main():
     for bug in bugs:
         if options.verbose:
             print 'Bug %-13d %-17s %-10s <%s>' % (bug.bug_id, bug.bug_status,
-                    abbrev_user(bug.assigned_to), bug.url)
+                    abbrev_user(bug.assigned_to), bug.weburl)
         bug_changes = list(changes_for_bug(changes, bug.bug_id))
 
         # print out summary of changes
