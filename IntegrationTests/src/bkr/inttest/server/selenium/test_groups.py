@@ -75,7 +75,7 @@ class TestGroups(WebDriverTestCase):
         b.get(get_server_base() + 'groups/')
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
-        b.find_element_by_xpath("//input[@value='Search']").submit()
+        b.find_element_by_id('Search').submit()
         self.assert_('Remove' in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
                                                              % self.group.group_name).text)
         logout(b)
@@ -85,11 +85,11 @@ class TestGroups(WebDriverTestCase):
         b.get(get_server_base() + 'groups/')
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
-        b.find_element_by_xpath("//input[@value='Search']").submit()
+        b.find_element_by_id('Search').submit()
         self.assert_('Remove' not in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
                                                                  % self.group.group_name).text)
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(group.group_name)
-        b.find_element_by_xpath("//input[@value='Search']").submit()
+        b.find_element_by_id('Search').submit()
         self.assert_('Remove' in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
                                                                  % group.group_name).text)

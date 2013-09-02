@@ -10,6 +10,9 @@
 
 
 <body>
+  <div class="page-header">
+    <h1>${value_of('title', 'Form')}</h1>
+  </div>
     <div py:if="form">
 <p py:content="form(method='POST', action=action, value=value, options=options)">Form goes here</p>
     </div>

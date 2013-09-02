@@ -42,25 +42,25 @@ class OSVersionsTest(WebDriverTestCase):
         b = self.browser
         # set them from scratch
         go_to_edit_osmajor(b, 'LinuxLinux2.1')
-        b.find_element_by_xpath('//table[@id="install_options_all"]'
-                '//td[preceding-sibling::th/text()="Kickstart Metadata"]'
-                '/input').send_keys('one')
-        b.find_element_by_xpath('//table[@id="install_options_all"]'
-                '//td[preceding-sibling::th/text()="Kernel Options"]'
-                '/input').send_keys('two')
-        b.find_element_by_xpath('//table[@id="install_options_all"]'
-                '//td[preceding-sibling::th/text()="Kernel Options Post"]'
-                '/input').send_keys('three')
-        b.find_element_by_xpath('//table[@id="install_options_ppc64"]'
-                '//td[preceding-sibling::th/text()="Kickstart Metadata"]'
-                '/input').send_keys('four')
-        b.find_element_by_xpath('//table[@id="install_options_ppc64"]'
-                '//td[preceding-sibling::th/text()="Kernel Options"]'
-                '/input').send_keys('five')
-        b.find_element_by_xpath('//table[@id="install_options_ppc64"]'
-                '//td[preceding-sibling::th/text()="Kernel Options Post"]'
-                '/input').send_keys('six')
-        b.find_element_by_link_text('Save Changes').click()
+        b.find_element_by_xpath('//*[@id="install_options_all"]'
+                '//div[normalize-space(label/text())="Kickstart Metadata"]'
+                '//input').send_keys('one')
+        b.find_element_by_xpath('//*[@id="install_options_all"]'
+                '//div[normalize-space(label/text())="Kernel Options"]'
+                '//input').send_keys('two')
+        b.find_element_by_xpath('//*[@id="install_options_all"]'
+                '//div[normalize-space(label/text())="Kernel Options Post"]'
+                '//input').send_keys('three')
+        b.find_element_by_xpath('//*[@id="install_options_ppc64"]'
+                '//div[normalize-space(label/text())="Kickstart Metadata"]'
+                '//input').send_keys('four')
+        b.find_element_by_xpath('//*[@id="install_options_ppc64"]'
+                '//div[normalize-space(label/text())="Kernel Options"]'
+                '//input').send_keys('five')
+        b.find_element_by_xpath('//*[@id="install_options_ppc64"]'
+                '//div[normalize-space(label/text())="Kernel Options Post"]'
+                '//input').send_keys('six')
+        b.find_element_by_xpath('//button[text()="Save Changes"]').click()
         self.assertEquals(
                 b.find_element_by_class_name('flash').text,
                 'Install options saved for LinuxLinux2.1')
@@ -83,25 +83,25 @@ class OSVersionsTest(WebDriverTestCase):
             self.assertEquals(o.install_options_by_arch[ppc64].kernel_options_post, 'six')
         # now edit the existing options
         go_to_edit_osmajor(b, 'LinuxLinux2.1')
-        input = b.find_element_by_xpath('//table[@id="install_options_ppc64"]'
-                '//td[preceding-sibling::th/text()="Kickstart Metadata"]'
-                '/input')
+        input = b.find_element_by_xpath('//*[@id="install_options_ppc64"]'
+                '//div[normalize-space(label/text())="Kickstart Metadata"]'
+                '//input')
         self.assertEquals(input.get_attribute('value'), 'four')
         input.clear()
         input.send_keys('something else')
-        input = b.find_element_by_xpath('//table[@id="install_options_ppc64"]'
-                '//td[preceding-sibling::th/text()="Kernel Options"]'
-                '/input')
+        input = b.find_element_by_xpath('//*[@id="install_options_ppc64"]'
+                '//div[normalize-space(label/text())="Kernel Options"]'
+                '//input')
         self.assertEquals(input.get_attribute('value'), 'five')
         input.clear()
         input.send_keys('something else')
-        input = b.find_element_by_xpath('//table[@id="install_options_ppc64"]'
-                '//td[preceding-sibling::th/text()="Kernel Options Post"]'
-                '/input')
+        input = b.find_element_by_xpath('//*[@id="install_options_ppc64"]'
+                '//div[normalize-space(label/text())="Kernel Options Post"]'
+                '//input')
         self.assertEquals(input.get_attribute('value'), 'six')
         input.clear()
         input.send_keys('something else')
-        b.find_element_by_link_text('Save Changes').click()
+        b.find_element_by_xpath('//button[text()="Save Changes"]').click()
         self.assertEquals(
                 b.find_element_by_class_name('flash').text,
                 'Install options saved for LinuxLinux2.1')
@@ -125,7 +125,7 @@ class OSVersionsTest(WebDriverTestCase):
         b = self.browser
         go_to_edit_osmajor(b, 'LinuxLinux2.1')
         b.find_element_by_xpath('//input[@id="form_alias"]').send_keys('linux21')
-        b.find_element_by_xpath('//input[@value="Edit OSMajor"]').submit()
+        b.find_element_by_xpath('//button[text()="Edit OSMajor"]').submit()
         self.assertEquals(
             b.find_element_by_class_name('flash').text,
             'Changes saved for LinuxLinux2.1')

@@ -211,6 +211,23 @@ class RadioButtonList(SelectionField):
     """
     _selected_verb = 'checked'
 
+class CheckBoxList(SelectionField):
+    template = """
+    <div xmlns:py="http://purl.org/kid/ns#" py:strip="True">
+        <label py:for="value, desc, attrs in options" class="radio">
+            <input type="checkbox"
+                name="${name}"
+                id="${field_id}_${value}"
+                value="${value}"
+                py:attrs="attrs"
+            />
+            ${desc}
+        </label>
+    </div>
+    """
+    _multiple_selection = True
+    _selected_verb = 'checked'
+
 
 class UnmangledHiddenField(HiddenField):
 
@@ -535,7 +552,7 @@ class LabControllerFormSchema(validators.Schema):
     chained_validators = [UniqueLabControllerEmail('id', 'email', 'lusername')]
 
 
-class LabControllerForm(TableForm):
+class LabControllerForm(HorizontalForm):
     action = 'save_data'
     submit_text = _(u'Save')
     fields = [

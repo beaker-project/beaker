@@ -7,7 +7,8 @@ from kid import Element
 from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import AlphaNavBar, myPaginateDataGrid
+from bkr.server.widgets import AlphaNavBar, myPaginateDataGrid, HorizontalForm, \
+        CheckBoxList
 from bkr.server.admin_page import AdminPage
 
 import cherrypy
@@ -30,16 +31,16 @@ class OSVersions(AdminPage):
 
     id      = widgets.HiddenField(name="id")
     alias   = widgets.TextField(name="alias")
-    arches  = widgets.CheckBoxList(name="arches", label="Arches",
+    arches  = CheckBoxList(name="arches", label="Arches",
                                       options=lambda: [(arch.id, arch.arch) for arch in Arch.query],
                                       validator=validators.Int())
 
-    osmajor_form = widgets.TableForm(
+    osmajor_form = HorizontalForm(
         fields      = [id, alias],
         submit_text = _(u"Edit OSMajor"),
     )
 
-    osversion_form = widgets.TableForm(
+    osversion_form = HorizontalForm(
         fields      = [id, arches],
         action      = "edit osversion",
         submit_text = _(u"Edit OSVersion"),
@@ -63,7 +64,7 @@ class OSVersions(AdminPage):
         except InvalidRequestError:
             flash(_(u"Invalid OSVersion ID %s" % id))
             redirect(".")
-        return dict(title   = "OSVersion",
+        return dict(title   = unicode(osversion),
                     value   = dict(id     = osversion.id,
                                    arches = [arch.id for arch in osversion.arches]),
                     form    = self.osversion_form,

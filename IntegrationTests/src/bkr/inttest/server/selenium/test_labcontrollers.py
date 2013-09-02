@@ -73,7 +73,7 @@ class LabControllerViewTest(WebDriverTestCase):
         b.get(get_server_base() + 'labcontrollers')
         b.find_element_by_xpath("//table[@id='widget']/tbody/tr/"
             "td[preceding-sibling::td/a[normalize-space(text())='%s']]"
-            "/a[normalize-space(text())='Remove (-)']" % lc_name).click()
+            "/a[normalize-space(text())='Remove']" % lc_name).click()
         self.assert_('%s removed' % lc_name in
             b.find_element_by_css_selector('.flash').text)
 

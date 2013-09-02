@@ -1,7 +1,7 @@
 from turbogears.database import session
 from turbogears import url, expose, flash, validate, error_handler, \
                        redirect, paginate, config
-from kid import Element
+from kid import XML
 from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link, make_edit_link
@@ -457,13 +457,11 @@ class LabControllers(RPCRoot):
 
     def make_lc_remove_link(self, lc):
         if lc.removed is not None:
-            return make_link(url  = 'unremove?id=%s' % lc.id,
-                text = 'Re-Add (+)')
+            return XML('<a class="btn" href="unremove?id=%s">'
+                    '<i class="icon-plus"/> Re-Add</a>' % lc.id)
         else:
-            a = Element('a', {'class': 'list'}, href='#')
-            a.text = 'Remove (-)'
-            a.attrib.update({'onclick' : "has_watchdog('%s')" % lc.id})
-            return a
+            return XML('<a class="btn" href="#" onclick="has_watchdog(\'%s\')">'
+                    '<i class="icon-remove"/> Remove</a>' % lc.id)
 
     @identity.require(identity.in_group("admin"))
     @expose(template="bkr.server.templates.grid")

@@ -1,4 +1,4 @@
-from kid import Element
+from kid import Element, XML
 import turbogears, sys
 from turbogears.database import session
 
@@ -17,8 +17,8 @@ def make_edit_link(name, id):
 
 def make_remove_link(id):
     # make a remove link
-    return make_link(url  = 'remove?id=%s' % id,
-                     text = 'Remove (-)')
+    return XML('<a class="btn" href="remove?id=%s">'
+            '<i class="icon-remove"/> Remove</a>' % id)
 
 def make_fake_link(name=None,id=None,text=None,attrs=None):
     # make something look like a href

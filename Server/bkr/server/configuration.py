@@ -2,7 +2,8 @@ from turbogears.database import session
 from turbogears import expose, flash, widgets, error_handler, validators, redirect, paginate, url
 from bkr.server import identity
 from bkr.server.helpers import *
-from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, AlphaNavBar
+from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, AlphaNavBar, \
+        HorizontalForm
 from bkr.server.admin_page import AdminPage
 from datetime import datetime
 
@@ -18,14 +19,14 @@ class Configuration(AdminPage):
                                    label=_(u'Effective from date'),
                                    help_text=u"Enter date and time (YYYY-MM-DD HH:MM) in the future or leave blank for setting to take immediate effect")
 
-    string_form = widgets.TableForm(
+    string_form = HorizontalForm(
         'configitem',
         fields = [id, value_str, valid_from],
         action = 'save_data',
         submit_text = _(u'Save'),
     )
 
-    int_form = widgets.TableForm(
+    int_form = HorizontalForm(
         'configitem',
         fields = [id, value_int, valid_from],
         action = 'save_data',
@@ -75,7 +76,8 @@ class Configuration(AdminPage):
             form = self.string_form
 
         return dict(
-            title = item.description,
+            title = item.name,
+            subtitle = item.description,
             form = form,
             action = './save',
             options = {},
@@ -127,12 +129,12 @@ class Configuration(AdminPage):
                                   ('Current Value', lambda x: x.current_value()),
                                   ('Next Value', lambda x: x.next_value() and u'"%s" from %s' % (x.next_value().value, x.next_value().valid_from)),
                                   (' ', lambda x: (x.readonly or x.current_value() is None) and " " or
-                                        make_link(url  = 'remove?id=%s' % x.id, text = 'Clear current value')),
+                                        make_link(url='remove?id=%s' % x.id,
+                                            elem_class='btn', text='Clear current value')),
                               ])
         return dict(title="Configuration",
                     grid = configitems_grid,
                     alpha_nav_bar = AlphaNavBar(list_by_letters, self.search_name),
-                    addable = False,
                     object_count = configitems.count(),
                     search_widget = self.search_widget_form,
                     list = configitems)

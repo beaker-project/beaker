@@ -103,7 +103,7 @@ class AddUserWD(WebDriverTestCase):
 
         valid_user_2 = data_setup.unique_name('user%s')
         b.find_element_by_name('user_name').send_keys(valid_user_2)
-        b.find_element_by_class_name('submitbutton').click()
+        b.find_element_by_id('User').submit()
         is_text_present(b, '%s saved' % valid_user_2)
 
         # Check our custom email address validator
