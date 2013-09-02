@@ -63,7 +63,7 @@ class DistroTreeViewTest(WebDriverTestCase):
             "option[normalize-space(text())='%s']" % lc.fqdn).click()
         b.find_element_by_xpath("//input[@id='url']"). \
             send_keys('http://blah.com')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_name('lab_controller_add_form').submit()
         # A trailing '/' is added automatically if it's not present. RHBZ#912242
         self.assertEqual(
             b.find_element_by_class_name('flash').text,
@@ -80,7 +80,7 @@ class DistroTreeViewTest(WebDriverTestCase):
         login(b)
         go_to_distro_tree_view(b, self.distro_tree)
         b.find_element_by_link_text('Install Options').click()
-        b.find_element_by_link_text('Edit').click()
+        b.find_element_by_xpath('//button[text()="Edit"]').click()
         b.find_element_by_name('ks_meta').click()
         b.find_element_by_name('ks_meta').clear()
         b.find_element_by_name('ks_meta').send_keys('no_addon_repos')
@@ -90,7 +90,7 @@ class DistroTreeViewTest(WebDriverTestCase):
         b.find_element_by_name('kernel_options_post').click()
         b.find_element_by_name('kernel_options_post').clear()
         b.find_element_by_name('kernel_options_post').send_keys('rhgb')
-        b.find_element_by_link_text('Save Changes').click()
+        b.find_element_by_xpath('//button[text()="Save Changes"]').click()
         self.assertEqual(
             b.find_element_by_class_name('flash').text,
             'Updated install options')

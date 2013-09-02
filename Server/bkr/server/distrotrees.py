@@ -107,7 +107,6 @@ class DistroTrees(RPCRoot):
         is_admin = identity.current.user and identity.current.user.is_admin() or False
         return dict(title='Distro Tree',
                     value=distro_tree,
-                    tabber=widgets.Tabber(use_cookie=True),
                     install_options_widget=DistroTreeInstallOptionsWidget(),
                     form_task=form_task,
                     delete_link=self.delete_link,
