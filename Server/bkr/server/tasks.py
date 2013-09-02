@@ -185,6 +185,10 @@ class Tasks(RPCRoot):
         :type task_rpm_data: XML-RPC binary
         """
         rpm_path = Task.get_rpm_path(task_rpm_name)
+        # we do it here, since we do not want to proceed
+        # any further
+        if len(task_rpm_name) > 255:
+            raise BX(_("Task RPM name should be <= 255 characters"))
         if os.path.exists("%s" % rpm_path):
             raise BX(_(u'Cannot import duplicate task %s') % task_rpm_name)
 
@@ -203,6 +207,12 @@ class Tasks(RPCRoot):
 
         if not task_rpm.filename:
             flash(_(u'No task RPM specified'))
+            redirect(url("./new"))
+
+        # we do it here, since we do not want to proceed
+        # any further
+        if len(task_rpm.filename) > 255:
+            flash(_(u"Task RPM name should be <= 255 characters"))
             redirect(url("./new"))
 
         if os.path.exists("%s" % rpm_path):
