@@ -13,7 +13,7 @@ from turbogears.widgets import CheckBox
             py:replace="field.display(value_for(field), **params_for(field))"
         />
     </div>
-    <span py:strip="True" py:for="field in fields">
+    <span py:for="field in fields" class="control-group ${error_for(field) and 'error' or ''}">
         <!--! check boxes are a special case :-( -->
         <span py:strip="True" py:if="isinstance(field, CheckBox)">
             <label class="checkbox">
@@ -25,6 +25,7 @@ from turbogears.widgets import CheckBox
             <label class="control-label" for="${field.field_id}" py:content="field.label" />
             <span py:replace="field.display(value_for(field), **params_for(field))" />
         </span>
-        <button type="submit" class="btn btn-primary" py:content="submit_text" />
+        <span py:if="error_for(field)" class="help-inline">${error_for(field)}</span>
     </span>
+    <button type="submit" class="btn btn-primary" py:content="submit_text" />
 </form>
