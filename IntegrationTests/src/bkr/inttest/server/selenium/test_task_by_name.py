@@ -21,7 +21,7 @@ class TaskByName(WebDriverTestCase):
         task_name = self.my_task.name
 
         b.get(get_server_base() + 'tasks%s' % task_name)
-        self.assert_('Tasks - %s' % task_name in b.find_element_by_xpath('//body').text)
+        self.assert_('Task %s' % task_name in b.find_element_by_xpath('//body').text)
 
         b.get(get_server_base() + 'tasks/%s' % task_id)
-        self.assert_('Tasks - %s' % task_name in b.find_element_by_xpath('//body').text)
+        self.assert_('Task %s' % task_name in b.find_element_by_xpath('//body').text)

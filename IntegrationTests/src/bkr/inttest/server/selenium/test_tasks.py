@@ -43,7 +43,7 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_id('task_task_rpm').send_keys(
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
-        b.find_element_by_xpath('//input[@value="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assert_task_upload_flash_OK(test_package_name)
         # ...and make sure it worked...
         b.find_element_by_name('simplesearch').send_keys(test_package_name)
@@ -59,7 +59,7 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_id('task_task_rpm').send_keys(
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
-        b.find_element_by_xpath('//input[@value="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assert_task_upload_flash_OK(test_package_name)
         # ...and make sure everything was updated
         b.find_element_by_name('simplesearch').send_keys(test_package_name)
@@ -104,13 +104,13 @@ class TestSubmitTask(WebDriverTestCase):
 
     def get_task_info_field(self, field_label):
         """Returns the value of a field in the task info table."""
-        return self.browser.find_element_by_xpath('//table[@class="show"]'
-                '//td[preceding-sibling::td[1]//text()="%s:"]' % field_label).text
+        return self.browser.find_element_by_xpath('//table'
+                '//td[preceding-sibling::th/text()="%s"]' % field_label).text
 
     def get_task_info_field_href(self, field_label):
         """Returns the href of a link in the task info table."""
-        return self.browser.find_element_by_xpath('//table[@class="show"]'
-                '//td[preceding-sibling::td[1]//text()="%s:"]/a' % field_label)\
+        return self.browser.find_element_by_xpath('//table'
+                '//td[preceding-sibling::th/text()="%s"]/a' % field_label)\
                 .get_attribute('href')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=681143
@@ -128,7 +128,7 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_id('task_task_rpm').send_keys(
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
-        b.find_element_by_xpath('//input[@value="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assert_task_upload_flash_OK(test_package_name)
         b.find_element_by_name('simplesearch').send_keys(test_package_name)
         b.find_element_by_id('simpleform').submit()
@@ -143,7 +143,7 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_id('task_task_rpm').send_keys(
                 pkg_resources.resource_filename(self.__module__,
                 invalidtask))
-        b.find_element_by_xpath('//input[@value="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 'Failed to import task: error reading package header')
         rpms = tg.config.get('basepath.rpms')
@@ -156,7 +156,7 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_id('task_task_rpm').send_keys(
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker-dummy_for_bz617274-1.0-1.noarch.rpm'))
-        b.find_element_by_xpath('//input[@value="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 'Failed to import task: Owner field not defined')
 
@@ -167,7 +167,7 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_id('task_task_rpm').send_keys(
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker-long-task-RPM-1.0-1.noarch.rpm'))
-        b.find_element_by_xpath('//input[@value="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 'Failed to import task: Task name should be <= 255 characters')
 
@@ -178,7 +178,7 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_id('task_task_rpm').send_keys(
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker----redundant_slashes-1.0-0.noarch.rpm'))
-        b.find_element_by_xpath('//input[@value="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 "Failed to import task: Task name must not contain redundant slashes")
 
@@ -189,7 +189,7 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_id('task_task_rpm').send_keys(
                 pkg_resources.resource_filename(self.__module__,
                 'tmp-distribution-beaker-trailing_slash--1.0-0.noarch.rpm'))
-        b.find_element_by_xpath('//input[@value="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 "Failed to import task: Task name must not end with slash")
 
@@ -197,7 +197,7 @@ class TestSubmitTask(WebDriverTestCase):
     def test_submit_no_task(self):
         b = self.browser
         b.get(get_server_base() + 'tasks/new')
-        b.find_element_by_xpath('//input[@value="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                           "No task RPM specified")
 
