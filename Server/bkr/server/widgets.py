@@ -22,6 +22,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 PasswordField)
 
 from bkr.server import model, search_utility, identity
+from bkr.server.assets import get_assets_env
 from bkr.server.bexceptions import BeakerException
 from bkr.server.helpers import make_fake_link, make_link
 from bkr.server.validators import UniqueLabControllerEmail
@@ -136,10 +137,45 @@ class LocalCSSLink(CSSLink):
         d["link"] = self.name
 
 
+class LocalJSBundleLink(LocalJSLink):
+
+    template = """
+        <script xmlns:py="http://purl.org/kid/ns#"
+            py:for="url in urls"
+            type="text/javascript" src="$url" />
+        """
+
+    def __init__(self, name, **kwargs):
+        super(LocalJSBundleLink, self).__init__('bkr.server', name, **kwargs)
+
+    def update_params(self, d):
+        super(LocalJSBundleLink, self).update_params(d)
+        bundle = get_assets_env()[self.name]
+        d['urls'] = [url(u) for u in bundle.urls()]
+
+
+class LocalCSSBundleLink(LocalCSSLink):
+
+    template = """
+        <link xmlns:py="http://purl.org/kid/ns#"
+            py:for="url in urls"
+            rel="stylesheet" type="text/css" media="$media"
+            href="$url" />
+        """
+
+    def __init__(self, name, **kwargs):
+        super(LocalCSSBundleLink, self).__init__('bkr.server', name, **kwargs)
+
+    def update_params(self, d):
+        super(LocalCSSBundleLink, self).update_params(d)
+        bundle = get_assets_env()[self.name]
+        d['urls'] = [url(u) for u in bundle.urls()]
+
+
 jquery = LocalJSLink('bkr', '/static/javascript/jquery-2.0.2.min.js',
         order=1) # needs to come after MochiKit
-
-local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime_v2.js')
+beaker_js = LocalJSBundleLink('js', order=2)
+beaker_css = LocalCSSBundleLink('css')
 
 
 class UnmangledHiddenField(HiddenField):

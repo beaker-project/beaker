@@ -19,9 +19,6 @@
              display:none
          }
     </style>
-    <style type="text/css" media="screen">
-@import "${tg.url('/static/css/layout-uncompressed.css')}";
-</style>
 </head>
 
 <body py:match="item.tag=='{http://www.w3.org/1999/xhtml}body'" py:attrs="item.items()">

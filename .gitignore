@@ -6,6 +6,7 @@ rpm-build
 *.egg-info
 *.bz2
 Harness/build
+Server/assets/.webassets-cache/
 Server/build
 Server/build.out
 Server/devdata.sqlite

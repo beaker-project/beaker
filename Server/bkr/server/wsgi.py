@@ -23,7 +23,7 @@ from bkr.server import identity
 
 log = logging.getLogger(__name__)
 
-app = Flask('bkr.server')
+app = Flask('bkr.server', static_folder='../../assets')
 application = app
 
 # Load config.
