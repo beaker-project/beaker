@@ -387,10 +387,10 @@ class Root(RPCRoot):
         def reserve_link(x, distro_tree):
             if x.is_free():
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
-                        % (x.id, distro_tree.id), 'Reserve Now')
+                        % (x.id, distro_tree.id), 'Reserve Now', elem_class='btn')
             else:
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
-                        % (x.id, distro_tree.id), 'Queue Reservation')
+                        % (x.id, distro_tree.id), 'Queue Reservation', elem_class='btn')
         try:
             distro_tree = DistroTree.by_id(kw['distro_tree_id'])
         except KeyError:

@@ -346,7 +346,7 @@ class GroupPermissions(Widget):
         </div>
         """
 
-class ReserveSystem(TableForm):
+class ReserveSystem(HorizontalForm):
     fields = [ 
           HiddenField(name='system_id'),
               Label(name='system', label=_(u'System to Provision')),
@@ -380,7 +380,6 @@ class ReserveWorkflow(Form):
                   LocalJSLink('bkr', '/static/javascript/reserve_workflow_v8.js'),
                  ] 
     template="bkr.server.templates.reserve_workflow"
-    css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
     fields = [
         SingleSelectField(name='osmajor', label=_(u'Family'),
             validator=validators.UnicodeString(),

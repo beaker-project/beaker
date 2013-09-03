@@ -43,11 +43,11 @@ class ReserveWorkflow(WebDriverTestCase):
         s = Select(b.find_element_by_name('distro_tree_id'))
         s.select_by_visible_text('%s Server i386' % self.distro.name)
         s.select_by_visible_text('%s Server x86_64' % self.distro.name)
-        b.find_element_by_xpath('//button[@class="auto_pick"]').click()
+        b.find_element_by_xpath('//button[normalize-space(text())="Auto pick system"]').click()
         self.assertEquals(b.find_element_by_id('form_distro').text,
                 '%s Server i386, %s Server x86_64'
                 % (self.distro.name, self.distro.name))
-        self.assertEquals(b.title, 'Reserve System Any System')
+        self.assertEquals(b.title, 'Reserve Any System')
 
     def test_no_lab_controller_distro(self):
         """ Test distros that have no lab controller are not shown"""
@@ -105,10 +105,10 @@ class ReserveWorkflow(WebDriverTestCase):
         Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
         Select(b.find_element_by_name('distro_tree_id'))\
             .select_by_visible_text('%s Server i386' % self.distro.name)
-        b.find_element_by_xpath('//button[@class="auto_pick"]').click()
+        b.find_element_by_xpath('//button[normalize-space(text())="Auto pick system"]').click()
         self.assertEquals(b.find_element_by_id('form_distro').text,
                 '%s Server i386' % self.distro.name)
-        self.assertEquals(b.title, 'Reserve System Any System')
+        self.assertEquals(b.title, 'Reserve Any System')
 
 def go_to_reserve_systems(browser, distro_tree):
     browser.get(get_server_base() + 'reserve_system?distro_tree_id=%s' % distro_tree.id)

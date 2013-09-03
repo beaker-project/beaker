@@ -13,6 +13,7 @@
   <div class="page-header">
     <h1>${value_of('title', 'Form')}</h1>
   </div>
+  <div py:if="value_of('warn', None)" class="alert alert-warning">${warn}</div>
     <div py:if="form">
 <p py:content="form(method='GET', action=tg.url(action), value=value, options=options)">Form goes here</p>
     </div>

@@ -58,8 +58,8 @@ class ReserveWorkflow:
                             system = system_name,
                             distro = '',
                             distro_tree_ids = [],
-                            warn='',
                             )
+        warn = None
         if not isinstance(distro_tree_id, list):
             distro_tree_id = [distro_tree_id]
         for id in distro_tree_id:
@@ -68,7 +68,7 @@ class ReserveWorkflow:
                 if System.by_type(type=SystemType.machine,
                         systems=distro_tree.systems(user=identity.current.user))\
                         .count() < 1:
-                    flash(_(u'No systems compatible with %s') % distro_tree)
+                    warn = _(u'No systems compatible with %s') % distro_tree
                 distro_names.append(unicode(distro_tree))
                 return_value['distro_tree_ids'].append(id)
             except NoResultFound:
@@ -79,8 +79,9 @@ class ReserveWorkflow:
         return dict(form=self.reserveform,
                     action='./doit',
                     value = return_value,
+                    warn=warn,
                     options = None,
-                    title='Reserve System %s' % system_name)
+                    title='Reserve %s' % system_name)
 
     @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.generic') 
