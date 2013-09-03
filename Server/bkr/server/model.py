@@ -6962,7 +6962,7 @@ class Task(MappedObject):
 
         try:
             task.uploader = identity.current.user
-        except IdentityException:
+        except identity.RequestRequiredException:
             task.uploader = User.query.get(1)
 
         task.valid = True
