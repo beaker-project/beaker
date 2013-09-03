@@ -127,12 +127,20 @@ class Process(object):
         self.exec_dir = exec_dir
 
     def start(self):
-        log.info('Spawning %s: %s %r', self.name, ' '.join(self.args), self.env)
+        _cmd_line = ' '.join(self.args)
+        if self.env is None:
+            log.info('Spawning %s: %r', self.name, _cmd_line)
+        else:
+            log.info('Spawning %s in %r: %r', self.name, self.env, _cmd_line)
         env = dict(os.environ)
         if self.env:
             env.update(self.env)
-        self.popen = subprocess.Popen(self.args, stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT, env=env, cwd=self.exec_dir)
+        try:
+            self.popen = subprocess.Popen(self.args, stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT, env=env, cwd=self.exec_dir)
+        except:
+            log.info('Failed to spawn %s', self.name)
+            raise
         self.communicate_thread = CommunicateThread(popen=self.popen)
         self.communicate_thread.start()
         if self.listen_port:
@@ -279,8 +287,13 @@ def setup_package():
 
     if 'BEAKER_SERVER_BASE_URL' not in os.environ:
         # need to start the server ourselves
+        # Usual pkg_resources ugliness is needed to ensure gunicorn doesn't
+        # import pkg_resources before we get a chance to specify our
+        # requirements in bkr.server.wsgi
         processes.extend([
-            Process('gunicorn', args=['gunicorn',
+            Process('gunicorn', args=[sys.executable, '-c',
+                '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; ' \
+                'from gunicorn.app.wsgiapp import run; run()',
                 '--bind', ':%s' % turbogears.config.get('server.socket_port'),
                 '--workers', '8', '--access-logfile', '-', '--preload',
                 'bkr.server.wsgi:application'],
