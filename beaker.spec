@@ -51,6 +51,11 @@ BuildRequires:  python-kid
 # These server dependencies are needed in the build, because
 # sphinx imports bkr.server modules to generate API docs
 BuildRequires:  TurboGears >= 1.1.3
+%if 0%{?rhel} == 6
+BuildRequires:  python-turbojson13
+%else
+BuildRequires:  python-turbojson
+%endif
 BuildRequires:  python-sqlalchemy >= 0.6
 BuildRequires:  python-xmltramp
 BuildRequires:  python-lxml
@@ -100,6 +105,11 @@ Conflicts:      rhts-devel < 4.52
 Summary:       Server component of Beaker
 Group:          Applications/Internet
 Requires:       TurboGears >= 1.1.3
+%if 0%{?rhel} == 6
+Requires:       python-turbojson13
+%else
+Requires:       python-turbojson
+%endif
 Requires:       python-sqlalchemy >= 0.6
 Requires:       intltool
 Requires:       python-decorator
