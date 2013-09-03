@@ -52,14 +52,14 @@ class JobDeleteWD(WebDriverTestCase):
         # check we cannot delete
         action_text = b.find_element_by_xpath("//td[preceding-sibling::td/"
             "a[normalize-space(text())='%s']]/"
-            "div[@class='job-action-container']" % job.t_id).text
+            "div[contains(@class, 'job-action-container')]" % job.t_id).text
         self.assertTrue('Delete' not in action_text)
         # Now go to the individual job page to test for the lack
         # of a 'Delete' link
         b.get(get_server_base() + 'jobs/%d' % \
             job.id)
         action_text = b. \
-            find_element_by_xpath("//div[@class='job-action-container']").text
+            find_element_by_xpath("//div[contains(@class, 'job-action-container')]").text
         self.assertTrue('Delete' not in action_text)
 
         # Ok add our delegates as the submitters

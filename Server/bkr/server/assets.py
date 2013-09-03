@@ -36,11 +36,16 @@ def _create_env():
             'bootstrap/js/bootstrap-dropdown.js',
             'bootstrap/js/bootstrap-tab.js',
             'bootstrap/js/bootstrap-alert.js',
+            'bootstrap/js/bootstrap-button.js',
+            'bootstrap/js/bootstrap-collapse.js',
             'bootstrap/js/bootstrap-typeahead.js',
             'jquery.cookie.js',
+            'underscore-1.5.1.js',
+            'backbone-1.0.0.js',
             # ours
             'local-datetime.js',
             'link-tabs-to-anchor.js',
+            'recipe-tasks.js',
             filters=['uglifyjs'],
             output='generated/beaker-%(version)s.js')
     return env

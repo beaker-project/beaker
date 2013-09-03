@@ -147,7 +147,7 @@ class TestRecipeView(WebDriverTestCase):
             the_recipe.systems[:] = [self.system]
         b = self.browser
         self.go_to_recipe_view(the_recipe)
-        b.find_element_by_xpath('//td[preceding-sibling::td/b[text()='
+        b.find_element_by_xpath('//td[preceding-sibling::th[text()='
             '"Possible Systems"]]/a').click()
 
         # Make sure our system link is there
@@ -163,11 +163,11 @@ class TestRecipeView(WebDriverTestCase):
         some_job = self.job
         r = some_job.recipesets[0].recipes[0]
         self.go_to_recipe_view(r)
-        b.find_element_by_id("all_recipe_%s" % r.id).click()
-        rt_log_server_link = b.find_element_by_xpath("//tr[@class='even pass_recipe_%s recipe_%s']//td[position()=4]//a" % (r.id, r.id)).get_attribute('href')
+        b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]' % r.id).click()
+        rt_log_server_link = b.find_element_by_xpath("//tr[@class='pass_recipe_%s recipe_%s']//td[position()=4]//a" % (r.id, r.id)).get_attribute('href')
         self.assertEquals(rt_log_server_link, 'http://dummy-archive-server/beaker/tasks/dummy.txt')
-        b.find_element_by_id("logs_button_%s" % r.id).click()
-        r_server_link = b.find_element_by_xpath("//table[@class='show']/tbody//tr[position()=6]/td/a").get_attribute('href')
+        b.find_element_by_xpath('//div[@id="recipe%s"]//button[text()="Logs"]' % r.id).click()
+        r_server_link = b.find_element_by_xpath("//table/tbody//tr[position()=6]/td//a").get_attribute('href')
         self.assertEquals(r_server_link, 'http://dummy-archive-server/beaker/recipe_path/dummy.txt')
 
     def test_task_pagination(self):
@@ -179,7 +179,8 @@ class TestRecipeView(WebDriverTestCase):
 
         b = self.browser
         self.go_to_recipe_view(the_recipe)
-        b.find_element_by_id("all_recipe_%s" % the_recipe.id).click()
+        b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]'
+                % the_recipe.id).click()
         for t in the_job.recipesets[0].recipes[0].tasks:
             self.assertTrue(is_text_present(b, "T:%s" %t.id))
 
@@ -196,7 +197,8 @@ class TestRecipeView(WebDriverTestCase):
 
         b = self.browser
         self.go_to_recipe_view(recipe)
-        b.find_element_by_id('all_recipe_%s' % recipe.id).click()
+        b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]'
+                % recipe.id).click()
         # Let's set a wait time of 30 seconds and try to find the results table.
         # If the server is taking too long to return our results,
         # we will get a NoSuchElementException below.
@@ -215,9 +217,8 @@ class TestRecipeView(WebDriverTestCase):
         task = job.recipesets[0].recipes[0].tasks[0].id
         # bkr/recipes/id#task<id>
         b.get(get_server_base() + 'recipes/%s#task%s' %(recipe.id,task))
-        # give 10 seconds for the element to be displayed
-        WebDriverWait(b, 10).until(lambda driver : driver.find_element_by_id('task_items_%s' %recipe.id).is_displayed())
-        self.assertTrue(b.find_element_by_id('task_items_%s' %recipe.id).is_displayed())
+        # "Show Results" should be activated for the recipe
+        b.find_element_by_css_selector('#recipe%s .active .results-tab' % recipe.id)
 
         # bkr/jobs/id#task<id>
         # for multi recipe jobs, only the recipe to which the task belongs should be visible
@@ -225,11 +226,9 @@ class TestRecipeView(WebDriverTestCase):
         task = job.recipesets[0].recipes[6].tasks[0].id
         recipe = recipes[6]
         b.get(get_server_base() + 'jobs/%s#task%s' %(job.id,task))
-        # give 10 seconds for the element to be displayed
-        WebDriverWait(b, 10).until(lambda driver : driver.find_element_by_id('task_items_%s' %recipe.id).is_displayed())
-        self.assertTrue(b.find_element_by_id('task_items_%s' %recipe.id).is_displayed())
+        # "Show Results" should be activated for the recipe
+        b.find_element_by_css_selector('#recipe%s .active .results-tab' % recipe.id)
         recipes.remove(recipe)
         for r in recipes:
-            # be fair and give 10 seconds for the element to be displayed, if at all
-            WebDriverWait(b, 10).until(lambda driver : driver.find_element_by_id('task_items_%s' %recipe.id).is_displayed())
-            self.assertTrue(not b.find_element_by_id('task_items_%s' %r.id).is_displayed())
+            # "Hide Results" should be activated for the recipe
+            b.find_element_by_css_selector('#recipe%s .active .hide-results-tab' % r.id)

@@ -21,7 +21,6 @@ from cherrypy import request, response
 from kid import Element
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import RecipeWidget
-from bkr.server.widgets import RecipeTasksWidget
 from bkr.server.widgets import SearchBar
 from bkr.server.widgets import RecipeActionWidget
 from bkr.server import search_utility, identity
@@ -59,7 +58,6 @@ class Recipes(RPCRoot):
     tasks = RecipeTasks()
 
     recipe_widget = RecipeWidget()
-    recipe_tasks_widget = RecipeTasksWidget()
 
     log_types = dict(R = LogRecipe,
                      T = LogRecipeTask,
@@ -446,7 +444,6 @@ class Recipes(RPCRoot):
             redirect(".")
         return dict(title   = 'Recipe',
                     recipe_widget        = self.recipe_widget,
-                    recipe_tasks_widget  = self.recipe_tasks_widget,
                     recipe               = recipe)
 
 # hack for Sphinx

@@ -256,8 +256,6 @@ class Tasks(RPCRoot):
             tasks = tasks.join(RecipeTask.recipe).filter(Recipe.id == kw['recipe_id'])
 
             hidden = dict(distro_tree=1, system=1)
-            return dict(tasks=tasks,hidden=hidden,task_widget=self.task_widget)
-
         if kw.get('distro_tree_id'):
             tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree)\
                     .filter(DistroTree.id == kw.get('distro_tree_id'))

@@ -46,9 +46,9 @@
     <?python
         result = task.is_failed() and 'fail' or 'pass'
     ?>
-   <tr class="${result}_recipe_${task.recipe.id} recipe_${task.recipe.id}">
+   <tr class="${result}_recipe_${task.recipe.id} recipe_${task.recipe.id}" id="task${task.id}">
     <td class="task" py:if="not hidden.has_key('rid')">
-     <a name="task${task.id}">${task.link_id}</a>
+     ${task.link_id}
     </td>
     <td class="task" py:if="not hidden.has_key('task')">
      ${task.link}
@@ -68,10 +68,10 @@
     <td class="task" py:if="not hidden.has_key('logs')">
      <span py:for="log in task.logs">${log.link}<br/></span>
     </td>
-    <td class="task" py:if="not hidden.has_key('status')">
+    <td class="task status${task.status}" py:if="not hidden.has_key('status')">
      ${task.status}
     </td>
-    <td class="task" py:if="not hidden.has_key('result')">
+    <td class="task result${task.result}" py:if="not hidden.has_key('result')">
      ${task.result}
     </td>
     <td class="task" py:if="not hidden.has_key('score')">
@@ -104,7 +104,7 @@
     <td class="result" py:if="not hidden.has_key('status')">
      &nbsp;
     </td>
-    <td class="result" py:if="not hidden.has_key('result')">
+    <td class="result result${task_result.result}" py:if="not hidden.has_key('result')">
      ${task_result.result}
     </td>
     <td class="result" py:if="not hidden.has_key('score')">

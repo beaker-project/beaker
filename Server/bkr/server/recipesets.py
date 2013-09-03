@@ -21,7 +21,6 @@ from cherrypy import request, response
 from kid import Element
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import RecipeWidget
-from bkr.server.widgets import RecipeTasksWidget
 from bkr.server.widgets import SearchBar
 from bkr.server import search_utility, identity
 from bkr.server.xmlrpccontroller import RPCRoot

@@ -157,8 +157,8 @@ class TestViewJob(WebDriverTestCase):
         b.find_element_by_xpath('//td[.//text()="%s"]' % job.t_id)
         self.assertEqual(
             # value of cell beside "CC" cell
-            b.find_element_by_xpath('//table[@class="show"]//td'
-                '[preceding-sibling::td[1]/b/text() = "CC"]').text,
+            b.find_element_by_xpath('//table//td'
+                '[preceding-sibling::th[1]/text() = "CC"]').text,
             'laika@mir.su; tereshkova@kosmonavt.su')
 
     def test_edit_job_whiteboard(self):
@@ -170,7 +170,7 @@ class TestViewJob(WebDriverTestCase):
         b.get(get_server_base() + 'jobs/%s' % job.id)
         new_whiteboard = 'new whiteboard value %s' % int(time.time())
         b.find_element_by_xpath(
-                '//td[preceding-sibling::td[1]/b/text()="Whiteboard"]'
+                '//td[preceding-sibling::th[1]/text()="Whiteboard"]'
                 '//a[text()="(Edit)"]').click()
         b.find_element_by_name('whiteboard').clear()
         b.find_element_by_name('whiteboard').send_keys(new_whiteboard)
@@ -188,14 +188,14 @@ class TestViewJob(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'jobs/%s' % job.id)
         self.check_datetime_localised(b.find_element_by_xpath(
-                '//table[@class="show"]//td'
-                '[preceding-sibling::td[1]/b/text() = "Queued"]').text)
+                '//table//td'
+                '[preceding-sibling::th[1]/text() = "Queued"]').text)
         self.check_datetime_localised(b.find_element_by_xpath(
-                '//table[@class="show"]//td'
-                '[preceding-sibling::td[1]/b/text() = "Started"]').text)
+                '//table//td'
+                '[preceding-sibling::th[1]/text() = "Started"]').text)
         self.check_datetime_localised(b.find_element_by_xpath(
-                '//table[@class="show"]//td'
-                '[preceding-sibling::td[1]/b/text() = "Finished"]').text)
+                '//table//td'
+                '[preceding-sibling::th[1]/text() = "Finished"]').text)
 
     def test_invalid_datetimes_arent_localised(self):
         with session.begin():
@@ -203,8 +203,8 @@ class TestViewJob(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'jobs/%s' % job.id)
         self.assertEquals(
-                b.find_element_by_xpath('//table[@class="show"]//td'
-                '[preceding-sibling::td[1]/b/text() = "Finished"]').text,
+                b.find_element_by_xpath('//table//td'
+                '[preceding-sibling::th[1]/text() = "Finished"]').text,
                 '')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=706435
@@ -214,18 +214,18 @@ class TestViewJob(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'jobs/%s' % job.id)
         recipe_id = job.recipesets[0].recipes[0].id
-        b.find_element_by_id('all_recipe_%d' % recipe_id).click()
+        b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]' % recipe_id).click()
         b.find_element_by_xpath(
-                '//div[@id="task_items_%d"]//table[@class="list"]' % recipe_id)
-        recipe_task_start, recipe_task_finish, _ = \
-                b.find_element_by_xpath(
-                    '//div[@id="task_items_%d"]//table[@class="list"]'
-                    '/tbody/tr[2]/td[3]' % recipe_id).text.splitlines()
-        self.check_datetime_localised(recipe_task_start.strip())
-        self.check_datetime_localised(recipe_task_finish.strip())
+                '//div[@id="recipe-%d-results"]//table' % recipe_id)
+        recipe_task_start, recipe_task_finish = \
+                b.find_elements_by_xpath(
+                    '//div[@id="recipe-%d-results"]//table'
+                    '/tbody/tr[1]/td[3]/span' % recipe_id)
+        self.check_datetime_localised(recipe_task_start.text.strip())
+        self.check_datetime_localised(recipe_task_finish.text.strip())
         self.check_datetime_localised(b.find_element_by_xpath(
-                '//div[@id="task_items_%d"]//table[@class="list"]'
-                '/tbody/tr[3]/td[3]' % recipe_id).text)
+                '//div[@id="recipe-%d-results"]//table'
+                '/tbody/tr[2]/td[3]' % recipe_id).text)
 
     def check_datetime_localised(self, dt):
         self.assert_(re.match(r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d [-+]\d\d:\d\d$', dt),
@@ -246,7 +246,7 @@ class TestViewJob(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'jobs/%s' % job.id)
         recipe_order = [elem.text for elem in b.find_elements_by_xpath(
-                '//a[@class="list recipe-id"]')]
+                '//a[@class="recipe-id"]')]
         self.assertEquals(recipe_order, [host.t_id, guest.t_id])
 
 class NewJobTestWD(WebDriverTestCase):
@@ -290,10 +290,10 @@ class NewJobTestWD(WebDriverTestCase):
             ''')
         xml_file.flush()
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
-        b.find_element_by_xpath("//input[@value='Submit Data']").click()
-        b.find_element_by_xpath("//input[@value='Queue']").click()
-        flash_text = b.find_element_by_class_name('flash').text
-        self.assert_('Job failed schema validation' in flash_text, flash_text)
+        b.find_element_by_xpath("//button[text()='Submit Data']").click()
+        b.find_element_by_xpath("//button[text()='Queue']").click()
+        b.find_element_by_xpath('//div[contains(@class, "alert")]'
+                '/h4[contains(text(), "Job failed schema validation")]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=949777
     def test_invalid_inventory_date_with_not_equal(self):
@@ -323,10 +323,10 @@ class NewJobTestWD(WebDriverTestCase):
             ''')
         xml_file.flush()
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
-        b.find_element_by_xpath("//input[@value='Submit Data']").click()
-        b.find_element_by_xpath("//input[@value='Queue']").click()
-        flash_text = b.find_element_by_class_name('flash').text
-        self.assert_('Job failed schema validation' in flash_text, flash_text)
+        b.find_element_by_xpath("//button[text()='Submit Data']").click()
+        b.find_element_by_xpath("//button[text()='Queue']").click()
+        b.find_element_by_xpath('//div[contains(@class, "alert")]'
+                '/h4[contains(text(), "Job failed schema validation")]')
 
     def test_valid_submission_delegate(self):
         with session.begin():
@@ -356,8 +356,8 @@ class NewJobTestWD(WebDriverTestCase):
             ''' % user.user_name)
         xml_file.flush()
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
-        b.find_element_by_xpath("//input[@value='Submit Data']").click()
-        b.find_element_by_xpath("//input[@value='Queue']").click()
+        b.find_element_by_xpath("//button[text()='Submit Data']").click()
+        b.find_element_by_xpath("//button[text()='Queue']").click()
         flash_text = b.find_element_by_class_name('flash').text
         self.assert_('Success!' in flash_text, flash_text)
         self.assertEqual(b.title, 'My Jobs')
@@ -392,8 +392,8 @@ class NewJobTestWD(WebDriverTestCase):
             ''' % user.user_name)
         xml_file.flush()
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
-        b.find_element_by_xpath("//input[@value='Submit Data']").click()
-        b.find_element_by_xpath("//input[@value='Queue']").click()
+        b.find_element_by_xpath("//button[text()='Submit Data']").click()
+        b.find_element_by_xpath("//button[text()='Queue']").click()
         flash_text = b.find_element_by_class_name('flash').text
         self.assertEquals('Failed to import job because of: %s is not a valid'
             ' submission delegate for %s' % (invalid_delegate.user_name, user.user_name), flash_text, flash_text)
@@ -426,8 +426,8 @@ class NewJobTestWD(WebDriverTestCase):
             ''')
         xml_file.flush()
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
-        b.find_element_by_xpath("//input[@value='Submit Data']").click()
-        b.find_element_by_xpath("//input[@value='Queue']").click()
+        b.find_element_by_xpath("//button[text()='Submit Data']").click()
+        b.find_element_by_xpath("//button[text()='Queue']").click()
         flash_text = b.find_element_by_class_name('flash').text
         self.assert_('Success!' in flash_text, flash_text)
         self.assertEqual(b.title, 'My Jobs')
@@ -441,7 +441,7 @@ class NewJobTestWD(WebDriverTestCase):
         xml_file.write('\x89')
         xml_file.flush()
         b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
-        b.find_element_by_xpath("//input[@value='Submit Data']").click()
+        b.find_element_by_xpath("//button[text()='Submit Data']").click()
         flash_text = b.find_element_by_class_name('flash').text
         self.assertEquals(flash_text,
                 "Invalid job XML: 'utf8' codec can't decode byte 0x89 "
@@ -486,14 +486,14 @@ class NewJobTest(SeleniumTestCase):
             ''')
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
-        sel.click('//input[@value="Submit Data"]')
+        sel.click('//button[text()="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        sel.click('//input[@value="Queue"]')
+        sel.click('//button[text()="Queue"]')
         sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_text('css=.flash'),
+        self.assertEqual(sel.get_text('css=.alert-error h4'),
                 'Job failed schema validation. Please confirm that you want to submit it.')
         self.assert_(int(sel.get_xpath_count('//ul[@class="xsd-error-list"]/li')) > 0)
-        sel.click('//input[@value="Queue despite validation errors"]')
+        sel.click('//button[text()="Queue despite validation errors"]')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'My Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
@@ -512,9 +512,9 @@ class NewJobTest(SeleniumTestCase):
             ''')
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
-        sel.click('//input[@value="Submit Data"]')
+        sel.click('//button[text()="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        sel.click('//input[@value="Queue"]')
+        sel.click('//button[text()="Queue"]')
         sel.wait_for_page_to_load('30000')
         self.assert_('Failed to import job' in sel.get_text('css=.flash'))
 
@@ -531,9 +531,9 @@ class NewJobTest(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         sel.type('jobs_filexml', pkg_resources.resource_filename(
                 'bkr.inttest', 'complete-job.xml'))
-        sel.click('//input[@value="Submit Data"]')
+        sel.click('//button[text()="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        sel.click('//input[@value="Queue"]')
+        sel.click('//button[text()="Queue"]')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'My Jobs')
         self.assert_(sel.get_text('css=.flash').startswith('Success!'))
@@ -571,9 +571,9 @@ class NewJobTest(SeleniumTestCase):
             ''' % (distro_tree.distro.name, excluded_task.name))
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
-        sel.click('//input[@value="Submit Data"]')
+        sel.click('//button[text()="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        sel.click('//input[@value="Queue"]')
+        sel.click('//button[text()="Queue"]')
         sel.wait_for_page_to_load('30000')
         flash = sel.get_text('css=.flash')
         self.assert_(flash.startswith('Success!'), flash)
@@ -606,9 +606,9 @@ class NewJobTest(SeleniumTestCase):
             ''')
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
-        sel.click('//input[@value="Submit Data"]')
+        sel.click('//button[text()="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        sel.click('//input[@value="Queue"]')
+        sel.click('//button[text()="Queue"]')
         sel.wait_for_page_to_load('30000')
         flash = sel.get_text('css=.flash')
         self.assert_(flash.startswith('Success!'), flash)
@@ -644,9 +644,9 @@ class NewJobTest(SeleniumTestCase):
             ''')
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
-        sel.click('//input[@value="Submit Data"]')
+        sel.click('//button[text()="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        sel.click('//input[@value="Queue"]')
+        sel.click('//button[text()="Queue"]')
         sel.wait_for_page_to_load('30000')
         flash = sel.get_text('css=.flash')
         self.assert_(flash.startswith('Success!'), flash)
@@ -681,9 +681,9 @@ class NewJobTest(SeleniumTestCase):
             ''')
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
-        sel.click('//input[@value="Submit Data"]')
+        sel.click('//button[text()="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        sel.click('//input[@value="Queue"]')
+        sel.click('//button[text()="Queue"]')
         sel.wait_for_page_to_load('30000')
         self.assert_('Failed to import job' in sel.get_text('css=.flash'))
 
@@ -713,9 +713,9 @@ class NewJobTest(SeleniumTestCase):
             ''')
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
-        sel.click('//input[@value="Submit Data"]')
+        sel.click('//button[text()="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        sel.click('//input[@value="Queue"]')
+        sel.click('//button[text()="Queue"]')
         sel.wait_for_page_to_load('30000')
         flash = sel.get_text('css=.flash')
         self.assert_(flash.startswith('Success!'), flash)
@@ -745,9 +745,9 @@ class NewJobTest(SeleniumTestCase):
             ''')
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
-        sel.click('//input[@value="Submit Data"]')
+        sel.click('//button[text()="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        sel.click('//input[@value="Queue"]')
+        sel.click('//button[text()="Queue"]')
         sel.wait_for_page_to_load('30000')
         flash = sel.get_text('css=.flash')
         self.assert_(flash.startswith('Success!'), flash)
@@ -807,9 +807,9 @@ class NewJobTest(SeleniumTestCase):
             ''')
         xml_file.flush()
         sel.type('jobs_filexml', xml_file.name)
-        sel.click('//input[@value="Submit Data"]')
+        sel.click('//button[text()="Submit Data"]')
         sel.wait_for_page_to_load('30000')
-        sel.click('//input[@value="Queue"]')
+        sel.click('//button[text()="Queue"]')
         sel.wait_for_page_to_load('30000')
         flash = sel.get_text('css=.flash')
         self.assert_(flash.startswith('Success!'), flash)
@@ -834,10 +834,10 @@ class CloneJobTest(SeleniumTestCase):
         sel =  self.selenium
         sel.open('jobs/clone?job_id=%s' % job.id)
         sel.wait_for_page_to_load('30000')
-        cloned_from_job = sel.get_text('//textarea[@id="job_textxml"]')
+        cloned_from_job = sel.get_text('//textarea[@name="textxml"]')
         sel.open('jobs/clone?recipeset_id=%s' % job.recipesets[0].id)
         sel.wait_for_page_to_load('30000')
-        cloned_from_rs = sel.get_text('//textarea[@id="job_textxml"]')
+        cloned_from_rs = sel.get_text('//textarea[@name="textxml"]')
         self.assertEqual(cloned_from_job,cloned_from_rs)
 
     def test_cloning_recipeset(self):
@@ -847,10 +847,10 @@ class CloneJobTest(SeleniumTestCase):
         sel = self.selenium
         sel.open('jobs/clone?job_id=%s' % job.id)
         sel.wait_for_page_to_load('30000')
-        cloned_from_job = sel.get_text('//textarea[@id="job_textxml"]')
+        cloned_from_job = sel.get_text('//textarea[@name="textxml"]')
         sel.open('jobs/clone?recipeset_id=%s' % job.recipesets[0].id)
         sel.wait_for_page_to_load('30000')
-        cloned_from_rs = sel.get_text('//textarea[@id="job_textxml"]')
+        cloned_from_rs = sel.get_text('//textarea[@name="textxml"]')
         self.assertEqual(cloned_from_job, cloned_from_rs)
 
 class TestJobsGrid(WebDriverTestCase):

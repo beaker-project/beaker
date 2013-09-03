@@ -24,7 +24,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
 from bkr.server import model, search_utility, identity
 from bkr.server.assets import get_assets_env
 from bkr.server.bexceptions import BeakerException
-from bkr.server.helpers import make_fake_link, make_link
+from bkr.server.helpers import make_link
 from bkr.server.validators import UniqueLabControllerEmail
 import logging
 log = logging.getLogger(__name__)
@@ -174,7 +174,7 @@ class LocalCSSBundleLink(LocalCSSLink):
 
 jquery = LocalJSLink('bkr', '/static/javascript/jquery-2.0.2.min.js',
         order=1) # needs to come after MochiKit
-beaker_js = LocalJSBundleLink('js', order=2)
+beaker_js = LocalJSBundleLink('js', order=5)
 beaker_css = LocalCSSBundleLink('css')
 
 
@@ -241,7 +241,7 @@ class UnmangledHiddenField(HiddenField):
 
 
 class DeleteLinkWidget(Widget):
-    javascript = [LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js', order=3),
         LocalJSLink('bkr', '/static/javascript/util.js')]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     params = ['msg', 'action_text', 'show_icon']
@@ -264,7 +264,7 @@ class DoAndConfirmForm(Form):
     params = ['msg', 'action_text', 'look']
 
     def __init__(self, *args, **kw):
-        self.javascript.extend([LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js'), 
+        self.javascript.extend([LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js', order=3),
             LocalJSLink('bkr', '/static/javascript/util.js'),])
         self.css.append(LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css'))
 
@@ -290,7 +290,7 @@ class DeleteLinkWidgetForm(Form, DeleteLinkWidget):
           py:replace="field.display()"/>
             <a href="#" onclick="javascript:job_delete(this.parentNode);return false;" 
                class="btn">
-              <i class="icon-remove"/> ${action_text}
+              <i class="icon-remove" py:if="show_icon"/> ${action_text}
             </a>
       </form>
     </span>
@@ -330,7 +330,7 @@ class GroupPermissions(Widget):
 
     javascript = [LocalJSLink('bkr', '/static/javascript/group_permission_v3.js'),
         LocalJSLink('bkr', '/static/javascript/util.js'),
-        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js'),]
+        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js', order=3),]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     member_widgets = ['form', 'grid']
     template = """
@@ -516,7 +516,7 @@ class myPaginateDataGrid(PaginateDataGrid):
 
 class LabControllerDataGrid(myPaginateDataGrid):
     javascript = [LocalJSLink('bkr','/static/javascript/lab_controller_remove.js'),
-                  LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js'),]
+                  LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js', order=3),]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
 
 class SingleSelectFieldJSON(SingleSelectField):
@@ -595,24 +595,24 @@ class JobQuickSearch(CompoundWidget):
 
 class AckPanel(RadioButtonList): 
 
-    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js'),
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),
                   LocalJSLink('bkr','/static/javascript/loader_v2.js'),
                   LocalJSLink('bkr','/static/javascript/response_v3.js')]
 
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     params = ['widget_name','unreal_response','comment_id','comment_class']
     template = """
-    <ul xmlns:py="http://purl.org/kid/ns#"
+    <div xmlns:py="http://purl.org/kid/ns#"
         class="${field_class}"
         id="${field_id}"
     >
-        <li py:for="value, desc, attrs in options">
+        <label py:for="value, desc, attrs in options" class="radio">
             <input type="radio" name="${widget_name}" py:if="unreal_response != value" id="${field_id}_${value}" value="${value}" py:attrs="attrs" />
             <input type="radio" name="${widget_name}" py:if="unreal_response == value" id="unreal_response" value="${value}" py:attrs="attrs" />
-            <label for="${field_id}_${value}" py:content="desc" />
-        </li>
+            ${desc}
+        </label>
         <a id="${comment_id}" class="${comment_class}" style="cursor:pointer;display:inline-block;margin-top:0.3em">comment</a>
-    </ul>
+    </div>
     """
     
     def __init__(self,*args,**kw):
@@ -679,7 +679,7 @@ class AckPanel(RadioButtonList):
         return super(AckPanel,self).display(value,*args,**params)
  
 class JobMatrixReport(Form):     
-    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js'),
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),
                   LocalJSLink('bkr', '/static/javascript/job_matrix_v2.js')]
     css = [LocalCSSLink('bkr','/static/css/job_matrix.css'),
         LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
@@ -725,7 +725,7 @@ class SearchBar(RepeatingFormField):
     css = [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     javascript = [LocalJSLink('bkr', '/static/javascript/search_object.js'),
                   LocalJSLink('bkr', '/static/javascript/searchbar_v9.js'),
-                  LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js'),]
+                  LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),]
     template = "bkr.server.templates.search_bar"
 
     params = ['repetitions', 'search_object', 'form_attrs', 'search_controller',
@@ -1529,15 +1529,6 @@ class TasksWidget(CompoundWidget):
     action = '/tasks/do_search'
     link = LinkRemoteFunction(name='link', before='task_search_before()', on_complete='task_search_complete()')
 
-class RecipeTasksWidget(TasksWidget):
-    
-     
-    def update_params(self, d):
-        d["hidden"] = dict(system  = 1,
-                           arch    = 1,
-                           distro  = 1,
-                           osmajor = 1,
-                          )
 
 class RecipeSetWidget(CompoundWidget):
     javascript = []
@@ -1611,10 +1602,11 @@ class ReportProblemForm(RemoteForm):
 class RecipeActionWidget(CompoundWidget):
     template = 'bkr.server.templates.recipe_action'
     javascript = [LocalJSLink('bkr', '/static/javascript/util.js'),
-        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js'),]
+        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js', order=3),]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     problem_form = ReportProblemForm()
-    params = ['report_problem_options', 'report_link']
+    report_problem_options = {}
+    params = ['report_problem_options']
     member_widgets = ['problem_form']
 
     def __init__(self, *args, **kw):
@@ -1622,14 +1614,9 @@ class RecipeActionWidget(CompoundWidget):
 
     def display(self, task, **params):
         if getattr(task.resource, 'system', None):
-            params['report_link'] = make_fake_link(
-                attrs={'onclick': "show_field('report_problem_recipe_%s','%s')" % (task.id, self.problem_form.desc)},
-                text='Report Problem with system')
             params['report_problem_options'] = {'system' : task.resource.system,
                 'recipe' : task, 'name' : 'report_problem_recipe_%s' % task.id,
                 'action' : '../system_action/report_system_problem'}
-        else:
-            params['report_link'] = None
         return super(RecipeActionWidget,self).display(task, **params)
 
 
@@ -1637,9 +1624,8 @@ class RecipeWidget(CompoundWidget):
     css = []
     template = "bkr.server.templates.recipe_widget"
     params = ['recipe', 'recipe_systems']
-    member_widgets = ['recipe_tasks_widget','action_widget']
+    member_widgets = ['action_widget']
     action_widget = RecipeActionWidget()
-    recipe_tasks_widget = RecipeTasksWidget()
 
     def update_params(self, d):
         super(RecipeWidget, self).update_params(d)
@@ -1909,6 +1895,7 @@ class JobPageActionWidget(JobActionWidget):
         super(JobPageActionWidget, self).update_params(d)
         value = {'t_id' : d['job_details'].get('t_id') }
         d['job_delete_attrs'] = { 'value' : value,
+                                  'show_icon': False,
                                   'action' : d['job_delete_attrs'].get('action') }
 
 
