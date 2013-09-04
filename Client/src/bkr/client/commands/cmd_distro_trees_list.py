@@ -99,12 +99,8 @@ See also
 
 
 import sys
-try:
-    import json
-except ImportError:
-    import simplejson as json
+import bkr.client.json_compat as json
 from bkr.client import BeakerCommand
-
 
 class Distro_Trees_List(BeakerCommand):
     """List distro trees"""
