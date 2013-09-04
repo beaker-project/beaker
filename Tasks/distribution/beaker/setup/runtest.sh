@@ -172,9 +172,9 @@ __EOF__
     rlPhaseEnd
 
     rlPhaseStartTest "Add lab controllers"
-    rlRun "yum install -y python-twill"
+    rlRun "curl -f -s -o /dev/null -c cookie -d user_name=admin -d password=testing -d login http://$SERVER/bkr/login" 0 "Log in to Beaker"
     for CLIENT in $CLIENTS; do
-        rlRun "./add-labcontroller.py -l $CLIENT" 0 "Add Lab Controller"
+        rlRun "curl -f -s -o /dev/null -b cookie -d fqdn=$CLIENT -d lusername=host/$CLIENT -d lpassword=testing -d email=root@$CLIENT http://$SERVER/bkr/labcontrollers/save" 0 "Add lab controller $CLIENT"
     done
     rlPhaseEnd
 
