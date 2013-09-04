@@ -60,7 +60,9 @@ part swap --recommended
 {% set partname = partition[0].lstrip('/') %}
 {% if partition[1] == 'part' %}
 {% if myfstype %} 
-{% if myfstype == 'btrfs' %}
+{% if myfstype == 'btrfs' and
+      distro is not osmajor('RedHatEnterpriseLinux6') %}
+{# Recent anaconda versions need a custom command for btrfs #}
 {% set btrfs_vol_label = partname.replace('/', '_') %}
 part btrfs.{{ btrfs_vol_label }} --size={{ size }}
 btrfs /{{ partname }} --label={{ btrfs_vol_label}} btrfs.{{ btrfs_vol_label }}
