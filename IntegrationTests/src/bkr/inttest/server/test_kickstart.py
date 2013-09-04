@@ -1,5 +1,5 @@
 
-import unittest
+import unittest2 as unittest
 import urlparse
 import tempfile
 import re
@@ -1762,6 +1762,48 @@ done
                 <recipeSet>
                     <recipe>
                         <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="btrfs" name="mnt/testarea1" size="10" type="part"/>
+                            <partition fs="btrfs" name="mnt/testarea2" size="10" type="part"/>
+                        </partitions>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        self.assertIn('''
+part /boot --size 200 --recommended --asprimary
+part / --size 1024 --grow
+part swap --recommended
+''',
+                    recipe.rendered_kickstart.kickstart)
+
+        self.assertIn('''
+part btrfs.mnt_testarea1 --size=10240
+btrfs /mnt/testarea1 --label=mnt_testarea1 btrfs.mnt_testarea1
+''',
+                     recipe.rendered_kickstart.kickstart)
+
+        self.assertIn('''
+part btrfs.mnt_testarea2 --size=10240
+btrfs /mnt/testarea2 --label=mnt_testarea2 btrfs.mnt_testarea2
+''',
+                     recipe.rendered_kickstart.kickstart)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1002261
+    def test_btrfs_volume_rhel6(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
                             <distro_name op="=" value="RHEL-6.2" />
                             <distro_variant op="=" value="Server" />
                             <distro_arch op="=" value="x86_64" />
@@ -1778,23 +1820,19 @@ done
             </job>
             ''', self.system)
 
-        self.assert_('''part /boot --size 200 --recommended --asprimary
+        self.assertIn('''
+part /boot --size 200 --recommended --asprimary
 part / --size 1024 --grow
 part swap --recommended
-'''
-                    in recipe.rendered_kickstart.kickstart,
+''',
                     recipe.rendered_kickstart.kickstart)
 
-        self.assert_('''
-part btrfs.mnt_testarea1 --size=10240
-btrfs /mnt/testarea1 --label=mnt_testarea1 btrfs.mnt_testarea1
-'''
-                     in recipe.rendered_kickstart.kickstart,
+        self.assertIn('''
+part /mnt/testarea1 --size=10240 --fstype btrfs
+''',
                      recipe.rendered_kickstart.kickstart)
 
-        self.assert_('''
-part btrfs.mnt_testarea2 --size=10240
-btrfs /mnt/testarea2 --label=mnt_testarea2 btrfs.mnt_testarea2
-'''
-                     in recipe.rendered_kickstart.kickstart,
+        self.assertIn('''
+part /mnt/testarea2 --size=10240 --fstype btrfs
+''',
                      recipe.rendered_kickstart.kickstart)
