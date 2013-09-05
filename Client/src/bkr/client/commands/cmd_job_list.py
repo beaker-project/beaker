@@ -100,12 +100,8 @@ See also
 """
 
 from bkr.client import BeakerCommand
+import bkr.client.json_compat as json
 from optparse import OptionValueError
-
-try:
-    import json
-except ImportError:
-    import simplejson as json
 
 class Job_List(BeakerCommand):
     """List Beaker jobs """
@@ -227,6 +223,6 @@ class Job_List(BeakerCommand):
         if format == 'list':
             for job_id in jobs:
                 print job_id
-                
+
         if format == 'json':
             print json.dumps(jobs)

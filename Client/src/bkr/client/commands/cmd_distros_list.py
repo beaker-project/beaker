@@ -81,12 +81,8 @@ See also
 
 
 import sys
-try:
-    import json
-except ImportError:
-    import simplejson as json
+import bkr.client.json_compat as json
 from bkr.client import BeakerCommand
-
 
 class Distros_List(BeakerCommand):
     """list distros"""
