@@ -1,7 +1,7 @@
 <div xmlns:py='http://purl.org/kid/ns#'>
  <script type='text/javascript' src="${tg.url('/static/javascript/system_notes_v2.js')}" />
  <script type='text/javascript' src="${tg.url('/static/javascript/util.js')}" />
-    <form name="${name}" action="${tg.url(action)}" method="${method}" py:if="not readonly">
+    <form name="${name}" action="${action}" method="${method}" py:if="not readonly">
    ${display_field_for("note")}
    ${display_field_for("id")}
    <a class="btn btn-primary" href="javascript:document.${name}.submit();"><i class="icon-plus"/> Add</a>

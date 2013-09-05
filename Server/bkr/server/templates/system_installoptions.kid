@@ -8,7 +8,7 @@
  <p>Kernel Options are passed at the command line for installations.  ksdevice=bootif is an example along with console=ttyS0.</p>
  <p>Kernel Options Post are also command line options but they are for after the installation has completed.</p>
  <p>Commands are inherited from least specific to most specific. ARCH->FAMILY->UPDATE</p>
- <form  name="${name}" action="${tg.url(action)}" method="POST">
+ <form  name="${name}" action="${action}" method="POST">
   <table py:if="not readonly">
    <tr>
     <th>Arch</th><td>${display_field_for("prov_arch")}</td>

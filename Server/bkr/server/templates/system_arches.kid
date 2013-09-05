@@ -11,7 +11,7 @@
     ${display_field_for("arch")}
       </td>
       <td>
-    <form  name="${name}" action="${tg.url(action)}" method="POST" onsubmit="populate_form_elements(this); return true;">
+    <form  name="${name}" action="${action}" method="POST" onsubmit="populate_form_elements(this); return true;">
      <script src="${tg.url('/static/javascript/magic_forms.js')}" type='text/javascript'/>
      <input type='hidden'
       id="${name}_${arch.name}_${arch.text_field.name}_hidden"

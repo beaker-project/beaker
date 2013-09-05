@@ -1302,7 +1302,7 @@ class SystemExclude(Form):
     template = """
     <form xmlns:py="http://purl.org/kid/ns#"
           name="${name}"
-          action="${tg.url(action)}"
+          action="${action}"
           method="${method}" width="100%">
      ${display_field_for("id")}
      ${display_field_for("excluded_families")}

@@ -20,7 +20,7 @@ function confirmSubmit(action)
 // -->
  </script>
  <span py:if="enabled">
-    <form action="${tg.url(action)}" method="${method}">
+    <form action="${action}" method="${method}">
       ${id.display(value_for(id), **params_for(id))}
       <div class="btn-group">
         <button class="btn" type="submit"

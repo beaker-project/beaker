@@ -15,7 +15,7 @@
       <td />
       <td />
       <td>
-    <form name="${name}" action="${tg.url(action)}" method="POST" onsubmit="populate_form_elements(this); return true;">
+    <form name="${name}" action="${action}" method="POST" onsubmit="populate_form_elements(this); return true;">
      <script src="${tg.url('/static/javascript/magic_forms.js')}"
       type='text/javascript'/>
      ${display_field_for("id")}
