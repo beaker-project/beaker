@@ -70,6 +70,7 @@ BuildRequires:  python-itsdangerous
 BuildRequires:  python-decorator
 BuildRequires:  python-flask
 BuildRequires:  python-markdown
+BuildRequires:  python-webassets
 %if %{with_systemd}
 BuildRequires:  systemd
 %endif
@@ -139,6 +140,7 @@ Requires:       python-itsdangerous
 Requires:       python-decorator
 Requires:       python-flask
 Requires:       python-markdown
+Requires:       python-webassets
 %if %{with_systemd}
 Requires:       systemd-units
 Requires(post): systemd

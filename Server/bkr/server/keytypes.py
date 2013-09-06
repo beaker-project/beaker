@@ -5,7 +5,7 @@ from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
-from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar
+from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, HorizontalForm
 from bkr.server.admin_page import AdminPage
 
 import cherrypy
@@ -25,7 +25,7 @@ class KeyTypes(AdminPage):
     key_name   = widgets.TextField(name='key_name', label=_(u'Name'))
     numeric    = widgets.CheckBox(name='numeric', label=_(u'Numeric'))
 
-    form = widgets.TableForm(
+    form = HorizontalForm(
         'keytypes',
         fields = [id, key_name, numeric],
         action = 'save_data',

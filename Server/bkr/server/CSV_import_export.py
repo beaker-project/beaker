@@ -7,6 +7,7 @@ from bkr.server.helpers import *
 from tempfile import NamedTemporaryFile
 from cherrypy.lib.cptools import serve_file
 from bkr.server.model import *
+from bkr.server.widgets import HorizontalForm, RadioButtonList
 import csv
 import datetime
 import logging
@@ -27,7 +28,7 @@ class CSV(RPCRoot):
     exposed = False
 
     upload     = widgets.FileField(name='csv_file', label='Import CSV')
-    download   = widgets.RadioButtonList(name='csv_type', label='CSV Type',
+    download   = RadioButtonList(name='csv_type', label='CSV Type',
                                options=[('system', 'Systems'), 
                                         ('labinfo', 'System LabInfo'), 
                                         ('power', 'System Power'),
@@ -38,14 +39,14 @@ class CSV(RPCRoot):
                                         ('user_group', 'User Groups')], 
                                                           default='system')
 
-    importform = widgets.TableForm(
+    importform = HorizontalForm(
         'import',
         fields = [upload],
         action = 'import data',
         submit_text = _(u'Import CSV'),
     )
 
-    exportform = widgets.TableForm(
+    exportform = HorizontalForm(
         'export',
         fields = [download],
         action = 'export data',
@@ -57,6 +58,7 @@ class CSV(RPCRoot):
     def index(self, **kw):
         return dict(
             form = self.exportform,
+            title=_(u'CSV Export'),
             action = './action_export',
             options = {},
             value = kw,
@@ -67,6 +69,7 @@ class CSV(RPCRoot):
     def csv_import(self, **kw):
         return dict(
             form = self.importform,
+            title=_(u'CSV Import'),
             action = './action_import',
             options = {},
             value = kw,

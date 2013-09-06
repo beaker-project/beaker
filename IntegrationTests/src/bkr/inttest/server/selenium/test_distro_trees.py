@@ -28,9 +28,9 @@ class DistroTreeViewTest(WebDriverTestCase):
     def test_sort_grid_doesnt_blow_up(self):
         b = self.browser
         b.get(get_server_base() + 'distrotrees/')
-        b.find_element_by_xpath("//a[@class='head_list' and normalize-space(text())='Arch']").click()
-        b.find_element_by_xpath("//a[@class='head_list' and normalize-space(text())='Distro']").click()
-        b.find_element_by_xpath("//a[@class='head_list' and normalize-space(text())='OS Minor Version']").click()
+        b.find_element_by_xpath("//th/a[normalize-space(text())='Arch']").click()
+        b.find_element_by_xpath("//th/a[normalize-space(text())='Distro']").click()
+        b.find_element_by_xpath("//th/a[normalize-space(text())='OS Minor Version']").click()
         b.find_element_by_xpath('//title[text()="Distro Trees"]')
 
     def test_install_options(self):
@@ -63,16 +63,16 @@ class DistroTreeViewTest(WebDriverTestCase):
             "option[normalize-space(text())='%s']" % lc.fqdn).click()
         b.find_element_by_xpath("//input[@id='url']"). \
             send_keys('http://blah.com')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_name('lab_controller_add_form').submit()
         # A trailing '/' is added automatically if it's not present. RHBZ#912242
         self.assertEqual(
-            b.find_element_by_xpath('//div[@class="flash"]').text,
+            b.find_element_by_class_name('flash').text,
             'Added %s http://blah.com/' % lc.fqdn)
 
         # Delete
-        delete_and_confirm(b, "//td[preceding-sibling::td/a[@href='http://blah.com/']]/form", delete_text='Delete ( - )')
+        delete_and_confirm(b, "//td[preceding-sibling::td/a[@href='http://blah.com/']]/form")
         self.assertEqual(
-            b.find_element_by_xpath('//div[@class="flash"]').text,
+            b.find_element_by_class_name('flash').text,
             'Deleted %s http://blah.com/' % lc.fqdn)
 
     def test_update_install_options(self):
@@ -80,7 +80,7 @@ class DistroTreeViewTest(WebDriverTestCase):
         login(b)
         go_to_distro_tree_view(b, self.distro_tree)
         b.find_element_by_link_text('Install Options').click()
-        b.find_element_by_link_text('Edit').click()
+        b.find_element_by_xpath('//button[text()="Edit"]').click()
         b.find_element_by_name('ks_meta').click()
         b.find_element_by_name('ks_meta').clear()
         b.find_element_by_name('ks_meta').send_keys('no_addon_repos')
@@ -90,9 +90,9 @@ class DistroTreeViewTest(WebDriverTestCase):
         b.find_element_by_name('kernel_options_post').click()
         b.find_element_by_name('kernel_options_post').clear()
         b.find_element_by_name('kernel_options_post').send_keys('rhgb')
-        b.find_element_by_link_text('Save Changes').click()
+        b.find_element_by_xpath('//button[text()="Save Changes"]').click()
         self.assertEqual(
-            b.find_element_by_xpath('//div[@class="flash"]').text,
+            b.find_element_by_class_name('flash').text,
             'Updated install options')
         self.assertEqual(
             b.find_element_by_xpath('//table[@id="install_options"]'
@@ -211,7 +211,7 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('%s' % self.distro_three_name)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_tree_three],
                                     absent=[self.distro_tree_one, self.distro_tree_two])
 
@@ -227,7 +227,7 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('%s' % self.distro_one_osmajor)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_tree_one],
                                     absent=[self.distro_tree_two, self.distro_tree_three])
 
@@ -243,7 +243,7 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('1')
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_tree_one],
                                     absent=[self.distro_tree_two, self.distro_tree_three])
 
@@ -259,7 +259,7 @@ class DistroTreeSearch(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="search_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys('%s' % self.distro_one_variant)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_tree_one],
                                     absent=[self.distro_tree_two, self.distro_tree_three])
 
@@ -277,7 +277,7 @@ class DistroTreeSearch(WebDriverTestCase):
         now_and_1_string = now_and_1.strftime('%Y-%m-%d')
         b.find_element_by_xpath('//input[@id="search_0_value"]'). \
             send_keys(now_and_1_string)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_tree_two],
                                     absent=[self.distro_tree_one, self.distro_tree_three])
 
@@ -292,6 +292,6 @@ class DistroTreeSearch(WebDriverTestCase):
             "option[@value='is']").click()
         b.find_element_by_xpath("//select[@id='search_0_value']/"
             "option[@value='%s']" % self.distro_one_tag[0]).click()
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         check_distro_search_results(b, present=[self.distro_tree_one],
                                     absent=[self.distro_tree_two, self.distro_tree_three])

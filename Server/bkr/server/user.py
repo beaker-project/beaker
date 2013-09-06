@@ -1,12 +1,12 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from cherrypy import request, response
-from kid import Element
+from kid import Element, XML
 from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, \
-    BeakerDataGrid, AutoCompleteField
+    BeakerDataGrid, AutoCompleteField, HorizontalForm
 from bkr.server.admin_page import AdminPage
 from bkr.server import validators as beaker_validators
 
@@ -42,7 +42,7 @@ class Users(AdminPage):
     email_address = widgets.TextField(name='email_address', label=_(u'Email Address'))
     password     = widgets.PasswordField(name='password', label=_(u'Password'))
     disabled = widgets.CheckBox(name='disabled', label=_(u'Disabled'))
-    user_form = widgets.TableForm(
+    user_form = HorizontalForm(
         'User',
         fields = [user_id, user_name, display_name,
                   email_address, password, disabled
@@ -72,10 +72,19 @@ class Users(AdminPage):
     @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.user_edit_form')
     def edit(self, id=None, **kw):
+        if id:
+            user = User.by_id(id)
+            title = _(u'User %s') % user.user_name
+            value = user
+        else:
+            user = None
+            title = _(u'New user')
+            value = kw
         return_vals = dict(form=self.user_form,
                            action='./save',
+                           title=title,
                            options={},
-                           value=id and User.by_id(id) or kw,)
+                           value=value)
         if id:
             return_vals['groupsgrid'] = self.show_groups()
         else:
@@ -106,12 +115,11 @@ class Users(AdminPage):
 
     def make_remove_link(self, user):
         if user.removed is not None:
-            link =  make_link(url = 'unremove?id=%s' % user.user_id,
-                              text = 'Re-Add (+)')
+            return XML('<a class="btn" href="unremove?id=%s">'
+                    '<i class="icon-plus"/> Re-Add</a>' % user.user_id)
         else:
-            link =  make_link(url = 'remove?id=%s' % user.user_id,
-                              text = 'Remove (-)')
-        return link
+            return XML('<a class="btn" href="remove?id=%s">'
+                    '<i class="icon-remove"/> Remove</a>' % user.user_id)
 
     @expose(template="bkr.server.templates.admin_grid")
     @paginate('list', default_order='user_name',limit=20)
@@ -129,13 +137,13 @@ class Users(AdminPage):
                                   ('Display Name', lambda x: x.display_name),
                                   ('Disabled', lambda x: x.disabled),
                                   ('', lambda x: self.make_remove_link(x)),
-                              ])
+                              ],
+                              add_action='./new')
         return dict(title="Users",
                     grid = users_grid,
                     object_count = users.count(),
                     alpha_nav_bar = AlphaNavBar(list_by_letters,'user'),
                     search_widget = self.search_widget_form,
-                    addable = self.add, 
                     list = users)
 
     @identity.require(identity.in_group("admin"))

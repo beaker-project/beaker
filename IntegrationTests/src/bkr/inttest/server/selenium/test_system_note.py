@@ -27,20 +27,17 @@ class SystemNoteTests(WebDriverTestCase):
         b.find_element_by_link_text('Notes').click()
         note = data_setup.unique_name('note%s')
         b.find_element_by_id('notes_note').send_keys(note)
-        b.find_element_by_xpath("//form[@name='notes']//a[normalize-space(text())='Add ( + )']").click()
-        note_p = b.find_element_by_xpath('//td[preceding-sibling::th[text()="Note"]]/div/p')
-        self.assertEquals(note_p.text, note)
+        b.find_element_by_name('notes').submit()
+        b.find_element_by_xpath('//*[@id="notes"]//tr/td[3]/p[text()="%s"]' % note)
         return note
 
     def delete_note(self, note):
         b = self.browser
         b.find_element_by_link_text('Notes').click()
-        delete_and_confirm(b, '//td[div/p/text()="%s"]' % note,
-                '(Delete this note)')
+        delete_and_confirm(b, '//tr[td/p/text()="%s"]' % note)
         # Test that it is hidden
         wait_for_condition(lambda: not b.find_element_by_xpath(
-                '//tr[th/text()="Note" and td/div/p/text()="%s"]' % note)
-                .is_displayed())
+                '//tr[td/p/text()="%s"]' % note).is_displayed())
 
     def test_can_show_deleted_notes(self):
         b = self.browser
@@ -51,8 +48,7 @@ class SystemNoteTests(WebDriverTestCase):
         b.find_element_by_link_text('Toggle deleted notes').click()
         # Test that it reappears when toggled
         wait_for_condition(lambda: b.find_element_by_xpath(
-                '//tr[th/text()="Note" and td/div/p/text()="%s"]' % note)
-                .is_displayed())
+                '//tr[td/p/text()="%s"]' % note).is_displayed())
 
     def test_notes_are_hidden_by_default(self):
         b = self.browser
@@ -63,8 +59,7 @@ class SystemNoteTests(WebDriverTestCase):
         b.find_element_by_link_text('Notes').click()
         # Test existing deleted notes are hidden
         self.assertFalse(b.find_element_by_xpath(
-                '//tr[th/text()="Note" and td/div/p/text()="%s"]' % note)
-                .is_displayed())
+                '//tr[td/p/text()="%s"]' % note).is_displayed())
         # Test that it recognises deleted notes and gives us a toggle option
         b.find_element_by_link_text('Toggle deleted notes')
 
@@ -79,11 +74,9 @@ class SystemNoteTests(WebDriverTestCase):
         self.delete_note(note_2)
         b.find_element_by_link_text('Toggle deleted notes').click()
         wait_for_condition(lambda: b.find_element_by_xpath(
-                '//tr[th/text()="Note" and td/div/p/text()="%s"]' % note)
-                .is_displayed())
+                '//tr[td/p/text()="%s"]' % note).is_displayed())
         wait_for_condition(lambda: b.find_element_by_xpath(
-                '//tr[th/text()="Note" and td/div/p/text()="%s"]' % note_2)
-                .is_displayed())
+                '//tr[td/p/text()="%s"]' % note_2).is_displayed())
 
     def test_notes_as_admin(self):
         login(self.browser)
@@ -154,10 +147,7 @@ class SystemNoteTests(WebDriverTestCase):
 
 It has multiple paragraphs, *and emphasis*.
 Also a URL <http://example.com/>.''')
-        b.find_element_by_xpath("//form[@name='notes']//a[normalize-space(text())='Add ( + )']").click()
-        b.find_element_by_xpath('//td[preceding-sibling::th[text()="Note"]]/div'
-                '/p[1][text()="Here is my note."]')
-        b.find_element_by_xpath('//td[preceding-sibling::th[text()="Note"]]/div'
-                '/p[2][em/text()="and emphasis"]')
-        b.find_element_by_xpath('//td[preceding-sibling::th[text()="Note"]]/div'
-                '/p[2][a/@href="http://example.com/"]')
+        b.find_element_by_name('notes').submit()
+        b.find_element_by_xpath('//td/p[1][text()="Here is my note."]')
+        b.find_element_by_xpath('//td/p[2][em/text()="and emphasis"]')
+        b.find_element_by_xpath('//td/p[2][a/@href="http://example.com/"]')

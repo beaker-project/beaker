@@ -21,7 +21,6 @@ from cherrypy import request, response
 from kid import Element
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import RecipeWidget
-from bkr.server.widgets import RecipeTasksWidget
 from bkr.server.widgets import SearchBar
 from bkr.server.widgets import RecipeActionWidget
 from bkr.server import search_utility, identity
@@ -45,7 +44,6 @@ log = logging.getLogger(__name__)
 class Recipes(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
-    action_widget = RecipeActionWidget()
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
     message = widgets.TextArea(name='msg', label=_(u'Reason?'), help_text=_(u'Optional'))
@@ -60,7 +58,6 @@ class Recipes(RPCRoot):
     tasks = RecipeTasks()
 
     recipe_widget = RecipeWidget()
-    recipe_tasks_widget = RecipeTasksWidget()
 
     log_types = dict(R = LogRecipe,
                      T = LogRecipeTask,
@@ -398,7 +395,7 @@ class Recipes(RPCRoot):
                 PDC(name='result',
                     getter=_custom_result, title='Result',
                     options=dict(sortable=True)),
-                PDC(name='action', getter=lambda x:self.action_widget(x),
+                PDC(name='action', getter=lambda x:self.action_cell(x),
                     title='Action', options=dict(sortable=False)),])
 
         search_bar = SearchBar(name='recipesearch',
@@ -416,6 +413,9 @@ class Recipes(RPCRoot):
                     action=action,
                     options=search_options,
                     searchvalue=searchvalue)
+
+    def action_cell(self, recipe):
+        return make_link(recipe.clone_link(), 'Clone RecipeSet', elem_class='btn')
 
     @expose(template='bkr.server.templates.grid')
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
@@ -444,7 +444,6 @@ class Recipes(RPCRoot):
             redirect(".")
         return dict(title   = 'Recipe',
                     recipe_widget        = self.recipe_widget,
-                    recipe_tasks_widget  = self.recipe_tasks_widget,
                     recipe               = recipe)
 
 # hack for Sphinx

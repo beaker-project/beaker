@@ -62,7 +62,7 @@ class ActivityTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Via']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys('TESTSERVICE')
-        b.find_element_by_xpath("//input[@name='Search']").click()
+        b.find_element_by_id('searchform').submit()
         self.assertTrue(is_activity_row_present(b, via='TESTSERVICE', action='Removed',
             object_='DistroTree: %s' % self.distro_tree1))
         self.assertFalse(is_activity_row_present(b, via='TESTSERVICE2', action='Removed',
@@ -77,17 +77,17 @@ class ActivityTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.distro_tree1.arch.arch)
 
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
         b.find_element_by_xpath("//select[@id='activitysearch_1_table']/option[@value='DistroTree/Variant']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_1_operation']/option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_1_value']").send_keys(self.distro_tree1.variant)
 
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
         b.find_element_by_xpath("//select[@id='activitysearch_2_table']/option[@value='DistroTree/Distro Name']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_2_operation']/option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_2_value']").send_keys(self.distro_tree1.distro.name)
 
-        b.find_element_by_xpath("//input[@name='Search']").click()
+        b.find_element_by_id('searchform').submit()
 
         self.assert_(is_activity_row_present(b,
                 object_='DistroTree: %s' % self.distro_tree1))
@@ -102,7 +102,7 @@ class ActivityTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='System/Name']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.system.fqdn)
-        b.find_element_by_xpath("//input[@name='Search']").click()
+        b.find_element_by_id('searchform').submit()
         self.assert_(is_activity_row_present(b,
                 object_='System: %s' % self.system.fqdn))
 
@@ -113,7 +113,7 @@ class ActivityTestWD(WebDriverTestCase):
         b.find_element_by_xpath('//select[@id="activitysearch_0_table"]/option[@value="Distro/Name"]').click()
         b.find_element_by_xpath('//select[@id="activitysearch_0_operation"]/option[@value="is"]').click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.distro.name)
-        b.find_element_by_xpath('//input[@name="Search"]').click()
+        b.find_element_by_id('searchform').submit()
         self.assert_(is_activity_row_present(b,
                 object_='Distro: %s' % self.distro.name))
 
@@ -124,7 +124,7 @@ class ActivityTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Group/Name']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys(self.group.display_name)
-        b.find_element_by_xpath("//input[@name='Search']").click()
+        b.find_element_by_id('searchform').submit()
         self.assert_(is_activity_row_present(b,
                 object_='Group: %s' % self.group.display_name))
 
@@ -136,10 +136,9 @@ class ActivityTestWD(WebDriverTestCase):
         b.get(get_server_base() + 'groups/')
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
-        b.find_element_by_xpath("//input[@value='Search']").submit()
-        delete_and_confirm(b, "//td[preceding-sibling::td/"
-            "a[normalize-space(text())='%s']]" % self.group.group_name,
-            'Remove (-)')
+        b.find_element_by_id('Search').submit()
+        delete_and_confirm(b, "//tr[td/a[normalize-space(text())='%s']]" % self.group.group_name,
+            'Remove')
         should_have_deleted_msg = b.find_element_by_xpath('//body').text
         self.assert_('%s deleted' % self.group.display_name in should_have_deleted_msg)
 
@@ -149,12 +148,12 @@ class ActivityTestWD(WebDriverTestCase):
         b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Action']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys('Removed')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
 
         b.find_element_by_xpath("//select[@id='activitysearch_1_table']/option[@value='Old Value']").click()
         b.find_element_by_xpath("//select[@id='activitysearch_1_operation']/option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_1_value']").send_keys(self.group.display_name)
-        b.find_element_by_xpath("//input[@name='Search']").submit()
+        b.find_element_by_id('searchform').submit()
         self.assert_(is_activity_row_present(b,via='WEBUI', action='Removed',
              old_value=self.group.display_name, new_value='',
              object_='System: %s' % self.system.fqdn))

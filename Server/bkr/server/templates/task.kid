@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#"
     py:extends="'master.kid'">
 
@@ -8,115 +8,125 @@
     <title>Task ${task.name}</title>
 </head>
 
-<body class="flora">
-<table width="97%">
-    <tr>
-        <td>
-            <div class="show"><a href="${tg.url('/tasks')}">Tasks</a> - ${task.name}</div>
-        </td>
-    </tr>
-</table>
-<table class="show">
+<body>
+<div class="page-header">
+  <h1>Task ${task.name}</h1>
+</div>
+<table class="table table-bordered">
+  <tbody>
     <tr py:if="task.description">
-        <td class="title"><b>Description:</b></td>
-        <td class="value">${task.description}</td>
+        <th>Description</th>
+        <td>${task.description}</td>
     </tr>
     <tr py:if="task.valid">
-        <td class="title"><b>Valid:</b></td>
-        <td class="value">${task.valid}</td>
+        <th>Valid</th>
+        <td>${task.valid}</td>
     </tr>
     <tr py:if="task.path">
-        <td class="title"><b>Path:</b></td>
-        <td class="value">${task.path}</td>
+        <th>Path</th>
+        <td>${task.path}</td>
     </tr>
     <tr>
-        <td class="title"><b>Expected Time:</b></td>
-        <td class="value">${task.elapsed_time()}</td>
+        <th>Expected Time</th>
+        <td>${task.elapsed_time()}</td>
     </tr>
     <tr py:if="task.creation_date">
-        <td class="title"><b>Creation Date:</b></td>
-        <td class="value"><span class="datetime">${task.creation_date}</span></td>
+        <th>Creation Date</th>
+        <td><span class="datetime">${task.creation_date}</span></td>
     </tr>
     <tr py:if="task.update_date">
-        <td class="title"><b>Updated Date:</b></td>
-        <td class="value"><span class="datetime">${task.update_date}</span></td>
+        <th>Updated Date</th>
+        <td><span class="datetime">${task.update_date}</span></td>
     </tr>
     <tr py:if="task.owner">
-        <td class="title"><b>Owner:</b></td>
-        <td class="value">${task.owner}</td>
+        <th>Owner</th>
+        <td>${task.owner}</td>
     </tr>
     <tr py:if="task.uploader">
-        <td class="title"><b>Uploader:</b></td>
-        <td class="value">${task.uploader.email_link}</td>
+        <th>Uploader</th>
+        <td>${task.uploader.email_link}</td>
     </tr>
     <tr py:if="task.version">
-        <td class="title"><b>Version:</b></td>
-        <td class="value">${task.version}</td>
+        <th>Version</th>
+        <td>${task.version}</td>
     </tr>
     <tr py:if="task.license">
-        <td class="title"><b>License:</b></td>
-        <td class="value">${task.license}</td>
+        <th>License</th>
+        <td>${task.license}</td>
     </tr>
     <tr py:if="task.rpm">
-        <td class="title"><b>RPM:</b></td>
-        <td class="value"><a href="/rpms/${task.rpm}">${task.rpm}</a></td>
+        <th>RPM</th>
+        <td><a href="/rpms/${task.rpm}">${task.rpm}</a></td>
     </tr>
     <tr py:if="task.needs">
-        <td class="title"><b>Needs:</b></td>
-        <td class="value">
-            <span py:for="need in task.needs">${need.property}<br/></span>
+        <th>Needs</th>
+        <td>
+          <ul class="unstyled">
+            <li py:for="need in task.needs">${need.property}</li>
+          </ul>
         </td>
     </tr>
     <tr py:if="task.bugzillas">
-        <td class="title"><b>Bugzillas:</b></td>
-        <td class="value">
-            <span py:for="bug in task.bugzillas">
+        <th>Bugzillas</th>
+        <td>
+          <ul class="unstyled">
+            <li py:for="bug in task.bugzillas">
                 <a href="https://bugzilla.redhat.com/show_bug.cgi?id=${bug.bugzilla_id}">${bug.bugzilla_id}</a>
-                <br/>
-            </span>
+            </li>
+          </ul>
         </td>
     </tr>
     <tr py:if="task.types">
-        <td class="title"><b>Types:</b></td>
-        <td class="value">
-            <span py:for="type in task.types">${type.type}<br/></span>
+        <th>Types</th>
+        <td>
+          <ul class="unstyled">
+            <li py:for="type in task.types">${type.type}</li>
+          </ul>
         </td>
     </tr>
     <tr py:if="task.runfor">
-        <td class="title"><b>Run For:</b></td>
-        <td class="value">
-            <span py:for="package in task.runfor">
+        <th>Run For</th>
+        <td>
+          <ul class="unstyled">
+            <li py:for="package in task.runfor">
                 ${package}
-                <br/>
-            </span>
+            </li>
+          </ul>
         </td>
     </tr>
     <tr py:if="task.priority">
-        <td class="title"><b>Priority:</b></td>
-        <td class="value">${task.priority}</td>
+        <th>Priority</th>
+        <td>${task.priority}</td>
     </tr>
     <tr py:if="task.destructive is not None">
-        <td class="title"><b>Destructive:</b></td>
-        <td class="value">${task.destructive}</td>
+        <th>Destructive</th>
+        <td>${task.destructive}</td>
     </tr>
     <tr py:if="task.required">
-        <td class="title"><b>Requires:</b></td>
-        <td class="value">
-            <span py:for="package in task.required">${package}<br/></span>
+        <th>Requires</th>
+        <td>
+          <ul class="unstyled">
+            <li py:for="package in task.required">${package}</li>
+          </ul>
         </td>
     </tr>
     <tr py:if="task.excluded_osmajor">
-        <td class="title"><b>Excluded OSMajors:</b></td>
-        <td class="value">
-            <span py:for="osmajor in task.excluded_osmajor">${osmajor.osmajor}<br/></span>
+        <th>Excluded OSMajors</th>
+        <td>
+          <ul class="unstyled">
+            <li py:for="osmajor in task.excluded_osmajor">${osmajor.osmajor}</li>
+          </ul>
         </td>
     </tr>
     <tr py:if="task.excluded_arch">
-        <td class="title"><b>Excluded Arches:</b></td>
-        <td class="value">
-            <span py:for="arch in task.excluded_arch">${arch.arch}<br/></span>
+        <th>Excluded Arches</th>
+        <td>
+          <ul class="unstyled">
+            <li py:for="arch in task.excluded_arch">${arch.arch}</li>
+          </ul>
         </td>
     </tr>
+  </tbody>
 </table>
 <div>
 <h2>Executed Tasks</h2>

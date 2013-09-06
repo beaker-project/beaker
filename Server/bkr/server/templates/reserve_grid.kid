@@ -1,5 +1,4 @@
-
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#"
     py:extends="'master.kid'">
 <head>
@@ -7,10 +6,11 @@
 <title>$title</title>
 </head>
 <body>
-<h2>$title</h2>
+<div class="page-header">
+  <h1>$title</h1>
+</div>
 <span py:if="search_bar">${search_bar.display(method='GET', action=tg.url(action), value=searchvalue, options=options)}</span>
-
-<div py:if="warn_msg" style='text-align:center'><warn class='rounded-side-pad'>${warn_msg}</warn></div>
+<div py:if="warn_msg" class="alert alert-error">${warn_msg}</div>
 ${grid.display(list)}
 </body>
 </html>

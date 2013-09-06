@@ -19,7 +19,7 @@ class SystemLoanTest(WebDriverTestCase):
     def go_to_loan_page(self):
         b = self.browser
         b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('(Loan Settings)').click()
+        b.find_element_by_link_text('Loan Settings').click()
 
     def change_loan(self, loanee, comment=None):
         b = self.browser

@@ -20,11 +20,8 @@ from turbogears import controllers, expose, flash, widgets, validate, error_hand
 from cherrypy import request, response
 from kid import Element
 from bkr.server import search_utility, identity
-from bkr.server.widgets import myPaginateDataGrid
-from bkr.server.widgets import TasksWidget
-from bkr.server.widgets import TaskSearchForm
-from bkr.server.widgets import SearchBar
-from bkr.server.widgets import TaskActionWidget
+from bkr.server.widgets import myPaginateDataGrid, TasksWidget, TaskSearchForm, \
+        SearchBar, TaskActionWidget, HorizontalForm
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.common.helpers import unlink_ignore, siphon
@@ -54,12 +51,12 @@ class Tasks(RPCRoot):
     task_form = TaskSearchForm()
     task_widget = TasksWidget()
 
-    upload = widgets.FileField(name='task_rpm', label='Task rpm')
-    form = widgets.TableForm(
+    upload = widgets.FileField(name='task_rpm', label='Task RPM')
+    form = HorizontalForm(
         'task',
         fields = [upload],
         action = 'save_data',
-        submit_text = _(u'Submit Data')
+        submit_text = _(u'Upload')
     )
 
     @expose(template='bkr.server.templates.form-post')
@@ -266,8 +263,6 @@ class Tasks(RPCRoot):
             tasks = tasks.join(RecipeTask.recipe).filter(Recipe.id == kw['recipe_id'])
 
             hidden = dict(distro_tree=1, system=1)
-            return dict(tasks=tasks,hidden=hidden,task_widget=self.task_widget)
-
         if kw.get('distro_tree_id'):
             tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree)\
                     .filter(DistroTree.id == kw.get('distro_tree_id'))

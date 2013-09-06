@@ -9,7 +9,7 @@ from bkr.server import identity
 from bkr.server.model import ConfigItem, SSHPubKey, User
 from bkr.server import validators as beaker_validators
 from bkr.server.widgets import BeakerDataGrid, DeleteLinkWidgetForm, \
-    DoAndConfirmForm, AutoCompleteField
+    DoAndConfirmForm, AutoCompleteField, HorizontalForm, InlineForm
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.bexceptions import NoChangeException
 from bkr.server.helpers import make_link
@@ -29,7 +29,7 @@ class Preferences(RPCRoot):
                                       attrs={'disabled': True})
     email = widgets.TextField(name='email_address', label='Email Address',
                                    validator=beaker_validators.CheckUniqueEmail())
-    prefs_form   = widgets.TableForm(
+    prefs_form   = HorizontalForm(
         'UserPrefs',
         fields = [email, beaker_password, root_password, rootpw_expiry],
         action = 'save',
@@ -38,7 +38,7 @@ class Preferences(RPCRoot):
 
     sshkey = widgets.TextArea(name='ssh_pub_key', label='Public SSH Key',
             validator=beaker_validators.SSHPubKey(not_empty=True))
-    ssh_key_add_form = widgets.TableForm(
+    ssh_key_add_form = InlineForm(
         'ssh_key_add',
         fields = [sshkey],
         action = 'ssh_key_add',
@@ -56,7 +56,7 @@ class Preferences(RPCRoot):
         search_controller = url("../users/by_name"),
         search_param = "input", result_name = "matches")
 
-    submission_delegate_form = widgets.TableForm(
+    submission_delegate_form = InlineForm(
         'SubmissionDelegates',
         fields = [auto_users],
         action = 'save_data',
@@ -72,7 +72,7 @@ class Preferences(RPCRoot):
                 action=url('remove_submission_delegate'), look='link',
                 msg='Are you sure you want to remove %s as a submitter?' % x,
                 action_text='Remove (-)')),]
-        return widgets.DataGrid(fields=user_fields)
+        return BeakerDataGrid(fields=user_fields)
 
     @expose(template='bkr.server.templates.prefs')
     @identity.require(identity.not_anonymous())

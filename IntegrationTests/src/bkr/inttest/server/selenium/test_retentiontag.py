@@ -44,24 +44,24 @@ class RetentionTagTest(SeleniumTestCase):
         tag_to_add = 'foo'
         sel = self.selenium
         sel.open("retentiontag/admin")
-        sel.click("link=Add ( + )")
+        sel.click("link=Add")
         sel.wait_for_page_to_load("30000")
         sel.type("Retention Tag_tag", "%s" % tag_to_add)
         sel.select("Retention Tag_default", "label=True")
         sel.click("Retention Tag_needs_product")
 
-        sel.click("//input[@value='Save']")
+        sel.click("//button[text()='Save']")
         sel.wait_for_page_to_load("30000")
         self.failUnless(sel.is_text_present("OK"))
         self.failUnless(sel.is_text_present("%s" % tag_to_add))
 
         tag_to_add = 'bar'
         sel.open("retentiontag/admin")
-        sel.click("link=Add ( + )")
+        sel.click("link=Add")
         sel.wait_for_page_to_load("30000")
         sel.type("Retention Tag_tag", "%s"% tag_to_add)
         sel.select("Retention Tag_default", "label=False")
-        sel.click("//input[@value='Save']")
+        sel.click("//button[text()='Save']")
         sel.wait_for_page_to_load("30000")
         self.failUnless(sel.is_text_present("OK"))
         self.failUnless(sel.is_text_present("%s" % tag_to_add))
@@ -70,10 +70,10 @@ class RetentionTagTest(SeleniumTestCase):
         self.assertEqual("off", sel.get_value("Retention Tag_needs_product"))
 
         sel.open("retentiontag/admin")
-        sel.click("link=Add ( + )")
+        sel.click("link=Add")
         sel.wait_for_page_to_load("30000")
         sel.type("Retention Tag_tag", "%s" % tag_to_add)
         sel.select("Retention Tag_default", "label=False")
-        sel.click("//input[@value='Save']")
+        sel.click("//button[text()='Save']")
         sel.wait_for_page_to_load("30000")
         self.failUnless(sel.is_text_present("Problem saving tag %s" % tag_to_add))

@@ -1,11 +1,10 @@
 <div xmlns:py="http://purl.org/kid/ns#">
- <table width="97%">
- <a name="RS_${recipeset.id}" />
+ <table style="width: 100%;" id="RS_${recipeset.id}">
   <tr>
    <td class="title"><b>RecipeSet ID</b></td>
    <td class="value">${recipeset.t_id}</td><td py:if="can_ack_nak"
        style='min-width:30em'>
-     <span id="response_${recipeset.id}">
+     <span id="response_${recipeset.id}" class="form-inline">
     ${ack_panel_widget.display(recipeset.id, name='response_box_%s' % recipeset.id)}
      </span>
    </td>

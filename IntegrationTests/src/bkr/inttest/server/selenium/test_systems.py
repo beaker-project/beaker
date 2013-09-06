@@ -107,9 +107,9 @@ class TestSystemGridSorting(SeleniumTestCase):
             # (so that we can see that it is really sorted)
             if len(set(cell_values)) > 1:
                 break
-            if sel.get_xpath_count('//div[@class="list"]//a[text()=">"]') != 2:
+            if sel.get_xpath_count('//div[contains(@class, "pagination")]//a[text()=">"]') != 2:
                 raise AssertionError('Tried all pages, but every cell had the same value!')
-            sel.click('//div[@class="list"]//a[text()=">"]')
+            sel.click('//div[contains(@class, "pagination")]//a[text()=">"]')
             sel.wait_for_page_to_load('30000')
         assert_sorted(cell_values, key=lambda x: x.lower())
 
@@ -126,11 +126,11 @@ class TestSystemGridSorting(SeleniumTestCase):
         sel.select('systemsearch_0_table', 'CPU/Cores')
         sel.select('systemsearch_0_operation', 'greater than')
         sel.type('systemsearch_0_value', '1')
-        sel.click('//form[@name="systemsearch"]//a[text()="Add ( + )"]')
+        sel.click('link=Add')
         sel.select('systemsearch_1_table', 'System/Name')
         sel.select('systemsearch_1_operation', 'is not')
         sel.type('systemsearch_1_value', 'bob')
-        sel.click('Search')
+        sel.submit('id=searchform')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Systems')
 

@@ -89,8 +89,7 @@ SearchBar.prototype.show = function(field) {
        //If we don't have any other instances of this column already, let's display the header for it
        if (count < 1) { 
            label_text = column_name.replace(/^./, column_name.match(/^./)[0].toUpperCase());       
-           label = $("span:contains('"+label_text+"')") 
-           th_to_show = label[1].parentNode
+           var th_to_show = $("th:contains('" + label_text + "')").get(0);
            removeElementClass(th_to_show,'hidden')                
 
 
@@ -378,8 +377,7 @@ var SearchBarForm = {
     hide_others : function(field) {
             label_text = field
             label_text = label_text.replace(/^./, label_text.match(/^./)[0].toUpperCase());       
-            label = $("span:contains('"+label_text+"')")
-            th_to_hide = label[1].parentNode
+            var th_to_hide = $("th:contains('" + label_text + "')").get(0);
             addElementClass(th_to_hide,'hidden')                
 
 	    /*Now we need to go through each SearchBar and hide the td for this column,

@@ -1,0 +1,102 @@
+@import "bootstrap/less/bootstrap.less";
+@import "bootstrap/less/responsive.less";
+@import "font-awesome/less/font-awesome.less";
+
+// overrides for Bootstrap variables
+@sansFontFamily:  "Liberation Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+@serifFontFamily: Georgia, "Times New Roman", Times, serif;
+@monoFontFamily:  "Source Code Pro", "DejaVu Sans Mono", Monaco, Menlo, Consolas, "Courier New", monospace;
+// Bootstrap sets a global font size of 14px and line height of 20px, which is 
+// not very nice. It would be better to use 1em as the base font-size and use 
+// relative units for line height, so that we obey the font sizes configured in 
+// the browser. Unfortunately this won't work because Bootstrap assumes throughout 
+// that @baseLineHeight is an absolute size, not using relative units. :-(
+//@baseFontSize:          1em;
+//@baseLineHeight:        3ex;
+
+// overrides for FontAwesome variables
+@FontAwesomePath: "generated/font-awesome-3.2.1";
+
+// heading sizes (Bootstrap's are too generous)
+h1, h2, h3 { line-height: @baseLineHeight * 2; }
+h1 { font-size: @baseFontSize * 2.25; }
+h2 { font-size: @baseFontSize * 1.75; }
+h3 { font-size: @baseFontSize * 1.5; }
+h4 { font-size: @baseFontSize * 1.25; }
+h5 { font-size: @baseFontSize; }
+h6 { font-size: @baseFontSize; }
+h1 small { font-size: @baseFontSize * 1.5; }
+h2 small { font-size: @baseFontSize * 1.25; }
+h3 small { font-size: @baseFontSize * 1.25; }
+
+// We have some forms in table cells, and the bottom margin (from Bootstrap) 
+// ruins the row height.
+td form, td input, td select {
+    margin-bottom: 0 !important;
+}
+
+// By default, table cells are top-aligned. If every cell in a row has only one 
+// (notional) line, it makes more sense to middle-align them.
+.table-one-line-per-row td {
+    vertical-align: middle;
+}
+
+// To put stuff inline beside the pagination doodads
+// Use <div class="pagination-beside"><span>Extra stuff</span></div>
+.pagination-beside {
+    display: inline-block;
+    span {
+        // matches .pagination ul li a
+        float: left;
+        padding: 4px 12px;
+    }
+}
+
+// Use <div class="controls text-controls" /> if you have only 
+// regular text, not form controls.
+.text-controls {
+    padding-top: 5px; // corresponds to .control-label
+}
+
+// buttons in grid cells
+.table td .btn {
+    white-space: nowrap;
+    padding: @paddingSmall;
+}
+
+// progress bars in grid cells
+.table td .progress {
+    min-width: 100px;
+    height: 12px;
+    margin-bottom: 0;
+}
+
+// colour-coded status and result in jobs/recipes grid
+.statusCompleted, .resultPass { color: @green; }
+.statusAborted, .resultFail { color: @red; }
+.statusCancelled, .resultWarn { color: @orange; }
+.statusRunning { color: @blueDark; }
+.statusDirty { font-style: italic; }
+
+// recipes and recipe sets on job page
+.recipeset {
+    border: 2px solid @tableBorder;
+    padding: 1em;
+    margin: 1em 0;
+}
+.recipe table {
+    margin-top: 2em;
+    margin-bottom: 0;
+}
+.recipe table th {
+    text-align: right;
+}
+
+// elements from master.kid
+.container {
+    padding-top: 20px;
+}
+footer {
+    .muted;
+    text-align: right;
+}

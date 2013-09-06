@@ -72,7 +72,7 @@ class SeleniumTestCase(unittest.TestCase):
         if sel is not None:
             sel.open("")
             try:
-                sel.click("link=Logout")
+                sel.click("link=Log out")
             except Exception, e:
                 raise BX(unicode(e))
             sel.wait_for_page_to_load("30000")
@@ -89,7 +89,7 @@ class SeleniumTestCase(unittest.TestCase):
         if sel is not None:
             sel.open("")
             try:
-                sel.click("link=Login")
+                sel.click("link=Log in")
             except Exception, e:
                 raise BX(_(unicode(e)))
             sel.wait_for_page_to_load("30000")
@@ -102,8 +102,11 @@ class SeleniumTestCase(unittest.TestCase):
 
     def assert_system_view_text(self, field, val):
         sel = self.selenium
-        text = sel.get_text("//td[preceding-sibling::"
-            "th/label[@for='form_%s']]" % field)
+        if field == 'fqdn':
+            text = sel.get_text('//h1')
+        else:
+            text = sel.get_text('//div[@class="controls" and '
+                    'preceding-sibling::label/@for="form_%s"]/span' % field)
         self.assertEqual(text.strip(), val)
 
 class WebDriverTestCase(unittest.TestCase):

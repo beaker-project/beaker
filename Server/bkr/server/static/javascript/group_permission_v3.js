@@ -3,6 +3,7 @@ $(document).ready(function () {
         var elem_id = $(this).attr('id')
         var group_permission_id = elem_id.replace(/remove_permission_(\d+)$/,"$1")
         group_permission_remove(group_permission_id)
+        return false;
     });
 });
 
@@ -10,28 +11,15 @@ function add_group_permission_success (result) {
     var result = $.parseJSON(result)
     var added_permission_name = result['name']
     var added_permission_id = result['id']
-    var last_element = $('#'+permissions_grid_id +' tbody > tr:last');
-    if (last_element.length) {
-        var last_row_class = last_element.attr('class');
-    } else {
-        //No existing permissions for this group
-        // So let's just pick one
-        var last_row_class = 'odd'
-        last_element = $('#'+permissions_grid_id +' tbody');
-    }
-    var new_row_class = 'even';
-    if (last_row_class == 'even') {
-        new_row_class = 'odd';
-    }
-    var added_permission_tr = $("<tr></tr>").addClass(new_row_class)
+    var added_permission_tr = $("<tr></tr>");
     var td_permission = $("<td></td>").text(added_permission_name)
     var a_remove = $("<a></a>").attr('id', 'remove_permission_' + added_permission_id)
-    a_remove.text('Remove (-)')
-    a_remove.addClass('link')
+    a_remove.html('<i class="icon-remove"></i> Remove');
+    a_remove.addClass('btn');
     var td_remove = $("<td></td>").html(a_remove)
     added_permission_tr.append(td_permission).append(td_remove)
     //Add the new group permission row
-    last_element.after(added_permission_tr)
+    $('#' + permissions_grid_id + ' tbody').append(added_permission_tr);
 }
 
 function group_permission_remove(permission_id) {

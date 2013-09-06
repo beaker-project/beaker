@@ -30,7 +30,7 @@ from bkr.server.widgets import TaskSearchForm, SystemArches, SearchBar, \
     SystemForm, SystemProvision, SystemInstallOptions, SystemGroups, \
     SystemNotes, SystemKeys, SystemExclude, SystemHistory, SystemDetails, \
     ReportProblemForm, PowerActionForm, LabInfoForm, PowerActionHistory, \
-    PowerTypeForm, DoAndConfirmForm, LoanWidget, BeakerDataGrid,\
+    DoAndConfirmForm, LoanWidget, BeakerDataGrid,\
     myPaginateDataGrid, PowerForm, AutoCompleteTextField, SystemActions
 from bkr.server.preferences import Preferences
 from bkr.server.authentication import Auth
@@ -55,6 +55,7 @@ from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
 import urllib
+import kid
 from kid import Element
 import cherrypy
 from hashlib import md5
@@ -73,6 +74,9 @@ import logging
 log = logging.getLogger("bkr.server.controllers")
 import breadcrumbs
 from datetime import datetime, timedelta
+
+# This ridiculous hack gets us an HTML5 doctype in our Kid template output.
+config.update({'kid.outputformat': kid.HTMLSerializer(doctype=('html',))})
 
 class Arches:
     @expose(format='json')
@@ -338,7 +342,7 @@ class Root(RPCRoot):
         recipeset.activity.append(activity)
         return {'success' : True } 
 
-    @expose(template='bkr.server.templates.grid_add')
+    @expose(template='bkr.server.templates.grid')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
@@ -383,10 +387,10 @@ class Root(RPCRoot):
         def reserve_link(x, distro_tree):
             if x.is_free():
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
-                        % (x.id, distro_tree.id), 'Reserve Now')
+                        % (x.id, distro_tree.id), 'Reserve Now', elem_class='btn')
             else:
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
-                        % (x.id, distro_tree.id), 'Queue Reservation')
+                        % (x.id, distro_tree.id), 'Queue Reservation', elem_class='btn')
         try:
             distro_tree = DistroTree.by_id(kw['distro_tree_id'])
         except KeyError:
@@ -556,7 +560,8 @@ class Root(RPCRoot):
         if 'direct_columns' in kw: #Let's add our direct columns here
             for index,col in kw['direct_columns']:
                 my_fields.insert(index - 1, col)
-        display_grid = myPaginateDataGrid(fields=my_fields)
+        display_grid = myPaginateDataGrid(fields=my_fields,
+                add_action='/new' if not identity.current.anonymous else None)
         col_data = Utility.result_columns(columns)
         return dict(title=title,
                     grid = display_grid,
@@ -681,7 +686,7 @@ class Root(RPCRoot):
             flash(_(u"Group ID not found"))
         redirect("./view/%s" % system.fqdn)
 
-    @expose(template="bkr.server.templates.system")
+    @expose(template="bkr.server.templates.form-post")
     @identity.require(identity.not_anonymous())
     def new(self, **kwargs):
         options = {}
@@ -698,17 +703,17 @@ class Root(RPCRoot):
         options = {}
         our_user = identity.current.user
         if system.can_admin(user=our_user):
-            options['owner_change_text'] = ' (Change)'
+            options['owner_change_text'] = 'Change'
 
         options['loan_widget'] = LoanWidget()
 
         # Has privs and machine is available, can take
         if system.can_share(our_user) and \
             system.can_provision_now(our_user):
-                options['user_change_text'] = ' (Take)'
+                options['user_change_text'] = 'Take'
 
         if system.current_user(our_user):
-            options['user_change_text'] = ' (Return)'
+            options['user_change_text'] = 'Return'
         if system.open_reservation is not None and \
             system.open_reservation.recipe:
                 job_id = system.open_reservation.recipe.recipeset.job.id
@@ -816,17 +821,17 @@ class Root(RPCRoot):
             task_widget     = self.task_form,
             history_widget  = self.system_activity,
             widgets         = widgets,
-            widgets_action  = dict( power     = '/save_power',
-                                    history   = '/view/%s' % fqdn,
-                                    labinfo   = '/save_labinfo',
-                                    exclude   = '/save_exclude',
-                                    keys      = '/save_keys',
-                                    notes     = '/save_note',
-                                    groups    = '/save_group',
-                                    install   = '/save_install',
+            widgets_action  = dict( power     = url('/save_power'),
+                                    history   = url('/view/%s' % fqdn),
+                                    labinfo   = url('/save_labinfo'),
+                                    exclude   = url('/save_exclude'),
+                                    keys      = url('/save_keys'),
+                                    notes     = url('/save_note'),
+                                    groups    = url('/save_group'),
+                                    install   = url('/save_install'),
                                     provision = getattr(self,'provision_action',''),
-                                    power_action = '/action_power',
-                                    arches    = '/save_arch',
+                                    power_action = url('/action_power'),
+                                    arches    = url('/save_arch'),
                                     tasks     = '/tasks/do_search',
                                   ),
             widgets_options = dict(power  = options,

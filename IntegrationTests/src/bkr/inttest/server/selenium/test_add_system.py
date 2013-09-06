@@ -1,17 +1,20 @@
-#!/usr/bin/python
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
-import unittest, time, re, os
-from turbogears.database import session, get_engine
 
-class AddSystem(SeleniumTestCase):
+from selenium.webdriver.support.ui import Select
+from bkr.server.model import session, System
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest import data_setup, get_server_base
+
+class AddSystem(WebDriverTestCase):
     def setUp(self):
         with session.begin():
             data_setup.create_labcontroller(fqdn=u'lab-devel.rhts.eng.bos.redhat.com')
-        self.selenium = self.get_selenium()
-        self.selenium.start()
+        self.browser = self.get_browser()
         self.condition_report = 'never being fixed'
-        logged_in = self.login()
+        login(self.browser)
+
+    def tearDown(self):
+        self.browser.quit()
 
     def test_case_1(self):
         system_details = dict(fqdn = 'test-system-1',
@@ -27,21 +30,20 @@ class AddSystem(SeleniumTestCase):
                               location = 'brisbane',
                               mac = '33333333')
 
-        sel = self.selenium
-        sel.open("")
-        sel.wait_for_page_to_load("30000")
-        sel.click("//div[@id='fedora-content']/a")
-        sel.wait_for_page_to_load("30000")
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Add').click()
         self.add_system(**system_details)
-        self.assert_system_view_text('fqdn', system_details['fqdn'])
+        self.assertEquals(b.find_element_by_xpath('//h1').text,
+                system_details['fqdn'])
         self.assert_system_view_text('lender', system_details['lender'])
         self.assert_system_view_text('model', system_details['model'])
         self.assert_system_view_text('location', system_details['location'])
         self.assert_system_view_text('shared', 'False')
         self.assert_system_view_text('private', 'False')
-        results = self.check_db(system_details['fqdn'])
-        if str(results['status']) != system_details['status']:
-            raise AssertionError('System status not set correctly to %s' % system_details['status'])
+        with session.begin():
+            system = System.query.filter_by(fqdn=system_details['fqdn']).one()
+            self.assertEquals(unicode(system.status), system_details['status'])
 
     def test_case_2(self):
         system_details = dict(fqdn = 'test-system-2',
@@ -57,13 +59,12 @@ class AddSystem(SeleniumTestCase):
                               location = 'brisbane',
                               mac = '33333333')
 
-        sel = self.selenium
-        sel.open("")
-        sel.wait_for_page_to_load("30000")
-        sel.click("//div[@id='fedora-content']/a")
-        sel.wait_for_page_to_load("30000")
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Add').click()
         self.add_system(**system_details)
-        self.assert_system_view_text('fqdn', system_details['fqdn'])
+        self.assertEquals(b.find_element_by_xpath('//h1').text,
+                system_details['fqdn'])
         self.assert_system_view_text('lender', system_details['lender'])
         self.assert_system_view_text('vendor', system_details['vendor'])
         self.assert_system_view_text('status_reason', self.condition_report)
@@ -86,13 +87,12 @@ class AddSystem(SeleniumTestCase):
                               location = '',
                               mac = '33333333')
 
-        sel = self.selenium
-        sel.open("")
-        sel.wait_for_page_to_load("30000")
-        sel.click("//div[@id='fedora-content']/a")
-        sel.wait_for_page_to_load("30000")
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Add').click()
         self.add_system(**system_details)
-        self.assert_system_view_text('fqdn', system_details['fqdn'])
+        self.assertEquals(b.find_element_by_xpath('//h1').text,
+                system_details['fqdn'])
         self.assert_system_view_text('lender', system_details['lender'])
         self.assert_system_view_text('vendor', system_details['vendor'])
         self.assert_system_view_text('model', system_details['model'])
@@ -114,13 +114,12 @@ class AddSystem(SeleniumTestCase):
                               location = 'brisbane',
                               mac = '33333333')
 
-        sel = self.selenium
-        sel.open("")
-        sel.wait_for_page_to_load("30000")
-        sel.click("//div[@id='fedora-content']/a")
-        sel.wait_for_page_to_load("30000")
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Add').click()
         self.add_system(**system_details)
-        self.assert_system_view_text('fqdn', system_details['fqdn'])
+        self.assertEquals(b.find_element_by_xpath('//h1').text,
+                system_details['fqdn'])
         self.assert_system_view_text('lender', system_details['lender'])
         self.assert_system_view_text('vendor', system_details['vendor'])
         self.assert_system_view_text('model', system_details['model'])
@@ -144,49 +143,35 @@ class AddSystem(SeleniumTestCase):
                               location = 'brisbane',
                               mac = '33333333')
 
-        sel = self.selenium
-        sel.open("")
-        sel.wait_for_page_to_load("30000")
-        sel.click("//div[@id='fedora-content']/a")
-        sel.wait_for_page_to_load("30000")
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Add').click()
         self.add_system(**system_details)
-        self.assert_(sel.is_text_present("preexisting-system already exists!"))
-
-    def check_db(self,fqdn):
-        conn = get_engine().connect()
-        result = conn.execute("SELECT status,l.fqdn, type \
-                        FROM system \
-                            INNER JOIN lab_controller AS l ON system.lab_controller_id = l.id\
-                        WHERE system.fqdn = %s", fqdn).fetchone()
-        if not result:
-            raise AssertionError('Could not find status,type,lab_controller for  system %s in db' % fqdn)
-        return {'status' : result[0], 'lab_controller' : result[1], 'type' : result[2] }
-
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'preexisting-system already exists!')
 
     def add_system(self,fqdn=None,lender=None,serial=None,status=None,
                    lab_controller=None,type=None,private=False,shared=False,
                    vendor=None,model=None,location=None,mac=None): 
-        sel = self.selenium
-        sel.type("form_fqdn", fqdn)
-        sel.type("form_lender", lender)
-        sel.select("form_status", "label=%s" % status)
+        b = self.browser
+        b.find_element_by_name('fqdn').send_keys(fqdn)
+        b.find_element_by_name('lender').send_keys(lender)
+        Select(b.find_element_by_name('status')).select_by_visible_text(status)
         if private:
-            sel.click("form_private")
+            b.find_element_by_name('private').click()
         if status == 'Broken':
-            sel.type("form_status_reason", self.condition_report)
-        sel.select("form_lab_controller_id", "label=%s" % lab_controller)
-        sel.select("form_type", "label=%s" % type)
-        sel.type("form_serial", serial)
-        sel.type("form_vendor", vendor)
-        sel.type("form_model", model)
-        sel.type("form_location", location)
-        sel.type("form_mac_address", mac)
-        sel.click("link=Save Changes")
-        sel.wait_for_page_to_load("30000")
+            b.find_element_by_name('status_reason').send_keys(self.condition_report)
+        Select(b.find_element_by_name('lab_controller_id'))\
+            .select_by_visible_text(lab_controller)
+        Select(b.find_element_by_name('type')).select_by_visible_text(type)
+        b.find_element_by_name('serial').send_keys(serial)
+        b.find_element_by_name('vendor').send_keys(vendor)
+        b.find_element_by_name('model').send_keys(model)
+        b.find_element_by_name('location').send_keys(location)
+        b.find_element_by_name('mac_address').send_keys(mac)
+        b.find_element_by_name('form').submit()
 
-
-    def tearDown(self):
-        self.selenium.stop()
-
-if __name__ == "__main__":
-        unittest.main()
+    def assert_system_view_text(self, field, val):
+        text = self.browser.find_element_by_xpath('//div[@class="controls" and '
+                'preceding-sibling::label/@for="form_%s"]/span' % field).text
+        self.assertEqual(text.strip(), val)

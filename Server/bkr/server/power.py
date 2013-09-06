@@ -1,39 +1,11 @@
 from turbogears.database import session
 from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from kid import Element
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.widgets import AlphaNavBar, myPaginateDataGrid
+from bkr.server.widgets import AlphaNavBar, myPaginateDataGrid, HorizontalForm
 from bkr.server.model import PowerType
 from bkr.server.admin_page import AdminPage
-
-import cherrypy
-
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-#import model
 from model import *
-import string
-
-# Validation Schemas
-
-class FormSchema(validators.Schema):
-    key = validators.UnicodeString(not_empty=True, max=256, strip=True)
-    description = validators.UnicodeString(not_empty=True, max=256, strip=True)
-    type = validators.UnicodeString(not_empty=True, max=256, strip=True)
-
-class ExpandingFormSchema(validators.Schema):
-    name = validators.UnicodeString(not_empty=True, max=256, strip=True)
-    command = validators.UnicodeString(not_empty=True, max=256, strip=True)
-    powerreset = validators.UnicodeString(not_empty=False, max=256, strip=True)
-    poweroff = validators.UnicodeString(not_empty=True, max=256, strip=True)
-    poweron = validators.UnicodeString(not_empty=True, max=256, strip=True)
-    arguments = validators.ForEach(
-        FormSchema(),
-    )
-
 
 def make_link(url, text):
     # make a <a> element
@@ -48,8 +20,9 @@ def make_edit_link(power):
 
 def make_remove_link(power):
     # make a remove link
-    return make_link(url  = 'remove?id=%s' % power.id,
-                     text = 'Remove (-)')
+    return XML('<a class="btn" href="remove?id=%s">'
+            '<i class="icon-remove"/> Remove</a>' % power.id)
+
 def get_power_type(power):
     # return powertype name
     return make_link(url  = '../powertypes/edit?id=%s' % power.powertype.id,
@@ -62,11 +35,11 @@ class PowerTypes(AdminPage):
     id         = widgets.HiddenField(name='id')
     name       = widgets.TextField(name='name', label=_(u'Name'))
 
-    form = widgets.TableForm(
+    form = HorizontalForm(
         'powertypes',
         fields = [id, name],
         action = 'save_data',
-        submit_text = _(u'Submit Data'),
+        submit_text = _(u'Save'),
     )
 
 
@@ -83,6 +56,7 @@ class PowerTypes(AdminPage):
     def new(self, **kw):
         return dict(
             form = self.form,
+            title=_(u'New Power Type'),
             action = './save',
             options = {},
             value = kw,
@@ -90,9 +64,11 @@ class PowerTypes(AdminPage):
 
     @expose(template='bkr.server.templates.form')
     def edit(self,**kw):
+        title = _(u'New Power Type')
         values = []
         if kw.get('id'):
             powertype = PowerType.by_id(kw['id'])
+            title = powertype.name
             values = dict(
                 id         = powertype.id,
                 name       = powertype.name,
@@ -100,6 +76,7 @@ class PowerTypes(AdminPage):
         
         return dict(
             form = self.form,
+            title=title,
             action = './save',
             options = {},
             value = values,
@@ -141,12 +118,12 @@ class PowerTypes(AdminPage):
         powertypes_grid = myPaginateDataGrid(fields=[
                                   ('Power Type', make_edit_link),
                                   (' ', make_remove_link),
-                              ])
+                              ],
+                              add_action='./new')
         
 
         return dict(title="Power Types", 
                     grid = powertypes_grid,
-                    addable = self.add,
                     search_widget = self.search_widget_form,
                     alpha_nav_bar = AlphaNavBar(list_by_letters,'power'),
                     object_count = powertypes.count(),

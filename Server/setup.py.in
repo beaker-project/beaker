@@ -150,7 +150,8 @@ def find_data_recursive(dest_dir, src_dir, exclude=frozenset()):
                 if filename not in exclude])
 
 data_files = \
-    list(find_data_recursive('bkr/server/static', 'bkr/server/static/')) + [
+    list(find_data_recursive('bkr/server/static', 'bkr/server/static/')) + \
+    list(find_data_recursive('bkr/server/assets', 'assets')) + [
     ("/etc/beaker", ["server.cfg"]),
     ("/etc/httpd/conf.d", ["apache/beaker-server.conf"]),
     ("/etc/init.d", ["init.d/beakerd"]),

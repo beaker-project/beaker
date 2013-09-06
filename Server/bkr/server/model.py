@@ -4277,20 +4277,15 @@ class TaskBase(MappedObject):
             completed += self.ktasks
             kwidth = int(float(self.ktasks)/float(self.ttasks)*100)
         percentCompleted = int(float(completed)/float(self.ttasks)*100)
-        div   = Element('div', {'class': 'dd'})
-        div.append(Element('div', {'class': 'green', 'style': 'width:%s%%' % pwidth}))
-        div.append(Element('div', {'class': 'orange', 'style': 'width:%s%%' % wwidth}))
-        div.append(Element('div', {'class': 'red', 'style': 'width:%s%%' % fwidth}))
-        div.append(Element('div', {'class': 'blue', 'style': 'width:%s%%' % kwidth}))
-
-        percents = Element('div', {'class': 'progressPercentage'})
-        percents.text = "%s%%" % percentCompleted
-
-        span = Element('span')
-        span.append(percents)
-        span.append(div)
-
-        return span
+        div = Element('div', {'class': 'progress'})
+        div.append(Element('div', {'class': 'bar bar-success', 'style': 'width:%s%%' % pwidth}))
+        div.append(Element('div', {'class': 'bar bar-warning', 'style': 'width:%s%%' % wwidth}))
+        div.append(Element('div', {'class': 'bar bar-danger', 'style': 'width:%s%%' % fwidth}))
+        div.append(Element('div', {'class': 'bar bar-info', 'style': 'width:%s%%' % kwidth}))
+        container = Element('div')
+        container.text = "%s%%" % percentCompleted
+        container.append(div)
+        return container
     progress_bar = property(progress_bar)
 
 
@@ -5374,9 +5369,8 @@ class Recipe(TaskBase):
     @property
     def link(self):
         """ Return a link to this recipe. """
-        link = make_link(url='/recipes/%s' % self.id, text=self.t_id)
-        link.attrib['class'] += ' recipe-id'
-        return link
+        return make_link(url='/recipes/%s' % self.id, text=self.t_id,
+                elem_class='recipe-id')
 
     def filepath(self):
         """

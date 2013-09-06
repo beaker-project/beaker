@@ -32,13 +32,13 @@ class SystemManualProvisionTest(SeleniumTestCase):
             user.sshpubkeys.append(SSHPubKey(u'ssh-rsa', u'AAAAvalidkeyyeah', u'user@host'))
         sel.open("")
         sel.type("simplesearch", "%s" % system.fqdn)
-        sel.click("search")
+        sel.submit('simpleform')
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % system.fqdn)
         sel.wait_for_page_to_load("30000")
         sel.click("link=Provision")
         sel.select("provision_prov_install", "index=0")
-        sel.click("//a[@href='javascript:document.provision.submit();']")
+        sel.submit('name=provision')
         sel.wait_for_page_to_load("30000")
         self.assert_("Successfully Provisioned %s" % system.fqdn in sel.get_text('css=.flash'))
 
@@ -53,13 +53,13 @@ class SystemManualProvisionTest(SeleniumTestCase):
         session.flush()
         sel.open("")
         sel.type("simplesearch", "%s" % system.fqdn)
-        sel.click("search")
+        sel.submit('simpleform')
         sel.wait_for_page_to_load("30000")
         sel.click("link=%s" % system.fqdn)
         sel.wait_for_page_to_load("30000")
         sel.click("link=Provision")
         sel.select("provision_prov_install", "index=0")
-        sel.click("//a[@href='javascript:document.provision.submit();']")
+        sel.submit('name=provision')
         sel.wait_for_page_to_load("30000")
         self.assert_("root password has expired" in sel.get_text('css=.flash'))
 
@@ -105,8 +105,8 @@ class SystemManualProvisionInstallOptionsTest(WebDriverTestCase):
         wait_for_condition(provision_koptions_populated)
 
         # provision
-        b.find_element_by_xpath("//form[@name='provision']//a[text()='Provision']").click()
-        b.find_element_by_xpath('//div[@class="flash"]').text.startswith('Success')
+        b.find_element_by_xpath("//form[@name='provision']//button[text()='Provision']").click()
+        self.assert_(b.find_element_by_class_name('flash').text.startswith('Success'))
 
         # check
         self.assertEquals(self.system.command_queue[1].action, u'configure_netboot')

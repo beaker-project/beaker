@@ -1,16 +1,13 @@
 #!/usr/bin/python
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
-import unittest, time, re, os
-from turbogears.database import session
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login, click_menu_item
+from bkr.inttest import data_setup, with_transaction, get_server_base
 
-class ItemCount(SeleniumTestCase):
+class ItemCount(WebDriverTestCase):
 
     @with_transaction
     def setUp(self):
-        self.verificationErrors = []
-        self.selenium = self.get_selenium()
-        self.selenium.start()
+        self.browser = self.get_browser()
         data_setup.create_device(device_class="IDE") #needed for device page
         data_setup.create_distro() # needed for distro page
         data_setup.create_job() # needed for job page
@@ -18,36 +15,28 @@ class ItemCount(SeleniumTestCase):
         system = data_setup.create_system()
         system.shared = True
         system.activity.append(data_setup.create_system_activity())
-    
-    def test_itemcount(self):
-        sel = self.selenium
-        sel.open("")
-        self.login()
-        sel.click("link=All")
-        sel.wait_for_page_to_load('30000')
-        self.failUnless(sel.is_text_present("Items found:"))
-        sel.click("link=Available")
-        sel.wait_for_page_to_load('30000')
-        self.failUnless(sel.is_text_present("Items found:"))
-        sel.click("link=Free")
-        sel.wait_for_page_to_load('30000')
-        self.failUnless(sel.is_text_present("Items found:"))
-        sel.click("//ul[@id='devices']/li[1]/a")
-        sel.wait_for_page_to_load('30000')
-        self.failUnless(sel.is_text_present("Items found:"))
-        sel.click("//ul[@id='distros']/li[1]/a")
-        sel.wait_for_page_to_load('30000')
-        self.failUnless(sel.is_text_present("Items found:"))
-        sel.click("link=Jobs")
-        sel.wait_for_page_to_load('30000')
-        self.failUnless(sel.is_text_present("Items found:"))
-        sel.click("link=Task Library")
-        sel.wait_for_page_to_load('30000')
-        self.failUnless(sel.is_text_present("Items found:"))
- 
+
     def tearDown(self):
-        self.selenium.stop()
-        self.assertEqual([], self.verificationErrors)
+        self.browser.quit()
+
+    def test_itemcount(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Systems', 'All')
+        b.find_element_by_xpath('//span[contains(text(), "Items found:")]')
+        click_menu_item(b, 'Systems', 'Available')
+        b.find_element_by_xpath('//span[contains(text(), "Items found:")]')
+        click_menu_item(b, 'Systems', 'Free')
+        b.find_element_by_xpath('//span[contains(text(), "Items found:")]')
+        click_menu_item(b, 'Devices', 'All')
+        b.find_element_by_xpath('//span[contains(text(), "Items found:")]')
+        click_menu_item(b, 'Distros', 'All')
+        b.find_element_by_xpath('//span[contains(text(), "Items found:")]')
+        click_menu_item(b, 'Scheduler', 'Jobs')
+        b.find_element_by_xpath('//span[contains(text(), "Items found:")]')
+        click_menu_item(b, 'Scheduler', 'Task Library')
+        b.find_element_by_xpath('//span[contains(text(), "Items found:")]')
 
 if __name__ == "__main__":
     unittest.main()

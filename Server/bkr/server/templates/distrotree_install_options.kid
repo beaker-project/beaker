@@ -4,8 +4,8 @@
 <script type="text/javascript" py:if="not readonly">
 $(function () {
     var form = document.install_options_form;
-    var edit_link = $('<a href="#">Edit</a>');
-    var save_link = $('<a href="#">Save Changes</a>');
+    var edit_link = $('<button class="btn">Edit</button>');
+    var save_link = $('<button class="btn btn-primary">Save Changes</button>');
     edit_link.click(function () {
         $('td', form).each(function (i, elem) {
             var name = elem.id;
@@ -26,7 +26,7 @@ $(function () {
     $(form).append(edit_link);
 })
 </script>
-<table class="list" id="install_options">
+<table class="table table-bordered" id="install_options">
     <tbody>
         <tr class="list">
             <th class="list" style="width: 25%;">Kickstart Metadata</th>

@@ -20,38 +20,31 @@ function confirmSubmit(action)
 // -->
  </script>
  <span py:if="enabled">
-  <form onSubmit="return confirmSubmit('Power System On');"
-   name="${name}_off"
-   action="${tg.url(action)}"
-   method="${method}" width="100%">
-       ${id.display(value_for(id), **params_for(id))}
-       <input type="hidden" name="action" value="on" class="hiddenfield"/>
-       <input type="Submit" value="Power On System" id="on" name="on"/>
-  </form>
-  <form onSubmit="return confirmSubmit('Power System Off');"
-   name="${name}_on"
-   action="${tg.url(action)}"
-   method="${method}" width="100%">
-       ${id.display(value_for(id), **params_for(id))}
-       <input type="hidden" name="action" value="off" class="hiddenfield"/>
-       <input type="Submit" value="Power Off System" id="off" name="off"/>
-  </form>
-  <form onSubmit="return confirmSubmit('Reboot System');"
-   name="${name}_reboot"
-   action="${tg.url(action)}"
-   method="${method}" width="100%">
-       ${id.display(value_for(id), **params_for(id))}
-       <input type="hidden" name="action" value="reboot" class="hiddenfield"/>
-       <input type="Submit" value="Reboot System" id="reboot" name="reboot"/>
-  </form>
-  <form onSubmit="return confirmSubmit('interrupt system');"
-   name="${name}_interrupt"
-   action="${tg.url(action)}"
-   method="${method}" width="100%">
-       ${id.display(value_for(id), **params_for(id))}
-       <input type="hidden" name="action" value="interrupt" class="hiddenfield"/>
-       <input type="submit" value="Interrupt System" />
-  </form>
+    <form action="${action}" method="${method}">
+      ${id.display(value_for(id), **params_for(id))}
+      <div class="btn-group">
+        <button class="btn" type="submit"
+                name="action" value="on"
+                onclick="return confirmSubmit('power the system on');">
+          Power On
+        </button>
+        <button class="btn" type="submit"
+                name="action" value="off"
+                onclick="return confirmSubmit('power the system off');">
+          Power Off
+        </button>
+        <button class="btn" type="submit"
+                name="action" value="reboot"
+                onclick="return confirmSubmit('reboot the system');">
+          Reboot
+        </button>
+        <button class="btn" type="submit"
+                name="action" value="interrupt"
+                onclick="return confirmSubmit('interrupt the system');">
+          Interrupt
+        </button>
+      </div>
+    </form>
  </span>
  <span py:if="not enabled">System is not configured for power support</span>
 </div>

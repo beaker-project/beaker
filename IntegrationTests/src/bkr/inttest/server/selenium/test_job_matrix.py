@@ -176,7 +176,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.find_element_by_xpath("//select/option[@value='%s']" % unique_whiteboard).click()
         b.find_element_by_xpath('//input[@value="Generate"]').click()
         b.find_element_by_link_text('Pass: 1').click()
-        task_id = b.find_element_by_xpath('//table[position()=2]//tr[position()=2]/td').text
+        task_id = b.find_element_by_xpath('//table/tbody/tr[1]/td').text
         self.assertEqual(task_id,
             single_job.recipesets[0].recipes[0].tasks[0].t_id)
 
@@ -194,7 +194,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.find_element_by_link_text('Pass: 1').click()
 
         # This tests that we are indeed only looking at one recipe task.
-        task_spec_columns = b.find_elements_by_xpath('//table[2]//tr/td[1]')
+        task_spec_columns = b.find_elements_by_xpath('//table/tbody/tr/td[1]')
         failed = True
         for col in task_spec_columns:
             if col and col.text.strip():
@@ -304,7 +304,7 @@ class TestJobMatrix(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Executed Tasks')
         self.assertEqual(sel.get_value('whiteboard'), self.recipe_whiteboard)
-        self.assertEqual(sel.get_text('//table[@class="list"]/tbody/tr[2]/td[1]'),
+        self.assertEqual(sel.get_text('//table/tbody/tr[1]/td[1]'),
                 self.passed_job.recipesets[0].recipes[0].tasks[0].t_id)
         sel.go_back()
         sel.wait_for_page_to_load('30000')
@@ -312,7 +312,7 @@ class TestJobMatrix(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Executed Tasks')
         self.assertEqual(sel.get_value('whiteboard'), self.recipe_whiteboard)
-        self.assertEqual(sel.get_text('//table[@class="list"]/tbody/tr[2]/td[1]'),
+        self.assertEqual(sel.get_text('//table/tbody/tr[1]/td[1]'),
                 self.warned_job.recipesets[0].recipes[0].tasks[0].t_id)
         sel.go_back()
         sel.wait_for_page_to_load('30000')
@@ -321,5 +321,5 @@ class TestJobMatrix(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Executed Tasks')
         self.assertEqual(sel.get_value('whiteboard'), self.recipe_whiteboard)
-        self.assertEqual(sel.get_text('//table[@class="list"]/tbody/tr[2]/td[1]'),
+        self.assertEqual(sel.get_text('//table/tbody/tr[1]/td[1]'),
                 self.failed_job.recipesets[0].recipes[0].tasks[0].t_id)

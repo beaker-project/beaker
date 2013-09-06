@@ -23,8 +23,9 @@ from formencode.api import Invalid
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
-    RecipeWidget,RecipeTasksWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
-    SearchBar, JobWhiteboard, ProductWidget, JobActionWidget, JobPageActionWidget
+    RecipeWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
+    SearchBar, JobWhiteboard, ProductWidget, JobActionWidget, JobPageActionWidget, \
+    HorizontalForm, BeakerDataGrid
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import *
 from bkr.server import search_utility, identity
@@ -56,7 +57,7 @@ class JobForm(widgets.Form):
     template = 'bkr.server.templates.job_form'
     name = 'job'
     submit_text = _(u'Queue')
-    fields = [widgets.TextArea(name='textxml', label=_(u'Job XML'), attrs=dict(rows=40, cols=155))]
+    fields = [widgets.TextArea(name='textxml')]
     hidden_fields = [widgets.HiddenField(name='confirmed', validator=validators.StringBool())]
     params = ['xsd_errors']
     xsd_errors = None
@@ -77,7 +78,6 @@ class Jobs(RPCRoot):
     priority_widget = PriorityWidget() #FIXME I have a feeling we don't need this as the RecipeSet widget declares an instance of it
     product_widget = ProductWidget()
     retention_tag_widget = RetentionTagWidget()
-    recipe_tasks_widget = RecipeTasksWidget()
     job_type = { 'RS' : RecipeSet,
                  'J'  : Job
                }
@@ -88,7 +88,7 @@ class Jobs(RPCRoot):
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
     message = widgets.TextArea(name='msg', label=_(u'Reason?'), help_text=_(u'Optional'))
 
-    form = widgets.TableForm(
+    form = HorizontalForm(
         'jobs',
         fields = [upload],
         action = 'save_data',
@@ -936,16 +936,16 @@ class Jobs(RPCRoot):
             for d in query: 
                 recipe_set_data.append(d)   
  
-        job_history_grid = widgets.DataGrid(fields= [
-                               widgets.DataGrid.Column(name='recipeset', 
+        job_history_grid = BeakerDataGrid(fields= [
+                               BeakerDataGrid.Column(name='recipeset',
                                                                getter=lambda x: make_link(url='#RS_%s' % x.recipeset_id,text ='RS:%s' % x.recipeset_id), 
                                                                title='RecipeSet', options=dict(sortable=True)), 
-                               widgets.DataGrid.Column(name='user', getter= lambda x: x.user, title='User', options=dict(sortable=True)), 
-                               widgets.DataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
-                               widgets.DataGrid.Column(name='field', getter=lambda x: x.field_name, title='Field Name', options=dict(sortable=True)),
-                               widgets.DataGrid.Column(name='action', getter=lambda x: x.action, title='Action', options=dict(sortable=True)),
-                               widgets.DataGrid.Column(name='old_value', getter=lambda x: x.old_value, title='Old value', options=dict(sortable=True)),
-                               widgets.DataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New value', options=dict(sortable=True)),])
+                               BeakerDataGrid.Column(name='user', getter= lambda x: x.user, title='User', options=dict(sortable=True)),
+                               BeakerDataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
+                               BeakerDataGrid.Column(name='field', getter=lambda x: x.field_name, title='Field Name', options=dict(sortable=True)),
+                               BeakerDataGrid.Column(name='action', getter=lambda x: x.action, title='Action', options=dict(sortable=True)),
+                               BeakerDataGrid.Column(name='old_value', getter=lambda x: x.old_value, title='Old value', options=dict(sortable=True)),
+                               BeakerDataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New value', options=dict(sortable=True)),])
 
         return_dict = dict(title = 'Job',
                            recipeset_widget = self.recipeset_widget,

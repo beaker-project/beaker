@@ -26,7 +26,7 @@ class LabControllerViewTest(WebDriverTestCase):
 
     def _add_lc(self, b, lc_name, lc_email, user_name,):
         b.get(get_server_base() + 'labcontrollers')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
         b.find_element_by_name('fqdn').send_keys(lc_name)
         b.find_element_by_name('email').send_keys(lc_email)
         b.find_element_by_name('lusername').send_keys(user_name)
@@ -49,7 +49,7 @@ class LabControllerViewTest(WebDriverTestCase):
             "option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']"). \
             send_keys(lc_name)
-        b.find_element_by_xpath("//input[@name='Search']").click()
+        b.find_element_by_id('searchform').submit()
 
         self.assert_(is_activity_row_present(b,
             object_='LabController: %s' % lc_name, via='WEBUI',
@@ -73,7 +73,7 @@ class LabControllerViewTest(WebDriverTestCase):
         b.get(get_server_base() + 'labcontrollers')
         b.find_element_by_xpath("//table[@id='widget']/tbody/tr/"
             "td[preceding-sibling::td/a[normalize-space(text())='%s']]"
-            "/a[normalize-space(text())='Remove (-)']" % lc_name).click()
+            "/a[normalize-space(text())='Remove']" % lc_name).click()
         self.assert_('%s removed' % lc_name in
             b.find_element_by_css_selector('.flash').text)
 
@@ -86,7 +86,7 @@ class LabControllerViewTest(WebDriverTestCase):
             "option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']"). \
             send_keys(lc_name)
-        b.find_element_by_xpath("//input[@name='Search']").click()
+        b.find_element_by_id('searchform').submit()
         self.assert_(is_activity_row_present(b,
             object_='LabController: %s' % lc_name, via='WEBUI',
             property_='Disabled', action='Changed', new_value='True'))
@@ -103,7 +103,7 @@ class LabControllerViewTest(WebDriverTestCase):
             "option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='activitysearch_0_value']"). \
             send_keys(sys.fqdn)
-        b.find_element_by_xpath("//input[@name='Search']").click()
+        b.find_element_by_id('searchform').submit()
         self.assert_(is_activity_row_present(b,
             object_='System: %s' % sys.fqdn, via='WEBUI',
             property_='lab_controller', action='Changed', new_value=''))
