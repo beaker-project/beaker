@@ -50,7 +50,7 @@ class ValidEnumValue(validators.FancyValidator):
         try:
             return self.enum_type.from_string(value)
         except ValueError:
-            raise Invalid(self.message('invalid', state), value, state)
+            raise validators.Invalid(self.message('invalid', state), value, state)
     def _from_python(self, value, state):
         return value.value
 

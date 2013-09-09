@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 02110-1301  USA
 """
 
-from bkr.common.bexceptions import *
+from bkr.common.bexceptions import BeakerException, BX
 
 class NoChangeException(BeakerException):
     """This is raised when we want to signal we are doing a NOP"""

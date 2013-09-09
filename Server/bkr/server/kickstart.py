@@ -6,7 +6,7 @@ import logging
 import netaddr
 import pipes # For pipes.quote, since it isn't available in shlex until 3.3
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears import identity, config
+from turbogears import config, redirect
 from turbogears.controllers import expose
 import cherrypy
 import jinja2.sandbox, jinja2.ext, jinja2.nodes

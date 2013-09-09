@@ -4435,7 +4435,8 @@ class Job(TaskBase):
             recipe.distro_tree = distro_tree
             # Don't report panic's for reserve workflow.
             recipe.panic = 'ignore'
-            if kw.get('system_id'):
+            system_id = kw.get('system_id')
+            if system_id:
                 try:
                     system = System.by_id(kw.get('system_id'), identity.current.user)
                 except InvalidRequestError:
@@ -4980,13 +4981,12 @@ class RecipeSetResponse(MappedObject):
 
     @classmethod
     def by_jobs(cls,job_ids):
-        job_ids_type = type(job_ids)
-        if job_ids_type == type(list()):
+        if isinstance(job_ids, list):
             clause = Job.id.in_(job_ids)
-        elif job_ids_type == int:
-            clause = Job.id == job_id
+        elif isinstance(job_ids, int):
+            clause = Job.id == job_ids
         else:
-            raise BeakerException('job_ids needs to be either type \'int\' or \'list\'. Found %s' % job_ids_type)
+            raise BeakerException('job_ids needs to be either type \'int\' or \'list\'. Found %s' % type(job_ids))
         queri = cls.query.outerjoin('recipesets','job').filter(clause)
         results = {}
         for elem in queri:
@@ -5031,7 +5031,7 @@ class RecipeSet(TaskBase):
         """Return True iff the given user can change the response to this recipeset"""
         return self.job.can_set_response(user)
 
-    def can_stop(sel, user=None):
+    def can_stop(self, user=None):
         """Returns True iff the given user can stop this recipeset"""
         return self.job.can_stop(user)
 

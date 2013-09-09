@@ -22,6 +22,7 @@ import logging
 import socket
 import datetime
 import time
+from sqlalchemy import create_engine
 from sqlalchemy.orm import create_session
 import turbogears
 from turbogears import config, url
