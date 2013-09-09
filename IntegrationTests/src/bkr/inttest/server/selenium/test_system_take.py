@@ -1,43 +1,31 @@
-#!/usr/bin/python
-from bkr.inttest.server.selenium import SeleniumTestCase
+
+from selenium.webdriver.support.ui import Select
+from bkr.server.model import SystemStatus
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login
 from turbogears.database import session
-from bkr.inttest import data_setup
-import unittest, time, os
+from bkr.inttest import data_setup, get_server_base
 
-
-class SystemOwnerTake(SeleniumTestCase):
+class SystemTakeTest(WebDriverTestCase):
 
     def setUp(self):
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-
+        self.browser = self.get_browser()
         with session.begin():
-            self.manual_system = data_setup.create_system(status=u'Manual')
-            self.manual_system.shared = True
-            self.user = data_setup.create_user(password='password')
-            self.manual_system.owner = self.user
-            lc = data_setup.create_labcontroller(u'test-lc')
-            data_setup.add_system_lab_controller(self.manual_system,lc)
-        self.login(user=self.user.user_name,password='password')
+            self.lc = data_setup.create_labcontroller()
+            self.distro_tree = data_setup.create_distro_tree(
+                    lab_controllers=[self.lc])
 
     def tearDown(self):
-        self.selenium.stop()
+        self.browser.quit()
 
     def test_owner_manual_system(self):
-        sel = self.selenium
-        sel.open("")
-        sel.type("simplesearch", "%s" % self.manual_system.fqdn)
-        sel.submit('id=simpleform')
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=%s" % self.manual_system.fqdn)
-        sel.wait_for_page_to_load("30000")
-        self.assert_(sel.is_text_present("Take"))
-        sel.click("link=Take")
-        sel.wait_for_page_to_load('30000')
-        self.assert_("Reserved %s" % self.manual_system.fqdn in sel.get_text('//body'))
-
-
-class SystemGroupUserTake(SeleniumTestCase):
+        with session.begin():
+            owner = data_setup.create_user(password=u'testing')
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    owner=owner, shared=True, lab_controller=self.lc)
+        b = self.browser
+        login(b, user=owner.user_name, password='testing')
+        self.check_take(system)
 
     """
     Tests the following scenarios for take in both Automated and Manual machines:
@@ -46,241 +34,148 @@ class SystemGroupUserTake(SeleniumTestCase):
     * System has group, user in group
     """
 
-    def setUp(self):
-        self.verificationErrors = []
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-
-        with session.begin():
-            self.automated_system = data_setup.create_system()
-            self.automated_system.shared = True
-            self.manual_system = data_setup.create_system(status=u'Manual')
-            self.manual_system.shared = True
-            self.group = data_setup.create_group() 
-            self.user = data_setup.create_user(password='password')
-            self.wrong_group = data_setup.create_group()
-            self.user2 = data_setup.create_user(password=u'password')
-            lc = data_setup.create_labcontroller(u'test-lc')
-            data_setup.add_system_lab_controller(self.automated_system,lc)
-            data_setup.add_system_lab_controller(self.manual_system,lc)
-            session.flush()
-            self.distro_tree = data_setup.create_distro_tree()
-        self.login(user=self.user.user_name,password='password')
-
     def test_schedule_provision_system_has_user(self):
         with session.begin():
-            self.automated_system.user = self.user2
-        self.logout()
-        self.login() # login as admin
-        sel = self.selenium
-        sel.open("view/%s/" % self.automated_system.fqdn)
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=Provision")
-        try: self.failUnless(sel.is_text_present("Schedule provision"))
-        except AssertionError, e: self.verificationErrors.append('Admin has no schedule provision option when system is in use')
+            system = data_setup.create_system(status=SystemStatus.automated,
+                    shared=True, lab_controller=self.lc)
+            job = data_setup.create_job()
+            data_setup.mark_job_running(job, system=system)
+        b = self.browser
+        login(b)
+        self.check_schedule_provision(system)
 
-    def test_schedule_provision_system_has_user_with_group(self): 
+    def test_schedule_provision_system_has_user_with_group(self):
         with session.begin():
-            self.automated_system.user = self.user2
-            data_setup.add_user_to_group(self.user,self.group)
-            data_setup.add_group_to_system(self.automated_system,self.group)
-        self.logout() 
-        self.login(user=self.user.user_name,password='password') # login as admin
-        sel = self.selenium
-        sel.open("view/%s/" % self.automated_system.fqdn)
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=Provision")
-        try: self.failUnless(sel.is_text_present("Schedule provision"))
-        except AssertionError, e: self.verificationErrors.append('Systemgroup has no schedule provision option when system is in use')
-
+            user = data_setup.create_user(password=u'testing')
+            group = data_setup.create_group()
+            system = data_setup.create_system(status=SystemStatus.automated,
+                    shared=True, lab_controller=self.lc)
+            data_setup.add_user_to_group(user, group)
+            data_setup.add_group_to_system(system, group)
+            user2 = data_setup.create_user()
+            data_setup.add_user_to_group(user2, group)
+            job = data_setup.create_job(owner=user2)
+            data_setup.mark_job_running(job, system=system)
+        b = self.browser
+        login(b, user=user.user_name, password=u'testing')
+        self.check_schedule_provision(system)
 
     def test_system_no_group(self):
-        #Auto Machine
-        sel = self.selenium
-        sel.open("")
-        sel.type("simplesearch", "%s" % self.automated_system.fqdn)
-        sel.submit('id=simpleform')
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=%s" % self.automated_system.fqdn)
-        sel.wait_for_page_to_load("30000")
-        try: self.failUnless(not sel.is_text_present("Take")) #Automated should not have Take for this user
-        except AssertionError, e: self.verificationErrors.append('Take is present on automated machine with no groups')
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.automated,
+                    shared=True, lab_controller=self.lc)
+            user = data_setup.create_user(password=u'testing')
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
+        self.check_cannot_take(system)
 
-        # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
-        sel.open('user_change?id=%s' % self.automated_system.id)
-        sel.wait_for_page_to_load("30000")
-        self.assert_('You were unable to change the user for %s' % self.automated_system.fqdn in sel.get_text('//body'))
-   
-
-        #Manual machine
-        #import pdb;pdb.set_trace()
-        sel.open("")
-        sel.type("simplesearch", "%s" % self.manual_system.fqdn)
-        sel.submit('id=simpleform')
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=%s" % self.manual_system.fqdn)
-        sel.wait_for_page_to_load("30000")
-        try: self.failUnless(sel.is_text_present("Take")) #Should have Take for this machine
-        except AssertionError, e: self.verificationErrors.append('Take is not present on manual machine with no groups')
-        self._do_take(self.manual_system.fqdn)
+    def test_system_no_group_manual(self):
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    shared=True, lab_controller=self.lc)
+            user = data_setup.create_user(password=u'testing')
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
+        self.check_take(system)
 
     def test_system_has_group(self):
-        #Automated machine
         with session.begin():
-            data_setup.add_group_to_system(self.automated_system,self.group) # Add systemgroup
-        sel = self.selenium
-        sel.open("")
-        sel.type("simplesearch", "%s" % self.automated_system.fqdn)
-        sel.submit('id=simpleform')
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=%s" % self.automated_system.fqdn)
-        sel.wait_for_page_to_load("30000")
-        try: self.failUnless(not sel.is_text_present("Take")) #Should not be here
-        except AssertionError, e: self.verificationErrors.append('Take is present on automated machine with group')
+            system = data_setup.create_system(status=SystemStatus.automated,
+                    shared=True, lab_controller=self.lc)
+            user = data_setup.create_user(password=u'testing')
+            group = data_setup.create_group()
+            # user is not in group
+            data_setup.add_group_to_system(system, group)
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
+        self.check_cannot_take(system)
+        self.check_cannot_schedule_provision(system)
 
-        # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
-        sel.open('user_change?id=%s' % self.automated_system.id)
-        sel.wait_for_page_to_load("30000")
-        self.assert_('You were unable to change the user for %s' % self.automated_system.fqdn in sel.get_text('//body'))
-
-        try:
-            self._do_schedule_provision(self.automated_system.fqdn,reraise=True) #Should not be able to provision either
-        except AssertionError, e: #Hmm, this is actually a good thing!
-            pass
-        else:
-            self.verificationErrors.append('System with group should not have  \
-            schedule provision option for not group members')
-
-        #Manual machine
+    def test_system_has_group_manual(self):
         with session.begin():
-            data_setup.add_group_to_system(self.manual_system, self.group) # Add systemgroup
-        sel = self.selenium
-        sel.open("")
-        sel.type("simplesearch", "%s" % self.manual_system.fqdn)
-        sel.submit('id=simpleform')
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=%s" % self.manual_system.fqdn)
-        sel.wait_for_page_to_load("30000")
-        try: self.failUnless(not sel.is_text_present("Take")) #Should not be here
-        except AssertionError, e: self.verificationErrors.append('Take is present on manual machine with group')
-
-        # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
-        sel.open('user_change?id=%s' % self.manual_system.id)
-        sel.wait_for_page_to_load("30000")
-        self.assert_('You were unable to change the user for %s' % self.manual_system.fqdn in sel.get_text('//body'))
-
-        try:
-            self._do_schedule_provision(self.manual_system.fqdn, reraise=True) #Should not be able to provision either
-        except AssertionError, e: #Hmm, this is actually a good thing!
-            pass
-        else:
-            self.verificationErrors.append('System with group should not have  \
-            schedule provision option for not group members')
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    shared=True, lab_controller=self.lc)
+            user = data_setup.create_user(password=u'testing')
+            group = data_setup.create_group()
+            # user is not in group
+            data_setup.add_group_to_system(system, group)
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
+        self.check_cannot_take(system)
+        self.check_cannot_schedule_provision(system)
 
     def test_system_group_user_group(self):
-        #Automated machine
         with session.begin():
-            data_setup.add_group_to_system(self.automated_system, self.group) # Add systemgroup
-            data_setup.add_user_to_group(self.user, self.wrong_group) # Add user to group
-        sel = self.selenium
-        self.logout()
-        self.login(user=self.user.user_name, password='password')
-        sel.open("")
-        sel.type("simplesearch", "%s" % self.automated_system.fqdn)
-        sel.submit('id=simpleform')
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=%s" % self.automated_system.fqdn) #this tests the click! 
-        sel.wait_for_page_to_load("30000")
-        self.assertEqual("%s" % self.automated_system.fqdn, sel.get_title()) #ensure the page has opened
-        try: self.failUnless(not sel.is_text_present("Take")) #Should be not here
-        except AssertionError, e: self.verificationErrors.\
-            append('Take is available to automated machine with system group privs' )
+            system = data_setup.create_system(status=SystemStatus.automated,
+                    shared=True, lab_controller=self.lc)
+            wrong_group = data_setup.create_group()
+            user = data_setup.create_user(password=u'testing')
+            # user is not in the same group as system
+            data_setup.add_user_to_group(user, wrong_group)
+            group = data_setup.create_group()
+            data_setup.add_group_to_system(system, group)
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
+        self.check_cannot_take(system)
 
-        # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
-        sel.open('user_change?id=%s' % self.automated_system.id)
-        sel.wait_for_page_to_load("30000")
-        self.assert_('You were unable to change the user for %s' % self.automated_system.fqdn in sel.get_text('//body'))
-
+    def test_system_in_user_group(self):
         with session.begin():
-            self.user.groups = [self.group]
+            system = data_setup.create_system(status=SystemStatus.automated,
+                    shared=True, lab_controller=self.lc)
+            user = data_setup.create_user(password=u'testing')
+            group = data_setup.create_group()
+            data_setup.add_user_to_group(user, group)
+            data_setup.add_group_to_system(system, group)
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
+        self.check_take(system)
 
-        sel.open("")
-        sel.type("simplesearch", "%s" % self.automated_system.fqdn)
-        sel.submit('id=simpleform')
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=%s" % self.automated_system.fqdn)
-        sel.wait_for_page_to_load("30000")
-        try: self.failUnless(sel.is_text_present("Take")) #Should be here
-        except AssertionError, e: self.verificationErrors.\
-            append('Take is not available to automated machine with system group pirvs' )
-        self._do_schedule_provision(self.automated_system.fqdn)
-
-        # Now can I actually take it?
-        sel.open("")
-        sel.type("simplesearch", "%s" % self.automated_system.fqdn)
-        sel.submit('id=simpleform')
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=%s" % self.automated_system.fqdn)
-        sel.wait_for_page_to_load("30000")
-        self._do_take(self.automated_system.fqdn)
-
-        #Manual machine
+    def test_manual_system_in_user_group(self):
         with session.begin():
-            data_setup.add_group_to_system(self.manual_system, self.group) # Add systemgroup
-        sel = self.selenium
-        sel.open("")
-        sel.type("simplesearch", "%s" % self.manual_system.fqdn)
-        sel.submit('id=simpleform')
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=%s" % self.manual_system.fqdn)
-        sel.wait_for_page_to_load("30000")
-        try: self.failUnless(sel.is_text_present("Take")) #Should be here
-        except AssertionError, e: self.verificationErrors.append('Take is not here for manual machine with system group privs')
-        self._do_schedule_provision(self.manual_system.fqdn)
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    shared=True, lab_controller=self.lc)
+            user = data_setup.create_user(password=u'testing')
+            group = data_setup.create_group()
+            data_setup.add_user_to_group(user, group)
+            data_setup.add_group_to_system(system, group)
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
+        self.check_take(system)
 
-        # Now can I actually take it?
-        sel.open("")
-        sel.type("simplesearch", "%s" % self.manual_system.fqdn)
-        sel.submit('id=simpleform')
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=%s" % self.manual_system.fqdn)
-        sel.wait_for_page_to_load("30000")
-        self._do_take(self.manual_system.fqdn)
+    def go_to_system_view(self, system):
+        self.browser.get(get_server_base() + 'view/%s' % system.fqdn)
 
-    def _do_take(self, system_fqdn):
-        sel = self.selenium
-        sel.click('link=Take')
-        sel.wait_for_page_to_load("30000")
-        try:
-            self.assertEquals(sel.get_text('css=.flash'), 'Reserved %s' % system_fqdn)
-        except AssertionError, e:
-            self.verificationErrors.append(e)
+    def check_take(self, system):
+        self.go_to_system_view(system)
+        b = self.browser
+        b.find_element_by_link_text('Take').click()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'Reserved %s' % system.fqdn)
 
-    def _do_schedule_provision(self,system_fqdn,reraise=False):
-        #Check we can do a schedule provision as well
-        sel = self.selenium
-        sel.click("link=Provision")
+    def check_cannot_take(self, system):
+        self.go_to_system_view(system)
+        b = self.browser
+        # "Take" link should be absent
+        b.find_element_by_xpath('//form[@name="form" and not(.//a[normalize-space(string(.))="Take"])]')
+        # Try taking it directly as well:
+        # https://bugzilla.redhat.com/show_bug.cgi?id=747328
+        b.get(get_server_base() + 'user_change?id=%s' % system.id)
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'You were unable to change the user for %s' % system.fqdn)
 
-        try:
-            self.failUnless(sel.is_text_present("Schedule provision"))
-        except AssertionError, e:
-            if reraise:
-                raise
-            self.verificationErrors.append('No Schedule provision option for system %s' % system_fqdn)
-        sel.select("provision_prov_install", "label=%s" % self.distro_tree)
-        sel.click("//button[text()='Schedule provision']")
-        sel.wait_for_page_to_load("30000")
-        try:
-            self.failUnless(sel.is_text_present("Success!"))
-        except AssertionError, e:
-            if reraise:
-                raise
-            self.verificationErrors.append('Did not succesfully create job')
+    def check_schedule_provision(self, system):
+        self.go_to_system_view(system)
+        b = self.browser
+        b.find_element_by_link_text('Provision').click()
+        Select(b.find_element_by_name('prov_install'))\
+            .select_by_visible_text(unicode(self.distro_tree))
+        b.find_element_by_xpath('//button[text()="Schedule provision"]').click()
+        self.assertIn('Success!', b.find_element_by_class_name('flash').text)
 
-
-    def tearDown(self):
-        self.selenium.stop()
-        self.assertEqual([], self.verificationErrors)
-
-if __name__ == "__main__":
-    unittest.main()
+    def check_cannot_schedule_provision(self, system):
+        self.go_to_system_view(system)
+        b = self.browser
+        b.find_element_by_link_text('Provision').click()
+        b.find_element_by_xpath('//*[@id="provision" and not(.//button[text()="Schedule Provision"])]')
+        # just to be sure...
+        b.find_element_by_xpath('//*[@id="provision" and not(.//button)]')
