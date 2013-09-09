@@ -10,6 +10,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import aliased, joinedload
 from turbogears.database import session
 from bkr.server.model import Key as KeyModel
+from bkr.common.bexceptions import BeakerException
 import logging
 log = logging.getLogger(__name__)
 
@@ -409,7 +410,7 @@ class Search(object):
                             self.queri = self.queri.outerjoin(*relations, aliased=aliased)
                             break
             except TypeError, (error):
-                log.error('Column %s has not specified joins validly:%s' % (column, error))                                                               
+                log.error('Column %s has not specified joins validly:%s' % (mycolumn, error))
 
     def return_standard_filter(self,mycolumn,operation,value,loose_match=True):  
         col_type = mycolumn.type
@@ -903,7 +904,7 @@ class SystemObject:
         try: 
             return m.return_operators(field)
         except KeyError, (e): 
-            log.error('Failed to find search_type by index %s, got error: %s' % (index_type,e))
+            log.error('Failed to find operators for field %s, got error: %s' % (field,e))
 
 
 class System(SystemObject): 

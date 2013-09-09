@@ -62,7 +62,7 @@ class Search(CompoundFormField):
     params_doc = {'powertypes_callback' : ''}
 
     def __init__(self, callback, search_controller, *args, **kw):
-        super(Power,self).__init__(*args, **kw)
+        super(Search,self).__init__(*args, **kw)
 
         self.search_controller=search_controller
         self.powercontroller_field = SingleSelectField(name="powercontroller", options=callback)

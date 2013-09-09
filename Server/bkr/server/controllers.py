@@ -240,7 +240,7 @@ class Root(RPCRoot):
         return return_dict
 
     @expose(format='json')
-    def get_search_options_distros(self,table_field,**kw):
+    def get_search_options_distros(self,table_field, *args, **kw):
         return su.Distro.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
@@ -248,7 +248,7 @@ class Root(RPCRoot):
         return su.Recipe.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
-    def get_search_options_job(self,table_field,**kw):
+    def get_search_options_job(self,table_field, *args, **kw):
         return su.Job.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
@@ -265,7 +265,7 @@ class Root(RPCRoot):
         return su.Key.search.get_search_options(keyvalue_field, *args, **kw)
 
     @expose(format='json')
-    def get_search_options(self,table_field,**kw):
+    def get_search_options(self,table_field, *args, **kw):
         return_dict = {}
         search =  su.System.search.search_on(table_field)
       
@@ -324,7 +324,7 @@ class Root(RPCRoot):
         try:
             recipeset = RecipeSet.by_id(recipeset_id)
             old_priority = recipeset.priority
-        except NoResultFound:
+        except NoResultFound as e:
             log.error('No rows returned for recipeset_id %s in change_priority_recipeset:%s' % (recipeset_id,e))
             return { 'success' : None, 'msg' : 'RecipeSet is not valid' }
 
