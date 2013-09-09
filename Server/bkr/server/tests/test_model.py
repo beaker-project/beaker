@@ -1,7 +1,5 @@
-
-# These are unit tests which don't need an actual database. Tests which need to 
-# talk to external services (which is most of the tests for model.py) belong in 
-# the IntegrationTests subdir.
+# These are unit tests which don't need a MySQL database. Tests which need to
+# talk to external services belong in the IntegrationTests subdir.
 
 import unittest
 from sqlalchemy.schema import MetaData, Table, Column
