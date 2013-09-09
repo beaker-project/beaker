@@ -57,8 +57,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.reserve(system.fqdn)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('Cannot reserve system with status Automated'
-                    in e.faultString)
+            self.assertIn('Cannot manually reserve automated system', e.faultString)
 
     def test_cannot_reserve_system_in_use(self):
         with session.begin():
@@ -71,8 +70,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.reserve(system.fqdn)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('cannot reserve system' in e.faultString,
-                    e.faultString)
+            self.assertIn('already reserved', e.faultString)
 
     def test_reserve_system(self):
         with session.begin():
@@ -169,8 +167,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.release(system.fqdn)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('System is reserved by a different user'
-                    in e.faultString)
+            self.assertIn('cannot unreserve system', e.faultString)
 
     def test_release_system(self):
         with session.begin():
@@ -399,9 +396,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         try:
             self.server.systems.provision(system.fqdn, 'distro')
         except xmlrpclib.Fault, e:
-            # It's not really a permissions issue, but oh well
-            self.assert_('has insufficient permissions to provision'
-                    in e.faultString)
+            self.assertIn('Reserve a system before provisioning', e.faultString)
         with session.begin():
             self.assertEquals(system.command_queue, [])
 

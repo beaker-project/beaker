@@ -2440,19 +2440,6 @@ class System(SystemObject):
                 return True
         return False
 
-    def can_provision_now(self,user=None):
-        if user is None:
-            return False
-        elif self.loaned == user:
-            return True
-        elif self._user_in_systemgroup(user):
-            return True
-        elif user is None:
-            return False
-        if self.status==SystemStatus.manual: #If it's manual then we us our original perm system.
-            return self._has_regular_perms(user)
-        return False
-
     def can_loan(self, user=None):
         if user and not self.loaned:
             if self.can_admin(user):
@@ -2521,18 +2508,38 @@ class System(SystemObject):
                 return True
         return False
 
-    def current_user(self, user=None):
-        if user and self.user:
-            if self.user  == user \
-               or self.can_admin(user):
-                return True
-        return False
-
     def _user_in_systemgroup(self,user=None):
         if self.groups:
             for group in user.groups:
                 if group in self.groups:
                     return True
+
+    def can_reserve(self, user):
+        """
+        Does the given user have permission to reserve this system?
+        """
+        if self.owner == user:
+            return True
+        if self.loaned == user:
+            return True
+        if self.shared:
+            if self.groups:
+                if self._user_in_systemgroup(user):
+                    return True
+            else:
+                return True
+        return False
+
+    def can_unreserve(self, user):
+        """
+        Does the given user have permission to return the current reservation 
+        on this system?
+        """
+        if self.can_admin(user):
+            return True
+        if self.user and self.user == user:
+            return True
+        return False
 
     def _update_loan_comment(self, comment=None, service=u'WEBUI'):
         """Updates the comment associated with a loan
@@ -2557,61 +2564,6 @@ class System(SystemObject):
             _update_comment()
         else:
             raise BX(_('Insufficient permissions to change loan comment'))
-
-    def is_available(self,user=None):
-        """
-        is_available() will return true if this system is allowed to be used by the user.
-        """
-        if user:
-            if self.shared:
-                # If the user is in the Systems groups
-                if self.groups:
-                    if self._user_in_systemgroup(user):
-                        return True
-                else:
-                    return True
-            elif self.loaned and self.loaned == user:
-                return True
-            elif self.owner == user:
-                return True
-        
-    def can_share(self, user=None):
-        """
-        can_share() will return True id the system is currently free and allwoed to be used by the user
-        """
-        if user and not self.user:
-            return self._has_regular_perms(user)
-        return False
-
-    def _has_regular_perms(self, user=None, *args, **kw):
-        """
-        This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
-        """
-        # If user is None then probably not logged in.
-        if not user:
-            return False
-        if self.loaned:
-            if user == self.loaned:
-                return True
-            else:
-                return False
-        # If its the owner always allow.
-        if user == self.owner:
-            return True
-        if self.shared:
-            # If the user is in the Systems groups
-            return self._in_group(user)
-
-    def _in_group(self, user=None, *args, **kw):
-            if user is None:
-                return False
-            if self.groups:
-                for group in user.groups:
-                    if group in self.groups:
-                        return True
-            else:
-                # If the system has no groups
-                return True
 
     ALLOWED_ATTRS = ['vendor', 'model', 'memory'] #: attributes which the inventory scripts may set
     PRESERVED_ATTRS = ['vendor', 'model'] #: attributes which should only be set when empty
@@ -3035,15 +2987,29 @@ class System(SystemObject):
             log.warn(reason)
             self.mark_broken(reason=reason)
 
+    def reserve_manually(self, service, user=None):
+        if self.status == SystemStatus.automated:
+            raise BX(_(u'Cannot manually reserve automated system, '
+                    'schedule a job instead'))
+        return self.reserve(service, user=user, reservation_type=u'manual')
+
     def reserve(self, service, user=None, reservation_type=u'manual'):
         if user is None:
             user = identity.current.user
+
         if self.user is not None and self.user == user:
             raise StaleSystemUserException(_(u'User %s has already reserved '
                 'system %s') % (user, self))
-        if not self.can_share(user):
+        if not self.can_reserve(user):
             raise InsufficientSystemPermissions(_(u'User %s cannot '
                 'reserve system %s') % (user, self))
+        if self.loaned:
+            # loans give exclusive rights to reserve
+            if user != self.loaned and user != self.owner:
+                raise InsufficientSystemPermissions(_(u'User %s cannot reserve '
+                        'system %s while it is loaned to user %s')
+                        % (user, self, self.loaned))
+
         # Atomic operation to reserve the system
         session.flush()
         if session.connection(System).execute(system_table.update(
@@ -3066,11 +3032,12 @@ class System(SystemObject):
         if user is None:
             user = identity.current.user
 
-        # Some sanity checks
         if self.user is None:
             raise BX(_(u'System is not reserved'))
-        if not self.current_user(user):
-            raise BX(_(u'System is reserved by a different user'))
+        if not self.can_unreserve(user):
+            raise InsufficientSystemPermissions(
+                    _(u'User %s cannot unreserve system %s, reserved by %s')
+                    % (user, self, self.user))
 
         # Update reservation atomically first, to avoid races
         session.flush()

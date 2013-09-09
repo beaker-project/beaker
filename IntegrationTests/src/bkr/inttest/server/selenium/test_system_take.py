@@ -67,7 +67,8 @@ class SystemTakeTest(WebDriverTestCase):
             user = data_setup.create_user(password=u'testing')
         b = self.browser
         login(b, user=user.user_name, password='testing')
-        self.check_cannot_take(system)
+        self.check_cannot_take_automated(system)
+        self.check_schedule_provision(system)
 
     def test_system_no_group_manual(self):
         with session.begin():
@@ -88,7 +89,7 @@ class SystemTakeTest(WebDriverTestCase):
             data_setup.add_group_to_system(system, group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
-        self.check_cannot_take(system)
+        self.check_cannot_take_automated(system)
         self.check_cannot_schedule_provision(system)
 
     def test_system_has_group_manual(self):
@@ -101,7 +102,7 @@ class SystemTakeTest(WebDriverTestCase):
             data_setup.add_group_to_system(system, group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
-        self.check_cannot_take(system)
+        self.check_cannot_take_manual(system)
         self.check_cannot_schedule_provision(system)
 
     def test_system_group_user_group(self):
@@ -116,7 +117,8 @@ class SystemTakeTest(WebDriverTestCase):
             data_setup.add_group_to_system(system, group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
-        self.check_cannot_take(system)
+        self.check_cannot_take_automated(system)
+        self.check_cannot_schedule_provision(system)
 
     def test_system_in_user_group(self):
         with session.begin():
@@ -128,7 +130,8 @@ class SystemTakeTest(WebDriverTestCase):
             data_setup.add_group_to_system(system, group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
-        self.check_take(system)
+        self.check_cannot_take_automated(system)
+        self.check_schedule_provision(system)
 
     def test_manual_system_in_user_group(self):
         with session.begin():
@@ -142,6 +145,26 @@ class SystemTakeTest(WebDriverTestCase):
         login(b, user=user.user_name, password='testing')
         self.check_take(system)
 
+    def test_automated_system_loaned_to_another_user(self):
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.automated,
+                    shared=True, lab_controller=self.lc)
+            system.loaned = data_setup.create_user()
+            user = data_setup.create_user(password=u'testing')
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
+        self.check_schedule_provision(system)
+
+    def test_manual_system_loaned_to_another_user(self):
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    shared=True, lab_controller=self.lc)
+            system.loaned = data_setup.create_user()
+            user = data_setup.create_user(password=u'testing')
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
+        self.check_cannot_take_manual(system)
+
     def go_to_system_view(self, system):
         self.browser.get(get_server_base() + 'view/%s' % system.fqdn)
 
@@ -152,7 +175,7 @@ class SystemTakeTest(WebDriverTestCase):
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 'Reserved %s' % system.fqdn)
 
-    def check_cannot_take(self, system):
+    def check_cannot_take_manual(self, system):
         self.go_to_system_view(system)
         b = self.browser
         # "Take" link should be absent
@@ -160,8 +183,20 @@ class SystemTakeTest(WebDriverTestCase):
         # Try taking it directly as well:
         # https://bugzilla.redhat.com/show_bug.cgi?id=747328
         b.get(get_server_base() + 'user_change?id=%s' % system.id)
-        self.assertEquals(b.find_element_by_class_name('flash').text,
-                'You were unable to change the user for %s' % system.fqdn)
+        self.assertIn('cannot reserve system',
+                b.find_element_by_class_name('flash').text)
+
+    def check_cannot_take_automated(self, system):
+        self.go_to_system_view(system)
+        b = self.browser
+        # "Take" link should be absent
+        b.find_element_by_xpath('//form[@name="form" and not(.//a[normalize-space(string(.))="Take"])]')
+        # Try taking it directly as well:
+        # https://bugzilla.redhat.com/show_bug.cgi?id=747328
+        b.get(get_server_base() + 'user_change?id=%s' % system.id)
+        self.assertIn(
+                'Cannot manually reserve automated system',
+                b.find_element_by_class_name('flash').text)
 
     def check_schedule_provision(self, system):
         self.go_to_system_view(system)
