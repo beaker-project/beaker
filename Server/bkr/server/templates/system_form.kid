@@ -96,14 +96,6 @@ $(document).ready(function(){
         </div>
       </div>
       <div class="control-group">
-        ${label_for('shared')}
-        <div class="controls">
-        <span py:if="value_for('fqdn')">
-         ${display_system_property("shared")}
-        </span>
-        </div>
-      </div>
-      <div class="control-group">
         ${label_for('private')}
         <div class="controls">
         ${display_system_property("private")}
@@ -125,6 +117,12 @@ $(document).ready(function(){
         ${label_for('hypervisor_id')}
         <div class="controls">
         ${display_system_property("hypervisor_id")}
+        </div>
+      </div>
+      <div class="control-group">
+        ${label_for('kernel_type_id')}
+        <div class="controls">
+        ${display_system_property("kernel_type_id")}
         </div>
       </div>
     </div>
@@ -198,12 +196,6 @@ $(document).ready(function(){
         <div class="controls">
         ${'; '.join(value_for("cc") or [])}
         <a class="btn" href="${tg.url('/cc_change', system_id=id)}">Change</a>
-        </div>
-      </div>
-      <div class="control-group">
-        ${label_for('kernel_type_id')}
-        <div class="controls">
-        ${display_system_property("kernel_type_id")}
         </div>
       </div>
     </div>

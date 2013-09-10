@@ -335,7 +335,6 @@ system_table = Table('system', metadata,
     Column('type', SystemType.db_type(), nullable=False),
     Column('status', SystemStatus.db_type(), nullable=False),
     Column('status_reason',Unicode(255)),
-    Column('shared', Boolean, default=False),
     Column('private', Boolean, default=False),
     Column('deleted', Boolean, default=False),
     Column('memory', Integer),
@@ -777,7 +776,6 @@ system_group_table = Table('system_group', metadata,
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    Column('admin', Boolean, nullable=False, default=False),
     mysql_engine='InnoDB',
 )
 
@@ -2209,7 +2207,6 @@ class System(SystemObject):
                not user.has_permission(u'secret_visible'):
                 query = query.filter(
                             or_(System.private==False,
-                                System.groups.any(Group.users.contains(user)),
                                 System.owner == user,
                                 System.loaned == user,
                                 System.user == user))
@@ -2251,16 +2248,11 @@ class System(SystemObject):
         else:
             query = query.filter(System.status==system_status)
 
-        query = query.filter(or_(and_(System.owner==user), 
-                                System.loaned == user,
-                                and_(System.shared==True, 
-                                     System.group_assocs==None,
-                                    ),
-                                and_(System.shared==True,
-                                     System.groups.any(Group.users.contains(user)),
-                                    )
-                                )
-                            )
+        # these filter conditions correspond to can_reserve
+        query = query.outerjoin(System.custom_access_policy).filter(or_(
+                System.owner == user,
+                System.loaned == user,
+                SystemAccessPolicy.grants(user, SystemPermission.reserve)))
         return query
 
 
@@ -2272,10 +2264,16 @@ class System(SystemObject):
         return cls._available(user, systems=systems)
 
     @classmethod
-    def available_order(cls, user, systems=None):
-        return cls.available_for_schedule(user,systems=systems).order_by(case([(System.owner==user, 1),
-                          (and_(System.owner!=user, System.group_assocs != None), 2)],
-                              else_=3))
+    def scheduler_ordering(cls, user, query):
+        # Order by:
+        #   System Owner
+        #   System group
+        #   Single procesor bare metal system
+        return query.outerjoin(System.cpu).order_by(
+            case([(System.owner==user, 1),
+                (and_(System.owner!=user, System.group_assocs != None), 2)],
+                else_=3),
+                and_(System.hypervisor == None, Cpu.processors == 1))
 
     @classmethod
     def mine(cls, user):
@@ -2398,42 +2396,80 @@ class System(SystemObject):
         else:
             return False
 
-    def is_admin(self, user=None, *args, **kw):
-        # We are either using a passed in user, or the current user, not both
-        if not user:
-            try:
-                user = identity.current.user
-            except AttributeError: pass #May not be logged in
-
-        if not user: #Can't verify anything
-            return False
-
-        if user.is_admin(): #first let's see if we are an _admin_
-            return True
-
-        #If we are the owner....
+    def can_change_owner(self, user):
+        """
+        Does the given user have permission to change the owner of this system?
+        """
         if self.owner == user:
             return True
-
-        user_groups = user.groups
-        if user_groups:
-            if any(ga.admin and ga.group in user_groups
-                    for ga in self.group_assocs):
-                return True
-
+        if user.is_admin():
+            return True
         return False
 
-    def can_admin(self,user=None):
-        # XXX Refactor this out, use is_admin() instead.
-        if user:
-            if user == self.owner or user.is_admin() or self.is_admin(user=user):
-                return True
+    def can_edit(self, user):
+        """
+        Does the given user have permission to edit details (inventory info, 
+        power config, etc) of this system?
+        """
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.edit_system)):
+            return True
         return False
 
-    def can_loan(self, user=None):
-        if user and not self.loaned:
-            if self.can_admin(user):
-                return True
+    def can_loan(self, user):
+        """
+        Does the given user have permission to loan this system to someone?
+        """
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.loan_any)):
+            return True
+        return False
+
+    def can_return_loan(self, user):
+        """
+        Does the given user have permission to cancel the current loan for this 
+        system?
+        """
+        if self.loaned == user:
+            return True
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        return False
+
+    def can_reserve(self, user):
+        """
+        Does the given user have permission to reserve this system?
+        """
+        if self.owner == user:
+            return True
+        if self.loaned == user:
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.reserve)):
+            return True
+        return False
+
+    def can_unreserve(self, user):
+        """
+        Does the given user have permission to return the current reservation 
+        on this system?
+        """
+        if self.user and self.user == user:
+            return True
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
         return False
 
     def change_loan(self, user_name, comment=None, service='WEBUI'):
@@ -2449,111 +2485,36 @@ class System(SystemObject):
 
         Returns the user holding the loan.
         """
-        def _update_loanee():
-            if user != self.loaned:
-                activity = SystemActivity(identity.current.user, service,
-                    u'Changed', u'Loaned To', u'%s' % self.loaned if self.loaned else '' ,
-                    u'%s' % user if user else '')
-                self.loaned = user
-                self.activity.append(activity)
-
         loaning_to = user_name
         if loaning_to:
+            if not self.can_loan(identity.current.user):
+                raise BX(_("Insufficient permissions to create loan"))
             user = User.by_user_name(loaning_to)
             # This is an error condition
             if not user:
                 raise ValueError('user name %s is invalid' % loaning_to)
         else:
-            user = None
-
-        # This implies a Change to another user
-        if self.loaned and loaning_to:
-            if self.is_admin():
-                _update_loanee()
-            else:
-                raise BX(_("Insufficient permissions to change loanee of system"))
-        # This implies a Return
-        elif self.loaned and not loaning_to:
-            # Check permission
-            if self.current_loan(identity.current.user):
-                # Clear any existing comments
-                _update_loanee()
-                comment = None
-            else:
+            if not self.can_return_loan(identity.current.user):
                 raise BX(_("Insufficient permissions to return loan"))
-        # This is a new loan
-        elif not self.loaned and loaning_to:
-            # Check permission
-            if self.is_admin():
-                _update_loanee()
-            else:
-                raise BX(_("Insufficient permissions to create loan"))
-        self._update_loan_comment(comment)
+            user = None
+            comment = None
+
+        if user != self.loaned:
+            activity = SystemActivity(identity.current.user, service,
+                u'Changed', u'Loaned To', u'%s' % self.loaned if self.loaned else '' ,
+                u'%s' % user if user else '')
+            self.loaned = user
+            self.activity.append(activity)
+
+        if self.loan_comment != comment:
+            activity = SystemActivity(identity.current.user, service,
+                u'Changed', u'Loan Comment', u'%s' % self.loan_comment if
+                self.loan_comment else '' , u'%s' % comment if
+                comment else '')
+            self.activity.append(activity)
+            self.loan_comment = comment
+
         return loaning_to if loaning_to else ''
-
-    def current_loan(self, user=None):
-        if user and self.loaned:
-            if self.loaned == user or \
-               self.is_admin():
-                return True
-        return False
-
-    def _user_in_systemgroup(self,user=None):
-        if self.groups:
-            for group in user.groups:
-                if group in self.groups:
-                    return True
-
-    def can_reserve(self, user):
-        """
-        Does the given user have permission to reserve this system?
-        """
-        if self.owner == user:
-            return True
-        if self.loaned == user:
-            return True
-        if self.shared:
-            if self.groups:
-                if self._user_in_systemgroup(user):
-                    return True
-            else:
-                return True
-        return False
-
-    def can_unreserve(self, user):
-        """
-        Does the given user have permission to return the current reservation 
-        on this system?
-        """
-        if self.can_admin(user):
-            return True
-        if self.user and self.user == user:
-            return True
-        return False
-
-    def _update_loan_comment(self, comment=None, service=u'WEBUI'):
-        """Updates the comment associated with a loan
-
-        Checks permissions and adds SystemActivity entry.
-        """
-        if not self.loaned and comment:
-            raise BX(_(u'Cannot add a loan comment without a current loan'))
-
-        def _update_comment():
-            if self.loan_comment != comment:
-                activity = SystemActivity(identity.current.user, service,
-                    u'Changed', u'Loan Comment', u'%s' % self.loan_comment if
-                    self.loan_comment else '' , u'%s' % comment if
-                    comment else '')
-                self.activity.append(activity)
-                self.loan_comment = comment
-        if self.can_admin(identity.current.user):
-            _update_comment()
-        # This is the case when returning a loan by a loanee
-        elif not self.loaned and not comment:
-            _update_comment()
-        else:
-            raise BX(_('Insufficient permissions to change loan comment'))
 
     ALLOWED_ATTRS = ['vendor', 'model', 'memory'] #: attributes which the inventory scripts may set
     PRESERVED_ATTRS = ['vendor', 'model'] #: attributes which should only be set when empty
@@ -3789,7 +3750,8 @@ class DistroTree(MappedObject):
         Limit to what is available to user if user passed in.
         """
         if user:
-            systems = System.available_order(user, systems=systems)
+            systems = System.available_for_schedule(user, systems=systems)
+            systems = System.scheduler_ordering(user, query=systems)
         elif not systems:
             systems = System.query
         

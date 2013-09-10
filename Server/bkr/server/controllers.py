@@ -212,28 +212,6 @@ class Root(RPCRoot):
     task_form = TaskSearchForm(name='tasks')
     system_actions = SystemActions()
 
-    @expose(format='json')
-    def change_system_admin(self,system_id=None,group_id=None,cmd=None,**kw):
-        if system_id is None or group_id is None or cmd is None:
-            log.debug('Did not call change_system_admin with correct formal args')
-            return {'success' : 0}
-
-        sys = System.by_id(system_id,identity.current.user)
-        if not sys.is_admin():
-            #Someone tried to be tricky...
-            return {'success' : 0}
-
-        assoc = SystemGroup.query.filter(and_(
-                SystemGroup.system == sys, SystemGroup.group_id == group_id)).one()
-        if not assoc:
-            return {'success': 0}
-        if cmd == 'add':
-            assoc.admin = True
-            return { 'success' : 1 }
-        if cmd == 'remove':
-            assoc.admin = False
-            return {'success' : 1 }
-
 
     @expose(format='json')
     def get_keyvalue_search_options(self,**kw):
@@ -604,7 +582,7 @@ class Root(RPCRoot):
             flash(_(u"system_id, key_value_id and key_type must be provided"))
             redirect("/")
         
-        if system.can_admin(identity.current.user):
+        if system.can_edit(identity.current.user):
             if key_type == 'int':
                 key_values = system.key_values_int
             else:
@@ -640,7 +618,7 @@ class Root(RPCRoot):
         else:
             flash(_(u"system_id and arch_id must be provided"))
             redirect("/")
-        if system.can_admin(identity.current.user):
+        if system.can_edit(identity.current.user):
             for arch in system.arch:
                 if arch.id == int(arch_id):
                     system.arch.remove(arch)
@@ -668,11 +646,7 @@ class Root(RPCRoot):
         else:
             flash(_(u"system_id and group_id must be provided"))
             redirect("/")
-        if not identity.in_group("admin") and \
-          system.shared and len(system.groups) == 1:
-            flash(_(u"You don't have permission to remove the last group if the system is shared"))
-            redirect("./view/%s" % system.fqdn)
-        if system.can_admin(identity.current.user):
+        if system.can_edit(identity.current.user):
             for group in system.groups:
                 if group.group_id == int(group_id):
                     system.groups.remove(group)
@@ -704,12 +678,12 @@ class Root(RPCRoot):
     def _get_system_options(self, system):
         options = {}
         our_user = identity.current.user
-        if system.can_admin(user=our_user):
+        if our_user and system.can_change_owner(our_user):
             options['owner_change_text'] = 'Change'
 
         options['loan_widget'] = LoanWidget()
 
-        if system.status != SystemStatus.automated:
+        if our_user and system.status != SystemStatus.automated:
             if system.user and system.can_unreserve(our_user):
                 options['user_change_text'] = 'Return'
             elif system.is_free() and system.can_reserve(our_user):
@@ -755,7 +729,7 @@ class Root(RPCRoot):
             redirect("/")
         our_user = identity.current.user
         if our_user:
-            readonly = not system.can_admin(our_user)
+            readonly = not system.can_edit(our_user)
             is_user = (system.user == our_user)
             can_reserve = system.can_reserve(our_user)
         else:
@@ -787,11 +761,6 @@ class Root(RPCRoot):
         options['excluded_families'] = []
         for arch in system.arch:
             options['excluded_families'].append((arch.arch, [(osmajor.id, osmajor.osmajor, [(osversion.id, '%s' % osversion, attrs) for osversion in osmajor.osversion],attrs) for osmajor in OSMajor.query]))
-        try:
-            can_admin = system.can_admin(user = identity.current.user)
-        except AttributeError:
-            can_admin = False
-
 
         # If you have anything in your widgets 'javascript' variable,
         # do not return the widget here, the JS will not be loaded,
@@ -848,8 +817,7 @@ class Root(RPCRoot):
                                                 notes = system.notes),
                                    groups    = dict(readonly = readonly,
                                                 group_assocs = system.group_assocs,
-                                                system_id = system.id,
-                                                can_admin = can_admin),
+                                                system_id = system.id),
                                    install   = dict(readonly = readonly,
                                                 provisions = system.provisions,
                                                 prov_arch = [(arch.id, arch.arch) for arch in system.arch]),
@@ -892,7 +860,7 @@ class Root(RPCRoot):
             system = System.by_id(id, our_user)
         elif fqdn:
             system = System.by_fqdn(fqdn, our_user)
-        if system and not system.can_admin(user=our_user):
+        if system and not system.can_edit(user=our_user):
             flash(_(u"You do not have permission to edit %s" % fqdn))
             redirect('/')
         title = system.fqdn
@@ -924,7 +892,7 @@ class Root(RPCRoot):
         except InvalidRequestError, e:
             log.exception(e)
             return ('0',)
-        if not system.can_admin(identity.current.user):
+        if not system.can_edit(identity.current.user):
             log.error('User does not have the correct permission to delete this note')
             return ('0',)
         note = Note.query.filter_by(id=id).one()
@@ -934,56 +902,13 @@ class Root(RPCRoot):
 
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
-    def loan_change(self, id, switch_user=False):
-        def user_change_form():
-            return dict(
-                title   = "Loan system %s" % system.fqdn,
-                form = self.loan_form,
-                action = '/save_loan',
-                options = None,
-                value = {'id': system.id},
-            )
-
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to find system with id of %s" % id) )
-            redirect("/")
-
-        if system.loaned:
-            if switch_user:
-                # This implies a Change
-                if system.is_admin():
-                    return user_change_form()
-                else:
-                    flash( _(u"Insufficient permissions to change loanee of system"))
-                    redirect("/")
-            # This implies a Return
-            if system.current_loan(identity.current.user):
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', '%s' % system.loaned, 'None')
-                system.activity.append(activity)
-                system.loaned = None
-                flash( _(u"Loan Returned for %s" % system.fqdn) )
-                redirect("/view/%s" % system.fqdn)
-            else:
-                flash( _(u"Insufficient permissions to return loan"))
-                redirect("/")
-        else:
-            if not system.can_loan(identity.current.user):
-                flash( _(u"Insufficient permissions to loan system"))
-                redirect("/")
-            #This implies a Loan
-            return user_change_form()
-
-    @expose(template='bkr.server.templates.form')
-    @identity.require(identity.not_anonymous())
     def owner_change(self, id=None, **kwargs):
         try:
             system = System.by_id(id,identity.current.user)
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
-        if not system.can_admin(identity.current.user):
+        if not system.can_change_owner(identity.current.user):
             flash( _(u"Insufficient permissions to change owner"))
             redirect("/")
 
@@ -994,25 +919,6 @@ class Root(RPCRoot):
             options = None,
             value = {'id': system.id},
         )
-            
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def save_loan(self, id, *args, **kw):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to find system with id of %s" % id) )
-            redirect("/")
-
-        if not system.is_admin():
-            flash( _(u"Insufficient permissions to loan system"))
-            redirect("/")
-        user = User.by_user_name(kw['user'])
-        activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', '%s' % system.loaned , '%s' % user)
-        system.activity.append(activity)
-        system.loaned = user
-        flash( _(u"%s Loaned to %s" % (system.fqdn, user) ))
-        redirect("/view/%s" % system.fqdn)
     
     @expose()
     @validate(form=owner_form)
@@ -1024,7 +930,7 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
-        if not system.can_admin(identity.current.user):
+        if not system.can_change_owner(identity.current.user):
             flash( _(u"Insufficient permissions to change owner"))
             redirect("/")
         user = User.by_user_name(kw['user'])
@@ -1085,7 +991,7 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash(_(u'Unable to find system with id of %s' % system_id))
             redirect('/')
-        if not system.can_admin(identity.current.user):
+        if not system.can_edit(identity.current.user):
             flash(_(u'Insufficient permissions to edit CC list'))
             redirect('/')
         return dict(
@@ -1106,7 +1012,7 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash(_(u'Unable to find system with id of %s' % id))
             redirect('/')
-        if not system.can_admin(identity.current.user):
+        if not system.can_edit(identity.current.user):
             flash(_(u'Insufficient permissions to edit CC list'))
             redirect('/')
         orig_value = list(system.cc)
@@ -1321,19 +1227,6 @@ class Root(RPCRoot):
                     new_val = unicode(new_val)
                 activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val)
                 system.activity.append(activity)
-        
-        # We only want admins to be able to share systems to everyone.
-        shared = kw.get('shared',False)
-        if shared != system.shared:
-            if not identity.in_group("admin") and \
-              shared and len(system.groups) == 0:
-                flash( _(u"You don't have permission to share without the system being in a group first " ) )
-                redirect("/view/%s" % system.fqdn)
-            current_val = unicode(system.shared and True or False) #give us the text 'True' or 'False'
-            new_val = unicode(shared and True) #give us the text 'True' or 'False'
-            activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', u'shared', current_val, new_val )
-            system.activity.append(activity)
-            system.shared = shared
                 
         log_bool_fields = [ 'private' ]
         for field in log_bool_fields:

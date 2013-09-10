@@ -1216,13 +1216,9 @@ class SystemReserve(System):
                             'Name'      : MyColumn(column=model.System.fqdn,col_type='string'),
                             'Type'      : MyColumn(column=model.System.type, col_type='string'),
                             'Owner'     : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations='owner'),
-                            'Shared'    : MyColumn(column=model.System.shared, col_type='boolean'),
                             'User'      : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations='user'),
                             'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string', has_alias=True, relations='loaned'),
                           }
-
-    search_values_dict = dict(System.search_values_dict.items() +
-                             [('Shared', lambda: ['True', 'False'])])
 
 
 class Activity(SystemObject):

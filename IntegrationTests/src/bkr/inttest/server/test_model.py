@@ -148,6 +148,52 @@ class TestSystemKeyValue(unittest.TestCase):
         self.assertEqual(reloaded_system.key_values_string, [])
         self.assertEqual(reloaded_system.key_values_int, [])
 
+class SystemPermissionsTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+        self.owner = data_setup.create_user()
+        self.system = data_setup.create_system(owner=self.owner, shared=False)
+        self.policy = self.system.custom_access_policy
+        self.unprivileged = data_setup.create_user()
+
+    def tearDown(self):
+        session.rollback()
+
+    def test_can_change_owner(self):
+        self.assertTrue(self.system.can_change_owner(self.owner))
+        self.assertFalse(self.system.can_change_owner(self.unprivileged))
+
+    def test_can_edit(self):
+        self.assertTrue(self.system.can_edit(self.owner))
+        self.assertFalse(self.system.can_edit(self.unprivileged))
+        self.policy.add_rule(SystemPermission.edit_system, user=self.unprivileged)
+        self.assertTrue(self.system.can_edit(self.unprivileged))
+
+    def test_can_loan(self):
+        self.assertTrue(self.system.can_loan(self.owner))
+        self.assertFalse(self.system.can_loan(self.unprivileged))
+        self.policy.add_rule(SystemPermission.loan_any, user=self.unprivileged)
+        self.assertTrue(self.system.can_loan(self.unprivileged))
+
+    def test_can_return_loan(self):
+        self.assertTrue(self.system.can_return_loan(self.owner))
+        self.assertFalse(self.system.can_return_loan(self.unprivileged))
+        self.system.loaned = self.unprivileged
+        self.assertTrue(self.system.can_return_loan(self.unprivileged))
+
+    def test_can_reserve(self):
+        self.assertTrue(self.system.can_reserve(self.owner))
+        self.assertFalse(self.system.can_reserve(self.unprivileged))
+        self.policy.add_rule(SystemPermission.reserve, user=self.unprivileged)
+        self.assertTrue(self.system.can_reserve(self.unprivileged))
+
+    def test_can_unreserve(self):
+        self.assertTrue(self.system.can_unreserve(self.owner))
+        self.assertFalse(self.system.can_unreserve(self.unprivileged))
+        self.system.user = self.unprivileged
+        self.assertTrue(self.system.can_unreserve(self.unprivileged))
+
 class TestBrokenSystemDetection(unittest.TestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=637260

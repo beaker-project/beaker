@@ -17,9 +17,9 @@ class SearchColumns(WebDriverTestCase):
     def test_group_column(self):
         with session.begin():
             group = data_setup.create_group()
-            system_with_group = data_setup.create_system(shared=True)
+            system_with_group = data_setup.create_system()
             system_with_group.groups.append(group)
-            system_without_group = data_setup.create_system(shared=True)
+            system_without_group = data_setup.create_system()
         b = self.browser
         b.get(get_server_base())
         b.find_element_by_link_text('Show Search Options').click()
@@ -42,7 +42,7 @@ class SearchColumns(WebDriverTestCase):
 
     def test_numa_column(self):
         with session.begin():
-            system_with_numa = data_setup.create_system(shared=True)
+            system_with_numa = data_setup.create_system()
             system_with_numa.numa = Numa(nodes=2)
             system_without_numa = data_setup.create_system()
             system_without_numa.numa = None

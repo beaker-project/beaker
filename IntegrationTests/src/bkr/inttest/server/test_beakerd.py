@@ -2,7 +2,7 @@ import unittest, datetime, os, threading
 import bkr
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
-        Provision, TaskPriority, RecipeSet, Task
+        Provision, TaskPriority, RecipeSet, Task, SystemPermission
 import sqlalchemy.orm
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
@@ -376,11 +376,12 @@ class TestBeakerd(unittest.TestCase):
     def test_loaned_machine_can_be_scheduled(self):
         with session.begin():
             user = data_setup.create_user()
-            system = data_setup.create_system(status=u'Automated', shared=True,
-                    lab_controller=self.lab_controller)
-            # System has groups, which the user is not a member of, but is loaned to the user
+            system = data_setup.create_system(status=u'Automated',
+                    shared=False, lab_controller=self.lab_controller)
+            # User is denied by the policy, but system is loaned to the user
+            self.assertFalse(system.custom_access_policy.grants(user,
+                       SystemPermission.reserve))
             system.loaned = user
-            data_setup.add_group_to_system(system, data_setup.create_group())
             job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
@@ -553,8 +554,9 @@ class TestBeakerd(unittest.TestCase):
             user = data_setup.create_user()
             group = data_setup.create_group()
             system = data_setup.create_system(lab_controller=self.lab_controller,
-                    shared=True)
-            system.groups.append(group)
+                    shared=False)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         self.check_user_cannot_run_job_on_system(user, system)
 
     def test_shared_group_system_with_user_in_group(self):
@@ -563,8 +565,9 @@ class TestBeakerd(unittest.TestCase):
             user = data_setup.create_user()
             user.groups.append(group)
             system = data_setup.create_system(lab_controller=self.lab_controller,
-                    shared=True)
-            system.groups.append(group)
+                    shared=False)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         self.check_user_can_run_job_on_system(user, system)
 
     def test_shared_group_system_with_admin_not_in_group(self):
@@ -572,8 +575,9 @@ class TestBeakerd(unittest.TestCase):
             admin = data_setup.create_admin()
             group = data_setup.create_group()
             system = data_setup.create_system(lab_controller=self.lab_controller,
-                    shared=True)
-            system.groups.append(group)
+                    shared=False)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         self.check_user_cannot_run_job_on_system(admin, system)
 
     def test_shared_group_system_with_admin_in_group(self):
@@ -582,8 +586,9 @@ class TestBeakerd(unittest.TestCase):
             admin = data_setup.create_admin()
             admin.groups.append(group)
             system = data_setup.create_system(lab_controller=self.lab_controller,
-                    shared=True)
-            system.groups.append(group)
+                    shared=False)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         self.check_user_can_run_job_on_system(admin, system)
 
     def test_loaned_system_with_admin(self):
@@ -867,9 +872,10 @@ class TestBeakerd(unittest.TestCase):
             group = data_setup.create_group()
             job_owner = data_setup.create_user()
             job_owner.groups.append(group)
-            system1 = data_setup.create_system(shared=True,
-                    fqdn='no_longer_has_access1',
+            system1 = data_setup.create_system(fqdn='no_longer_has_access1',
                     lab_controller=self.lab_controller)
+            system1.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
             system1.groups.append(group)
             system2 = data_setup.create_system(shared=True,
                     fqdn='no_longer_has_access2',
@@ -896,7 +902,7 @@ class TestBeakerd(unittest.TestCase):
             candidate_systems = job.recipesets[0].recipes[0].systems
             self.assertEqual(candidate_systems, [system1, system2])
             # now remove access to system1
-            system1.groups[:] = [data_setup.create_group()]
+            system1.custom_access_policy.rules[:] = []
         # first iteration: "recipe no longer has access"
         beakerd.schedule_queued_recipes()
         beakerd.update_dirty_jobs()

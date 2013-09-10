@@ -3,7 +3,8 @@ from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, \
         search_for_system
 from bkr.inttest import data_setup, get_server_base, with_transaction
-from bkr.server.model import Arch, ExcludeOSMajor, SystemType, LabControllerDistroTree
+from bkr.server.model import Arch, ExcludeOSMajor, SystemType, \
+        LabControllerDistroTree, SystemPermission
 from selenium.webdriver.support.ui import Select
 import unittest, time, re, os
 from turbogears.database import session
@@ -13,8 +14,8 @@ class ReserveWorkflow(WebDriverTestCase):
     @with_transaction
     def setUp(self):
         self.lc = data_setup.create_labcontroller()
-        self.system = data_setup.create_system(arch=u'i386')
-        self.system2 = data_setup.create_system(arch=u'x86_64')
+        self.system = data_setup.create_system(arch=u'i386', shared=True)
+        self.system2 = data_setup.create_system(arch=u'x86_64', shared=True)
         self.unique_distro_name = data_setup.unique_name('distro%s')
         self.distro = data_setup.create_distro(name=self.unique_distro_name)
         self.distro_tree_i386 = data_setup.create_distro_tree(
@@ -23,9 +24,7 @@ class ReserveWorkflow(WebDriverTestCase):
                 variant=u'Server', arch=u'x86_64', distro=self.distro)
 
         self.system.lab_controller = self.lc
-        self.system.shared = True
         self.system2.lab_controller = self.lc
-        self.system2.shared = True
 
         self.browser = self.get_browser()
 
@@ -122,11 +121,10 @@ class ReserveSystem(WebDriverTestCase):
     def setUp(self):
         with session.begin():
             self.lc = data_setup.create_labcontroller()
-            self.system = data_setup.create_system(arch=u'i386')
+            self.system = data_setup.create_system(arch=u'i386', shared=True)
             self.distro_tree = data_setup.create_distro_tree(arch=u'i386',
                     lab_controllers=[self.lc])
             self.system.lab_controller = self.lc
-            self.system.shared = True
         self.browser = self.get_browser()
 
     def tearDown(self):
@@ -205,9 +203,11 @@ class ReserveSystem(WebDriverTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=722321
     def test_admin_cannot_reserve_any_system(self):
         with session.begin():
-            group_system = data_setup.create_system(shared=True)
+            group_system = data_setup.create_system(shared=False)
             group_system.lab_controller = self.lc
-            group_system.groups.append(data_setup.create_group())
+            group_system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve,
+                    group=data_setup.create_group())
         login(self.browser)
         b = self.browser
         go_to_reserve_systems(b, self.distro_tree)

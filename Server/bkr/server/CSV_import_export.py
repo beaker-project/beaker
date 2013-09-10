@@ -128,7 +128,7 @@ class CSV(RPCRoot):
                                             owner=identity.current.user,
                                             type=SystemType.machine,
                                             status=SystemStatus.broken)
-                        if system.can_admin(identity.current.user):
+                        if system.can_edit(identity.current.user):
                             # Remove fqdn, can't change that via csv.
                             data.pop('fqdn')
                             if not self.from_csv(system, data, log):
@@ -239,7 +239,7 @@ class CSV_System(CSV):
     csv_type = 'system'
     reg_keys = ['fqdn', 'deleted', 'lender', 'location', 
                 'mac_address', 'memory', 'model',
-                'serial', 'shared', 'vendor']
+                'serial', 'vendor']
 
     spec_keys = ['arch', 'lab_controller', 'owner', 
                  'secret', 'status','type','cc']
@@ -382,7 +382,6 @@ class CSV_System(CSV):
         self.owner = system.owner
         self.secret = system.private
         self.serial = system.serial
-        self.shared = system.shared
         self.status = system.status
         self.type = system.type
         self.vendor = system.vendor

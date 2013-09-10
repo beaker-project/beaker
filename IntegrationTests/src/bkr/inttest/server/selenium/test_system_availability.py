@@ -1,6 +1,6 @@
 
 from selenium.webdriver.support.ui import Select
-from bkr.server.model import SystemStatus
+from bkr.server.model import SystemStatus, SystemPermission
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, \
         search_for_system, check_system_search_results
@@ -33,7 +33,7 @@ class SystemAvailabilityTest(WebDriverTestCase):
         with session.begin():
             owner = data_setup.create_user(password=u'testing')
             system = data_setup.create_system(status=SystemStatus.manual,
-                    owner=owner, shared=True, lab_controller=self.lc)
+                    owner=owner, lab_controller=self.lc)
         b = self.browser
         login(b, user=owner.user_name, password='testing')
         self.check_take(system)
@@ -70,9 +70,10 @@ class SystemAvailabilityTest(WebDriverTestCase):
             user = data_setup.create_user(password=u'testing')
             group = data_setup.create_group()
             system = data_setup.create_system(status=SystemStatus.automated,
-                    shared=True, lab_controller=self.lc)
+                    shared=False, lab_controller=self.lc)
             data_setup.add_user_to_group(user, group)
-            data_setup.add_group_to_system(system, group)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
             user2 = data_setup.create_user()
             data_setup.add_user_to_group(user2, group)
             job = data_setup.create_job(owner=user2)
@@ -107,11 +108,12 @@ class SystemAvailabilityTest(WebDriverTestCase):
     def test_system_restricted_to_group(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.automated,
-                    shared=True, lab_controller=self.lc)
+                    shared=False, lab_controller=self.lc)
             user = data_setup.create_user(password=u'testing')
             group = data_setup.create_group()
             # user is not in group
-            data_setup.add_group_to_system(system, group)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
         self.check_system_is_not_available(system)
@@ -126,11 +128,12 @@ class SystemAvailabilityTest(WebDriverTestCase):
     def test_manual_system_restricted_to_group(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.manual,
-                    shared=True, lab_controller=self.lc)
+                    shared=False, lab_controller=self.lc)
             user = data_setup.create_user(password=u'testing')
             group = data_setup.create_group()
             # user is not in group
-            data_setup.add_group_to_system(system, group)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
         self.check_cannot_take_manual(system)
@@ -139,13 +142,14 @@ class SystemAvailabilityTest(WebDriverTestCase):
     def test_system_restricted_to_different_group(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.automated,
-                    shared=True, lab_controller=self.lc)
+                    shared=False, lab_controller=self.lc)
             wrong_group = data_setup.create_group()
             user = data_setup.create_user(password=u'testing')
             # user is not in the same group as system
             data_setup.add_user_to_group(user, wrong_group)
             group = data_setup.create_group()
-            data_setup.add_group_to_system(system, group)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
         self.check_system_is_not_available(system)
@@ -155,11 +159,12 @@ class SystemAvailabilityTest(WebDriverTestCase):
     def test_system_restricted_to_users_group(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.automated,
-                    shared=True, lab_controller=self.lc)
+                    shared=False, lab_controller=self.lc)
             user = data_setup.create_user(password=u'testing')
             group = data_setup.create_group()
             data_setup.add_user_to_group(user, group)
-            data_setup.add_group_to_system(system, group)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
         self.check_system_is_available(system)
@@ -169,11 +174,12 @@ class SystemAvailabilityTest(WebDriverTestCase):
     def test_manual_system_restricted_to_users_group(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.manual,
-                    shared=True, lab_controller=self.lc)
+                    shared=False, lab_controller=self.lc)
             user = data_setup.create_user(password=u'testing')
             group = data_setup.create_group()
             data_setup.add_user_to_group(user, group)
-            data_setup.add_group_to_system(system, group)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
         self.check_take(system)

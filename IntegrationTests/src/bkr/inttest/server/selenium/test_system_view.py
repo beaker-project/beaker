@@ -151,7 +151,6 @@ class SystemViewTest(SeleniumTestCase):
                 lab_controllers=[self.lab_controller])
         self.system = data_setup.create_system(owner=self.system_owner,
                 status=u'Automated', arch=u'i386')
-        self.system.shared = True
         self.system.provisions[self.distro_tree.arch] = Provision(
                 arch=self.distro_tree.arch, ks_meta=u'some_ks_meta_var=1',
                 kernel_options=u'some_kernel_option=1',
@@ -503,7 +502,7 @@ class SystemViewTest(SeleniumTestCase):
         self.assertEquals(sel.get_xpath_count(
                 '//td[normalize-space(text())="%s"]' % group.group_name), 1)
         sel.click( # delete link inside cell in row with group name
-                '//table//td[normalize-space(preceding-sibling::td[3]/text())="%s"]'
+                '//table//td[normalize-space(preceding-sibling::td[2]/text())="%s"]'
                 '//a[normalize-space(string(.))="Delete"]' % group.group_name)
         sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
