@@ -1,5 +1,5 @@
 Config option for job group permissions (breakage)
-=======================================
+==================================================
 
 The implicit permission given to group co-members over jobs
 is now enabled via an entry in Beaker's configuration file:
