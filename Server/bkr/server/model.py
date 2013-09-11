@@ -2140,7 +2140,11 @@ class Group(DeclBase, MappedObject, ActivityMixin):
             creator=lambda user: UserGroup(user=user))
 
 
-class System(SystemObject):
+class System(SystemObject, ActivityMixin):
+
+    @property
+    def activity_type(self):
+        return SystemActivity
 
     def __init__(self, fqdn=None, status=SystemStatus.broken, contact=None, location=None,
                        model=None, type=SystemType.machine, serial=None, vendor=None,
@@ -2403,6 +2407,19 @@ class System(SystemObject):
         if self.owner == user:
             return True
         if user.is_admin():
+            return True
+        return False
+
+    def can_edit_policy(self, user):
+        """
+        Does the given user have permission to edit this system's access policy?
+        """
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.edit_policy)):
             return True
         return False
 

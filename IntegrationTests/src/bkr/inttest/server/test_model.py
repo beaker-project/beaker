@@ -164,6 +164,12 @@ class SystemPermissionsTest(unittest.TestCase):
         self.assertTrue(self.system.can_change_owner(self.owner))
         self.assertFalse(self.system.can_change_owner(self.unprivileged))
 
+    def test_can_edit_policy(self):
+        self.assertTrue(self.system.can_edit_policy(self.owner))
+        self.assertFalse(self.system.can_edit_policy(self.unprivileged))
+        self.policy.add_rule(SystemPermission.edit_policy, user=self.unprivileged)
+        self.assertTrue(self.system.can_edit_policy(self.unprivileged))
+
     def test_can_edit(self):
         self.assertTrue(self.system.can_edit(self.owner))
         self.assertFalse(self.system.can_edit(self.unprivileged))

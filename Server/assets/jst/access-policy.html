@@ -1,0 +1,48 @@
+<form>
+<table class="table table-bordered table-hover">
+  <thead>
+    <tr>
+      <th></th>
+      <% _.each(possible_permissions, function (permission) { %>
+        <th><%- permission.label %></th>
+      <% }); %>
+    </tr>
+  </thead>
+  <tbody class="group-rows">
+    <tr>
+      <th colspan="<%- possible_permissions.length + 1 %>">Group</th>
+    </tr>
+    <!-- group rows go here -->
+    <% if (!readonly) { %>
+      <tr>
+        <td>
+          <input type="text" placeholder="Group name" autocomplete="off" />
+        </td>
+        <td colspan="<%- possible_permissions.length %>"></td>
+      </tr>
+    <% } %>
+  </tbody>
+  <tbody class="user-rows">
+    <tr>
+      <th colspan="<%- possible_permissions.length + 1 %>">User</th>
+    </tr>
+    <!-- user rows go here -->
+    <% if (!readonly) { %>
+      <tr>
+        <td><input type="text" placeholder="Username" autocomplete="off"/></td>
+        <td colspan="<%- possible_permissions.length %>"></td>
+      </tr>
+    <% } %>
+  </tbody>
+  <tbody class="everybody-row">
+    <!-- everybody row goes here -->
+  </tbody>
+</table>
+<% if (!readonly) { %>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Save changes</button>
+    <button type="reset" class="btn">Revert</button>
+    <span class="sync-status"></span>
+  </div>
+<% } %>
+</form>

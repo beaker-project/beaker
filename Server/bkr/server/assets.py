@@ -1,6 +1,7 @@
 
 import os
 import webassets
+from webassets.filter.jst import JST
 import threading
 from turbogears import config
 
@@ -43,9 +44,14 @@ def _create_env():
             'underscore-1.5.1.js',
             'backbone-1.0.0.js',
             # ours
+            webassets.Bundle(
+                'jst/*.html',
+                filters=[JST(template_function='_.template')],
+                output='generated/beaker-jst-%(version)s.js'),
             'local-datetime.js',
             'link-tabs-to-anchor.js',
             'recipe-tasks.js',
+            'access-policy.js',
             filters=['uglifyjs'],
             output='generated/beaker-%(version)s.js')
     return env

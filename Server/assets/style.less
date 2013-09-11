@@ -71,6 +71,14 @@ td form, td input, td select {
     margin-bottom: 0;
 }
 
+// dirty rows in editable tables
+.table > tbody > tr.dirty {
+    & > td, & > th {
+        background-color: @warningBackground;
+        font-style: italic;
+    }
+}
+
 // colour-coded status and result in jobs/recipes grid
 .statusCompleted, .resultPass { color: @green; }
 .statusAborted, .resultFail { color: @red; }
