@@ -106,7 +106,6 @@ class TaskLibrarySync:
         # setup, sanity checks
         self.task_dir = turbogears.config.get("basepath.rpms", "/var/www/beaker/rpms")
         self._setup_logging()
-        self._check_perms()
 
         # Initialize core attributes
         if remote:
@@ -128,8 +127,7 @@ class TaskLibrarySync:
         self.logger = logging.getLogger("")
         self.logger.addHandler(stdout_handler)
 
-    def _check_perms(self):
-
+    def check_perms(self):
         # See if the euid is the same as that of self.task_dir
         task_dir_uid = os.stat(self.task_dir).st_uid
 
@@ -319,6 +317,7 @@ def main():
 
     remote = options.remote.rstrip('/')
     task_sync = TaskLibrarySync(remote)
+    task_sync.check_perms()
 
     if options.debug:
         task_sync.logger.setLevel(logging.DEBUG)
