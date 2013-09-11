@@ -1,20 +1,9 @@
 from turbogears import widgets
 from kid.element import Element
-from model import *
-import search_utility
-import bkr
-import bkr.server.stdvars
-from bkr.server.widgets import myPaginateDataGrid
 from cherrypy import request, response, HTTPError
-from bkr.server.helpers import *
-from bexceptions import *
-import re
+from bkr.server import search_utility
+from bkr.server.helpers import make_link
 
-
-# for debugging
-import sys
-
-# from bkr.server import json
 import logging
 log = logging.getLogger("bkr.server.controllers")
 
@@ -40,7 +29,6 @@ class _FKLogEntry:
         self.description = description or form_field
         self.form_field = form_field
         self.mapper_class = mapper_class
-        valid_column = getattr(mapper_class,mapper_column_name,None)
         self.mapper_column_name = mapper_column_name
 
 
@@ -94,29 +82,29 @@ class Utility:
 
     @classmethod
     def result_columns(cls,values_checked = None):  
-      """
-      result_columns() will return the list of columns that are able to bereturned
-      in the system search results.
-      """
-      column_names = search_utility.System.search.create_column_table([{search_utility.Cpu :{'exclude': ['Flags']} },
-                                                                       {search_utility.System: {'all':[]} }] ) 
-      
-      send = [(elem,elem) for elem in column_names]  
-     
-      if values_checked is not None:
-         vals_to_set = values_checked
-         response.simple_cookie['column_values'] = ','.join(values_checked)
-      elif request.simple_cookie.has_key('column_values'): 
-         text = request.simple_cookie['column_values'].value
-         vals_to_set = text.split(',') 
-      else:
-         vals_to_set = [] 
+        """
+        result_columns() will return the list of columns that are able to bereturned
+        in the system search results.
+        """
+        column_names = search_utility.System.search.create_column_table([{search_utility.Cpu :{'exclude': ['Flags']} },
+                                                                         {search_utility.System: {'all':[]} }] )
 
-      default = {}
-      for elem in vals_to_set:
-          default[elem] = 1;
+        send = [(elem,elem) for elem in column_names]
 
-      return {'options' : send, 'default':default}; 
+        if values_checked is not None:
+            vals_to_set = values_checked
+            response.simple_cookie['column_values'] = ','.join(values_checked)
+        elif request.simple_cookie.has_key('column_values'):
+            text = request.simple_cookie['column_values'].value
+            vals_to_set = text.split(',')
+        else:
+            vals_to_set = []
+
+        default = {}
+        for elem in vals_to_set:
+            default[elem] = 1;
+
+        return {'options' : send, 'default':default};
 
     @classmethod
     def cpu_vendor_getter_name(cls):
@@ -207,7 +195,7 @@ class Utility:
         def my_f(x):
             try:
                 return x.power.power_type.name
-            except Exception,(e):
+            except Exception:
                 return ''
         return my_f
 
