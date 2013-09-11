@@ -1,0 +1,32 @@
+[general]
+name = Fedora-rawhide
+family = Fedora
+timestamp = 1378389431.7
+variant = 
+version = rawhide
+packagedir = 
+arch = x86_64
+
+[stage2]
+mainimage = LiveOS/squashfs.img
+
+[images-x86_64]
+kernel = images/pxeboot/vmlinuz
+initrd = images/pxeboot/initrd.img
+upgrade = images/pxeboot/upgrade.img
+boot.iso = images/boot.iso
+
+[images-xen]
+kernel = images/pxeboot/vmlinuz
+initrd = images/pxeboot/initrd.img
+upgrade = images/pxeboot/upgrade.img
+
+[checksums]
+images/efiboot.img = sha256:49ae11b137f81d4968500111b56b68cacd7cfcc0e68898db27edfdb8a60e5830
+images/macboot.img = sha256:633cb1c6c11366a93d049a67db8c783647e5af0084b2c5fb6e66d0a8507be7e5
+images/boot.iso = sha256:ca5380195a660185c3355c7d67a326d26ddcb5cb7f558dfd7fdcef2c5f4f189f
+images/pxeboot/upgrade.img = sha256:8d1fd3394764fd9220c8ea44c68432797eb55f2f65d1d68319d96fcbd6ca3ff3
+images/pxeboot/vmlinuz = sha256:3ffc8b1e5eeb2c56080b1653aa0ebeedb3d89060ac91c0496a962fbcb3c8d85d
+images/pxeboot/initrd.img = sha256:c5c3b0b56bb2e563dcd3b8f3d2d7452a1d981357fb47852484240b4fef52885c
+repodata/repomd.xml = sha256:a7ab11be67ef4d513d888dc2b7107510536b0451b06a14dc205f7bba832dade3
+
