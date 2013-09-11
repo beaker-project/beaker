@@ -4,6 +4,7 @@ from datetime import datetime
 from turbogears import widgets, expose, validators, \
 	error_handler, validate, flash, redirect, url
 from turbogears.database import session
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
 from bkr.server.model import ConfigItem, SSHPubKey, User

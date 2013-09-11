@@ -123,7 +123,7 @@ class Jobs(RPCRoot):
             value = kw,
         )
 
-    def _check_job_deletability(self, job):
+    def _check_job_deletability(self, t_id, job):
         if not isinstance(job, Job):
             raise TypeError('%s is not of type %s' % (t_id, Job.__name__))
         if not job.can_delete(identity.current.user):
@@ -131,7 +131,7 @@ class Jobs(RPCRoot):
 
     def _delete_job(self, t_id):
         job = TaskBase.get_by_t_id(t_id)
-        self._check_job_deletability(job)
+        self._check_job_deletability(t_id, job)
         Job.delete_jobs([job])
         return [t_id]
 
