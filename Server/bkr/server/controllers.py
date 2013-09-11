@@ -1,11 +1,21 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from model import *
+from turbogears import expose, flash, widgets, validate, error_handler, validators, paginate, url
 from turbogears import redirect, config
-import search_utility as su
 import bkr
 import bkr.server.stdvars
-from bkr.server.model import TaskBase
+import bkr.server.search_utility as su
+from bkr.server.model import (TaskBase, Device, System, SystemGroup,
+                              SystemActivity, Key, OSMajor, DistroTree,
+                              Arch, TaskPriority, Group, GroupActivity,
+                              RecipeSet, RecipeSetActivity, User,
+                              LabInfo, ReleaseAction, PowerType,
+                              LabController, Hypervisor, KernelType,
+                              SystemType, Distro, Note, Power, Job,
+                              InstallOptions, ExcludeOSMajor,
+                              ExcludeOSVersion, OSVersion,
+                              Provision, ProvisionFamily,
+                              ProvisionFamilyUpdate, SystemStatus,
+                              Key_Value_Int, Key_Value_String)
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
@@ -29,8 +39,8 @@ from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import TaskSearchForm, SystemArches, SearchBar, \
     SystemForm, SystemProvision, SystemInstallOptions, SystemGroups, \
     SystemNotes, SystemKeys, SystemExclude, SystemHistory, SystemDetails, \
-    ReportProblemForm, PowerActionForm, LabInfoForm, PowerActionHistory, \
-    DoAndConfirmForm, LoanWidget, BeakerDataGrid,\
+    PowerActionForm, LabInfoForm, PowerActionHistory, \
+    DoAndConfirmForm, LoanWidget, \
     myPaginateDataGrid, PowerForm, AutoCompleteTextField, SystemActions
 from bkr.server.preferences import Preferences
 from bkr.server.authentication import Auth
@@ -43,37 +53,29 @@ from bkr.server.task_actions import TaskActions
 from bkr.server.kickstart import KickstartController
 from bkr.server.controller_utilities import Utility, \
     SystemSaveForm, restrict_http_method
-from bkr.server.bexceptions import *
-import bkr.server.validators as beaker_validators
+from bkr.server.bexceptions import BeakerException, BX
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from bkr.server.helpers import *
-from bkr.server.tools.init import dummy
-from bkr.server import mail, needpropertyxml, metrics, identity
+from bkr.server.helpers import make_link
+from bkr.server import needpropertyxml, metrics, identity
 from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
-import urllib
 import kid
-from kid import Element
 import cherrypy
-from hashlib import md5
 import re
-import string
+import os
 import pkg_resources
 import rdflib.graph
-import formencode.variabledecode
+from sqlalchemy import and_, join
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.exc import InvalidRequestError
+import time
+from datetime import datetime
 
-# for debugging
-import sys
-
-# from bkr.server import json
 import logging
 log = logging.getLogger("bkr.server.controllers")
-import breadcrumbs
-from datetime import datetime, timedelta
 
 # This ridiculous hack gets us an HTML5 doctype in our Kid template output.
 config.update({'kid.outputformat': kid.HTMLSerializer(doctype=('html',))})
@@ -432,9 +434,9 @@ class Root(RPCRoot):
             col = class_field_list[1]              
             #If value id False or True, let's convert them to
             if class_field_list[0] != 'Key':
-               sys_search.append_results(cls_ref,search['value'],col,search['operation']) 
+                sys_search.append_results(cls_ref,search['value'],col,search['operation'])
             else:
-               sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue=search['keyvalue']) 
+                sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue=search['keyvalue'])
 
         return sys_search.return_results()
               
@@ -639,12 +641,12 @@ class Root(RPCRoot):
             flash(_(u"system_id and arch_id must be provided"))
             redirect("/")
         if system.can_admin(identity.current.user):
-           for arch in system.arch:
-               if arch.id == int(arch_id):
-                   system.arch.remove(arch)
-                   removed = arch
-                   activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Arch', arch.arch, "")
-                   system.activity.append(activity)
+            for arch in system.arch:
+                if arch.id == int(arch_id):
+                    system.arch.remove(arch)
+                    removed = arch
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Arch', arch.arch, "")
+                    system.activity.append(activity)
         if removed:
             system.date_modified = datetime.utcnow()
             flash(_(u"%s Removed" % removed.arch))
@@ -671,14 +673,14 @@ class Root(RPCRoot):
             flash(_(u"You don't have permission to remove the last group if the system is shared"))
             redirect("./view/%s" % system.fqdn)
         if system.can_admin(identity.current.user):
-           for group in system.groups:
-               if group.group_id == int(group_id):
-                   system.groups.remove(group)
-                   removed = group
-                   activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Group', group.display_name, "")
-                   gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Removed', 'System', "", system.fqdn)
-                   group.activity.append(gactivity)
-                   system.activity.append(activity)
+            for group in system.groups:
+                if group.group_id == int(group_id):
+                    system.groups.remove(group)
+                    removed = group
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Group', group.display_name, "")
+                    gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Removed', 'System', "", system.fqdn)
+                    group.activity.append(gactivity)
+                    system.activity.append(activity)
         if removed:
             system.date_modified = datetime.utcnow()
             flash(_(u"%s Removed" % removed.display_name))
@@ -787,7 +789,7 @@ class Root(RPCRoot):
             options['excluded_families'].append((arch.arch, [(osmajor.id, osmajor.osmajor, [(osversion.id, '%s' % osversion, attrs) for osversion in osmajor.osversion],attrs) for osmajor in OSMajor.query]))
         try:
             can_admin = system.can_admin(user = identity.current.user)
-        except AttributeError,e:
+        except AttributeError:
             can_admin = False
 
 
@@ -954,8 +956,8 @@ class Root(RPCRoot):
                 if system.is_admin():
                     return user_change_form()
                 else:
-                   flash( _(u"Insufficient permissions to change loanee of system"))
-                   redirect("/")
+                    flash( _(u"Insufficient permissions to change loanee of system"))
+                    redirect("/")
             # This implies a Return
             if system.current_loan(identity.current.user):
                 activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', '%s' % system.loaned, 'None')
@@ -1037,9 +1039,6 @@ class Root(RPCRoot):
     @expose()
     @identity.require(identity.not_anonymous())
     def user_change(self, id):
-        msg = ""
-        status = None
-        activity = None
         current_identity = identity.current.user
         try:
             system = System.by_id(id, current_identity)
@@ -1728,7 +1727,7 @@ class Root(RPCRoot):
                 if system.provisions.has_key(arch):
                     if system.provisions[arch].provision_families.has_key(osversion.osmajor):
                         if system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates.has_key(osversion):
-                            provision = system.provisions[arch].provision_families[osmajor].provision_family_updates[osversion]
+                            provision = system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates[osversion]
                             action = "Changed"
                         else:
                             provision = ProvisionFamilyUpdate()
@@ -1800,7 +1799,7 @@ class Root(RPCRoot):
     def to_xml(self, taskid, to_screen=False, pretty=True, *args, **kw):
         try:
             task = TaskBase.get_by_t_id(taskid)
-        except Exception, e:
+        except Exception:
             flash(_('Invalid Task: %s' % taskid))
             redirect(url('/'))
         xml = task.to_xml()
