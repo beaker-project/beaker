@@ -1,0 +1,7 @@
+Verified+1: Amit Saha <asaha@redhat.com>
+Code-Review+2: Nick Coghlan <ncoghlan@redhat.com>
+Submitted-by: Amit Saha <asaha@redhat.com>
+Submitted-at: Wed, 11 Sep 2013 07:13:20 +0000
+Reviewed-on: http://gerrit.beaker-project.org/2230
+Project: beaker
+Branch: refs/heads/develop
