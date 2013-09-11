@@ -1,20 +1,11 @@
-from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, \
-        error_handler, validators, redirect, paginate
-from turbogears.widgets import AutoCompleteField
-from cherrypy import request, response
-from kid import Element
+from turbogears.config import get
 from bkr.common.bexceptions import BX
 from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
-from bkr.server.model import *
-from xmlrpclib import ProtocolError
+from bkr.server.model import User
 import cherrypy
-import time
-import re
 import logging
-import string
+import socket
 
 log = logging.getLogger(__name__)
 
