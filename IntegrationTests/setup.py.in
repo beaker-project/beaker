@@ -22,7 +22,8 @@ setup(
         'server/motd.xml',
         'server/selenium/*.csv',
         'server/selenium/*.rpm',
-        'server/selenium/invalid-task_file',] +
+        'server/selenium/invalid-task_file',
+        'server/tools/*.rpm',] +
         get_compose_layout()
     },
     namespace_packages=['bkr'],
