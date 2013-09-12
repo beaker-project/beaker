@@ -46,7 +46,7 @@ class JobCancelTest(unittest.TestCase):
     def test_cannot_cancel_other_peoples_job(self):
         with session.begin():
             user1 = data_setup.create_user(password='abc')
-            job_owner = data_setup.create_user(user_name='user2')
+            job_owner = data_setup.create_user()
             job = data_setup.create_job(owner=job_owner)
 
         try:
