@@ -74,15 +74,7 @@
     </span>
    </div>
    <div class="tab-pane" id="commands">
-      <h3>Power Action</h3>
-      ${widgets['power_action'].display(method='get', action=widgets_action['power_action'], value=value, options=widgets_options['power_action'])}
-      <span py:if='value.lab_controller' py:strip="True">
-      <h3>Netboot</h3>
-      ${widgets['clear_netboot'].display(dict(fqdn=value.fqdn),
-          action=tg.url('../systems/clear_netboot_form'),
-          msg='Are you sure you want to clear the netboot for this system?',
-           action_text='Clear Netboot', look='button')}
-      </span>
+      ${widgets['commands_form'].display(method='get', action=widgets_action['commands_form'], value=value, options=widgets_options['commands_form'])}
       <h3>Recent Commands</h3>
      ${widgets['power_history'].display(list=widgets_options['power_history'], title='Recent Commands')}
    </div>

@@ -52,20 +52,6 @@ class SystemViewTestWD(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
-    def test_clear_netboot(self):
-        b = self.browser
-        login(b)
-        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('Commands').click()
-
-        clear = b.find_element_by_xpath('//button[normalize-space(text())='
-            '"Clear Netboot"]')
-        clear.click()
-        b.find_element_by_xpath("//button[@type='button' and .//text()='Yes']").click()
-        flash_text = b.find_element_by_class_name('flash').text
-        self.assertEqual(flash_text, u'Clear netboot command enqueued')
-
-
     #https://bugzilla.redhat.com/show_bug.cgi?id=886875
     def test_kernel_install_options_propagated_view(self):
 
@@ -693,21 +679,6 @@ class SystemViewTest(SeleniumTestCase):
         with session.begin():
             session.refresh(self.system)
             self.assertEqual(self.system.mac_address, bad_mac_address)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=740321
-    def test_no_power_without_lc(self):
-        self.login()
-        sel = self.selenium
-        self.go_to_system_view()
-        sel.click('link=Commands')
-        self.assert_(sel.is_element_present(
-                '//button[normalize-space(text())="Power On"]'))
-        self.go_to_system_edit()
-        sel.select('lab_controller_id', 'None')
-        sel.click('link=Save Changes')
-        sel.wait_for_page_to_load('30000')
-        self.assert_(sel.is_element_present(
-                '//span[text()="System is not configured for power support"]'))
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=833275
     def test_excluded_families(self):

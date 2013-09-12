@@ -200,6 +200,19 @@ class SystemPermissionsTest(unittest.TestCase):
         self.system.user = self.unprivileged
         self.assertTrue(self.system.can_unreserve(self.unprivileged))
 
+    def test_can_power(self):
+        # owner
+        self.assertTrue(self.system.can_power(self.owner))
+        # system's current user
+        user = data_setup.create_user()
+        self.assertFalse(self.system.can_power(user))
+        self.system.user = user
+        self.assertTrue(self.system.can_power(user))
+        # granted by policy
+        self.assertFalse(self.system.can_power(self.unprivileged))
+        self.policy.add_rule(SystemPermission.control_system, user=self.unprivileged)
+        self.assertTrue(self.system.can_power(self.unprivileged))
+
 class TestBrokenSystemDetection(unittest.TestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=637260

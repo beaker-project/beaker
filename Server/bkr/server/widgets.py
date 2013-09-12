@@ -827,28 +827,26 @@ class SearchBar(RepeatingFormField):
 class ProvisionForm(RepeatingFormField):
     pass
 
-class PowerActionForm(Form):
-    template = "bkr.server.templates.system_power_action"
+class SystemCommandsForm(Form):
+    template = "bkr.server.templates.system_commands_form"
     member_widgets = ["id", "power", "lab_controller"]
-    params = ['options', 'action', 'enabled','is_user']
+    params = ['options', 'action', 'can_power', 'is_user',
+              'power_enabled', 'netboot_enabled']
 
     def __init__(self, *args, **kw):
-        super(PowerActionForm, self).__init__(*args, **kw)
+        super(SystemCommandsForm, self).__init__(*args, **kw)
         self.id = HiddenField(name="id")
         self.power = HiddenField(name="power")
         self.lab_controller = HiddenField(name="lab_controller")
 
-    def update_params(self, d):
-        super(PowerActionForm, self).update_params(d)
-        if 'power' in d['value'] and 'lab_controller' in d['value']:
-            if d['value']['power'] and d['value']['lab_controller']:
-                d['enabled'] = True
-
     def display(self, value, *args, **kw):
         if 'options' in kw:
-            if 'is_user' in kw['options']:
-                kw['is_user'] = kw['options']['is_user']
-        return super(PowerActionForm,self).display(value,*args,**kw)
+            kw.update(kw['options'])
+        system = value
+        kw['power_enabled'] = bool(system.power and system.lab_controller)
+        kw['netboot_enabled'] = bool(system.lab_controller)
+        kw['fqdn'] = system.fqdn
+        return super(SystemCommandsForm, self).display(value, *args, **kw)
 
 class PowerActionHistory(CompoundWidget):
     template = "bkr.server.templates.power_history_grid"

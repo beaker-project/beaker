@@ -7,7 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from flask import request, abort, jsonify
 from turbogears import expose, controllers, flash, redirect
 from bkr.server import identity
-from bkr.server.bexceptions import BX
+from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
         SystemPermission
@@ -133,6 +133,10 @@ class SystemsController(controllers.Controller):
            No longer waits for completion of Cobbler power task.
         """
         system = System.by_fqdn(fqdn, identity.current.user)
+        if not system.can_power(identity.current.user):
+            raise InsufficientSystemPermissions(
+                    _(u'User %s does not have permission to power system %s')
+                    % (identity.current.user, system))
         if not force and system.user is not None \
                 and system.user != identity.current.user:
             raise BX(_(u'System is in use'))
@@ -150,6 +154,9 @@ class SystemsController(controllers.Controller):
         system, and on success redirects to the system page.
         """
         system = System.by_fqdn(fqdn, identity.current.user)
+        if not system.can_power(identity.current.user):
+            flash(_(u'You do not have permission to control this system'))
+            redirect(u'../view/%s' % fqdn)
         system.clear_netboot(service=u'WEBUI')
         flash(_(u'Clear netboot command enqueued'))
         redirect(u'../view/%s' % fqdn)

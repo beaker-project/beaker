@@ -2491,6 +2491,22 @@ class System(SystemObject, ActivityMixin):
             return True
         return False
 
+    def can_power(self, user):
+        """
+        Does the given user have permission to run power/netboot commands on 
+        this system?
+        """
+        if self.user and self.user == user:
+            return True
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.control_system)):
+            return True
+        return False
+
     def change_loan(self, user_name, comment=None, service='WEBUI'):
         """Changes the current system loan
 

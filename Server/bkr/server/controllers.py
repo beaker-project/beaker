@@ -39,8 +39,7 @@ from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import TaskSearchForm, SystemArches, SearchBar, \
     SystemForm, SystemProvision, SystemInstallOptions, SystemGroups, \
     SystemNotes, SystemKeys, SystemExclude, SystemHistory, SystemDetails, \
-    PowerActionForm, LabInfoForm, PowerActionHistory, \
-    DoAndConfirmForm, LoanWidget, \
+    SystemCommandsForm, LabInfoForm, PowerActionHistory, LoanWidget, \
     myPaginateDataGrid, PowerForm, AutoCompleteTextField, SystemActions
 from bkr.server.preferences import Preferences
 from bkr.server.authentication import Auth
@@ -197,8 +196,7 @@ class Root(RPCRoot):
     system_form = SystemForm()
     power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')
-    power_action_form = PowerActionForm(name='power_action')
-    clear_netboot = DoAndConfirmForm()
+    commands_form = SystemCommandsForm(name='commands')
     power_history = PowerActionHistory()
     system_details = SystemDetails()
     system_activity = SystemHistory()
@@ -732,10 +730,12 @@ class Root(RPCRoot):
             readonly = not system.can_edit(our_user)
             is_user = (system.user == our_user)
             can_reserve = system.can_reserve(our_user)
+            can_power = system.can_power(our_user)
         else:
             readonly = True
             is_user = False
             can_reserve = False
+            can_power = False
         title = system.fqdn
         options = self._get_system_options(system)
         options['edit'] = False
@@ -777,8 +777,7 @@ class Root(RPCRoot):
                       )
         widgets['provision'] = self.system_provision
         widgets['power'] = self.power_form
-        widgets['power_action'] = self.power_action_form
-        widgets['clear_netboot'] = self.clear_netboot
+        widgets['commands_form'] = self.commands_form
         widgets['power_history'] = self.power_history
 
         return dict(
@@ -801,7 +800,7 @@ class Root(RPCRoot):
                                     groups    = url('/save_group'),
                                     install   = url('/save_install'),
                                     provision = url(provision_action),
-                                    power_action = url('/action_power'),
+                                    commands_form = url('/action_power'),
                                     arches    = url('/save_arch'),
                                     tasks     = '/tasks/do_search',
                                   ),
@@ -826,7 +825,8 @@ class Root(RPCRoot):
                                                     can_reserve=can_reserve,
                                                     lab_controller = system.lab_controller,
                                                     prov_install = [(dt.id, unicode(dt)) for dt in system.distro_trees().order_by(Distro.name, DistroTree.variant, DistroTree.arch_id)]),
-                                   power_action = dict(is_user=is_user),
+                                   commands_form = dict(is_user=is_user,
+                                                        can_power=can_power),
                                    arches    = dict(readonly = readonly,
                                                     arches = system.arch),
                                    tasks      = dict(system_id = system.id,
@@ -1353,6 +1353,13 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to look up system id:%s via your login" % id) )
             redirect("/")
+
+        if not system.power or not system.lab_controller:
+            flash(_(u'System is not configured for power support'))
+            redirect('/view/%s' % system.fqdn)
+        if not system.can_power(identity.current.user):
+            flash(_(u'You do not have permission to control this system'))
+            redirect('/view/%s' % system.fqdn)
 
         system.action_power(service='WEBUI', action=action)
         flash(_(u"%s power %s command enqueued" % (system.fqdn, action)))
