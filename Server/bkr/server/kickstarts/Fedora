@@ -78,7 +78,6 @@ uboot-tools
 {% endif %}
 {% if no_clock_sync is undefined %}
 chrony
--ntp
 {% endif %}
 {% snippet 'packages' %}
 %end

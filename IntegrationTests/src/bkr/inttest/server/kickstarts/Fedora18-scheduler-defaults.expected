@@ -58,7 +58,6 @@ unifdef
 vim-enhanced
 wget
 chrony
--ntp
 # no snippet data for packages
 %end
 
@@ -138,6 +137,8 @@ if [ -e /etc/chrony.conf ] ; then
     # setting iburst should speed up initial sync
     # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
+    /sbin/chkconfig ntpd off >/dev/null 2>&1 || :
+    /sbin/chkconfig ntpdate off >/dev/null 2>&1 || :
 fi
 
 

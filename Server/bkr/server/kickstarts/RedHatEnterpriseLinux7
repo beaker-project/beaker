@@ -67,7 +67,6 @@ install
 {% snippet 'packages' %}
 {% if no_clock_sync is undefined %}
 chrony
--ntp
 {% endif %}
 %end
 
