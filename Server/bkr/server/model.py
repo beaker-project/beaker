@@ -6877,18 +6877,19 @@ class TaskLibrary(object):
         # Internal call that assumes the flock is already held
         # Removed --baseurl, if upgrading you will need to manually
         # delete repodata directory before this will work correctly.
-        p = subprocess.Popen(['createrepo', '-q', '--update',
+        createrepo_command = get('beaker.createrepo_command', 'createrepo')
+        p = subprocess.Popen([createrepo_command, '-q', '--update',
                 '--checksum', 'sha', '.'], cwd=self.rpmspath,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, err = p.communicate()
         if output:
-            log.debug("stdout from createrepo: %s", output)
+            log.debug("stdout from %s: %s", createrepo_command, output)
         if err:
-            log.warn("stderr from createrepo: %s", err)
+            log.warn("stderr from %s: %s", createrepo_command, err)
         retcode = p.poll()
         if retcode:
-            raise ValueError('createrepo failed with exit status %d:\n%s'
-                    % (retcode, err))
+            raise ValueError('%s failed with exit status %d:\n%s'
+                    % (createrepo_command, retcode, err))
 
     def update_repo(self):
         """Update the task library yum repo metadata"""
