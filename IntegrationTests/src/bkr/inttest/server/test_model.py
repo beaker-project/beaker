@@ -182,6 +182,12 @@ class SystemPermissionsTest(unittest.TestCase):
         self.policy.add_rule(SystemPermission.loan_any, user=self.unprivileged)
         self.assertTrue(self.system.can_loan(self.unprivileged))
 
+    def test_can_loan_to_self(self):
+        self.assertTrue(self.system.can_loan_to_self(self.owner))
+        self.assertFalse(self.system.can_loan_to_self(self.unprivileged))
+        self.policy.add_rule(SystemPermission.loan_self, user=self.unprivileged)
+        self.assertTrue(self.system.can_loan_to_self(self.unprivileged))
+
     def test_can_return_loan(self):
         self.assertTrue(self.system.can_return_loan(self.owner))
         self.assertFalse(self.system.can_return_loan(self.unprivileged))

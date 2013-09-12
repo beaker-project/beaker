@@ -2441,7 +2441,7 @@ class System(SystemObject, ActivityMixin):
 
     def can_loan(self, user):
         """
-        Does the given user have permission to loan this system to someone?
+        Does the given user have permission to loan this system to another user?
         """
         if self.owner == user:
             return True
@@ -2449,6 +2449,20 @@ class System(SystemObject, ActivityMixin):
             return True
         if (self.custom_access_policy and
             self.custom_access_policy.grants(user, SystemPermission.loan_any)):
+            return True
+        return False
+
+    def can_loan_to_self(self, user):
+        """
+        Does the given user have permission to loan this system to themselves?
+        """
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.loan_any) or
+            self.custom_access_policy.grants(user, SystemPermission.loan_self)):
             return True
         return False
 
@@ -2522,12 +2536,16 @@ class System(SystemObject, ActivityMixin):
         """
         loaning_to = user_name
         if loaning_to:
-            if not self.can_loan(identity.current.user):
-                raise BX(_("Insufficient permissions to create loan"))
             user = User.by_user_name(loaning_to)
-            # This is an error condition
             if not user:
+                # This is an error condition
                 raise ValueError('user name %s is invalid' % loaning_to)
+            if user == identity.current.user:
+                if not self.can_loan_to_self(identity.current.user):
+                    raise BX(_("Insufficient permissions to create loan"))
+            else:
+                if not self.can_loan(identity.current.user):
+                    raise BX(_("Insufficient permissions to create loan"))
         else:
             if not self.can_return_loan(identity.current.user):
                 raise BX(_("Insufficient permissions to return loan"))
