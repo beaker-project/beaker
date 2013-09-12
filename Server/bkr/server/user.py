@@ -34,7 +34,7 @@ class UserFormSchema(validators.Schema):
 
 class Users(AdminPage):
     # For XMLRPC methods in this class.
-    exposed = False
+    exposed = True
 
     user_id     = widgets.HiddenField(name='user_id')
     user_name   = widgets.TextField(name='user_name', label=_(u'Login'))
@@ -182,11 +182,27 @@ class Users(AdminPage):
 
     @cherrypy.expose
     @identity.require(identity.in_group('admin'))
-    def close_account(self, username):
+    def remove_account(self, username):
+        """
+        Remove a user account.
+
+        Removing a user account cancels any running job(s), returns all
+        the systems in use by the user, modifies the ownership of the
+        systems owned to the admin closing the account, and disables the
+        account for further login.
+
+        :param username: An existing username
+        :type username: string
+        """
+
         try:
             user = User.by_user_name(username)
         except InvalidRequestError:
             raise BX(_('Invalid User %s ' % username))
+
+        if user.removed:
+            raise BX(_('User already removed %s' % username))
+
         self._remove(user=user, method='XMLRPC')
 
     def _disable(self, user, method, 
@@ -204,7 +220,7 @@ class Users(AdminPage):
     def _remove(self, user, method, **kw):
         # Return all systems in use by this user
         if user == identity.current.user:
-            raise BX(_('You can''t remove yourself'))
+            raise BX(_('You cannot remove yourself'))
         for system in System.query.filter(System.user==user):
             msg = ''
             try:
@@ -238,3 +254,6 @@ class Users(AdminPage):
     def show_groups(self):
         group = ('Group', lambda x: x.display_name)
         return BeakerDataGrid(fields=[group])
+
+# for sphinx
+users = Users

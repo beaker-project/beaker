@@ -43,6 +43,13 @@ User Preferences
 
 .. automethod:: prefs.update
 
+User Accounts
+-------------
+
+.. currentmodule:: bkr.server.user
+
+.. automethod:: users.remove_account
+
 Groups
 ------
 
