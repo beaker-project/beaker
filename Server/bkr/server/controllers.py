@@ -42,7 +42,7 @@ from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
 from bkr.server.kickstart import KickstartController
 from bkr.server.controller_utilities import Utility, \
-    SystemSaveForm, SystemTab, restrict_http_method
+    SystemSaveForm, restrict_http_method
 from bkr.server.bexceptions import *
 import bkr.server.validators as beaker_validators
 from cherrypy import request, response
@@ -707,13 +707,12 @@ class Root(RPCRoot):
 
         options['loan_widget'] = LoanWidget()
 
-        # Has privs and machine is available, can take
-        if system.can_share(our_user) and \
-            system.can_provision_now(our_user):
+        if system.status != SystemStatus.automated:
+            if system.user and system.can_unreserve(our_user):
+                options['user_change_text'] = 'Return'
+            elif system.is_free() and system.can_reserve(our_user):
                 options['user_change_text'] = 'Take'
 
-        if system.current_user(our_user):
-            options['user_change_text'] = 'Return'
         if system.open_reservation is not None and \
             system.open_reservation.recipe:
                 job_id = system.open_reservation.recipe.recipeset.job.id
@@ -753,20 +752,21 @@ class Root(RPCRoot):
             flash( _(u"No given system to view") )
             redirect("/")
         our_user = identity.current.user
-        if system.can_admin(user=our_user):
-            readonly = False
+        if our_user:
+            readonly = not system.can_admin(our_user)
+            is_user = (system.user == our_user)
+            can_reserve = system.can_reserve(our_user)
         else:
             readonly = True
-        if system.current_user(our_user):
-            is_user = True
-        else:
             is_user = False
+            can_reserve = False
         title = system.fqdn
-        currently_held = system.user == our_user
         options = self._get_system_options(system)
         options['edit'] = False
-        self.provision_now_rights,self.will_provision,self.provision_action = \
-                SystemTab.get_provision_perms(system, our_user, currently_held)
+        if system.status == SystemStatus.automated:
+            provision_action = '/schedule_provision'
+        else:
+            provision_action = '/action_provision'
 
         if 'activities_found' in histories_return:
             historical_data = histories_return['activities_found']
@@ -829,7 +829,7 @@ class Root(RPCRoot):
                                     notes     = url('/save_note'),
                                     groups    = url('/save_group'),
                                     install   = url('/save_install'),
-                                    provision = getattr(self,'provision_action',''),
+                                    provision = url(provision_action),
                                     power_action = url('/action_power'),
                                     arches    = url('/save_arch'),
                                     tasks     = '/tasks/do_search',
@@ -851,9 +851,9 @@ class Root(RPCRoot):
                                    install   = dict(readonly = readonly,
                                                 provisions = system.provisions,
                                                 prov_arch = [(arch.id, arch.arch) for arch in system.arch]),
-                                   provision = dict(is_user = is_user,
-                                                    will_provision = self.will_provision,
-                                                    provision_now_rights = self.provision_now_rights,
+                                   provision = dict(reserved=is_user,
+                                                    automated=system.status == SystemStatus.automated,
+                                                    can_reserve=can_reserve,
                                                     lab_controller = system.lab_controller,
                                                     prov_install = [(dt.id, unicode(dt)) for dt in system.distro_trees().order_by(Distro.name, DistroTree.variant, DistroTree.arch_id)]),
                                    power_action = dict(is_user=is_user),
@@ -1046,22 +1046,20 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
-        if system.current_user(current_identity):
+        if system.user:
             try:
                 system.unreserve_manually_reserved(service=u'WEBUI')
                 flash(_(u'Returned %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to return')
                 flash(_(u'Failed to return %s: %s') % (system.fqdn, e))
-        elif system.can_share(current_identity) and system.can_provision_now(current_identity):
+        else:
             try:
-                system.reserve(service=u'WEBUI', reservation_type=u'manual')
+                system.reserve_manually(service=u'WEBUI')
                 flash(_(u'Reserved %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to reserve')
                 flash(_(u'Failed to reserve %s: %s') % (system.fqdn, e))
-        else:
-            flash(_(u'You were unable to change the user for %s' % system.fqdn))
         redirect("/view/%s" % system.fqdn)
 
     system_cc_form = widgets.TableForm(
@@ -1520,8 +1518,7 @@ class Root(RPCRoot):
                              koptions=None, koptions_post=None, reboot=None):
 
         """
-        We schedule a job which will provision a system. 
-
+        Immediately provision a Manual system. The system must already be reserved.
         """
         distro_tree_id = prov_install
         try:
@@ -1539,21 +1536,20 @@ class Root(RPCRoot):
         if user.rootpw_expired:
             flash( _(u"Your root password has expired, please change or clear it in order to submit jobs.") )
             redirect(u"/view/%s" % system.fqdn)
+        if system.user != user:
+            flash(_(u'Reserve a system before provisioning'))
+            redirect(u'view/%s' % system.fqdn)
 
         try:
-            can_provision_now = system.can_provision_now(user) #Check perms
-            if can_provision_now:
-                from bkr.server.kickstart import generate_kickstart
-                install_options = system.install_options(distro_tree).combined_with(
-                        InstallOptions.from_strings(ks_meta, koptions, koptions_post))
-                if 'ks' not in install_options.kernel_options:
-                    kickstart = generate_kickstart(install_options,
-                            distro_tree=distro_tree, system=system, user=user)
-                    install_options.kernel_options['ks'] = kickstart.link
-                system.configure_netboot(distro_tree,
-                        install_options.kernel_options_str, service=u'WEBUI')
-            else: #This shouldn't happen, maybe someone is trying to be funny
-                raise BX('User: %s has insufficent permissions to provision %s' % (user.user_name, system.fqdn))
+            from bkr.server.kickstart import generate_kickstart
+            install_options = system.install_options(distro_tree).combined_with(
+                    InstallOptions.from_strings(ks_meta, koptions, koptions_post))
+            if 'ks' not in install_options.kernel_options:
+                kickstart = generate_kickstart(install_options,
+                        distro_tree=distro_tree, system=system, user=user)
+                install_options.kernel_options['ks'] = kickstart.link
+            system.configure_netboot(distro_tree,
+                    install_options.kernel_options_str, service=u'WEBUI')
         except Exception, msg:
             log.exception('Failed to provision system %s', id)
             activity = SystemActivity(user=identity.current.user, service=u'WEBUI',

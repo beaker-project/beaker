@@ -22,7 +22,7 @@ import re
 import logging
 import subprocess
 from selenium import selenium, webdriver
-import unittest
+import unittest2 as unittest
 import xmlrpclib
 from urlparse import urljoin
 import kobo.xmlrpc

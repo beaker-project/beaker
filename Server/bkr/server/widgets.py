@@ -1177,7 +1177,8 @@ class SystemProvision(Form):
     template = "bkr.server.templates.system_provision"
     member_widgets = ["id", "prov_install", "ks_meta", "power",
                       "koptions", "koptions_post", "reboot","schedule_reserve_days"]
-    params = ['options', 'is_user', 'lab_controller', 'power_enabled','provision_now_rights','will_provision']
+    params = ['options', 'lab_controller', 'power_enabled',
+              'automated', 'reserved', 'can_reserve']
     MAX_DAYS_PROVISION = 7
     DEFAULT_RESERVE_DAYS = 0.5
 
@@ -1207,14 +1208,8 @@ class SystemProvision(Form):
 
     def update_params(self, d): 
         super(SystemProvision, self).update_params(d)
-        if 'will_provision' in d['options']:
-            d['will_provision'] = d['options']['will_provision']
-        if 'provision_now_rights' in d['options']:
-            d['provision_now_rights'] = d['options']['provision_now_rights']
-        if 'is_user' in d['options']:
-            d['is_user'] = d['options']['is_user']
-        if 'lab_controller' in d['options']:
-            d['lab_controller'] = d['options']['lab_controller']
+        for param in ['automated', 'reserved', 'can_reserve', 'lab_controller']:
+            d[param] = d['options'].get(param)
         if 'power' in d['value']:
             if d['value']['power']:
                 d['power_enabled'] = True

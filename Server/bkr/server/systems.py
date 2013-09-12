@@ -54,9 +54,7 @@ class SystemsController(controllers.Controller):
         .. versionadded:: 0.6
         """
         system = System.by_fqdn(fqdn, identity.current.user)
-        if system.status != SystemStatus.manual:
-            raise BX(_(u'Cannot reserve system with status %s') % system.status)
-        system.reserve(service=u'XMLRPC', reservation_type=u'manual')
+        system.reserve_manually(service=u'XMLRPC')
         return system.fqdn # because turbogears makes us return something
 
     @expose()
@@ -203,9 +201,6 @@ class SystemsController(controllers.Controller):
            See :meth:`distrotrees.filter`.
         """
         system = System.by_fqdn(fqdn, identity.current.user)
-        if not system.can_provision_now(identity.current.user):
-            raise BX(_(u'User %s has insufficient permissions to provision %s')
-                    % (identity.current.user.user_name, system.fqdn))
         if not system.user == identity.current.user:
             raise BX(_(u'Reserve a system before provisioning'))
         distro_tree = DistroTree.by_id(distro_tree_id)

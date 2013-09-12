@@ -22,7 +22,10 @@ class SystemReturnTestWD(WebDriverTestCase):
         system = self.recipe.resource.system
         login(b)
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_link_text('Return').click()
+        # "Return" button should be absent
+        b.find_element_by_xpath('//form[@name="form" and not(.//a[normalize-space(string(.))="Return"])]')
+        # try doing it directly
+        b.get(get_server_base() + 'user_change?id=%s' % system.id)
         self.assertEquals(b.find_element_by_css_selector('.flash').text,
             "Failed to return %s: Currently running R:%s" % (system.fqdn, self.recipe.id))
 
@@ -55,8 +58,7 @@ class SystemReturnTest(SeleniumTestCase):
         # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
         sel.open('user_change?id=%s' % self.system.id)
         sel.wait_for_page_to_load("30000")
-        self.assert_('You were unable to change the user for %s' % self.system.fqdn in sel.get_text('//body'))
-
+        self.assertIn('cannot unreserve system', sel.get_text('css=.flash'))
 
     def test_return_with_no_lc(self):
         sel = self.selenium

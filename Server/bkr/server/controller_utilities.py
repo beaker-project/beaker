@@ -44,41 +44,6 @@ class _FKLogEntry:
         self.mapper_column_name = mapper_column_name
 
 
-class SystemTab:
-
-    @classmethod
-    def get_provision_perms(cls, system, our_user, currently_held):
-
-        if system.can_share(our_user) and system.can_provision_now(our_user): #Has privs and machine is available, can take
-            provision_now_rights = False
-            will_provision = True # User with take privs can also schedule it they wish
-            provision_action = '/schedule_provision'
-        elif not system.can_provision_now(our_user): # If you don't have privs to take
-            if system.is_available(our_user): #And you have access to the machine, schedule
-                provision_action = '/schedule_provision'
-                provision_now_rights = False
-                will_provision = True
-            else: #No privs to machine at all
-                will_provision = False
-                provision_now_rights = False
-                provision_action = ''
-        elif system.can_provision_now(our_user) and currently_held: #Has privs, and we are current user, we can provision
-            provision_action = '/action_provision'
-            provision_now_rights = True
-            will_provision = True
-        elif system.can_provision_now(our_user) and not currently_held: #Has privs, not current user, You need to Take it first
-            provision_now_rights = False
-            will_provision = True
-            provision_action = '/schedule_provision'
-        else:
-            log.error('Could not follow logic when determining user access to machine')
-            will_provision = False
-            provision_now_rights = False
-            provision_action = ''
-
-        return provision_now_rights,will_provision,provision_action
-
-
 class _SystemSaveFormHandler:
 
     @classmethod
