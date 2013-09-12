@@ -1,6 +1,19 @@
 Access policies for systems
 ===========================
 
+Access policies are a new, more flexible mechanism for controlling who can 
+access a Beaker system. Access policies replace the existing access controls 
+for systems, based on the :guilabel:`Shared` flag and the system's group 
+memberships.
+
+In earlier Beaker releases, any logged-in user was permitted to power any 
+system. This permission is preserved in the access policy for existing systems 
+when migrating to this release. However, system owners can now remove this rule 
+from their system's access policy if desired.
+
+The restriction preventing unprivileged users from sharing their system with 
+all Beaker users has been removed.
+
 Database changes
 ----------------
 

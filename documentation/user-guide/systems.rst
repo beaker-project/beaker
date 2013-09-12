@@ -108,7 +108,7 @@ Refer to :ref:`bkr-machine-test` for more details.
 
 .. _loaning-systems:
 
-Loaning Systems
+Loaning systems
 ~~~~~~~~~~~~~~~
 If you have admin permissions over a system, you will be able to loan the
 system to other Beaker users. In the context of Beaker, loaning is the
@@ -214,8 +214,6 @@ logged in as either the owner of the System, or an admin.
 
    -  *Removed*: System no longer exists in the inventory.
 
--  *Shared*: Allows others to run jobs against this machine.
-
 -  *Secret*: Stops other people from seeing this system in the
    inventory.
 
@@ -269,6 +267,9 @@ Key/Values
     Shows further hardware details.
 Groups
     Shows the groups of which this System is a member.
+Access Policy
+    Control the level of permission granted to other Beaker users for this 
+    system. See :ref:`system-access-policies`.
 Excluded Families
     Are the list of Distros that this System does not support. 
 Power
@@ -294,6 +295,40 @@ History
     an inventory item in Beaker. These activities can also be searched. By 
     default, the simple search does a "contains" search on the Field attribute. 
     Please see :ref:`system-searching` for details on searching. 
+
+.. _system-access-policies:
+
+System access policies
+~~~~~~~~~~~~~~~~~~~~~~
+
+System owners can use an access policy to grant other Beaker users limited 
+access to their system.
+
+Access policies are represented as a table of checkboxes, where each column is 
+a permission and each row is a user or group covered by the policy. If 
+a checkbox is selected, the user or group in that row is granted the permission 
+in that column.
+
+The following permissions can be granted in a system access policy:
+
+Edit this policy
+    The user can edit the access policy to grant or revoke permissions, 
+    including adding new users and groups to the policy.
+Edit system details
+    The user can edit system details and configuration, however they cannot 
+    take ownership of it or grant new permissions to themselves or any other 
+    user.
+Loan to anyone
+    The user can loan the system to any Beaker user, including themselves.
+Loan to self
+    The user can loan the system to themselves only.
+Control power
+    The user can run power commands and netboot commands for the system *even 
+    when they have not reserved it*.
+Reserve
+    The user can reserve the system, either through the scheduler (if the 
+    system is Automated) or manually through the web UI (if the system is 
+    Manual).
 
 System activity
 ~~~~~~~~~~~~~~~
