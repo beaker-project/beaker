@@ -194,7 +194,7 @@ class TaskLibrarySync:
                 except Exception, e:
                     session.rollback()
                     session.close()
-                    self.logger.critical('Error adding task %s: %s' % (task_rpm, e))
+                    self.logger.exception('Error adding task %s: %s' % (task_rpm, e))
                     unlink_ignore(os.path.join(self.task_dir, task_rpm))
 
                 else:
@@ -220,11 +220,11 @@ class TaskLibrarySync:
                     f.flush()
 
             except urllib2.HTTPError as err:
-                self.logger.critical('Error downloading %s: %s' % (task_rpm_name, err))
+                self.logger.exception('Error downloading %s: %s' % (task_rpm_name, err))
                 unlink_ignore(rpm_file)
 
             except Exception as err:
-                self.logger.critical('Error downloading %s: %s' % (task_rpm_name, err))
+                self.logger.exception('Error downloading %s: %s' % (task_rpm_name, err))
                 unlink_ignore(rpm_file)
             else:
                 self.logger.debug('Downloaded %s' % task_rpm_name)
