@@ -1,6 +1,6 @@
 <form xmlns:py="http://purl.org/kid/ns#"
  name="${name}"
- action="${tg.url(action)}"
+ action="${action}"
  method="${method}" width="100%">
   <span py:if="lab_controller">
     <span py:if="(automated and can_reserve) or (not automated and reserved)">
