@@ -18,7 +18,7 @@ class TestTaskLibrarySync(unittest.TestCase):
         task_sync = TaskLibrarySync(get_server_base())
         old_tasks, new_tasks = task_sync.tasks()
         with session.begin():
-            tasks = Task.query.all()
+            tasks = Task.query.filter(Task.valid == True).all()
             self.assertEqual(len(old_tasks), len(tasks))
             self.assertEqual(len(new_tasks), 0)
 
