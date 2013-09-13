@@ -5,7 +5,7 @@ from kid import Element
 from sqlalchemy.sql import exists
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears import expose, flash, redirect, paginate, widgets, url
+from turbogears import expose, flash, redirect, paginate
 from bkr.server.model import session, DistroTree, Distro, OSVersion, OSMajor, \
         LabController, LabControllerDistroTree, DistroTreeActivity, \
         distro_tree_lab_controller_map, lab_controller_table, Arch, DistroTag

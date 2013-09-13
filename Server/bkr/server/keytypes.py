@@ -1,21 +1,9 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from kid import Element
-from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
+from turbogears import expose, flash, widgets, error_handler, redirect, paginate, url
+from bkr.server.helpers import make_edit_link, make_remove_link
 from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, HorizontalForm
 from bkr.server.admin_page import AdminPage
-
-import cherrypy
-
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-#import model
-from model import *
-import string
+from bkr.server.model import Key
 
 class KeyTypes(AdminPage):
     # For XMLRPC methods in this class.

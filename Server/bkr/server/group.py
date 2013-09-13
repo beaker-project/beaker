@@ -1,34 +1,33 @@
 
-from turbogears import redirect, config, controllers, expose, \
+from turbogears import redirect, config, expose, \
         flash, widgets, validate, error_handler, validators, redirect, \
         paginate, url
 from turbogears.database import session
 from sqlalchemy.orm.exc import NoResultFound
-from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
+import cherrypy
+from cherrypy import response
 from kid import XML
+
 from bkr.server.validators import StrongPassword
-from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
+from bkr.server.helpers import make_link
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
     GroupPermissions, DeleteLinkWidgetForm, LocalJSLink, AutoCompleteField, \
     HorizontalForm, InlineForm, InlineRemoteForm
 from bkr.server.admin_page import AdminPage
-from bkr.server.bexceptions import BX 
+from bkr.server.bexceptions import BX, BeakerException
 from bkr.server.controller_utilities import restrict_http_method
-import cherrypy
 from bkr.server import mail, identity
 
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-#import model
-from model import *
-import string
+from bkr.server.model import (Group, Permission, System, User, UserGroup,
+                              Activity, GroupActivity, SystemActivity)
+
+import logging
+log = logging.getLogger(__name__)
 
 class GroupOwnerModificationForbidden(BX, cherrypy.HTTPError):
 
     def __init__(self, message):
+        # XXX: Call base class __init__?
         self._message = message
         self.args = [message]
 
@@ -299,6 +298,7 @@ class Groups(AdminPage):
 
         group = Group()
         session.add(group)
+        # FIXME: Actually record the group creation in the activity log
         activity = Activity(user, u'WEBUI', u'Added', u'Group', u"", display_name)
         group.display_name = display_name
         group.group_name = group_name
@@ -404,7 +404,7 @@ class Groups(AdminPage):
     def save_group_permissions(self, **kw):
         try:
             permission_name = kw['permissions']['text']
-        except KeyError, e:
+        except KeyError:
             log.exception('Permission not submitted correctly')
             response.status = 403
             return ['Permission not submitted correctly']
@@ -759,6 +759,7 @@ class Groups(AdminPage):
 
             group = Group()
             session.add(group)
+            # FIXME: Actually record the group creation in the activity log
             activity = Activity(identity.current.user, u'XMLRPC', u'Added', u'Group', u"", kw['display_name'] )
             group.display_name = display_name
             group.group_name = group_name

@@ -1,18 +1,15 @@
-from turbogears import controllers, expose, url, database, validate, flash, redirect
-from turbogears.database import session
-from sqlalchemy.sql.expression import and_, func, not_
+from turbogears import expose, flash, redirect
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import InvalidRequestError
 from bkr.server import identity
 from bkr.server.widgets import ReserveWorkflow as ReserveWorkflowWidget
 from bkr.server.widgets import ReserveSystem
-from bkr.server.model import (osversion_table, distro_table, osmajor_table, arch_table, distro_tag_table,
-                              Distro, Job, RecipeSet, MachineRecipe, System, RecipeTask, RecipeTaskParam,
-                              Task, Arch, OSMajor, DistroTag, SystemType, OSVersion, DistroTree,
+from bkr.server.model import (Distro, Job, System, Arch, OSMajor, DistroTag,
+                              SystemType, OSVersion, DistroTree,
                               LabController, LabControllerDistroTree)
 from bkr.server.jobs import Jobs as JobController
-from bexceptions import *
-import re
+from bkr.common.bexceptions import BX
+
 import logging
 log = logging.getLogger(__name__)
 

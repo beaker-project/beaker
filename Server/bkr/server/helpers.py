@@ -1,6 +1,5 @@
 from kid import Element, XML
-import turbogears, sys
-from turbogears.database import session
+import turbogears
 
 def make_link(url, text, **kwargs):
     # make an <a> element

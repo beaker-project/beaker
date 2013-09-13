@@ -1,13 +1,12 @@
 from kid import XML
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
+from turbogears import expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
 from bkr.server import identity
-from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.widgets import myPaginateDataGrid, HorizontalForm
 from bkr.server.admin_page import AdminPage
 from bkr.server.model import RetentionTag as Tag
 from bkr.server.retention_tag_utility import RetentionTagUtility
-from bkr.server.helpers import make_edit_link, make_link
+from bkr.server.helpers import make_edit_link
 
 import logging
 log = logging.getLogger(__name__)
@@ -53,8 +52,8 @@ class RetentionTag(AdminPage):
         try:
             RetentionTagUtility.edit_default(**kw)
         except Exception, e:
-            log.error('Error editing tag: %s and default: %s' % (kw.get('tag'), kw.get('default_')))
-            flash(_(u"Problem editing tag %s" % kw.get('tag')))
+            log.exception('Error editing tag: %s and default: %s' % (kw.get('tag'), kw.get('default_')))
+            flash(_(u"Problem editing tag %s: %s" % (kw.get('tag'), e)))
             redirect("./admin")
         flash(_(u"OK"))
         redirect("./admin")

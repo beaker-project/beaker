@@ -10,25 +10,21 @@ from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
                         or_, and_, not_, select, case, func, BigInteger)
 
-from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
-        query, object_mapper, mapper, column_property, contains_eager, \
+from sqlalchemy.orm import relation, backref, dynamic_loader, \
+        object_mapper, mapper, column_property, contains_eager, \
         relationship, class_mapper
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.orm.util import has_identity
 from sqlalchemy.sql import exists, union, literal, Insert
-from sqlalchemy.sql.expression import join, Executable, ClauseElement
-from sqlalchemy.exc import InvalidRequestError, IntegrityError
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.types import TypeDecorator, BINARY
 from bkr.server.installopts import InstallOptions, global_install_options
-from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
-from sqlalchemy.util import OrderedDict
+from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.ext import compiler
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
-import socket
-from xmlrpclib import ProtocolError
 import time
 from kid import Element, XML
 from markdown import markdown
@@ -37,18 +33,13 @@ from bkr.server.bexceptions import BeakerException, BX, \
         InsufficientSystemPermissions, StaleSystemUserException, \
         StaleCommandStatusException, NoChangeException
 from bkr.server.enum import DeclEnum
-from bkr.server.helpers import *
+from bkr.server.helpers import make_link, make_fake_link
 from bkr.server.util import unicode_truncate, absolute_url
 from bkr.server import mail, metrics, identity
-import traceback
-from BasicAuthTransport import BasicAuthTransport
-import xmlrpclib
-import bkr.timeout_xmlrpclib
 import os
 import shutil
 import urllib
 import urlparse
-import posixpath
 import crypt
 import random
 import string
@@ -58,17 +49,15 @@ import uuid
 import netaddr
 import ovirtsdk.api
 from collections import defaultdict
-from datetime import timedelta, date, datetime
+from datetime import timedelta, datetime
 from hashlib import md5, sha1
 import xml.dom.minidom
-from xml.dom.minidom import Node, parseString
 
 # These are only here for TaskLibrary. It would be nice to factor that out,
 # but there's a circular dependency between Task and TaskLibrary
 import subprocess
 import rpm
 from rhts import testinfo
-from rhts.testinfo import ParserError, ParserWarning
 from bkr.common.helpers import (AtomicFileReplacement, Flock,
                                 makedirs_ignore, unlink_ignore)
 
@@ -101,7 +90,7 @@ DeclBase = declarative_base(constructor=decl_base_constructor,
 
 
 class ConditionalInsert(Insert):
-    def __init__(self, table, unique_values, extra_values={}):
+    def __init__(self, table, unique_values, extra_values=()):
         """
         An INSERT statement which will atomically insert a row with the given 
         values if one does not exist, or otherwise do nothing. extra_values are 
@@ -1815,8 +1804,8 @@ class User(MappedObject, ActivityMixin):
         "Set the password to be used for root on provisioned systems, hashing if necessary"
         if password:
             if len(password.split('$')) != 4:
-                salt = ''.join([random.choice(string.digits + string.ascii_letters)
-                                for i in range(8)])
+                salt = ''.join(random.choice(string.digits + string.ascii_letters)
+                                for i in range(8))
                 self._root_password = crypt.crypt(cracklib.VeryFascistCheck(password), "$1$%s$" % salt)
             else:
                 self._root_password = password
@@ -1831,8 +1820,8 @@ class User(MappedObject, ActivityMixin):
         else:
             pw = ConfigItem.by_name(u'root_password').current_value()
             if pw:
-                salt = ''.join([random.choice(string.digits + string.ascii_letters)
-                                for i in range(8)])
+                salt = ''.join(random.choice(string.digits + string.ascii_letters)
+                                for i in range(8))
                 return crypt.crypt(pw, "$1$%s$" % salt)
 
     root_password = property(_get_root_password, _set_root_password)
@@ -1889,7 +1878,7 @@ class Permission(MappedObject):
     """
     @classmethod
     def by_id(cls, id):
-      return cls.query.filter_by(permission_id=id).one()
+        return cls.query.filter_by(permission_id=id).one()
 
     @classmethod
     def by_name(cls, permission_name, anywhere=False):
@@ -2015,8 +2004,8 @@ class Group(DeclBase, MappedObject, ActivityMixin):
         """
         if password:
             if len(password.split('$')) != 4:
-                salt = ''.join([random.choice(string.digits + string.ascii_letters)
-                                for i in range(8)])
+                salt = ''.join(random.choice(string.digits + string.ascii_letters)
+                                for i in range(8))
                 try:
                     # If you change VeryFascistCheck, please also modify
                     # bkr.server.validators.StrongPassword
@@ -2211,7 +2200,7 @@ class System(SystemObject):
         if user is None:
             try:
                 user = identity.current.user
-            except AttributeError, e:
+            except AttributeError:
                 user = None
 
         if user:
@@ -2319,7 +2308,7 @@ class System(SystemObject):
     @classmethod
     def by_group(cls,group_id,*args,**kw):
         return System.query.join(SystemGroup,Group).filter(Group.group_id == group_id)
-    
+
     @classmethod
     def by_type(cls,type,user=None,systems=None):
         if systems:
@@ -2413,7 +2402,7 @@ class System(SystemObject):
         if not user:
             try:
                 user = identity.current.user
-            except AttributeError, e: pass #May not be logged in
+            except AttributeError: pass #May not be logged in
 
         if not user: #Can't verify anything
             return False
@@ -3441,7 +3430,7 @@ class Cpu(SystemObject):
 
     def updateFlags(self,flags):
         if flags != None:
-	    for cpuflag in flags:
+            for cpuflag in flags:
                 new_flag = CpuFlag(flag=cpuflag)
                 self.flags.append(new_flag)
 
@@ -4116,7 +4105,7 @@ class Log(MappedObject):
 
     @classmethod 
     def by_id(cls,id): 
-       return cls.query.filter_by(id=id).one()
+        return cls.query.filter_by(id=id).one()
 
     def __cmp__(self, other):
         """ Used to compare logs that are already stored. Log(path,filename) in Recipe.logs  == True
@@ -4159,7 +4148,7 @@ class TaskBase(MappedObject):
         task_type,id = t_id.split(":")
         try:
             class_str = cls.t_id_types[task_type]
-        except KeyError, e:
+        except KeyError:
             raise BeakerException(_('You have have specified an invalid task type:%s' % task_type))
 
         class_ref = globals()[class_str]
@@ -4366,18 +4355,17 @@ class Job(TaskBase):
                 if log_B.startswith(log_A) and log_A != log_B:
                     try:
                         logs_to_return.remove(log_B)
-                    except KeyError, e:
+                    except KeyError:
                         pass # Possibly already removed
         return logs_to_return
 
     @classmethod
     def expired_logs(cls, limit=None):
-        """Return log files for expired recipes
+        """Iterate over log files for expired recipes
 
-        Will not return recipes that have already been deleted. Does
-        return recipes that are marked to be deleted though.
+        Will not yield recipes that have already been deleted. Does
+        yield recipes that are marked to be deleted though.
         """
-        expired_logs = []
         job_ids = [job_id for job_id, in cls.marked_for_deletion().values(Job.id)]
         for tag in RetentionTag.get_transient():
             expire_in = tag.expire_in_days
@@ -4891,7 +4879,7 @@ class Job(TaskBase):
             return False
         if self.group:
             if self.group in user.groups:
-               return True
+                return True
         return self.is_owner(user) or user.is_admin() or \
             self.submitter == user
 
@@ -5045,7 +5033,7 @@ class RecipeSetResponse(MappedObject):
 
     @classmethod 
     def by_id(cls,id): 
-       return cls.query.filter_by(recipe_set_id=id).one()
+        return cls.query.filter_by(recipe_set_id=id).one()
 
     @classmethod
     def by_jobs(cls,job_ids):
@@ -5177,7 +5165,7 @@ class RecipeSet(TaskBase):
 
     @classmethod 
     def by_id(cls,id): 
-       return cls.query.filter_by(id=id).one()
+        return cls.query.filter_by(id=id).one()
 
     @classmethod
     def by_job_id(cls,job_id):
@@ -5228,7 +5216,7 @@ class RecipeSet(TaskBase):
                 min_status = recipe.status
             if recipe.result.severity > max_result.severity:
                 max_result = recipe.result
-        status_changed = self._change_status(min_status)
+        self._change_status(min_status)
         self.result = max_result
 
         # Return systems if recipeSet finished
@@ -6683,7 +6671,7 @@ class VirtResource(RecipeResource):
                     self.system_name, self.recipe.id)
             with VirtManager() as manager:
                 manager.destroy_vm(self.system_name)
-        except Exception, e:
+        except Exception:
             log.exception('Failed to destroy vm %s, leaked!',
                     self.system_name)
             # suppress exception, nothing more we can do now
@@ -6762,9 +6750,9 @@ class TaskLibrary(object):
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, err = p.communicate()
         if output:
-           log.debug("stdout from createrepo: %s", output)
+            log.debug("stdout from createrepo: %s", output)
         if err:
-           log.warn("stderr from createrepo: %s", err)
+            log.warn("stderr from createrepo: %s", err)
         retcode = p.poll()
         if retcode:
             raise ValueError('createrepo failed with exit status %d:\n%s'
@@ -7134,7 +7122,7 @@ class Task(MappedObject):
             task.append(excluded)
         return lxml.etree.tostring(task, pretty_print=pretty)
 
-    def elapsed_time(self, suffixes=[' year',' week',' day',' hour',' minute',' second'], add_s=True, separator=', '):
+    def elapsed_time(self, suffixes=(' year',' week',' day',' hour',' minute',' second'), add_s=True, separator=', '):
         """
         Takes an amount of seconds and turns it into a human-readable amount of 
         time.
@@ -7312,7 +7300,7 @@ class ConfigItem(MappedObject):
         if user is None:
             try:
                 user = identity.current.user
-            except AttributeError, e:
+            except AttributeError:
                 raise BX(_('Settings may not be changed anonymously'))
         if valid_from:
             if valid_from < datetime.utcnow():
@@ -7943,7 +7931,6 @@ mapper(ConfigValueString, config_value_string_table,
 
 
 ## Static list of device_classes -- used by master.kid
-global _device_classes
 _device_classes = None
 def device_classes():
     global _device_classes
@@ -7954,8 +7941,8 @@ def device_classes():
 
 # available in python 2.7+ importlib
 def import_module(modname):
-     __import__(modname)
-     return sys.modules[modname]
+    __import__(modname)
+    return sys.modules[modname]
 
 def auto_cmd_handler(command, new_status):
     if not command.system.open_reservation:

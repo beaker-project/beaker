@@ -16,27 +16,28 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from datetime import datetime
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config, url
-from cherrypy import request, response
-from kid import Element
+from turbogears import expose, flash, widgets, redirect, paginate, url
+from sqlalchemy import not_, and_
+from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
+from bkr.common.bexceptions import BX
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import RecipeWidget
 from bkr.server.widgets import SearchBar
-from bkr.server.widgets import RecipeActionWidget
 from bkr.server import search_utility, identity
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
+from bkr.server.helpers import make_link
 from bkr.server.recipetasks import RecipeTasks
 from bkr.server.controller_utilities import _custom_status, _custom_result
-from socket import gethostname
-import exceptions
-import time
+from datetime import timedelta
 import urlparse
 
 import cherrypy
 
-from model import *
-import string
+from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
+                              MachineRecipe, SystemResource, VirtResource,
+                              VirtManager, LogRecipe, LogRecipeTask,
+                              LogRecipeTaskResult)
 
 import logging
 log = logging.getLogger(__name__)
@@ -155,7 +156,7 @@ class Recipes(RPCRoot):
         if log_type.upper() in self.log_types.keys():
             try:
                 mylog = self.log_types[log_type.upper()].by_id(log_id)
-            except InvalidRequestError, e:
+            except InvalidRequestError:
                 raise BX(_("Invalid %s" % tid))
         mylog.server = server
         mylog.basepath = basepath
@@ -226,7 +227,7 @@ class Recipes(RPCRoot):
         """
         try:
             recipe = Recipe.by_id(recipe_id)
-        except InvalidRequestError, e:
+        except InvalidRequestError:
             raise BX(_(u'Invalid Recipe ID %s' % recipe_id))
         recipe.resource.postinstall_finished = datetime.utcnow()
         return True
@@ -295,7 +296,7 @@ class Recipes(RPCRoot):
         if not recipe_id:
             raise BX(_("No recipe id provided!"))
         try:
-           recipexml = Recipe.by_id(recipe_id).to_xml().toprettyxml()
+            recipexml = Recipe.by_id(recipe_id).to_xml().toprettyxml()
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
         return recipexml
@@ -422,7 +423,7 @@ class Recipes(RPCRoot):
     def systems(self, recipe_id=None, *args, **kw):
         try:
             recipe = Recipe.by_id(recipe_id)
-        except NoResultFound, e:
+        except NoResultFound:
             flash(_(u"Invalid recipe id %s" % recipe_id))
             redirect(url("/recipes"))
         PDC = widgets.PaginateDataGrid.Column

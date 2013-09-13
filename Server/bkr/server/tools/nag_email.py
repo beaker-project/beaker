@@ -13,7 +13,7 @@ from bkr.log import log_to_stream
 from bkr.server.model import System, Reservation
 from bkr.server.util import load_config
 from turbogears import config
-from turbogears.database import session, get_engine
+from turbogears.database import get_engine
 from turbomail.control import interface
 from bkr.server import mail
 from optparse import OptionParser

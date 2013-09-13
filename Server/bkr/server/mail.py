@@ -21,7 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 """
 
 
-from turbogears import config, url
+from turbogears import config
 import turbomail
 import logging
 from bkr.server.util import absolute_url
@@ -36,7 +36,7 @@ def send_mail(sender, to, subject, body, **kwargs):
         turbomail.send(message)
     except MailNotEnabledException:
         log.warning("TurboMail is not enabled!")
-    except Exception, e:
+    except Exception:
         log.exception("Exception thrown when trying to send mail")
 
 def failed_recipes(job):

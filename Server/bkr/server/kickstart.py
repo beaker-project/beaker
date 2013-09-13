@@ -178,7 +178,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
 
     snippet_locations = []
     if system:
-         snippet_locations.append(
+        snippet_locations.append(
              'snippets/per_system/%%s/%s' % system.fqdn)
     snippet_locations.extend([
         'snippets/per_lab/%%s/%s' % lab_controller.fqdn,

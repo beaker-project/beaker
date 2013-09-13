@@ -1,32 +1,14 @@
 import datetime
-from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, \
-        error_handler, validators, redirect, paginate, url, config
-from turbogears.widgets import AutoCompleteField
-from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from sqlalchemy.sql import func, and_, or_, not_, select
-from sqlalchemy.orm import create_session, contains_eager
-from kid import Element
+from turbogears import expose, widgets, paginate, url
+from sqlalchemy.orm import contains_eager
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
+from bkr.server.helpers import make_link
 from bkr.server.widgets import SearchBar, myPaginateDataGrid
 from bkr.server.controller_utilities import SearchOptions
-from bkr.server.model import System, Reservation, SystemStatus, SystemType, \
-        Arch, SystemStatusDuration, Group
-from bkr.server.util import absolute_url, get_reports_engine
+from bkr.server.model import System
 from bkr.server import search_utility, identity
-from distro import Distros
 from bkr.server.external_reports import ExternalReportsController
 
-import cherrypy
-
-from BasicAuthTransport import BasicAuthTransport
-import xmlrpclib
-from turbojson import jsonify
-import csv
-from cStringIO import StringIO
-import string
 import pkg_resources
 import logging
 

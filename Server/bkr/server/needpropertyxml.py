@@ -18,17 +18,20 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import os
-import sys
 import operator
-from bkr.server.model import *
-from turbogears.database import session
-import turbogears
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, not_, exists
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import aliased
 import datetime
 from lxml import etree
+
+from bkr.server.model import (Arch, Distro, DistroTree, DistroTag,
+                              OSMajor, OSVersion, Group, System, User,
+                              Key, Key_Value_Int, Key_Value_String,
+                              LabController, distro_tree_lab_controller_map,
+                              lab_controller_table, LabControllerDistroTree,
+                              Hypervisor, Cpu, CpuFlag, Numa, Device,
+                              DeviceClass, Disk, Power, PowerType)
 
 # This follows the SI conventions used in disks and networks --
 # *not* applicable to computer memory!
@@ -61,7 +64,7 @@ def get_dtrange(dt):
 def date_filter(col, op, value):
     try:
         dt = datetime.datetime.strptime(value,'%Y-%m-%d').date()
-    except ValueError,e:
+    except ValueError:
         raise ValueError('Invalid date format: %s. '
                                  'Use YYYY-MM-DD.' % value)
     if op == '__eq__':
