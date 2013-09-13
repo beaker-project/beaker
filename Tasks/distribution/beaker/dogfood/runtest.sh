@@ -32,3 +32,4 @@ else
 fi
 rhts-run-simple-test $TEST "nosetests -v $NOSEARGS" || :
 rhts-submit-log -l /var/log/beaker/server-errors.log
+rhts-submit-log -l /var/log/beaker/server-debug.log
