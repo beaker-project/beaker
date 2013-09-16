@@ -10,12 +10,9 @@ from bkr.log import log_to_stream
 from bkr.server.model import OSMajor
 from bkr.server.util import load_config
 from optparse import OptionParser
-from turbogears.database import session
 from turbogears.config import get
-from sqlalchemy.exc import InvalidRequestError, IntegrityError
 import os
 import sys
-import traceback
 import urlparse
 import shutil
 import yum, yum.misc, yum.packages

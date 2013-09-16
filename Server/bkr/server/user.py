@@ -1,23 +1,21 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from cherrypy import request, response
-from kid import Element, XML
+from turbogears import (expose, widgets, flash, error_handler,
+                        validate, validators, redirect, paginate, url)
+from sqlalchemy import and_, or_
+from sqlalchemy.exc import InvalidRequestError
+from kid import XML
+from bkr.common.bexceptions import BX
 from bkr.server import identity
-from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
+from bkr.server.helpers import make_edit_link
 from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, \
-    BeakerDataGrid, AutoCompleteField, HorizontalForm
+    BeakerDataGrid, HorizontalForm
 from bkr.server.admin_page import AdminPage
 from bkr.server import validators as beaker_validators
 
 import cherrypy
+from datetime import datetime
 
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-#import model
-from model import *
-import string
+from bkr.server.model import User, Job, System, SystemActivity, TaskStatus
 
 
 class UserFormSchema(validators.Schema):

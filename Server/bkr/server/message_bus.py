@@ -1,21 +1,8 @@
-from bkr.server.bexceptions import BeakerException
-from bkr.server.recipetasks import RecipeTasks
-import bkr.server.model as bkr_model
-from bkr.server.model import TaskBase, LabController
 from turbogears import config as tg_config
 from bkr.common.message_bus import BeakerBus
-from bkr.common.helpers import BkrThreadPool
-from time import sleep
-from threading import Thread
-import Queue
+
 import logging
 log = logging.getLogger(__name__)
-
-try:
-    from qpid.messaging import *
-    from qpid import datatypes
-except ImportError, e:
-    pass
 
 class ServerBeakerBus(BeakerBus):
 

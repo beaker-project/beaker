@@ -1,7 +1,6 @@
 import cherrypy
-import sys
 from datetime import datetime
-from turbogears import widgets, expose, validators, \
+from turbogears import widgets, expose, \
 	error_handler, validate, flash, redirect, url
 from turbogears.database import session
 from sqlalchemy.exc import InvalidRequestError
@@ -12,10 +11,10 @@ from bkr.server import validators as beaker_validators
 from bkr.server.widgets import BeakerDataGrid, DeleteLinkWidgetForm, \
     DoAndConfirmForm, AutoCompleteField, HorizontalForm, InlineForm
 from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.common.bexceptions import BX, BeakerException
 from bkr.server.bexceptions import NoChangeException
-from bkr.server.helpers import make_link
 
-from bexceptions import *
+# from bexceptions import *
 
 __all__ = ['Preferences']
 
@@ -110,7 +109,7 @@ class Preferences(RPCRoot):
     def remove_submission_delegate_by_name(self, delegate_name, service=u'XMLRPC'):
         user = identity.current.user
         try:
-           submission_delegate = User.by_user_name(delegate_name)
+            submission_delegate = User.by_user_name(delegate_name)
         except NoResultFound:
             raise BX(_(u'%s is not a valid user name' % delegate_name))
         try:
@@ -126,7 +125,7 @@ class Preferences(RPCRoot):
     def remove_submission_delegate(self, delegate_id, service=u'WEBUI'):
         user = identity.current.user
         try:
-           submission_delegate = User.by_id(delegate_id)
+            submission_delegate = User.by_id(delegate_id)
         except NoResultFound:
             flash(_(u'%s is not a valid user id' % delegate_id))
             redirect('.')

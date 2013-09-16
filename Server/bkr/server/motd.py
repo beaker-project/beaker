@@ -1,6 +1,4 @@
 import errno
-import logging
-import os.path
 from turbogears import config
 from lxml import etree
 import logging

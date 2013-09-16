@@ -16,35 +16,39 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from cherrypy import request, response
-from kid import Element
+from turbogears import expose, flash, widgets, validate, validators, redirect, paginate, url
+from cherrypy import response
 from formencode.api import Invalid
+from sqlalchemy import and_
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
-from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
+from bkr.server.widgets import myPaginateDataGrid, \
     RecipeWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
     SearchBar, JobWhiteboard, ProductWidget, JobActionWidget, JobPageActionWidget, \
     HorizontalForm, BeakerDataGrid
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
+from bkr.server.helpers import make_link
 from bkr.server import search_utility, identity
 from bkr.server.controller_utilities import _custom_status, _custom_result, \
     restrict_http_method
-import datetime
 import pkg_resources
 import lxml.etree
 import logging
 
 import cherrypy
 
-from model import *
-import string
+from bkr.server.model import (Job, RecipeSet, RetentionTag, TaskBase,
+                              TaskPriority, User, Group, MachineRecipe,
+                              DistroTree, TaskPackage, RecipeRepo,
+                              RecipeKSAppend, Task, Product, GuestRecipe,
+                              RecipeTask, RecipeTaskParam, RecipeSetResponse,
+                              Response, StaleTaskStatusException,
+                              RecipeSetActivity)
 
-from bexceptions import *
+from bkr.common.bexceptions import BeakerException, BX
 
 import xmltramp
-from jobxml import *
+from bkr.server.jobxml import XmlJob
 import cgi
 from bkr.server.job_utilities import Utility
 
@@ -83,17 +87,18 @@ class Jobs(RPCRoot):
                }
     whiteboard_widget = JobWhiteboard()
 
-    upload = widgets.FileField(name='filexml', label='Job XML')
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
     message = widgets.TextArea(name='msg', label=_(u'Reason?'), help_text=_(u'Optional'))
 
+    _upload = widgets.FileField(name='filexml', label='Job XML')
     form = HorizontalForm(
         'jobs',
-        fields = [upload],
+        fields = [_upload],
         action = 'save_data',
         submit_text = _(u'Submit Data')
     )
+    del _upload
 
     cancel_form = widgets.TableForm(
         'cancel_job',
@@ -142,7 +147,7 @@ class Jobs(RPCRoot):
         try:
             self._delete_job(t_id)
             flash(_(u'Succesfully deleted %s' % t_id))
-        except (BeakerException, TypeError), e:
+        except (BeakerException, TypeError):
             flash(_(u'Unable to delete %s' % t_id))
             redirect('.')
         redirect('./mine')
@@ -427,7 +432,7 @@ class Jobs(RPCRoot):
         if recipeset_priority is not None:
             try:
                 my_priority = TaskPriority.from_string(recipeset_priority)
-            except InvalidRequestError, (e):
+            except InvalidRequestError:
                 raise BX(_('You have specified an invalid recipeSet priority:%s' % recipeset_priority))
             allowed_priorities = RecipeSet.allowed_priorities_initial(user)
             if my_priority in allowed_priorities:
@@ -912,7 +917,7 @@ class Jobs(RPCRoot):
         for attr in kw:
             try:
                 setattr(job, attr, kw[attr])
-            except AttributeError, e:
+            except AttributeError:
                 return {'success' : False }
                 # FIXME I think job_whiteboard will need a status non 200
                 # raised to catch an error 

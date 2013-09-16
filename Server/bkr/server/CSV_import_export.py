@@ -1,12 +1,19 @@
 
 from turbogears.database import session
 from turbogears import expose, widgets
+from sqlalchemy.exc import InvalidRequestError
 from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
 from tempfile import NamedTemporaryFile
 from cherrypy.lib.cptools import serve_file
-from bkr.server.model import *
+from bkr.server.model import (System, SystemType, Activity, SystemActivity,
+                              User, Group, LabController, LabInfo,
+                              OSMajor, OSVersion,
+                              ExcludeOSMajor, ExcludeOSVersion,
+                              SystemStatus, Power, PowerType, Arch,
+                              Provision, ProvisionFamily,
+                              ProvisionFamilyUpdate,
+                              Key, Key_Value_Int, Key_Value_String)
 from bkr.server.widgets import HorizontalForm, RadioButtonList
 import csv
 import datetime
@@ -787,12 +794,12 @@ class CSV_GroupUser(CSV):
         """
         if 'group' in data and data['group']:
             try:
-               group = Group.by_name(data['group'])
+                group = Group.by_name(data['group'])
             except InvalidRequestError:
-               group = Group(group_name=data['group'],
-                             display_name=data['group'])
-               session.add(group)
-               session.flush([group])
+                group = Group(group_name=data['group'],
+                              display_name=data['group'])
+                session.add(group)
+                session.flush([group])
             deleted = False
             if 'deleted' in data:
                 deleted = smart_bool(data['deleted'])
@@ -831,12 +838,12 @@ class CSV_GroupSystem(CSV):
         """
         if 'group' in data and data['group']:
             try:
-               group = Group.by_name(data['group'])
+                group = Group.by_name(data['group'])
             except InvalidRequestError:
-               group = Group(group_name=data['group'],
-                             display_name=data['group'])
-               session.add(group)
-               session.flush([group])
+                group = Group(group_name=data['group'],
+                              display_name=data['group'])
+                session.add(group)
+                session.flush([group])
             deleted = False
             if 'deleted' in data:
                 deleted = smart_bool(data['deleted'])

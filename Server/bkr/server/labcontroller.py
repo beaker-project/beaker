@@ -4,7 +4,7 @@ from turbogears import url, expose, flash, validate, error_handler, \
 from kid import XML
 from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import make_link, make_edit_link
+from bkr.server.helpers import make_edit_link
 from bkr.server.util import total_seconds
 from bkr.server.widgets import LabControllerDataGrid, LabControllerForm
 from bkr.server.distrotrees import DistroTrees

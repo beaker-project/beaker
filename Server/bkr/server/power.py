@@ -1,11 +1,10 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from kid import Element
-from bkr.server.xmlrpccontroller import RPCRoot
+from turbogears import (expose, flash, widgets, error_handler,
+                        redirect, paginate, url)
+from kid import Element, XML
 from bkr.server.widgets import AlphaNavBar, myPaginateDataGrid, HorizontalForm
 from bkr.server.model import PowerType
 from bkr.server.admin_page import AdminPage
-from model import *
 
 def make_link(url, text):
     # make a <a> element

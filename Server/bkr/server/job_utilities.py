@@ -15,9 +15,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from bkr.server.model import Job, RetentionTag, Product
+from bkr.server.model import RetentionTag, Product
 from bkr.server.widgets import ProductWidget
-from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 
 import logging
@@ -56,7 +55,7 @@ class Utility:
         elif retentiontag is None and product is not None: #only product
             return cls.check_product_job(job, product)
         else: #updating both
-           return cls._update_task_product(job, product, retentiontag)
+            return cls._update_task_product(job, product, retentiontag)
 
     @classmethod
     def _update_task_product(cls, job, product, retentiontag):
@@ -87,7 +86,6 @@ class Utility:
         """
         #This ensures that we take into account any proposed product change
         the_product = job.product
-        old_retentiontag = job.retention_tag.tag
         new_retentiontag = retentiontag
 
         if new_retentiontag.requires_product() != bool(the_product):

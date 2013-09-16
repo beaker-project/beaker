@@ -16,30 +16,30 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config, url
-from cherrypy import request, response
-from kid import Element
+from turbogears import expose, flash, widgets, validate, redirect, paginate, url
 from bkr.server import search_utility, identity
 from bkr.server.widgets import myPaginateDataGrid, TasksWidget, TaskSearchForm, \
         SearchBar, TaskActionWidget, HorizontalForm
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
-from bkr.common.helpers import unlink_ignore, siphon
+from bkr.common.helpers import siphon
+from bkr.common.bexceptions import BX
+from sqlalchemy import or_, and_
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import joinedload, joinedload_all
 from sqlalchemy.orm.exc import NoResultFound
-import tempfile
 
 import os
-import errno
 
 import cherrypy
 
-# from medusa import json
-# import logging
-# log = logging.getLogger("medusa.controllers")
-#import model
-from model import *
-import string
+from bkr.server.model import (Distro, Task, OSMajor, Recipe, RecipeSet,
+                              RecipeTask, DistroTree, TaskPackage, TaskType,
+                              Job, Arch, OSVersion, RecipeTaskResult, System,
+                              SystemResource, RecipeResource)
+
+import logging
+log = logging.getLogger(__name__)
 
 __all__ = ['Tasks']
 
@@ -51,13 +51,14 @@ class Tasks(RPCRoot):
     task_form = TaskSearchForm()
     task_widget = TasksWidget()
 
-    upload = widgets.FileField(name='task_rpm', label='Task RPM')
+    _upload = widgets.FileField(name='task_rpm', label='Task RPM')
     form = HorizontalForm(
         'task',
-        fields = [upload],
+        fields = [_upload],
         action = 'save_data',
         submit_text = _(u'Upload')
     )
+    del _upload
 
     @expose(template='bkr.server.templates.form-post')
     @identity.require(identity.not_anonymous())
@@ -116,7 +117,7 @@ class Tasks(RPCRoot):
         elif 'osmajor' in filter and filter['osmajor']:
             try:
                 osmajor = OSMajor.by_name(filter['osmajor'])
-            except InvalidRequestError, err:
+            except InvalidRequestError:
                 raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
             tasks = osmajor.tasks()
         else:

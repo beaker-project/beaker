@@ -2,9 +2,7 @@
 import os
 import errno
 import logging
-import string
 from decorator import decorator
-import urllib
 import itsdangerous
 import cherrypy
 import flask

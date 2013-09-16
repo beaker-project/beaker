@@ -1,27 +1,14 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, \
-    error_handler, validators, redirect, paginate, url
-from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from kid import Element
+from turbogears import expose, flash, widgets, validate, \
+    validators, redirect, paginate, url
+from sqlalchemy.exc import InvalidRequestError
 from bkr.server import identity
-from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
-from bkr.server.widgets import AlphaNavBar, myPaginateDataGrid, HorizontalForm, \
+from bkr.server.helpers import make_link
+from bkr.server.widgets import myPaginateDataGrid, HorizontalForm, \
         CheckBoxList
 from bkr.server.admin_page import AdminPage
 
-import cherrypy
-
-from BasicAuthTransport import BasicAuthTransport
-import xmlrpclib
-
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-#import model
-from model import *
-import string
+from bkr.server.model import Arch, OSMajor, OSVersion, OSMajorInstallOptions
 
 # Validation Schemas
 
