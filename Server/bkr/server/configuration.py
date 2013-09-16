@@ -1,13 +1,13 @@
 from turbogears.database import session
 from turbogears import expose, flash, widgets, error_handler, validators, redirect, paginate, url
 from bkr.server import identity
-from bkr.server.helpers import *
+from bkr.server.helpers import make_link, make_edit_link
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, AlphaNavBar, \
         HorizontalForm
 from bkr.server.admin_page import AdminPage
 from datetime import datetime
 
-from model import ConfigItem
+from bkr.server.model import ConfigItem
 
 class Configuration(AdminPage):
     exposed = False
