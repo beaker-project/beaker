@@ -51,7 +51,7 @@ def _create_env():
     return env
 
 def get_assets_env():
-    global _env, _env_lock
+    global _env
     if _env is None:
         with _env_lock:
             if _env is None:
