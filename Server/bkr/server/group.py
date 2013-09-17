@@ -16,7 +16,7 @@ from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
 from bkr.server.admin_page import AdminPage
 from bkr.server.bexceptions import BX, BeakerException
 from bkr.server.controller_utilities import restrict_http_method
-from bkr.server.wsgi import app
+from bkr.server.app import app
 from bkr.server import mail, identity
 
 from bkr.server.model import (Group, Permission, System, User, UserGroup,
