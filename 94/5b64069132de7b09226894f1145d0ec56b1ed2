@@ -1,0 +1,8 @@
+Verified+1: Dan Callaghan <dcallagh@redhat.com>
+Code-Review+2: Raymond Mancy <rmancy@redhat.com>
+Code-Review+1: Nick Coghlan <ncoghlan@redhat.com>
+Submitted-by: Dan Callaghan <dcallagh@redhat.com>
+Submitted-at: Tue, 17 Sep 2013 07:12:28 +0000
+Reviewed-on: http://gerrit.beaker-project.org/2200
+Project: beaker
+Branch: refs/heads/develop
