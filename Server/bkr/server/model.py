@@ -4582,6 +4582,13 @@ class Job(TaskBase):
         return query
 
     @classmethod
+    def cancel_jobs_by_user(cls, user, msg = None):
+        jobs = Job.query.filter(and_(Job.owner == user,
+                                     Job.status.in_([s for s in TaskStatus if not s.finished])))
+        for job in jobs:
+            job.cancel(msg=msg)
+
+    @classmethod
     def delete_jobs(cls, jobs=None, query=None):
         jobs_to_delete  = cls._delete_criteria(jobs,query)
 

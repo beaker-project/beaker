@@ -2,6 +2,8 @@ import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, create_client_config, ClientError
+from bkr.server.model import TaskStatus, Job
+from bkr.server.tools import beakerd
 
 class RemoveAccountTest(unittest.TestCase):
 
@@ -41,3 +43,23 @@ class RemoveAccountTest(unittest.TestCase):
             self.fail('Must fail or die')
         except ClientError, e:
             self.assertIn('Not member of group: admin', e.stderr_output)
+
+    def test_account_close_job_cancel(self):
+
+        with session.begin():
+            user1 = data_setup.create_user()
+            job = data_setup.create_job(owner=user1)
+            data_setup.mark_job_running(job)
+
+        run_client(['bkr', 'remove-account', user1.user_name])
+
+        # reflect the change in recipe task status when
+        # update_dirty_jobs() is called
+        session.expunge_all()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.by_id(job.id)
+            self.assertEquals(job.status, TaskStatus.cancelled)
+            self.assertIn('User %s removed' % user1.user_name,
+                          job.recipesets[0].recipes[0].tasks[0].results[0].log)

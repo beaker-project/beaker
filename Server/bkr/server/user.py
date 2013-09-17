@@ -11,6 +11,7 @@ from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, \
     BeakerDataGrid, HorizontalForm
 from bkr.server.admin_page import AdminPage
 from bkr.server import validators as beaker_validators
+from sqlalchemy import and_
 
 import cherrypy
 from datetime import datetime
@@ -152,16 +153,14 @@ class Users(AdminPage):
         except InvalidRequestError:
             flash(_(u'Invalid user id %s' % id))
             raise redirect('.')
-        flash( _(u'%s Removed') % user.display_name )
         try:
             self._remove(user=user, method='WEBUI')
         except BX, e:
-            flash( _(u'Failed to Remove User %s, due to %s' % (user.user_name,
-                                                               e
-                                                              )
-                    )
-                 )
-        raise redirect('.')
+            flash( _(u'Failed to remove User %s, due to %s' % (user.user_name, e)))
+            raise redirect('.')
+        else:
+            flash( _(u'User %s removed') % user.user_name )
+            redirect('.')
 
     @identity.require(identity.in_group("admin"))
     @expose()
@@ -203,22 +202,21 @@ class Users(AdminPage):
 
         self._remove(user=user, method='XMLRPC')
 
-    def _disable(self, user, method, 
+    def _disable(self, user, method,
                  msg='Your account has been temporarily disabled'):
+
         # cancel all queued and running jobs
-        jobs = Job.query.filter(and_(Job.owner==user,
-                                    or_(Job.status==TaskStatus.queued,
-                                        Job.status==TaskStatus.running
-                                           ),
-                                       ),
-                                  )
-        for job in jobs:
-            job.cancel(msg=msg)
+        Job.cancel_jobs_by_user(user, msg)
 
     def _remove(self, user, method, **kw):
-        # Return all systems in use by this user
+
         if user == identity.current.user:
             raise BX(_('You cannot remove yourself'))
+
+        # cancel all running and queued jobs
+        Job.cancel_jobs_by_user(user, 'User %s removed' % user.user_name)
+
+        # Return all systems in use by this user
         for system in System.query.filter(System.user==user):
             msg = ''
             try:
