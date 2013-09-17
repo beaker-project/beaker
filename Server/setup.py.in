@@ -192,6 +192,7 @@ setup(
     data_files = data_files,
     packages = find_packages(),
     package_data={
+        'bkr.server.tests': ['unit-test.cfg', '*.rpm'],
         'bkr.server.config': ['*.cfg'],
         'bkr.server.templates': ['*.kid'],
         'bkr.server': ['kickstarts/*', 'snippets/*', 'reporting-queries/*'],
