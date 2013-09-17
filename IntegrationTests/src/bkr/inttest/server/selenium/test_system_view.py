@@ -52,20 +52,6 @@ class SystemViewTestWD(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
-    def test_clear_netboot(self):
-        b = self.browser
-        login(b)
-        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('Commands').click()
-
-        clear = b.find_element_by_xpath('//button[normalize-space(text())='
-            '"Clear Netboot"]')
-        clear.click()
-        b.find_element_by_xpath("//button[@type='button' and .//text()='Yes']").click()
-        flash_text = b.find_element_by_class_name('flash').text
-        self.assertEqual(flash_text, u'Clear netboot command enqueued')
-
-
     #https://bugzilla.redhat.com/show_bug.cgi?id=886875
     def test_kernel_install_options_propagated_view(self):
 
@@ -151,7 +137,6 @@ class SystemViewTest(SeleniumTestCase):
                 lab_controllers=[self.lab_controller])
         self.system = data_setup.create_system(owner=self.system_owner,
                 status=u'Automated', arch=u'i386')
-        self.system.shared = True
         self.system.provisions[self.distro_tree.arch] = Provision(
                 arch=self.distro_tree.arch, ks_meta=u'some_ks_meta_var=1',
                 kernel_options=u'some_kernel_option=1',
@@ -503,7 +488,7 @@ class SystemViewTest(SeleniumTestCase):
         self.assertEquals(sel.get_xpath_count(
                 '//td[normalize-space(text())="%s"]' % group.group_name), 1)
         sel.click( # delete link inside cell in row with group name
-                '//table//td[normalize-space(preceding-sibling::td[3]/text())="%s"]'
+                '//table//td[normalize-space(preceding-sibling::td[2]/text())="%s"]'
                 '//a[normalize-space(string(.))="Delete"]' % group.group_name)
         sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
@@ -694,21 +679,6 @@ class SystemViewTest(SeleniumTestCase):
         with session.begin():
             session.refresh(self.system)
             self.assertEqual(self.system.mac_address, bad_mac_address)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=740321
-    def test_no_power_without_lc(self):
-        self.login()
-        sel = self.selenium
-        self.go_to_system_view()
-        sel.click('link=Commands')
-        self.assert_(sel.is_element_present(
-                '//button[normalize-space(text())="Power On"]'))
-        self.go_to_system_edit()
-        sel.select('lab_controller_id', 'None')
-        sel.click('link=Save Changes')
-        sel.wait_for_page_to_load('30000')
-        self.assert_(sel.is_element_present(
-                '//span[text()="System is not configured for power support"]'))
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=833275
     def test_excluded_families(self):

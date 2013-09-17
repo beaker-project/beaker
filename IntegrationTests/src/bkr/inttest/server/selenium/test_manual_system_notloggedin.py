@@ -9,7 +9,6 @@ class NotLoggedInManualSystem(SeleniumTestCase):
     @with_transaction
     def setUp(self):
         self.system = data_setup.create_system(status=u'Manual')
-        self.system.shared = True
         self.group = data_setup.create_group()
         data_setup.add_group_to_system(self.system,self.group)
         self.verificationErrors = []

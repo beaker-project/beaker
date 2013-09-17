@@ -17,6 +17,7 @@
     <li><a data-toggle="tab" href="#arches">Arch(s)</a></li>
     <li><a data-toggle="tab" href="#keys">Key/Values</a></li>
     <li><a data-toggle="tab" href="#groups">Groups</a></li>
+    <li><a data-toggle="tab" href="#access-policy">Access Policy</a></li>
     <li><a data-toggle="tab" href="#exclude">Excluded Families</a></li>
     <li><a data-toggle="tab" href="#commands">Commands</a></li>
     <li><a data-toggle="tab" href="#power">Power Config</a></li>
@@ -40,6 +41,30 @@
    <div class="tab-pane" id="groups">
     ${widgets['groups'].display(method='get', action=widgets_action['groups'], value=value, options=widgets_options['groups'])}
    </div>
+   <div class="tab-pane" id="access-policy">
+    <div id="access-policy-${value.id}">
+      <i class="icon-spinner icon-spin"/> Loading&hellip;
+    </div>
+    <script>
+      $(function () {
+        // defer until tab is shown
+        $('.nav-tabs a[href="#access-policy"]').one('show', function () {
+          var policy = new AccessPolicy({}, {url:
+              ${tg.to_json(tg.url('/systems/%s/access-policy' % value.fqdn))}});
+          policy.fetch({
+            success: function () {
+              new AccessPolicyView({model: policy, el: '#access-policy-${value.id}',
+                    readonly: ${tg.to_json(not tg.identity.user or not value.can_edit_policy(tg.identity.user))}});
+            },
+            error: function (model, xhr) {
+              $('#access-policy-${value.id}').addClass('alert alert-error')
+                .html('Failed to fetch access policy: ' + xhr.statusText);
+            },
+          });
+        });
+      });
+    </script>
+   </div>
    <div class="tab-pane" id="exclude">
     <span py:if="value.lab_controller and value.arch">
      ${widgets['exclude'].display(method='get', action=widgets_action['exclude'], value=value, options=widgets_options['exclude'])} 
@@ -49,15 +74,7 @@
     </span>
    </div>
    <div class="tab-pane" id="commands">
-      <h3>Power Action</h3>
-      ${widgets['power_action'].display(method='get', action=widgets_action['power_action'], value=value, options=widgets_options['power_action'])}
-      <span py:if='value.lab_controller' py:strip="True">
-      <h3>Netboot</h3>
-      ${widgets['clear_netboot'].display(dict(fqdn=value.fqdn),
-          action=tg.url('../systems/clear_netboot_form'),
-          msg='Are you sure you want to clear the netboot for this system?',
-           action_text='Clear Netboot', look='button')}
-      </span>
+      ${widgets['commands_form'].display(method='get', action=widgets_action['commands_form'], value=value, options=widgets_options['commands_form'])}
       <h3>Recent Commands</h3>
      ${widgets['power_history'].display(list=widgets_options['power_history'], title='Recent Commands')}
    </div>

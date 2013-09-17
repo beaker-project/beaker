@@ -1,6 +1,6 @@
 import unittest
 from selenium.webdriver.support.ui import WebDriverWait
-from bkr.server.model import SystemActivity, System
+from bkr.server.model import SystemActivity, System, SystemPermission
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout
 from bkr.inttest import data_setup, with_transaction, get_server_base
@@ -11,7 +11,7 @@ class SystemLoanTest(WebDriverTestCase):
     @with_transaction
     def setUp(self):
         self.browser = self.get_browser()
-        self.system = data_setup.create_system()
+        self.system = data_setup.create_system(shared=False)
 
     def tearDown(self):
         self.browser.quit()
@@ -177,3 +177,14 @@ class SystemLoanTest(WebDriverTestCase):
             self.assertEqual(reserved_activity.old_value, user.user_name)
             self.assertEqual(reserved_activity.new_value, user2.user_name)
             self.assertEqual(reserved_activity.service, 'WEBUI')
+
+    def test_user_with_perms_can_loan_to_self(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            self.system.custom_access_policy.add_rule(
+                    permission=SystemPermission.loan_self, user=user)
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+        self.go_to_loan_page()
+        self.change_loan(user.user_name)
+        self.verify_loan_update(user.user_name)

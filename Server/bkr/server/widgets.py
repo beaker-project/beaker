@@ -827,28 +827,26 @@ class SearchBar(RepeatingFormField):
 class ProvisionForm(RepeatingFormField):
     pass
 
-class PowerActionForm(Form):
-    template = "bkr.server.templates.system_power_action"
+class SystemCommandsForm(Form):
+    template = "bkr.server.templates.system_commands_form"
     member_widgets = ["id", "power", "lab_controller"]
-    params = ['options', 'action', 'enabled','is_user']
+    params = ['options', 'action', 'can_power', 'is_user',
+              'power_enabled', 'netboot_enabled']
 
     def __init__(self, *args, **kw):
-        super(PowerActionForm, self).__init__(*args, **kw)
+        super(SystemCommandsForm, self).__init__(*args, **kw)
         self.id = HiddenField(name="id")
         self.power = HiddenField(name="power")
         self.lab_controller = HiddenField(name="lab_controller")
 
-    def update_params(self, d):
-        super(PowerActionForm, self).update_params(d)
-        if 'power' in d['value'] and 'lab_controller' in d['value']:
-            if d['value']['power'] and d['value']['lab_controller']:
-                d['enabled'] = True
-
     def display(self, value, *args, **kw):
         if 'options' in kw:
-            if 'is_user' in kw['options']:
-                kw['is_user'] = kw['options']['is_user']
-        return super(PowerActionForm,self).display(value,*args,**kw)
+            kw.update(kw['options'])
+        system = value
+        kw['power_enabled'] = bool(system.power and system.lab_controller)
+        kw['netboot_enabled'] = bool(system.lab_controller)
+        kw['fqdn'] = system.fqdn
+        return super(SystemCommandsForm, self).display(value, *args, **kw)
 
 class PowerActionHistory(CompoundWidget):
     template = "bkr.server.templates.power_history_grid"
@@ -1142,13 +1140,9 @@ class DistroTags(Form):
 
 
 class SystemGroups(Form):
-    # XXX As it's currently used, this JS is not loaded from here
-    # but from the SystemForm widget. It should stay here, just in case
-    # we change how we display this widget
-    javascript = [LocalJSLink('bkr','/static/javascript/system_admin_v2.js')]
     template = "bkr.server.templates.system_groups"
     member_widgets = ["id", "group", "delete_link"]
-    params = ['options', 'readonly', 'group_assocs', 'can_admin', 'change_admin_url']
+    params = ['options', 'readonly', 'group_assocs']
     delete_link = DeleteLinkWidgetForm()
 
     def __init__(self, *args, **kw):
@@ -1167,9 +1161,6 @@ class SystemGroups(Form):
             d['group_assocs'] = d['options']['group_assocs']
         if 'system_id' in d['options']:
             d['system_id'] = d['options']['system_id']
-        if 'can_admin' in d['options']:
-            d['can_admin'] = d['options']['can_admin']
-        d['change_admin_url'] = url('/change_system_admin')
 
 
 class SystemProvision(Form):
@@ -1337,18 +1328,16 @@ class SystemHistory(CompoundWidget):
 class SystemForm(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/provision_v2.js'),
                   LocalJSLink('bkr', '/static/javascript/install_options.js'),
-                  LocalJSLink('bkr','/static/javascript/system_admin_v2.js'),
                   LocalJSLink('bkr', '/static/javascript/searchbar_v9.js'),
                   JSLink(static,'ajax.js'),
                  ]
     template = "bkr.server.templates.system_form"
     params = ['id','readonly',
               'user_change','user_change_text', 'running_job',
-              'loan_change', 'loan_type', 'show_loan_options',
+              'show_loan_options',
               'owner_change', 'owner_change_text']
     user_change = '/user_change'
     owner_change = '/owner_change'
-    loan_change = '/loan_change'
     fields = [
                HiddenField(name='id'),
                TextField(name='fqdn',
@@ -1383,9 +1372,6 @@ class SystemForm(Form):
                TextField(name='owner', label=_(u'Owner')),
                TextField(name='loaned', label=_(u'Loaned To')),
                TextField(name='contact', label=_(u'Contact')),
-               CheckBox(name='shared', label=_(u'Shared'),
-                        help_text=_(u'Should this system be made available '
-                            'for running other users\' jobs?')),
                CheckBox(name='private', label=_(u'Secret (NDA)'),
                         help_text=_(u'Should this system be invisible to '
                             'all other users?')),
@@ -1415,9 +1401,13 @@ class SystemForm(Form):
         if value:
             params['loan_comment'] = value.loan_comment
             # It's currently loaned or we have perm to add a new loan
-            params['show_loan_options'] = value.current_loan( 
-                identity.current.user) or \
-                value.can_admin(identity.current.user)
+            if identity.current.user:
+                params['show_loan_options'] = \
+                    value.can_return_loan(identity.current.user) or \
+                    value.can_loan(identity.current.user) or \
+                    value.can_loan_to_self(identity.current.user)
+            else:
+                params['show_loan_options'] = False
         else:
             params['loan_comment'] = None
             params['show_loan_options'] = None
@@ -1471,10 +1461,6 @@ class SystemForm(Form):
             d["owner_change_text"] = d["options"]["owner_change_text"]
         if d["options"].has_key("user_change_text"):
             d["user_change_text"] = d["options"]["user_change_text"]
-        if d["options"].has_key("loan_change"):
-            d["loan_change"] = d["options"]["loan_change"]
-        if d["options"].has_key("loan_type"):
-            d["loan_type"] = d["options"]["loan_type"]
         if d["options"].has_key("loan_widget"):
             d["loan_widget"] = d["options"]["loan_widget"]
         if d["options"].has_key("running_job"):
@@ -1782,7 +1768,8 @@ class LoanWidget(RPC, TableForm, CompoundWidget):
             d['name'], jsonify.encode(self.get_options(d)), url('../systems/return_loan'))})
 
         system = model.System.by_fqdn(d['value']['fqdn'], identity.current.user)
-        if system.can_admin(identity.current.user):
+        if identity.current.user and system.can_loan(identity.current.user) \
+                or system.can_loan_to_self(identity.current.user):
             for field in d['fields']:
                 if field.attrs.get('disabled'):
                     del field.attrs['disabled']
@@ -1792,7 +1779,7 @@ class LoanWidget(RPC, TableForm, CompoundWidget):
                 field.attrs.update({'disabled': 'readonly'})
             d['update_loan'].attrs.update({'style': 'display:none'})
 
-        if system.current_loan(identity.current.user):
+        if system.can_return_loan(identity.current.user):
             d['return_loan'].attrs.update({'style': 'display:block'})
         else:
             d['return_loan'].attrs.update({'style': 'display:none'})

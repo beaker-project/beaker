@@ -1,12 +1,13 @@
 
 from selenium.webdriver.support.ui import Select
-from bkr.server.model import SystemStatus
+from bkr.server.model import SystemStatus, SystemPermission
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, logout, \
+        search_for_system, check_system_search_results
 from turbogears.database import session
 from bkr.inttest import data_setup, get_server_base
 
-class SystemTakeTest(WebDriverTestCase):
+class SystemAvailabilityTest(WebDriverTestCase):
 
     def setUp(self):
         self.browser = self.get_browser()
@@ -18,23 +19,41 @@ class SystemTakeTest(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
-    def test_owner_manual_system(self):
+    def test_own_system(self):
+        with session.begin():
+            owner = data_setup.create_user(password=u'testing')
+            system = data_setup.create_system(status=SystemStatus.automated,
+                    owner=owner, lab_controller=self.lc)
+        b = self.browser
+        login(b, user=owner.user_name, password='testing')
+        self.check_system_is_available(system)
+        self.check_schedule_provision(system)
+
+    def test_own_manual_system(self):
         with session.begin():
             owner = data_setup.create_user(password=u'testing')
             system = data_setup.create_system(status=SystemStatus.manual,
-                    owner=owner, shared=True, lab_controller=self.lc)
+                    owner=owner, lab_controller=self.lc)
         b = self.browser
         login(b, user=owner.user_name, password='testing')
         self.check_take(system)
 
-    """
-    Tests the following scenarios for take in both Automated and Manual machines:
-    * System with no groups - regular user
-    * System has group, user not in group
-    * System has group, user in group
-    """
+    def test_non_shared_system(self):
+        with session.begin():
+            user = data_setup.create_user(password=u'testing')
+            system = data_setup.create_system(status=SystemStatus.automated,
+                    lab_controller=self.lc, shared=False)
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
+        self.check_system_is_not_available(system)
+        self.check_cannot_schedule_provision(system)
+        # same thing, as admin
+        logout(b)
+        login(b)
+        self.check_system_is_not_available(system)
+        self.check_cannot_schedule_provision(system)
 
-    def test_schedule_provision_system_has_user(self):
+    def test_system_in_use_by_another_user(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.automated,
                     shared=True, lab_controller=self.lc)
@@ -42,35 +61,42 @@ class SystemTakeTest(WebDriverTestCase):
             data_setup.mark_job_running(job, system=system)
         b = self.browser
         login(b)
+        self.check_system_is_available(system)
+        self.check_system_is_not_free(system)
         self.check_schedule_provision(system)
 
-    def test_schedule_provision_system_has_user_with_group(self):
+    def test_system_in_use_by_another_group_member(self):
         with session.begin():
             user = data_setup.create_user(password=u'testing')
             group = data_setup.create_group()
             system = data_setup.create_system(status=SystemStatus.automated,
-                    shared=True, lab_controller=self.lc)
+                    shared=False, lab_controller=self.lc)
             data_setup.add_user_to_group(user, group)
-            data_setup.add_group_to_system(system, group)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
             user2 = data_setup.create_user()
             data_setup.add_user_to_group(user2, group)
             job = data_setup.create_job(owner=user2)
             data_setup.mark_job_running(job, system=system)
         b = self.browser
         login(b, user=user.user_name, password=u'testing')
+        self.check_system_is_available(system)
+        self.check_system_is_not_free(system)
         self.check_schedule_provision(system)
 
-    def test_system_no_group(self):
+    def test_shared_system(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.automated,
                     shared=True, lab_controller=self.lc)
             user = data_setup.create_user(password=u'testing')
         b = self.browser
         login(b, user=user.user_name, password='testing')
+        self.check_system_is_available(system)
+        self.check_system_is_free(system)
         self.check_cannot_take_automated(system)
         self.check_schedule_provision(system)
 
-    def test_system_no_group_manual(self):
+    def test_shared_manual_system(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.manual,
                     shared=True, lab_controller=self.lc)
@@ -79,68 +105,81 @@ class SystemTakeTest(WebDriverTestCase):
         login(b, user=user.user_name, password='testing')
         self.check_take(system)
 
-    def test_system_has_group(self):
+    def test_system_restricted_to_group(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.automated,
-                    shared=True, lab_controller=self.lc)
+                    shared=False, lab_controller=self.lc)
             user = data_setup.create_user(password=u'testing')
             group = data_setup.create_group()
             # user is not in group
-            data_setup.add_group_to_system(system, group)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
+        self.check_system_is_not_available(system)
         self.check_cannot_take_automated(system)
         self.check_cannot_schedule_provision(system)
+        # same thing, as admin
+        logout(b)
+        login(b)
+        self.check_system_is_not_available(system)
+        self.check_cannot_schedule_provision(system)
 
-    def test_system_has_group_manual(self):
+    def test_manual_system_restricted_to_group(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.manual,
-                    shared=True, lab_controller=self.lc)
+                    shared=False, lab_controller=self.lc)
             user = data_setup.create_user(password=u'testing')
             group = data_setup.create_group()
             # user is not in group
-            data_setup.add_group_to_system(system, group)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
         self.check_cannot_take_manual(system)
         self.check_cannot_schedule_provision(system)
 
-    def test_system_group_user_group(self):
+    def test_system_restricted_to_different_group(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.automated,
-                    shared=True, lab_controller=self.lc)
+                    shared=False, lab_controller=self.lc)
             wrong_group = data_setup.create_group()
             user = data_setup.create_user(password=u'testing')
             # user is not in the same group as system
             data_setup.add_user_to_group(user, wrong_group)
             group = data_setup.create_group()
-            data_setup.add_group_to_system(system, group)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
+        self.check_system_is_not_available(system)
         self.check_cannot_take_automated(system)
         self.check_cannot_schedule_provision(system)
 
-    def test_system_in_user_group(self):
+    def test_system_restricted_to_users_group(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.automated,
-                    shared=True, lab_controller=self.lc)
+                    shared=False, lab_controller=self.lc)
             user = data_setup.create_user(password=u'testing')
             group = data_setup.create_group()
             data_setup.add_user_to_group(user, group)
-            data_setup.add_group_to_system(system, group)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
+        self.check_system_is_available(system)
         self.check_cannot_take_automated(system)
         self.check_schedule_provision(system)
 
-    def test_manual_system_in_user_group(self):
+    def test_manual_system_restricted_to_users_group(self):
         with session.begin():
             system = data_setup.create_system(status=SystemStatus.manual,
-                    shared=True, lab_controller=self.lc)
+                    shared=False, lab_controller=self.lc)
             user = data_setup.create_user(password=u'testing')
             group = data_setup.create_group()
             data_setup.add_user_to_group(user, group)
-            data_setup.add_group_to_system(system, group)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         b = self.browser
         login(b, user=user.user_name, password='testing')
         self.check_take(system)
@@ -153,6 +192,8 @@ class SystemTakeTest(WebDriverTestCase):
             user = data_setup.create_user(password=u'testing')
         b = self.browser
         login(b, user=user.user_name, password='testing')
+        self.check_system_is_available(system)
+        self.check_system_is_not_free(system)
         self.check_schedule_provision(system)
 
     def test_manual_system_loaned_to_another_user(self):
@@ -163,7 +204,42 @@ class SystemTakeTest(WebDriverTestCase):
             user = data_setup.create_user(password=u'testing')
         b = self.browser
         login(b, user=user.user_name, password='testing')
+        self.check_system_is_available(system)
+        self.check_system_is_not_free(system)
         self.check_cannot_take_manual(system)
+
+    def check_system_is_available(self, system):
+        """
+        Checks that the system can be found by searching on the Available page, 
+        indicating that the logged-in user has access to reserve it.
+        """
+        b = self.browser
+        b.get(get_server_base() + 'available')
+        search_for_system(b, system)
+        check_system_search_results(b, present=[system])
+
+    def check_system_is_not_available(self, system):
+        b = self.browser
+        b.get(get_server_base() + 'available')
+        search_for_system(b, system)
+        check_system_search_results(b, absent=[system])
+
+    def check_system_is_free(self, system):
+        """
+        Checks that the system can be found by searching on the Free page, 
+        indicating that the logged-in user has access to reserve it and it is 
+        currently not in use.
+        """
+        b = self.browser
+        b.get(get_server_base() + 'free')
+        search_for_system(b, system)
+        check_system_search_results(b, present=[system])
+
+    def check_system_is_not_free(self, system):
+        b = self.browser
+        b.get(get_server_base() + 'free')
+        search_for_system(b, system)
+        check_system_search_results(b, absent=[system])
 
     def go_to_system_view(self, system):
         self.browser.get(get_server_base() + 'view/%s' % system.fqdn)

@@ -3,7 +3,6 @@
     <tr>
       <th>Name</th>
       <th>Display Name</th>
-      <th>Admin Rights</th>
       <th/>
     </tr>
   </thead>
@@ -12,7 +11,6 @@
       <td>
     ${display_field_for("group")}
       </td>
-      <td />
       <td />
       <td>
     <form name="${name}" action="${action}" method="POST" onsubmit="populate_form_elements(this); return true;">
@@ -33,33 +31,6 @@
       </td>
       <td>
     ${group.display_name}
-      </td>
-      <td>
-   <span py:if="'admin' not in [group.group_name]">
-   <span py:if="group_assoc.admin">
-     <span id="admin_group_${group.group_id}">Yes
-      <a class="btn" py:if="'admin' in tg.identity.groups or can_admin"
-       onclick="remove_system_admin('${change_admin_url}', ${group.group_id});return false;"
-       href="#"><i class="icon-remove"/> Remove</a>
-     </span>
-     <span id="non_admin_group_${group.group_id}" style="display:none">No
-       <a class="btn" py:if="'admin' in tg.identity.groups or can_admin"
-        onclick="add_system_admin('${change_admin_url}', ${group.group_id});return false;"
-        href="#"><i class="icon-plus"/> Add</a>
-     </span>
-   </span>
-   <span py:if="not group_assoc.admin">
-     <span id="admin_group_${group.group_id}" style="display:none">Yes
-      <a class="btn" py:if="'admin' in tg.identity.groups or can_admin"
-       onclick="remove_system_admin('${change_admin_url}', ${group.group_id});return false"
-       href="#"><i class="icon-remove"/> Remove</a>
-     </span>
-     <span id="non_admin_group_${group.group_id}">No
-      <a class="btn" py:if="'admin' in tg.identity.groups or can_admin"
-       onclick="add_system_admin('${change_admin_url}', ${group.group_id});return false"
-       href="#"><i class="icon-plus"/> Add</a></span>
-   </span>
-   </span>
       </td>
       <td>
        <span py:if="not readonly" py:strip='1'>

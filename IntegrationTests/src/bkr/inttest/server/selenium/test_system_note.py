@@ -2,6 +2,7 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, delete_and_confirm
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest import data_setup, with_transaction, get_server_base
+from bkr.server.model import SystemPermission
 from turbogears.database import session
 
 class SystemNoteTests(WebDriverTestCase):
@@ -11,10 +12,6 @@ class SystemNoteTests(WebDriverTestCase):
         self.system = data_setup.create_system()
         self.owner = data_setup.create_user(password='password')
         self.system.owner = self.owner
-        self.admin_group = data_setup.create_group()
-        self.user = data_setup.create_user(password='password')
-        self.admin_group.users.append(self.user)
-        data_setup.add_group_to_system(self.system, self.admin_group, admin=True)
         self.nobody = data_setup.create_user(password='password')
         self.browser = self.get_browser()
 
@@ -88,8 +85,12 @@ class SystemNoteTests(WebDriverTestCase):
         note = self.add_note()
         self.delete_note(note)
 
-    def test_notes_as_group_admin(self):
-        login(self.browser, user=self.user.user_name, password='password')
+    def test_notes_as_user_with_edit_permission(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            self.system.custom_access_policy.add_rule(
+                    permission=SystemPermission.edit_system, user=user)
+        login(self.browser, user=user.user_name, password='password')
         note = self.add_note()
         self.delete_note(note)
 

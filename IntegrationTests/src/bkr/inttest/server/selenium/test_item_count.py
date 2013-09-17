@@ -12,8 +12,7 @@ class ItemCount(WebDriverTestCase):
         data_setup.create_distro() # needed for distro page
         data_setup.create_job() # needed for job page
         data_setup.create_task() #create task
-        system = data_setup.create_system()
-        system.shared = True
+        system = data_setup.create_system(shared=True)
         system.activity.append(data_setup.create_system_activity())
 
     def tearDown(self):

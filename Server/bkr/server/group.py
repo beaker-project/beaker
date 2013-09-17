@@ -7,7 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import cherrypy
 from cherrypy import response
 from kid import XML
-
+from flask import jsonify
 from bkr.server.validators import StrongPassword
 from bkr.server.helpers import make_link
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
@@ -16,6 +16,7 @@ from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
 from bkr.server.admin_page import AdminPage
 from bkr.server.bexceptions import BX, BeakerException
 from bkr.server.controller_utilities import restrict_http_method
+from bkr.server.wsgi import app
 from bkr.server import mail, identity
 
 from bkr.server.model import (Group, Permission, System, User, UserGroup,
@@ -384,8 +385,8 @@ class Groups(AdminPage):
         # A system owner can add their system to a group, but a group owner 
         # *cannot* add an arbitrary system to their group because that would 
         # grant them extra privileges over it.
-        if not system.is_admin(identity.current.user):
-            flash(_(u'You are not an owner of system %s' % system))
+        if not system.can_edit(identity.current.user):
+            flash(_(u'You do not have permission to edit system %s' % system))
             redirect('edit?group_id=%s' % kw['group_id'])
         group = Group.by_id(kw['group_id'])
         if group in system.groups:
@@ -664,7 +665,8 @@ class Groups(AdminPage):
         # A group owner can remove a system from their group.
         # A system owner can remove their system from a group.
         # But note this is not symmetrical with adding systems.
-        if not (group.can_edit(identity.current.user) or system.is_admin()):
+        if not (group.can_edit(identity.current.user) or
+                system.can_edit(identity.current.user)):
             flash(_(u'Not permitted to remove %s from %s') % (system, group))
             redirect('../groups/mine')
 
@@ -935,6 +937,13 @@ class Groups(AdminPage):
             users.append(user)
 
         return users
+
+@app.route('/groups/+typeahead')
+def groups_typeahead():
+    data = [{'group_name': group.group_name, 'display_name': group.display_name,
+             'tokens': [group.group_name]}
+            for group in Group.query]
+    return jsonify(data=data)
 
 # for sphinx
 groups = Groups

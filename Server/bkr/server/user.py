@@ -5,11 +5,13 @@ from sqlalchemy import and_, or_
 from sqlalchemy.exc import InvalidRequestError
 from kid import XML
 from bkr.common.bexceptions import BX
+from flask import request, jsonify
 from bkr.server import identity
 from bkr.server.helpers import make_edit_link
 from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, \
     BeakerDataGrid, HorizontalForm
 from bkr.server.admin_page import AdminPage
+from bkr.server.wsgi import app
 from bkr.server import validators as beaker_validators
 from sqlalchemy import and_
 
@@ -245,11 +247,28 @@ class Users(AdminPage):
     @expose(format='json')
     def by_name(self, input,anywhere=False,ldap=True):
         input = input.lower()
-        return dict(matches=User.list_by_name(input,anywhere,ldap))
+        matches = [user_name for user_name, display_name
+                in User.list_by_name(input, anywhere, ldap)]
+        return dict(matches=matches)
 
     def show_groups(self):
         group = ('Group', lambda x: x.display_name)
         return BeakerDataGrid(fields=[group])
+
+@app.route('/users/+typeahead')
+def users_typeahead():
+    if 'q' in request.args:
+        ldap = (len(request.args['q']) >= 3) # be nice to the LDAP server
+        users = User.list_by_name(request.args['q'],
+                find_anywhere=False, find_ldap_users=ldap)
+    else:
+        # not sure if this is wise, the response may be several hundred KB...
+        users = User.query.filter(User.removed == None)\
+                .values(User.user_name, User.display_name)
+    data = [{'user_name': user_name, 'display_name': display_name,
+             'tokens': [user_name]}
+            for user_name, display_name in users]
+    return jsonify(data=data)
 
 # for sphinx
 users = Users

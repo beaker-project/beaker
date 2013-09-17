@@ -1,5 +1,5 @@
 
-from bkr.server.model import session, SystemGroup
+from bkr.server.model import session
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.server.selenium import WebDriverTestCase
 from selenium.webdriver.support.ui import WebDriverWait
@@ -75,15 +75,3 @@ class TestSystemGroups(WebDriverTestCase):
         self.add_group_to_system(b, group=test_group)
         self.assertEquals(b.find_element_by_class_name('flash').text,
                           "System '%s' is already in group '%s'" % (self.system.fqdn, test_group.group_name))
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=797584
-    def test_removing_group_removes_admin(self):
-        with session.begin():
-            self.system.group_assocs.append(
-                    SystemGroup(group=self.group, admin=True))
-            self.assert_(self.system.can_admin(self.user_in_group))
-        b = self.browser
-        self.delete_group_from_system(b)
-        with session.begin():
-            session.refresh(self.system)
-            self.assert_(not self.system.can_admin(self.user_in_group))

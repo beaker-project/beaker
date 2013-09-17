@@ -24,7 +24,6 @@ class AddSystem(WebDriverTestCase):
                               lab_controller = 'lab-devel.rhts.eng.bos.redhat.com',
                               type = 'Machine',
                               private = False,
-                              shared = False,
                               vendor = 'Intel',
                               model = 'model',
                               location = 'brisbane',
@@ -39,7 +38,6 @@ class AddSystem(WebDriverTestCase):
         self.assert_system_view_text('lender', system_details['lender'])
         self.assert_system_view_text('model', system_details['model'])
         self.assert_system_view_text('location', system_details['location'])
-        self.assert_system_view_text('shared', 'False')
         self.assert_system_view_text('private', 'False')
         with session.begin():
             system = System.query.filter_by(fqdn=system_details['fqdn']).one()
@@ -53,7 +51,6 @@ class AddSystem(WebDriverTestCase):
                               lab_controller = 'None',
                               type = 'Laptop',
                               private = False,
-                              shared = False,
                               vendor = 'Intel',
                               model = 'model',
                               location = 'brisbane',
@@ -70,7 +67,6 @@ class AddSystem(WebDriverTestCase):
         self.assert_system_view_text('status_reason', self.condition_report)
         self.assert_system_view_text('model', system_details['model'])
         self.assert_system_view_text('location', system_details['location'])
-        self.assert_system_view_text('shared', 'False')
         self.assert_system_view_text('private', 'False')
 
     def test_case_3(self):
@@ -81,7 +77,6 @@ class AddSystem(WebDriverTestCase):
                               lab_controller = 'None',
                               type = 'Resource',
                               private = True,
-                              shared = False,
                               vendor = 'AMD',
                               model = 'model',
                               location = '',
@@ -97,7 +92,6 @@ class AddSystem(WebDriverTestCase):
         self.assert_system_view_text('vendor', system_details['vendor'])
         self.assert_system_view_text('model', system_details['model'])
         self.assert_system_view_text('location', system_details['location'])
-        self.assert_system_view_text('shared', 'False')
         self.assert_system_view_text('private', 'True')
 
     def test_case_4(self):
@@ -108,7 +102,6 @@ class AddSystem(WebDriverTestCase):
                               lab_controller = 'None',
                               type = 'Prototype',
                               private = True,
-                              shared = False,
                               vendor = 'AMD',
                               model = 'model',
                               location = 'brisbane',
@@ -124,7 +117,6 @@ class AddSystem(WebDriverTestCase):
         self.assert_system_view_text('vendor', system_details['vendor'])
         self.assert_system_view_text('model', system_details['model'])
         self.assert_system_view_text('location', system_details['location'])
-        self.assert_system_view_text('shared', 'False')
         self.assert_system_view_text('private', 'True')
 
     def test_case_5(self):
@@ -137,7 +129,6 @@ class AddSystem(WebDriverTestCase):
                               lab_controller = 'None',
                               type = 'Prototype',
                               private = True,
-                              shared = False,
                               vendor = 'AMD',
                               model = 'model',
                               location = 'brisbane',
@@ -151,7 +142,7 @@ class AddSystem(WebDriverTestCase):
                 'preexisting-system already exists!')
 
     def add_system(self,fqdn=None,lender=None,serial=None,status=None,
-                   lab_controller=None,type=None,private=False,shared=False,
+                   lab_controller=None,type=None,private=False,
                    vendor=None,model=None,location=None,mac=None): 
         b = self.browser
         b.find_element_by_name('fqdn').send_keys(fqdn)

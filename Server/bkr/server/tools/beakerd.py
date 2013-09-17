@@ -431,7 +431,6 @@ def schedule_queued_recipes(*args):
 def schedule_queued_recipe(recipe_id):
     recipe = MachineRecipe.by_id(recipe_id)
     systems = recipe.dyn_systems\
-               .outerjoin(System.cpu)\
                .join(System.lab_controller)\
                .filter(and_(System.user==None,
                           LabController._distro_trees.any(
@@ -457,15 +456,7 @@ def schedule_queued_recipe(recipe_id):
     # </recipe>
     user = recipe.recipeset.job.owner
     if True: #FIXME if pools are defined add them here in the order requested.
-        # Order by:
-        #   System Owner
-        #   System group
-        #   Single procesor bare metal system
-        systems = systems.order_by(
-            case([(System.owner==user, 1),
-                (and_(System.owner!=user, System.group_assocs != None), 1)],
-                else_=3),
-                and_(System.hypervisor == None, Cpu.processors == 1))
+        systems = System.scheduler_ordering(user, query=systems)
     if recipe.recipeset.lab_controller:
         # First recipe of a recipeSet determines the lab_controller
         systems = systems.filter(
@@ -680,9 +671,8 @@ def _system_count_metrics_for_query_grouped(name, grouping, query):
 def system_count_metrics():
     _system_count_metrics_for_query('all', System.query)
     _system_count_metrics_for_query('shared', System.query
-            .filter(System.private == False)
-            .filter(System.shared == True)
-            .filter(System.group_assocs == None))
+            .outerjoin(System.custom_access_policy)
+            .filter(SystemAccessPolicy.grants_everybody(SystemPermission.reserve)))
     _system_count_metrics_for_query_grouped('by_arch', Arch.arch,
             System.query.join(System.arch))
     _system_count_metrics_for_query_grouped('by_lab', LabController.fqdn,
