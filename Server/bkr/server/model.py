@@ -7012,10 +7012,12 @@ class TaskLibrary(object):
         if taskinfo_file:
             fd.seek(0)
             p1 = subprocess.Popen(["rpm2cpio"],
-                                  stdin=fd.fileno(), stdout=subprocess.PIPE)
+                                  stdin=fd.fileno(), stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
             p2 = subprocess.Popen(["cpio", "--quiet", "--extract",
                                    "--to-stdout", ".%s" % taskinfo_file],
-                                  stdin=p1.stdout, stdout=subprocess.PIPE)
+                                  stdin=p1.stdout, stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
             taskinfo['desc'] = p2.communicate()[0]
         return taskinfo
 
