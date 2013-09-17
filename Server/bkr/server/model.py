@@ -4347,17 +4347,17 @@ class TaskBase(MappedObject):
             return None
         if getattr(self, 'ptasks', None):
             completed += self.ptasks
-            pwidth = int(float(self.ptasks)/float(self.ttasks)*100)
+            pwidth = int(round(float(self.ptasks)/float(self.ttasks)*100))
         if getattr(self, 'wtasks', None):
             completed += self.wtasks
-            wwidth = int(float(self.wtasks)/float(self.ttasks)*100)
+            wwidth = int(round(float(self.wtasks)/float(self.ttasks)*100))
         if getattr(self, 'ftasks', None):
             completed += self.ftasks
-            fwidth = int(float(self.ftasks)/float(self.ttasks)*100)
+            fwidth = int(round(float(self.ftasks)/float(self.ttasks)*100))
         if getattr(self, 'ktasks', None):
             completed += self.ktasks
-            kwidth = int(float(self.ktasks)/float(self.ttasks)*100)
-        percentCompleted = int(float(completed)/float(self.ttasks)*100)
+            kwidth = int(round(float(self.ktasks)/float(self.ttasks)*100))
+        percentCompleted = int(round(float(completed)/float(self.ttasks)*100))
         div = Element('div', {'class': 'progress'})
         div.append(Element('div', {'class': 'bar bar-success', 'style': 'width:%s%%' % pwidth}))
         div.append(Element('div', {'class': 'bar bar-warning', 'style': 'width:%s%%' % wwidth}))

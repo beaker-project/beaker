@@ -344,6 +344,7 @@ def create_recipe(distro_tree=None, task_list=None,
             rt = RecipeTask(task=t)
             rt.role = u'STANDALONE'
             recipe.tasks.append(rt)
+        recipe.ttasks = len(task_list)
     else:
         rt = RecipeTask(task=create_task(name=task_name))
         rt.role = u'STANDALONE'
@@ -373,8 +374,8 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
         owner = create_user()
     if whiteboard is None:
         whiteboard = unique_name(u'job %s')
-    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,
-        retention_tag=retention_tag, group=group, product=product,
+    job = Job(whiteboard=whiteboard, ttasks=sum(r.ttasks for r in recipes),
+        owner=owner, retention_tag=retention_tag, group=group, product=product,
         submitter=submitter)
     if cc is not None:
         job.cc = cc
