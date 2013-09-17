@@ -2,14 +2,11 @@ Static web assets served from /assets
 =====================================
 
 Beaker uses a new URL prefix for static web assets, ``/assets``. To ensure 
-assets are served correctly, add the following setting to 
-``/etc/beaker/server.cfg``::
+assets are served correctly, add the following configuration to 
+``/etc/httpd/conf.d/beaker-server.conf``. Adjust the ``/bkr`` prefix as 
+appropriate for your installation.
 
-    basepath.assets='/usr/share/bkr/server/assets'
-
-and add the following configuration to 
-``/etc/httpd/conf.d/beaker-server.conf``, adjusting the ``/bkr`` prefix as 
-appropriate for your installation::
+::
 
     Alias /bkr/assets /usr/share/bkr/server/assets
 
