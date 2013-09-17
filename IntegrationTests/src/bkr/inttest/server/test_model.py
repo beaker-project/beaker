@@ -1,4 +1,5 @@
 import sys
+import re
 import time
 import datetime
 import unittest
@@ -268,6 +269,22 @@ class TestJob(unittest.TestCase):
         job.update_status()
         self.assertEquals(job.status, TaskStatus.cancelled)
         self.assertEquals(job.result, TaskResult.warn)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=660633
+    def test_progress_bar_sums_to_100(self):
+        recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/reservesys')] * 3)
+        job = data_setup.create_job_for_recipes([recipe])
+        recipe.tasks[0].pass_(u'/', 0, u'')
+        recipe.tasks[1].fail(u'/', 0, u'')
+        recipe.tasks[2].fail(u'/', 0, u'')
+        data_setup.mark_job_complete(job)
+        job.update_status()
+        progress_bar = job.progress_bar
+        widths = [int(re.match(r'width:(\d+)%', elem.get('style')).group(1))
+                for elem in progress_bar.getchildren()[0].getchildren()]
+        self.assertEquals(widths, [33, 0, 67, 0])
+        self.assertEquals(sum(widths), 100)
 
 class DistroTreeByFilterTest(unittest.TestCase):
 
