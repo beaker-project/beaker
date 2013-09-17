@@ -370,7 +370,7 @@ def main():
                 problem('Bug %s target milestone should be set to %s or earlier' %
                             (bug.bug_id, options.release))
             elif (bug.target_milestone == "HOTFIX" and
-                  bug.get_flag_status("hss_hot_fix") == "+"):
+                  bug.get_flag_status("hot_fix") == "+"):
                 pass
             elif (bug.target_milestone.split('.')[0] >=
                  options.release.split('.')[0]):
