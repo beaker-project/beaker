@@ -18,6 +18,8 @@ Description
 Modifies the system's access policy to revoke permissions for the given users 
 or groups.
 
+(Note: this command requires Python 2.6 or later)
+
 Options
 -------
 
