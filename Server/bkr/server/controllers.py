@@ -766,7 +766,6 @@ class Root(RPCRoot):
         # do not return the widget here, the JS will not be loaded,
         # return it as an arg in return()
         widgets = dict(
-                        labinfo   = self.labinfo_form,
                         details   = self.system_details,
                         exclude   = self.system_exclude,
                         keys      = self.system_keys,
@@ -779,6 +778,8 @@ class Root(RPCRoot):
         widgets['power'] = self.power_form
         widgets['commands_form'] = self.commands_form
         widgets['power_history'] = self.power_history
+        # Lab Info is deprecated, only show it if the system has existing data
+        widgets['labinfo'] = self.labinfo_form if system.labinfo else None
 
         return dict(
             title           = title,

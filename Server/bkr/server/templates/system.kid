@@ -24,7 +24,7 @@
     <li><a data-toggle="tab" href="#notes">Notes</a></li>
     <li><a data-toggle="tab" href="#install">Install Options</a></li>
     <li><a data-toggle="tab" href="#provision">Provision</a></li>
-    <li><a data-toggle="tab" href="#labinfo">Lab Info</a></li>
+    <li py:if="widgets['labinfo']"><a data-toggle="tab" href="#labinfo">Lab Info</a></li>
     <li><a data-toggle="tab" href="#history">History</a></li>
     <li><a data-toggle="tab" href="#tasks">Tasks</a></li>
   </ul>
@@ -110,7 +110,7 @@
      System must be associated to a lab controller and have at least one architecture specified in order to provision.
     </span>
    </div>
-   <div class="tab-pane" id="labinfo">
+   <div class="tab-pane" id="labinfo" py:if="widgets['labinfo']">
     ${widgets['labinfo'].display(method='get', action=widgets_action['labinfo'], value=value, options=widgets_options['labinfo'])}
    </div>
    <div class="tab-pane" id="history">

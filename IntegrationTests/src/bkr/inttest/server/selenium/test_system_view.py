@@ -31,7 +31,7 @@ from bkr.inttest import data_setup, get_server_base, \
         assertions, with_transaction
 from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
-        SystemStatus
+        SystemStatus, LabInfo
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_system_search_results
 from selenium.webdriver.support.ui import Select
@@ -100,6 +100,14 @@ class SystemViewTestWD(WebDriverTestCase):
         wait_for_condition(provision_ks_meta_populated)
         wait_for_condition(provision_koptions_populated)
         wait_for_condition(provision_koptions_post_populated)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=987313
+    def test_labinfo_not_visible_for_new_systems(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
+        b.find_element_by_xpath('//ul[@class="nav nav-tabs" and '
+                'not(.//a/text()="Lab Info")]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=920018
     def test_system_not_visible_available_free_when_lc_disabled(self):
@@ -559,6 +567,9 @@ class SystemViewTest(SeleniumTestCase):
                     u'InstallOption:ks_meta:i386')
 
     def test_update_labinfo(self):
+        with session.begin():
+            # Due to bz987313 system must have existing lab info
+            self.system.labinfo = LabInfo(weight=100)
         orig_date_modified = self.system.date_modified
         self.login()
         sel = self.selenium
