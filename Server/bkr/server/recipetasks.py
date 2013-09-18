@@ -50,7 +50,7 @@ class RecipeTasks(RPCRoot):
                     % recipetask.t_id)
 
         # Add the log to the DB if it hasn't been recorded yet.
-        log_recipe = LogRecipeTask.lazy_create(parent=recipetask,
+        log_recipe = LogRecipeTask.lazy_create(recipe_task_id=recipetask.id,
                                                path=path, 
                                                filename=filename,
                                               )
@@ -73,7 +73,7 @@ class RecipeTasks(RPCRoot):
             raise BX('Cannot register file for finished task %s'
                     % result.recipetask.t_id)
 
-        log_recipe = LogRecipeTaskResult.lazy_create(parent=result,
+        log_recipe = LogRecipeTaskResult.lazy_create(recipe_task_result_id=result.id,
                                                      path=path, 
                                                      filename=filename,
                                                     )

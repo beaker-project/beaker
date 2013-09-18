@@ -98,8 +98,8 @@ class OSVersions(AdminPage):
             redirect(".")
         for arch, options in installopts.iteritems():
             # arch=None means applied to all arches
-            io = OSMajorInstallOptions.lazy_create(osmajor=osmajor,
-                    arch=Arch.by_name(arch) if arch else None)
+            io = OSMajorInstallOptions.lazy_create(osmajor_id=osmajor.id,
+                    arch_id=Arch.by_name(arch).id if arch else None)
             io.ks_meta = options['ks_meta']
             io.kernel_options = options['kernel_options']
             io.kernel_options_post = options['kernel_options_post']
