@@ -31,22 +31,9 @@ import socket
 
 log = logging.getLogger(__name__)
 
+_config_loaded = None
 def load_config(configfile=None):
     """ Loads Beaker's configuration and configures logging. """
-    # In general, we want all messages from application code.
-    logging.getLogger().setLevel(logging.DEBUG)
-    # Well-behaved libraries will set their own log levels to something 
-    # suitable (sqlalchemy sets it to WARNING, for example) but the TurboGears 
-    # stuff leaves its unset.
-    logging.getLogger('turbomail').setLevel(logging.INFO)
-    logging.getLogger('turbogears').setLevel(logging.INFO)
-    logging.getLogger('turbokid').setLevel(logging.INFO)
-    logging.getLogger('turbogears.access').setLevel(logging.WARN)
-    # Note that the actual level of log output is controlled by the handlers, 
-    # not the loggers (for example command line tools will typically log to 
-    # stderr at WARNING level). The main entry point for the program should 
-    # call bkr.log.log_to_{syslog,stream} to set up a handler.
-
     setupdir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     curdir = os.getcwd()
     if configfile and os.path.exists(configfile):
@@ -65,6 +52,31 @@ def load_config(configfile=None):
     else:
         raise RuntimeError("Unable to find configuration to load!")
 
+    # We only allow the config to be loaded once, update_config()
+    # doesn't seem to update the config when called more than once
+    # anyway
+    configfile = os.path.realpath(configfile)
+    global _config_loaded
+    if _config_loaded is not None and configfile == _config_loaded:
+        return
+    elif _config_loaded is not None and configfile != _config_loaded:
+        raise RuntimeError('Config has already been loaded from %s' % \
+            _config_loaded)
+
+    # In general, we want all messages from application code.
+    logging.getLogger().setLevel(logging.DEBUG)
+    # Well-behaved libraries will set their own log levels to something 
+    # suitable (sqlalchemy sets it to WARNING, for example) but the TurboGears 
+    # stuff leaves its unset.
+    logging.getLogger('turbomail').setLevel(logging.INFO)
+    logging.getLogger('turbogears').setLevel(logging.INFO)
+    logging.getLogger('turbokid').setLevel(logging.INFO)
+    logging.getLogger('turbogears.access').setLevel(logging.WARN)
+    # Note that the actual level of log output is controlled by the handlers, 
+    # not the loggers (for example command line tools will typically log to 
+    # stderr at WARNING level). The main entry point for the program should 
+    # call bkr.log.log_to_{syslog,stream} to set up a handler.
+
     # We do not want TurboGears to touch the logging config, so let's 
     # double-check the user hasn't left an old [logging] section in their 
     # config file.
@@ -75,6 +87,7 @@ def load_config(configfile=None):
                 'remove [logging] section from config file %s' % configfile)
 
     turbogears.update_config(configfile=configfile, modulename="bkr.server.config")
+    _config_loaded = configfile
 
 def to_unicode(obj, encoding='utf-8'):
     if isinstance(obj, basestring):

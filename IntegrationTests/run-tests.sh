@@ -29,7 +29,10 @@ rm -rf /tmp/bkr-*
 # parallel. This semi-supported hack using __requires__ is the workaround.
 # http://bugs.python.org/setuptools/issue139
 # (Fedora/EPEL has python-cherrypy2 = 2.3 and python-cherrypy = 3)
-
-env PYTHONPATH=../Common:../Server:../LabController/src:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} \
+#
+# We need to set BEAKER_CONFIG_FILE here, so that our unit tests in bkr.server don't try and
+# load their own config (subsequent calls to update_config() don't seem to work...)
+env BEAKER_CONFIG_FILE='server-test.cfg' \
+    PYTHONPATH=../Common:../Server:../LabController/src:../Client/src:../IntegrationTests/src${PYTHONPATH:+:$PYTHONPATH} \
     python -c '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; from nose.core import main; main()' \
     ${*:--v rhts bkr}

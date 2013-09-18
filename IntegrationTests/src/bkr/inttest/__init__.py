@@ -33,9 +33,9 @@ import logging, logging.config
 import signal
 import cherrypy
 import turbogears
-from turbogears import update_config
 from turbogears.database import session
 from bkr.server.controllers import Root
+from bkr.server.util import load_config
 from bkr.log import log_to_stream
 
 # hack to make turbogears.testutil not do dumb stuff at import time
@@ -43,6 +43,8 @@ orig_cwd = os.getcwd()
 os.chdir('/tmp')
 import turbogears.testutil
 os.chdir(orig_cwd)
+
+CONFIG_FILE = os.environ.get('BEAKER_CONFIG_FILE')
 
 # workaround for delayed log formatting in nose
 # https://groups.google.com/forum/?fromgroups=#!topic/nose-users/5uZVDfDf1ZI
@@ -56,9 +58,6 @@ class EagerFormattedLogRecord(orig_LogRecord):
 logging.LogRecord = EagerFormattedLogRecord
 
 log = logging.getLogger(__name__)
-
-os.environ.setdefault('BEAKER_CONFIG_FILE', 'server-test.cfg')
-CONFIG_FILE = os.environ['BEAKER_CONFIG_FILE']
 
 def get_server_base():
     return os.environ.get('BEAKER_SERVER_BASE_URL',
@@ -288,9 +287,8 @@ def stop_process(name):
         raise ValueError('%s is not a valid process name')
 
 def setup_package():
-    log.info('Loading test configuration from %s', CONFIG_FILE)
     assert os.path.exists(CONFIG_FILE), 'Config file %s must exist' % CONFIG_FILE
-    update_config(configfile=CONFIG_FILE, modulename='bkr.server.config')
+    load_config(configfile=CONFIG_FILE)
     log_to_stream(sys.stdout, level=logging.DEBUG)
 
     from bkr.inttest import data_setup
