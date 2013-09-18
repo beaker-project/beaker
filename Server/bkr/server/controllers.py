@@ -681,10 +681,12 @@ class Root(RPCRoot):
 
         options['loan_widget'] = LoanWidget()
 
-        if our_user and system.status != SystemStatus.automated:
-            if system.user and system.can_unreserve(our_user):
+        if our_user:
+            if (system.open_reservation and system.open_reservation.type != 'recipe'
+                and system.can_unreserve(our_user)):
                 options['user_change_text'] = 'Return'
-            elif system.is_free() and system.can_reserve(our_user):
+            elif (system.status != SystemStatus.automated and
+                  system.is_free() and system.can_reserve(our_user)):
                 options['user_change_text'] = 'Take'
 
         if system.open_reservation is not None and \
