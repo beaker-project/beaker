@@ -11,7 +11,7 @@ from bkr.server.helpers import make_edit_link
 from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, \
     BeakerDataGrid, HorizontalForm
 from bkr.server.admin_page import AdminPage
-from bkr.server.wsgi import app
+from bkr.server.app import app
 from bkr.server import validators as beaker_validators
 from sqlalchemy import and_
 

@@ -14,7 +14,7 @@ from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.wsgi import app
+from bkr.server.app import app
 from turbogears.database import session
 import cherrypy
 

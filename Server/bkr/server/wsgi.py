@@ -1,4 +1,12 @@
 
+"""
+WSGI application entry point.
+
+Normal Beaker code should not import this module, since it has side effects 
+(such as loading configuration). It should only be imported by the WSGI 
+application container.
+"""
+
 import __main__
 __main__.__requires__ = ['CherryPy < 3.0']
 import pkg_resources
@@ -20,6 +28,7 @@ import cherrypy._cpwsgi
 from cherrypy.filters.basefilter import BaseFilter
 from flask import Flask
 from bkr.server import identity
+from bkr.server.app import app
 
 log = logging.getLogger(__name__)
 
@@ -29,17 +38,12 @@ from bkr.server.util import load_config
 load_config()
 log_to_stream(sys.stderr, level=logging.DEBUG)
 
-# This is NOT the right way to do this, we should just use SCRIPT_NAME properly instead.
-# But this is needed to line up with TurboGears server.webpath way of doing things.
-class PrefixedFlask(Flask):
-    def add_url_rule(self, rule, *args, **kwargs):
-        prefixed_rule = config.get('server.webpath', '').rstrip('/') + rule
-        return super(PrefixedFlask, self).add_url_rule(prefixed_rule, *args, **kwargs)
-
-app = application = PrefixedFlask('bkr.server', static_folder='../../assets')
+application = app
 
 # Register all routes.
-import bkr.server.controllers
+import bkr.server.user
+import bkr.server.group
+import bkr.server.systems
 
 @app.before_first_request
 def init():
@@ -63,6 +67,7 @@ def init():
     turbogears.database.restart_transaction = restart_transaction_patched
 
     # Set up old CherryPy stuff.
+    import bkr.server.controllers
     cherrypy.root = bkr.server.controllers.Root()
     cherrypy.server.start(init_only=True, server_class=None)
 
