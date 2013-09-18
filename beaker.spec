@@ -93,6 +93,10 @@ Requires:	python-setuptools
 Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
+%if 0%{?rhel} >= 6 || 0%{?fedora}
+# some client commands use requests, they are unsupported on RHEL5
+Requires:       python-requests
+%endif
 Requires:       libxslt-python
 %if !(0%{?rhel} >= 6) || !(0%{?fedora} >= 14)
 Requires:       python-simplejson
