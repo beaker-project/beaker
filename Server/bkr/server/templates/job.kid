@@ -105,7 +105,7 @@
    ${job_history_grid.display(job_history)}
  </div>
  <div id='dialog-confirm'> </div>
- <table class="table">
+ <table class="table job">
  <tbody>
   <tr>
    <th>Job ID</th>

@@ -1,5 +1,5 @@
 <div xmlns:py="http://purl.org/kid/ns#" id="recipe${recipe.id}">
- <table class="table">
+ <table class="table recipe">
  <tbody>
   <tr>
    <th><span py:strip="True" py:if="recipe.hostrecipe">Guest</span> Recipe ID</th>
