@@ -2,6 +2,7 @@
 
 import xml.dom.minidom
 import re, errno, sys, os
+from urlparse import urljoin
 import optparse
 from optparse import OptionGroup
 from kobo.client import ClientCommand
@@ -32,6 +33,35 @@ class BeakerCommand(ClientCommand):
         if kwargs.get('hub'):
             self.conf['HUB_URL'] = kwargs['hub']
         self.container.set_hub(username, password)
+
+    def requests_session(self):
+        import bkr.client.json_compat as json
+        try:
+            import requests
+        except ImportError:
+            # requests is not available for Python < 2.6 (for example on RHEL5),
+            # so client commands which use it will raise this exception.
+            raise RuntimeError('The requests package is not available on your system')
+        # share cookiejar with kobo hub, to re-use authentication token
+        cookies = self.hub._transport.cookiejar
+        # HUB_URL will have no trailing slash in the config, due to kobo
+        base_url = self.conf['HUB_URL'] + '/'
+        class BeakerClientRequestsSession(requests.Session):
+            """
+            Custom requests.Session class with a few conveniences for bkr client code.
+            """
+            def __init__(self):
+                super(BeakerClientRequestsSession, self).__init__()
+                self.cookies = cookies
+            def request(self, method, url, **kwargs):
+                # callers can pass in a relative URL and we will figure it out for them
+                url = urljoin(base_url, url)
+                # turn 'json' parameter into a suitably formatted request
+                if 'json' in kwargs:
+                    kwargs['data'] = json.dumps(kwargs.pop('json'))
+                    kwargs.setdefault('headers', []).append(('Content-Type', 'application/json'))
+                return super(BeakerClientRequestsSession, self).request(method, url, **kwargs)
+        return BeakerClientRequestsSession()
 
     t_id_types = dict(T = 'RecipeTask',
                       TR = 'RecipeTaskResult',

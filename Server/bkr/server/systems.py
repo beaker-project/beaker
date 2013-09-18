@@ -10,7 +10,7 @@ from bkr.server import identity
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
-        SystemPermission
+        SystemPermission, SystemAccessPolicyRule
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.xmlrpccontroller import RPCRoot
@@ -387,6 +387,73 @@ def save_system_access_policy(fqdn):
             system.record_activity(user=identity.current.user, service=u'HTTP',
                     field=u'Access Policy Rule', action=u'Added',
                     new=repr(new_rule))
+    return '', 204
+
+@app.route('/systems/<fqdn>/access-policy/rules/', methods=['POST'])
+def add_system_access_policy_rule(fqdn):
+    if not identity.current.user:
+        abort(401)
+    try:
+        system = System.by_fqdn(fqdn, identity.current.user)
+    except NoResultFound:
+        abort(404)
+    if not system.can_edit_policy(identity.current.user):
+        abort(403)
+    if system.custom_access_policy:
+        policy = system.custom_access_policy
+    else:
+        policy = system.custom_access_policy = SystemAccessPolicy()
+    rule = request.get_json()
+    user = User.by_user_name(rule['user']) if rule['user'] else None
+    group = Group.by_name(rule['group']) if rule['group'] else None
+    try:
+        permission = SystemPermission.from_string(rule['permission'])
+    except ValueError:
+        abort(400)
+    new_rule = policy.add_rule(user=user, group=group,
+            everybody=rule['everybody'], permission=permission)
+    system.record_activity(user=identity.current.user, service=u'HTTP',
+            field=u'Access Policy Rule', action=u'Added',
+            new=repr(new_rule))
+    return '', 204
+
+@app.route('/systems/<fqdn>/access-policy/rules/', methods=['DELETE'])
+def delete_system_access_policy_rules(fqdn):
+    if not identity.current.user:
+        abort(401)
+    try:
+        system = System.by_fqdn(fqdn, identity.current.user)
+    except NoResultFound:
+        abort(404)
+    if not system.can_edit_policy(identity.current.user):
+        abort(403)
+    if system.custom_access_policy:
+        policy = system.custom_access_policy
+    else:
+        policy = system.custom_access_policy = SystemAccessPolicy()
+    # We expect some query string args specifying which rules should be 
+    # deleted. If those are not present, it's "Method Not Allowed".
+    query = SystemAccessPolicyRule.query.filter(SystemAccessPolicyRule.policy == policy)
+    if 'permission' in request.args:
+        query = query.filter(SystemAccessPolicyRule.permission.in_(
+                request.args.getlist('permission', type=SystemPermission.from_string)))
+    else:
+        abort(405)
+    if 'user' in request.args:
+        query = query.join(SystemAccessPolicyRule.user)\
+                .filter(User.user_name.in_(request.args.getlist('user')))
+    elif 'group' in request.args:
+        query = query.join(SystemAccessPolicyRule.group)\
+                .filter(Group.group_name.in_(request.args.getlist('group')))
+    elif 'everybody' in request.args:
+        query = query.filter(SystemAccessPolicyRule.everybody)
+    else:
+        abort(405)
+    for rule in query:
+        system.record_activity(user=identity.current.user, service=u'HTTP',
+                field=u'Access Policy Rule', action=u'Removed',
+                old=repr(rule))
+        session.delete(rule)
     return '', 204
 
 # for sphinx

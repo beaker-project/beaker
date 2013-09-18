@@ -27,6 +27,7 @@ Contents
 
    bkr-client
    interface
+   systems/index
    job-design
    workflow
    writing-tasks

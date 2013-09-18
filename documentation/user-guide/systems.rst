@@ -70,67 +70,6 @@ Columns" link is pressed and the columns checked/unchecked.
    the name of the user currently logged in. Click on this, then down to "My 
    Systems"
 
-.. _adding-systems:
-
-Adding a system
-~~~~~~~~~~~~~~~
-
-To add a System, go to any System search page, and click on the "Add(+)"
-link on the bottom left. You must be logged in to do this. After filling
-in the details, press the "Save Changes" button on the bottom left hand
-corner.
-
-.. figure:: system_add.png
-   :width: 100%
-   :alt: [screenshot of Add System page]
-
-   Adding a System
-
-You will then need to update the Power details. To test they work, try hitting 
-the power action buttons to ensure the system is responding correctly. The Arch 
-details should then be updated, and then update the Install options with 
-``console=ttyS1,115200n8 ksdevice=link`` for each arch. See 
-:ref:`system-details-tabs`. You'll need to ensure that your System is hooked up 
-to the conserver. Try provisioning a system (see :ref:`provisioning-a-system`). 
-You can watch the provisioning process through the console. Please, be patient. 
-The provisioning may take some time.
-
-Once the System has been added, you should :ref:`create a job
-<submitting-a-new-job>` to run the Beaker-provided :ref:`inventory-task` task
-on the machine.  The easiest way to do this is to use the ``machine-test``
-workflow to generate and submit an appropriate job definition::
-
-    bkr machine-test --inventory --family=RedHatEnterpriseLinux6 \
-         --arch=x86_64 --machine=<FQDN>
-
-Refer to :ref:`bkr-machine-test` for more details.
-
-
-.. _loaning-systems:
-
-Loaning systems
-~~~~~~~~~~~~~~~
-If you have admin permissions over a system, you will be able to loan the
-system to other Beaker users. In the context of Beaker, loaning is the
-assignment of a system to a user such that the system is exclusively available
-to the loanee. The loanee also has the ability to manually reserve the system,
-see :ref:`provisioning-a-system`.
-
-To loan a system to another user, go to the :ref:`system-details` page
-and next to the :guilabel:`Loaned to` field, click the link that says
-:guilabel:`(Loan Settings)`. This will display a dialog where you can enter a user to
-loan the system to. You can also enter a comment about the loan for future
-reference. To return a loan, follow the steps above, but click
-:guilabel:`Return Loan` instead.
-
-.. admonition:: Comments
-
-   Although a loan does not require a comment, the reverse is not true.
-   Whenever a loan is returned, the comment is removed. Similarly,
-   if the :guilabel:`Update Button` is clicked when the :guilabel:`Loan To`
-   field is empty, then the loan is returned and any existing comment cleared.
-
-
 Adding a driver disk
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -247,8 +186,7 @@ logged in as either the owner of the System, or an admin.
    is the user who added the entry to inventory, but owners can be
    reassigned)
 
--  *Loaned To*: The current Loanee. If this field is non empty, the
-   system is only able to be used by the loanee.
+-  *Loaned To*: The current Loanee. See :ref:`loaning-systems`.
 
 -  *MAC Address*: The MAC address of the network device.
 
@@ -295,40 +233,6 @@ History
     an inventory item in Beaker. These activities can also be searched. By 
     default, the simple search does a "contains" search on the Field attribute. 
     Please see :ref:`system-searching` for details on searching. 
-
-.. _system-access-policies:
-
-System access policies
-~~~~~~~~~~~~~~~~~~~~~~
-
-System owners can use an access policy to grant other Beaker users limited 
-access to their system.
-
-Access policies are represented as a table of checkboxes, where each column is 
-a permission and each row is a user or group covered by the policy. If 
-a checkbox is selected, the user or group in that row is granted the permission 
-in that column.
-
-The following permissions can be granted in a system access policy:
-
-Edit this policy
-    The user can edit the access policy to grant or revoke permissions, 
-    including adding new users and groups to the policy.
-Edit system details
-    The user can edit system details and configuration, however they cannot 
-    take ownership of it or grant new permissions to themselves or any other 
-    user.
-Loan to anyone
-    The user can loan the system to any Beaker user, including themselves.
-Loan to self
-    The user can loan the system to themselves only.
-Control power
-    The user can run power commands and netboot commands for the system *even 
-    when they have not reserved it*.
-Reserve
-    The user can reserve the system, either through the scheduler (if the 
-    system is Automated) or manually through the web UI (if the system is 
-    Manual).
 
 System activity
 ~~~~~~~~~~~~~~~
