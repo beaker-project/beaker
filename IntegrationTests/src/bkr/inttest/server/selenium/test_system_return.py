@@ -23,12 +23,39 @@ class SystemReturnTestWD(WebDriverTestCase):
         login(b)
         b.get(get_server_base() + 'view/%s' % system.fqdn)
         # "Return" button should be absent
-        b.find_element_by_xpath('//form[@name="form" and not(.//a[normalize-space(string(.))="Return"])]')
+        b.find_element_by_xpath('//form[@name="form"'
+                                'and not(.//a[normalize-space(string(.))="Return"])]')
         # try doing it directly
         b.get(get_server_base() + 'user_change?id=%s' % system.id)
         self.assertEquals(b.find_element_by_css_selector('.flash').text,
             "Failed to return %s: Currently running R:%s" % (system.fqdn, self.recipe.id))
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1007789
+    def test_can_return_manual_reservation_when_automated(self):
+
+        with session.begin():
+            user = data_setup.create_user(password='foobar')
+            system = data_setup.create_system(owner=user, status=SystemStatus.manual)
+
+        b = self.browser
+        login(b, user=user.user_name, password="foobar")
+
+        # Take
+        b.get(get_server_base() + 'view/%s' % system.fqdn)
+        b.find_element_by_link_text('Take').click()
+        self.assertEquals(b.find_element_by_css_selector('.flash').text,
+                          "Reserved %s" % (system.fqdn))
+
+        # toggle status to Automated
+        with session.begin():
+            system.status = SystemStatus.automated
+        session.expunge_all()
+
+        # Attempt to return
+        b.get(get_server_base() + 'view/%s' % system.fqdn)
+        b.find_element_by_link_text('Return').click()
+        self.assertEquals(b.find_element_by_css_selector('.flash').text,
+                          "Returned %s" % (system.fqdn))
 
 class SystemReturnTest(SeleniumTestCase):
 
