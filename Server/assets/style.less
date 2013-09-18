@@ -87,18 +87,20 @@ td form, td input, td select {
 .statusRunning { color: @blueDark; }
 .statusDirty { font-style: italic; }
 
-// recipes and recipe sets on job page
+// jobs, recipe sets, and recipes on job page and recipe page
+table.job, table.recipe {
+    & > tbody > tr > th {
+        text-align: right;
+    }
+}
 .recipeset {
     border: 2px solid @tableBorder;
     padding: 1em;
     margin: 1em 0;
 }
-.recipe table {
+table.recipe {
     margin-top: 2em;
     margin-bottom: 0;
-}
-.recipe table th {
-    text-align: right;
 }
 
 // elements from master.kid
