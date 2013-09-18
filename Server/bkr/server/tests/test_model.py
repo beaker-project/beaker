@@ -6,11 +6,14 @@ import gzip
 import os
 import re
 import pkg_resources
+import errno
 from lxml import etree
 from tempfile import mkdtemp
 from shutil import copy, rmtree
+from nose.plugins.skip import SkipTest
 from sqlalchemy.schema import MetaData, Table, Column
 from sqlalchemy.types import Integer, Unicode
+from turbogears.config import get, update
 from bkr.server.model import ConditionalInsert, TaskLibrary
 
 
@@ -54,7 +57,8 @@ class TaskLibraryTest(unittest.TestCase):
         self.tasklibrary = TaskLibrary()
 
     def tearDown(self):
-        pass
+        # Make sure sane value is left after test run
+        update({'beaker.createrepo_command': 'createrepo'})
 
     def _create_clean_dir(self, dir):
         """Creates an empty directory"""
@@ -89,6 +93,38 @@ class TaskLibraryTest(unittest.TestCase):
         hashed_file2 = self._hash_repodata_file(file2_content)
         # Assert the contents of the files are indeed the same
         self.assertEquals(hashed_file2, hashed_file1)
+
+    def test_createrepo_c_command(self):
+        update({'beaker.createrepo_command': 'createrepo_c'})
+        basepath = self.tasklibrary.rpmspath
+        self._create_clean_dir(basepath)
+        try:
+            rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
+                'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
+            copy(rpm_file, basepath)
+            try:
+                self.tasklibrary.update_repo()
+            except OSError, e:
+                if e.errno is errno.ENOENT:
+                    raise SkipTest('Could not find createrepo_c')
+        finally:
+            rmtree(basepath)
+
+    def test_invalid_createrepo_command_fail(self):
+        update({'beaker.createrepo_command': 'iamnotarealcommand'})
+        basepath = self.tasklibrary.rpmspath
+        self._create_clean_dir(basepath)
+        try:
+            rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
+                'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
+            copy(rpm_file, basepath)
+            try:
+                self.tasklibrary.update_repo()
+                self.fail('Should throw exception with invalid command')
+            except OSError, e:
+                self.assertEqual(e.errno, errno.ENOENT)
+        finally:
+            rmtree(basepath)
 
     def test_update_repo(self):
         basepath = self.tasklibrary.rpmspath

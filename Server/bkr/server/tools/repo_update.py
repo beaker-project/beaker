@@ -17,6 +17,7 @@ import urlparse
 import shutil
 import yum, yum.misc, yum.packages
 import urllib
+import subprocess
 
 __version__ = '0.1'
 __description__ = 'Script to update harness repos'
@@ -97,9 +98,9 @@ def update_repos(baseurl, basepath):
         except Exception, e:
             print >>sys.stderr, str(e)
             continue
-        cmd = "pushd %s && createrepo -q --checksum sha ." % dest
-        print cmd
-        os.system(cmd)
+        createrepo_command = get('beaker.createrepo_command', 'createrepo')
+        p = subprocess.Popen([createrepo_command, '-q', '--checksum', 'sha', '.'], cwd=dest)
+        return p.wait()
 
 def main():
     parser = get_parser()
@@ -112,7 +113,7 @@ def main():
         basepath = opts.basepath
     else:
         basepath = get("basepath.harness", "/var/www/beaker/harness")
-    update_repos(baseurl=baseurl, basepath=basepath)
+    sys.exit(update_repos(baseurl=baseurl, basepath=basepath))
 
 if __name__ == '__main__':
     main()
