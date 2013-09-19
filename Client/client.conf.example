@@ -23,3 +23,7 @@ AUTH_METHOD = "password"
 
 # Kerberos credential cache file.
 #KRB_CCACHE = ""
+
+# SSL CA certificate to verify the Beaker server's SSL certificate.
+# By default, uses the system-wide CA certificate bundle.
+#CA_CERT = ""

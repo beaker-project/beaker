@@ -44,6 +44,8 @@ class BeakerCommand(ClientCommand):
             raise RuntimeError('The requests package is not available on your system')
         # share cookiejar with kobo hub, to re-use authentication token
         cookies = self.hub._transport.cookiejar
+        # use custom CA cert/bundle, if given
+        ca_cert = self.conf.get('CA_CERT', None)
         # HUB_URL will have no trailing slash in the config, due to kobo
         base_url = self.conf['HUB_URL'] + '/'
         class BeakerClientRequestsSession(requests.Session):
@@ -53,6 +55,8 @@ class BeakerCommand(ClientCommand):
             def __init__(self):
                 super(BeakerClientRequestsSession, self).__init__()
                 self.cookies = cookies
+                if ca_cert:
+                    self.verify = ca_cert
             def request(self, method, url, **kwargs):
                 # callers can pass in a relative URL and we will figure it out for them
                 url = urljoin(base_url, url)
