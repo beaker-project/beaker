@@ -56,6 +56,49 @@ class TestBeakerd(unittest.TestCase):
             task = Task.by_id(task_id)
             task.disable()
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=977562
+    def test_jobs_with_no_systems_process_beyond_queued(self):
+        with session.begin():
+            system = data_setup. \
+                create_system(lab_controller=self.lab_controller)
+            r1 = data_setup.create_recipe()
+            j1 = data_setup.create_job_for_recipes([r1])
+
+            r2 = data_setup.create_recipe()
+            j2 = data_setup.create_job_for_recipes([r2])
+
+            data_setup.mark_job_queued(j1)
+            r1.systems[:] = [system]
+            data_setup.mark_job_running(j2, system=system)
+            j1.update_status()
+            j2.update_status()
+
+        # Mark system broken and cancel the job
+        with session.begin():
+            system.status = SystemStatus.broken
+            j2.cancel()
+            j2.update_status()
+
+        session.expunge_all()
+        with session.begin():
+            j1 = Job.by_id(j1.id)
+            j2 = Job.by_id(j2.id)
+            self.assertTrue(j1.status is TaskStatus.queued)
+            self.assertTrue(j2.status is TaskStatus.cancelled)
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+        session.expunge_all()
+        # We should still be queued here.
+        with session.begin():
+            j1 = Job.by_id(j1.id)
+            self.assertTrue(j1.status is TaskStatus.queued, j1.status)
+        beakerd.abort_dead_recipes()
+        beakerd.update_dirty_jobs()
+        session.expunge_all()
+        with session.begin():
+            j1 = Job.by_id(j1.id)
+            self.assertTrue(j1.status is TaskStatus.aborted, j1.status)
+
     def test_serialized_scheduling(self):
         # This tests that our main recipes loop will schedule
         # systems correctly, without any need to manually clean
