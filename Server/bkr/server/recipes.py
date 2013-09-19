@@ -407,7 +407,6 @@ class Recipes(RPCRoot):
                            search_controller=url("/get_search_options_recipe"), 
                            quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
         return dict(title="Recipes", 
-                    object_count=recipes.count(),
                     grid=recipes_grid, 
                     list=recipes,
                     search_bar=search_bar,
@@ -431,7 +430,7 @@ class Recipes(RPCRoot):
             PDC(name='user', getter=lambda x: x.user.email_link if x.user else None, title='User'),]
         grid = myPaginateDataGrid(fields=fields)
         return dict(title='Recipe Systems', grid=grid, list=recipe.systems,
-            object_count = len(recipe.systems), search_bar=None)
+            search_bar=None)
 
     @expose(template="bkr.server.templates.recipe")
     def default(self, id):

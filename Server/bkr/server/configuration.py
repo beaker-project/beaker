@@ -135,7 +135,6 @@ class Configuration(AdminPage):
         return dict(title="Configuration",
                     grid = configitems_grid,
                     alpha_nav_bar = AlphaNavBar(list_by_letters, self.search_name),
-                    object_count = configitems.count(),
                     search_widget = self.search_widget_form,
                     list = configitems)
 

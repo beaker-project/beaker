@@ -76,7 +76,6 @@ class DistroTrees(RPCRoot):
                     search_bar=search_bar,
                     searchvalue=kwargs.get('search'),
                     options=options,
-                    object_count=query.count(),
                     list=query)
 
     def _provision_system_link(self, distro_tree):

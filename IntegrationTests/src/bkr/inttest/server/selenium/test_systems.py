@@ -99,6 +99,9 @@ class TestSystemGridSorting(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
 
         cell_values = []
+        # Next page number
+        # Assume our current page is 1
+        next_page = 2
         while True:
             row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr/td[%d]' % column))
             cell_values += [sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
@@ -107,9 +110,11 @@ class TestSystemGridSorting(SeleniumTestCase):
             # (so that we can see that it is really sorted)
             if len(set(cell_values)) > 1:
                 break
-            if sel.get_xpath_count('//div[contains(@class, "pagination")]//a[text()=">"]') != 2:
+            try:
+                sel.click('//div[contains(@class, "pagination")]//ul/li/a[normalize-space(string())="%s"]' % next_page)
+            except Exception:
                 raise AssertionError('Tried all pages, but every cell had the same value!')
-            sel.click('//div[contains(@class, "pagination")]//a[text()=">"]')
+            next_page += 1
             sel.wait_for_page_to_load('30000')
         assert_sorted(cell_values, key=lambda x: x.lower())
 

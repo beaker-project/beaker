@@ -211,7 +211,6 @@ class Distros(RPCRoot):
         return dict(title="Distros", 
                     grid=distros_grid,
                     search_bar=search_bar,
-                    object_count = distros.count(),
                     action=action,
                     options=search_options,
                     searchvalue=searchvalue,

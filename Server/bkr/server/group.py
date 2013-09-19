@@ -514,7 +514,6 @@ class Groups(AdminPage):
                 add_action='./new' if not identity.current.anonymous else None)
         return_dict = dict(title=u"Groups",
                            grid=grid,
-                           object_count = groups.count(),
                            search_bar = None,
                            search_widget = self.search_widget_form,
                            list = groups)

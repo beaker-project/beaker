@@ -147,7 +147,6 @@ class RetentionTag(AdminPage):
         tag_grid = myPaginateDataGrid(fields=my_fields, add_action='./new')
         return_dict = dict(title='Tags',
                            grid = tag_grid,
-                           object_count = tags.count(),
                            search_bar = None,
                            search_widget = self.search_widget_form,
                            list = tags)
