@@ -36,7 +36,7 @@ from bkr.server.bexceptions import BeakerException, BX, \
 from bkr.server.enum import DeclEnum
 from bkr.server.hybrid import hybrid_property, hybrid_method
 from bkr.server.helpers import make_link, make_fake_link
-from bkr.server.util import unicode_truncate, absolute_url
+from bkr.server.util import unicode_truncate, absolute_url, run_createrepo
 from bkr.server import mail, metrics, identity
 import os
 import shutil
@@ -6898,19 +6898,14 @@ class TaskLibrary(object):
         # Internal call that assumes the flock is already held
         # Removed --baseurl, if upgrading you will need to manually
         # delete repodata directory before this will work correctly.
-        createrepo_command = get('beaker.createrepo_command', 'createrepo')
-        p = subprocess.Popen([createrepo_command, '-q', '--update',
-                '--checksum', 'sha', '.'], cwd=self.rpmspath,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, err = p.communicate()
-        if output:
-            log.debug("stdout from %s: %s", createrepo_command, output)
+        command, returncode, out, err = run_createrepo(cwd=self.rpmspath)
+        if out:
+            log.debug("stdout from %s: %s", command, out)
         if err:
-            log.warn("stderr from %s: %s", createrepo_command, err)
-        retcode = p.poll()
-        if retcode:
-            raise ValueError('%s failed with exit status %d:\n%s'
-                    % (createrepo_command, retcode, err))
+            log.warn("stderr from %s: %s", command, err)
+        if returncode != 0:
+            raise RuntimeError('Createrepo failed.\nreturncode:%s cmd:%s err:%s'
+                % (returncode, command, err))
 
     def update_repo(self):
         """Update the task library yum repo metadata"""
