@@ -8,7 +8,7 @@ __requires__ = ['CherryPy < 3.0']
 
 from bkr.log import log_to_stream
 from bkr.server.model import OSMajor
-from bkr.server.util import load_config
+from bkr.server.util import load_config, run_createrepo
 from optparse import OptionParser
 from turbogears.config import get
 import os
@@ -17,7 +17,6 @@ import urlparse
 import shutil
 import yum, yum.misc, yum.packages
 import urllib
-import subprocess
 
 __version__ = '0.1'
 __description__ = 'Script to update harness repos'
@@ -98,8 +97,14 @@ def update_repos(baseurl, basepath):
         except Exception, e:
             print >>sys.stderr, str(e)
             continue
-        createrepo_command = get('beaker.createrepo_command', 'createrepo')
-        subprocess.check_call([createrepo_command, '-q', '--checksum', 'sha', '.'], cwd=dest)
+        createrepo_results = run_createrepo(cwd=dest)
+        returncode = createrepo_results.returncode
+        if returncode != 0:
+            err = createrepo_results.err
+            command = createrepo_results.command
+            raise RuntimeError('Createrepo failed.\nreturncode:%s cmd:%s err:%s'
+                 % (returncode, command, err))
+
 
 def main():
     parser = get_parser()
