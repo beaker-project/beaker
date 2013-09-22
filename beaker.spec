@@ -459,7 +459,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
 %attr(-,apache,root) %dir %{_datadir}/bkr
 %attr(-,apache,root) %{_datadir}/bkr/lab-controller
-%{_sysconfdir}/cron.hourly/beaker_expire_distros
+%config(noreplace) %{_sysconfdir}/cron.hourly/beaker_expire_distros
 %attr(-,apache,root) %dir %{_var}/www/beaker
 %attr(-,apache,root) %dir %{_var}/www/beaker/logs
 %dir %{_localstatedir}/log/%{name}
@@ -479,7 +479,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
-%attr(0440,root,root) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
+%attr(0440,root,root) %config(noreplace) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-lab-controller.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/beaker
 %if %{with_systemd}
