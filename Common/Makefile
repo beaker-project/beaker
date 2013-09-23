@@ -1,24 +1,22 @@
 # License: GPL v2 or later
 # Copyright Red Hat Inc. 2008
 
-PKGNAME=beaker
-
-include ../rpmspec_rules.mk
-include ../py_rules.mk
-
-build:	bkr/common/__init__.py py-build
+.PHONY: build
+build:
+	python setup.py build
 	# Workaround for https://bitbucket.org/pypa/setuptools/issue/2/
-	# See adjacent setup.py.in for more details
+	# See adjacent setup.py for more details
 	echo bkr > build/namespace_packages.txt
 
-bkr/common/__init__.py: bkr/common/__init__.py.in
-	sed -e 's/@VERSION@/$(PKGVERSION)/g' < $< > $@
-
-install: build py-install
+.PHONY: install
+install: build
+	python setup.py install -O1 --skip-build --root $(DESTDIR)
 	# Workaround for https://bitbucket.org/pypa/setuptools/issue/2/
-	# See adjacent setup.py.in for more details
+	# See adjacent setup.py for more details
 	install -m0644 build/namespace_packages.txt \
 	  $(DESTDIR)/usr/lib/python*/site-packages/bkr-*.egg-info
 
-clean:	py-clean
-	rm bkr/common/__init__.py
+.PHONY: clean
+clean:
+	python setup.py clean
+	rm -rf build
