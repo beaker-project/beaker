@@ -99,8 +99,7 @@ def update_repos(baseurl, basepath):
             print >>sys.stderr, str(e)
             continue
         createrepo_command = get('beaker.createrepo_command', 'createrepo')
-        p = subprocess.Popen([createrepo_command, '-q', '--checksum', 'sha', '.'], cwd=dest)
-        return p.wait()
+        subprocess.check_call([createrepo_command, '-q', '--checksum', 'sha', '.'], cwd=dest)
 
 def main():
     parser = get_parser()
