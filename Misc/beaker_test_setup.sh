@@ -1,28 +1,45 @@
 #!/bin/bash
 
-# This script installs the necessary packages, sets up the database
+# On Fedora, this script installs the necessary packages, sets up the database
 # and copies selenium JAR to the appropriate location. All of these
 # are needed to run Beaker's test suite.
 
-# Tested on Fedora 19+20
-# You should run this as root
+# You should run this as root from the Misc/ directory of a git clone
+# of the source repository
 
 # Abort if any of these fails
 set -e
+
+# install wget
+yum -y install wget python-sphinx-1.1.3-8.fc20.beaker.1
+
+# add the beaker-server-testing repo
+pushd /etc/yum.repos.d/
+cat >/etc/yum.repos.d/beaker-server-testing.repo <<"EOF"
+[beaker-server-testing]
+name=Beaker Server -Fedora$releasever - Testing
+baseurl=http://beaker-project.org/yum/server-testing/Fedora$releasever/
+enabled=1
+gpgcheck=0
+
+EOF
+
+popd
 
 # create beaker RPMs
 
 pushd ../
 
 yum-builddep -y beaker.spec
-yum -y install tito createrepo
-tito build --test --rpm
-createrepo --no-database /tmp/tito/noarch
+yum -y install createrepo rpm-build
+Misc/rpmbuild.sh -bb
+mv rpmbuild-output /tmp/beaker-rpms
+createrepo --no-database /tmp/beaker-rpms
 
 cat >/etc/yum.repos.d/beaker-local-builds.repo <<"EOF"
-[tito]
-name=tito
-baseurl=file:///tmp/tito/noarch/
+[beaker-builds]
+name=beaker-builds
+baseurl=file:///tmp/beaker-rpms
 EOF
 
 popd
@@ -60,3 +77,10 @@ mkdir -p /usr/local/share/selenium
 pushd /usr/local/share/selenium
 wget http://selenium.googlecode.com/files/selenium-server-standalone-2.35.0.jar
 popd
+
+
+# make build
+pushd ../
+make build
+popd
+
