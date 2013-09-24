@@ -54,18 +54,20 @@ JIRA_CONFIG = os.path.expanduser("~/.beaker-jira.cfg")
 CONFIG_DIR = os.path.dirname(JIRA_CONFIG)
 BZ_ISSUE_CRITERIA = 'summary ~ "BZ#" or cf[10400] is not NULL'
 EXTERNAL_LINK_FIELD = "customfield_10400"
+STORY_POINTS_FIELD = "customfield_10002"
 
 TRACKING_ISSUE_DESCRIPTION = """\
-Bugzilla tracking issue for Beaker created by {{Misc/bz2jira.py}}.
+[BZ#%s|%s] tracking issue created by {{Misc/bz2jira.py}}.
 Use {{Misc/checkbugs.py}} to ensure bug and issue states are aligned.
 """
 
 def relative_config_path(target):
     return os.path.normpath(os.path.join(CONFIG_DIR, target))
 
-class IssueSummary(namedtuple("IssueSummary",
-                              ["id", "status", "summary", "bz_link",
-                               "bz_summary_ref", "bz_link_ref"])):
+class IssueDetails(namedtuple("IssueDetails",
+                              ["id", "status", "summary", "description",
+                               "target_version", "story_points",
+                               "bz_link", "bz_summary_ref", "bz_link_ref"])):
     pass
 
 class JiraInfo(object):
@@ -85,6 +87,8 @@ class JiraInfo(object):
         if getpasscb is None:
             raise RuntimeError("Kerberos auth not yet supported")
         self._jira = jira = JIRA(options, basic_auth=(username, getpasscb()))
+        self._versions = dict((v.name, v)
+                                for v in jira.project(project).versions)
         # Retrieving every issue that references bugzilla probably won't
         # scale as the project accumulates more issues, but it'll do for now
         self._issues = jira.search_issues('project=%s and type != Sub-task '
@@ -98,12 +102,14 @@ class JiraInfo(object):
         self._bz_summary_cache = summary_cache = {}
         for issue in self._issues:
             issue_info = issue.fields
+            # Extract summary and summary ref to BZ (if any)
             summary = issue_info.summary.strip()
             bz_summary_ref, __, __ = summary.partition(" ")
             if bz_summary_ref.startswith("BZ#"):
                 bz_summary_ref = int(bz_summary_ref[3:])
             else:
                 bz_summary_ref = None
+            # Extract external link and link ref to BZ (if any)
             external_url = getattr(issue_info, EXTERNAL_LINK_FIELD)
             bz_link_ref = None
             if external_url is not None:
@@ -114,8 +120,26 @@ class JiraInfo(object):
             # TODO?: Handle the case where multiple JIRA issues refer to the
             # same BZ entry (e.g. reopened bugs)
             if bz_link_ref or bz_summary_ref:
-                v = IssueSummary(issue.key, issue_info.status.name,
-                                 summary, external_url,
+                # Extract description
+                description = issue_info.description
+                if description is None:
+                    description = ""
+                else:
+                    description = description.strip()
+
+                # Extract target version
+                #   - assume at most one target version
+                #   - anything in the backlog is implicitly 1.0 material
+                if issue_info.fixVersions:
+                    target_version = issue_info.fixVersions[0].name
+                else:
+                    target_version = u"1.0"
+
+                # Extract story points
+                story_points = getattr(issue_info, STORY_POINTS_FIELD)
+                v = IssueDetails(issue.key, issue_info.status.name,
+                                 summary, description, target_version,
+                                 story_points, external_url,
                                  bz_summary_ref, bz_link_ref)
                 if bz_link_ref:
                     link_cache[bz_link_ref] = v
@@ -150,20 +174,34 @@ class JiraInfo(object):
             issue_type = 'Improvement'
         else:
             issue_type = 'Bug'
+        story_points = bug.estimated_time if bug.estimated_time else None
+        description = TRACKING_ISSUE_DESCRIPTION % (bug.bug_id, bug.weburl)
         issue_details = {
             "project": {"key": self._jira_project},
             "summary": issue_summary,
             "issuetype": {"name": issue_type},
-            "description": TRACKING_ISSUE_DESCRIPTION,
+            "description": description,
             EXTERNAL_LINK_FIELD: bug.weburl,
+            STORY_POINTS_FIELD: story_points
         }
-        return issue_details
+
+        # Only handle 0.XY releases for now
+        if bug.target_milestone.startswith(u"0."):
+            target_version = bug.target_milestone[:4]
+            version_details = {"id": self._versions[target_version].id}
+            issue_details["fixVersions"] = [version_details]
+        else:
+            target_version = u"1.0"
+        return issue_details, target_version
 
     def create_bz_issue(self, bug):
-        details = self.derive_bz_issue_details(bug)
+        details, target_version = self.derive_bz_issue_details(bug)
         issue = self._jira.create_issue(fields=details)
-        return IssueSummary(issue.key, "To Do",
+        return IssueDetails(issue.key, "To Do",
                             details["summary"],
+                            details["description"],
+                            target_version,
+                            details[STORY_POINTS_FIELD],
                             details[EXTERNAL_LINK_FIELD],
                             bug.bug_id, bug.bug_id)
 
