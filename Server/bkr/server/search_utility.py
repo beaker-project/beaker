@@ -1,3 +1,4 @@
+import datetime
 import model
 import re
 import sqlalchemy
@@ -79,6 +80,13 @@ class MyColumn(object):
     @property
     def aliased(self):
         return self._aliased
+
+    @property
+    def parent_entity(self):
+        try:
+            return self.column.parent.entity
+        except AttributeError: # sqlalchemy < 0.8
+            return self.column.parententity
 
 
 class CpuColumn(MyColumn):
@@ -958,21 +966,48 @@ class System(SystemObject):
         if not val:
             return col == None
         else:
-            return and_(col >= '%s 00:00:00' % val, col <= '%s 23:59:99' % val)
+            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return and_(col >= date, col < date + datetime.timedelta(days=1))
+
+    @classmethod
+    def added_after_filter(cls, col, val):
+        if not val:
+            return col == None
+        else:
+            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return col >= date + datetime.timedelta(days=1)
+
+    @classmethod
+    def added_before_filter(cls, col, val):
+        if not val:
+            return col == None
+        else:
+            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return col < date
 
     @classmethod
     def lastinventoried_is_filter(cls,col,val):
         if not val:
             return col == None
         else:
-            return and_(col >= '%s 00:00:00' % val, col <= '%s 23:59:99' % val)
+            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return and_(col >= date, col < date + datetime.timedelta(days=1))
 
     @classmethod
     def lastinventoried_after_filter(cls,col,val):
         if not val:
             return col == None
         else:
-            return col >= '%s 23:59:59' % val
+            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return col >= date + datetime.timedelta(days=1)
+
+    @classmethod
+    def lastinventoried_before_filter(cls,col,val):
+        if not val:
+            return col == None
+        else:
+            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return col < date
 
     @classmethod
     def arch_is_not_filter(cls,col,val):
@@ -1378,27 +1413,27 @@ class Key(SystemObject):
         result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
-        return and_(col.column < val, col.column.parententity.key_id == key_id)
+        return and_(col.column < val, col.parent_entity.key_id == key_id)
 
     @classmethod
     def value_greater_than_filter(cls,col,val,key_name):
         result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
-        return and_(col.column > val, col.column.parententity.key_id == key_id)
+        return and_(col.column > val, col.parent_entity.key_id == key_id)
 
     @classmethod
     def value_contains_filter(cls, col, val, key_name):
         result = model.Key.by_name(key_name) 
         key_id = result.id
-        return and_(col.column.like('%%%s%%' % val), col.column.parententity.key_id == key_id)
+        return and_(col.column.like('%%%s%%' % val), col.parent_entity.key_id == key_id)
         
     @classmethod
     def value_is_filter(cls,col,val,key_name):
         result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
-        column_parent = col.column.parententity
+        column_parent = col.parent_entity
         if not val:
             return and_(or_(col.column == val, col.column == None),
                 or_(column_parent.key_id == key_id,
@@ -1411,7 +1446,7 @@ class Key(SystemObject):
         result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
-        column_parent = col.column.parententity
+        column_parent = col.parent_entity
         if int_table == 1:
             if not val:
                 return and_(or_(col.column != val, col.column == None),

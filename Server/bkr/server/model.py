@@ -2919,7 +2919,7 @@ class System(SystemObject):
                 Distro.tags.contains(reliable_distro_tag.decode('utf8')),
                 Recipe.start_time >
                     func.ifnull(status_change_subquery.as_scalar(), self.date_added),
-                Recipe.finish_time > nonaborted_recipe_subquery.as_scalar()))\
+                Recipe.finish_time > nonaborted_recipe_subquery.as_scalar().correlate(None)))\
             .value(func.count(DistroTree.id.distinct()))
         if count >= 2:
             # Broken!
