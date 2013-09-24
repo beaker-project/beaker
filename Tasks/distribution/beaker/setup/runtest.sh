@@ -22,8 +22,8 @@
 function BuildBeaker ()
 {
     rlPhaseStartTest "Build Beaker from git"
-    rlRun "git clone git://git.beaker-project.org/beaker"
-    rlRun "pushd beaker"
+    rlRun "git clone git://git.beaker-project.org/beaker /mnt/testarea/beaker"
+    rlRun "pushd /mnt/testarea/beaker"
     rlRun "git checkout ${BEAKER_GIT_REF:-develop}"
     if [[ -n "$BEAKER_GIT_REMOTE" ]] ; then
         rlRun "git fetch $BEAKER_GIT_REMOTE ${BEAKER_GIT_REMOTE_REF:-develop}"
@@ -31,16 +31,16 @@ function BuildBeaker ()
             || rlDie "Git checkout/merge failed"
     fi
     rlRun "yum-builddep -y ./beaker.spec"
-    rlRun "yum -y install tito createrepo"
-    rlRun "tito build --rpm --test" || rlDie "Tito RPM build failed"
+    rlRun "yum -y install createrepo"
+    rlRun "Misc/rpmbuild.sh -bb" || rlDie "RPM build failed"
     rlRun "popd"
-    rlRun "createrepo /tmp/tito/noarch/"
+    rlRun "createrepo /mnt/testarea/beaker/rpmbuild-output/noarch/"
     cat >/etc/yum.repos.d/beaker-local-builds.repo <<"EOF"
-[tito]
-name=tito
-baseurl=file:///tmp/tito/noarch/
+[beaker-local-builds]
+name=beaker-local-builds
+baseurl=file:///mnt/testarea/beaker/rpmbuild-output/noarch/
 EOF
-    rlAssert0 "Created yum repo config for /tmp/tito/noarch/" $?
+    rlAssert0 "Created yum repo config for /mnt/testarea/beaker/rpmbuild-output/noarch/" $?
     rlPhaseEnd
 }
 
