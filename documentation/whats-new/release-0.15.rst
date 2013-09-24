@@ -334,9 +334,6 @@ release.
     * :issue:`999967`: The ``bkr job-list`` command once again works with the
       ``python-json`` package on Red Hat Enterprise Linux 5 (Contributed by
       Amit Saha)
-    * :issue:`981259`:  The long deprecated handling of the redundant
-      ``TEST_PARAM_`` has been removed from the ``bkr workflow-snake``
-      subcommand (Contributed by Peter Kotvan)
     * :issue:`759269`: An empty MOTD no longer causes spurious tracebacks in
       the server error log (Contributed by Dan Callaghan)
     * :issue:`999733`: Individual recipe sets can now be cancelled over XML-RPC
