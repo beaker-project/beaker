@@ -31,7 +31,7 @@ function BuildBeaker ()
             || rlDie "Git checkout/merge failed"
     fi
     rlRun "yum-builddep -y ./beaker.spec"
-    rlRun "yum -y install createrepo"
+    rlRun "yum -y install createrepo rpm-build"
     rlRun "Misc/rpmbuild.sh -bb" || rlDie "RPM build failed"
     rlRun "popd"
     rlRun "createrepo /mnt/testarea/beaker/rpmbuild-output/noarch/"
