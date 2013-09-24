@@ -2310,9 +2310,9 @@ class LogRecipeTest(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=865265
     def test_path_is_normalized(self):
         lr1 = LogRecipe.lazy_create(path=u'/', filename=u'dummy.log',
-                parent=self.recipe)
+                recipe_id=self.recipe.id)
         lr2 = LogRecipe.lazy_create(path=u'', filename=u'dummy.log',
-                parent=self.recipe)
+                recipe_id=self.recipe.id)
         self.assert_(lr1 is lr2, (lr1, lr2))
 
 

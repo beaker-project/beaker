@@ -1457,30 +1457,6 @@ class MappedObject(object):
     query = session.query_property()
 
     @classmethod
-    def _convert_attr_and_value(cls, table, key, value):
-        # This is kind of a reimplementation of some bits of the ORM... we 
-        # probably shouldn't be playing with this magic, but it makes things 
-        # much nicer for the callers of lazy_create.
-        prop = class_mapper(cls).get_property(key)
-        if hasattr(prop, 'columns'):
-            # ColumnProperties are pretty easy...
-            assert len(prop.columns) == 1
-            assert prop.columns[0].table == table
-            return prop.columns[0], value
-        elif hasattr(prop, 'remote_side'):
-            # we can handle simple RelationshipProperties too...
-            assert len(prop.local_side) == 1
-            assert len(prop.remote_side) == 1
-            if value is None:
-                return prop.local_side[0], None
-            assert has_identity(value), 'Value %r must be persisted' % value
-            attr_name = prop.mapper.get_property_by_column(prop.remote_side[0]).key
-            return prop.local_side[0], getattr(value, attr_name)
-        else:
-            # ... but anything else is too hard
-            raise AssertionError('Unknown property type %r' % prop)
-
-    @classmethod
     def lazy_create(cls, _extra_attrs={}, **kwargs):
         """
         Returns the instance identified by the given uniquely-identifying 
@@ -1491,11 +1467,9 @@ class MappedObject(object):
         are not NULLable. Subclasses should override this and pass attributes 
         up in _extra_attrs if needed.
 
-        BEWARE: this method bypasses SQLAlchemy's ORM machinery. It makes some 
-        attempts to understand relationship properties, but anything other than 
-        simple many-to-one relationships onto persistent instances will raise 
-        AssertionError. Pass column properties instead of relationship 
-        properties (for example, osmajor_id not osmajor) if that is an issue.
+        BEWARE: this method bypasses SQLAlchemy's ORM machinery. Pass column 
+        properties instead of relationship properties (for example, osmajor_id 
+        not osmajor).
         """
         # We do a conditional INSERT, which will always succeed or 
         # silently have no effect.
@@ -1507,11 +1481,9 @@ class MappedObject(object):
         assert len(class_mapper(cls).tables) == 1
         table = class_mapper(cls).tables[0]
         for k, v in kwargs.iteritems():
-            col, value = cls._convert_attr_and_value(table, k, v)
-            unique_params[col] = value
+            unique_params[table.c[k]] = v
         for k, v in _extra_attrs.iteritems():
-            col, value = cls._convert_attr_and_value(table, k, v)
-            extra_params[col] = value
+            extra_params[table.c[k]] = v
 
         session.connection(cls).execute(ConditionalInsert(table,
                 unique_params, extra_params))
@@ -3210,8 +3182,10 @@ class SystemAccessPolicy(DeclBase, MappedObject):
         if user is None and group is None and not everybody:
             raise RuntimeError('Did you mean to pass everybody=True to add_rule?')
         session.flush() # make sure self is persisted, for lazy_create
-        self.rules.append(SystemAccessPolicyRule.lazy_create(policy=self,
-                permission=permission, user=user, group=group))
+        self.rules.append(SystemAccessPolicyRule.lazy_create(policy_id=self.id,
+                permission=permission,
+                user_id=user.user_id if user else None,
+                group_id=group.group_id if group else None))
         return self.rules[-1]
 
 class SystemPermission(DeclEnum):
@@ -3399,6 +3373,12 @@ class OSMajorInstallOptions(MappedObject): pass
 
 
 class OSVersion(MappedObject):
+
+    @classmethod
+    def lazy_create(cls, osmajor, osminor):
+        return super(OSVersion, cls).lazy_create(osmajor_id=osmajor.id,
+                osminor=osminor)
+
     def __init__(self, osmajor, osminor, arches=None):
         super(OSVersion, self).__init__()
         self.osmajor = osmajor
@@ -3678,7 +3658,7 @@ class Distro(MappedObject):
     @classmethod
     def lazy_create(cls, name, osversion):
         return super(Distro, cls).lazy_create(name=name,
-                _extra_attrs=dict(osversion=osversion))
+                _extra_attrs=dict(osversion_id=osversion.id))
 
     @classmethod
     def by_name(cls, name):
@@ -3717,6 +3697,11 @@ class Distro(MappedObject):
                  distro_tag_map.c.distro_tag_id: tagobj.id}))
 
 class DistroTree(MappedObject):
+
+    @classmethod
+    def lazy_create(cls, distro, variant, arch):
+        return super(DistroTree, cls).lazy_create(distro_id=distro.id,
+                variant=variant, arch_id=arch.id)
 
     @classmethod
     def by_filter(cls, filter):
@@ -3890,7 +3875,7 @@ class DistroTreeRepo(MappedObject):
     @classmethod
     def lazy_create(cls, distro_tree, repo_id, repo_type, path):
         return super(DistroTreeRepo, cls).lazy_create(
-                distro_tree=distro_tree,
+                distro_tree_id=distro_tree.id,
                 repo_id=repo_id,
                 _extra_attrs=dict(repo_type=repo_type, path=path))
 
@@ -3899,8 +3884,8 @@ class DistroTreeImage(MappedObject):
     @classmethod
     def lazy_create(cls, distro_tree, image_type, kernel_type, path):
         return super(DistroTreeImage, cls).lazy_create(
-                distro_tree=distro_tree,
-                image_type=image_type, kernel_type=kernel_type,
+                distro_tree_id=distro_tree.id,
+                image_type=image_type, kernel_type_id=kernel_type.id,
                 _extra_attrs=dict(path=path))
 
 class DistroTag(MappedObject):

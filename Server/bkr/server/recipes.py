@@ -99,7 +99,7 @@ class Recipes(RPCRoot):
                     % recipe.t_id)
 
         # Add the log to the DB if it hasn't been recorded yet.
-        log_recipe = LogRecipe.lazy_create(parent=recipe,
+        log_recipe = LogRecipe.lazy_create(recipe_id=recipe.id,
                                            path=path,
                                            filename=filename,
                                           )
