@@ -117,7 +117,7 @@ from bkr.server.reports import Reports
         <ul class="nav pull-right">
             <li py:if="not tg.identity.anonymous" class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                    Hello, ${tg.identity.user}
+                    Hello<span class="navbar-wide-viewport-only">, ${tg.identity.user}</span>
                     <b class="caret"></b>
                 </a>
                 <ul class="dropdown-menu">
@@ -130,7 +130,8 @@ from bkr.server.reports import Reports
                     <li><a href="${tg.url('/groups/mine')}">My Groups</a></li>
                 </ul>
             </li>
-            <li py:if="not tg.identity.anonymous"><a href="${tg.url('/jobs/mine')}">My Jobs</a>
+            <li py:if="not tg.identity.anonymous" class="navbar-wide-viewport-only">
+              <a href="${tg.url('/jobs/mine')}">My Jobs</a>
             </li>
             <li py:if="tg.identity.anonymous"><a href="${tg.url('/login')}">Log in</a>
             </li>
