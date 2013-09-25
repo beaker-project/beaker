@@ -48,7 +48,7 @@ def all(iterable):
 
 
 ################################################
-# Display helpers
+# CLI helpers
 ################################################
 
 def abbrev_user(user):
@@ -60,6 +60,9 @@ def problem(message):
         print '\033[1m\033[91m** %s\033[0m' % message
     else:
         print '** %s' % message
+
+def confirm(prompt):
+    return raw_input(prompt + " (y/N)?:").lower().startswith('y')
 
 ################################################
 # Bugzilla access
@@ -226,9 +229,10 @@ build_git_revlist = _git_info.build_git_revlist
 # Milestone tracking
 #  - filters based on the target milestone in Bugzilla
 #
-# Sprint tracking
-#  - currently filters based on the devel whiteboard in Bugzilla
-#  - will be switching to filtering based on Greenhopper sprint status
+# Sprint tracking (BROKEN)
+#  - currently filters based on the devel whiteboard in Bugzilla which
+#    is no longer maintained
+#  - may eventually switch to filtering based on Greenhopper sprint status
 
 
 def main():
@@ -238,11 +242,14 @@ def main():
             help='Check bugs slated for MILESTONE')
     parser.add_option('-r', '--release', metavar='RELEASE',
             help='Check bugs approved for RELEASE (using flags)')
-    parser.add_option('-s', '--sprint', metavar='SPRINT',
-            help='Check bugs approved for SPRINT (using devel whiteboard)')
+    #parser.add_option('-s', '--sprint', metavar='SPRINT',
+    #        help='Check bugs approved for SPRINT (using devel whiteboard)')
     parser.add_option('-j', '--jira', action='store_true',
             help='Check consistency between Bugzilla and JIRA (see '
                  'jirainfo.py for configuration details)')
+    parser.add_option('--syncjirainfo', action='store_true',
+            help='Selectively adjust JIRA info based on BZ info '
+                 '(implies --jira)')
     parser.add_option('-i', '--include', metavar='STATE', action="append",
             help='Include bugs in the specified state '
                  '(may be given multiple times)')
@@ -250,9 +257,11 @@ def main():
             dest="verbose", default=True,
             help='Only display problem reports')
     options, args = parser.parse_args()
+    options.sprint = None
     if not (options.milestone or options.release or options.sprint):
         parser.error('Specify a milestone, release or sprint')
-
+    if options.syncjirainfo:
+        options.jira = True
     if options.verbose:
         print "Building git revision list for HEAD"
     build_git_revlist()
@@ -289,20 +298,25 @@ def main():
             # Check internal consistency of BZ references
             bz_summary_ref = issue.bz_summary_ref
             bz_link_ref = issue.bz_link_ref
+            sync_info = options.syncjirainfo
             if bz_summary_ref is None:
                 problem('Issue %s summary is missing reference to BZ#%d' %
                                 (issue.id, bz_link_ref))
+                bz_ref = bz_link_ref
             elif bz_link_ref is None:
                 problem('Issue %s is missing link to BZ#%d' %
                                 (issue.id, bz_summary_ref))
             elif bz_summary_ref != bz_link_ref:
+                sync_info = False
                 problem('Issue %s references BZ#%d in summary, '
                         'but links to BZ#%d' %
                         (issue.id, bz_summary_ref, bz_link_ref))
-            # Check state consistency for bugs that meet the filter
+            # Check full details only for linked bugs that meet the filter
             if not bz_link_ref in bug_ids:
                 continue
-            bz_status = get_bug(bz_link_ref).bug_status
+            # Check status consistency
+            bug = get_bug(bz_link_ref)
+            bz_status = bug.bug_status
             state_err = ('Issue %s state %s does not match BZ#%s state %s' %
                              (issue.id, issue.status, bz_link_ref, bz_status))
             if bz_status in to_do_states:
@@ -317,6 +331,43 @@ def main():
             else:
                 problem('Issue %s references BZ#%s in unknown state %s' %
                              (issue.id, bz_link_ref, bz_status))
+                if sync_info:
+                    print("  Status syncing is not currently supported")
+            # Check description starts with an appropriate link
+            if bug.weburl not in issue.description:
+                problem('Issue %s tracks BZ#%d but description does not '
+                        'contain the corresponding link' %
+                        (issue.id, bz_link_ref))
+                if sync_info:
+                    prompt = "  Insert link into %r" % issue.description
+                    if confirm(prompt):
+                        neat_link = "[BZ#%s|%s] " % (bz_link_ref, bug.weburl)
+                        new_description = neat_link + issue.description
+                        jira.update_description(issue, new_description)
+            # Check story points are set if estimated hours are set
+            points = issue.story_points
+            hours = float(bug.estimated_time)
+            if hours and points is None:
+                problem('Issue %s story points not set for '
+                        'BZ#%d with estimated hours to first patch (%s) ' %
+                        (issue.id, bz_link_ref, hours))
+                if sync_info:
+                    prompt = "  Set story points to %s" % hours
+                    if confirm(prompt):
+                        jira.update_story_points(issue, hours)
+            # Check target milestone matches fix version
+            version = issue.target_version
+            milestone = bug.target_milestone
+            bz_version = jira.get_target_version(milestone)
+            if bz_version != version:
+                problem('Issue %s target version (%s) does not match '
+                        'BZ#%d target milestone (%s) ' %
+                        (issue.id, version, bz_link_ref, milestone))
+                if sync_info and milestone != "---":
+                    prompt = "  Set target version to %s" % bz_version
+                    if confirm(prompt):
+                        jira.update_target_version(issue, bz_version)
+
 
     # Consistency check on all bugs in the specified sprint, release or
     # milestone
@@ -365,19 +416,30 @@ def main():
                 problem('Bug %s should be ASSIGNED, not %s' % (bug.bug_id, bug.bug_status))
             elif not all(change['status'] in ('ABANDONED', 'MERGED') for change in bug_changes):
                 problem('Bug %s should be POST, not %s' % (bug.bug_id, bug.bug_status))
-        if options.release and bug.target_milestone != options.release:
-            if bug.target_milestone == "---":
-                problem('Bug %s target milestone should be set to %s or earlier' %
-                            (bug.bug_id, options.release))
-            elif (bug.target_milestone == "HOTFIX" and
-                  bug.get_flag_status("hot_fix") == "+"):
-                pass
-            elif (bug.target_milestone.split('.')[0] >=
-                 options.release.split('.')[0]):
-                # If the milestone doesn't match the release flag, it should
-                # refer to an earlier major version
-                problem('Bug %s target milestone should be %s, not %s' %
-                                (bug.bug_id, options.release, bug.target_milestone))
+        if options.release:
+            if options.release == "1.0":
+                # All currently completed work for 1.0 should target 0.x
+                if (not bug.target_milestone.startswith("0.") and
+                    bug.target_milestone != "HOTFIX" and
+                    (bug.bug_status in ('VERIFIED', 'RELEASE_PENDING')
+                     or (bug.bug_status == 'CLOSED' and
+                         bug.resolution == 'CURRENTRELEASE'))):
+                    problem('Bug %s target milestone should be set earlier than %s' %
+                                    (bug.bug_id, options.release))
+            # Other checks for bugs not merely allocated to the release
+            if bug.target_milestone != options.release:
+                if bug.target_milestone == "---":
+                    problem('Bug %s target milestone should be set to %s or earlier' %
+                                (bug.bug_id, options.release))
+                elif (bug.target_milestone == "HOTFIX" and
+                    bug.get_flag_status("hot_fix") == "+"):
+                    pass
+                elif (bug.target_milestone.split('.')[0] >=
+                    options.release.split('.')[0]):
+                    # If the milestone doesn't match the release flag, it should
+                    # refer to an earlier major version
+                    problem('Bug %s target milestone should be %s or earlier, not %s' %
+                                    (bug.bug_id, options.release, bug.target_milestone))
         for change in bug_changes:
             if change['status'] == 'MERGED' and change['project'] == 'beaker':
                 sha = change['currentPatchSet']['revision']
