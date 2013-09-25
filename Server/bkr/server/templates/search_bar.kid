@@ -126,11 +126,11 @@ $(document).ready(function() {
         return false;
     });
     $('#selectnone').click(function () {
-        $("input[name *= 'systemsearch_column_']").removeAttr('checked');
+        $("input[name *= 'systemsearch_column_']").prop('checked', false);
         return false;
     });
     $('#selectall').click(function () {
-        $("input[name *= 'systemsearch_column_']").attr('checked', 1);
+        $("input[name *= 'systemsearch_column_']").prop('checked', true);
         return false;
     });
     $('#selectdefault').click(function () {
@@ -145,9 +145,9 @@ $(document).ready(function() {
         var current_item = obj.val()
         var the_name = 'systemsearch_column_'+current_item
             if (defaults[current_item] == 1) {
-                $("input[name = '"+the_name+"']").attr('checked',1); 
+                $("input[name = '"+the_name+"']").prop('checked', true);
             } else {
-                $("input[name = '"+the_name+"']").removeAttr('checked');  
+                $("input[name = '"+the_name+"']").prop('checked', false);
             }
         }
     });
