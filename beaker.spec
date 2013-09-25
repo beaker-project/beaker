@@ -51,6 +51,7 @@ BuildRequires:  python-sphinx >= 1.0
 %endif
 BuildRequires:  python-sphinxcontrib-httpdomain
 BuildRequires:  bash-completion
+BuildRequires:  python-prettytable
 
 %if %{with server}
 BuildRequires:  python-kid
@@ -108,6 +109,7 @@ Requires:       libxslt-python
 Requires:       python-simplejson
 %endif
 Requires:       libxml2-python
+Requires:       python-prettytable
 # beaker-wizard was moved from rhts-devel to here in 4.52
 Conflicts:      rhts-devel < 4.52
 

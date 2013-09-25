@@ -119,9 +119,17 @@ app.before_request(identity.check_authentication)
 app.after_request(identity.update_response)
 
 @app.after_request
-def fall_back_to_cherrypy(response):
+def fall_back_to_cherrypy(flask_response):
     # If Flask returns a 404, fall back to the old CherryPy stuff.
-    if response.status_code == 404:
-        # XXX is it safe to discard the old response without consuming it?
-        return app.make_response(cherrypy._cpwsgi.wsgiApp)
-    return response
+    if flask_response.status_code == 404:
+        cherrypy_response = app.make_response(cherrypy._cpwsgi.wsgiApp)
+        # If we get a 404 from cherrypy as well, it means that the
+        # resource doesn't exist, so we return the original response
+        if cherrypy_response.status_code == 404:
+            cherrypy_response.close()
+            return flask_response
+        else:
+            flask_response.close()
+            return cherrypy_response
+
+    return flask_response
