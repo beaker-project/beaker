@@ -87,11 +87,13 @@
 
 <a py:if="enable_custom_columns" id="customcolumns" href="#">Toggle Result Columns</a> 
 <div style='display:none'  id='selectablecolumns'>
-    <ul class="${field_class}" id="${field_id}">
+    <ul class="unstyled">
     <li py:if="col_options" py:for="value,desc in col_options">
+      <label>
         <input py:if="col_defaults.get(value)" type="checkbox" name = "${field_id}_column_${value}" id="${field_id}_column_${value}" value="${value}" checked='checked' />
         <input py:if="not col_defaults.get(value)" type="checkbox" name = "${field_id}_column_${value}" id="${field_id}_column_${value}" value="${value}" />
-        <label for="${field_id}_${value}" py:content="desc" />
+        ${desc}
+      </label>
     </li>  
     </ul>
 <a style='margin-left:10px' id="selectnone" href="#">Select None</a>
