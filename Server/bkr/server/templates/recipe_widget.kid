@@ -65,11 +65,11 @@
   </tr>
   <tr>
    <td colspan="8">
-    <ul class="nav nav-pills results-tabs" style="margin-bottom: 0;">
-      <li><a data-toggle="tab" class="results-tab" data-cookie-value="all" href="#recipe-${recipe.id}-results">Show Results</a></li>
-      <li><a data-toggle="tab" class="failed-tab" data-cookie-value="fail" href="#recipe-${recipe.id}-failed" py:if="recipe.is_failed()">Show Failed Results</a></li>
-      <li><a data-toggle="tab" class="hide-results-tab" data-cookie-value="" href="#recipe-${recipe.id}-hide">Hide</a></li>
-    </ul>
+    <div class="btn-group results-tabs" data-toggle="buttons-radio">
+      <a data-toggle="tab" class="btn results-tab" data-cookie-value="all" href="#recipe-${recipe.id}-results">Show Results</a>
+      <a data-toggle="tab" class="btn failed-tab" data-cookie-value="fail" href="#recipe-${recipe.id}-failed" py:if="recipe.is_failed()">Show Failed Results</a>
+      <a data-toggle="tab" class="btn hide-results-tab" data-cookie-value="" href="#recipe-${recipe.id}-hide">Hide</a>
+    </div>
    </td>
   </tr>
  </tbody>

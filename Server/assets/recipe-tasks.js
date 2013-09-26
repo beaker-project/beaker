@@ -23,14 +23,14 @@ window.RecipeTasksView = Backbone.View.extend({
         // 3. Hide by default
         var cookie_value = $.cookie('recipe_' + this.options.recipe_id);
         if (window.location.hash && this.$('.results-pane ' + window.location.hash).length) {
-            this.$('.results-tab').tab('show');
+            this.$('.results-tab').tab('show').addClass('active');
             window.location.hash = window.location.hash;
         } else if (cookie_value) {
             this.$('.results-tabs a')
                 .filter(function () { return $(this).data('cookieValue') == cookie_value; })
-                .tab('show');
+                .tab('show').addClass('active');
         } else {
-            this.$('.hide-results-tab').tab('show');
+            this.$('.hide-results-tab').tab('show').addClass('active');
         }
     },
     load_results: function () {
