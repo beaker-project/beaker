@@ -21,7 +21,7 @@
       <li py:if="tg.paginate.href_next">${link.display("&gt;&gt;", action=tg.url(action), data=data_last, update="task_items")}</li>
     </ul>
   </div>
-  <table class="table table-condensed table-hover"
+  <table class="table table-condensed table-hover tasks"
         py:if="tasks">
   <thead>
   <tr>
@@ -37,12 +37,7 @@
    <th py:if="not hidden.has_key('score')">Score</th>
   </tr>
   </thead>
-  <tbody>
-  <span py:for="i, task in enumerate(tasks)" py:strip="1">
-    <!-- Depending on if its a RecipeTask or a RecipeTaskResult we 
-         display a different row 
-    -->
-    <span py:if="isinstance(task, RecipeTask)" py:strip="1">
+  <tbody py:for="task in tasks">
     <?python
         result = task.is_failed() and 'fail' or 'pass'
     ?>
@@ -112,8 +107,6 @@
     </td>
     </tr>
     </span>
-   </span>
-  </span>
   </tbody>
  </table>
 </div>
