@@ -331,13 +331,17 @@ release.
     controllers (Contributed by Amit Saha)
   * :issue:`988848`: Searching for multiple CPU/Flags entries now gives the
     appropriate results (Contributed by Raymond Mancy)
+  * :issue:`1001883`: Searching datetime fields with the ``is`` operator
+    now gives the appropriate results (Contibuted by Dan Callaghan)
   * :issue:`999967`: The ``bkr job-list`` command once again works with the
     ``python-json`` package on Red Hat Enterprise Linux 5 (Contributed by
     Amit Saha)
-  * :issue:`759269`: An empty MOTD no longer causes spurious tracebacks in
-    the server error log (Contributed by Dan Callaghan)
   * :issue:`999733`: Individual recipe sets can now be cancelled over XML-RPC
     (Contributed by Nick Coghlan)
+  * :issue:`989902`: The main Beaker server is now compatible with SQL
+    Alchemy 0.8, in addition to 0.6 and 0.7 (Contributed by Dan Callaghan)
+  * :issue:`759269`: An empty MOTD no longer causes spurious tracebacks in
+    the server error log (Contributed by Dan Callaghan)
   * :issue:`993531`: spurious RPM %post output on new installations of
     beaker-server and beaker-lab-controller has been eliminated (Contributed
     by Dan Callaghan)
