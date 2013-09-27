@@ -4,6 +4,16 @@
 The ``bkr`` command-line client
 ===============================
 
+Supported platforms
+-------------------
+
+The Beaker command line client is fully supported on recent versions of
+Fedora and on Red Hat Enterprise Linux 6. Most commands are also supported
+on Red Hat Enterprise Linux 5 (when this is not the case, it will be noted
+in the documentation of the affected command by indicating the minimum
+required version of Python).
+
+
 .. _installing-bkr-client:
 
 Installing and configuring the client
