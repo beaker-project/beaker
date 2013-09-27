@@ -89,7 +89,7 @@ class RetentionTag(AdminPage):
             flash(u'%s is not applicable for deletion' % tag.tag)
             redirect('/retentiontag/admin')
         session.delete(tag)
-        flash(u'Succesfully deleted %s' % tag.tag)
+        flash(u'Successfully deleted %s' % tag.tag)
         redirect('/retentiontag/admin')
 
     @identity.require(identity.in_group("admin"))
