@@ -363,7 +363,9 @@ def save_system_access_policy(fqdn):
         policy = system.custom_access_policy
     else:
         policy = system.custom_access_policy = SystemAccessPolicy()
-    data = request.get_json()
+    data = request.json
+    if not data:
+        abort(400)
     # Figure out what is added, what is removed.
     # Rules are immutable, so if it has an id it is unchanged, 
     # if it has no id it is new.
@@ -403,7 +405,9 @@ def add_system_access_policy_rule(fqdn):
         policy = system.custom_access_policy
     else:
         policy = system.custom_access_policy = SystemAccessPolicy()
-    rule = request.get_json()
+    rule = request.json
+    if not rule:
+        abort(400)
     user = User.by_user_name(rule['user']) if rule['user'] else None
     group = Group.by_name(rule['group']) if rule['group'] else None
     try:
