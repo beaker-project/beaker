@@ -19,6 +19,14 @@
 . /usr/bin/rhts-environment.sh
 . /usr/share/beakerlib/beakerlib.sh
 
+function CheckDistro()
+{
+    rlIsFedora '>=18' || rlIsRHEL '>=7'
+    future_distro=$?
+}
+
+CheckDistro
+
 function BuildBeaker ()
 {
     rlPhaseStartTest "Build Beaker from git"
@@ -84,7 +92,7 @@ __EOF__
 function generate_proxy_cfg()
 {
     cat << __EOF__ > /etc/beaker/labcontroller.conf
-HUB_URL = "https://$SERVER/bkr/"
+HUB_URL = "http://$SERVER/bkr/"
 AUTH_METHOD = "password"
 USERNAME = "host/$HOSTNAME"
 PASSWORD = "testing"
@@ -151,9 +159,13 @@ __EOF__
         rlPhaseEnd
     fi
 
-    rlPhaseStartTest "Configure iptables"
+    rlPhaseStartTest "Configure firewall"
     # XXX we can do better than this
-    rlServiceStop iptables
+    if [[ $future_distro -eq 0 ]]; then
+        rlServiceStop firewalld
+    else
+        rlServiceStop iptables
+    fi
     rlPhaseEnd
 
     if [ -n "$GRAPHITE_SERVER" ] ; then
@@ -174,14 +186,18 @@ __EOF__
     rlPhaseStartTest "Add lab controllers"
     rlRun "curl -f -s -o /dev/null -c cookie -d user_name=admin -d password=testing -d login http://$SERVER/bkr/login" 0 "Log in to Beaker"
     for CLIENT in $CLIENTS; do
-        rlRun "curl -f -s -o /dev/null -b cookie -d fqdn=$CLIENT -d lusername=host/$CLIENT -d lpassword=testing -d email=root@$CLIENT http://$SERVER/bkr/labcontrollers/save" 0 "Add lab controller $CLIENT"
+        rlRun -c "curl -f -s -o /dev/null -b cookie -d fqdn=$CLIENT -d lusername=host/$CLIENT -d lpassword=testing -d email=root@$CLIENT http://$SERVER/bkr/labcontrollers/save" 0 "Add lab controller $CLIENT"
     done
     rlPhaseEnd
 
     rlPhaseStartTest "Enable rsync for fake archive server"
     generate_rsync_cfg
-    rlRun "chkconfig rsync on" 0
-    rlRun "service xinetd restart" 0
+    if [[ $future_distro -eq 0 ]]; then
+        rlRun "systemctl enable rsyncd"
+    else
+        rlRun "chkconfig rsync on"
+        rlServiceStart xinetd
+    fi
     rlPhaseEnd
 
     if [ -n "$ENABLE_COLLECTD" ] ; then
@@ -230,14 +246,24 @@ function LabController()
     rlPhaseStartTest "Fetch netboot loaders"
     # Using cobbler to get the netboot loaders..
     rlServiceStart httpd cobblerd
-    rlRun "cobbler get-loaders" 0 "get network boot loaders"
-    rlRun "cobbler sync" 0 "sync boot loaders to tftpboot"
+    # XXX for some reason cobblerd fails to 
+    # to start with rlServiceStart under systemd
+    if [[ $future_distro -eq 0 ]]; then
+        rlRun -c "systemctl start cobblerd" 0 "Start cobblerd"
+    fi
+
+    rlRun -c "cobbler get-loaders" 0 "get network boot loaders"
+    rlRun -c "cobbler sync" 0 "sync boot loaders to tftpboot"
     rlServiceStop cobblerd
     rlPhaseEnd
 
-    rlPhaseStartTest "Configure iptables"
+    rlPhaseStartTest "Configure firewall"
     # XXX we can do better than this
-    rlServiceStop iptables
+    if [[ $future_distro -eq 0 ]]; then
+        rlServiceStop firewalld
+    else
+        rlServiceStop iptables
+    fi
     rlPhaseEnd
 
     rlPhaseStartTest "Wait for SERVERREADY"
@@ -245,9 +271,15 @@ function LabController()
     rlPhaseEnd
 
     rlPhaseStartTest "Start services"
-    rlRun "chkconfig xinetd on" 0
-    rlRun "chkconfig tftp on" 0
-    rlServiceStart xinetd
+    if [[ $future_distro -eq 0 ]]; then
+        rlRun -c "systemctl enable tftp.socket"
+        rlRun -c "systemctl start tftp.socket"
+    else
+        rlRun "chkconfig xinetd on" 0
+        rlRun "chkconfig tftp on" 0
+        rlServiceStart xinetd
+    fi
+
     # There is beaker-transfer as well but it's disabled by default
     for service in httpd beaker-proxy beaker-watchdog beaker-provision ; do
         rlRun "chkconfig $service on" 0
