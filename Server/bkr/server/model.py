@@ -4265,7 +4265,8 @@ class Log(MappedObject):
         if self.server:
             return self.href
         else:
-            return os.path.join(self.parent.logspath, self.parent.filepath, self._combined_path())
+            return os.path.join(self.parent.logspath, self.parent.filepath,
+                self._combined_path())
 
     @property
     def href(self):
@@ -4463,6 +4464,22 @@ class TaskBase(MappedObject):
             if self.__class__.__name__ == class_:
                 return '%s:%s' % (t, self.id)
     t_id = property(t_id)
+
+    def _get_log_dirs(self):
+        """
+        Returns the directory names of all a task's logs,
+        with a trailing slash.
+
+        URLs are also returned with a trailing slash.
+        """
+        logs_to_return = []
+        for log in self.logs:
+            full_path = os.path.dirname(log.full_path)
+            if not full_path.endswith('/'):
+                full_path += '/'
+            logs_to_return.append(full_path)
+        return logs_to_return
+
 
 class Job(TaskBase):
     """
@@ -5571,13 +5588,12 @@ class Recipe(TaskBase):
     filepath = property(filepath)
 
     def get_log_dirs(self):
-        logs_to_return = [os.path.dirname(log.full_path) for log in self.logs]
-
+        recipe_logs = self._get_log_dirs()
         for task in self.tasks:
             rt_log = task.get_log_dirs()
             if rt_log:
-                logs_to_return.extend(rt_log)
-        return logs_to_return
+                recipe_logs.extend(rt_log)
+        return recipe_logs
 
     def owner(self):
         return self.recipeset.job.owner
@@ -6338,12 +6354,12 @@ class RecipeTask(TaskBase):
         return (self.recipe.recipeset.job.t_id, self.recipe.recipeset.t_id, self.recipe.t_id)
 
     def get_log_dirs(self):
-        logs_to_return = [os.path.dirname(log.full_path) for log in self.logs]
+        recipe_task_logs = self._get_log_dirs()
         for result in self.results:
             rtr_log = result.get_log_dirs()
             if rtr_log:
-                logs_to_return.extend(rtr_log)
-        return logs_to_return
+                recipe_task_logs.extend(rtr_log)
+        return recipe_task_logs
 
     def to_xml(self, clone=False, *args, **kw):
         task = xmldoc.createElement("task")
@@ -6742,7 +6758,7 @@ class RecipeTaskResult(TaskBase):
         return [mylog.dict for mylog in self.logs]
 
     def get_log_dirs(self):
-        return [os.path.dirname(log.full_path) for log in self.logs]
+        return self._get_log_dirs()
 
     def task_info(self):
         """
