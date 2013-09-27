@@ -103,6 +103,24 @@ table.recipe {
     margin-bottom: 0;
 }
 
+// recipe tasks on job and recipe pages (and elsewhere)
+table.tasks {
+    & > tbody {
+        border-top: 2px solid @tableBorder;
+    }
+    & > tbody:nth-child(odd) > tr {
+        & > td, & > th {
+            background-color: @tableBackgroundAccent;
+        }
+    }
+    // need to repeat hover style here to override the striping
+    & > tbody > tr:hover {
+        & > td, & > th {
+            background-color: @tableBackgroundHover;
+        }
+    }
+}
+
 // elements from master.kid
 .container {
     padding-top: 20px;
