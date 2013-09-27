@@ -32,6 +32,7 @@ class KeyTypes(AdminPage):
     @expose(template='bkr.server.templates.form')
     def new(self, **kw):
         return dict(
+            title=_(u'New Key Type'),
             form = self.form,
             action = './save',
             options = {},
@@ -76,17 +77,17 @@ class KeyTypes(AdminPage):
         list_by_letters = set([elem.key_name[0].capitalize() for elem in keytypes])
         results = self.process_search(**kw)
         if results:
-            keytypes = results
+            keytypes = results.order_by(Key.key_name)
         keytypes_grid = myPaginateDataGrid(fields=[
                                   ('Key', lambda x: make_edit_link(x.key_name, x.id)),
                                   ('Numeric', lambda x: x.numeric),
                                   (' ', lambda x: make_remove_link(x.id)),
-                              ]) 
+                              ],
+                              add_action='./new')
         return dict(title="Key Types", 
                     grid = keytypes_grid, 
                     search_widget = self.search_widget_form,
                     alpha_nav_bar = AlphaNavBar(list_by_letters,self.search_name),
-                    addable = self.add,
                     list = keytypes)
 
     @expose()
