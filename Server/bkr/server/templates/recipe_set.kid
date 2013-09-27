@@ -2,9 +2,9 @@
  <table style="width: 100%;" id="RS_${recipeset.id}">
   <tr>
    <td class="title"><b>RecipeSet ID</b></td>
-   <td class="value">${recipeset.t_id}</td><td py:if="can_ack_nak"
+   <td class="value">${recipeset.t_id}</td><td
        style='min-width:30em'>
-     <span id="response_${recipeset.id}" class="form-inline">
+     <span id="response_${recipeset.id}" class="form-inline" py:if="can_ack_nak">
     ${ack_panel_widget.display(recipeset.id, name='response_box_%s' % recipeset.id)}
      </span>
    </td>

@@ -218,7 +218,7 @@ class TestRecipeView(WebDriverTestCase):
         # bkr/recipes/id#task<id>
         b.get(get_server_base() + 'recipes/%s#task%s' %(recipe.id,task))
         # "Show Results" should be activated for the recipe
-        b.find_element_by_css_selector('#recipe%s .active .results-tab' % recipe.id)
+        b.find_element_by_css_selector('#recipe%s .results-tab.active' % recipe.id)
 
         # bkr/jobs/id#task<id>
         # for multi recipe jobs, only the recipe to which the task belongs should be visible
@@ -227,8 +227,8 @@ class TestRecipeView(WebDriverTestCase):
         recipe = recipes[6]
         b.get(get_server_base() + 'jobs/%s#task%s' %(job.id,task))
         # "Show Results" should be activated for the recipe
-        b.find_element_by_css_selector('#recipe%s .active .results-tab' % recipe.id)
+        b.find_element_by_css_selector('#recipe%s .results-tab.active' % recipe.id)
         recipes.remove(recipe)
         for r in recipes:
             # "Hide Results" should be activated for the recipe
-            b.find_element_by_css_selector('#recipe%s .active .hide-results-tab' % r.id)
+            b.find_element_by_css_selector('#recipe%s .hide-results-tab.active' % r.id)

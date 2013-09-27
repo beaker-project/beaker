@@ -60,7 +60,7 @@ td form, td input, td select {
 }
 
 // buttons in grid cells
-.table td .btn {
+.table td .btn, .table th .btn {
     white-space: nowrap;
     padding: @paddingSmall;
 }
@@ -89,17 +89,26 @@ td form, td input, td select {
 
 // jobs, recipe sets, and recipes on job page and recipe page
 table.job, table.recipe {
-    & > tbody > tr > th {
-        text-align: right;
+    & > tbody > tr {
+        & > th {
+            text-align: right;
+        }
+        & > th, & > td {
+            border: none;
+        }
     }
 }
-.recipeset {
+div.recipeset {
     border: 2px solid @tableBorder;
     padding: 1em;
     margin: 1em 0;
 }
+div.recipe {
+    margin-top: 1em;
+    border-top: 2px solid @tableBorder;
+    padding-top: 1em;
+}
 table.recipe {
-    margin-top: 2em;
     margin-bottom: 0;
 }
 
