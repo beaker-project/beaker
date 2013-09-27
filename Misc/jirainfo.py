@@ -38,8 +38,8 @@ The JIRA support needs to know where to find the JIRA instance. Create a
   username=<JIRA username>
   project=<JIRA project name>
 
-checkbugs only needs read-only access, bz2jira needs write access (hence
-the separate config sections)
+checkbugs only needs read-only access (if not using --syncjirainfo),
+bz2jira always needs write access (hence the separate config sections)
 
 Kerberos login is not currently supported, so checkbugs is configured to
 prompt for a password with getpass
@@ -67,7 +67,8 @@ def relative_config_path(target):
 class IssueDetails(namedtuple("IssueDetails",
                               ["id", "status", "summary", "description",
                                "target_version", "story_points",
-                               "bz_link", "bz_summary_ref", "bz_link_ref"])):
+                               "bz_link", "bz_summary_ref", "bz_link_ref",
+                               "apiref"])):
     pass
 
 class JiraInfo(object):
@@ -91,10 +92,13 @@ class JiraInfo(object):
                                 for v in jira.project(project).versions)
         # Retrieving every issue that references bugzilla probably won't
         # scale as the project accumulates more issues, but it'll do for now
-        self._issues = jira.search_issues('project=%s and type != Sub-task '
+        issues = jira.search_issues('project=%s and type != Sub-task '
                                           'and (%s)' %
                                           (project, BZ_ISSUE_CRITERIA),
                                           maxResults=10000)
+        self._issues = [issue for issue in issues
+                            if "bugzilla" in
+                                getattr(issue.fields, EXTERNAL_LINK_FIELD)]
         self._make_bz_caches()
 
     def _make_bz_caches(self):
@@ -140,7 +144,7 @@ class JiraInfo(object):
                 v = IssueDetails(issue.key, issue_info.status.name,
                                  summary, description, target_version,
                                  story_points, external_url,
-                                 bz_summary_ref, bz_link_ref)
+                                 bz_summary_ref, bz_link_ref, issue)
                 if bz_link_ref:
                     link_cache[bz_link_ref] = v
                 # Catch cases where the link is not set, or disagrees with
@@ -159,6 +163,28 @@ class JiraInfo(object):
             return self._bz_link_cache[bug_id]
         except KeyError:
             return self._bz_summary_cache[bug_id]
+
+    def _get_target_version(self, target_milestone):
+        # "N.M.x" as a milestone effectively means the same thing as "N.M.1"
+        target_version = target_milestone.replace("x", "1")
+        version_details = {"id": self._versions[target_version].id}
+        return target_version, version_details
+
+    def get_target_version(self, target_milestone):
+        try:
+            return self._get_target_version(target_milestone)[0]
+        except KeyError:
+            return target_milestone
+
+    def update_description(self, issue, description):
+        issue.apiref.update(description=description)
+
+    def update_story_points(self, issue, story_points):
+        issue.apiref.update(fields={STORY_POINTS_FIELD: story_points})
+
+    def update_target_version(self, issue, target_milestone):
+        target_version, version_details = self._get_target_version(target_milestone)
+        issue.apiref.update(fixVersions=[version_details])
 
     def derive_bz_issue_details(self, bug):
         summary = bug.summary
@@ -185,10 +211,8 @@ class JiraInfo(object):
             STORY_POINTS_FIELD: story_points
         }
 
-        # Only handle 0.XY releases for now
         if bug.target_milestone.startswith(u"0."):
-            target_version = bug.target_milestone[:4]
-            version_details = {"id": self._versions[target_version].id}
+            target_version, version_details = self._get_target_version(bug.target_milestone)
             issue_details["fixVersions"] = [version_details]
         else:
             target_version = u"1.0"
@@ -203,7 +227,7 @@ class JiraInfo(object):
                             target_version,
                             details[STORY_POINTS_FIELD],
                             details[EXTERNAL_LINK_FIELD],
-                            bug.bug_id, bug.bug_id)
+                            bug.bug_id, bug.bug_id, issue)
 
 if __name__ == "__main__":
     from getpass import getpass
