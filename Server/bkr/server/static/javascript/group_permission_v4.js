@@ -1,5 +1,5 @@
 $(document).ready(function () {
-    $("a[id ^='remove_permission_']").delegate('', 'click', function () {
+    $(document).on('click', 'a[id ^="remove_permission_"]', function () {
         var elem_id = $(this).attr('id')
         var group_permission_id = elem_id.replace(/remove_permission_(\d+)$/,"$1")
         group_permission_remove(group_permission_id)

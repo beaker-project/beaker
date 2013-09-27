@@ -76,6 +76,18 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//table[@id="group_permission_grid" and '
                 'not(.//td/text()="%s")]' % self.perm1.permission_name)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1012373
+    def test_add_then_immediately_remove_permission(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'groups/edit?group_id=%d' % self.group.group_id)
+        b.find_element_by_id('Permissions_permissions_text').send_keys(self.perm1.permission_name)
+        b.find_element_by_id('Permissions').submit()
+        delete_and_confirm(b, '//td[preceding-sibling::td/text()="%s"]'
+                % self.perm1.permission_name, 'Remove')
+        b.find_element_by_xpath('//table[@id="group_permission_grid" and '
+                'not(.//td/text()="%s")]' % self.perm1.permission_name)
+
     def check_notification(self, user, group, action):
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
