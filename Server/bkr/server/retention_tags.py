@@ -20,12 +20,15 @@ class RetentionTag(AdminPage):
             options=[(0,'False'),(1,'True')],
             validator=validators.StringBool(if_empty=False))
     id = widgets.HiddenField(name='id') 
+    expire_in_days = widgets.TextField(name='expire_in_days', label=_(u'Expire In Days'),
+            help_text=_(u'Number of days after which jobs will expire'),
+            validator=validators.Int())
     needs_product = widgets.CheckBox('needs_product', label=u'Needs Product',
             validator=validators.StringBool(if_empty=False))
 
     tag_form = HorizontalForm(
         'Retention Tag',
-        fields = [tag, default, needs_product, id],
+        fields = [tag, default, expire_in_days, needs_product, id],
         action = 'save_data',
         submit_text = _(u'Save'),
     )
@@ -55,6 +58,7 @@ class RetentionTag(AdminPage):
     @error_handler(new)
     def save(self, id=None, **kw):
         retention_tag = Tag(kw['tag'], kw['default'], kw['needs_product'])
+        retention_tag.expire_in_days = kw['expire_in_days']
         flash(_(u"OK"))
         redirect("./admin")
 
@@ -109,6 +113,7 @@ class RetentionTag(AdminPage):
         retention_tag = Tag.by_id(id)
         retention_tag.tag = kw['tag']
         retention_tag.default = kw['default']
+        retention_tag.expire_in_days = kw['expire_in_days']
         retention_tag.needs_product = kw['needs_product']
         flash(_(u"OK"))
         redirect("./admin")

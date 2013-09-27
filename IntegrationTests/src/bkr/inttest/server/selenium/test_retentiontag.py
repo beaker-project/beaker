@@ -14,6 +14,7 @@ class RetentionTagTestWD(WebDriverTestCase):
     def test_edit(self):
         with session.begin():
             tag = data_setup.create_retention_tag()
+            tag.expire_in_days = 30
             tag.needs_product = True
         b = self.browser
         login(b)
@@ -21,6 +22,8 @@ class RetentionTagTestWD(WebDriverTestCase):
         b.find_element_by_link_text(tag.tag).click()
         b.find_element_by_name('tag').clear()
         b.find_element_by_name('tag').send_keys('pink-fluffy-unicorns')
+        b.find_element_by_name('expire_in_days').clear()
+        b.find_element_by_name('expire_in_days').send_keys('60')
         self.assertTrue(b.find_element_by_name('needs_product').is_selected())
         b.find_element_by_name('needs_product').click()
         b.find_element_by_id('Retention Tag').submit()
@@ -28,6 +31,7 @@ class RetentionTagTestWD(WebDriverTestCase):
         with session.begin():
             session.refresh(tag)
             self.assertEquals(tag.tag, u'pink-fluffy-unicorns')
+            self.assertEquals(tag.expire_in_days, 60)
             self.assertEquals(tag.needs_product, False)
 
     def test_cannot_change_tag_name_to_an_existing_tag(self):
