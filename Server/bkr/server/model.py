@@ -792,7 +792,7 @@ recipe_set_nacked_table = Table('recipe_set_nacked', metadata,
 
 beaker_tag_table = Table('beaker_tag', metadata,
     Column('id', Integer, primary_key=True, nullable = False),
-    Column('tag', Unicode(20), primary_key=True, nullable = False),
+    Column('tag', Unicode(20), nullable=False),
     Column('type', Unicode(40), nullable=False),
     UniqueConstraint('tag', 'type'),
     mysql_engine='InnoDB',

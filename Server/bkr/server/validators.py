@@ -1,8 +1,9 @@
 import cracklib
-from turbogears.validators import FormValidator, Invalid, TgFancyValidator, Email
+from turbogears.validators import FormValidator, Invalid, TgFancyValidator, \
+        Email, UnicodeString
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
-from bkr.server.model import System, Recipe, User, LabController
+from bkr.server.model import System, Recipe, User, LabController, RetentionTag
 
 
 class StrongPassword(TgFancyValidator):
@@ -185,4 +186,20 @@ class SSHPubKey(TgFancyValidator):
     def _from_python(self, value, state):
         if isinstance(value, tuple):
             return ' '.join(value)
+        return value
+
+class UniqueRetentionTag(UnicodeString):
+
+    not_empty = True
+    max = 20
+    strip = True
+
+    messages = {
+        'not_unique': 'Retention tag already exists',
+    }
+
+    def _to_python(self, value, state):
+        value = super(UniqueRetentionTag, self)._to_python(value, state)
+        if RetentionTag.query.filter_by(tag=value).count():
+            raise Invalid(self.message('not_unique', state), value, state)
         return value

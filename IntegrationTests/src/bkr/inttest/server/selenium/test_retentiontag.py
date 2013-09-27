@@ -1,7 +1,48 @@
 from turbogears.database import session
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest import data_setup, get_server_base
 
+class RetentionTagTestWD(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+
+    def tearDown(self):
+        self.browser.quit()
+
+    def test_edit(self):
+        with session.begin():
+            tag = data_setup.create_retention_tag()
+            tag.needs_product = True
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'retentiontag/admin')
+        b.find_element_by_link_text(tag.tag).click()
+        b.find_element_by_name('tag').clear()
+        b.find_element_by_name('tag').send_keys('pink-fluffy-unicorns')
+        self.assertTrue(b.find_element_by_name('needs_product').is_selected())
+        b.find_element_by_name('needs_product').click()
+        b.find_element_by_id('Retention Tag').submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text, 'OK')
+        with session.begin():
+            session.refresh(tag)
+            self.assertEquals(tag.tag, u'pink-fluffy-unicorns')
+            self.assertEquals(tag.needs_product, False)
+
+    def test_cannot_change_tag_name_to_an_existing_tag(self):
+        with session.begin():
+            existing_tag = data_setup.create_retention_tag()
+            tag_to_edit = data_setup.create_retention_tag()
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'retentiontag/admin')
+        b.find_element_by_link_text(tag_to_edit.tag).click()
+        b.find_element_by_name('tag').clear()
+        b.find_element_by_name('tag').send_keys(existing_tag.tag)
+        b.find_element_by_id('Retention Tag').submit()
+        b.find_element_by_xpath('//div[@class="control-group error" and .//input[@name="tag"]]'
+                '//span[string(.)="Retention tag already exists"]')
 
 class RetentionTagTest(SeleniumTestCase):
 
@@ -76,4 +117,4 @@ class RetentionTagTest(SeleniumTestCase):
         sel.select("Retention Tag_default", "label=False")
         sel.click("//button[text()='Save']")
         sel.wait_for_page_to_load("30000")
-        self.failUnless(sel.is_text_present("Problem saving tag %s" % tag_to_add))
+        self.failUnless(sel.is_text_present('Retention tag already exists'))

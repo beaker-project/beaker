@@ -5,8 +5,8 @@ from bkr.server import identity
 from bkr.server.widgets import myPaginateDataGrid, HorizontalForm
 from bkr.server.admin_page import AdminPage
 from bkr.server.model import RetentionTag as Tag
-from bkr.server.retention_tag_utility import RetentionTagUtility
 from bkr.server.helpers import make_edit_link
+from bkr.server.validators import UniqueRetentionTag
 
 import logging
 log = logging.getLogger(__name__)
@@ -14,10 +14,14 @@ log = logging.getLogger(__name__)
 class RetentionTag(AdminPage):
     exposed = False
 
-    tag = widgets.TextField(name='tag', label=_(u'Tag'))
-    default = widgets.SingleSelectField(name='default', label=(u'Default'), options=[(0,'False'),(1,'True')])
+    tag = widgets.TextField(name='tag', label=_(u'Tag'),
+            validator=UniqueRetentionTag())
+    default = widgets.SingleSelectField(name='default', label=(u'Default'),
+            options=[(0,'False'),(1,'True')],
+            validator=validators.StringBool(if_empty=False))
     id = widgets.HiddenField(name='id') 
-    needs_product = widgets.CheckBox('needs_product', label=u'Needs Product')
+    needs_product = widgets.CheckBox('needs_product', label=u'Needs Product',
+            validator=validators.StringBool(if_empty=False))
 
     tag_form = HorizontalForm(
         'Retention Tag',
@@ -45,35 +49,15 @@ class RetentionTag(AdminPage):
             value = kw,
         )
 
-
     @identity.require(identity.in_group("admin"))
     @expose()
-    def save_edit(self, **kw):
-        try:
-            RetentionTagUtility.edit_default(**kw)
-        except Exception, e:
-            log.exception('Error editing tag: %s and default: %s' % (kw.get('tag'), kw.get('default_')))
-            flash(_(u"Problem editing tag %s: %s" % (kw.get('tag'), e)))
-            redirect("./admin")
+    @validate(form=tag_form)
+    @error_handler(new)
+    def save(self, id=None, **kw):
+        retention_tag = Tag(kw['tag'], kw['default'], kw['needs_product'])
         flash(_(u"OK"))
         redirect("./admin")
 
-    @identity.require(identity.in_group("admin"))
-    @expose()
-    @validate(validators = { 'tag' : validators.UnicodeString(not_empty=True, max=20, strip=True) })
-    @error_handler(new)
-    def save(self, **kw):
-        try:
-            RetentionTagUtility.save_tag(**kw)
-            session.flush()
-        except Exception, e:
-            session.rollback()
-            log.error('Error inserting tag: %s and default: %s' % (kw.get('tag'), kw.get('default_')))
-            flash(_(u"Problem saving tag %s" % kw.get('tag')))
-        else:
-            flash(_(u"OK"))
-        redirect("./admin")
-    
     @expose(format='json')
     def by_tag(self, input, *args, **kw):
         input = input.lower()
@@ -116,6 +100,18 @@ class RetentionTag(AdminPage):
             value = tag,
             disabled_fields = ['tag']
         )
+
+    @identity.require(identity.in_group("admin"))
+    @expose()
+    @validate(form=tag_form)
+    @error_handler(edit)
+    def save_edit(self, id=None, **kw):
+        retention_tag = Tag.by_id(id)
+        retention_tag.tag = kw['tag']
+        retention_tag.default = kw['default']
+        retention_tag.needs_product = kw['needs_product']
+        flash(_(u"OK"))
+        redirect("./admin")
 
     @expose(template="bkr.server.templates.grid")
     @paginate('list', default_order='tag', limit=20)
