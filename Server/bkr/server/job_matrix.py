@@ -269,7 +269,7 @@ class JobMatrix:
                               s2.c.task_id.label('task_id_pk')],
                               s2.c.task_id == model.task_table.c.id,
                               from_obj=[model.task_table,s2]).group_by(model.task_table.c.name).order_by(model.task_table.c.name).alias()
-                results = s1.execute()
+                results = session.connection(model.Recipe).execute(s1)
                 for task_details in results:
                     if task_details.arch in the_tasks[task_details.task_name]:
                         if (whiteboard_val not in

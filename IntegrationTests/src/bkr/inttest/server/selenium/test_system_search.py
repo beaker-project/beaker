@@ -93,6 +93,29 @@ class SearchColumns(WebDriverTestCase):
         b.find_element_by_xpath('//table[@id="widget"]'
                 '//td[2][normalize-space(text())="%s"]' % system_with_serial.serial)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1010624
+    def test_column_selection(self):
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Show Search Options').click()
+        wait_for_animation(b, '#searchform')
+        b.find_element_by_link_text('Toggle Result Columns').click()
+        wait_for_animation(b, '#selectablecolumns')
+
+        b.find_element_by_link_text('Select None').click()
+        b.find_element_by_link_text('Select Default').click()
+        b.find_element_by_xpath("//form[@id='searchform']").submit()
+        columns = b.find_elements_by_xpath("//table[@id='widget']//th")
+        self.assertEquals(len(columns), 7)
+
+        b.find_element_by_link_text('Toggle Result Columns').click()
+        wait_for_animation(b, '#selectablecolumns')
+        b.find_element_by_link_text('Select None').click()
+        b.find_element_by_link_text('Select All').click()
+        b.find_element_by_xpath("//form[@id='searchform']").submit()
+        columns = b.find_elements_by_xpath("//table[@id='widget']//th")
+        self.assertGreater(len(columns), 7)
+
     @classmethod
     def tearDownClass(cls):
         cls.browser.quit()

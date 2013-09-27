@@ -1569,7 +1569,7 @@ class Root(RPCRoot):
                     service=u'WEBUI', action=u'Removed',
                     field_name=u'InstallOption:kernel_options_post:%s/%s' % (arch, osversion),
                     old_value=prov.kernel_options_post, new_value=None))
-            system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates[osversion] = None
+            del system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates[osversion]
         elif kw.get('osmajor_id'):
             # remove osmajor option
             osmajor = OSMajor.by_id(int(kw['osmajor_id']))
@@ -1586,7 +1586,7 @@ class Root(RPCRoot):
                     service=u'WEBUI', action=u'Removed',
                     field_name=u'InstallOption:kernel_options_post:%s/%s' % (arch, osmajor),
                     old_value=prov.kernel_options_post, new_value=None))
-            system.provisions[arch].provision_families[osmajor] = None
+            del system.provisions[arch].provision_families[osmajor]
         else:
             # remove arch option
             prov = system.provisions[arch]
@@ -1602,7 +1602,7 @@ class Root(RPCRoot):
                     service=u'WEBUI', action=u'Removed',
                     field_name=u'InstallOption:kernel_options_post:%s' % arch,
                     old_value=prov.kernel_options_post, new_value=None))
-            system.provisions[arch] = None
+            del system.provisions[arch]
         system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 

@@ -231,7 +231,7 @@ Config option for legacy implicit job sharing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The implicit permission previously given to group co-members over jobs
-is now enabled via an entry in Beaker's configuration file:
+is now enabled via an entry in Beaker's configuration file::
 
   beaker.deprecated_job_group_permissions.on = True
 
@@ -248,7 +248,7 @@ Beaker currently includes some rudimentary asset management functionality,
 a task that is better handled by a dedicated inventory management system
 like `OpenDCIM <http://www.opendcim.org/>`__.
 
-Starting with Beaker 0.15, the "Lab Info" tab in the system web UI is
+Starting with Beaker 0.15, the :guilabel:`Lab Info` tab in the system web UI is
 hidden by default. While this tab will automatically be made visible if
 the asset management fields already contain data, the overall feature is
 considered deprecated and should not be used in new Beaker installations.
@@ -264,93 +264,93 @@ release.
 
 * Recipe queue management updates
 
-    * :issue:`954219`: The external watchdog will now correctly abort a recipe
-      even if a system is stuck in an install loop due to Anaconda repeatedly
-      rebooting the system after executing ``%pre``, but prior to starting
-      execution of ``%post``
-      (Contributed by Amit Saha)
-    * :issue:`953543`: The external watchdog will now correctly abort a recipe
-      even if a system is stuck in an install loop due to a kernel panic
-      (Contributed by Raymond Mancy)
-    * :issue:`977562`: Recipes will now be aborted if there are no candidate
-      systems in Automated mode. Previously, affected recipes would remain
-      queued indefinitely, even if all candidate systems were configured
-      for Manual mode or marked as Broken. (Contributed by Raymond Mancy)
+  * :issue:`954219`: The external watchdog will now correctly abort a recipe
+    even if a system is stuck in an install loop due to Anaconda repeatedly
+    rebooting the system after executing ``%pre``, but prior to starting
+    execution of ``%post``
+    (Contributed by Amit Saha)
+  * :issue:`953543`: The external watchdog will now correctly abort a recipe
+    even if a system is stuck in an install loop due to a kernel panic
+    (Contributed by Raymond Mancy)
+  * :issue:`977562`: Recipes will now be aborted if there are no candidate
+    systems in Automated mode. Previously, affected recipes would remain
+    queued indefinitely, even if all candidate systems were configured
+    for Manual mode or marked as Broken. (Contributed by Raymond Mancy)
 
 * System provisioning updates
 
-    * :issue:`997629`/:issue:`994677`: Beaker now correctly forces all EFI
-      systems to attempt netboot prior to local boot, even if the boot order
-      is implicitly switched to prefer local boot during installation. This is
-      needed to ensure the system can be automatically reprovisioned after
-      use (Contributed by Raymond Mancy)
-    * :issue:`1002261`: The ``btrfs`` technical preview can once again be
-      selected as a partition filetype in Red Hat Enterprise Linux 6
-      (Contributed by Nick Coghlan)
-    * :issue:`968804` The provisioning system no longer caches netboot images
-      on the lab controller, allowing it to handle in place updates that use
-      the same image name (Contributed by Amit Saha)
-    * :issue:`1006690`: Provisioning Fedora rawhide is now supported
-      (Contributed by Amit Saha)
-    * :issue:`997222`: The mechanism that attempts to automatically detect
-      broken systems is now documented (Contributed by Dan Callaghan)
+  * :issue:`997629`/:issue:`994677`: Beaker now correctly forces all EFI
+    systems to attempt netboot prior to local boot, even if the boot order
+    is implicitly switched to prefer local boot during installation. This is
+    needed to ensure the system can be automatically reprovisioned after
+    use (Contributed by Raymond Mancy)
+  * :issue:`1002261`: The ``btrfs`` technical preview can once again be
+    selected as a partition filetype in Red Hat Enterprise Linux 6
+    (Contributed by Nick Coghlan)
+  * :issue:`968804` The provisioning system no longer caches netboot images
+    on the lab controller, allowing it to handle in place updates that use
+    the same image name (Contributed by Amit Saha)
+  * :issue:`1006690`: Provisioning Fedora rawhide is now supported
+    (Contributed by Amit Saha)
+  * :issue:`997222`: The mechanism that attempts to automatically detect
+    broken systems is now documented (Contributed by Dan Callaghan)
 
 
 * Updates to server utilities
 
-    * :issue:`994789`: The  ``beaker-sync-tasks`` task library update script
-      once again works correctly and now has automated tests (Contributed by
-      Amit Saha)
-    * :issue:`957614`: ``beaker-expire-distros-via-qpid`` is now identified in
-      activity logs as "QPID" rather than "XMLRPC" (Contributed by Raymond
-      Mancy)
-    * :issue:`999423`: The ``beaker-expire-distro-via-qpid`` command can once
-      again be run as a foreground application (Contributed by Dan Callaghan)
-    * :issue:`874386`: Importing the same distro tree simultaneously in two
-      labs no longer triggers a database deadlock (this scenario was correctly
-      resolved by the database, and was only likely to be encountered if two
-      lab controllers were co-located and imported distro trees from the same
-      file server (Contributed by Dan Callaghan)
-    * :issue:`1002395`: The command used to generate yum repos is now
-      configurable and Beaker uses ``createrepo_c`` by default. This is
-      expected to reduce the impact task uploads have on the operation of
-      the main server (Contributed by Raymond Mancy)
+  * :issue:`994789`: The  ``beaker-sync-tasks`` task library update script
+    once again works correctly and now has automated tests (Contributed by
+    Amit Saha)
+  * :issue:`957614`: ``beaker-expire-distros-via-qpid`` is now identified in
+    activity logs as "QPID" rather than "XMLRPC" (Contributed by Raymond
+    Mancy)
+  * :issue:`999423`: The ``beaker-expire-distro-via-qpid`` command can once
+    again be run as a foreground application (Contributed by Dan Callaghan)
+  * :issue:`874386`: Importing the same distro tree simultaneously in two
+    labs no longer triggers a database deadlock (this scenario was correctly
+    resolved by the database, and was only likely to be encountered if two
+    lab controllers were co-located and imported distro trees from the same
+    file server (Contributed by Dan Callaghan)
+  * :issue:`1002395`: The command used to generate yum repos is now
+    configurable and Beaker uses ``createrepo_c`` by default. This is
+    expected to reduce the impact task uploads have on the operation of
+    the main server (Contributed by Raymond Mancy)
 
 * Test harness updates
 
-    * :issue:`1008433`: ``beah`` no longer depends on ``procmail`` (for its
-      ``lockfile`` command) on distros that use ``systemd`` for service
-      management (Contributed by Dan Callaghan)
-    * :issue:`987332`: the support tasks needed in order to use Beaker's
-      guest recipe functionality are now published in the beaker-project.org
-      repositories (Contributed by Raymond Mancy)
+  * :issue:`1008433`: ``beah`` no longer depends on ``procmail`` (for its
+    ``lockfile`` command) on distros that use ``systemd`` for service
+    management (Contributed by Dan Callaghan)
+  * :issue:`987332`: the support tasks needed in order to use Beaker's
+    guest recipe functionality are now published in the beaker-project.org
+    repositories (Contributed by Raymond Mancy)
 
 * Other updates
 
-    * :issue:`920018`: The system list no longer shows systems on disabled
-      controllers (Contributed by Amit Saha)
-    * :issue:`988848`: Searching for multiple CPU/Flags entries now gives the
-      appropriate results (Contributed by Raymond Mancy)
-    * :issue:`999967`: The ``bkr job-list`` command once again works with the
-      ``python-json`` package on Red Hat Enterprise Linux 5 (Contributed by
-      Amit Saha)
-    * :issue:`759269`: An empty MOTD no longer causes spurious tracebacks in
-      the server error log (Contributed by Dan Callaghan)
-    * :issue:`999733`: Individual recipe sets can now be cancelled over XML-RPC
-      (Contributed by Nick Coghlan)
-    * :issue:`993531`: spurious RPM %post output on new installations of
-      beaker-server and beaker-lab-controller has been eliminated (Contributed
-      by Dan Callaghan)
-    * :issue:`965915`: The Beaker task library now has dedicated automated
-      tests (Contributed by Raymond Mancy)
-    * :issue:`998369`: The requirement for task RPM names to be unique is now
-      enforced in the database (previously it was only checked on task
-      upload) (Contributed by Amit Saha)
-    * :issue:`990349`: The maximum group name length been increased to 255
-      characters from 16 characters and is now properly validated by the
-      XML-RPC API (Contributed by Amit Saha)
-    * and :issue:`990821`: The maximum group display name length is now
-      properly validated by the XML-RPC API (Contributed by Amit Saha)
+  * :issue:`920018`: The system list no longer shows systems on disabled
+    controllers (Contributed by Amit Saha)
+  * :issue:`988848`: Searching for multiple CPU/Flags entries now gives the
+    appropriate results (Contributed by Raymond Mancy)
+  * :issue:`999967`: The ``bkr job-list`` command once again works with the
+    ``python-json`` package on Red Hat Enterprise Linux 5 (Contributed by
+    Amit Saha)
+  * :issue:`759269`: An empty MOTD no longer causes spurious tracebacks in
+    the server error log (Contributed by Dan Callaghan)
+  * :issue:`999733`: Individual recipe sets can now be cancelled over XML-RPC
+    (Contributed by Nick Coghlan)
+  * :issue:`993531`: spurious RPM %post output on new installations of
+    beaker-server and beaker-lab-controller has been eliminated (Contributed
+    by Dan Callaghan)
+  * :issue:`965915`: The Beaker task library now has dedicated automated
+    tests (Contributed by Raymond Mancy)
+  * :issue:`998369`: The requirement for task RPM names to be unique is now
+    enforced in the database (previously it was only checked on task
+    upload) (Contributed by Amit Saha)
+  * :issue:`990349`: The maximum group name length been increased to 255
+    characters from 16 characters and is now properly validated by the
+    XML-RPC API (Contributed by Amit Saha)
+  * and :issue:`990821`: The maximum group display name length is now
+    properly validated by the XML-RPC API (Contributed by Amit Saha)
 
 
 Maintenance updates
