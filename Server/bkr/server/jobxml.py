@@ -19,7 +19,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import xmltramp
-import os
 import sys
 
 class ElementWrapper(object):
@@ -209,7 +208,7 @@ class XmlRecipeGuest(XmlRecipe):
             return self.get_xml_attr('guestargs', unicode, None)
         elif attrname == 'guestname': 
             return self.get_xml_attr('guestname', unicode, None)
-	else: return XmlRecipe.__getattr__(self,attrname)
+        else: return XmlRecipe.__getattr__(self,attrname)
 
 class XmlTask(ElementWrapper):
     def iter_params(self):

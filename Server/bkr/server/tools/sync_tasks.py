@@ -58,7 +58,7 @@ Querying the existing tasks: The script communicates with the remote Beaker serv
 calls and directly interacts with the local Beaker database.
 
 Adding new tasks: The tasks to be added to the local Beaker database
-are first downloaded in the task directort (usually,
+are first downloaded in the task directory (usually,
 /var/www/beaker/rpms). Each of these tasks are then added to the
 Beaker database and finally createrepo is run.
 
@@ -77,8 +77,7 @@ import turbogears.config
 from turbogears.database import session
 
 from bkr.common.helpers import atomically_replaced_file, unlink_ignore, siphon
-from bkr.server.model import Task
-from bkr.server.tasks import Tasks
+from bkr.server.model import TaskLibrary, Task
 from bkr.server.util import load_config
 
 # We need kobo
@@ -102,21 +101,22 @@ def find_task_version_url(task_xml):
 
 class TaskLibrarySync:
 
-    def __init__(self, remote):
+    def __init__(self, remote=None):
 
         # setup, sanity checks
         self.task_dir = turbogears.config.get("basepath.rpms", "/var/www/beaker/rpms")
         self._setup_logging()
-        self._check_perms()
 
         # Initialize core attributes
-        self.remote = remote
-        remote_proxy = self._get_server_proxy(self.remote)
-        self.proxy={'remote':remote_proxy,
-                    }
+        if remote:
+            self.remote = remote
+            remote_proxy = self._get_server_proxy(self.remote)
+            self.proxy={'remote':remote_proxy,
+                        }
+
         self.tasks_added = []
         self.t_downloaded = 0
-        self.tasks = Tasks()       
+        self.tasklib = TaskLibrary()
         # load configuration data
         load_config()
 
@@ -126,9 +126,8 @@ class TaskLibrarySync:
         stdout_handler.setFormatter(formatter)
         self.logger = logging.getLogger("")
         self.logger.addHandler(stdout_handler)
-        
-    def _check_perms(self):
 
+    def check_perms(self):
         # See if the euid is the same as that of self.task_dir
         task_dir_uid = os.stat(self.task_dir).st_uid
 
@@ -148,7 +147,8 @@ class TaskLibrarySync:
 
         # if local, directly read the database
         if server == 'local':
-            tasks = self.tasks.filter({'valid':1})
+            tasks = Task.query.filter(Task.valid == True).all()
+            tasks = [task.to_dict() for task in tasks]
         else:
             tasks = self.proxy[server].tasks.filter({'valid':1})
 
@@ -160,7 +160,7 @@ class TaskLibrarySync:
         if server == 'local':
             try:
                 self.logger.debug('Getting task XML for %s from local database' % task)
-                return self.tasks.to_xml(task, False)
+                return Task.by_name(task, True).to_xml(False)
             except Exception:
                 self.logger.error('Could not get task XML for %s from local Beaker DB. Continuing.' % task)
                 return None
@@ -184,29 +184,26 @@ class TaskLibrarySync:
 
             self.logger.debug('Adding %s'% task_rpm)
 
-            with open(os.path.join(self.task_dir,task_rpm)) as f:
+            with open(os.path.join(self.task_dir,task_rpm)) as task_data:
                 try:
+                    def write_data(f):
+                        siphon(task_data, f)
                     session.begin()
-                    task = self.tasks.process_taskinfo(self.tasks.read_taskinfo(f))
-                    old_rpm = task.rpm
-                    task.rpm = task_rpm
+                    task = self.tasklib.update_task(task_rpm, write_data)
                     session.commit()
-
-                except Exception:
+                except Exception, e:
                     session.rollback()
                     session.close()
-                    self.logger.critical('Error adding task %s' % task_rpm)
-                    unlink_ignore(task_rpm)
+                    self.logger.exception('Error adding task %s: %s' % (task_rpm, e))
+                    unlink_ignore(os.path.join(self.task_dir, task_rpm))
 
-                else:                    
+                else:
                     session.close()
                     self.logger.debug('Successfully added %s' % task.rpm)
-                    if old_rpm:
-                        unlink_ignore(os.path.join(self.task_dir, old_rpm))
 
         # Update task repo
         self.logger.info('Creating repodata..')
-        Task.update_repo()
+        self.tasklib.update_repo()
 
         return
 
@@ -223,11 +220,11 @@ class TaskLibrarySync:
                     f.flush()
 
             except urllib2.HTTPError as err:
-                self.logger.critical(err)
-                #unlink_ignore(rpm_file)
+                self.logger.exception('Error downloading %s: %s' % (task_rpm_name, err))
+                unlink_ignore(rpm_file)
 
             except Exception as err:
-                self.logger.critical(err)
+                self.logger.exception('Error downloading %s: %s' % (task_rpm_name, err))
                 unlink_ignore(rpm_file)
             else:
                 self.logger.debug('Downloaded %s' % task_rpm_name)
@@ -259,14 +256,15 @@ class TaskLibrarySync:
         # tasks which exist in both remote and local
         # will be uploaded only if remote_version != local_version
         for task in old_tasks:
-            task_xml = self._get_task_xml('remote', task)
-            remote_task_version, remote_task_url = find_task_version_url(task_xml)
+            remote_task_xml = self._get_task_xml('remote', task)
+            local_task_xml = self._get_task_xml('local', task)
 
-            task_xml = self._get_task_xml('local', task)
-            local_task_version = find_task_version_url(task_xml)[0]
+            if None not in [remote_task_xml, local_task_xml]:
+                remote_task_version, remote_task_url = find_task_version_url(remote_task_xml)
+                local_task_version = find_task_version_url(local_task_xml)[0]
 
-            if remote_task_version != local_task_version:
-                self._download(remote_task_url)
+                if remote_task_version != local_task_version:
+                    self._download(remote_task_url)
 
         # Finished downloading tasks
         self.logger.info('Downloaded %d Tasks' % self.t_downloaded)
@@ -275,6 +273,20 @@ class TaskLibrarySync:
         self.update_db()
 
         return
+
+    # Get list of tasks from remote and local
+    # return the common tasks and the new tasks
+    # not present locally
+    def tasks(self):
+        self.logger.info('Getting the list of tasks from remote and local Beaker..')
+        remote_tasks = self.get_tasks('remote')
+        local_tasks = self.get_tasks('local')
+        # new_tasks -> Tasks which do not exist on the local
+        # old_tasks-> Tasks which exist on remote and local
+        new_tasks = list(set(remote_tasks).difference(local_tasks))
+        old_tasks = list(set(remote_tasks).intersection(local_tasks))
+
+        return old_tasks, new_tasks
 
 def get_parser():
 
@@ -305,21 +317,14 @@ def main():
 
     remote = options.remote.rstrip('/')
     task_sync = TaskLibrarySync(remote)
+    task_sync.check_perms()
 
     if options.debug:
         task_sync.logger.setLevel(logging.DEBUG)
     else:
         task_sync.logger.setLevel(logging.INFO)
 
-    # Get list of tasks from remote and local
-    task_sync.logger.info('Getting the list of tasks from remote and local Beaker..')
-    remote_tasks = task_sync.get_tasks('remote')
-    local_tasks = task_sync.get_tasks('local')
-
-    # new_tasks -> Tasks which do not exist on the local
-    # old_tasks-> Tasks which exist on remote and local
-    new_tasks = list(set(remote_tasks).difference(local_tasks))
-    old_tasks = list(set(remote_tasks).intersection(local_tasks))
+    old_tasks, new_tasks = task_sync.tasks()
 
     if not options.force:
         if len(old_tasks)>0:

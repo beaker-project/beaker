@@ -1,6 +1,7 @@
 #!/usr/bin/python
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, logout, is_text_present
+from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, \
+        delete_and_confirm
 from bkr.inttest import data_setup, get_server_base
 import unittest, time, re, os
 from turbogears.database import session
@@ -28,8 +29,7 @@ class UserPrefs(WebDriverTestCase):
         delegate_field = b.find_element_by_id('SubmissionDelegates_user_text')
         # Add an invalid user
         delegate_field.send_keys('randuseriosgfsy89238')
-        b.find_element_by_xpath("//input[@value='Add' and"
-            " ../../../tr/td/span[@id='SubmissionDelegates_user']]").click()
+        b.find_element_by_id('SubmissionDelegates').submit()
         self.assertEquals(b.find_element_by_class_name('flash').text,
             'randuseriosgfsy89238 is not a valid user')
 
@@ -41,8 +41,7 @@ class UserPrefs(WebDriverTestCase):
         delegate_field = b.find_element_by_id('SubmissionDelegates_user_text')
         # Add the submission delegate again
         delegate_field.send_keys(submission_delegate.user_name)
-        b.find_element_by_xpath("//input[@value='Add' and"
-            " ../../../tr/td/span[@id='SubmissionDelegates_user']]").click()
+        b.find_element_by_id('SubmissionDelegates').submit()
         self.assertEquals(b.find_element_by_class_name('flash').text,
             '%s is already a submission delegate for %s' % (submission_delegate, self.user))
         # Check that it hasn't changed our list of submission delegates
@@ -54,9 +53,8 @@ class UserPrefs(WebDriverTestCase):
             self.user.submission_delegates[:] = [submission_delegate]
         b = self.browser
         b.get(get_server_base() + 'prefs')
-        b.find_element_by_xpath("//a[normalize-space(text())='Remove (-)' and"
-            " ../../preceding-sibling::td[text()='%s']]" % submission_delegate).click()
-        b.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
+        delete_and_confirm(b, '//td[preceding-sibling::td/text()="%s"]'
+                % submission_delegate, 'Remove (-)')
         self.assertEquals(b.find_element_by_class_name('flash').text,
             '%s removed as a submission delegate' % submission_delegate)
         # Check they have been removed in DB
@@ -76,8 +74,7 @@ class UserPrefs(WebDriverTestCase):
         b = self.browser
         delegate_field = b.find_element_by_id('SubmissionDelegates_user_text')
         delegate_field.send_keys(submission_delegate.user_name)
-        b.find_element_by_xpath("//input[@value='Add' and"
-            " ../../../tr/td/span[@id='SubmissionDelegates_user']]").click()
+        b.find_element_by_id('SubmissionDelegates').submit()
         self.assertEquals(b.find_element_by_class_name('flash').text,
             'Added %s as a submission delegate' % submission_delegate)
         session.expire(self.user)
@@ -105,7 +102,7 @@ class UserPrefs(WebDriverTestCase):
         logout(b)
         login(b, user=self.user.user_name, password='AlbiDoubleyou')
         self.browser.get(get_server_base() + 'prefs')
-        b.find_element_by_xpath('//h2[text()="Preferences"]')
+        b.find_element_by_xpath('//h1[text()="User Preferences"]')
 
     def test_modifying_email(self):
         current_user_email = self.user.email_address
@@ -186,9 +183,8 @@ class UserPrefs(WebDriverTestCase):
         key = 'ssh-rsa AAAAw00t me@example.com\nssh-rsa AAAAlol another key'
         b.find_element_by_name('ssh_pub_key').send_keys(key)
         b.find_element_by_id('ssh_key_add').submit()
-        error_msg = b.find_element_by_xpath(
-                '//form[@id="ssh_key_add"]//td[textarea[@name="ssh_pub_key"]]'
-                '/span[@class="fielderror"]').text
+        error_msg = b.find_element_by_css_selector(
+                '#ssh_key_add .control-group.error .help-inline').text
         self.assertEquals(error_msg, 'SSH public keys may not contain newlines')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=830475
@@ -196,9 +192,8 @@ class UserPrefs(WebDriverTestCase):
         b = self.browser
         b.find_element_by_name('ssh_pub_key').send_keys('gibberish')
         b.find_element_by_id('ssh_key_add').submit()
-        error_msg = b.find_element_by_xpath(
-                '//form[@id="ssh_key_add"]//td[textarea[@name="ssh_pub_key"]]'
-                '/span[@class="fielderror"]').text
+        error_msg = b.find_element_by_css_selector(
+                '#ssh_key_add .control-group.error .help-inline').text
         self.assert_('not a valid SSH public key' in error_msg)
 
 if __name__ == "__main__":

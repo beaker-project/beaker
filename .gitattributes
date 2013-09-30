@@ -2,3 +2,5 @@
 *.txt   whitespace=-trailing-space
 *.rst   whitespace=-trailing-space
 /pub_doc/*/*/*.xml   whitespace=-trailing-space
+/Server/assets/generated/*.css -diff
+/Server/assets/generated/*.js -diff

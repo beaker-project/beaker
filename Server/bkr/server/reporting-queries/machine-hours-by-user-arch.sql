@@ -13,8 +13,8 @@
 -- a 32-bit distro, this may lead to discrepancies with the recipe-hours 
 -- report, which considers only the arch of the recipe distro.
 
--- This version of the query is limited to systems which are shared with no 
--- group restrictions (the "public pool"). See below if you want to remove or 
+-- This version of the query is limited to systems which are available 
+-- to all users (the "public pool"). See below if you want to remove or 
 -- alter this filter.
 
 SELECT
@@ -39,11 +39,16 @@ INNER JOIN
     GROUP BY system.id) system_arch
     ON system_arch.id = system.id
 INNER JOIN tg_user ON reservation.user_id = tg_user.user_id
+LEFT OUTER JOIN system_access_policy ON system.id = system_access_policy.system_id
 WHERE reservation.start_time < '2012-11-01 00:00:00'
     AND (reservation.finish_time >= '2012-10-01 00:00:00'
          OR reservation.finish_time IS NULL)
-    -- limit to shared systems with no group restrictions
-    AND system.private = 0 AND system.shared = 1
-        AND NOT EXISTS (SELECT 1 FROM system_group WHERE system_id = system.id)
+    -- limit to systems which everybody is allowed to reserve
+    AND system.private = 0 AND EXISTS (
+        SELECT 1
+        FROM system_access_policy_rule
+        WHERE policy_id = system_access_policy.id
+            AND permission = 'reserve'
+            AND user_id IS NULL AND group_id IS NULL)
 GROUP BY tg_user.user_name, system_arch.arch
 ORDER BY tg_user.user_name, system_arch.arch;

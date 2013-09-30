@@ -1,6 +1,6 @@
-from turbogears import expose, validate, identity 
+from turbogears import expose, validate
 from cherrypy import HTTPError
-from bkr.server import mail
+from bkr.server import mail, identity
 from bkr.server.model import System, Recipe, SystemActivity
 from bkr.server.validators import CheckSystemValid, CheckRecipeValid
 

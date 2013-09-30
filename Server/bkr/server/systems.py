@@ -3,13 +3,18 @@ import logging
 import xmlrpclib
 import datetime
 from sqlalchemy import and_
-from turbogears import expose, identity, controllers, flash, redirect
-from bkr.server.bexceptions import BX
+from sqlalchemy.orm.exc import NoResultFound
+from flask import request, abort, jsonify
+from turbogears import expose, controllers, flash, redirect
+from bkr.server import identity
+from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
-        OSMajor, DistroTag, Arch, Distro
+        OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
+        SystemPermission, SystemAccessPolicyRule
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.server.app import app
 from turbogears.database import session
 import cherrypy
 
@@ -53,9 +58,7 @@ class SystemsController(controllers.Controller):
         .. versionadded:: 0.6
         """
         system = System.by_fqdn(fqdn, identity.current.user)
-        if system.status != SystemStatus.manual:
-            raise BX(_(u'Cannot reserve system with status %s') % system.status)
-        system.reserve(service=u'XMLRPC', reservation_type=u'manual')
+        system.reserve_manually(service=u'XMLRPC')
         return system.fqdn # because turbogears makes us return something
 
     @expose()
@@ -130,6 +133,10 @@ class SystemsController(controllers.Controller):
            No longer waits for completion of Cobbler power task.
         """
         system = System.by_fqdn(fqdn, identity.current.user)
+        if not system.can_power(identity.current.user):
+            raise InsufficientSystemPermissions(
+                    _(u'User %s does not have permission to power system %s')
+                    % (identity.current.user, system))
         if not force and system.user is not None \
                 and system.user != identity.current.user:
             raise BX(_(u'System is in use'))
@@ -147,6 +154,9 @@ class SystemsController(controllers.Controller):
         system, and on success redirects to the system page.
         """
         system = System.by_fqdn(fqdn, identity.current.user)
+        if not system.can_power(identity.current.user):
+            flash(_(u'You do not have permission to control this system'))
+            redirect(u'../view/%s' % fqdn)
         system.clear_netboot(service=u'WEBUI')
         flash(_(u'Clear netboot command enqueued'))
         redirect(u'../view/%s' % fqdn)
@@ -202,9 +212,6 @@ class SystemsController(controllers.Controller):
            See :meth:`distrotrees.filter`.
         """
         system = System.by_fqdn(fqdn, identity.current.user)
-        if not system.can_provision_now(identity.current.user):
-            raise BX(_(u'User %s has insufficient permissions to provision %s')
-                    % (identity.current.user.user_name, system.fqdn))
         if not system.user == identity.current.user:
             raise BX(_(u'Reserve a system before provisioning'))
         distro_tree = DistroTree.by_id(distro_tree_id)
@@ -308,6 +315,150 @@ class SystemsController(controllers.Controller):
         for osmajor, arch in query.values(OSMajor.osmajor, Arch.arch):
             result.setdefault(osmajor, []).append(arch)
         return result
+
+# XXX need to move /view/FQDN to /systems/FQDN/
+@app.route('/systems/<fqdn>/access-policy', methods=['GET'])
+def get_system_access_policy(fqdn):
+    try:
+        system = System.by_fqdn(fqdn, identity.current.user)
+    except NoResultFound:
+        abort(404)
+    policy = system.custom_access_policy
+    # For now, we don't distinguish between an empty policy and an absent one.
+    if not policy:
+        return jsonify({
+            'id': None,
+            'rules': [],
+            'possible_permissions': [
+                {'value': unicode(permission),
+                 'label': unicode(permission.label)}
+                for permission in SystemPermission],
+        })
+    return jsonify({
+        'id': policy.id,
+        'rules': [
+            {'id': rule.id,
+             'user': rule.user.user_name if rule.user else None,
+             'group': rule.group.group_name if rule.group else None,
+             'everybody': rule.everybody,
+             'permission': unicode(rule.permission)}
+            for rule in policy.rules],
+        'possible_permissions': [
+            {'value': unicode(permission),
+             'label': unicode(permission.label)}
+            for permission in SystemPermission],
+    })
+
+@app.route('/systems/<fqdn>/access-policy', methods=['POST', 'PUT'])
+def save_system_access_policy(fqdn):
+    if not identity.current.user:
+        abort(401)
+    try:
+        system = System.by_fqdn(fqdn, identity.current.user)
+    except NoResultFound:
+        abort(404)
+    if not system.can_edit_policy(identity.current.user):
+        abort(403)
+    if system.custom_access_policy:
+        policy = system.custom_access_policy
+    else:
+        policy = system.custom_access_policy = SystemAccessPolicy()
+    data = request.json
+    if not data:
+        abort(400)
+    # Figure out what is added, what is removed.
+    # Rules are immutable, so if it has an id it is unchanged, 
+    # if it has no id it is new.
+    kept_rule_ids = frozenset(r['id'] for r in data['rules'] if 'id' in r)
+    removed = []
+    for old_rule in policy.rules:
+        if old_rule.id not in kept_rule_ids:
+            removed.append(old_rule)
+    for old_rule in removed:
+        system.record_activity(user=identity.current.user, service=u'HTTP',
+                field=u'Access Policy Rule', action=u'Removed',
+                old=repr(old_rule))
+        policy.rules.remove(old_rule)
+    for rule in data['rules']:
+        if 'id' not in rule:
+            user = User.by_user_name(rule['user']) if rule['user'] else None
+            group = Group.by_name(rule['group']) if rule['group'] else None
+            permission = SystemPermission.from_string(rule['permission'])
+            new_rule = policy.add_rule(user=user, group=group,
+                    everybody=rule['everybody'], permission=permission)
+            system.record_activity(user=identity.current.user, service=u'HTTP',
+                    field=u'Access Policy Rule', action=u'Added',
+                    new=repr(new_rule))
+    return '', 204
+
+@app.route('/systems/<fqdn>/access-policy/rules/', methods=['POST'])
+def add_system_access_policy_rule(fqdn):
+    if not identity.current.user:
+        abort(401)
+    try:
+        system = System.by_fqdn(fqdn, identity.current.user)
+    except NoResultFound:
+        abort(404)
+    if not system.can_edit_policy(identity.current.user):
+        abort(403)
+    if system.custom_access_policy:
+        policy = system.custom_access_policy
+    else:
+        policy = system.custom_access_policy = SystemAccessPolicy()
+    rule = request.json
+    if not rule:
+        abort(400)
+    user = User.by_user_name(rule['user']) if rule['user'] else None
+    group = Group.by_name(rule['group']) if rule['group'] else None
+    try:
+        permission = SystemPermission.from_string(rule['permission'])
+    except ValueError:
+        abort(400)
+    new_rule = policy.add_rule(user=user, group=group,
+            everybody=rule['everybody'], permission=permission)
+    system.record_activity(user=identity.current.user, service=u'HTTP',
+            field=u'Access Policy Rule', action=u'Added',
+            new=repr(new_rule))
+    return '', 204
+
+@app.route('/systems/<fqdn>/access-policy/rules/', methods=['DELETE'])
+def delete_system_access_policy_rules(fqdn):
+    if not identity.current.user:
+        abort(401)
+    try:
+        system = System.by_fqdn(fqdn, identity.current.user)
+    except NoResultFound:
+        abort(404)
+    if not system.can_edit_policy(identity.current.user):
+        abort(403)
+    if system.custom_access_policy:
+        policy = system.custom_access_policy
+    else:
+        policy = system.custom_access_policy = SystemAccessPolicy()
+    # We expect some query string args specifying which rules should be 
+    # deleted. If those are not present, it's "Method Not Allowed".
+    query = SystemAccessPolicyRule.query.filter(SystemAccessPolicyRule.policy == policy)
+    if 'permission' in request.args:
+        query = query.filter(SystemAccessPolicyRule.permission.in_(
+                request.args.getlist('permission', type=SystemPermission.from_string)))
+    else:
+        abort(405)
+    if 'user' in request.args:
+        query = query.join(SystemAccessPolicyRule.user)\
+                .filter(User.user_name.in_(request.args.getlist('user')))
+    elif 'group' in request.args:
+        query = query.join(SystemAccessPolicyRule.group)\
+                .filter(Group.group_name.in_(request.args.getlist('group')))
+    elif 'everybody' in request.args:
+        query = query.filter(SystemAccessPolicyRule.everybody)
+    else:
+        abort(405)
+    for rule in query:
+        system.record_activity(user=identity.current.user, service=u'HTTP',
+                field=u'Access Policy Rule', action=u'Removed',
+                old=repr(rule))
+        session.delete(rule)
+    return '', 204
 
 # for sphinx
 systems = SystemsController

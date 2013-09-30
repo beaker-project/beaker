@@ -16,35 +16,30 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config, url
-from turbogears import identity, redirect
-from cherrypy import request, response
-from kid import Element
-from bkr.server import search_utility
-from bkr.server.widgets import myPaginateDataGrid
-from bkr.server.widgets import TasksWidget
-from bkr.server.widgets import TaskSearchForm
-from bkr.server.widgets import SearchBar
-from bkr.server.widgets import TaskActionWidget
+from turbogears import expose, flash, widgets, validate, redirect, paginate, url
+from bkr.server import search_utility, identity
+from bkr.server.widgets import myPaginateDataGrid, TasksWidget, TaskSearchForm, \
+        SearchBar, TaskActionWidget, HorizontalForm
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
-from bkr.common.helpers import unlink_ignore, siphon
+from bkr.common.helpers import siphon
+from bkr.common.bexceptions import BX
+from sqlalchemy import or_, and_
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import joinedload, joinedload_all
 from sqlalchemy.orm.exc import NoResultFound
-import tempfile
-from turbogears.identity.exceptions import IdentityException
 
 import os
-import errno
 
 import cherrypy
 
-# from medusa import json
-# import logging
-# log = logging.getLogger("medusa.controllers")
-#import model
-from model import *
-import string
+from bkr.server.model import (Distro, Task, OSMajor, Recipe, RecipeSet,
+                              RecipeTask, DistroTree, TaskPackage, TaskType,
+                              Job, Arch, OSVersion, RecipeTaskResult, System,
+                              SystemResource, RecipeResource)
+
+import logging
+log = logging.getLogger(__name__)
 
 __all__ = ['Tasks']
 
@@ -56,13 +51,14 @@ class Tasks(RPCRoot):
     task_form = TaskSearchForm()
     task_widget = TasksWidget()
 
-    upload = widgets.FileField(name='task_rpm', label='Task rpm')
-    form = widgets.TableForm(
+    _upload = widgets.FileField(name='task_rpm', label='Task RPM')
+    form = HorizontalForm(
         'task',
-        fields = [upload],
+        fields = [_upload],
         action = 'save_data',
-        submit_text = _(u'Submit Data')
+        submit_text = _(u'Upload')
     )
+    del _upload
 
     @expose(template='bkr.server.templates.form-post')
     @identity.require(identity.not_anonymous())
@@ -121,7 +117,7 @@ class Tasks(RPCRoot):
         elif 'osmajor' in filter and filter['osmajor']:
             try:
                 osmajor = OSMajor.by_name(filter['osmajor'])
-            except InvalidRequestError, err:
+            except InvalidRequestError:
                 raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
             tasks = osmajor.tasks()
         else:
@@ -187,6 +183,10 @@ class Tasks(RPCRoot):
         :type task_rpm_data: XML-RPC binary
         """
         rpm_path = Task.get_rpm_path(task_rpm_name)
+        # we do it here, since we do not want to proceed
+        # any further
+        if len(task_rpm_name) > 255:
+            raise BX(_("Task RPM name should be <= 255 characters"))
         if os.path.exists("%s" % rpm_path):
             raise BX(_(u'Cannot import duplicate task %s') % task_rpm_name)
 
@@ -205,6 +205,12 @@ class Tasks(RPCRoot):
 
         if not task_rpm.filename:
             flash(_(u'No task RPM specified'))
+            redirect(url("./new"))
+
+        # we do it here, since we do not want to proceed
+        # any further
+        if len(task_rpm.filename) > 255:
+            flash(_(u"Task RPM name should be <= 255 characters"))
             redirect(url("./new"))
 
         if os.path.exists("%s" % rpm_path):
@@ -258,8 +264,6 @@ class Tasks(RPCRoot):
             tasks = tasks.join(RecipeTask.recipe).filter(Recipe.id == kw['recipe_id'])
 
             hidden = dict(distro_tree=1, system=1)
-            return dict(tasks=tasks,hidden=hidden,task_widget=self.task_widget)
-
         if kw.get('distro_tree_id'):
             tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree)\
                     .filter(DistroTree.id == kw.get('distro_tree_id'))
@@ -373,7 +377,6 @@ class Tasks(RPCRoot):
                            search_controller=url("/get_search_options_task"),
                            )
         return dict(title="Task Library",
-                    object_count=tasks.count(),
                     grid=tasks_grid,
                     list=tasks,
                     search_bar=search_bar,

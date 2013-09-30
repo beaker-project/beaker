@@ -45,8 +45,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.reserve(system.fqdn)
             self.fail('should raise')
         except Exception, e:
-            self.assert_('turbogears.identity.exceptions.IdentityFailure'
-                    in e.faultString, e.faultString)
+            self.assert_('Anonymous access denied' in e.faultString, e.faultString)
 
     def test_cannot_reserve_automated_system(self):
         with session.begin():
@@ -58,8 +57,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.reserve(system.fqdn)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('Cannot reserve system with status Automated'
-                    in e.faultString)
+            self.assertIn('Cannot manually reserve automated system', e.faultString)
 
     def test_cannot_reserve_system_in_use(self):
         with session.begin():
@@ -72,8 +70,7 @@ class ReserveSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.reserve(system.fqdn)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('cannot reserve system' in e.faultString,
-                    e.faultString)
+            self.assertIn('already reserved', e.faultString)
 
     def test_reserve_system(self):
         with session.begin():
@@ -154,8 +151,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.release(system.fqdn)
             self.fail('should raise')
         except Exception, e:
-            self.assert_('turbogears.identity.exceptions.IdentityFailure'
-                    in e.faultString, e.faultString)
+            self.assert_('Anonymous access denied' in e.faultString, e.faultString)
 
     def test_cannot_release_when_not_current_user(self):
         with session.begin():
@@ -171,8 +167,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             server.systems.release(system.fqdn)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('System is reserved by a different user'
-                    in e.faultString)
+            self.assertIn('cannot unreserve system', e.faultString)
 
     def test_release_system(self):
         with session.begin():
@@ -299,21 +294,31 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
             self.server.systems.power('on', 'fqdn')
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('turbogears.identity.exceptions.IdentityFailure'
-                    in e.faultString, e.faultString)
+            self.assertIn('Anonymous access denied', e.faultString)
 
-    def test_cannot_power_system_in_use(self):
+    def test_cannot_power_without_permission(self):
         with session.begin():
             user = data_setup.create_user(password=u'password')
-            other_user = data_setup.create_user()
-            system = data_setup.create_system()
-            system.user = other_user
+            system = data_setup.create_system(shared=False)
         self.server.auth.login_password(user.user_name, 'password')
         try:
             self.server.systems.power('on', system.fqdn)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('System is in use' in e.faultString)
+            self.assertIn('does not have permission to power system', e.faultString)
+
+    def test_cannot_power_system_in_use(self):
+        with session.begin():
+            owner = data_setup.create_user(password=u'password')
+            user = data_setup.create_user()
+            system = data_setup.create_system(owner=owner)
+            system.user = user
+        self.server.auth.login_password(owner.user_name, 'password')
+        try:
+            self.server.systems.power('on', system.fqdn)
+            self.fail('should raise')
+        except xmlrpclib.Fault, e:
+            self.assertIn('System is in use', e.faultString)
         with session.begin():
             self.assertEquals(system.command_queue, [])
 
@@ -323,7 +328,7 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
             system = data_setup.create_system()
             data_setup.configure_system_power(system)
             system.lab_controller = self.lab_controller
-            system.user = None
+            system.user = user
         self.server.auth.login_password(user.user_name, 'password')
         self.server.systems.power(action, system.fqdn)
         self.assertEqual(
@@ -341,25 +346,25 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
 
     def test_can_force_powering_system_in_use(self):
         with session.begin():
-            user = data_setup.create_user(password=u'password')
-            other_user = data_setup.create_user()
-            system = data_setup.create_system()
+            owner = data_setup.create_user(password=u'password')
+            user = data_setup.create_user()
+            system = data_setup.create_system(owner=owner)
             data_setup.configure_system_power(system)
             system.lab_controller = self.lab_controller
-            system.user = other_user
-        self.server.auth.login_password(user.user_name, 'password')
+            system.user = user
+        self.server.auth.login_password(owner.user_name, 'password')
         self.server.systems.power('on', system.fqdn, False, True)
         with session.begin():
             self.assertEqual(system.command_queue[0].action, 'on')
 
     def test_clear_netboot(self):
         with session.begin():
-            user = data_setup.create_user(password=u'password')
-            system = data_setup.create_system()
+            owner = data_setup.create_user(password=u'password')
+            system = data_setup.create_system(owner=owner)
             data_setup.configure_system_power(system)
             system.lab_controller = self.lab_controller
             system.user = None
-        self.server.auth.login_password(user.user_name, 'password')
+        self.server.auth.login_password(owner.user_name, 'password')
         self.server.systems.power('reboot', system.fqdn, True)
         with session.begin():
             self.assertEqual(system.command_queue[0].action, 'reboot')
@@ -371,7 +376,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
     def setUp(self):
         self.lab_controller = data_setup.create_labcontroller()
         self.distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora',
-                arch=u'i386')
+                arch=u'i386', lab_controllers=[self.lab_controller])
         self.usable_system = data_setup.create_system(arch=u'i386',
                 owner=User.by_user_name(data_setup.ADMIN_USER),
                 status=u'Manual', shared=True)
@@ -390,8 +395,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             self.server.systems.provision('fqdn', 'distro')
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('turbogears.identity.exceptions.IdentityFailure'
-                    in e.faultString, e.faultString)
+            self.assert_('Anonymous access denied' in e.faultString, e.faultString)
 
     def test_cannot_provision_automated_system(self):
         with session.begin():
@@ -403,9 +407,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         try:
             self.server.systems.provision(system.fqdn, 'distro')
         except xmlrpclib.Fault, e:
-            # It's not really a permissions issue, but oh well
-            self.assert_('has insufficient permissions to provision'
-                    in e.faultString)
+            self.assertIn('Reserve a system before provisioning', e.faultString)
         with session.begin():
             self.assertEquals(system.command_queue, [])
 

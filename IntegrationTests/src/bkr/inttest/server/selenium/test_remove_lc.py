@@ -10,7 +10,7 @@ class RemoveLabController(SeleniumTestCase):
         self.lc = data_setup.create_labcontroller(
             fqdn=data_setup.unique_name(u'%d1111'))
         self.system.lab_controller = self.lc
-        self.distro_tree = data_setup.create_distro_tree()
+        self.distro_tree = data_setup.create_distro_tree(lab_controllers=[self.lc])
         self.selenium = self.get_selenium()
         self.selenium.start()
         self.login()
@@ -50,8 +50,7 @@ class RemoveLabController(SeleniumTestCase):
         sel = self.selenium
         sel.open('view/%s' % self.system.fqdn)
         sel.wait_for_page_to_load('30000')
-        lcs = sel.get_text('//form//table/tbody/tr[10]') #The Lab Controller td
-        self.failUnless('%s' % self.lc.fqdn in lcs)
+        self.assert_system_view_text('lab_controller_id', self.lc.fqdn)
         self.failUnless(self.system.lab_controller is self.lc)
 
         # Remove it
@@ -62,8 +61,7 @@ class RemoveLabController(SeleniumTestCase):
 
         sel.open('view/%s' % self.system.fqdn)
         sel.wait_for_page_to_load('30000')
-        lcs = sel.get_text('//form//table/tbody/tr[10]')
-        self.failUnless('%s' % self.lc.fqdn not in lcs)
+        self.assert_system_view_text('lab_controller_id', '')
         with session.begin():
             session.refresh(self.system)
             self.failUnless(not self.system.lab_controller)
@@ -76,7 +74,7 @@ class RemoveLabController(SeleniumTestCase):
         sel.open('edit/%s' % self.system.fqdn)
         sel.wait_for_page_to_load('30000')
         sel.select("form_lab_controller_id", "label=%s" % self.lc.fqdn)
-        sel.click("link=Save Changes")
+        sel.submit('name=form')
         sel.wait_for_page_to_load('30000')
         with session.begin():
             session.refresh(self.system)

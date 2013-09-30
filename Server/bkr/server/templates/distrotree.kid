@@ -1,177 +1,166 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#"
     py:extends="'master.kid'">
 <head>
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
-    <title>${title} ${value.id}: ${value}</title>
+    <title>${value}</title>
     <script src="${tg.url('/static/javascript/magic_forms.js')}" type='text/javascript'/>
-    <style type="text/css">
-        table.lab_controllers tbody tr {
-            border: none;
-        }
-        table.lab_controllers tbody tr:last-child {
-            border-bottom: 1px solid #bcbcbc !important;
-        }
-        table.lab_controllers td {
-            padding: 5px 25px;
-        }
-    </style>
 </head>
-<body class="flora">
+<body>
+<div class="page-header">
+  <h1>${value}</h1>
+</div>
 
-<h2>Distro Tree</h2>
-<table class="list">
+<table class="table table-bordered" style="max-width: 30em;">
     <tbody>
-        <tr class="list">
-            <th class="list" style="width: 25%;">ID</th>
-            <td class="list">${value.id}</td>
+        <tr>
+            <th>ID</th>
+            <td>${value.id}</td>
         </tr>
-        <tr class="list">
-            <th class="list">Distro</th>
-            <td class="list">${value.distro.link}</td>
+        <tr>
+            <th>Distro</th>
+            <td>${value.distro.link}</td>
         </tr>
-        <tr class="list">
-            <th class="list">Variant</th>
-            <td class="list">${value.variant}</td>
+        <tr>
+            <th>Variant</th>
+            <td>${value.variant}</td>
         </tr>
-        <tr class="list">
-            <th class="list">Arch</th>
-            <td class="list">${value.arch}</td>
+        <tr>
+            <th>Arch</th>
+            <td>${value.arch}</td>
         </tr>
-        <tr class="list">
-            <th class="list">Date Created</th>
-            <td class="list datetime">${value.date_created}</td>
+        <tr>
+            <th>Date Created</th>
+            <td class="datetime">${value.date_created}</td>
         </tr>
     </tbody>
 </table>
 
-<div class="tabber">
+<ul class="nav nav-tabs">
+  <li><a data-toggle="tab" href="#lab-controllers">Lab Controllers</a></li>
+  <li><a data-toggle="tab" href="#install-options">Install Options</a></li>
+  <li><a data-toggle="tab" href="#repos">Repos</a></li>
+  <li><a data-toggle="tab" href="#images">Images</a></li>
+  <li><a data-toggle="tab" href="#executed-tasks">Executed Tasks</a></li>
+</ul>
 
-<div class="tabbertab">
-<h2>Lab Controllers</h2>
-<table class="list lab_controllers">
+<div class="tab-content">
+
+<div class="tab-pane" id="lab-controllers">
+<table class="table table-one-line-per-row">
     <thead>
-        <tr class="list">
-            <th class="list">Lab Controller</th>
-            <th class="list">URL</th>
-            <th class="list"></th>
+        <tr>
+            <th>Lab Controller</th>
+            <th>URL</th>
+            <th></th>
         </tr>
     </thead>
-    <?python i = 0 ?>
-    <tbody py:for="lab_controller in lab_controllers" py:if="lab_controller_assocs[lab_controller]">
-        <tr py:for="j, lca in enumerate(lab_controller_assocs[lab_controller])"
-            class="list ${i%2 and 'odd' or 'even'}">
-            <td class="list" py:if="j == 0" rowspan="${len(lab_controller_assocs[lab_controller])}">${lab_controller}</td>
-            <td class="list">
-                <a class="list" href="${lca.url}"
+    <tbody>
+      <span py:for="lab_controller in lab_controllers" py:if="lab_controller_assocs[lab_controller]" py:strip="True">
+        <tr py:for="j, lca in enumerate(lab_controller_assocs[lab_controller])">
+            <td py:if="j == 0" rowspan="${len(lab_controller_assocs[lab_controller])}">${lab_controller}</td>
+            <td>
+                <a href="${lca.url}"
                  py:strip="lca.url.startswith('nfs://') or lca.url.startswith('file://')">
                     ${lca.url}
                 </a>
             </td>
-            <td class="list">
+            <td>
              <span py:if='not readonly' py:strip='1'>
-              ${delete_link.display(dict(id=lca.id), attrs=dict(class_='link'),
-                  action=tg.url('./lab_controller_remove'))}
+              ${delete_link.display(dict(id=lca.id), action=tg.url('./lab_controller_remove'))}
              </span>
             </td>
         </tr>
-        <?python i += 1 ?>
+      </span>
     </tbody>
-    <tbody py:if="not readonly">
-        <tr class="list ${i%2 and 'odd' or 'even'}">
-            <td class="list">
+    <tfoot py:if="not readonly">
+        <tr>
+            <td>
                 <select id="lab_controller_id">
                     <option py:for="lab_controller in lab_controllers"
                             value="${lab_controller.id}">${lab_controller}</option>
                 </select>
             </td>
-            <td class="list">
+            <td>
                 <input id="url" type="text" size="100" maxlength="255"/>
             </td>
-            <td class="list">
+            <td>
 
-            <form action="lab_controller_add" method="post" name="lab_controller_add_form">
+            <form action="lab_controller_add" method="post" name="lab_controller_add_form" onsubmit="populate_form_elements(this);">
                 <input type="hidden" name="distro_tree_id" value="${value.id}" />
                 <input type="hidden" id="url_hidden" name="url" />
                 <input type="hidden" id="lab_controller_id_hidden" name="lab_controller_id" />
-                <a onclick="populate_form_elements(this.parentNode);return true" href="javascript:document.lab_controller_add_form.submit()">Add ( + )</a>
+                <button class="btn btn-primary" type="submit"><i class="icon-plus"/> Add</button>
                 </form>
             </td>
         </tr>
-    </tbody>
+    </tfoot>
 </table>
 </div>
 
-<div class="tabbertab">
-<h2>Install Options</h2>
+<div class="tab-pane" id="install-options">
 ${install_options_widget.display(value, readonly=readonly)}
 </div>
 
-<div class="tabbertab">
-<h2>Repos</h2>
-<table class="list">
+<div class="tab-pane" id="repos">
+<table class="table table-one-line-per-row table-striped">
     <thead>
-        <tr class="list">
-            <th class="list">Repo ID</th>
-            <th class="list">Type</th>
-            <th class="list" style="width: 70%;">Path</th>
+        <tr>
+            <th>Repo ID</th>
+            <th>Type</th>
+            <th style="width: 70%;">Path</th>
         </tr>
     </thead>
     <tbody>
-        <tr py:for="i, repo in enumerate(value.repos)" class="list ${i%2 and 'odd' or 'even'}">
-            <td class="list">${repo.repo_id}</td>
-            <td class="list">${repo.repo_type}</td>
-            <td class="list">${repo.path}</td>
+        <tr py:for="repo in value.repos">
+            <td>${repo.repo_id}</td>
+            <td>${repo.repo_type}</td>
+            <td>${repo.path}</td>
         </tr>
     </tbody>
 </table>
 
-<h3 style="display: block;">Download Yum Config</h3>
-<table class="list yum_config">
+<h3>Download Yum Config</h3>
+<table class="yum_config table table-one-line-per-row table-striped">
     <thead>
-        <tr class="list">
-            <th class="list">Lab Controller</th>
-            <th class="list" style="width: 70%;">Yum Config</th>
+        <tr>
+            <th>Lab Controller</th>
+            <th style="width: 70%;">Yum Config</th>
         </tr>
     </thead>
     <tbody>
-        <?python i = 0 ?>
         <tr py:for="lab_controller in lab_controllers"
-            py:if="lab_controller_assocs[lab_controller]"
-            class="list ${i%2 and 'odd' or 'even'}">
-            <td class="list">${lab_controller}</td>
-            <td class="list">
+            py:if="lab_controller_assocs[lab_controller]">
+            <td>${lab_controller}</td>
+            <td>
                 <?python filename = '%s.repo' % unicode(value).replace(' ', '-') ?>
                 <a href="yum_config/${value.id}/${filename}?lab=${lab_controller.fqdn}">${filename}</a>
             </td>
-            <?python i += 1 ?>
         </tr>
     </tbody>
 </table>
 </div>
 
-<div class="tabbertab">
-<h2>Images</h2>
-<table class="list">
+<div class="tab-pane" id="images">
+<table class="table table-one-line-per-row table-striped">
     <thead>
-        <tr class="list">
-            <th class="list">Image Type</th>
-            <th class="list">Kernel Type</th>
-            <th class="list" style="width: 70%;">Path</th>
+        <tr>
+            <th>Image Type</th>
+            <th>Kernel Type</th>
+            <th style="width: 70%;">Path</th>
         </tr>
     </thead>
     <tbody>
-        <tr py:for="i, image in enumerate(value.images)" class="list ${i%2 and 'odd' or 'even'}">
-            <td class="list">${image.image_type}</td>
-            <td class="list">${image.kernel_type}</td>
-            <td class="list">${image.path}</td>
+        <tr py:for="image in value.images">
+            <td>${image.image_type}</td>
+            <td>${image.kernel_type}</td>
+            <td>${image.path}</td>
         </tr>
     </tbody>
 </table>
 </div>
 
-<div class="tabbertab">
-<h2>Executed Tasks</h2>
+<div class="tab-pane" id="executed-tasks">
 ${form_task.display(value=dict(distro_tree_id=value.id),
         target_dom='task_items',
         update='task_items')}
@@ -180,5 +169,6 @@ ${form_task.display(value=dict(distro_tree_id=value.id),
 
 </div>
 
+<script type="text/javascript">$(link_tabs_to_anchor);</script>
 </body>
 </html>

@@ -11,7 +11,7 @@ from bkr.common.bexceptions import BeakerException
 
 can_use_qpid = True
 try:
-    from qpid.messaging import *
+    from qpid.messaging import exceptions, Connection, MessagingError
     from qpid.log import enable, DEBUG, WARN, ERROR
     from qpid import datatypes
     enable("qpid.messaging", ERROR)

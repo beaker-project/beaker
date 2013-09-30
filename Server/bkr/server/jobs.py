@@ -16,35 +16,39 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from turbogears import identity, redirect
-from cherrypy import request, response
-from kid import Element
+from turbogears import expose, flash, widgets, validate, validators, redirect, paginate, url
+from cherrypy import response
 from formencode.api import Invalid
+from sqlalchemy import and_
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
-from bkr.server.widgets import myPaginateDataGrid, AckPanel, JobQuickSearch, \
-    RecipeWidget,RecipeTasksWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
-    SearchBar, JobWhiteboard, ProductWidget, JobActionWidget, JobPageActionWidget
+from bkr.server.widgets import myPaginateDataGrid, \
+    RecipeWidget, RecipeSetWidget, PriorityWidget, RetentionTagWidget, \
+    SearchBar, JobWhiteboard, ProductWidget, JobActionWidget, JobPageActionWidget, \
+    HorizontalForm, BeakerDataGrid
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
-from bkr.server import search_utility
+from bkr.server.helpers import make_link
+from bkr.server import search_utility, identity
 from bkr.server.controller_utilities import _custom_status, _custom_result, \
     restrict_http_method
-import datetime
 import pkg_resources
 import lxml.etree
 import logging
 
 import cherrypy
 
-from model import *
-import string
+from bkr.server.model import (Job, RecipeSet, RetentionTag, TaskBase,
+                              TaskPriority, User, Group, MachineRecipe,
+                              DistroTree, TaskPackage, RecipeRepo,
+                              RecipeKSAppend, Task, Product, GuestRecipe,
+                              RecipeTask, RecipeTaskParam, RecipeSetResponse,
+                              Response, StaleTaskStatusException,
+                              RecipeSetActivity)
 
-from bexceptions import *
+from bkr.common.bexceptions import BeakerException, BX
 
 import xmltramp
-from jobxml import *
+from bkr.server.jobxml import XmlJob
 import cgi
 from bkr.server.job_utilities import Utility
 
@@ -57,7 +61,7 @@ class JobForm(widgets.Form):
     template = 'bkr.server.templates.job_form'
     name = 'job'
     submit_text = _(u'Queue')
-    fields = [widgets.TextArea(name='textxml', label=_(u'Job XML'), attrs=dict(rows=40, cols=155))]
+    fields = [widgets.TextArea(name='textxml')]
     hidden_fields = [widgets.HiddenField(name='confirmed', validator=validators.StringBool())]
     params = ['xsd_errors']
     xsd_errors = None
@@ -78,23 +82,23 @@ class Jobs(RPCRoot):
     priority_widget = PriorityWidget() #FIXME I have a feeling we don't need this as the RecipeSet widget declares an instance of it
     product_widget = ProductWidget()
     retention_tag_widget = RetentionTagWidget()
-    recipe_tasks_widget = RecipeTasksWidget()
     job_type = { 'RS' : RecipeSet,
                  'J'  : Job
                }
     whiteboard_widget = JobWhiteboard()
 
-    upload = widgets.FileField(name='filexml', label='Job XML')
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
     message = widgets.TextArea(name='msg', label=_(u'Reason?'), help_text=_(u'Optional'))
 
-    form = widgets.TableForm(
+    _upload = widgets.FileField(name='filexml', label='Job XML')
+    form = HorizontalForm(
         'jobs',
-        fields = [upload],
+        fields = [_upload],
         action = 'save_data',
         submit_text = _(u'Submit Data')
     )
+    del _upload
 
     cancel_form = widgets.TableForm(
         'cancel_job',
@@ -124,7 +128,7 @@ class Jobs(RPCRoot):
             value = kw,
         )
 
-    def _check_job_deletability(self, job):
+    def _check_job_deletability(self, t_id, job):
         if not isinstance(job, Job):
             raise TypeError('%s is not of type %s' % (t_id, Job.__name__))
         if not job.can_delete(identity.current.user):
@@ -132,7 +136,7 @@ class Jobs(RPCRoot):
 
     def _delete_job(self, t_id):
         job = TaskBase.get_by_t_id(t_id)
-        self._check_job_deletability(job)
+        self._check_job_deletability(t_id, job)
         Job.delete_jobs([job])
         return [t_id]
 
@@ -143,7 +147,7 @@ class Jobs(RPCRoot):
         try:
             self._delete_job(t_id)
             flash(_(u'Succesfully deleted %s' % t_id))
-        except (BeakerException, TypeError), e:
+        except (BeakerException, TypeError):
             flash(_(u'Unable to delete %s' % t_id))
             redirect('.')
         redirect('./mine')
@@ -428,7 +432,7 @@ class Jobs(RPCRoot):
         if recipeset_priority is not None:
             try:
                 my_priority = TaskPriority.from_string(recipeset_priority)
-            except InvalidRequestError, (e):
+            except InvalidRequestError:
                 raise BX(_('You have specified an invalid recipeSet priority:%s' % recipeset_priority))
             allowed_priorities = RecipeSet.allowed_priorities_initial(user)
             if my_priority in allowed_priorities:
@@ -822,7 +826,6 @@ class Jobs(RPCRoot):
                             
 
         return dict(title=title,
-                    object_count = jobs.count(),
                     grid=jobs_grid,
                     list=jobs,
                     action_widget = self.job_list_action_widget,  #Hack,inserts JS for us.
@@ -913,7 +916,7 @@ class Jobs(RPCRoot):
         for attr in kw:
             try:
                 setattr(job, attr, kw[attr])
-            except AttributeError, e:
+            except AttributeError:
                 return {'success' : False }
                 # FIXME I think job_whiteboard will need a status non 200
                 # raised to catch an error 
@@ -937,16 +940,16 @@ class Jobs(RPCRoot):
             for d in query: 
                 recipe_set_data.append(d)   
  
-        job_history_grid = widgets.DataGrid(fields= [
-                               widgets.DataGrid.Column(name='recipeset', 
+        job_history_grid = BeakerDataGrid(fields= [
+                               BeakerDataGrid.Column(name='recipeset',
                                                                getter=lambda x: make_link(url='#RS_%s' % x.recipeset_id,text ='RS:%s' % x.recipeset_id), 
                                                                title='RecipeSet', options=dict(sortable=True)), 
-                               widgets.DataGrid.Column(name='user', getter= lambda x: x.user, title='User', options=dict(sortable=True)), 
-                               widgets.DataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
-                               widgets.DataGrid.Column(name='field', getter=lambda x: x.field_name, title='Field Name', options=dict(sortable=True)),
-                               widgets.DataGrid.Column(name='action', getter=lambda x: x.action, title='Action', options=dict(sortable=True)),
-                               widgets.DataGrid.Column(name='old_value', getter=lambda x: x.old_value, title='Old value', options=dict(sortable=True)),
-                               widgets.DataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New value', options=dict(sortable=True)),])
+                               BeakerDataGrid.Column(name='user', getter= lambda x: x.user, title='User', options=dict(sortable=True)),
+                               BeakerDataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
+                               BeakerDataGrid.Column(name='field', getter=lambda x: x.field_name, title='Field Name', options=dict(sortable=True)),
+                               BeakerDataGrid.Column(name='action', getter=lambda x: x.action, title='Action', options=dict(sortable=True)),
+                               BeakerDataGrid.Column(name='old_value', getter=lambda x: x.old_value, title='Old value', options=dict(sortable=True)),
+                               BeakerDataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New value', options=dict(sortable=True)),])
 
         return_dict = dict(title = 'Job',
                            recipeset_widget = self.recipeset_widget,

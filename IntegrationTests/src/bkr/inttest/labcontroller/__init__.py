@@ -2,7 +2,7 @@ import logging
 import os
 import shutil
 import signal
-import unittest
+import unittest2 as unittest
 from socket import gethostname
 from urlparse import urlparse, urlunparse
 from bkr.labcontroller.config import load_conf, get_conf

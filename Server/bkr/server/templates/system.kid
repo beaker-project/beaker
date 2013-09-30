@@ -1,32 +1,71 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#"
     py:extends="'master.kid'">
 
  <head>
   <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
-
-  <style type="text/css" media="print">
-   @import "${tg.url('/static/css/system-print.css')}";
-  </style>
   <title>${title}</title>
  </head>
 
- <body class="flora">
+<body>
+  <div class="page-header">
+    <h1>${value.fqdn}</h1>
+  </div>
   ${form.display(method='get', action=action, value=value, options=options)}
-  <div class="tabber">
-   <div py:if="widgets.has_key('details')" class="tabbertab"><h2>Details</h2>
+  <ul class="nav nav-tabs">
+    <li><a data-toggle="tab" href="#details">Details</a></li>
+    <li><a data-toggle="tab" href="#arches">Arch(s)</a></li>
+    <li><a data-toggle="tab" href="#keys">Key/Values</a></li>
+    <li><a data-toggle="tab" href="#groups">Groups</a></li>
+    <li><a data-toggle="tab" href="#access-policy">Access Policy</a></li>
+    <li><a data-toggle="tab" href="#exclude">Excluded Families</a></li>
+    <li><a data-toggle="tab" href="#commands">Commands</a></li>
+    <li><a data-toggle="tab" href="#power">Power Config</a></li>
+    <li><a data-toggle="tab" href="#notes">Notes</a></li>
+    <li><a data-toggle="tab" href="#install">Install Options</a></li>
+    <li><a data-toggle="tab" href="#provision">Provision</a></li>
+    <li py:if="widgets['labinfo']"><a data-toggle="tab" href="#labinfo">Lab Info</a></li>
+    <li><a data-toggle="tab" href="#history">History</a></li>
+    <li><a data-toggle="tab" href="#tasks">Tasks</a></li>
+  </ul>
+  <div class="tab-content">
+   <div class="tab-pane" id="details">
     ${widgets['details'].display(system=value)} 
    </div>
-   <div py:if="widgets.has_key('arches')" class="tabbertab"><h2>Arch(s)</h2>
+   <div class="tab-pane" id="arches">
     ${widgets['arches'].display(method='get', action=widgets_action['arches'], value=value, options=widgets_options['arches'])} 
    </div>
-   <div py:if="widgets.has_key('keys')" class="tabbertab"><h2>Key/Values</h2>
+   <div class="tab-pane" id="keys">
     ${widgets['keys'].display(method='get', action=widgets_action['keys'], value=value, options=widgets_options['keys'])} 
    </div>
-   <div py:if="widgets.has_key('groups')" class="tabbertab"><h2>Groups</h2>
+   <div class="tab-pane" id="groups">
     ${widgets['groups'].display(method='get', action=widgets_action['groups'], value=value, options=widgets_options['groups'])}
    </div>
-   <div py:if="widgets.has_key('exclude')" class="tabbertab"><h2>Excluded Families</h2>
+   <div class="tab-pane" id="access-policy">
+    <div id="access-policy-${value.id}">
+      <i class="icon-spinner icon-spin"/> Loading&hellip;
+    </div>
+    <script>
+      $(function () {
+        // defer until tab is shown
+        $('.nav-tabs a[href="#access-policy"]').one('show', function () {
+          var policy = new AccessPolicy({}, {url:
+              ${tg.to_json(tg.url('/systems/%s/access-policy' % value.fqdn))}});
+          policy.fetch({
+            success: function () {
+              new AccessPolicyView({model: policy, el: '#access-policy-${value.id}',
+                    readonly: ${tg.to_json(not tg.identity.user or not value.can_edit_policy(tg.identity.user))}});
+            },
+            error: function (model, xhr) {
+              $('#access-policy-${value.id}').addClass('alert alert-error')
+                .html('Failed to fetch access policy: ' + xhr.statusText);
+            },
+          });
+        });
+      });
+    </script>
+   </div>
+   <div class="tab-pane" id="exclude">
     <span py:if="value.lab_controller and value.arch">
      ${widgets['exclude'].display(method='get', action=widgets_action['exclude'], value=value, options=widgets_options['exclude'])} 
     </span>
@@ -34,41 +73,28 @@
      System must be associated to a lab controller and have at least one architecture specified to edit exclude families.
     </span>
    </div>
-   <div class="tabbertab"><h2>Commands</h2>
-    <fieldset py:if="widgets.has_key('power_action')">
-     <legend>Power Action</legend>
-      ${widgets['power_action'].display(method='get', action=widgets_action['power_action'], value=value, options=widgets_options['power_action'])}
-    </fieldset>
-    <fieldset py:if='widgets.has_key("clear_netboot") and value.lab_controller'>
-     <legend>Netboot</legend>
-      ${widgets['clear_netboot'].display(dict(fqdn=value.fqdn),
-          action=tg.url('../systems/clear_netboot_form'),
-          msg='Are you sure you want to clear the netboot for this system?',
-           action_text='Clear Netboot', look='button')}
-    </fieldset>
-    <fieldset py:if="widgets.has_key('power_history')">
-     <legend>Recent Commands</legend>
+   <div class="tab-pane" id="commands">
+      ${widgets['commands_form'].display(method='get', action=widgets_action['commands_form'], value=value, options=widgets_options['commands_form'])}
+      <h3>Recent Commands</h3>
      ${widgets['power_history'].display(list=widgets_options['power_history'], title='Recent Commands')}
-    </fieldset>
    </div>
-   <div py:if="widgets.has_key('power')" class="tabbertab"><h2>Power Config</h2>
-    <fieldset py:if="not readonly">
-     <legend>Power Config</legend>
-     <span py:if="value.lab_controller">
+   <div class="tab-pane" id="power">
+    <span py:if="not readonly" py:strip="True">
+     <span py:if="value.lab_controller" py:strip="True">
       ${widgets['power'].display(method='get', action=widgets_action['power'], value=value, options=widgets_options['power'])}
      </span>
-     <span py:if="not value.lab_controller">
+     <span py:if="not value.lab_controller" py:strip="True">
       System must be associated to a lab controller to edit power settings.
      </span>
-    </fieldset>
-    <span py:if="readonly">You do not have access to edit power settings for this system.</span>
+    </span>
+    <span py:if="readonly" py:strip="True">
+      You do not have access to edit power settings for this system.
+    </span>
    </div>
-   <div py:if="widgets.has_key('console')" class="tabbertab"><h2>Console</h2>
-   </div> 
-   <div py:if="widgets.has_key('notes')" class="tabbertab"><h2>Notes</h2>
+   <div class="tab-pane" id="notes">
     ${widgets['notes'].display(method='get', action=widgets_action['notes'], value=value, options=widgets_options['notes'])} 
    </div>
-   <div py:if="widgets.has_key('install')" class="tabbertab"><h2>Install Options</h2>
+   <div class="tab-pane" id="install">
     <span py:if="value.lab_controller and value.arch">
      ${widgets['install'].display(method='get', action=widgets_action['install'], value=value, options=widgets_options['install'])} 
     </span>
@@ -76,7 +102,7 @@
      System must be associated to a lab controller and have at least one architecture specified to edit install options.
     </span>
    </div>
-   <div py:if="widgets.has_key('provision')" class="tabbertab"><h2>Provision</h2>
+   <div class="tab-pane" id="provision">
     <span py:if="value.lab_controller and value.arch">
      ${widgets['provision'].display(method='get', action=widgets_action['provision'], value=value, options=widgets_options['provision'])} 
     </span>
@@ -84,13 +110,13 @@
      System must be associated to a lab controller and have at least one architecture specified in order to provision.
     </span>
    </div>
-   <div py:if="widgets.has_key('labinfo')" class="tabbertab"><h2>Lab Info</h2>
+   <div class="tab-pane" id="labinfo" py:if="widgets['labinfo']">
     ${widgets['labinfo'].display(method='get', action=widgets_action['labinfo'], value=value, options=widgets_options['labinfo'])}
    </div>
-   <div py:if="locals().has_key('history_widget')" class="tabbertab"><h2>History</h2>
+   <div class="tab-pane" id="history">
     ${history_widget.display(list=history_data,options=widgets_options['history'],action=widgets_action['history'])} 
    </div>
-   <div py:if="locals().has_key('task_widget')" class="tabbertab"><h2>Tasks</h2>
+   <div class="tab-pane" id="tasks">
     ${task_widget.display(
     value=widgets_options['tasks'],
     options=widgets_options['tasks'],
@@ -102,5 +128,6 @@
     <div id="task_items">&nbsp;</div>
    </div>
   </div>
+  <script type="text/javascript">$(link_tabs_to_anchor);</script>
  </body>
 </html>

@@ -10,16 +10,14 @@ from bkr.log import log_to_stream
 from bkr.server.model import OSMajor
 from bkr.server.util import load_config
 from optparse import OptionParser
-from turbogears.database import session
 from turbogears.config import get
-from sqlalchemy.exc import InvalidRequestError, IntegrityError
 import os
 import sys
-import traceback
 import urlparse
 import shutil
 import yum, yum.misc, yum.packages
 import urllib
+import subprocess
 
 __version__ = '0.1'
 __description__ = 'Script to update harness repos'
@@ -100,9 +98,8 @@ def update_repos(baseurl, basepath):
         except Exception, e:
             print >>sys.stderr, str(e)
             continue
-        cmd = "pushd %s && createrepo -q --checksum sha ." % dest
-        print cmd
-        os.system(cmd)
+        createrepo_command = get('beaker.createrepo_command', 'createrepo')
+        subprocess.check_call([createrepo_command, '-q', '--checksum', 'sha', '.'], cwd=dest)
 
 def main():
     parser = get_parser()
@@ -115,7 +112,7 @@ def main():
         basepath = opts.basepath
     else:
         basepath = get("basepath.harness", "/var/www/beaker/harness")
-    update_repos(baseurl=baseurl, basepath=basepath)
+    sys.exit(update_repos(baseurl=baseurl, basepath=basepath))
 
 if __name__ == '__main__':
     main()

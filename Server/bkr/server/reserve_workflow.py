@@ -1,17 +1,15 @@
-from turbogears import controllers, identity, expose, url, database, validate, flash, redirect
-from turbogears.database import session
-from sqlalchemy.sql.expression import and_, func, not_
+from turbogears import expose, flash, redirect
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import InvalidRequestError
+from bkr.server import identity
 from bkr.server.widgets import ReserveWorkflow as ReserveWorkflowWidget
 from bkr.server.widgets import ReserveSystem
-from bkr.server.model import (osversion_table, distro_table, osmajor_table, arch_table, distro_tag_table,
-                              Distro, Job, RecipeSet, MachineRecipe, System, RecipeTask, RecipeTaskParam,
-                              Task, Arch, OSMajor, DistroTag, SystemType, OSVersion, DistroTree,
+from bkr.server.model import (Distro, Job, System, Arch, OSMajor, DistroTag,
+                              SystemType, OSVersion, DistroTree,
                               LabController, LabControllerDistroTree)
 from bkr.server.jobs import Jobs as JobController
-from bexceptions import *
-import re
+from bkr.common.bexceptions import BX
+
 import logging
 log = logging.getLogger(__name__)
 
@@ -57,8 +55,8 @@ class ReserveWorkflow:
                             system = system_name,
                             distro = '',
                             distro_tree_ids = [],
-                            warn='',
                             )
+        warn = None
         if not isinstance(distro_tree_id, list):
             distro_tree_id = [distro_tree_id]
         for id in distro_tree_id:
@@ -67,7 +65,7 @@ class ReserveWorkflow:
                 if System.by_type(type=SystemType.machine,
                         systems=distro_tree.systems(user=identity.current.user))\
                         .count() < 1:
-                    flash(_(u'No systems compatible with %s') % distro_tree)
+                    warn = _(u'No systems compatible with %s') % distro_tree
                 distro_names.append(unicode(distro_tree))
                 return_value['distro_tree_ids'].append(id)
             except NoResultFound:
@@ -78,8 +76,9 @@ class ReserveWorkflow:
         return dict(form=self.reserveform,
                     action='./doit',
                     value = return_value,
+                    warn=warn,
                     options = None,
-                    title='Reserve System %s' % system_name)
+                    title='Reserve %s' % system_name)
 
     @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.generic') 

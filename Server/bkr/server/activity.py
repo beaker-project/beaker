@@ -1,22 +1,12 @@
-from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate,url
-from turbogears.widgets import AutoCompleteField
-from turbogears import identity, redirect
-from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from kid import Element
+from turbogears import expose, widgets, paginate
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
 from bkr.server.widgets import SearchBar, myPaginateDataGrid
 from bkr.server import search_utility
-import cherrypy
 
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-#import model
-from model import *
-import string
+from bkr.server.model import (Activity,
+                              DistroActivity, DistroTreeActivity,
+                              LabControllerActivity, SystemActivity,
+                              GroupActivity)
 
 
 class Activities(RPCRoot):
@@ -150,7 +140,6 @@ class Activities(RPCRoot):
 
         return dict(title=title,
                     grid = activity_grid,
-                    object_count = activities.count(),
                     search_bar = search_bar,
                     searchvalue = searchvalue,
                     action = action,

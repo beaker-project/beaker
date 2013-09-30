@@ -1,34 +1,34 @@
 
-from turbogears import identity, redirect, config, controllers, expose, \
+from turbogears import redirect, config, expose, \
         flash, widgets, validate, error_handler, validators, redirect, \
         paginate, url
 from turbogears.database import session
-from turbogears.widgets import AutoCompleteField
 from sqlalchemy.orm.exc import NoResultFound
-from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from kid import Element
-from bkr.server.validators import StrongPassword
-from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
-from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
-    GroupPermissions, DeleteLinkWidgetForm, LocalJSLink
-from bkr.server.admin_page import AdminPage
-from bkr.server.bexceptions import BX 
-from bkr.server.controller_utilities import restrict_http_method
 import cherrypy
-from bkr.server import mail
+from cherrypy import response
+from kid import XML
+from flask import jsonify
+from bkr.server.validators import StrongPassword
+from bkr.server.helpers import make_link
+from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
+    GroupPermissions, DeleteLinkWidgetForm, LocalJSLink, AutoCompleteField, \
+    HorizontalForm, InlineForm, InlineRemoteForm
+from bkr.server.admin_page import AdminPage
+from bkr.server.bexceptions import BX, BeakerException
+from bkr.server.controller_utilities import restrict_http_method
+from bkr.server.app import app
+from bkr.server import mail, identity
 
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-#import model
-from model import *
-import string
+from bkr.server.model import (Group, Permission, System, User, UserGroup,
+                              Activity, GroupActivity, SystemActivity)
+
+import logging
+log = logging.getLogger(__name__)
 
 class GroupOwnerModificationForbidden(BX, cherrypy.HTTPError):
 
     def __init__(self, message):
+        # XXX: Call base class __init__?
         self._message = message
         self.args = [message]
 
@@ -38,13 +38,16 @@ class GroupOwnerModificationForbidden(BX, cherrypy.HTTPError):
         response.headers['content-type'] = 'application/json'
 
 class GroupFormSchema(validators.Schema):
-    display_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
-    group_name = validators.UnicodeString(not_empty=True, max=256, strip=True)
+    display_name = validators.UnicodeString(not_empty=True,
+                                            max=Group.display_name.property.columns[0].type.length,
+                                            strip=True)
+    group_name = validators.UnicodeString(not_empty=True,
+                                          max=Group.group_name.property.columns[0].type.length,
+                                          strip=True)
     root_password = StrongPassword()
     ldap = validators.StringBool(if_empty=False)
 
-class GroupForm(widgets.TableForm):
-    name = 'Group'
+class GroupForm(HorizontalForm):
     fields = [
         widgets.HiddenField(name='group_id'),
         widgets.TextField(name='group_name', label=_(u'Group Name')),
@@ -54,6 +57,7 @@ class GroupForm(widgets.TableForm):
         widgets.CheckBox(name='ldap', label=_(u'LDAP'),
                 help_text=_(u'Populate group membership from LDAP?')),
     ]
+    name = 'Group'
     action = 'save_data'
     submit_text = _(u'Save')
     validator = GroupFormSchema()
@@ -89,7 +93,7 @@ class Groups(AdminPage):
 
     group_form = GroupForm()
 
-    permissions_form = widgets.RemoteForm(
+    permissions_form = InlineRemoteForm(
         'Permissions',
         fields = [search_permissions, group_id],
         submit_text = _(u'Add'),
@@ -99,14 +103,14 @@ class Groups(AdminPage):
         after = 'after_group_permission_submit()',
     )
 
-    group_user_form = widgets.TableForm(
+    group_user_form = InlineForm(
         'GroupUser',
         fields = [group_id, auto_users],
         action = 'save_data',
         submit_text = _(u'Add'),
     )
 
-    group_system_form = widgets.TableForm(
+    group_system_form = InlineForm(
         'GroupSystem',
         fields = [group_id, auto_systems],
         action = 'save_data',
@@ -176,27 +180,40 @@ class Groups(AdminPage):
         )
 
     def show_members(self, group):
-
-        def show_ownership_status(member):
-            if group.has_owner(member):
-                return make_link('revoke_owner?group_id=%s&id=%s' % (group.group_id, member.user_id),
-                                 'Remove (-)',elem_class='change_ownership_remove')
-            else:
-                return make_link('grant_owner?group_id=%s&id=%s' % (group.group_id, member.user_id),
-                                 'Add (+)',elem_class='change_ownership_add')
-
-        user_fields = [
-            ('User Members', lambda x: x.display_name),
-        ]
         can_edit = False
         if identity.current.user:
             can_edit = group.can_modify_membership(identity.current.user)
+
+        def show_ownership_status(member):
+            is_owner = member.is_owner
+            if can_edit:
+                if is_owner:
+                    return XML('<a class="btn change_ownership_remove" '
+                            'href="revoke_owner?group_id=%s&amp;id=%s">'
+                            '<i class="icon-remove"/> Remove</a>'
+                            % (group.group_id, member.user_id))
+                else:
+                    return XML('<a class="btn change_ownership_add" '
+                            'href="grant_owner?group_id=%s&amp;id=%s">'
+                            '<i class="icon-plus"/> Add</a>'
+                            % (group.group_id, member.user_id))
+            else:
+                is_owner = 'Yes' if is_owner else 'No'
+                return is_owner
+
+        def remove_button(member):
+            return XML('<a class="btn" href="removeUser?group_id=%s&amp;id=%s">'
+                    '<i class="icon-remove"/> Remove</a>' % (group.group_id, member.user_id))
+
+        user_fields = [
+            ('User', lambda x: x.user.user_name)
+        ]
+
+        user_fields.append(('Group Ownership', show_ownership_status))
         if can_edit:
-            user_fields.append(('Group Ownership', show_ownership_status))
-            user_fields.append(('Group Membership', lambda x: make_link(
-                    'removeUser?group_id=%s&id=%s' % (group.group_id, x.user_id),
-                    u'Remove (-)')))
-        return widgets.DataGrid(fields=user_fields)
+            user_fields.append(('Group Membership', remove_button))
+
+        return BeakerDataGrid(name='group_members_grid', fields=user_fields)
 
     @expose(template='bkr.server.templates.grid')
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
@@ -229,21 +246,22 @@ class Groups(AdminPage):
         if identity.current.user:
             can_edit = group.can_edit(identity.current.user)
 
-        systems_fields = [('System Members', lambda x: x.link)]
+        systems_fields = [('System', lambda x: x.link)]
         if can_edit:
             system_remove_widget = DeleteLinkWidgetForm(action='removeSystem',
                     hidden_fields=[widgets.HiddenField(name='group_id'),
                         widgets.HiddenField(name='id')],
-                    action_text=u'Remove (-)')
+                    action_text=u'Remove')
             systems_fields.append((' ', lambda x: system_remove_widget.display(
                 dict(group_id=group_id, id=x.id))))
-        systemgrid = widgets.DataGrid(fields=systems_fields)
+        systemgrid = BeakerDataGrid(fields=systems_fields)
 
-        permissions_fields = [('Permissions', lambda x: x.permission_name)]
+        permissions_fields = [('Permission', lambda x: x.permission_name)]
         if can_edit:
-            permissions_fields.append((' ', lambda x: make_fake_link('',
-                    'remove_permission_%s' % x.permission_id, 'Remove (-)')))
-        group_permissions_grid = widgets.DataGrid(name='group_permission_grid',
+            permissions_fields.append((' ', lambda x: XML(
+                    '<a class="btn" href="#" id="remove_permission_%s">'
+                    '<i class="icon-remove"/> Remove</a>' % x.permission_id)))
+        group_permissions_grid = BeakerDataGrid(name='group_permission_grid',
                 fields=permissions_fields)
         group_permissions = GroupPermissions()
 
@@ -251,7 +269,7 @@ class Groups(AdminPage):
             form = self.group_form,
             system_form = self.group_system_form,
             user_form = self.group_user_form,
-            group_edit_js = LocalJSLink('bkr', '/static/javascript/group_users.js'),
+            group_edit_js = LocalJSLink('bkr', '/static/javascript/group_users_v2.js'),
             action = './save',
             system_action = './save_system',
             user_action = './save_user',
@@ -278,8 +296,10 @@ class Groups(AdminPage):
         else:
             flash( _(u"Group %s already exists." % group_name) )
             redirect(".")
+
         group = Group()
         session.add(group)
+        # FIXME: Actually record the group creation in the activity log
         activity = Activity(user, u'WEBUI', u'Added', u'Group', u"", display_name)
         group.display_name = display_name
         group.group_name = group_name
@@ -297,10 +317,10 @@ class Groups(AdminPage):
                 old_value=None, new_value=user.user_name))
         return group
 
-    @identity.require(identity.not_anonymous())
     @expose()
     @validate(form=group_form)
     @error_handler(new)
+    @identity.require(identity.not_anonymous())
     def save_new(self, group_id=None, display_name=None, group_name=None,
         ldap=False, root_password=None, **kwargs):
         # save_new() is needed because 'edit' is not a viable
@@ -310,10 +330,10 @@ class Groups(AdminPage):
         flash( _(u"OK") )
         redirect("mine")
 
-    @identity.require(identity.not_anonymous())
     @expose()
     @validate(form=group_form)
     @error_handler(edit)
+    @identity.require(identity.not_anonymous())
     def save(self, group_id=None, display_name=None, group_name=None,
         ldap=False, root_password=None, **kwargs):
 
@@ -357,16 +377,16 @@ class Groups(AdminPage):
         flash( _(u"OK") )
         redirect("mine")
 
-    @identity.require(identity.not_anonymous())
     @expose()
     @error_handler(edit)
+    @identity.require(identity.not_anonymous())
     def save_system(self, **kw):
         system = System.by_fqdn(kw['system']['text'],identity.current.user)
         # A system owner can add their system to a group, but a group owner 
         # *cannot* add an arbitrary system to their group because that would 
         # grant them extra privileges over it.
-        if not system.is_admin(identity.current.user):
-            flash(_(u'You are not an owner of system %s' % system))
+        if not system.can_edit(identity.current.user):
+            flash(_(u'You do not have permission to edit system %s' % system))
             redirect('edit?group_id=%s' % kw['group_id'])
         group = Group.by_id(kw['group_id'])
         if group in system.groups:
@@ -385,7 +405,7 @@ class Groups(AdminPage):
     def save_group_permissions(self, **kw):
         try:
             permission_name = kw['permissions']['text']
-        except KeyError, e:
+        except KeyError:
             log.exception('Permission not submitted correctly')
             response.status = 403
             return ['Permission not submitted correctly']
@@ -418,9 +438,9 @@ class Groups(AdminPage):
 
         return {'name':permission_name, 'id':permission.permission_id}
 
-    @identity.require(identity.not_anonymous())
     @expose()
     @error_handler(edit)
+    @identity.require(identity.not_anonymous())
     def save_user(self, **kw):
         user = User.by_user_name(kw['user']['text'])
         if user is None:
@@ -445,15 +465,14 @@ class Groups(AdminPage):
             flash( _(u"User %s is already in Group %s" %(user.user_name, group.group_name)))
             redirect("./edit?group_id=%s" % kw['group_id'])
 
-    @expose(template="bkr.server.templates.grid_add")
+    @expose(template="bkr.server.templates.grid")
     @paginate('list', default_order='group_name', limit=20)
     def index(self, *args, **kw):
         groups = self.process_search(*args, **kw)
         template_data = self.groups(groups, *args, **kw)
-        template_data['addable'] = True
         return template_data
 
-    @expose(template="bkr.server.templates.grid_add")
+    @expose(template="bkr.server.templates.grid")
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='group_name', limit=20)
     def mine(self,*args,**kw):
@@ -461,7 +480,6 @@ class Groups(AdminPage):
         groups = groups.filter(Group.users.contains(identity.current.user))
         template_data = self.groups(groups, *args, **kw)
         template_data['title'] = 'My Groups'
-        template_data['addable'] = True
         return template_data
 
     def groups(self, groups=None, *args,**kw):
@@ -479,7 +497,7 @@ class Groups(AdminPage):
                 if x.can_edit(identity.current.user):
                     return self.delete_link.display(dict(group_id=x.group_id),
                                              action=url('remove'),
-                                             action_text='Remove (-)')
+                                             action_text='Remove')
                 else:
                     return ''
             except AttributeError:
@@ -492,10 +510,10 @@ class Groups(AdminPage):
         remove_link = ('', get_remove_link)
 
         grid_fields =  [group_name, display_name, systems, remove_link]
-        grid = myPaginateDataGrid(fields=grid_fields)
+        grid = myPaginateDataGrid(fields=grid_fields,
+                add_action='./new' if not identity.current.anonymous else None)
         return_dict = dict(title=u"Groups",
                            grid=grid,
-                           object_count = groups.count(),
                            search_bar = None,
                            search_widget = self.search_widget_form,
                            list = groups)
@@ -646,7 +664,8 @@ class Groups(AdminPage):
         # A group owner can remove a system from their group.
         # A system owner can remove their system from a group.
         # But note this is not symmetrical with adding systems.
-        if not (group.can_edit(identity.current.user) or system.is_admin()):
+        if not (group.can_edit(identity.current.user) or
+                system.can_edit(identity.current.user)):
             flash(_(u'Not permitted to remove %s from %s') % (system, group))
             redirect('../groups/mine')
 
@@ -735,8 +754,13 @@ class Groups(AdminPage):
         try:
             group = Group.by_name(group_name)
         except NoResultFound:
+            #validate
+            GroupFormSchema.fields['group_name'].to_python(group_name)
+            GroupFormSchema.fields['display_name'].to_python(display_name)
+
             group = Group()
             session.add(group)
+            # FIXME: Actually record the group creation in the activity log
             activity = Activity(identity.current.user, u'XMLRPC', u'Added', u'Group', u"", kw['display_name'] )
             group.display_name = display_name
             group.group_name = group_name
@@ -802,6 +826,10 @@ class Groups(AdminPage):
             if kw.get('add_member', None) or kw.get('remove_member', None):
                 raise BX(_(u'Cannot edit membership of an LDAP group'))
 
+        user = identity.current.user
+        if not group.can_edit(user):
+            raise BX(_('You are not an owner of group %s' % group_name))
+
         group_name = kw.get('group_name', None)
         if group_name:
             try:
@@ -813,12 +841,14 @@ class Groups(AdminPage):
                     raise BX(_(u'Failed to update group %s: Group name already exists: %s' %
                                (group.group_name, group_name)))
 
-        user = identity.current.user
-        if not group.can_edit(user):
-            raise BX(_('You are not an owner of group %s' % group_name))
+            GroupFormSchema.fields['group_name'].to_python(group_name)
+            group.set_name(user, u'XMLRPC', kw.get('group_name', None))
 
-        group.set_display_name(user, u'XMLRPC', kw.get('display_name', None))
-        group.set_name(user, u'XMLRPC', kw.get('group_name', None))
+        display_name = kw.get('display_name', None)
+        if display_name:
+            GroupFormSchema.fields['display_name'].to_python(display_name)
+            group.set_display_name(user, u'XMLRPC', display_name)
+
         root_password = kw.get('root_password', None)
         if root_password:
             group.set_root_password(user, u'XMLRPC', root_password)
@@ -906,6 +936,13 @@ class Groups(AdminPage):
             users.append(user)
 
         return users
+
+@app.route('/groups/+typeahead')
+def groups_typeahead():
+    data = [{'group_name': group.group_name, 'display_name': group.display_name,
+             'tokens': [group.group_name]}
+            for group in Group.query]
+    return jsonify(data=data)
 
 # for sphinx
 groups = Groups

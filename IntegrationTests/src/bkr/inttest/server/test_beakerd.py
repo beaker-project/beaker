@@ -2,7 +2,7 @@ import unittest, datetime, os, threading
 import bkr
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
-        Provision, TaskPriority, RecipeSet, Task
+        Provision, TaskPriority, RecipeSet, Task, SystemPermission
 import sqlalchemy.orm
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
@@ -55,6 +55,49 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             task = Task.by_id(task_id)
             task.disable()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=977562
+    def test_jobs_with_no_systems_process_beyond_queued(self):
+        with session.begin():
+            system = data_setup. \
+                create_system(lab_controller=self.lab_controller)
+            r1 = data_setup.create_recipe()
+            j1 = data_setup.create_job_for_recipes([r1])
+
+            r2 = data_setup.create_recipe()
+            j2 = data_setup.create_job_for_recipes([r2])
+
+            data_setup.mark_job_queued(j1)
+            r1.systems[:] = [system]
+            data_setup.mark_job_running(j2, system=system)
+            j1.update_status()
+            j2.update_status()
+
+        # Mark system broken and cancel the job
+        with session.begin():
+            system.status = SystemStatus.broken
+            j2.cancel()
+            j2.update_status()
+
+        session.expunge_all()
+        with session.begin():
+            j1 = Job.by_id(j1.id)
+            j2 = Job.by_id(j2.id)
+            self.assertTrue(j1.status is TaskStatus.queued)
+            self.assertTrue(j2.status is TaskStatus.cancelled)
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+        session.expunge_all()
+        # We should still be queued here.
+        with session.begin():
+            j1 = Job.by_id(j1.id)
+            self.assertTrue(j1.status is TaskStatus.queued, j1.status)
+        beakerd.abort_dead_recipes()
+        beakerd.update_dirty_jobs()
+        session.expunge_all()
+        with session.begin():
+            j1 = Job.by_id(j1.id)
+            self.assertTrue(j1.status is TaskStatus.aborted, j1.status)
 
     def test_serialized_scheduling(self):
         # This tests that our main recipes loop will schedule
@@ -307,6 +350,7 @@ class TestBeakerd(unittest.TestCase):
     def test_just_in_time_systems_multihost(self):
         with session.begin():
             systemA = data_setup.create_system(lab_controller=self.lab_controller)
+            systemB = data_setup.create_system(lab_controller=self.lab_controller)
             r1 = data_setup.create_recipe()
             j1 = data_setup.create_job_for_recipes([r1])
             j1_id = j1.id
@@ -322,7 +366,7 @@ class TestBeakerd(unittest.TestCase):
             r1 = Recipe.by_id(r1_id)
             data_setup.mark_recipe_running(r1)
             systemA = System.by_fqdn(systemA.fqdn, User.by_user_name('admin'))
-            systemB = data_setup.create_system(lab_controller=self.lab_controller)
+            systemB = System.by_fqdn(systemB.fqdn, User.by_user_name('admin'))
             r2 = data_setup.create_recipe()
             r3 = data_setup.create_recipe()
             j2 = data_setup.create_job_for_recipes([r2,r3])
@@ -375,11 +419,12 @@ class TestBeakerd(unittest.TestCase):
     def test_loaned_machine_can_be_scheduled(self):
         with session.begin():
             user = data_setup.create_user()
-            system = data_setup.create_system(status=u'Automated', shared=True,
-                    lab_controller=self.lab_controller)
-            # System has groups, which the user is not a member of, but is loaned to the user
+            system = data_setup.create_system(status=u'Automated',
+                    shared=False, lab_controller=self.lab_controller)
+            # User is denied by the policy, but system is loaned to the user
+            self.assertFalse(system.custom_access_policy.grants(user,
+                       SystemPermission.reserve))
             system.loaned = user
-            data_setup.add_group_to_system(system, data_setup.create_group())
             job = data_setup.create_job(owner=user)
             job.recipesets[0].recipes[0]._host_requires = (
                     '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
@@ -446,7 +491,8 @@ class TestBeakerd(unittest.TestCase):
             system2.lab_controller = lc2
             system3 = data_setup.create_system(arch=u'i386', shared=True)
             system3.lab_controller = lc3
-            job = data_setup.create_job(owner=user)
+            distro_tree = data_setup.create_distro_tree(lab_controllers=[lc1, lc2, lc3])
+            job = data_setup.create_job(owner=user, distro_tree=distro_tree)
             job.recipesets[0].recipes[0]._host_requires = (u"""
                    <hostRequires>
                     <or>
@@ -551,8 +597,9 @@ class TestBeakerd(unittest.TestCase):
             user = data_setup.create_user()
             group = data_setup.create_group()
             system = data_setup.create_system(lab_controller=self.lab_controller,
-                    shared=True)
-            system.groups.append(group)
+                    shared=False)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         self.check_user_cannot_run_job_on_system(user, system)
 
     def test_shared_group_system_with_user_in_group(self):
@@ -561,8 +608,9 @@ class TestBeakerd(unittest.TestCase):
             user = data_setup.create_user()
             user.groups.append(group)
             system = data_setup.create_system(lab_controller=self.lab_controller,
-                    shared=True)
-            system.groups.append(group)
+                    shared=False)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         self.check_user_can_run_job_on_system(user, system)
 
     def test_shared_group_system_with_admin_not_in_group(self):
@@ -570,8 +618,9 @@ class TestBeakerd(unittest.TestCase):
             admin = data_setup.create_admin()
             group = data_setup.create_group()
             system = data_setup.create_system(lab_controller=self.lab_controller,
-                    shared=True)
-            system.groups.append(group)
+                    shared=False)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         self.check_user_cannot_run_job_on_system(admin, system)
 
     def test_shared_group_system_with_admin_in_group(self):
@@ -580,8 +629,9 @@ class TestBeakerd(unittest.TestCase):
             admin = data_setup.create_admin()
             admin.groups.append(group)
             system = data_setup.create_system(lab_controller=self.lab_controller,
-                    shared=True)
-            system.groups.append(group)
+                    shared=False)
+            system.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
         self.check_user_can_run_job_on_system(admin, system)
 
     def test_loaned_system_with_admin(self):
@@ -865,9 +915,10 @@ class TestBeakerd(unittest.TestCase):
             group = data_setup.create_group()
             job_owner = data_setup.create_user()
             job_owner.groups.append(group)
-            system1 = data_setup.create_system(shared=True,
-                    fqdn='no_longer_has_access1',
+            system1 = data_setup.create_system(fqdn='no_longer_has_access1',
                     lab_controller=self.lab_controller)
+            system1.custom_access_policy.add_rule(
+                    permission=SystemPermission.reserve, group=group)
             system1.groups.append(group)
             system2 = data_setup.create_system(shared=True,
                     fqdn='no_longer_has_access2',
@@ -894,7 +945,7 @@ class TestBeakerd(unittest.TestCase):
             candidate_systems = job.recipesets[0].recipes[0].systems
             self.assertEqual(candidate_systems, [system1, system2])
             # now remove access to system1
-            system1.groups[:] = [data_setup.create_group()]
+            system1.custom_access_policy.rules[:] = []
         # first iteration: "recipe no longer has access"
         beakerd.schedule_queued_recipes()
         beakerd.update_dirty_jobs()

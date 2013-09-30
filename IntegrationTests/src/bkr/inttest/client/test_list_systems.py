@@ -1,5 +1,5 @@
 
-import unittest
+import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError
@@ -20,6 +20,34 @@ class ListSystemsTest(unittest.TestCase):
             data_setup.create_system() # so that we have at least one
         out = run_client(['bkr', 'list-systems'])
         self.assertEqual(len(out.splitlines()), System.query.count())
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=920018
+    def test_list_systems_lc_disabled(self):
+        with session.begin():
+            lc1 = data_setup.create_labcontroller()
+            lc2 = data_setup.create_labcontroller()
+            system1 = data_setup.create_system(fqdn=data_setup.unique_name(u'aaaa%s.testdata'))
+            system1.lab_controller = lc1
+            system2 = data_setup.create_system(fqdn=data_setup.unique_name(u'aaaa%s.testdata'))
+            system2.lab_controller = lc2
+
+            # set lc2 to disabled
+            lc2.disabled = True
+
+        out = run_client(['bkr', 'list-systems'])
+        systems = out.splitlines()
+        self.assertIn(system1.fqdn, systems)
+        self.assertIn(system2.fqdn, systems)
+
+        out = run_client(['bkr', 'list-systems', '--free'])
+        systems = out.splitlines()
+        self.assertIn(system1.fqdn, systems)
+        self.assertNotIn(system2.fqdn, systems)
+
+        out = run_client(['bkr', 'list-systems', '--available'])
+        systems = out.splitlines()
+        self.assertIn(system1.fqdn, systems)
+        self.assertIn(system2.fqdn, systems)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=690063
     def test_xml_filter(self):

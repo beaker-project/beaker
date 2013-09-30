@@ -31,9 +31,9 @@ from bkr.inttest import data_setup, get_server_base, \
         assertions, with_transaction
 from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
-        SystemStatus
+        SystemStatus, LabInfo
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, check_system_search_results
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.assertions import wait_for_condition
 
@@ -44,26 +44,13 @@ class SystemViewTestWD(WebDriverTestCase):
             self.lab_controller = data_setup.create_labcontroller()
             self.user = data_setup.create_user(password=u'password')
             self.system = data_setup.create_system(lab_controller=self.lab_controller)
-            self.distro_tree = data_setup.create_distro_tree()
+            self.distro_tree = data_setup.create_distro_tree(
+                    lab_controllers=[self.lab_controller])
 
         self.browser = self.get_browser()
 
     def tearDown(self):
         self.browser.quit()
-
-    def test_clear_netboot(self):
-        b = self.browser
-        login(b)
-        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('Commands').click()
-
-        clear = b.find_element_by_xpath('//button[normalize-space(text())='
-            '"Clear Netboot"]')
-        clear.click()
-        b.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
-        flash_text = b.find_element_by_class_name('flash').text
-        self.assertEqual(flash_text, u'Clear netboot command enqueued')
-
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=886875
     def test_kernel_install_options_propagated_view(self):
@@ -114,6 +101,39 @@ class SystemViewTestWD(WebDriverTestCase):
         wait_for_condition(provision_koptions_populated)
         wait_for_condition(provision_koptions_post_populated)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=987313
+    def test_labinfo_not_visible_for_new_systems(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
+        b.find_element_by_xpath('//ul[@class="nav nav-tabs" and '
+                'not(.//a/text()="Lab Info")]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=920018
+    def test_system_not_visible_available_free_when_lc_disabled(self):
+        with session.begin():
+            lc1 = data_setup.create_labcontroller()
+            lc2 = data_setup.create_labcontroller()
+            system1 = data_setup.create_system(fqdn=data_setup.unique_name(u'aaaa%s.testdata'))
+            system1.lab_controller = lc1
+            system2 = data_setup.create_system(fqdn=data_setup.unique_name(u'aaaa%s.testdata'))
+            system2.lab_controller = lc2
+
+            # set lc2 to disabled
+            lc2.disabled = True
+
+        b = self.browser
+        login(b)
+
+        b.get(get_server_base())
+        check_system_search_results(b, present=[system1,system2], absent=[])
+
+        b.get(get_server_base()+'available')
+        check_system_search_results(b, present=[system1, system2], absent=[])
+
+        b.get(get_server_base()+'free')
+        check_system_search_results(b, present=[system1], absent=[system2])
+
 class SystemViewTest(SeleniumTestCase):
 
     @with_transaction
@@ -121,10 +141,10 @@ class SystemViewTest(SeleniumTestCase):
         self.lab_controller = data_setup.create_labcontroller()
         self.system_owner = data_setup.create_user()
         self.unprivileged_user = data_setup.create_user(password=u'password')
-        self.distro_tree = data_setup.create_distro_tree()
+        self.distro_tree = data_setup.create_distro_tree(
+                lab_controllers=[self.lab_controller])
         self.system = data_setup.create_system(owner=self.system_owner,
                 status=u'Automated', arch=u'i386')
-        self.system.shared = True
         self.system.provisions[self.distro_tree.arch] = Provision(
                 arch=self.distro_tree.arch, ks_meta=u'some_ks_meta_var=1',
                 kernel_options=u'some_kernel_option=1',
@@ -155,7 +175,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.open('')
         sel.wait_for_page_to_load('30000')
         sel.type('simplesearch', system.fqdn)
-        sel.click('search')
+        sel.submit('id=simpleform')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Systems')
         sel.click('link=%s' % system.fqdn)
@@ -171,7 +191,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.open('')
         sel.wait_for_page_to_load('30000')
         sel.type('simplesearch', system.fqdn)
-        sel.click('search')
+        sel.submit('id=simpleform')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Systems')
         sel.click('link=%s' % system.fqdn)
@@ -182,13 +202,11 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.login()
         self.go_to_system_view()
-        is_hidden = sel.get_xpath_count("//tr[@id='condition_report_row' and @class='list hidden']")
-        self.assert_(is_hidden == 1)
+        self.assertFalse(sel.is_visible('//div[@id="condition_report_row"]'))
         with session.begin():
             self.system.status = SystemStatus.broken
         self.go_to_system_view()
-        not_hidden = sel.get_xpath_count("//tr[@id='condition_report_row' and @class='list']")
-        self.assert_(not_hidden == 1)
+        self.assertTrue(sel.is_visible('//div[@id="condition_report_row"]'))
 
     def test_current_job(self):
         sel = self.selenium
@@ -213,9 +231,8 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         sel.click( # link inside cell beside "Notify CC" cell
-                '//table[@class="list"]//td'
-                '[normalize-space(preceding-sibling::th[1]/label/text())="Notify CC"]'
-                '/a[text()="(Change)"]')
+                '//div[normalize-space(label/text())="Notify CC"]'
+                '//a[normalize-space(string(.))="Change"]')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(self.selenium.get_title(),
                 'Notify CC list for %s' % self.system.fqdn)
@@ -306,7 +323,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.type('fqdn', '    lol    ')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
-        self.assert_system_view_text('fqdn', 'lol')
+        self.assertEquals(sel.get_text('//h1'), 'lol')
 
     def test_rejects_malformed_fqdn(self):
         self.login()
@@ -315,7 +332,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.type('fqdn', 'lol...?')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_text('css=.fielderror'),
+        self.assertEquals(sel.get_text('css=.control-group.error .help-inline'),
                 'The supplied value is not a valid hostname')
 
     def test_rejects_non_ascii_chars_in_fqdn(self):
@@ -325,7 +342,7 @@ class SystemViewTest(SeleniumTestCase):
         sel.type('fqdn', u'lööööl')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_text('css=.fielderror'),
+        self.assertEquals(sel.get_text('css=.control-group.error .help-inline'),
                 'The supplied value is not a valid hostname')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=683003
@@ -336,19 +353,19 @@ class SystemViewTest(SeleniumTestCase):
         sel.type('fqdn', 'LooOOooL')
         sel.click('link=Save Changes')
         sel.wait_for_page_to_load('30000')
-        self.assert_system_view_text('fqdn', 'looooool')
+        self.assertEquals(sel.get_text('//h1'), 'looooool')
 
     def test_add_arch(self):
         orig_date_modified = self.system.date_modified
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Arch(s)"]')
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Arch(s)"]')
         sel.type('arch.text', 's390')
-        sel.click('//form[@name="arches"]//a[text()="Add ( + )"]')
+        sel.submit('name=arches')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_xpath_count(
-                '//div[normalize-space(@class)="tabbertab"]'
+                '//div[@id="arches"]'
                 '//td[normalize-space(text())="s390"]'), 1)
         with session.begin():
             session.refresh(self.system)
@@ -359,9 +376,9 @@ class SystemViewTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Arch(s)"]')
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Arch(s)"]')
         sel.type('arch.text', 'notexist')
-        sel.click('//form[@name="arches"]//a[text()="Add ( + )"]')
+        sel.submit('name=arches')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), u'No such arch notexist')
 
@@ -370,19 +387,19 @@ class SystemViewTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Arch(s)"]')
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Arch(s)"]')
         self.assertEquals(sel.get_xpath_count(
-                '//div[normalize-space(@class)="tabbertab"]'
+                '//div[@id="arches"]'
                 '//td[normalize-space(text())="i386"]'), 1)
         sel.click( # delete link inside cell beside "i386" cell
-                '//table[@class="list"]//td'
+                '//table//td'
                 '[normalize-space(preceding-sibling::td[1]/text())="i386"]'
-                '//a[text()="Delete ( - )"]')
-        sel.click("//button[@type='button' and text()='Yes']")
+                '//a[normalize-space(string(.))="Delete"]')
+        sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'i386 Removed')
         self.assertEquals(sel.get_xpath_count(
-                '//div[normalize-space(@class)="tabbertab"]'
+                '//div[@id="arches"]'
                 '//td[normalize-space(text())="i386"]'), 0)
         with session.begin():
             session.refresh(self.system)
@@ -393,10 +410,10 @@ class SystemViewTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Key/Values"]')
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Key/Values"]')
         sel.type('key_name', 'NR_DISKS')
         sel.type('key_value', '100')
-        sel.click('//form[@name="keys"]//a[text()="Add ( + )"]')
+        sel.submit('name=keys')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_xpath_count(
                 '//td[normalize-space(preceding-sibling::td[1]/text())'
@@ -414,17 +431,16 @@ class SystemViewTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Key/Values"]')
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Key/Values"]')
         self.assertEquals(sel.get_xpath_count(
                 '//td[normalize-space(preceding-sibling::td[1]/text())'
                 '="NR_DISKS" and '
                 'normalize-space(text())="100"]'), 1)
         sel.click( # delete link inside cell in row with NR_DISKS 100
-                '//table[@class="list"]//td['
-                'normalize-space(preceding-sibling::td[2]/text())="NR_DISKS" and '
+                '//td[normalize-space(preceding-sibling::td[2]/text())="NR_DISKS" and '
                 'normalize-space(preceding-sibling::td[1]/text())="100"'
-                ']//a[text()="Delete ( - )"]')
-        sel.click("//button[@type='button' and text()='Yes']")
+                ']//a[normalize-space(string(.))="Delete"]')
+        sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'removed NR_DISKS/100')
         self.assertEquals(sel.get_xpath_count(
@@ -447,12 +463,12 @@ class SystemViewTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Groups"]')
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Groups"]')
         sel.type("groups_group_text", group.group_name)
-        sel.click('//form[@name="groups"]//a[text()="Add ( + )"]')
+        sel.submit('name=groups')
         sel.wait_for_page_to_load("30000")
         self.assertEquals(sel.get_xpath_count(
-                '//div[normalize-space(@class)="tabbertab"]'
+                '//div[@id="groups"]'
                 '//td[normalize-space(text())="%s"]' % group.group_name), 1)
         with session.begin():
             session.refresh(self.system)
@@ -476,14 +492,13 @@ class SystemViewTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Groups"]')
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Groups"]')
         self.assertEquals(sel.get_xpath_count(
                 '//td[normalize-space(text())="%s"]' % group.group_name), 1)
         sel.click( # delete link inside cell in row with group name
-                '//table[@class="list"]'
-                '//td[normalize-space(preceding-sibling::td[3]/text())="%s"]'
-                '//a[text()="Delete ( - )"]' % group.group_name)
-        sel.click("//button[@type='button' and text()='Yes']")
+                '//table//td[normalize-space(preceding-sibling::td[2]/text())="%s"]'
+                '//a[normalize-space(string(.))="Delete"]' % group.group_name)
+        sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'),
                 '%s Removed' % group.display_name)
@@ -498,13 +513,13 @@ class SystemViewTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Power Config"]')
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Power Config"]')
         sel.select('name=power_type_id', 'drac')
         sel.type('name=power_address', 'nowhere.example.com')
         sel.type('name=power_user', 'asdf')
         sel.type('name=power_passwd', 'meh')
         sel.type('name=power_id', '1234')
-        sel.click('link=Save Power Changes')
+        sel.click('//button[text()="Save Power Changes"]')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'Updated Power')
         with session.begin():
@@ -516,11 +531,11 @@ class SystemViewTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Install Options"]')
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Install Options"]')
         sel.type('prov_ksmeta', 'skipx asdflol')
         sel.type('prov_koptions', 'init=/bin/true')
         sel.type('prov_koptionspost', 'vga=0x31b')
-        sel.click('//form[@name="installoptions"]//a[text()="Add ( + )"]')
+        sel.submit('name=installoptions')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), self.system.fqdn)
         with session.begin():
@@ -532,10 +547,9 @@ class SystemViewTest(SeleniumTestCase):
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Install Options"]')
-        sel.click('//tr[th/text()="Architecture"]'
-                '//a[text()="Delete ( - )"]')
-        sel.click("//button[@type='button' and text()='Yes']")
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Install Options"]')
+        sel.click('//tr[th/text()="Architecture"]//a') # Delete link
+        sel.click("//button[@type='button' and .//text()='Yes']")
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), self.system.fqdn)
         with session.begin():
@@ -553,11 +567,14 @@ class SystemViewTest(SeleniumTestCase):
                     u'InstallOption:ks_meta:i386')
 
     def test_update_labinfo(self):
+        with session.begin():
+            # Due to bz987313 system must have existing lab info
+            self.system.labinfo = LabInfo(weight=100)
         orig_date_modified = self.system.date_modified
         self.login()
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Lab Info"]')
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Lab Info"]')
         changes = {
             'orig_cost': '1,000.00',
             'curr_cost': '500.00',
@@ -568,7 +585,7 @@ class SystemViewTest(SeleniumTestCase):
         }
         for k, v in changes.iteritems():
             sel.type(k, v)
-        sel.click('link=Save Lab Info Changes')
+        sel.click('//button[text()="Save Lab Info Changes"]')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=.flash'), 'Saved Lab Info')
         for k, v in changes.iteritems():
@@ -584,9 +601,8 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         sel.click( # '(Change)' link inside cell beside 'Owner' cell
-                '//table[@class="list"]//td'
-                '[normalize-space(preceding-sibling::th[1]/label/text())="Owner"]'
-                '/a[normalize-space(span/text())="(Change)"]')
+                '//div[normalize-space(label/text())="Owner"]'
+                '//a[normalize-space(string(.))="Change"]')
         sel.wait_for_page_to_load('30000')
         sel.type('Owner_user', new_owner.user_name)
         sel.submit('Owner')
@@ -603,9 +619,8 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
         self.go_to_system_view()
         sel.click( # '(Change)' link inside cell beside 'Owner' cell
-                '//table[@class="list"]//td'
-                '[normalize-space(preceding-sibling::th[1]/label/text())="Owner"]'
-                '/a[normalize-space(span/text())="(Change)"]')
+                '//div[normalize-space(label/text())="Owner"]'
+                '//a[normalize-space(string(.))="Change"]')
         sel.wait_for_page_to_load('30000')
         sel.type('Owner_user', '')
         sel.submit('Owner')
@@ -622,7 +637,7 @@ class SystemViewTest(SeleniumTestCase):
         self.login(self.unprivileged_user.user_name, 'password')
         sel = self.selenium
         self.go_to_system_view()
-        sel.click('//ul[@class="tabbernav"]//a[text()="Provision"]')
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Provision"]')
         sel.select('prov_install', unicode(self.distro_tree))
         self.wait_and_try(self.check_install_options)
 
@@ -676,20 +691,6 @@ class SystemViewTest(SeleniumTestCase):
             session.refresh(self.system)
             self.assertEqual(self.system.mac_address, bad_mac_address)
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=740321
-    def test_no_power_without_lc(self):
-        self.login()
-        sel = self.selenium
-        self.go_to_system_view()
-        self.assert_(sel.is_element_present(
-                '//input[@value="Power On System"]'))
-        self.go_to_system_edit()
-        sel.select('lab_controller_id', 'None')
-        sel.click('link=Save Changes')
-        sel.wait_for_page_to_load('30000')
-        self.assert_(sel.is_element_present(
-                '//span[text()="System is not configured for power support"]'))
-
     #https://bugzilla.redhat.com/show_bug.cgi?id=833275
     def test_excluded_families(self):
         # Uses the default distro tree which goes by the name
@@ -707,10 +708,11 @@ class SystemViewTest(SeleniumTestCase):
         sel = self.selenium
 
         # go to the Excluded Families Tab
-        sel.click('//ul[@class="tabbernav"]//a[text()="Excluded Families"]')
+        sel.click('//ul[@class="nav nav-tabs"]//a[text()="Excluded Families"]')
 
         # simulate the label click for i386
-        sel.click('//li[label/text()="i386"]//label[text()="DansAwesomeLinux6.9"]')
+        sel.click('//li[normalize-space(text())="i386"]'
+                  '//label[normalize-space(string(.))="DansAwesomeLinux6.9"]')
         # Now check if the appropriate checkbox was selected
         self.assertEquals(sel.is_checked('//input[@name="excluded_families_subsection.i386" and @value="%s"]' %
                                          self.distro_tree.distro.osversion_id), True)
@@ -722,7 +724,8 @@ class SystemViewTest(SeleniumTestCase):
                     self.distro_tree.distro.osversion_id)
 
         # simulate the label click for x86_64
-        sel.click('//li[label/text()="x86_64"]//label[text()="DansAwesomeLinux6.9"]')
+        sel.click('//li[normalize-space(text())="x86_64"]'
+                  '//label[normalize-space(string(.))="DansAwesomeLinux6.9"]')
         # Now check if the appropriate checkbox was selected
         self.assertEquals(sel.is_checked('//input[@name="excluded_families_subsection.x86_64" and @value="%s"]' %
                                          self.distro_tree.distro.osversion_id), True)

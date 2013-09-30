@@ -6,7 +6,7 @@ import logging
 import netaddr
 import pipes # For pipes.quote, since it isn't available in shlex until 3.3
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears import identity, config
+from turbogears import config, redirect
 from turbogears.controllers import expose
 import cherrypy
 import jinja2.sandbox, jinja2.ext, jinja2.nodes
@@ -178,7 +178,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
 
     snippet_locations = []
     if system:
-         snippet_locations.append(
+        snippet_locations.append(
              'snippets/per_system/%%s/%s' % system.fqdn)
     snippet_locations.extend([
         'snippets/per_lab/%%s/%s' % lab_controller.fqdn,

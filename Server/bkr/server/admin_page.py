@@ -1,9 +1,8 @@
 from turbogears import url
 from turbogears.database import session
-from turbogears.widgets import AutoCompleteField, TableForm
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.bexceptions import BeakerException
-from bkr.server.widgets import AlphaNavBar
+from bkr.server.widgets import AlphaNavBar, AutoCompleteField, InlineForm
 
 class AdminPage(RPCRoot):
     exposed = False
@@ -38,7 +37,7 @@ class AdminPage(RPCRoot):
                                                 search_controller = url(self.search_url),
                                                 search_param = self.search_param,
                                                 result_name = self.result_name)
-        self.search_widget_form = TableForm('Search', fields=[self.search_auto],
+        self.search_widget_form = InlineForm('Search', fields=[self.search_auto],
                 method='get', action=self.widget_action,
                 submit_text=_(u'Search'))
         if getattr(self,'join',None) is None:

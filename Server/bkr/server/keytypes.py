@@ -1,22 +1,9 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from turbogears import identity, redirect
-from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from kid import Element
-from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
-from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar
+from turbogears import expose, flash, widgets, error_handler, redirect, paginate, url
+from bkr.server.helpers import make_edit_link, make_remove_link
+from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, HorizontalForm
 from bkr.server.admin_page import AdminPage
-
-import cherrypy
-
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-#import model
-from model import *
-import string
+from bkr.server.model import Key
 
 class KeyTypes(AdminPage):
     # For XMLRPC methods in this class.
@@ -26,7 +13,7 @@ class KeyTypes(AdminPage):
     key_name   = widgets.TextField(name='key_name', label=_(u'Name'))
     numeric    = widgets.CheckBox(name='numeric', label=_(u'Numeric'))
 
-    form = widgets.TableForm(
+    form = HorizontalForm(
         'keytypes',
         fields = [id, key_name, numeric],
         action = 'save_data',
@@ -45,6 +32,7 @@ class KeyTypes(AdminPage):
     @expose(template='bkr.server.templates.form')
     def new(self, **kw):
         return dict(
+            title=_(u'New Key Type'),
             form = self.form,
             action = './save',
             options = {},
@@ -89,18 +77,17 @@ class KeyTypes(AdminPage):
         list_by_letters = set([elem.key_name[0].capitalize() for elem in keytypes])
         results = self.process_search(**kw)
         if results:
-            keytypes = results
+            keytypes = results.order_by(Key.key_name)
         keytypes_grid = myPaginateDataGrid(fields=[
                                   ('Key', lambda x: make_edit_link(x.key_name, x.id)),
                                   ('Numeric', lambda x: x.numeric),
                                   (' ', lambda x: make_remove_link(x.id)),
-                              ]) 
+                              ],
+                              add_action='./new')
         return dict(title="Key Types", 
                     grid = keytypes_grid, 
                     search_widget = self.search_widget_form,
                     alpha_nav_bar = AlphaNavBar(list_by_letters,self.search_name),
-                    addable = self.add,
-                    object_count = keytypes.count(),
                     list = keytypes)
 
     @expose()

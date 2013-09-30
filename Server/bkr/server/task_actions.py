@@ -16,9 +16,10 @@ values for *type*:
 * TR: Result within a task
 """
 
-from turbogears.database import session
-from turbogears import expose
-from bkr.server.model import *
+from sqlalchemy.exc import InvalidRequestError
+from bkr.server import identity
+from bkr.server.model import (Job, RecipeSet, Recipe,
+                              RecipeTask, RecipeTaskResult, TaskBase)
 from bkr.server.bexceptions import BX, StaleTaskStatusException
 from bkr.server.xmlrpccontroller import RPCRoot
 import cherrypy
@@ -62,7 +63,7 @@ class TaskActions(RPCRoot):
         if task_type.upper() in self.task_types.keys():
             try:
                 task = self.task_types[task_type.upper()].by_id(task_id)
-            except InvalidRequestError, e:
+            except InvalidRequestError:
                 raise BX(_("Invalid %s %s" % (task_type, task_id)))
         return task.to_xml(clone,from_job).toxml()
 
@@ -94,7 +95,7 @@ class TaskActions(RPCRoot):
         if task_type.upper() in self.stoppable_task_types.keys():
             try:
                 task = self.stoppable_task_types[task_type.upper()].by_id(task_id)
-            except InvalidRequestError, e:
+            except InvalidRequestError:
                 raise BX(_("Invalid %s %s" % (task_type, task_id)))
         else:
             raise BX(_("Task type %s is not stoppable" % (task_type)))

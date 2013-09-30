@@ -1,12 +1,12 @@
+from kid import XML
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from turbogears import identity, redirect
-from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.widgets import myPaginateDataGrid
+from turbogears import expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
+from bkr.server import identity
+from bkr.server.widgets import myPaginateDataGrid, HorizontalForm
 from bkr.server.admin_page import AdminPage
 from bkr.server.model import RetentionTag as Tag
 from bkr.server.retention_tag_utility import RetentionTagUtility
-from bkr.server.helpers import make_edit_link, make_link
+from bkr.server.helpers import make_edit_link
 
 import logging
 log = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ class RetentionTag(AdminPage):
     id = widgets.HiddenField(name='id') 
     needs_product = widgets.CheckBox('needs_product', label=u'Needs Product')
 
-    tag_form = widgets.TableForm(
+    tag_form = HorizontalForm(
         'Retention Tag',
         fields = [tag, default, needs_product, id],
         action = 'save_data',
@@ -52,8 +52,8 @@ class RetentionTag(AdminPage):
         try:
             RetentionTagUtility.edit_default(**kw)
         except Exception, e:
-            log.error('Error editing tag: %s and default: %s' % (kw.get('tag'), kw.get('default_')))
-            flash(_(u"Problem editing tag %s" % kw.get('tag')))
+            log.exception('Error editing tag: %s and default: %s' % (kw.get('tag'), kw.get('default_')))
+            flash(_(u"Problem editing tag %s: %s" % (kw.get('tag'), e)))
             redirect("./admin")
         flash(_(u"OK"))
         redirect("./admin")
@@ -67,6 +67,7 @@ class RetentionTag(AdminPage):
             RetentionTagUtility.save_tag(**kw)
             session.flush()
         except Exception, e:
+            session.rollback()
             log.error('Error inserting tag: %s and default: %s' % (kw.get('tag'), kw.get('default_')))
             flash(_(u"Problem saving tag %s" % kw.get('tag')))
         else:
@@ -104,11 +105,12 @@ class RetentionTag(AdminPage):
         redirect('/retentiontag/admin')
 
     @identity.require(identity.in_group("admin"))
-    @expose(template='bkr.server.templates.tag_form')
+    @expose(template='bkr.server.templates.form')
     def edit(self, id, **kw):
         tag = Tag.by_id(id) 
         return dict(
             form = self.tag_form,
+            title=_(u'Retention tag %s' % tag.tag),
             action = './save_edit',
             options = {},
             value = tag,
@@ -126,7 +128,8 @@ class RetentionTag(AdminPage):
 
         def show_delete(x):
             if x.can_delete():
-                return make_link(url='./delete/%s' % x.id, text='Delete')
+                return XML('<a class="btn" href="./delete/%s">'
+                        '<i class="icon-remove"/> Delete</a>' % x.id)
             else:
                 return None
 
@@ -141,10 +144,9 @@ class RetentionTag(AdminPage):
         my_fields = [myPaginateDataGrid.Column(name='tag', title='Tags', getter=lambda x: show_tag(x),options=dict(sortable=True)),
                      myPaginateDataGrid.Column(name='default', title='Default', getter=lambda x: x.default,options=dict(sortable=True)),
                      myPaginateDataGrid.Column(name='delete', title='Delete', getter=lambda x: show_delete(x))]
-        tag_grid = myPaginateDataGrid(fields=my_fields)
+        tag_grid = myPaginateDataGrid(fields=my_fields, add_action='./new')
         return_dict = dict(title='Tags',
                            grid = tag_grid,
-                           object_count = tags.count(),
                            search_bar = None,
                            search_widget = self.search_widget_form,
                            list = tags)

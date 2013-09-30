@@ -1,10 +1,9 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#"
     py:extends="'master.kid'">
-<a href="#" onclick="show_system_actions()" class='link'>(Contact Owner)</a>
+<a href="#" onclick="show_system_actions(); return false;" class="btn">Contact Owner</a>
 <script type='text/javascript'>
     function show_system_actions() {
-       $('#system_action').dialog('destroy');
        $('#system_action').attr('title', 'System Action').dialog({
             buttons : {
                 "${problem.desc}" : function () {
@@ -24,7 +23,6 @@
     }
 
         function show_field (id, title) {
-            $('#'+id).dialog('destroy');
             $('#'+id).attr('title', title).dialog({
                 resizable: false,
                 height: 300,

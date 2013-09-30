@@ -22,8 +22,8 @@
 function BuildBeaker ()
 {
     rlPhaseStartTest "Build Beaker from git"
-    rlRun "git clone git://git.beaker-project.org/beaker"
-    rlRun "pushd beaker"
+    rlRun "git clone git://git.beaker-project.org/beaker /mnt/testarea/beaker"
+    rlRun "pushd /mnt/testarea/beaker"
     rlRun "git checkout ${BEAKER_GIT_REF:-develop}"
     if [[ -n "$BEAKER_GIT_REMOTE" ]] ; then
         rlRun "git fetch $BEAKER_GIT_REMOTE ${BEAKER_GIT_REMOTE_REF:-develop}"
@@ -31,16 +31,16 @@ function BuildBeaker ()
             || rlDie "Git checkout/merge failed"
     fi
     rlRun "yum-builddep -y ./beaker.spec"
-    rlRun "yum -y install tito"
-    rlRun "tito build --rpm --test" || rlDie "Tito RPM build failed"
+    rlRun "yum -y install createrepo"
+    rlRun "Misc/rpmbuild.sh -bb" || rlDie "RPM build failed"
     rlRun "popd"
-    rlRun "createrepo /tmp/tito/noarch/"
+    rlRun "createrepo /mnt/testarea/beaker/rpmbuild-output/noarch/"
     cat >/etc/yum.repos.d/beaker-local-builds.repo <<"EOF"
-[tito]
-name=tito
-baseurl=file:///tmp/tito/noarch/
+[beaker-local-builds]
+name=beaker-local-builds
+baseurl=file:///mnt/testarea/beaker/rpmbuild-output/noarch/
 EOF
-    rlAssert0 "Created yum repo config for /tmp/tito/noarch/" $?
+    rlAssert0 "Created yum repo config for /mnt/testarea/beaker/rpmbuild-output/noarch/" $?
     rlPhaseEnd
 }
 
@@ -115,7 +115,7 @@ function Inventory()
     # Backup /etc/my.cnf and make INNODB the default engine.
     rlRun "cp /etc/my.cnf /etc/my.cnf-orig" 0
     cat /etc/my.cnf-orig | awk '
-        {print $1};
+        {print $0};
         /\[mysqld\]/ {
             print "default-storage-engine=INNODB";
             print "max_allowed_packet=50M";
@@ -172,9 +172,9 @@ __EOF__
     rlPhaseEnd
 
     rlPhaseStartTest "Add lab controllers"
-    rlRun "yum install -y python-twill"
+    rlRun "curl -f -s -o /dev/null -c cookie -d user_name=admin -d password=testing -d login1 http://$SERVER/bkr/login" 0 "Log in to Beaker"
     for CLIENT in $CLIENTS; do
-        rlRun "./add-labcontroller.py -l $CLIENT" 0 "Add Lab Controller"
+        rlRun "curl -f -s -o /dev/null -b cookie -d fqdn=$CLIENT -d lusername=host/$CLIENT -d lpassword=testing -d email=root@$CLIENT http://$SERVER/bkr/labcontrollers/save" 0 "Add lab controller $CLIENT"
     done
     rlPhaseEnd
 

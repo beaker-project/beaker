@@ -1,14 +1,15 @@
 # License: GPL v2 or later
 # Copyright Red Hat Inc. 2008
 
-PKGNAME=beaker
+.PHONY: build
+build:
+	python setup.py build
 
-all:	py-build
+.PHONY: install
+install: build
+	python setup.py install -O1 --skip-build --root $(DESTDIR)
 
-include ../rpmspec_rules.mk
-include ../py_rules.mk
-
-build:	py-build
-install:	py-install
-
-clean:	py-clean
+.PHONY: clean
+clean:
+	python setup.py clean
+	rm -rf build

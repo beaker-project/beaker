@@ -1,9 +1,10 @@
 from turbogears.database import session
 from turbogears import url, expose, flash, validate, error_handler, \
-                       identity, redirect, paginate, config
-from kid import Element
+                       redirect, paginate, config
+from kid import XML
+from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import make_link, make_edit_link
+from bkr.server.helpers import make_edit_link
 from bkr.server.util import total_seconds
 from bkr.server.widgets import LabControllerDataGrid, LabControllerForm
 from bkr.server.distrotrees import DistroTrees
@@ -38,6 +39,7 @@ class LabControllers(RPCRoot):
             action = './save',
             options = {},
             value = kw,
+            title='New Lab Controller'
         )
 
     @identity.require(identity.in_group("admin"))
@@ -55,6 +57,7 @@ class LabControllers(RPCRoot):
             action = './save',
             options = options,
             value = labcontroller,
+            title='Edit Lab Controller'
         )
 
     @identity.require(identity.in_group("admin"))
@@ -114,57 +117,40 @@ class LabControllers(RPCRoot):
     def add_distro_tree(self, new_distro):
         lab_controller = identity.current.user.lab_controller
 
-        # osmajor is required
-        if 'osmajor' in new_distro:
-            try:
-                osmajor = OSMajor.by_alias(new_distro['osmajor'])
-            except NoResultFound:
-                osmajor = OSMajor.lazy_create(osmajor=new_distro['osmajor'])
-            else:
-                raise BX(_('Cannot import distro as %s: it is configured as an alias for %s' 
-                           % (new_distro['osmajor'], osmajor.osmajor)))
-        else:
-            return ''
+        variant = new_distro.get('variant')
+        arch = Arch.lazy_create(arch=new_distro['arch'])
 
-        if 'osminor' in new_distro:
-            osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=new_distro['osminor'])
+        osmajor = OSMajor.lazy_create(osmajor=new_distro['osmajor'])
+        try:
+            osmajor = OSMajor.by_alias(new_distro['osmajor'])
+        except NoResultFound:
+            pass
         else:
-            return ''
+            raise BX(_('Cannot import distro as %s: it is configured as an alias for %s' 
+                       % (new_distro['osmajor'], osmajor.osmajor)))
 
+        osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=new_distro['osminor'])
         if 'arches' in new_distro:
             for arch_name in new_distro['arches']:
-                try:
-                   arch = Arch.by_name(arch_name)
-                   if arch not in osversion.arches:
-                       osversion.arches.append(arch)
-                except NoResultFound:
-                   pass
+                osversion.add_arch(Arch.lazy_create(arch=arch_name))
+        osversion.add_arch(arch)
 
         distro = Distro.lazy_create(name=new_distro['name'], osversion=osversion)
-        arch = Arch.lazy_create(arch=new_distro['arch'])
-        variant = new_distro.get('variant')
-        distro_tree = DistroTree.lazy_create(distro=distro,
-                variant=variant, arch=arch)
-
         # Automatically tag the distro if tags exists
         if 'tags' in new_distro:
             for tag in new_distro['tags']:
-                if tag not in distro.tags:
-                    distro.tags.append(tag)
-
-        if arch not in distro.osversion.arches:
-            distro.osversion.arches.append(arch)
-        distro_tree.date_created = datetime.utcfromtimestamp(float(new_distro['tree_build_time']))
+                distro.add_tag(tag)
         distro.date_created = datetime.utcfromtimestamp(float(new_distro['tree_build_time']))
+
+        distro_tree = DistroTree.lazy_create(distro=distro,
+                variant=variant, arch=arch)
+        distro_tree.date_created = datetime.utcfromtimestamp(float(new_distro['tree_build_time']))
 
         if 'repos' in new_distro:
             for repo in new_distro['repos']:
-                dtr = distro_tree.repo_by_id(repo['repoid'])
-                if dtr is None:
-                    dtr = DistroTreeRepo(repo_id=repo['repoid'])
-                    distro_tree.repos.append(dtr)
-                dtr.repo_type = repo['type']
-                dtr.path = repo['path']
+                dtr = DistroTreeRepo.lazy_create(distro_tree=distro_tree,
+                        repo_id=repo['repoid'], repo_type=repo['type'],
+                        path=repo['path'])
 
         if 'kernel_options' in new_distro:
             distro_tree.kernel_options = new_distro['kernel_options']
@@ -187,12 +173,9 @@ class LabControllers(RPCRoot):
                     kernel_type = KernelType.by_name(image['kernel_type'])
                 except NoResultFound:
                     continue # ignore
-                dti = distro_tree.image_by_type(image_type, kernel_type)
-                if dti is None:
-                    dti = DistroTreeImage(image_type=image_type,
-                                          kernel_type=kernel_type)
-                    distro_tree.images.append(dti)
-                dti.path = image['path']
+                dti = DistroTreeImage.lazy_create(distro_tree=distro_tree,
+                        image_type=image_type, kernel_type=kernel_type,
+                        path=image['path'])
 
         new_urls_by_scheme = dict((urlparse.urlparse(url).scheme, url)
                 for url in new_distro['urls'])
@@ -474,16 +457,14 @@ class LabControllers(RPCRoot):
 
     def make_lc_remove_link(self, lc):
         if lc.removed is not None:
-            return make_link(url  = 'unremove?id=%s' % lc.id,
-                text = 'Re-Add (+)')
+            return XML('<a class="btn" href="unremove?id=%s">'
+                    '<i class="icon-plus"/> Re-Add</a>' % lc.id)
         else:
-            a = Element('a', {'class': 'list'}, href='#')
-            a.text = 'Remove (-)'
-            a.attrib.update({'onclick' : "has_watchdog('%s')" % lc.id})
-            return a
+            return XML('<a class="btn" href="#" onclick="has_watchdog(\'%s\')">'
+                    '<i class="icon-remove"/> Remove</a>' % lc.id)
 
     @identity.require(identity.in_group("admin"))
-    @expose(template="bkr.server.templates.grid_add")
+    @expose(template="bkr.server.templates.grid")
     @paginate('list', limit=None)
     def index(self):
         labcontrollers = session.query(LabController)
@@ -493,11 +474,11 @@ class LabControllers(RPCRoot):
                                   ('Disabled', lambda x: x.disabled),
                                   ('Removed', lambda x: x.removed),
                                   (' ', lambda x: self.make_lc_remove_link(x)),
-                              ])
+                              ],
+                              add_action='./new')
         return dict(title="Lab Controllers", 
                     grid = labcontrollers_grid,
                     search_bar = None,
-                    object_count = labcontrollers.count(),
                     list = labcontrollers)
 
 
@@ -529,37 +510,33 @@ class LabControllers(RPCRoot):
     @identity.require(identity.in_group("admin"))
     @expose()
     def remove(self, id, *args, **kw):
-        try:
-            labcontroller = LabController.by_id(id)
-            labcontroller.removed = datetime.utcnow()
-            systems = System.query.filter_by(lab_controller_id=id).values(System.id)
-            for system_id in systems:
-                sys_activity = SystemActivity(identity.current.user, 'WEBUI', \
-                    'Changed', 'lab_controller', labcontroller.fqdn,
-                    None, system_id=system_id[0])
-            system_table.update().where(system_table.c.lab_controller_id == id).\
-                values(lab_controller_id=None).execute()
-            watchdogs = Watchdog.by_status(labcontroller=labcontroller, 
-                status='active')
-            for w in watchdogs:
-                w.recipe.recipeset.job.cancel(msg='LabController %s has been deleted' % labcontroller.fqdn)
-            for lca in labcontroller._distro_trees:
-                lca.distro_tree.activity.append(DistroTreeActivity(
-                        user=identity.current.user, service=u'WEBUI',
-                        action=u'Removed', field_name=u'lab_controller_assocs',
-                        old_value=u'%s %s' % (lca.lab_controller, lca.url),
-                        new_value=None))
-                session.delete(lca)
-            labcontroller.disabled = True
-            LabControllerActivity(identity.current.user, 'WEBUI', 
-                'Changed', 'Disabled', unicode(False), unicode(True), 
-                lab_controller_id=id)
-            LabControllerActivity(identity.current.user, 'WEBUI', 
-                'Changed', 'Removed', unicode(False), unicode(True), 
-                lab_controller_id=id)
-            session.commit()
-        finally:
-            session.close()
+        labcontroller = LabController.by_id(id)
+        labcontroller.removed = datetime.utcnow()
+        systems = System.query.filter_by(lab_controller_id=id).values(System.id)
+        for system_id in systems:
+            sys_activity = SystemActivity(identity.current.user, 'WEBUI', \
+                'Changed', 'lab_controller', labcontroller.fqdn,
+                None, system_id=system_id[0])
+        system_table.update().where(system_table.c.lab_controller_id == id).\
+            values(lab_controller_id=None).execute()
+        watchdogs = Watchdog.by_status(labcontroller=labcontroller, 
+            status='active')
+        for w in watchdogs:
+            w.recipe.recipeset.job.cancel(msg='LabController %s has been deleted' % labcontroller.fqdn)
+        for lca in labcontroller._distro_trees:
+            lca.distro_tree.activity.append(DistroTreeActivity(
+                    user=identity.current.user, service=u'WEBUI',
+                    action=u'Removed', field_name=u'lab_controller_assocs',
+                    old_value=u'%s %s' % (lca.lab_controller, lca.url),
+                    new_value=None))
+            session.delete(lca)
+        labcontroller.disabled = True
+        LabControllerActivity(identity.current.user, 'WEBUI', 
+            'Changed', 'Disabled', unicode(False), unicode(True), 
+            lab_controller_id=id)
+        LabControllerActivity(identity.current.user, 'WEBUI', 
+            'Changed', 'Removed', unicode(False), unicode(True), 
+            lab_controller_id=id)
 
         flash( _(u"%s removed") % labcontroller.fqdn )
         raise redirect(".")

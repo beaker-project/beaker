@@ -13,7 +13,7 @@
       href="#"
       onclick="javascript:confirm_it(this.parentNode);return false;">
       ${action_text}</a>
-    <button py:if="look == 'button'"
+    <button py:if="look == 'button'" class="btn"
       onclick="javascript:confirm_it(this.parentNode);return false;">
       ${action_text}</button>
 </form>

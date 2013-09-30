@@ -63,7 +63,7 @@ class LoginTest(SeleniumTestCase):
         self.assertEquals(sel.get_title(), system.fqdn)
 
         # Click log in, and fill in details
-        sel.click('link=Login')
+        sel.click('link=Log in')
         sel.wait_for_page_to_load('30000')
         sel.type('user_name', self.user.user_name)
         sel.type('password', self.password)
@@ -109,7 +109,7 @@ class LoginTest(SeleniumTestCase):
     def test_message_when_explicitly_logging_in(self):
         sel = self.selenium
         sel.open('')
-        sel.click('link=Login')
+        sel.click('link=Log in')
         sel.wait_for_page_to_load('30000')
         self.assertEquals(sel.get_text('css=#message'), 'Please log in.')
 

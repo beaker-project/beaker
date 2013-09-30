@@ -9,7 +9,6 @@ __requires__ = ['CherryPy < 3.0']
 import sys
 import errno
 import shutil
-import datetime
 import urlparse
 import requests
 import requests_kerberos

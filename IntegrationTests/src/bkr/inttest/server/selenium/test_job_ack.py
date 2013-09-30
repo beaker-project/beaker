@@ -1,5 +1,7 @@
+from nose.plugins.skip import SkipTest
 from turbogears.database import session
-from bkr.inttest import get_server_base
+from bkr.inttest import get_server_base, stop_process, start_process, \
+    edit_file, CONFIG_FILE
 from bkr.inttest.server.webdriver_utils import login, logout
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup
@@ -55,3 +57,23 @@ class JobAckTest(WebDriverTestCase):
         login(b, user=self.user_2.user_name, password=self.password)
         b.get(get_server_base() + 'jobs/%s' % self.job.id)
         b.find_element_by_name("response_box_%s" % self.job.recipesets[0].id)
+
+        # XXX This whole block can go away with BZ#1000861
+        # This tests that we can't ack the recipeset
+        try:
+            stop_process('gunicorn')
+        except ValueError:
+            # It seems gunicorn is not a running process
+            raise SkipTest('Can only run this test against gunicorn')
+        try:
+            tmp_config = edit_file(CONFIG_FILE,
+                'beaker.deprecated_job_group_permissions.on = True',
+                'beaker.deprecated_job_group_permissions.on = False')
+            start_process('gunicorn', env={'BEAKER_CONFIG_FILE': tmp_config.name})
+
+            b.find_element_by_xpath("//td[normalize-space(text())='RS:%s' and "
+                "not(./input[@name='response_box_%s'])]" % (
+                self.job.recipesets[0].id, self.job.recipesets[0].id))
+        finally:
+            stop_process('gunicorn')
+            start_process('gunicorn')

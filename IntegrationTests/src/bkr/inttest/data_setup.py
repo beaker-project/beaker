@@ -33,9 +33,10 @@ from bkr.server.model import LabController, User, Group, UserGroup, Distro, Dist
         LabControllerDistroTree, Power, PowerType, TaskExcludeArch, TaskExcludeOSMajor, \
         Permission, RetentionTag, Product, Watchdog, Reservation, LogRecipe, \
         LogRecipeTask, ExcludeOSMajor, ExcludeOSVersion, Hypervisor, DistroTag, \
-        SystemGroup, DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
+        DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
         LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, \
-        GuestResource, VirtResource, SystemStatusDuration
+        GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
+        SystemPermission
 
 log = logging.getLogger(__name__)
 
@@ -158,8 +159,8 @@ def add_owner_to_group(user, group):
             if assoc.user == user:
                 assoc.is_owner = True
 
-def add_group_to_system(system, group, admin=False):
-    system.group_assocs.append(SystemGroup(group=group, admin=admin))
+def add_group_to_system(system, group):
+    system.groups.append(group)
 
 def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
         arches=None, tags=None):
@@ -220,7 +221,11 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
                 status=status, **kw)
     if date_added is not None:
         system.date_added = date_added
-    system.shared = shared
+    # Always give it a custom policy, so that tests can fill in rules they need.
+    system.custom_access_policy = SystemAccessPolicy()
+    if shared:
+        system.custom_access_policy.add_rule(
+                permission=SystemPermission.reserve, everybody=True)
     system.arch.append(Arch.by_name(arch))
     configure_system_power(system)
     system.excluded_osmajor.extend(ExcludeOSMajor(arch=Arch.by_name(arch),
@@ -339,6 +344,7 @@ def create_recipe(distro_tree=None, task_list=None,
             rt = RecipeTask(task=t)
             rt.role = u'STANDALONE'
             recipe.tasks.append(rt)
+        recipe.ttasks = len(task_list)
     else:
         rt = RecipeTask(task=create_task(name=task_name))
         rt.role = u'STANDALONE'
@@ -368,8 +374,8 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
         owner = create_user()
     if whiteboard is None:
         whiteboard = unique_name(u'job %s')
-    job = Job(whiteboard=whiteboard, ttasks=1, owner=owner,
-        retention_tag=retention_tag, group=group, product=product,
+    job = Job(whiteboard=whiteboard, ttasks=sum(r.ttasks for r in recipes),
+        owner=owner, retention_tag=retention_tag, group=group, product=product,
         submitter=submitter)
     if cc is not None:
         job.cc = cc

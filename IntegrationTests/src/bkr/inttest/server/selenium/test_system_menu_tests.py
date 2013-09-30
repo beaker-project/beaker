@@ -1,56 +1,45 @@
-#!/usr/bin/python
 
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
-import unittest, time, re, os
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login, click_menu_item
+from bkr.inttest import data_setup, get_server_base
 from turbogears.database import session
 
-class Menu(SeleniumTestCase):
-
+class Menu(WebDriverTestCase):
     
     def setUp(self):
-        self.verificationErrors = []
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-        try:
-            self.logout()
-        except:pass
-
         with session.begin():
             data_setup.create_device(device_class="IDE")
-        self.login()
+        self.browser = self.get_browser()
+        login(self.browser)
+
+    def tearDown(self):
+        self.browser.quit()
        
     def test_menulist(self):
-        sel = self.selenium
-        sel.open("")
-        sel.click("link=All")
-        sel.wait_for_page_to_load('30000')
-        sel.click("link=My Systems") 
-        sel.wait_for_page_to_load('30000')
-        sel.click("link=Available")
-        sel.wait_for_page_to_load('30000')
-        sel.click("link=Free")
-        sel.wait_for_page_to_load('30000')
-        sel.click("link=All")
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=IDE")
-        sel.wait_for_page_to_load('30000')
-        sel.click("link=Family")
-        sel.wait_for_page_to_load('30000')
-        sel.click("link=New Job")
-        sel.wait_for_page_to_load('30000')
-        sel.click("link=Watchdog")
-        sel.wait_for_page_to_load('30000')
-        sel.click("//ul[@id='Activity']/li[1]/a")
-        sel.wait_for_page_to_load('30000')
-        sel.click("link=Systems")
-        sel.wait_for_page_to_load('30000')
-        sel.click("link=Distros")
-        sel.wait_for_page_to_load('30000')
-    
-    def tearDown(self):
-        self.selenium.stop()
-        self.assertEqual([], self.verificationErrors)
+        b = self.browser
+        b.get(get_server_base())
 
-if __name__ == "__main__":
-    unittest.main()
+        click_menu_item(b, 'Systems', 'All')
+        b.find_element_by_xpath('//title[text()="Systems"]')
+        click_menu_item(b, 'Hello, %s' % data_setup.ADMIN_USER, 'My Systems')
+        b.find_element_by_xpath('//title[text()="My Systems"]')
+        click_menu_item(b, 'Systems', 'Available')
+        b.find_element_by_xpath('//title[text()="Available Systems"]')
+        click_menu_item(b, 'Systems', 'Free')
+        b.find_element_by_xpath('//title[text()="Free Systems"]')
+        click_menu_item(b, 'Devices', 'All')
+        b.find_element_by_xpath('//title[text()="Devices"]')
+        click_menu_item(b, 'Devices', 'IDE')
+        b.find_element_by_xpath('//title[text()="Devices"]')
+        click_menu_item(b, 'Distros', 'Family')
+        b.find_element_by_xpath('//title[text()="OS Versions"]')
+        click_menu_item(b, 'Scheduler', 'New Job')
+        b.find_element_by_xpath('//title[text()="New Job"]')
+        click_menu_item(b, 'Scheduler', 'Watchdog')
+        b.find_element_by_xpath('//title[text()="Watchdogs"]')
+        click_menu_item(b, 'Activity', 'All')
+        b.find_element_by_xpath('//title[text()="Activity"]')
+        click_menu_item(b, 'Activity', 'Systems')
+        b.find_element_by_xpath('//title[text()="System Activity"]')
+        click_menu_item(b, 'Activity', 'Distros')
+        b.find_element_by_xpath('//title[text()="Distro Activity"]')

@@ -1,9 +1,8 @@
 <div xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#"
      py:strip="1">
-<a id='loan-settings' href="#" onclick="show_loan_actions()" class='link'>(Loan Settings)</a>
+<a id='loan-settings' href="#" onclick="show_loan_actions(); return false;" class="btn">Loan Settings</a>
 <script type='text/javascript'>
     function show_loan_actions() {
-        $('#${name}').dialog('destroy');
         $('#${name}').attr('title', 'Loan').dialog({
             resizable: false,
             minWidth: 200,

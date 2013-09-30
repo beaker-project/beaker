@@ -56,7 +56,7 @@ class TestSystemsGrid(SeleniumTestCase):
     def test_show_all_columns_works(self):
         sel = self.selenium
         sel.open('')
-        sel.click('advancedsearch')
+        sel.click('link=Show Search Options')
         sel.select('systemsearch_0_table', 'label=System/Name')
         sel.click('customcolumns')
         sel.click('selectall')
@@ -99,6 +99,9 @@ class TestSystemGridSorting(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
 
         cell_values = []
+        # Next page number
+        # Assume our current page is 1
+        next_page = 2
         while True:
             row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr/td[%d]' % column))
             cell_values += [sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
@@ -107,9 +110,11 @@ class TestSystemGridSorting(SeleniumTestCase):
             # (so that we can see that it is really sorted)
             if len(set(cell_values)) > 1:
                 break
-            if sel.get_xpath_count('//div[@class="list"]//a[text()=">"]') != 2:
+            try:
+                sel.click('//div[contains(@class, "pagination")]//ul/li/a[normalize-space(string())="%s"]' % next_page)
+            except Exception:
                 raise AssertionError('Tried all pages, but every cell had the same value!')
-            sel.click('//div[@class="list"]//a[text()=">"]')
+            next_page += 1
             sel.wait_for_page_to_load('30000')
         assert_sorted(cell_values, key=lambda x: x.lower())
 
@@ -122,15 +127,15 @@ class TestSystemGridSorting(SeleniumTestCase):
     def go_to_search_results(self):
         sel = self.selenium
         sel.open('')
-        sel.click('link=Toggle Search')
+        sel.click('link=Show Search Options')
         sel.select('systemsearch_0_table', 'CPU/Cores')
         sel.select('systemsearch_0_operation', 'greater than')
         sel.type('systemsearch_0_value', '1')
-        sel.click('//form[@name="systemsearch"]//a[text()="Add ( + )"]')
+        sel.click('link=Add')
         sel.select('systemsearch_1_table', 'System/Name')
         sel.select('systemsearch_1_operation', 'is not')
         sel.type('systemsearch_1_value', 'bob')
-        sel.click('Search')
+        sel.submit('id=searchform')
         sel.wait_for_page_to_load('30000')
         self.assertEqual(sel.get_title(), 'Systems')
 

@@ -4,7 +4,7 @@ import time
 from turbogears.database import session
 from bkr.common.helpers import makedirs_ignore
 from bkr.labcontroller.config import get_conf
-from bkr.server.model import LogRecipe
+from bkr.server.model import LogRecipe, TaskResult
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.labcontroller import LabControllerTestCase
@@ -25,6 +25,10 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
         self.cached_console_log = os.path.join(get_conf().get('CACHEPATH'), 'recipes',
                 str(self.recipe.id // 1000) + '+', str(self.recipe.id), 'console.log')
 
+    def check_recipe_task_result(self, task_result, result_type):
+        with session.begin():
+            return task_result.result == result_type
+
     def check_console_log_registered(self):
         with session.begin():
             return LogRecipe.query.filter_by(parent=self.recipe,
@@ -43,6 +47,34 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
         open(self.console_log, 'a').write(second_line)
         wait_for_condition(lambda: self.check_cached_log_contents(
                 first_line + second_line))
+
+    def test_panic_not_doubly_detected(self):
+        # Write a panic string to the console log and wait for panic.
+        open(self.console_log, 'w').write('Oops\n')
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents('Oops\n'))
+        session.expire_all()
+        with session.begin():
+            self.assertEquals(len(self.recipe.tasks[0].results), 1)
+        self.check_recipe_task_result(self.recipe.tasks[0].results[0],
+            TaskResult.panic)
+
+        # Now check our kill_time
+        session.expire_all()
+        with session.begin():
+            kill_time1 = self.recipe.watchdog.kill_time
+
+        # Add another panic entry
+        open(self.console_log, 'a+').write('Oops\n')
+        wait_for_condition(lambda: self.check_cached_log_contents('Oops\nOops\n'))
+
+        session.expire_all()
+        with session.begin():
+            # Ensure that there are no new panic results
+            self.assertEquals(len(self.recipe.tasks[0].results), 1)
+            # Ensure that our kill time has not been extended again!
+            kill_time2 = self.recipe.watchdog.kill_time
+        self.assertEquals(kill_time1, kill_time2)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=962901
     def test_console_log_not_recreated_after_removed(self):

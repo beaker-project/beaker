@@ -1,8 +1,9 @@
 
-import unittest
+import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, create_client_config, ClientError
+import json
 
 class JobListTest(unittest.TestCase):
 
@@ -48,7 +49,12 @@ class JobListTest(unittest.TestCase):
     def test_list_jobs_mine(self):
         out = run_client(['bkr', 'job-list', '--mine'], config=self.client_configs[0])
         self.assert_(self.jobs[0].t_id in out and self.jobs[1].t_id not in out, out)
-
+        out = run_client(['bkr', 'job-list', '--mine',
+                          '--format','json'],
+                         config=self.client_configs[0])
+        out = json.loads(out)
+        self.assertIn(self.jobs[0].t_id, out)
+        self.assertNotIn(self.jobs[1].t_id, out)
         self.assertRaises(ClientError, run_client, ['bkr', 'job-list', '--mine', \
                                                         '--username', 'xyz',\
                                                         '--password','xyz'])

@@ -1,0 +1,31 @@
+[variant-Fedora.x86_64]
+debuginfo = x86_64/debug
+os_dir = x86_64/os
+arch = x86_64
+sources = source/SRPMS
+
+[variant-Fedora.armhfp]
+debuginfo = armhfp/debug
+os_dir = armhfp/os
+arch = armhfp
+sources = source/SRPMS
+
+[product]
+variants = Fedora
+version = rawhide
+name = Fedora-rawhide-20130905
+family = Fedora
+
+[variant-Fedora.i386]
+debuginfo = i386/debug
+os_dir = i386/os
+arch = i386
+sources = source/SRPMS
+
+[variant-Fedora]
+variants = 
+arches = i386,x86_64,armhfp
+type = variant
+id = Fedora
+name = Fedora
+

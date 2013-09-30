@@ -1,7 +1,6 @@
 nfs --server lab.test-kickstart.invalid --dir /distros/F-18/GOLD/Fedora/x86_64/os/
 #url --url=nfs://lab.test-kickstart.invalid:/distros/F-18/GOLD/Fedora/x86_64/os/
 
-auth --useshadow --enablemd5
 # System bootloader configuration
 bootloader --location=mbr
 # Use text mode install
@@ -58,7 +57,6 @@ unifdef
 vim-enhanced
 wget
 chrony
--ntp
 # no snippet data for packages
 %end
 
@@ -138,17 +136,17 @@ if [ -e /etc/chrony.conf ] ; then
     # setting iburst should speed up initial sync
     # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
+    /sbin/chkconfig ntpd off >/dev/null 2>&1 || :
+    /sbin/chkconfig ntpdate off >/dev/null 2>&1 || :
 fi
 
 
 # If efibootmgr exists then re-order boot options
 if [ -x '/usr/sbin/efibootmgr' ]; then
     BOOT=$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print $2}' | awk -F, '{print $1}')
-    EFI=$(/usr/sbin/efibootmgr -v | grep Boot$BOOT | awk '{print $NF}')
-    PXE_SLOT=$(/usr/sbin/efibootmgr -v | grep -Ei '(netboot|pxe)' |head -n 1 |cut -c5-8)
-    # If There is no Netboot Entry we can't continue
-    # You have to manually setup a Netboot entry first
-    # from EFI maint menu.
+    PXE_SLOT=$(/usr/sbin/efibootmgr -v | grep -i BootCurrent | awk '{print $2}')
+    # This will put the boot order back to what it was before the install.
+    # When first setting up a system make sure you put the netboot entry first.
     if [ ! -z $PXE_SLOT ]; then
        NEWBOOT=$(echo $BOOT| sed -e 's/$PXE_SLOT,//')
        # its cheesy. but it works.

@@ -1,5 +1,5 @@
 
-import unittest
+import unittest2 as unittest
 import urlparse
 import tempfile
 import re
@@ -258,6 +258,17 @@ EOF
             DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
         ]
 
+        cls.frawhide = data_setup.create_distro(name=u'Fedora-rawhide',
+                osmajor=u'Fedorarawhide', osminor=u'0')
+        cls.frawhide_x86_64 = data_setup.create_distro_tree(
+                distro=cls.frawhide, variant=u'Fedora', arch=u'x86_64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/development/rawhide/x86_64/os/',
+                      u'nfs://lab.test-kickstart.invalid/distros/development/rawhide/x86_64/os/'])
+        cls.frawhide_x86_64.repos[:] = [
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug', path=u'../debug'),
+        ]
+
         session.flush()
 
     def setUp(self):
@@ -307,6 +318,27 @@ EOF
         compare_expected('RedHatEnterpriseLinux3-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_rhel3_auth(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="auth='--enableshadow --enablemd5'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL3-U9" />
+                            <distro_variant op="=" value="AS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('\nauthconfig --enableshadow --enablemd5\n',
+                      recipe.rendered_kickstart.kickstart)
+
     def test_rhel4_defaults(self):
         recipe = self.provision_recipe('''
             <job>
@@ -328,6 +360,27 @@ EOF
         compare_expected('RedHatEnterpriseLinux4-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_rhel4_auth(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="auth='--enableshadow --enablemd5'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL4-U9" />
+                            <distro_variant op="=" value="AS" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('\nauthconfig --enableshadow --enablemd5\n',
+                     recipe.rendered_kickstart.kickstart)
+
     def test_rhel5server_defaults(self):
         recipe = self.provision_recipe('''
             <job>
@@ -347,6 +400,27 @@ EOF
             ''', self.system)
         compare_expected('RedHatEnterpriseLinuxServer5-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
+
+    def test_rhel5server_auth(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="auth='--useshadow --enablemd5'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL5-Server-U8" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        self.assertIn('\nauth --useshadow --enablemd5\n',
+                      recipe.rendered_kickstart.kickstart)
 
     def test_rhel5server_repos(self):
         recipe = self.provision_recipe('''
@@ -400,6 +474,27 @@ EOF
             ''', self.system)
         compare_expected('RedHatEnterpriseLinux6-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
+
+    def test_rhel6_auth(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="auth='--useshadow --enablemd5'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('\nauth --useshadow --enablemd5\n',
+                      recipe.rendered_kickstart.kickstart)
 
     def test_rhel6_http(self):
         recipe = self.provision_recipe('''
@@ -628,6 +723,27 @@ EOF
         compare_expected('RedHatEnterpriseLinux7-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_rhel7_auth(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="auth='--useshadow --enablemd5'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('\nauth --useshadow --enablemd5\n',
+                      recipe.rendered_kickstart.kickstart)
+
     def test_rhel7_manual(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                                           fqdn='test-manual-1.test-kickstart.invalid',
@@ -732,6 +848,26 @@ EOF
         compare_expected('Fedora18-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
 
+    def test_fedora18_auth(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="auth='--useshadow --enablemd5'">
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('\nauth --useshadow --enablemd5\n',
+                     recipe.rendered_kickstart.kickstart)
+
     def test_fedora_repos(self):
         recipe = self.provision_recipe('''
             <job>
@@ -757,6 +893,26 @@ EOF
         self.assert_(r'''repo --name=custom --cost=100 --baseurl=http://repos.fedorapeople.org/repos/beaker/server/Fedora18/'''
                      in recipe.rendered_kickstart.kickstart.splitlines(),
                      recipe.rendered_kickstart.kickstart)
+
+    def test_fedora_rawhide_defaults(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('Fedorarawhide-scheduler-defaults', recipe.id,
+                         recipe.rendered_kickstart.kickstart)
 
     def test_job_group_password(self):
         group = data_setup.create_group(group_name='group1', root_password='blappy7')
@@ -1762,6 +1918,48 @@ done
                 <recipeSet>
                     <recipe>
                         <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="btrfs" name="mnt/testarea1" size="10" type="part"/>
+                            <partition fs="btrfs" name="mnt/testarea2" size="10" type="part"/>
+                        </partitions>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        self.assertIn('''
+part /boot --size 200 --recommended --asprimary
+part / --size 1024 --grow
+part swap --recommended
+''',
+                    recipe.rendered_kickstart.kickstart)
+
+        self.assertIn('''
+part btrfs.mnt_testarea1 --size=10240
+btrfs /mnt/testarea1 --label=mnt_testarea1 btrfs.mnt_testarea1
+''',
+                     recipe.rendered_kickstart.kickstart)
+
+        self.assertIn('''
+part btrfs.mnt_testarea2 --size=10240
+btrfs /mnt/testarea2 --label=mnt_testarea2 btrfs.mnt_testarea2
+''',
+                     recipe.rendered_kickstart.kickstart)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1002261
+    def test_btrfs_volume_rhel6(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
                             <distro_name op="=" value="RHEL-6.2" />
                             <distro_variant op="=" value="Server" />
                             <distro_arch op="=" value="x86_64" />
@@ -1778,23 +1976,19 @@ done
             </job>
             ''', self.system)
 
-        self.assert_('''part /boot --size 200 --recommended --asprimary
+        self.assertIn('''
+part /boot --size 200 --recommended --asprimary
 part / --size 1024 --grow
 part swap --recommended
-'''
-                    in recipe.rendered_kickstart.kickstart,
+''',
                     recipe.rendered_kickstart.kickstart)
 
-        self.assert_('''
-part btrfs.mnt_testarea1 --size=10240
-btrfs /mnt/testarea1 --label=mnt_testarea1 btrfs.mnt_testarea1
-'''
-                     in recipe.rendered_kickstart.kickstart,
+        self.assertIn('''
+part /mnt/testarea1 --size=10240 --fstype btrfs
+''',
                      recipe.rendered_kickstart.kickstart)
 
-        self.assert_('''
-part btrfs.mnt_testarea2 --size=10240
-btrfs /mnt/testarea2 --label=mnt_testarea2 btrfs.mnt_testarea2
-'''
-                     in recipe.rendered_kickstart.kickstart,
+        self.assertIn('''
+part /mnt/testarea2 --size=10240 --fstype btrfs
+''',
                      recipe.rendered_kickstart.kickstart)

@@ -13,7 +13,7 @@ from bkr.log import log_to_stream
 from bkr.server.model import System, Reservation
 from bkr.server.util import load_config
 from turbogears import config
-from turbogears.database import session, get_engine
+from turbogears.database import get_engine
 from turbomail.control import interface
 from bkr.server import mail
 from optparse import OptionParser
@@ -65,8 +65,7 @@ def identify_nags(threshold, reservation_type, testing):
             Reservation.start_time <= datetime.datetime.utcnow()
                 - datetime.timedelta(days=threshold),
             Reservation.type == reservation_type,
-            # Only get those systems are not owner==user, and are shared
-            System.shared == True,
+            # Only get those systems are not owner==user
             Reservation.user_id != System.owner_id))\
             .options(contains_eager(System.open_reservation))
     for system in query:

@@ -1,5 +1,6 @@
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import wait_for_animation
+from bkr.inttest.server.webdriver_utils import wait_for_animation, \
+    check_job_search_results
 from bkr.inttest import data_setup, with_transaction, get_server_base
 from turbogears.database import session
 from bkr.server.model import Product, RetentionTag
@@ -21,20 +22,6 @@ class SearchJobsWD(WebDriverTestCase):
     def teardownClass(cls):
         cls.browser.quit()
 
-    def check_search_results(self, present=None, absent=None):
-        b = self.browser
-        if present is None:
-            present = []
-        if absent is None:
-            absent = []
-        for job in absent:
-            b.find_element_by_xpath('//table[@id="widget" and '
-                    'not(.//td[1]/a/text()="%s")]' % job.t_id)
-        for job in present:
-            b.find_element_by_xpath('//table[@id="widget" and '
-                    './/td[1]/a/text()="%s"]' % job.t_id)
-        return True
-
     def test_search_group(self):
         with session.begin():
             group = data_setup.create_group()
@@ -45,7 +32,7 @@ class SearchJobsWD(WebDriverTestCase):
         b = self.browser
         # Ensures that both jobs are present
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
             /option[@value='Whiteboard']").click()
@@ -53,8 +40,8 @@ class SearchJobsWD(WebDriverTestCase):
             /option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='jobsearch_0_value']"). \
             send_keys(whiteboard)
-        b.find_element_by_name('Search').click()
-        self.check_search_results(present=[job, job2])
+        b.find_element_by_id('searchform').submit()
+        check_job_search_results(b, present=[job, job2])
 
         # Now do the actual test
         b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
@@ -64,8 +51,8 @@ class SearchJobsWD(WebDriverTestCase):
         b.find_element_by_xpath("//input[@id='jobsearch_0_value']").clear()
         b.find_element_by_xpath("//input[@id='jobsearch_0_value']"). \
             send_keys(job.group.group_name)
-        b.find_element_by_name('Search').click()
-        self.check_search_results(present=[job], absent=[job2])
+        b.find_element_by_id('searchform').submit()
+        check_job_search_results(b, present=[job], absent=[job2])
 
     def test_search_tag(self):
         with session.begin():
@@ -76,14 +63,14 @@ class SearchJobsWD(WebDriverTestCase):
 
         # Test with tag.
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
             /option[@value='Tag']").click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
             /option[@value='is']").click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_value']/"
             "option[normalize-space(text())='%s']" % new_tag.tag).click()
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         job_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
         self.assert_('J:%s' % my_job.id in job_search_result)
@@ -98,14 +85,14 @@ class SearchJobsWD(WebDriverTestCase):
 
         # Test with product.
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
             /option[@value='Product']").click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
             /option[@value='is']").click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_value']/"
             "option[normalize-space(text())='%s']" % new_product.name).click()
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         job_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
         self.assert_('J:%s' % my_job.id in job_search_result)
@@ -121,7 +108,7 @@ class SearchJobsWD(WebDriverTestCase):
         b.find_element_by_xpath("//select[@id='jobsearch_0_value']/"
             "option[normalize-space(text())='None']").click()
 
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
 
         b.find_element_by_xpath("//select[@id='jobsearch_1_table'] \
             /option[@value='Id']").click()
@@ -129,7 +116,7 @@ class SearchJobsWD(WebDriverTestCase):
             /option[@value='is']").click()
         b.find_element_by_xpath("//input[@id='jobsearch_1_value']"). \
             send_keys(str(my_job.id))
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         job_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
 
@@ -138,7 +125,7 @@ class SearchJobsWD(WebDriverTestCase):
     def test_search_email(self):
         b = self.browser
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
             /option[@value='Owner/Email']").click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
@@ -146,7 +133,7 @@ class SearchJobsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="jobsearch_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="jobsearch_0_value"]'). \
             send_keys(self.running_job.owner.email_address)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         job_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
         self.assert_('J:%s' % self.running_job.id in job_search_result)
@@ -154,7 +141,7 @@ class SearchJobsWD(WebDriverTestCase):
     def test_search_owner(self):
         b = self.browser
         b.get(get_server_base() + 'jobs')
-        b.find_element_by_id('advancedsearch').click()
+        b.find_element_by_link_text('Show Search Options').click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_table'] \
             /option[@value='Owner/Username']").click()
         b.find_element_by_xpath("//select[@id='jobsearch_0_operation'] \
@@ -162,7 +149,7 @@ class SearchJobsWD(WebDriverTestCase):
         b.find_element_by_xpath('//input[@id="jobsearch_0_value"]').clear()
         b.find_element_by_xpath('//input[@id="jobsearch_0_value"]'). \
             send_keys(self.running_job.owner.user_name)
-        b.find_element_by_name('Search').click()
+        b.find_element_by_id('searchform').submit()
         job_search_result = \
             b.find_element_by_xpath('//table[@id="widget"]').text
         self.assert_('J:%s' % self.running_job.id in job_search_result)

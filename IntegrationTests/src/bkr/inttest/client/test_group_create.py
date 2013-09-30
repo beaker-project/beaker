@@ -1,4 +1,4 @@
-import unittest
+import unittest2 as unittest
 from turbogears.database import session
 from bkr.server.model import Activity, Group, User
 from bkr.inttest import data_setup
@@ -47,6 +47,24 @@ class GroupCreateTest(unittest.TestCase):
         except ClientError,e:
             self.assert_('Exactly one group name must be specified' in
                          e.stderr_output, e.stderr_output)
+        try:
+            out = run_client(['bkr', 'group-create',
+                              'areallylonggroupname'*20])
+            self.fail('Must fail or die')
+        except ClientError,e:
+            max_length = Group.group_name.property.columns[0].type.length
+            self.assertIn('Enter a value less than %r characters long' %
+                          max_length, e.stderr_output)
+        try:
+            out = run_client(['bkr', 'group-create',
+                              '--display-name',
+                              'A really long group display name'*20,
+                              'agroup'])
+            self.fail('Must fail or die')
+        except ClientError,e:
+            max_length = Group.display_name.property.columns[0].type.length
+            self.assertIn('Enter a value less than %r characters long' %
+                          max_length, e.stderr_output)
 
     def test_ldap_group(self):
 

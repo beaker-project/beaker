@@ -1,11 +1,21 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from model import *
-from turbogears import identity, redirect, config
-import search_utility as su
+from turbogears import expose, flash, widgets, validate, error_handler, validators, paginate, url
+from turbogears import redirect, config
 import bkr
 import bkr.server.stdvars
-from bkr.server.model import TaskBase
+import bkr.server.search_utility as su
+from bkr.server.model import (TaskBase, Device, System, SystemGroup,
+                              SystemActivity, Key, OSMajor, DistroTree,
+                              Arch, TaskPriority, Group, GroupActivity,
+                              RecipeSet, RecipeSetActivity, User,
+                              LabInfo, ReleaseAction, PowerType,
+                              LabController, Hypervisor, KernelType,
+                              SystemType, Distro, Note, Power, Job,
+                              InstallOptions, ExcludeOSMajor,
+                              ExcludeOSVersion, OSVersion,
+                              Provision, ProvisionFamily,
+                              ProvisionFamilyUpdate, SystemStatus,
+                              Key_Value_Int, Key_Value_String)
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
@@ -26,27 +36,11 @@ from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
 from bkr.server.systems import SystemsController
 from bkr.server.system_action import SystemAction as SystemActionController
-from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid
-from bkr.server.widgets import LoanWidget
-from bkr.server.widgets import DoAndConfirmForm
-from bkr.server.widgets import PowerTypeForm
-from bkr.server.widgets import PowerForm
-from bkr.server.widgets import PowerActionHistory
-from bkr.server.widgets import LabInfoForm
-from bkr.server.widgets import PowerActionForm
-from bkr.server.widgets import ReportProblemForm
-from bkr.server.widgets import SystemDetails
-from bkr.server.widgets import SystemHistory
-from bkr.server.widgets import SystemExclude
-from bkr.server.widgets import SystemKeys
-from bkr.server.widgets import SystemNotes
-from bkr.server.widgets import SystemGroups
-from bkr.server.widgets import SystemInstallOptions
-from bkr.server.widgets import SystemProvision
-from bkr.server.widgets import SearchBar, SystemForm
-from bkr.server.widgets import SystemArches
-from bkr.server.widgets import TaskSearchForm
-from bkr.server.widgets import SystemActions
+from bkr.server.widgets import TaskSearchForm, SystemArches, SearchBar, \
+    SystemForm, SystemProvision, SystemInstallOptions, SystemGroups, \
+    SystemNotes, SystemKeys, SystemExclude, SystemHistory, SystemDetails, \
+    SystemCommandsForm, LabInfoForm, PowerActionHistory, LoanWidget, \
+    myPaginateDataGrid, PowerForm, AutoCompleteTextField, SystemActions
 from bkr.server.preferences import Preferences
 from bkr.server.authentication import Auth
 from bkr.server.xmlrpccontroller import RPCRoot
@@ -57,44 +51,33 @@ from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
 from bkr.server.kickstart import KickstartController
 from bkr.server.controller_utilities import Utility, \
-    SystemSaveForm, SystemTab, restrict_http_method
-from bkr.server.bexceptions import *
-import bkr.server.validators as beaker_validators
+    SystemSaveForm, restrict_http_method
+from bkr.server.bexceptions import BeakerException, BX
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from bkr.server.helpers import *
-from bkr.server.tools.init import dummy
-from bkr.server import mail, needpropertyxml, metrics
+from bkr.server.helpers import make_link
+from bkr.server import needpropertyxml, metrics, identity
 from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
-import urllib
-from kid import Element
+import kid
 import cherrypy
-from hashlib import md5
 import re
-import string
+import os
 import pkg_resources
 import rdflib.graph
-import formencode.variabledecode
+from sqlalchemy import and_, join
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.exc import InvalidRequestError
+import time
+from datetime import datetime
 
-# for debugging
-import sys
-
-# from bkr.server import json
 import logging
 log = logging.getLogger("bkr.server.controllers")
-import breadcrumbs
-from datetime import datetime, timedelta
 
-def identity_failure_url(errors):
-    if identity.current.anonymous:
-        return '/login'
-    else:
-        return '/forbidden?%s' % urllib.urlencode({'reason': errors}, doseq=True)
-config.update({'identity.failure_url': identity_failure_url})
+# This ridiculous hack gets us an HTML5 doctype in our Kid template output.
+config.update({'kid.outputformat': kid.HTMLSerializer(doctype=('html',))})
 
 class Arches:
     @expose(format='json')
@@ -118,7 +101,6 @@ class Devices:
         return dict(title="", 
                     grid = device_grid, 
                     search_bar=None,
-                    object_count = systems.count(),
                     list = systems)
 
     @expose(template='bkr.server.templates.grid')
@@ -143,7 +125,6 @@ class Devices:
         return dict(title="Devices", 
                     grid = devices_grid, 
                     search_bar=None, 
-                    object_count = devices.count(),
                     list = devices)
 
 
@@ -188,10 +169,9 @@ class Root(RPCRoot):
     id         = widgets.HiddenField(name='id')
     submit     = widgets.SubmitButton(name='submit')
 
-    autoUsers  = widgets.AutoCompleteTextField(name='user',
-                                           search_controller=url("/users/by_name"),
-                                           search_param="input",
-                                           result_name="matches")
+    autoUsers = AutoCompleteTextField(name='user',
+        search_controller=url("/users/by_name"), search_param="input",
+        result_name="matches")
 
     loan_form     = widgets.TableForm(
         'Loan',
@@ -214,8 +194,7 @@ class Root(RPCRoot):
     system_form = SystemForm()
     power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')
-    power_action_form = PowerActionForm(name='power_action')
-    clear_netboot = DoAndConfirmForm()
+    commands_form = SystemCommandsForm(name='commands')
     power_history = PowerActionHistory()
     system_details = SystemDetails()
     system_activity = SystemHistory()
@@ -229,28 +208,6 @@ class Root(RPCRoot):
     task_form = TaskSearchForm(name='tasks')
     system_actions = SystemActions()
 
-    @expose(format='json')
-    def change_system_admin(self,system_id=None,group_id=None,cmd=None,**kw):
-        if system_id is None or group_id is None or cmd is None:
-            log.debug('Did not call change_system_admin with correct formal args')
-            return {'success' : 0}
-
-        sys = System.by_id(system_id,identity.current.user)
-        if not sys.is_admin():
-            #Someone tried to be tricky...
-            return {'success' : 0}
-
-        assoc = SystemGroup.query.filter(and_(
-                SystemGroup.system == sys, SystemGroup.group_id == group_id)).one()
-        if not assoc:
-            return {'success': 0}
-        if cmd == 'add':
-            assoc.admin = True
-            return { 'success' : 1 }
-        if cmd == 'remove':
-            assoc.admin = False
-            return {'success' : 1 }
-
 
     @expose(format='json')
     def get_keyvalue_search_options(self,**kw):
@@ -259,7 +216,7 @@ class Root(RPCRoot):
         return return_dict
 
     @expose(format='json')
-    def get_search_options_distros(self,table_field,**kw):
+    def get_search_options_distros(self,table_field, *args, **kw):
         return su.Distro.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
@@ -267,7 +224,7 @@ class Root(RPCRoot):
         return su.Recipe.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
-    def get_search_options_job(self,table_field,**kw):
+    def get_search_options_job(self,table_field, *args, **kw):
         return su.Job.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
@@ -284,7 +241,7 @@ class Root(RPCRoot):
         return su.Key.search.get_search_options(keyvalue_field, *args, **kw)
 
     @expose(format='json')
-    def get_search_options(self,table_field,**kw):
+    def get_search_options(self,table_field, *args, **kw):
         return_dict = {}
         search =  su.System.search.search_on(table_field)
       
@@ -343,7 +300,7 @@ class Root(RPCRoot):
         try:
             recipeset = RecipeSet.by_id(recipeset_id)
             old_priority = recipeset.priority
-        except NoResultFound:
+        except NoResultFound as e:
             log.error('No rows returned for recipeset_id %s in change_priority_recipeset:%s' % (recipeset_id,e))
             return { 'success' : None, 'msg' : 'RecipeSet is not valid' }
 
@@ -361,7 +318,7 @@ class Root(RPCRoot):
         recipeset.activity.append(activity)
         return {'success' : True } 
 
-    @expose(template='bkr.server.templates.grid_add')
+    @expose(template='bkr.server.templates.grid')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
@@ -406,10 +363,10 @@ class Root(RPCRoot):
         def reserve_link(x, distro_tree):
             if x.is_free():
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
-                        % (x.id, distro_tree.id), 'Reserve Now')
+                        % (x.id, distro_tree.id), 'Reserve Now', elem_class='btn')
             else:
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
-                        % (x.id, distro_tree.id), 'Queue Reservation')
+                        % (x.id, distro_tree.id), 'Queue Reservation', elem_class='btn')
         try:
             distro_tree = DistroTree.by_id(kw['distro_tree_id'])
         except KeyError:
@@ -451,9 +408,9 @@ class Root(RPCRoot):
             col = class_field_list[1]              
             #If value id False or True, let's convert them to
             if class_field_list[0] != 'Key':
-               sys_search.append_results(cls_ref,search['value'],col,search['operation']) 
+                sys_search.append_results(cls_ref,search['value'],col,search['operation'])
             else:
-               sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue=search['keyvalue']) 
+                sys_search.append_results(cls_ref,search['value'],col,search['operation'],keyvalue=search['keyvalue'])
 
         return sys_search.return_results()
               
@@ -579,12 +536,12 @@ class Root(RPCRoot):
         if 'direct_columns' in kw: #Let's add our direct columns here
             for index,col in kw['direct_columns']:
                 my_fields.insert(index - 1, col)
-        display_grid = myPaginateDataGrid(fields=my_fields)
+        display_grid = myPaginateDataGrid(fields=my_fields,
+                add_action='/new' if not identity.current.anonymous else None)
         col_data = Utility.result_columns(columns)
         return dict(title=title,
                     grid = display_grid,
                     list = systems,
-                    object_count = systems.count(),
                     searchvalue = searchvalue,
                     options =  {'simplesearch' : simplesearch,'columns':col_data,
                                 'result_columns' : default_result_columns,
@@ -620,7 +577,7 @@ class Root(RPCRoot):
             flash(_(u"system_id, key_value_id and key_type must be provided"))
             redirect("/")
         
-        if system.can_admin(identity.current.user):
+        if system.can_edit(identity.current.user):
             if key_type == 'int':
                 key_values = system.key_values_int
             else:
@@ -656,13 +613,13 @@ class Root(RPCRoot):
         else:
             flash(_(u"system_id and arch_id must be provided"))
             redirect("/")
-        if system.can_admin(identity.current.user):
-           for arch in system.arch:
-               if arch.id == int(arch_id):
-                   system.arch.remove(arch)
-                   removed = arch
-                   activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Arch', arch.arch, "")
-                   system.activity.append(activity)
+        if system.can_edit(identity.current.user):
+            for arch in system.arch:
+                if arch.id == int(arch_id):
+                    system.arch.remove(arch)
+                    removed = arch
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Arch', arch.arch, "")
+                    system.activity.append(activity)
         if removed:
             system.date_modified = datetime.utcnow()
             flash(_(u"%s Removed" % removed.arch))
@@ -684,19 +641,15 @@ class Root(RPCRoot):
         else:
             flash(_(u"system_id and group_id must be provided"))
             redirect("/")
-        if not identity.in_group("admin") and \
-          system.shared and len(system.groups) == 1:
-            flash(_(u"You don't have permission to remove the last group if the system is shared"))
-            redirect("./view/%s" % system.fqdn)
-        if system.can_admin(identity.current.user):
-           for group in system.groups:
-               if group.group_id == int(group_id):
-                   system.groups.remove(group)
-                   removed = group
-                   activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Group', group.display_name, "")
-                   gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Removed', 'System', "", system.fqdn)
-                   group.activity.append(gactivity)
-                   system.activity.append(activity)
+        if system.can_edit(identity.current.user):
+            for group in system.groups:
+                if group.group_id == int(group_id):
+                    system.groups.remove(group)
+                    removed = group
+                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Group', group.display_name, "")
+                    gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Removed', 'System', "", system.fqdn)
+                    group.activity.append(gactivity)
+                    system.activity.append(activity)
         if removed:
             system.date_modified = datetime.utcnow()
             flash(_(u"%s Removed" % removed.display_name))
@@ -704,9 +657,9 @@ class Root(RPCRoot):
             flash(_(u"Group ID not found"))
         redirect("./view/%s" % system.fqdn)
 
-    @expose(template="bkr.server.templates.system")
+    @expose(template="bkr.server.templates.form-post")
     @identity.require(identity.not_anonymous())
-    def new(self):
+    def new(self, **kwargs):
         options = {}
         options['edit'] = True
         return dict(
@@ -720,18 +673,19 @@ class Root(RPCRoot):
     def _get_system_options(self, system):
         options = {}
         our_user = identity.current.user
-        if system.can_admin(user=our_user):
-            options['owner_change_text'] = ' (Change)'
+        if our_user and system.can_change_owner(our_user):
+            options['owner_change_text'] = 'Change'
 
         options['loan_widget'] = LoanWidget()
 
-        # Has privs and machine is available, can take
-        if system.can_share(our_user) and \
-            system.can_provision_now(our_user):
-                options['user_change_text'] = ' (Take)'
+        if our_user:
+            if (system.open_reservation and system.open_reservation.type != 'recipe'
+                and system.can_unreserve(our_user)):
+                options['user_change_text'] = 'Return'
+            elif (system.status != SystemStatus.automated and
+                  system.is_free() and system.can_reserve(our_user)):
+                options['user_change_text'] = 'Take'
 
-        if system.current_user(our_user):
-            options['user_change_text'] = ' (Return)'
         if system.open_reservation is not None and \
             system.open_reservation.recipe:
                 job_id = system.open_reservation.recipe.recipeset.job.id
@@ -771,20 +725,23 @@ class Root(RPCRoot):
             flash( _(u"No given system to view") )
             redirect("/")
         our_user = identity.current.user
-        if system.can_admin(user=our_user):
-            readonly = False
+        if our_user:
+            readonly = not system.can_edit(our_user)
+            is_user = (system.user == our_user)
+            can_reserve = system.can_reserve(our_user)
+            can_power = system.can_power(our_user)
         else:
             readonly = True
-        if system.current_user(our_user):
-            is_user = True
-        else:
             is_user = False
+            can_reserve = False
+            can_power = False
         title = system.fqdn
-        currently_held = system.user == our_user
         options = self._get_system_options(system)
         options['edit'] = False
-        self.provision_now_rights,self.will_provision,self.provision_action = \
-                SystemTab.get_provision_perms(system, our_user, currently_held)
+        if system.status == SystemStatus.automated:
+            provision_action = '/schedule_provision'
+        else:
+            provision_action = '/action_provision'
 
         if 'activities_found' in histories_return:
             historical_data = histories_return['activities_found']
@@ -803,17 +760,11 @@ class Root(RPCRoot):
         options['excluded_families'] = []
         for arch in system.arch:
             options['excluded_families'].append((arch.arch, [(osmajor.id, osmajor.osmajor, [(osversion.id, '%s' % osversion, attrs) for osversion in osmajor.osversion],attrs) for osmajor in OSMajor.query]))
-        try:
-            can_admin = system.can_admin(user = identity.current.user)
-        except AttributeError,e:
-            can_admin = False
-
 
         # If you have anything in your widgets 'javascript' variable,
         # do not return the widget here, the JS will not be loaded,
         # return it as an arg in return()
         widgets = dict(
-                        labinfo   = self.labinfo_form,
                         details   = self.system_details,
                         exclude   = self.system_exclude,
                         keys      = self.system_keys,
@@ -824,9 +775,10 @@ class Root(RPCRoot):
                       )
         widgets['provision'] = self.system_provision
         widgets['power'] = self.power_form
-        widgets['power_action'] = self.power_action_form
-        widgets['clear_netboot'] = self.clear_netboot
+        widgets['commands_form'] = self.commands_form
         widgets['power_history'] = self.power_history
+        # Lab Info is deprecated, only show it if the system has existing data
+        widgets['labinfo'] = self.labinfo_form if system.labinfo else None
 
         return dict(
             title           = title,
@@ -839,17 +791,17 @@ class Root(RPCRoot):
             task_widget     = self.task_form,
             history_widget  = self.system_activity,
             widgets         = widgets,
-            widgets_action  = dict( power     = '/save_power',
-                                    history   = '/view/%s' % fqdn,
-                                    labinfo   = '/save_labinfo',
-                                    exclude   = '/save_exclude',
-                                    keys      = '/save_keys',
-                                    notes     = '/save_note',
-                                    groups    = '/save_group',
-                                    install   = '/save_install',
-                                    provision = getattr(self,'provision_action',''),
-                                    power_action = '/action_power',
-                                    arches    = '/save_arch',
+            widgets_action  = dict( power     = url('/save_power'),
+                                    history   = url('/view/%s' % fqdn),
+                                    labinfo   = url('/save_labinfo'),
+                                    exclude   = url('/save_exclude'),
+                                    keys      = url('/save_keys'),
+                                    notes     = url('/save_note'),
+                                    groups    = url('/save_group'),
+                                    install   = url('/save_install'),
+                                    provision = url(provision_action),
+                                    commands_form = url('/action_power'),
+                                    arches    = url('/save_arch'),
                                     tasks     = '/tasks/do_search',
                                   ),
             widgets_options = dict(power  = options,
@@ -864,17 +816,17 @@ class Root(RPCRoot):
                                                 notes = system.notes),
                                    groups    = dict(readonly = readonly,
                                                 group_assocs = system.group_assocs,
-                                                system_id = system.id,
-                                                can_admin = can_admin),
+                                                system_id = system.id),
                                    install   = dict(readonly = readonly,
                                                 provisions = system.provisions,
                                                 prov_arch = [(arch.id, arch.arch) for arch in system.arch]),
-                                   provision = dict(is_user = is_user,
-                                                    will_provision = self.will_provision,
-                                                    provision_now_rights = self.provision_now_rights,
+                                   provision = dict(reserved=is_user,
+                                                    automated=system.status == SystemStatus.automated,
+                                                    can_reserve=can_reserve,
                                                     lab_controller = system.lab_controller,
                                                     prov_install = [(dt.id, unicode(dt)) for dt in system.distro_trees().order_by(Distro.name, DistroTree.variant, DistroTree.arch_id)]),
-                                   power_action = dict(is_user=is_user),
+                                   commands_form = dict(is_user=is_user,
+                                                        can_power=can_power),
                                    arches    = dict(readonly = readonly,
                                                     arches = system.arch),
                                    tasks      = dict(system_id = system.id,
@@ -908,7 +860,7 @@ class Root(RPCRoot):
             system = System.by_id(id, our_user)
         elif fqdn:
             system = System.by_fqdn(fqdn, our_user)
-        if system and not system.can_admin(user=our_user):
+        if system and not system.can_edit(user=our_user):
             flash(_(u"You do not have permission to edit %s" % fqdn))
             redirect('/')
         title = system.fqdn
@@ -940,7 +892,7 @@ class Root(RPCRoot):
         except InvalidRequestError, e:
             log.exception(e)
             return ('0',)
-        if not system.can_admin(turbogears.identity.current.user):
+        if not system.can_edit(identity.current.user):
             log.error('User does not have the correct permission to delete this note')
             return ('0',)
         note = Note.query.filter_by(id=id).one()
@@ -950,56 +902,13 @@ class Root(RPCRoot):
 
     @expose(template='bkr.server.templates.form')
     @identity.require(identity.not_anonymous())
-    def loan_change(self, id, switch_user=False):
-        def user_change_form():
-            return dict(
-                title   = "Loan system %s" % system.fqdn,
-                form = self.loan_form,
-                action = '/save_loan',
-                options = None,
-                value = {'id': system.id},
-            )
-
+    def owner_change(self, id=None, **kwargs):
         try:
             system = System.by_id(id,identity.current.user)
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
-
-        if system.loaned:
-            if switch_user:
-                # This implies a Change
-                if system.is_admin():
-                    return user_change_form()
-                else:
-                   flash( _(u"Insufficient permissions to change loanee of system"))
-                   redirect("/")
-            # This implies a Return
-            if system.current_loan(identity.current.user):
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', '%s' % system.loaned, 'None')
-                system.activity.append(activity)
-                system.loaned = None
-                flash( _(u"Loan Returned for %s" % system.fqdn) )
-                redirect("/view/%s" % system.fqdn)
-            else:
-                flash( _(u"Insufficient permissions to return loan"))
-                redirect("/")
-        else:
-            if not system.can_loan(identity.current.user):
-                flash( _(u"Insufficient permissions to loan system"))
-                redirect("/")
-            #This implies a Loan
-            return user_change_form()
-
-    @expose(template='bkr.server.templates.form')
-    @identity.require(identity.not_anonymous())
-    def owner_change(self, id):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to find system with id of %s" % id) )
-            redirect("/")
-        if not system.can_admin(identity.current.user):
+        if not system.can_change_owner(identity.current.user):
             flash( _(u"Insufficient permissions to change owner"))
             redirect("/")
 
@@ -1010,25 +919,6 @@ class Root(RPCRoot):
             options = None,
             value = {'id': system.id},
         )
-            
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def save_loan(self, id, *args, **kw):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to find system with id of %s" % id) )
-            redirect("/")
-
-        if not system.is_admin():
-            flash( _(u"Insufficient permissions to loan system"))
-            redirect("/")
-        user = User.by_user_name(kw['user'])
-        activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'Loaned To', '%s' % system.loaned , '%s' % user)
-        system.activity.append(activity)
-        system.loaned = user
-        flash( _(u"%s Loaned to %s" % (system.fqdn, user) ))
-        redirect("/view/%s" % system.fqdn)
     
     @expose()
     @validate(form=owner_form)
@@ -1040,7 +930,7 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
-        if not system.can_admin(identity.current.user):
+        if not system.can_change_owner(identity.current.user):
             flash( _(u"Insufficient permissions to change owner"))
             redirect("/")
         user = User.by_user_name(kw['user'])
@@ -1055,31 +945,26 @@ class Root(RPCRoot):
     @expose()
     @identity.require(identity.not_anonymous())
     def user_change(self, id):
-        msg = ""
-        status = None
-        activity = None
         current_identity = identity.current.user
         try:
             system = System.by_id(id, current_identity)
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
-        if system.current_user(current_identity):
+        if system.user:
             try:
                 system.unreserve_manually_reserved(service=u'WEBUI')
                 flash(_(u'Returned %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to return')
                 flash(_(u'Failed to return %s: %s') % (system.fqdn, e))
-        elif system.can_share(current_identity) and system.can_provision_now(current_identity):
+        else:
             try:
-                system.reserve(service=u'WEBUI', reservation_type=u'manual')
+                system.reserve_manually(service=u'WEBUI')
                 flash(_(u'Reserved %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to reserve')
                 flash(_(u'Failed to reserve %s: %s') % (system.fqdn, e))
-        else:
-            flash(_(u'You were unable to change the user for %s' % system.fqdn))
         redirect("/view/%s" % system.fqdn)
 
     system_cc_form = widgets.TableForm(
@@ -1106,7 +991,7 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash(_(u'Unable to find system with id of %s' % system_id))
             redirect('/')
-        if not system.can_admin(identity.current.user):
+        if not system.can_edit(identity.current.user):
             flash(_(u'Insufficient permissions to edit CC list'))
             redirect('/')
         return dict(
@@ -1127,7 +1012,7 @@ class Root(RPCRoot):
         except InvalidRequestError:
             flash(_(u'Unable to find system with id of %s' % id))
             redirect('/')
-        if not system.can_admin(identity.current.user):
+        if not system.can_edit(identity.current.user):
             flash(_(u'Insufficient permissions to edit CC list'))
             redirect('/')
         orig_value = list(system.cc)
@@ -1280,8 +1165,8 @@ class Root(RPCRoot):
 
     @expose()
     @validate(form=system_form)
-    @identity.require(identity.not_anonymous())
     @error_handler(new)
+    @identity.require(identity.not_anonymous())
     def save(self, **kw):
         if kw.get('id'):
             try:
@@ -1342,19 +1227,6 @@ class Root(RPCRoot):
                     new_val = unicode(new_val)
                 activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val)
                 system.activity.append(activity)
-        
-        # We only want admins to be able to share systems to everyone.
-        shared = kw.get('shared',False)
-        if shared != system.shared:
-            if not identity.in_group("admin") and \
-              shared and len(system.groups) == 0:
-                flash( _(u"You don't have permission to share without the system being in a group first " ) )
-                redirect("/view/%s" % system.fqdn)
-            current_val = unicode(system.shared and True or False) #give us the text 'True' or 'False'
-            new_val = unicode(shared and True) #give us the text 'True' or 'False'
-            activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', u'shared', current_val, new_val )
-            system.activity.append(activity)
-            system.shared = shared
                 
         log_bool_fields = [ 'private' ]
         for field in log_bool_fields:
@@ -1482,6 +1354,13 @@ class Root(RPCRoot):
             flash( _(u"Unable to look up system id:%s via your login" % id) )
             redirect("/")
 
+        if not system.power or not system.lab_controller:
+            flash(_(u'System is not configured for power support'))
+            redirect('/view/%s' % system.fqdn)
+        if not system.can_power(identity.current.user):
+            flash(_(u'You do not have permission to control this system'))
+            redirect('/view/%s' % system.fqdn)
+
         system.action_power(service='WEBUI', action=action)
         flash(_(u"%s power %s command enqueued" % (system.fqdn, action)))
         redirect("/view/%s" % system.fqdn)
@@ -1538,8 +1417,7 @@ class Root(RPCRoot):
                              koptions=None, koptions_post=None, reboot=None):
 
         """
-        We schedule a job which will provision a system. 
-
+        Immediately provision a Manual system. The system must already be reserved.
         """
         distro_tree_id = prov_install
         try:
@@ -1557,21 +1435,20 @@ class Root(RPCRoot):
         if user.rootpw_expired:
             flash( _(u"Your root password has expired, please change or clear it in order to submit jobs.") )
             redirect(u"/view/%s" % system.fqdn)
+        if system.user != user:
+            flash(_(u'Reserve a system before provisioning'))
+            redirect(u'view/%s' % system.fqdn)
 
         try:
-            can_provision_now = system.can_provision_now(user) #Check perms
-            if can_provision_now:
-                from bkr.server.kickstart import generate_kickstart
-                install_options = system.install_options(distro_tree).combined_with(
-                        InstallOptions.from_strings(ks_meta, koptions, koptions_post))
-                if 'ks' not in install_options.kernel_options:
-                    kickstart = generate_kickstart(install_options,
-                            distro_tree=distro_tree, system=system, user=user)
-                    install_options.kernel_options['ks'] = kickstart.link
-                system.configure_netboot(distro_tree,
-                        install_options.kernel_options_str, service=u'WEBUI')
-            else: #This shouldn't happen, maybe someone is trying to be funny
-                raise BX('User: %s has insufficent permissions to provision %s' % (user.user_name, system.fqdn))
+            from bkr.server.kickstart import generate_kickstart
+            install_options = system.install_options(distro_tree).combined_with(
+                    InstallOptions.from_strings(ks_meta, koptions, koptions_post))
+            if 'ks' not in install_options.kernel_options:
+                kickstart = generate_kickstart(install_options,
+                        distro_tree=distro_tree, system=system, user=user)
+                install_options.kernel_options['ks'] = kickstart.link
+            system.configure_netboot(distro_tree,
+                    install_options.kernel_options_str, service=u'WEBUI')
         except Exception, msg:
             log.exception('Failed to provision system %s', id)
             activity = SystemActivity(user=identity.current.user, service=u'WEBUI',
@@ -1692,7 +1569,7 @@ class Root(RPCRoot):
                     service=u'WEBUI', action=u'Removed',
                     field_name=u'InstallOption:kernel_options_post:%s/%s' % (arch, osversion),
                     old_value=prov.kernel_options_post, new_value=None))
-            system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates[osversion] = None
+            del system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates[osversion]
         elif kw.get('osmajor_id'):
             # remove osmajor option
             osmajor = OSMajor.by_id(int(kw['osmajor_id']))
@@ -1709,7 +1586,7 @@ class Root(RPCRoot):
                     service=u'WEBUI', action=u'Removed',
                     field_name=u'InstallOption:kernel_options_post:%s/%s' % (arch, osmajor),
                     old_value=prov.kernel_options_post, new_value=None))
-            system.provisions[arch].provision_families[osmajor] = None
+            del system.provisions[arch].provision_families[osmajor]
         else:
             # remove arch option
             prov = system.provisions[arch]
@@ -1725,7 +1602,7 @@ class Root(RPCRoot):
                     service=u'WEBUI', action=u'Removed',
                     field_name=u'InstallOption:kernel_options_post:%s' % arch,
                     old_value=prov.kernel_options_post, new_value=None))
-            system.provisions[arch] = None
+            del system.provisions[arch]
         system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
@@ -1750,7 +1627,7 @@ class Root(RPCRoot):
                 if system.provisions.has_key(arch):
                     if system.provisions[arch].provision_families.has_key(osversion.osmajor):
                         if system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates.has_key(osversion):
-                            provision = system.provisions[arch].provision_families[osmajor].provision_family_updates[osversion]
+                            provision = system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates[osversion]
                             action = "Changed"
                         else:
                             provision = ProvisionFamilyUpdate()
@@ -1822,7 +1699,7 @@ class Root(RPCRoot):
     def to_xml(self, taskid, to_screen=False, pretty=True, *args, **kw):
         try:
             task = TaskBase.get_by_t_id(taskid)
-        except Exception, e:
+        except Exception:
             flash(_('Invalid Task: %s' % taskid))
             redirect(url('/'))
         xml = task.to_xml()
@@ -1855,36 +1732,36 @@ class Root(RPCRoot):
 
     @expose(template='bkr.server.templates.forbidden')
     def forbidden(self, reason=None, **kwargs):
-        if reason and not isinstance(reason, list):
-            reason = [reason]
         response.status = 403
-        return dict(reasons=reason)
+        return dict(reason=reason)
 
     @expose(template="bkr.server.templates.login")
     def login(self, forward_url=None, **kwargs):
-        # need to undo the work of NestedVariablesFilter
-        original_parameters = formencode.variabledecode.variable_encode(kwargs)
-
         if not forward_url:
-            forward_url = request.headers.get('Referer', '/')
-        if not identity.current.anonymous \
-                and not identity.get_identity_errors():
-            redirect(forward_url, redirect_params=original_parameters)
-
-        if not identity.was_login_attempted():
-            msg = _('Please log in.')
+            forward_url = request.headers.get('Referer', url('/'))
+        # If the container is doing authentication for us, we might have 
+        # already been authenticated through REMOTE_USER.
+        if not identity.current.anonymous:
+            raise cherrypy.HTTPRedirect(forward_url)
+        # Is this a login attempt?
+        if cherrypy.request.method == 'POST':
+            user = User.by_user_name(kwargs.get('user_name'))
+            if user is not None and user.can_log_in() and \
+                    user.check_password(kwargs.get('password')):
+                # Attempt successful
+                identity.set_authentication(user)
+                raise cherrypy.HTTPRedirect(forward_url)
+            else:
+                msg = _('The credentials you supplied were not correct or '
+                        'did not grant access to this resource.')
         else:
-            msg = _('The credentials you supplied were not correct or '
-                    'did not grant access to this resource.')
-            
-        response.status=403 # XXX shouldn't this be 401?
-        return dict(message=msg, action=request.path, logging_in=True,
-                    original_parameters=original_parameters,
-                    forward_url=forward_url)
+            msg = _('Please log in.')
+        response.status = 403
+        return dict(message=msg, action='', forward_url=forward_url)
 
     @expose()
     def logout(self):
-        identity.current.logout()
+        identity.clear_authentication()
         raise redirect("/")
 
     @expose()

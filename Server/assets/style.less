@@ -1,0 +1,159 @@
+@import "bootstrap/less/bootstrap.less";
+@import "bootstrap/less/responsive.less";
+@import "font-awesome/less/font-awesome.less";
+@import "typeahead.js-bootstrap.less";
+
+// overrides for Bootstrap variables
+@sansFontFamily:  "Liberation Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+@serifFontFamily: Georgia, "Times New Roman", Times, serif;
+@monoFontFamily:  "Source Code Pro", "DejaVu Sans Mono", Monaco, Menlo, Consolas, "Courier New", monospace;
+// Bootstrap sets a global font size of 14px and line height of 20px, which is 
+// not very nice. It would be better to use 1em as the base font-size and use 
+// relative units for line height, so that we obey the font sizes configured in 
+// the browser. Unfortunately this won't work because Bootstrap assumes throughout 
+// that @baseLineHeight is an absolute size, not using relative units. :-(
+//@baseFontSize:          1em;
+//@baseLineHeight:        3ex;
+
+// overrides for FontAwesome variables
+@FontAwesomePath: "generated/font-awesome-3.2.1";
+
+// heading sizes (Bootstrap's are too generous)
+h1, h2, h3 { line-height: @baseLineHeight * 2; }
+h1 { font-size: @baseFontSize * 2.25; }
+h2 { font-size: @baseFontSize * 1.75; }
+h3 { font-size: @baseFontSize * 1.5; }
+h4 { font-size: @baseFontSize * 1.25; }
+h5 { font-size: @baseFontSize; }
+h6 { font-size: @baseFontSize; }
+h1 small { font-size: @baseFontSize * 1.5; }
+h2 small { font-size: @baseFontSize * 1.25; }
+h3 small { font-size: @baseFontSize * 1.25; }
+
+// We have some forms in table cells, and the bottom margin (from Bootstrap) 
+// ruins the row height.
+td form, td input, td select {
+    margin-bottom: 0 !important;
+}
+
+// By default, table cells are top-aligned. If every cell in a row has only one 
+// (notional) line, it makes more sense to middle-align them.
+.table-one-line-per-row td {
+    vertical-align: middle;
+}
+
+// To put stuff inline beside the pagination doodads
+// Use <div class="pagination-beside"><span>Extra stuff</span></div>
+.pagination-beside {
+    display: inline-block;
+    span {
+        // matches .pagination ul li a
+        float: left;
+        padding: 4px 12px;
+    }
+}
+
+// Use <div class="controls text-controls" /> if you have only 
+// regular text, not form controls.
+.text-controls {
+    padding-top: 5px; // corresponds to .control-label
+}
+
+// buttons in grid cells
+.table td .btn, .table th .btn {
+    white-space: nowrap;
+    padding: @paddingSmall;
+}
+
+// progress bars in grid cells
+.table td .progress {
+    min-width: 100px;
+    height: 12px;
+    margin-bottom: 0;
+}
+
+// dirty rows in editable tables
+.table > tbody > tr.dirty {
+    & > td, & > th {
+        background-color: @warningBackground;
+        font-style: italic;
+    }
+}
+
+// colour-coded status and result in jobs/recipes grid
+.statusCompleted, .resultPass { color: @green; }
+.statusAborted, .resultFail { color: @red; }
+.statusCancelled, .resultWarn { color: @orange; }
+.statusRunning { color: @blueDark; }
+.statusDirty { font-style: italic; }
+
+// jobs, recipe sets, and recipes on job page and recipe page
+table.job, table.recipe {
+    & > tbody > tr {
+        & > th {
+            text-align: right;
+        }
+        & > th, & > td {
+            border: none;
+        }
+    }
+}
+div.recipeset {
+    border: 2px solid @tableBorder;
+    padding: 1em;
+    margin: 1em 0;
+}
+div.recipe {
+    margin-top: 1em;
+    border-top: 2px solid @tableBorder;
+    padding-top: 1em;
+}
+table.recipe {
+    margin-bottom: 0;
+}
+
+// recipe tasks on job and recipe pages (and elsewhere)
+table.tasks {
+    & > tbody {
+        border-top: 2px solid @tableBorder;
+    }
+    & > tbody:nth-child(odd) > tr {
+        & > td, & > th {
+            background-color: @tableBackgroundAccent;
+        }
+    }
+    // need to repeat hover style here to override the striping
+    & > tbody > tr:hover {
+        & > td, & > th {
+            background-color: @tableBackgroundHover;
+        }
+    }
+}
+
+// elements from master.kid
+.container {
+    padding-top: 20px;
+}
+footer {
+    .muted;
+    text-align: right;
+}
+
+// typeaheads
+.tt-dropdown-menu {
+    min-width: 240px;
+}
+.tt-suggestion small {
+    .muted;
+    margin-left: 0.5em;
+}
+
+// reserve workflow
+.reserveworkflow {
+    input, select {
+        .input-xlarge;
+    }
+    select#form_distro_tree_id {
+        .input-xxlarge;
+    }
+}

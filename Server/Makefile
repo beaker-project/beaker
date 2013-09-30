@@ -1,24 +1,22 @@
 # License: GPL v2 or later
 # Copyright Red Hat Inc. 2008
 
-PKGNAME=beaker
-
-all: build
-	
-include ../rpmspec_rules.mk
-include ../py_rules.mk
-
-build: $(_SETUP_PY)
+.PHONY: build
+build:
 	env PYTHONPATH=../Common$${PYTHONPATH:+:$$PYTHONPATH} \
-	    python $(SETUP_PY) build --install-data=/usr/share/ \
+	    python setup.py build --install-data=/usr/share/ \
 	    | tee build.out
 	@if grep -q ImportError build.out ; then \
 	    echo "ImportErrors in build output, did Sphinx autodoc fail?" ; \
 	    exit 1 ; \
 	fi
 
-install: $(_SETUP_PY)
-	python $(SETUP_PY) install -O1 --skip-build \
+.PHONY: install
+install: build
+	python setup.py install -O1 --skip-build \
             --install-data=/usr/share --root $(DESTDIR)
 
-clean: py-clean
+.PHONY: clean
+clean:
+	python setup.py clean
+	rm -rf build

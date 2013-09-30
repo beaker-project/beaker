@@ -1,7 +1,7 @@
 import cracklib
-from turbogears import identity
 from turbogears.validators import FormValidator, Invalid, TgFancyValidator, Email
 from sqlalchemy.orm.exc import NoResultFound
+from bkr.server import identity
 from bkr.server.model import System, Recipe, User, LabController
 
 
@@ -139,7 +139,7 @@ class CheckRecipeValid(TgFancyValidator):
         try:
             recipe = Recipe.by_id(value)
         except NoResultFound:
-            raise validators.Invalid('Invalid recipe', value, state)
+            raise Invalid('Invalid recipe', value, state)
         return recipe
 
 
@@ -149,7 +149,7 @@ class CheckSystemValid(TgFancyValidator):
         try:
             system = System.by_fqdn(value, identity.current.user)
         except NoResultFound:
-            raise validators.Invalid('Invalid system', value, state)
+            raise Invalid('Invalid system', value, state)
         return system
 
 

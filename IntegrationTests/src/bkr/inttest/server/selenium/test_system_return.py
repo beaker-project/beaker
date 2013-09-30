@@ -22,10 +22,40 @@ class SystemReturnTestWD(WebDriverTestCase):
         system = self.recipe.resource.system
         login(b)
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_link_text('(Return)').click()
+        # "Return" button should be absent
+        b.find_element_by_xpath('//form[@name="form"'
+                                'and not(.//a[normalize-space(string(.))="Return"])]')
+        # try doing it directly
+        b.get(get_server_base() + 'user_change?id=%s' % system.id)
         self.assertEquals(b.find_element_by_css_selector('.flash').text,
             "Failed to return %s: Currently running R:%s" % (system.fqdn, self.recipe.id))
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1007789
+    def test_can_return_manual_reservation_when_automated(self):
+
+        with session.begin():
+            user = data_setup.create_user(password='foobar')
+            system = data_setup.create_system(owner=user, status=SystemStatus.manual)
+
+        b = self.browser
+        login(b, user=user.user_name, password="foobar")
+
+        # Take
+        b.get(get_server_base() + 'view/%s' % system.fqdn)
+        b.find_element_by_link_text('Take').click()
+        self.assertEquals(b.find_element_by_css_selector('.flash').text,
+                          "Reserved %s" % (system.fqdn))
+
+        # toggle status to Automated
+        with session.begin():
+            system.status = SystemStatus.automated
+        session.expunge_all()
+
+        # Attempt to return
+        b.get(get_server_base() + 'view/%s' % system.fqdn)
+        b.find_element_by_link_text('Return').click()
+        self.assertEquals(b.find_element_by_css_selector('.flash').text,
+                          "Returned %s" % (system.fqdn))
 
 class SystemReturnTest(SeleniumTestCase):
 
@@ -44,7 +74,7 @@ class SystemReturnTest(SeleniumTestCase):
         sel = self.selenium
         sel.open('view/%s' % self.system.fqdn)
         sel.wait_for_page_to_load(30000)
-        sel.click('link=(Take)')
+        sel.click('link=Take')
         sel.wait_for_page_to_load(30000)
 
         self.logout()
@@ -55,15 +85,14 @@ class SystemReturnTest(SeleniumTestCase):
         # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
         sel.open('user_change?id=%s' % self.system.id)
         sel.wait_for_page_to_load("30000")
-        self.assert_('You were unable to change the user for %s' % self.system.fqdn in sel.get_text('//body'))
-
+        self.assertIn('cannot unreserve system', sel.get_text('css=.flash'))
 
     def test_return_with_no_lc(self):
         sel = self.selenium
         self.login(user=self.user.user_name, password='password')
         sel.open('view/%s' % self.system.fqdn)
         sel.wait_for_page_to_load('30000')
-        sel.click('link=(Take)')
+        sel.click('link=Take')
         sel.wait_for_page_to_load('30000')
 
         # Let's remove the LC
@@ -78,7 +107,7 @@ class SystemReturnTest(SeleniumTestCase):
         self.login(user=self.user.user_name, password='password')
         sel.open('view/%s' % self.system.fqdn)
         sel.wait_for_page_to_load('30000')
-        sel.click('link=(Return)')
+        sel.click('link=Return')
         sel.wait_for_page_to_load('30000')
         text = sel.get_text('//body')
         self.assert_('Returned %s' % self.system.fqdn in text)

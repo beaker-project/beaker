@@ -16,29 +16,28 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 from datetime import datetime
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config, url
-from turbogears import identity, redirect
-from cherrypy import request, response
-from kid import Element
+from turbogears import expose, flash, widgets, redirect, paginate, url
+from sqlalchemy import not_, and_
+from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
+from bkr.common.bexceptions import BX
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import RecipeWidget
-from bkr.server.widgets import RecipeTasksWidget
 from bkr.server.widgets import SearchBar
-from bkr.server.widgets import RecipeActionWidget
-from bkr.server import search_utility
+from bkr.server import search_utility, identity
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
+from bkr.server.helpers import make_link
 from bkr.server.recipetasks import RecipeTasks
 from bkr.server.controller_utilities import _custom_status, _custom_result
-from socket import gethostname
-import exceptions
-import time
+from datetime import timedelta
 import urlparse
 
 import cherrypy
 
-from model import *
-import string
+from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
+                              MachineRecipe, SystemResource, VirtResource,
+                              VirtManager, LogRecipe, LogRecipeTask,
+                              LogRecipeTaskResult)
 
 import logging
 log = logging.getLogger(__name__)
@@ -46,7 +45,6 @@ log = logging.getLogger(__name__)
 class Recipes(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
-    action_widget = RecipeActionWidget()
     hidden_id = widgets.HiddenField(name='id')
     confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
     message = widgets.TextArea(name='msg', label=_(u'Reason?'), help_text=_(u'Optional'))
@@ -61,7 +59,6 @@ class Recipes(RPCRoot):
     tasks = RecipeTasks()
 
     recipe_widget = RecipeWidget()
-    recipe_tasks_widget = RecipeTasksWidget()
 
     log_types = dict(R = LogRecipe,
                      T = LogRecipeTask,
@@ -102,7 +99,7 @@ class Recipes(RPCRoot):
                     % recipe.t_id)
 
         # Add the log to the DB if it hasn't been recorded yet.
-        log_recipe = LogRecipe.lazy_create(parent=recipe,
+        log_recipe = LogRecipe.lazy_create(recipe_id=recipe.id,
                                            path=path,
                                            filename=filename,
                                           )
@@ -159,7 +156,7 @@ class Recipes(RPCRoot):
         if log_type.upper() in self.log_types.keys():
             try:
                 mylog = self.log_types[log_type.upper()].by_id(log_id)
-            except InvalidRequestError, e:
+            except InvalidRequestError:
                 raise BX(_("Invalid %s" % tid))
         mylog.server = server
         mylog.basepath = basepath
@@ -204,19 +201,23 @@ class Recipes(RPCRoot):
             recipe = Recipe.by_id(recipe_id)
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
-        recipe.resource.install_started = datetime.utcnow()
 
-        # extend watchdog by 3 hours 60 * 60 * 3
-        kill_time = 10800
-        # XXX In future releases where 'Provisioning'
-        # is a valid recipe state, we will no longer
-        # need the following block.
         first_task = recipe.first_task
-        log.debug('Extending watchdog for %s', first_task.t_id)
-        first_task.extend(kill_time)
-        log.debug('Recording /start for %s', first_task.t_id)
-        first_task.pass_(path=u'/start', score=0, summary=u'Install Started')
-        return True
+        if not recipe.resource.install_started:
+            recipe.resource.install_started = datetime.utcnow()
+            # extend watchdog by 3 hours 60 * 60 * 3
+            kill_time = 10800
+            # XXX In future releases where 'Provisioning'
+            # is a valid recipe state, we will no longer
+            # need the following block.
+            log.debug('Extending watchdog for %s', first_task.t_id)
+            first_task.extend(kill_time)
+            log.debug('Recording /start for %s', first_task.t_id)
+            first_task.pass_(path=u'/start', score=0, summary=u'Install Started')
+            return True
+        else:
+            log.debug('Already recorded /start for %s', first_task.t_id)
+            return False
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
@@ -226,7 +227,7 @@ class Recipes(RPCRoot):
         """
         try:
             recipe = Recipe.by_id(recipe_id)
-        except InvalidRequestError, e:
+        except InvalidRequestError:
             raise BX(_(u'Invalid Recipe ID %s' % recipe_id))
         recipe.resource.postinstall_finished = datetime.utcnow()
         return True
@@ -295,7 +296,7 @@ class Recipes(RPCRoot):
         if not recipe_id:
             raise BX(_("No recipe id provided!"))
         try:
-           recipexml = Recipe.by_id(recipe_id).to_xml().toprettyxml()
+            recipexml = Recipe.by_id(recipe_id).to_xml().toprettyxml()
         except InvalidRequestError:
             raise BX(_("Invalid Recipe ID %s" % recipe_id))
         return recipexml
@@ -395,7 +396,7 @@ class Recipes(RPCRoot):
                 PDC(name='result',
                     getter=_custom_result, title='Result',
                     options=dict(sortable=True)),
-                PDC(name='action', getter=lambda x:self.action_widget(x),
+                PDC(name='action', getter=lambda x:self.action_cell(x),
                     title='Action', options=dict(sortable=False)),])
 
         search_bar = SearchBar(name='recipesearch',
@@ -406,7 +407,6 @@ class Recipes(RPCRoot):
                            search_controller=url("/get_search_options_recipe"), 
                            quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
         return dict(title="Recipes", 
-                    object_count=recipes.count(),
                     grid=recipes_grid, 
                     list=recipes,
                     search_bar=search_bar,
@@ -414,12 +414,15 @@ class Recipes(RPCRoot):
                     options=search_options,
                     searchvalue=searchvalue)
 
+    def action_cell(self, recipe):
+        return make_link(recipe.clone_link(), 'Clone RecipeSet', elem_class='btn')
+
     @expose(template='bkr.server.templates.grid')
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def systems(self, recipe_id=None, *args, **kw):
         try:
             recipe = Recipe.by_id(recipe_id)
-        except NoResultFound, e:
+        except NoResultFound:
             flash(_(u"Invalid recipe id %s" % recipe_id))
             redirect(url("/recipes"))
         PDC = widgets.PaginateDataGrid.Column
@@ -427,7 +430,7 @@ class Recipes(RPCRoot):
             PDC(name='user', getter=lambda x: x.user.email_link if x.user else None, title='User'),]
         grid = myPaginateDataGrid(fields=fields)
         return dict(title='Recipe Systems', grid=grid, list=recipe.systems,
-            object_count = len(recipe.systems), search_bar=None)
+            search_bar=None)
 
     @expose(template="bkr.server.templates.recipe")
     def default(self, id):
@@ -441,7 +444,6 @@ class Recipes(RPCRoot):
             redirect(".")
         return dict(title   = 'Recipe',
                     recipe_widget        = self.recipe_widget,
-                    recipe_tasks_widget  = self.recipe_tasks_widget,
                     recipe               = recipe)
 
 # hack for Sphinx

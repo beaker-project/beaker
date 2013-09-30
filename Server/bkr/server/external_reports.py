@@ -1,7 +1,8 @@
-from turbogears import expose, url, validators, identity, validate, \
+from turbogears import expose, url, validators, validate, \
     error_handler, flash, redirect
 from turbogears.database import session
 from turbogears.widgets import TableForm, TextArea, TextField, HiddenField
+from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.widgets import DeleteLinkWidgetForm
 from bkr.server.model import ExternalReport

@@ -9,7 +9,9 @@
 key {{ key|default('49af89414d147589') }}
 
 {% if manual is undefined %}
-auth --useshadow --enablemd5
+{% if auth %}
+auth {{ auth }}
+{% endif %}
 # System bootloader configuration
 bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}
 

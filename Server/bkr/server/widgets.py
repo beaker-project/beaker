@@ -10,22 +10,65 @@ import random
 import search_utility
 from decimal import Decimal
 from itertools import chain
+from turbogears import widgets
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
-                                AutoCompleteField, SingleSelectField, CheckBox, 
+                                SingleSelectField, CheckBox, 
                                 HiddenField, RemoteForm, LinkRemoteFunction, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, DataGrid, RepeatingFormField,
-                                CompoundWidget, AjaxGrid, Tabber, CSSLink,
-                                RadioButtonList, MultipleSelectField, Button,
+                                CompoundWidget, AjaxGrid, CSSLink,
+                                MultipleSelectField, Button,
                                 RepeatingFieldSet, SelectionField, WidgetsList,
                                 PasswordField)
 
-from bkr.server import model, search_utility
+from bkr.server import model, search_utility, identity
+from bkr.server.assets import get_assets_env
 from bkr.server.bexceptions import BeakerException
-from bkr.server.helpers import make_fake_link, make_link
+from bkr.server.helpers import make_link
 from bkr.server.validators import UniqueLabControllerEmail
 import logging
 log = logging.getLogger(__name__)
+
+class AutoCompleteTextField(widgets.AutoCompleteTextField):
+
+
+    template="""
+    <span xmlns:py="http://purl.org/kid/ns#" class="${field_class}">
+    <script type="text/javascript">
+        AutoCompleteManager${field_id} = new AutoCompleteManager('${field_id}', '${field_id}', null,
+        '${search_controller}', '${search_param}', '${result_name}', ${str(only_suggest).lower()},
+        '${show_spinner and tg.url('/tg_widgets/turbogears.widgets/spinner.gif') or None}',
+        ${complete_delay}, ${str(take_focus).lower()}, ${min_chars});
+        addLoadEvent(AutoCompleteManager${field_id}.initialize);
+    </script>
+    <input type="text" name="${name}" class="${field_class}" id="${field_id}"
+        value="${value}" py:attrs="attrs"/>
+    <img py:if="show_spinner" id="autoCompleteSpinner${field_id}"
+        src="${tg.url('/tg_widgets/turbogears.widgets/spinnerstopped.png')}" alt=""/>
+    <span class="autoTextResults" id="autoCompleteResults${field_id}"/>
+    </span>
+    """
+
+class AutoCompleteField(widgets.AutoCompleteField):
+    """Text field with auto complete functionality and hidden key field."""
+
+    template = """
+    <span xmlns:py="http://purl.org/kid/ns#" id="${field_id}" class="${field_class}">
+    <script type="text/javascript">
+        AutoCompleteManager${field_id} = new AutoCompleteManager('${field_id}',
+        '${text_field.field_id}', '${hidden_field.field_id}',
+        '${search_controller}', '${search_param}', '${result_name}',${str(only_suggest).lower()},
+        '${show_spinner and tg.url('/tg_widgets/turbogears.widgets/spinner.gif') or None}',
+        ${complete_delay}, ${str(take_focus).lower()}, ${min_chars});
+        addLoadEvent(AutoCompleteManager${field_id}.initialize);
+    </script>
+    ${text_field.display(value_for(text_field), **params_for(text_field))}
+    <img py:if="show_spinner" id="autoCompleteSpinner${field_id}"
+        src="${tg.url('/tg_widgets/turbogears.widgets/spinnerstopped.png')}" alt=""/>
+    <span class="autoTextResults" id="autoCompleteResults${field_id}"/>
+    ${hidden_field.display(value_for(hidden_field), **params_for(hidden_field))}
+    </span>
+    """
 
 
 class Hostname(validators.Regex):
@@ -50,30 +93,9 @@ class ValidEnumValue(validators.FancyValidator):
         try:
             return self.enum_type.from_string(value)
         except ValueError:
-            raise Invalid(self.message('invalid', state), value, state)
+            raise validators.Invalid(self.message('invalid', state), value, state)
     def _from_python(self, value, state):
         return value.value
-
-class UtilJSON:
-     @classmethod
-     def dynamic_json(cls):
-         return lambda param: cls.__return_array_of_json(param)
-
-     @classmethod
-     def __return_array_of_json(cls,x):
-         if x:
-             jsonified_fields = [jsonify.encode(elem) for elem in x]
-             return ','.join(jsonified_fields)
-             """
-             FIXME Add in here support for non-lists, something like:
-             if isinstance(x, list):
-                 jsonified_fields = [jsonify.encode(elem) for elem in x]
-                 return_json = ','.join(jsonified_fields)
-             else:
-                 jsonified_fields = jsonify.encode(x)
-                 return_json = jsonified_fields
-             return return_json
-             """
 
 class LocalJSLink(JSLink):
     """
@@ -94,10 +116,96 @@ class LocalCSSLink(CSSLink):
         d["link"] = self.name
 
 
-jquery = LocalJSLink('bkr', '/static/javascript/jquery-1.5.1.min.js',
-        order=1) # needs to come after MochiKit
+class LocalJSBundleLink(LocalJSLink):
 
-local_datetime = LocalJSLink('bkr', '/static/javascript/local_datetime_v2.js')
+    template = """
+        <script xmlns:py="http://purl.org/kid/ns#"
+            py:for="url in urls"
+            type="text/javascript" src="$url" />
+        """
+
+    def __init__(self, name, **kwargs):
+        super(LocalJSBundleLink, self).__init__('bkr.server', name, **kwargs)
+
+    def update_params(self, d):
+        super(LocalJSBundleLink, self).update_params(d)
+        bundle = get_assets_env()[self.name]
+        d['urls'] = [url(u) for u in bundle.urls()]
+
+
+class LocalCSSBundleLink(LocalCSSLink):
+
+    template = """
+        <link xmlns:py="http://purl.org/kid/ns#"
+            py:for="url in urls"
+            rel="stylesheet" type="text/css" media="$media"
+            href="$url" />
+        """
+
+    def __init__(self, name, **kwargs):
+        super(LocalCSSBundleLink, self).__init__('bkr.server', name, **kwargs)
+
+    def update_params(self, d):
+        super(LocalCSSBundleLink, self).update_params(d)
+        bundle = get_assets_env()[self.name]
+        d['urls'] = [url(u) for u in bundle.urls()]
+
+
+jquery = LocalJSLink('bkr', '/static/javascript/jquery-2.0.2.min.js',
+        order=1) # needs to come after MochiKit
+beaker_js = LocalJSBundleLink('js', order=5)
+beaker_css = LocalCSSBundleLink('css')
+
+
+class HorizontalForm(Form):
+    template = 'bkr.server.templates.horizontal_form'
+    params = ['legend_text']
+
+
+class InlineForm(Form):
+    template = 'bkr.server.templates.inline_form'
+
+class InlineRemoteForm(RPC, InlineForm):
+
+    # copied from turbogears.widgets.RemoteForm
+    def update_params(self, d):
+        super(InlineRemoteForm, self).update_params(d)
+        d['form_attrs']['onSubmit'] = "return !remoteFormRequest(this, '%s', %s);" % (
+            d.get("update", ''), jsonify.encode(self.get_options(d)))
+
+
+class RadioButtonList(SelectionField):
+    template = """
+    <div xmlns:py="http://purl.org/kid/ns#" py:strip="True">
+        <label py:for="value, desc, attrs in options" class="radio">
+            <input type="radio"
+                name="${name}"
+                id="${field_id}_${value}"
+                value="${value}"
+                py:attrs="attrs"
+            />
+            ${desc}
+        </label>
+    </div>
+    """
+    _selected_verb = 'checked'
+
+class CheckBoxList(SelectionField):
+    template = """
+    <div xmlns:py="http://purl.org/kid/ns#" py:strip="True">
+        <label py:for="value, desc, attrs in options" class="radio">
+            <input type="checkbox"
+                name="${name}"
+                id="${field_id}_${value}"
+                value="${value}"
+                py:attrs="attrs"
+            />
+            ${desc}
+        </label>
+    </div>
+    """
+    _multiple_selection = True
+    _selected_verb = 'checked'
 
 
 class UnmangledHiddenField(HiddenField):
@@ -112,22 +220,13 @@ class UnmangledHiddenField(HiddenField):
 
 
 class DeleteLinkWidget(Widget):
-    javascript = [LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js', order=3),
         LocalJSLink('bkr', '/static/javascript/util.js')]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
-
-    def update_params(self, d):
-        if not d.get('action_text', None):
-            d['action_text'] = 'Delete ( - )'
-        # 'class' cannot be interpolated in our templates
-        # so we use 'class_' before changing it back
-        if d.get('attrs', None):
-            class_ = d['attrs'].pop('class_', None)
-            if class_:
-                d['attrs']['class'] = class_
-        else:
-            d['attrs']= {'class' : 'link'}
-        super(DeleteLinkWidget, self).update_params(d)
+    params = ['msg', 'action_text', 'show_icon']
+    msg = None
+    action_text = _(u'Delete')
+    show_icon = True
 
 class DoAndConfirmForm(Form):
     """Generic confirmation dialogue
@@ -144,7 +243,7 @@ class DoAndConfirmForm(Form):
     params = ['msg', 'action_text', 'look']
 
     def __init__(self, *args, **kw):
-        self.javascript.extend([LocalJSLink('bkr', '/static/javascript/jquery-ui.js'), 
+        self.javascript.extend([LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js', order=3),
             LocalJSLink('bkr', '/static/javascript/util.js'),])
         self.css.append(LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css'))
 
@@ -169,11 +268,13 @@ class DeleteLinkWidgetForm(Form, DeleteLinkWidget):
         <span py:for="field in hidden_fields"
           py:replace="field.display()"/>
             <a href="#" onclick="javascript:job_delete(this.parentNode);return false;" 
-               py:attrs='attrs'>${action_text}</a>
+               class="btn">
+              <i class="icon-remove" py:if="show_icon"/> ${action_text}
+            </a>
       </form>
     </span>
     """
-    params = ['attrs', 'msg', 'action_text']
+    params = ['msg', 'action_text']
 
     def update_params(self, d):
         super(DeleteLinkWidgetForm, self).update_params(d)
@@ -186,10 +287,12 @@ class DeleteLinkWidgetForm(Form, DeleteLinkWidget):
 
 class DeleteLinkWidgetAJAX(DeleteLinkWidget):
 
-    template="""<a xmlns:py='http://purl.org/kid/ns#' href="#"
+    template="""<a xmlns:py='http://purl.org/kid/ns#' class="btn" href="#"
         onclick="javascript:do_and_confirm_ajax('${action}', ${data}, ${callback},
-        '${msg}', '${action_type}');return false" py:attrs='attrs'>${action_text}</a>"""
-    params = ['data', 'callback', 'action_type', 'msg', 'action_text']
+        '${msg}', '${action_type}');return false">
+            <i class="icon-remove" py:if="show_icon"/> ${action_text}
+        </a>"""
+    params = ['data', 'callback', 'action_type']
 
     def display(self, value=None, **params):
         missing = [(i, True) for i in ['action', 'data', 'callback']
@@ -198,18 +301,15 @@ class DeleteLinkWidgetAJAX(DeleteLinkWidget):
             raise ValueError('Missing arguments to %s: %s' %
                 (self.__class__.__name__, ','.join(dict(missing).keys())))
         params['action_type'] = params.get('action_type', 'delete')
-        params['msg'] = params.get('msg', None)
-        if not params.get('action_text', None):
-            params['action_text'] = 'Delete'
         params['data'] = jsonify.encode(params['data'])
         return super(DeleteLinkWidgetAJAX, self).display(value, **params)
 
 
 class GroupPermissions(Widget):
 
-    javascript = [LocalJSLink('bkr', '/static/javascript/group_permission_v2.js'),
+    javascript = [LocalJSLink('bkr', '/static/javascript/group_permission_v4.js'),
         LocalJSLink('bkr', '/static/javascript/util.js'),
-        LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),]
+        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js', order=3),]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     member_widgets = ['form', 'grid']
     template = """
@@ -225,57 +325,7 @@ class GroupPermissions(Widget):
         </div>
         """
 
-class PowerTypeForm(CompoundFormField):
-    """Dynmaically modifies power arguments based on Power Type Selection"""
-    javascript = [LocalJSLink('bkr', '/static/javascript/power.js')]
-    template = """
-    <div xmlns:py="http://purl.org/kid/ns#" id="${field_id}">
-    <script language="JavaScript" type="text/JavaScript">
-        PowerManager${field_id} = new PowerManager(
-        '${field_id}', '${key_field.field_id}', 
-        '${powercontroller_field.field_id}',  
-        '${search_controller}', '${system_id}');
-        addLoadEvent(PowerManager${field_id}.initialize);
-    </script>
-
-    ${key_field.display(value_for(key_field), **params_for(key_field))}
-     <table class="powerControlArgs">
-      <tr>
-       <td><label class="fieldlabel"
-                  for="${powercontroller_field.field_id}"
-                  py:content="powercontroller_field.label"/>
-       </td>
-       <td>
-        <font color="red">
-         <span py:if="error_for(powercontroller_field)"
-               class="fielderror"
-               py:content="error_for(powercontroller_field)" />
-        </font>
-        ${powercontroller_field.display(value_for(powercontroller_field), **params_for(powercontroller_field))}
-        <span py:if="powercontroller_field.help_text"
-              class="fieldhelp"
-              py:content="powercontroller_field.help_text" />
-       </td>
-      </tr>
-      <tr>
-       <td colspan="2">
-        <div class="powerControlArgs" id="powerControlArgs${field_id}"/>
-       </td>
-      </tr>
-     </table>
-    </div>
-    """
-    member_widgets = ["powercontroller_field", "key_field"]
-    params = ['search_controller', 'system_id']
-    params_doc = {'powertypes_callback' : ''}
-
-    def __init__(self, callback, search_controller, *args, **kw):
-        super(PowerTypeForm,self).__init__(*args, **kw)
-        self.search_controller=search_controller
-        self.powercontroller_field = SingleSelectField(name="powercontroller", options=callback)
-        self.key_field = HiddenField(name="key")
-
-class ReserveSystem(TableForm):
+class ReserveSystem(HorizontalForm):
     fields = [ 
           HiddenField(name='system_id'),
               Label(name='system', label=_(u'System to Provision')),
@@ -309,7 +359,6 @@ class ReserveWorkflow(Form):
                   LocalJSLink('bkr', '/static/javascript/reserve_workflow_v8.js'),
                  ] 
     template="bkr.server.templates.reserve_workflow"
-    css = [LocalCSSLink('bkr','/static/css/reserve_workflow.css')] 
     fields = [
         SingleSelectField(name='osmajor', label=_(u'Family'),
             validator=validators.UnicodeString(),
@@ -441,10 +490,11 @@ class MatrixDataGrid(DataGrid):
 
 class myPaginateDataGrid(PaginateDataGrid):
     template = "bkr.server.templates.my_paginate_datagrid"
+    params = ['add_action']
 
 class LabControllerDataGrid(myPaginateDataGrid):
     javascript = [LocalJSLink('bkr','/static/javascript/lab_controller_remove.js'),
-                  LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),]
+                  LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js', order=3),]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
 
 class SingleSelectFieldJSON(SingleSelectField):
@@ -480,7 +530,7 @@ class LabControllerFormSchema(validators.Schema):
     chained_validators = [UniqueLabControllerEmail('id', 'email', 'lusername')]
 
 
-class LabControllerForm(TableForm):
+class LabControllerForm(HorizontalForm):
     action = 'save_data'
     submit_text = _(u'Save')
     fields = [
@@ -523,25 +573,24 @@ class JobQuickSearch(CompoundWidget):
 
 class AckPanel(RadioButtonList): 
 
-    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui.js'),
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),
                   LocalJSLink('bkr','/static/javascript/loader_v2.js'),
                   LocalJSLink('bkr','/static/javascript/response_v3.js')]
 
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     params = ['widget_name','unreal_response','comment_id','comment_class']
     template = """
-    <ul xmlns:py="http://purl.org/kid/ns#"
+    <div xmlns:py="http://purl.org/kid/ns#"
         class="${field_class}"
         id="${field_id}"
-        py:attrs="list_attrs"
     >
-        <li py:for="value, desc, attrs in options">
+        <label py:for="value, desc, attrs in options" class="radio">
             <input type="radio" name="${widget_name}" py:if="unreal_response != value" id="${field_id}_${value}" value="${value}" py:attrs="attrs" />
             <input type="radio" name="${widget_name}" py:if="unreal_response == value" id="unreal_response" value="${value}" py:attrs="attrs" />
-            <label for="${field_id}_${value}" py:content="desc" />
-        </li>
+            ${desc}
+        </label>
         <a id="${comment_id}" class="${comment_class}" style="cursor:pointer;display:inline-block;margin-top:0.3em">comment</a>
-    </ul>
+    </div>
     """
     
     def __init__(self,*args,**kw):
@@ -608,7 +657,7 @@ class AckPanel(RadioButtonList):
         return super(AckPanel,self).display(value,*args,**params)
  
 class JobMatrixReport(Form):     
-    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui.js'),
+    javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),
                   LocalJSLink('bkr', '/static/javascript/job_matrix_v2.js')]
     css = [LocalCSSLink('bkr','/static/css/job_matrix.css'),
         LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
@@ -653,8 +702,8 @@ class SearchBar(RepeatingFormField):
     """Search Bar""" 
     css = [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     javascript = [LocalJSLink('bkr', '/static/javascript/search_object.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v8.js'),
-                  LocalJSLink('bkr','/static/javascript/jquery-ui.js'),]
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v9.js'),
+                  LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),]
     template = "bkr.server.templates.search_bar"
 
     params = ['repetitions', 'search_object', 'form_attrs', 'search_controller',
@@ -773,34 +822,31 @@ class SearchBar(RepeatingFormField):
 
     def update_params(self, d):
         super(SearchBar, self).update_params(d)
-        d['to_json'] = UtilJSON.dynamic_json()
         d['button_widget'] = MyButton(name='quick_search')
 
 class ProvisionForm(RepeatingFormField):
     pass
 
-class PowerActionForm(Form):
-    template = "bkr.server.templates.system_power_action"
+class SystemCommandsForm(Form):
+    template = "bkr.server.templates.system_commands_form"
     member_widgets = ["id", "power", "lab_controller"]
-    params = ['options', 'action', 'enabled','is_user']
+    params = ['options', 'action', 'can_power', 'is_user',
+              'power_enabled', 'netboot_enabled']
 
     def __init__(self, *args, **kw):
-        super(PowerActionForm, self).__init__(*args, **kw)
+        super(SystemCommandsForm, self).__init__(*args, **kw)
         self.id = HiddenField(name="id")
         self.power = HiddenField(name="power")
         self.lab_controller = HiddenField(name="lab_controller")
 
-    def update_params(self, d):
-        super(PowerActionForm, self).update_params(d)
-        if 'power' in d['value'] and 'lab_controller' in d['value']:
-            if d['value']['power'] and d['value']['lab_controller']:
-                d['enabled'] = True
-
     def display(self, value, *args, **kw):
         if 'options' in kw:
-            if 'is_user' in kw['options']:
-                kw['is_user'] = kw['options']['is_user']
-        return super(PowerActionForm,self).display(value,*args,**kw)
+            kw.update(kw['options'])
+        system = value
+        kw['power_enabled'] = bool(system.power and system.lab_controller)
+        kw['netboot_enabled'] = bool(system.lab_controller)
+        kw['fqdn'] = system.fqdn
+        return super(SystemCommandsForm, self).display(value, *args, **kw)
 
 class PowerActionHistory(CompoundWidget):
     template = "bkr.server.templates.power_history_grid"
@@ -845,6 +891,7 @@ class TaskSearchForm(RemoteForm):
              ]
     before = 'task_search_before()'
     on_complete = 'task_search_complete()'
+    submit_text = _(u'Submit Query')
 
     def __init__(self, *args, **kw):
         super(TaskSearchForm,self).__init__(*args,**kw)
@@ -855,27 +902,23 @@ class TaskSearchForm(RemoteForm):
         if 'arch_id' in d['options']:
             d['arch_id'] = d['options']['arch_id']
 
-class LabInfoForm(Form):
-    template = "bkr.server.templates.system_labinfo"
-    member_widgets = ["id", "labinfo", "orig_cost", "curr_cost", "dimensions",
-                      "weight", "wattage", "cooling"]
-    params = ['options']
-
-    def __init__(self, *args, **kw):
-        super(LabInfoForm, self).__init__(*args, **kw)
-        self.id = HiddenField(name="id")
-        self.labinfo = HiddenField(name="labinfo")
-        self.orig_cost = TextField(name='orig_cost', label=_(u'Original Cost'),
-                                   validator=validators.Money())
-        self.curr_cost = TextField(name='curr_cost', label=_(u'Current Cost'),
-                                   validator=validators.Money())
-        self.dimensions = TextField(name='dimensions', label=_(u'Dimensions'))
-        self.weight = TextField(name='weight', label=_(u'Weight'),
-                                   validator=validators.Int())
-        self.wattage = TextField(name='wattage', label=_(u'Wattage'),
-                                   validator=validators.Int())
-        self.cooling = TextField(name='cooling', label=_(u'Cooling'),
-                                   validator=validators.Int())
+class LabInfoForm(HorizontalForm):
+    fields = [
+        HiddenField(name="id"),
+        HiddenField(name="labinfo"),
+        TextField(name='orig_cost', label=_(u'Original Cost'),
+            validator=validators.Money()),
+        TextField(name='curr_cost', label=_(u'Current Cost'),
+            validator=validators.Money()),
+        TextField(name='dimensions', label=_(u'Dimensions')),
+        TextField(name='weight', label=_(u'Weight'),
+            validator=validators.Int()),
+        TextField(name='wattage', label=_(u'Wattage'),
+            validator=validators.Int()),
+        TextField(name='cooling', label=_(u'Cooling'),
+            validator=validators.Int()),
+    ]
+    submit_text = _(u'Save Lab Info Changes')
 
     def update_params(self, d):
         super(LabInfoForm, self).update_params(d)
@@ -889,35 +932,29 @@ class LabInfoForm(Form):
                 d['value']['wattage'] = labinfo.wattage
                 d['value']['cooling'] = labinfo.cooling
 
-class PowerForm(Form):
-    template = "bkr.server.templates.system_power"
-    member_widgets = ["id", "power", "power_type_id", "power_address", 
-                      "power_user", "power_passwd", "power_id",
-                       "release_action", "reprovision_distro_tree_id"]
-    params = []
-    params_doc = {}
-
-    def __init__(self, *args, **kw):
-        super(PowerForm, self).__init__(*args, **kw)
-        self.id = HiddenField(name="id")
-        self.power = HiddenField(name="power")
-        self.power_type_id = SingleSelectField(name='power_type_id',
-                                           label=_(u'Power Type'),
-                                           options=model.PowerType.get_all,
-                                           validator=validators.NotEmpty())
-        self.power_address = TextField(name='power_address', label=_(u'Power Address'))
-        self.power_user = TextField(name='power_user', label=_(u'Power Login'))
-        self.power_passwd = TextField(name='power_passwd', label=_(u'Power Password'))
-        self.power_id = TextField(name='power_id', label=_(u'Power Port/Plug/etc'))
-        self.release_action = RadioButtonList(name='release_action',
-                label=_(u'Release Action'),
-                options=[(ra, unicode(ra)) for ra in model.ReleaseAction],
-                default=model.ReleaseAction.power_off,
-                validator=ValidEnumValue(model.ReleaseAction))
-        self.reprovision_distro_tree_id = SingleSelectField(name='reprovision_distro_tree_id',
-                                                label=_(u'Reprovision Distro'),
-                                                options=[],
-                                             validator=validators.NotEmpty())
+class PowerForm(HorizontalForm):
+    fields = [
+        HiddenField(name="id"),
+        HiddenField(name="power"),
+        SingleSelectField(name='power_type_id',
+            label=_(u'Power Type'),
+            options=model.PowerType.get_all,
+            validator=validators.NotEmpty()),
+        TextField(name='power_address', label=_(u'Power Address')),
+        TextField(name='power_user', label=_(u'Power Login')),
+        TextField(name='power_passwd', label=_(u'Power Password')),
+        TextField(name='power_id', label=_(u'Power Port/Plug/etc')),
+        RadioButtonList(name='release_action',
+            label=_(u'Release Action'),
+            options=[(ra, unicode(ra)) for ra in model.ReleaseAction],
+            default=model.ReleaseAction.power_off,
+            validator=ValidEnumValue(model.ReleaseAction)),
+        SingleSelectField(name='reprovision_distro_tree_id',
+            label=_(u'Reprovision Distro'),
+            options=[],
+            validator=validators.NotEmpty()),
+    ]
+    submit_text = _(u'Save Power Changes')
 
     def update_params(self, d):
         super(PowerForm, self).update_params(d)
@@ -939,33 +976,37 @@ class ExcludedFamilies(FormField):
         py:attrs="list_attrs"
     >
      <li py:for="arch, a_options in options">
-      <label for="${field_id}_${arch}" py:content="arch" />
+      ${arch}
       <ul xmlns:py="http://purl.org/kid/ns#"
           class="${field_class}"
           id="${field_id}_${arch}"
           py:attrs="list_attrs"
       >
        <li py:for="value, desc, subsection, attrs in a_options">
+        <label class="checkbox">
         <input type="checkbox"
                name="${name}.${arch}"
                id="${field_id}_${value}_${arch}"
                value="${value}"
                py:attrs="attrs"
         />
-        <label for="${field_id}_${value}_${arch}" py:content="desc" />
+        ${desc}
+        </label>
         <ul xmlns:py="http://purl.org/kid/ns#"
             class="${field_class}"
             id="${field_id}_${value}_sub"
             py:attrs="list_attrs"
         >
          <li py:for="subvalue, subdesc, attrs  in subsection">
+          <label class="checkbox">
           <input type="checkbox"
                  name="${name}_subsection.${arch}"
                  id="${field_id}_${value}_sub_${subvalue}_${arch}"
                  value="${subvalue}"
                  py:attrs="attrs"
           />
-          <label for="${field_id}_${value}_sub_${subvalue}_${arch}" py:content="subdesc" />
+          ${subdesc}
+          </label>
          </li>
         </ul>
        </li>
@@ -1099,13 +1140,9 @@ class DistroTags(Form):
 
 
 class SystemGroups(Form):
-    # XXX As it's currently used, this JS is not loaded from here
-    # but from the SystemForm widget. It should stay here, just in case
-    # we change how we display this widget
-    javascript = [LocalJSLink('bkr','/static/javascript/system_admin_v2.js')]
     template = "bkr.server.templates.system_groups"
     member_widgets = ["id", "group", "delete_link"]
-    params = ['options', 'readonly', 'group_assocs', 'can_admin', 'change_admin_url']
+    params = ['options', 'readonly', 'group_assocs']
     delete_link = DeleteLinkWidgetForm()
 
     def __init__(self, *args, **kw):
@@ -1124,9 +1161,6 @@ class SystemGroups(Form):
             d['group_assocs'] = d['options']['group_assocs']
         if 'system_id' in d['options']:
             d['system_id'] = d['options']['system_id']
-        if 'can_admin' in d['options']:
-            d['can_admin'] = d['options']['can_admin']
-        d['change_admin_url'] = url('/change_system_admin')
 
 
 class SystemProvision(Form):
@@ -1134,7 +1168,8 @@ class SystemProvision(Form):
     template = "bkr.server.templates.system_provision"
     member_widgets = ["id", "prov_install", "ks_meta", "power",
                       "koptions", "koptions_post", "reboot","schedule_reserve_days"]
-    params = ['options', 'is_user', 'lab_controller', 'power_enabled','provision_now_rights','will_provision']
+    params = ['options', 'lab_controller', 'power_enabled',
+              'automated', 'reserved', 'can_reserve']
     MAX_DAYS_PROVISION = 7
     DEFAULT_RESERVE_DAYS = 0.5
 
@@ -1149,7 +1184,7 @@ class SystemProvision(Form):
         self.prov_install = SingleSelectField(name='prov_install',
                                              label=_(u'Distro'),
                                              options=[],
-                                             attrs=dict(size=10),
+                                             attrs={'size': 12, 'class': 'input-block-level'},
                                              validator=validators.NotEmpty())
         self.ks_meta       = TextField(name='ks_meta', attrs=dict(size=50),
                                        label=_(u'KickStart MetaData'))
@@ -1164,14 +1199,8 @@ class SystemProvision(Form):
 
     def update_params(self, d): 
         super(SystemProvision, self).update_params(d)
-        if 'will_provision' in d['options']:
-            d['will_provision'] = d['options']['will_provision']
-        if 'provision_now_rights' in d['options']:
-            d['provision_now_rights'] = d['options']['provision_now_rights']
-        if 'is_user' in d['options']:
-            d['is_user'] = d['options']['is_user']
-        if 'lab_controller' in d['options']:
-            d['lab_controller'] = d['options']['lab_controller']
+        for param in ['automated', 'reserved', 'can_reserve', 'lab_controller']:
+            d[param] = d['options'].get(param)
         if 'power' in d['value']:
             if d['value']['power']:
                 d['power_enabled'] = True
@@ -1237,11 +1266,11 @@ class SystemExclude(Form):
     template = """
     <form xmlns:py="http://purl.org/kid/ns#"
           name="${name}"
-          action="${tg.url(action)}"
+          action="${action}"
           method="${method}" width="100%">
      ${display_field_for("id")}
      ${display_field_for("excluded_families")}
-     <a py:if="not readonly" class="button" href="javascript:document.${name}.submit();">Save Exclude Changes</a>
+     <a py:if="not readonly" class="btn btn-primary" href="javascript:document.${name}.submit();">Save Exclude Changes</a>
     </form>
     """
     member_widgets = ["id", "excluded_families"]
@@ -1299,18 +1328,16 @@ class SystemHistory(CompoundWidget):
 class SystemForm(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/provision_v2.js'),
                   LocalJSLink('bkr', '/static/javascript/install_options.js'),
-                  LocalJSLink('bkr','/static/javascript/system_admin_v2.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v8.js'),
+                  LocalJSLink('bkr', '/static/javascript/searchbar_v9.js'),
                   JSLink(static,'ajax.js'),
                  ]
     template = "bkr.server.templates.system_form"
     params = ['id','readonly',
               'user_change','user_change_text', 'running_job',
-              'loan_change', 'loan_type', 'show_loan_options',
+              'show_loan_options',
               'owner_change', 'owner_change_text']
     user_change = '/user_change'
     owner_change = '/owner_change'
-    loan_change = '/loan_change'
     fields = [
                HiddenField(name='id'),
                TextField(name='fqdn',
@@ -1345,13 +1372,9 @@ class SystemForm(Form):
                TextField(name='owner', label=_(u'Owner')),
                TextField(name='loaned', label=_(u'Loaned To')),
                TextField(name='contact', label=_(u'Contact')),
-               CheckBox(name='shared', label=_(u'Shared'),
-                        help_text=_(u'Should this system be made available '
-                            'for running other users\' jobs?')),
                CheckBox(name='private', label=_(u'Secret (NDA)'),
                         help_text=_(u'Should this system be invisible to '
                             'all other users?')),
-               Tabber(use_cookie=True),
                AutoCompleteField(name='group',
                                       search_controller=url("/groups/by_name"),
                                       search_param="name",
@@ -1378,9 +1401,13 @@ class SystemForm(Form):
         if value:
             params['loan_comment'] = value.loan_comment
             # It's currently loaned or we have perm to add a new loan
-            params['show_loan_options'] = value.current_loan( 
-                tg.identity.current.user) or \
-                value.can_admin(tg.identity.current.user)
+            if identity.current.user:
+                params['show_loan_options'] = \
+                    value.can_return_loan(identity.current.user) or \
+                    value.can_loan(identity.current.user) or \
+                    value.can_loan_to_self(identity.current.user)
+            else:
+                params['show_loan_options'] = False
         else:
             params['loan_comment'] = None
             params['show_loan_options'] = None
@@ -1407,7 +1434,10 @@ class SystemForm(Form):
         else:
             property_value = getattr(value, item, None)
 
-        return property_value
+        span = Element('span', {'class': 'uneditable-input'})
+        if property_value is not None:
+            span.text = unicode(property_value)
+        return span
 
     def update_params(self, d):
         super(SystemForm, self).update_params(d)
@@ -1431,10 +1461,6 @@ class SystemForm(Form):
             d["owner_change_text"] = d["options"]["owner_change_text"]
         if d["options"].has_key("user_change_text"):
             d["user_change_text"] = d["options"]["user_change_text"]
-        if d["options"].has_key("loan_change"):
-            d["loan_change"] = d["options"]["loan_change"]
-        if d["options"].has_key("loan_type"):
-            d["loan_type"] = d["options"]["loan_type"]
         if d["options"].has_key("loan_widget"):
             d["loan_widget"] = d["options"]["loan_widget"]
         if d["options"].has_key("running_job"):
@@ -1461,15 +1487,6 @@ class TasksWidget(CompoundWidget):
     action = '/tasks/do_search'
     link = LinkRemoteFunction(name='link', before='task_search_before()', on_complete='task_search_complete()')
 
-class RecipeTasksWidget(TasksWidget):
-    
-     
-    def update_params(self, d):
-        d["hidden"] = dict(system  = 1,
-                           arch    = 1,
-                           distro  = 1,
-                           osmajor = 1,
-                          )
 
 class RecipeSetWidget(CompoundWidget):
     javascript = []
@@ -1492,7 +1509,7 @@ class RecipeSetWidget(CompoundWidget):
         super(RecipeSetWidget,self).update_params(d)
         recipeset = d['recipeset']
         owner_groups = [g.group_name for g in recipeset.job.owner.groups]
-        user = tg.identity.current.user
+        user = identity.current.user
         if recipeset.can_set_response(user):
             can_ack_nak = True
         else:
@@ -1543,10 +1560,11 @@ class ReportProblemForm(RemoteForm):
 class RecipeActionWidget(CompoundWidget):
     template = 'bkr.server.templates.recipe_action'
     javascript = [LocalJSLink('bkr', '/static/javascript/util.js'),
-        LocalJSLink('bkr', '/static/javascript/jquery-ui.js'),]
+        LocalJSLink('bkr', '/static/javascript/jquery-ui-1.9.2.min.js', order=3),]
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     problem_form = ReportProblemForm()
-    params = ['report_problem_options', 'report_link']
+    report_problem_options = {}
+    params = ['report_problem_options']
     member_widgets = ['problem_form']
 
     def __init__(self, *args, **kw):
@@ -1554,14 +1572,9 @@ class RecipeActionWidget(CompoundWidget):
 
     def display(self, task, **params):
         if getattr(task.resource, 'system', None):
-            params['report_link'] = make_fake_link(
-                attrs={'onclick': "show_field('report_problem_recipe_%s','%s')" % (task.id, self.problem_form.desc)},
-                text='Report Problem with system')
             params['report_problem_options'] = {'system' : task.resource.system,
                 'recipe' : task, 'name' : 'report_problem_recipe_%s' % task.id,
                 'action' : '../system_action/report_system_problem'}
-        else:
-            params['report_link'] = None
         return super(RecipeActionWidget,self).display(task, **params)
 
 
@@ -1569,9 +1582,8 @@ class RecipeWidget(CompoundWidget):
     css = []
     template = "bkr.server.templates.recipe_widget"
     params = ['recipe', 'recipe_systems']
-    member_widgets = ['recipe_tasks_widget','action_widget']
+    member_widgets = ['action_widget']
     action_widget = RecipeActionWidget()
-    recipe_tasks_widget = RecipeTasksWidget()
 
     def update_params(self, d):
         super(RecipeWidget, self).update_params(d)
@@ -1755,8 +1767,9 @@ class LoanWidget(RPC, TableForm, CompoundWidget):
             "update_loan_callback);" % (
             d['name'], jsonify.encode(self.get_options(d)), url('../systems/return_loan'))})
 
-        system = model.System.by_fqdn(d['value']['fqdn'], tg.identity.current.user)
-        if system.can_admin(tg.identity.current.user):
+        system = model.System.by_fqdn(d['value']['fqdn'], identity.current.user)
+        if identity.current.user and system.can_loan(identity.current.user) \
+                or system.can_loan_to_self(identity.current.user):
             for field in d['fields']:
                 if field.attrs.get('disabled'):
                     del field.attrs['disabled']
@@ -1766,7 +1779,7 @@ class LoanWidget(RPC, TableForm, CompoundWidget):
                 field.attrs.update({'disabled': 'readonly'})
             d['update_loan'].attrs.update({'style': 'display:none'})
 
-        if system.current_loan(tg.identity.current.user):
+        if system.can_return_loan(identity.current.user):
             d['return_loan'].attrs.update({'style': 'display:block'})
         else:
             d['return_loan'].attrs.update({'style': 'display:none'})
@@ -1801,7 +1814,7 @@ class TaskActionWidget(RPC):
 
     def update_params(self, d):
         super(TaskActionWidget, self).update_params(d)
-        d['task_details']['onclick'] = "TaskDisable('%s',%s, %s)" % (
+        d['task_details']['onclick'] = "TaskDisable('%s',%s, %s); return false;" % (
             d.get('action'),
             jsonify.encode({'t_id': d['task_details'].get('t_id')}),
             jsonify.encode(self.get_options(d)),
@@ -1825,10 +1838,9 @@ class JobActionWidget(CompoundWidget):
 
         job_data = {'t_id' : params['job_details'].get('t_id')}
         params['job_delete_attrs'] = {'data' : job_data,
-                                      'action_text' : 'Delete',
                                       'action' : params['delete_action'],
                                       'callback' : 'job_delete_success',
-                                      'attrs' : {'class' : 'list job-action'} }
+                                      'show_icon': False}
         return super(JobActionWidget, self).display(task, **params)
 
 
@@ -1842,8 +1854,7 @@ class JobPageActionWidget(JobActionWidget):
         super(JobPageActionWidget, self).update_params(d)
         value = {'t_id' : d['job_details'].get('t_id') }
         d['job_delete_attrs'] = { 'value' : value,
-                                  'action_text' : 'Delete',
-                                  'attrs' : { 'class' : 'list' },
+                                  'show_icon': False,
                                   'action' : d['job_delete_attrs'].get('action') }
 
 

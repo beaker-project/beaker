@@ -35,6 +35,9 @@ own man page. This man page is reserved for common options and features.
 * :manpage:`bkr-list-labcontrollers(1)` -- List Beaker lab controllers
 * :manpage:`bkr-list-systems(1)` -- List Beaker systems
 * :manpage:`bkr-machine-test(1)` -- Generate Beaker job to test a system
+* :manpage:`bkr-policy-grant(1)` -- Grant permissions through an access policy
+* :manpage:`bkr-policy-revoke(1)` -- Remove grant permissions from an access policy
+* :manpage:`bkr-remove-account(1)` -- Remove Beaker user account
 * :manpage:`bkr-system-details(1)` -- Export RDF/XML description of a Beaker system
 * :manpage:`bkr-system-power(1)` -- Control power for a Beaker system
 * :manpage:`bkr-system-provision(1)` -- Provision a Beaker system

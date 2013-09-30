@@ -1,8 +1,9 @@
+import datetime
 import model
 import re
 import sqlalchemy
 from copy import copy
-from turbogears import flash, identity
+from turbogears import flash
 from sqlalchemy import or_, and_, not_
 from sqlalchemy.sql import visitors, select
 from sqlalchemy.exc import InvalidRequestError
@@ -10,6 +11,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import aliased, joinedload
 from turbogears.database import session
 from bkr.server.model import Key as KeyModel
+from bkr.common.bexceptions import BeakerException
 import logging
 log = logging.getLogger(__name__)
 
@@ -80,6 +82,13 @@ class MyColumn(object):
     def aliased(self):
         return self._aliased
 
+    @property
+    def parent_entity(self):
+        try:
+            return self.column.parent.entity
+        except AttributeError: # sqlalchemy < 0.8
+            return self.column.parententity
+
 
 class CpuColumn(MyColumn):
     """
@@ -89,7 +98,7 @@ class CpuColumn(MyColumn):
         if not kw.has_key('relations'):
             kw['relations'] = 'cpu'
         super(CpuColumn,self).__init__(**kw)
-        
+
 class DeviceColumn(MyColumn):
     """
     DeviceColumn defines a relationship to system
@@ -409,7 +418,7 @@ class Search(object):
                             self.queri = self.queri.outerjoin(*relations, aliased=aliased)
                             break
             except TypeError, (error):
-                log.error('Column %s has not specified joins validly:%s' % (column, error))                                                               
+                log.error('Column %s has not specified joins validly:%s' % (mycolumn, error))
 
     def return_standard_filter(self,mycolumn,operation,value,loose_match=True):  
         col_type = mycolumn.type
@@ -903,7 +912,7 @@ class SystemObject:
         try: 
             return m.return_operators(field)
         except KeyError, (e): 
-            log.error('Failed to find search_type by index %s, got error: %s' % (index_type,e))
+            log.error('Failed to find operators for field %s, got error: %s' % (field,e))
 
 
 class System(SystemObject): 
@@ -958,21 +967,48 @@ class System(SystemObject):
         if not val:
             return col == None
         else:
-            return and_(col >= '%s 00:00:00' % val, col <= '%s 23:59:99' % val)
+            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return and_(col >= date, col < date + datetime.timedelta(days=1))
+
+    @classmethod
+    def added_after_filter(cls, col, val):
+        if not val:
+            return col == None
+        else:
+            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return col >= date + datetime.timedelta(days=1)
+
+    @classmethod
+    def added_before_filter(cls, col, val):
+        if not val:
+            return col == None
+        else:
+            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return col < date
 
     @classmethod
     def lastinventoried_is_filter(cls,col,val):
         if not val:
             return col == None
         else:
-            return and_(col >= '%s 00:00:00' % val, col <= '%s 23:59:99' % val)
+            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return and_(col >= date, col < date + datetime.timedelta(days=1))
 
     @classmethod
     def lastinventoried_after_filter(cls,col,val):
         if not val:
             return col == None
         else:
-            return col >= '%s 23:59:59' % val
+            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return col >= date + datetime.timedelta(days=1)
+
+    @classmethod
+    def lastinventoried_before_filter(cls,col,val):
+        if not val:
+            return col == None
+        else:
+            date = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return col < date
 
     @classmethod
     def arch_is_not_filter(cls,col,val):
@@ -1215,13 +1251,9 @@ class SystemReserve(System):
                             'Name'      : MyColumn(column=model.System.fqdn,col_type='string'),
                             'Type'      : MyColumn(column=model.System.type, col_type='string'),
                             'Owner'     : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations='owner'),
-                            'Shared'    : MyColumn(column=model.System.shared, col_type='boolean'),
                             'User'      : MyColumn(column=model.User.user_name, col_type='string', has_alias=True, relations='user'),
                             'LoanedTo'  : MyColumn(column=model.User.user_name,col_type='string', has_alias=True, relations='loaned'),
                           }
-
-    search_values_dict = dict(System.search_values_dict.items() +
-                             [('Shared', lambda: ['True', 'False'])])
 
 
 class Activity(SystemObject):
@@ -1378,27 +1410,27 @@ class Key(SystemObject):
         result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
-        return and_(col.column < val, col.column.parententity.key_id == key_id)
+        return and_(col.column < val, col.parent_entity.key_id == key_id)
 
     @classmethod
     def value_greater_than_filter(cls,col,val,key_name):
         result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
-        return and_(col.column > val, col.column.parententity.key_id == key_id)
+        return and_(col.column > val, col.parent_entity.key_id == key_id)
 
     @classmethod
     def value_contains_filter(cls, col, val, key_name):
         result = model.Key.by_name(key_name) 
         key_id = result.id
-        return and_(col.column.like('%%%s%%' % val), col.column.parententity.key_id == key_id)
+        return and_(col.column.like('%%%s%%' % val), col.parent_entity.key_id == key_id)
         
     @classmethod
     def value_is_filter(cls,col,val,key_name):
         result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
-        column_parent = col.column.parententity
+        column_parent = col.parent_entity
         if not val:
             return and_(or_(col.column == val, col.column == None),
                 or_(column_parent.key_id == key_id,
@@ -1411,7 +1443,7 @@ class Key(SystemObject):
         result = model.Key.by_name(key_name)
         int_table = result.numeric
         key_id = result.id
-        column_parent = col.column.parententity
+        column_parent = col.parent_entity
         if int_table == 1:
             if not val:
                 return and_(or_(col.column != val, col.column == None),
@@ -1463,18 +1495,32 @@ class Cpu(SystemObject):
     display_name = 'CPU'   
     search_values_dict = { 'Hyper' : lambda: ['True','False'] }
     searchable_columns = {
-                          'Vendor'      : CpuColumn(col_type='string', column = model.Cpu.vendor),
-                          'Processors'  : CpuColumn(col_type='numeric',column = model.Cpu.processors),
-                          'Hyper'       : CpuColumn(col_type='boolean',column = model.Cpu.hyper),
-                          'Cores'       : CpuColumn(col_type='numeric',column = model.Cpu.cores),
-                          'Sockets'     : CpuColumn(col_type='numeric',column = model.Cpu.sockets),
-                          'Model'       : CpuColumn(col_type='numeric',column = model.Cpu.model),
-                          'ModelName'   : CpuColumn(col_type='string',column = model.Cpu.model_name),
-                          'Family'      : CpuColumn(col_type='numeric',column = model.Cpu.family),
-                          'Stepping'    : CpuColumn(col_type='numeric',column = model.Cpu.stepping),
-                          'Speed'       : CpuColumn(col_type='numeric',column = model.Cpu.speed),
-                          'Flags'       : CpuColumn(col_type='string',column = model.CpuFlag.flag, relations=['cpu','flags']) 
-                         }  
+                          'Vendor'      : CpuColumn(col_type='string',
+                                              column = model.Cpu.vendor),
+                          'Processors'  : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.processors),
+                          'Hyper'       : CpuColumn(col_type='boolean',
+                                              column = model.Cpu.hyper),
+                          'Cores'       : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.cores),
+                          'Sockets'     : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.sockets),
+                          'Model'       : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.model),
+                          'ModelName'   : CpuColumn(col_type='string',
+                                              column = model.Cpu.model_name),
+                          'Family'      : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.family),
+                          'Stepping'    : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.stepping),
+                          'Speed'       : CpuColumn(col_type='numeric',
+                                              column = model.Cpu.speed),
+                          'Flags'       : AliasedColumn(col_type='string',
+                                              eagerload=False,
+                                              target_table=[model.CpuFlag],
+                                              column_name = 'flag',
+                                              relations= lambda: [model.System.cpu, model.CpuFlag])
+                         }
 
     @classmethod
     def flags_is_not_filter(cls,col,val,**kw):

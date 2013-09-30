@@ -10,43 +10,37 @@ from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
                         UnicodeText, Boolean, Float, VARCHAR, TEXT, Numeric,
                         or_, and_, not_, select, case, func, BigInteger)
 
-from sqlalchemy.orm import relation, backref, synonym, dynamic_loader, \
-        query, object_mapper, mapper, column_property, contains_eager, \
-        relationship
+from sqlalchemy.orm import relation, backref, dynamic_loader, \
+        object_mapper, mapper, column_property, contains_eager, \
+        relationship, class_mapper
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
-from sqlalchemy.sql import exists, union, literal
-from sqlalchemy.sql.expression import join
-from sqlalchemy.exc import InvalidRequestError, IntegrityError
+from sqlalchemy.orm.util import has_identity
+from sqlalchemy.sql import exists, union, literal, Insert
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.types import TypeDecorator, BINARY
-from identity import LdapSqlAlchemyIdentityProvider
 from bkr.server.installopts import InstallOptions, global_install_options
-from sqlalchemy.orm.collections import attribute_mapped_collection, MappedCollection, collection
-from sqlalchemy.util import OrderedDict
+from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.ext import compiler
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
-import socket
-from xmlrpclib import ProtocolError
 import time
-from kid import Element
+from kid import Element, XML
+from markdown import markdown
 from bkr.server.bexceptions import BeakerException, BX, \
         VMCreationFailedException, StaleTaskStatusException, \
         InsufficientSystemPermissions, StaleSystemUserException, \
         StaleCommandStatusException, NoChangeException
 from bkr.server.enum import DeclEnum
-from bkr.server.helpers import *
+from bkr.server.hybrid import hybrid_property, hybrid_method
+from bkr.server.helpers import make_link, make_fake_link
 from bkr.server.util import unicode_truncate, absolute_url
-from bkr.server import mail, metrics
-import traceback
-from BasicAuthTransport import BasicAuthTransport
-import xmlrpclib
-import bkr.timeout_xmlrpclib
+from bkr.server import mail, metrics, identity
 import os
 import shutil
 import urllib
 import urlparse
-import posixpath
 import crypt
 import random
 import string
@@ -54,20 +48,17 @@ import cracklib
 import lxml.etree
 import uuid
 import netaddr
-from turbogears import identity
 import ovirtsdk.api
 from collections import defaultdict
-from datetime import timedelta, date, datetime
-from hashlib import md5
+from datetime import timedelta, datetime
+from hashlib import md5, sha1
 import xml.dom.minidom
-from xml.dom.minidom import Node, parseString
 
 # These are only here for TaskLibrary. It would be nice to factor that out,
 # but there's a circular dependency between Task and TaskLibrary
 import subprocess
 import rpm
 from rhts import testinfo
-from rhts.testinfo import ParserError, ParserWarning
 from bkr.common.helpers import (AtomicFileReplacement, Flock,
                                 makedirs_ignore, unlink_ignore)
 
@@ -97,6 +88,41 @@ def decl_base_constructor(self, **kwargs):
 
 DeclBase = declarative_base(constructor=decl_base_constructor,
                             metadata=metadata)
+
+
+class ConditionalInsert(Insert):
+    def __init__(self, table, unique_values, extra_values=()):
+        """
+        An INSERT statement which will atomically insert a row with the given 
+        values if one does not exist, or otherwise do nothing. extra_values are 
+        values which do not participate in the unique identity of the row.
+
+        unique_values and extra_values are dicts of (column -> scalar).
+        """
+        values = dict(unique_values)
+        values.update(extra_values)
+        super(ConditionalInsert, self).__init__(table, values)
+        self.unique_condition = and_(*[col == value
+                for col, value in unique_values.iteritems()])
+
+@compiler.compiles(ConditionalInsert)
+def visit_conditional_insert(element, compiler, **kwargs):
+    # magic copied from sqlalchemy.sql.compiler.SQLCompiler.visit_insert
+    compiler.isinsert = True
+    colparams = compiler._get_colparams(element)
+    text = 'INSERT INTO %s' % compiler.process(element.table, asfrom=True)
+    text += ' (%s)\n' % ', '.join(compiler.process(c[0]) for c in colparams)
+    text += 'SELECT %s\n' % ', '.join(c[1] for c in colparams)
+    text += 'FROM DUAL\n'
+    # We need FOR UPDATE in the inner SELECT for MySQL, to ensure we acquire an 
+    # exclusive lock immediately, instead of acquiring a shared lock and then 
+    # subsequently upgrading it to an exclusive lock, which is subject to 
+    # deadlocks if another transaction is doing the same thing.
+    text += 'WHERE NOT EXISTS (SELECT 1 FROM %s\nWHERE %s FOR UPDATE)' % (
+            compiler.process(element.table, asfrom=True),
+            compiler.process(element.unique_condition))
+    return text
+
 
 class TaskStatus(DeclEnum):
 
@@ -309,7 +335,6 @@ system_table = Table('system', metadata,
     Column('type', SystemType.db_type(), nullable=False),
     Column('status', SystemStatus.db_type(), nullable=False),
     Column('status_reason',Unicode(255)),
-    Column('shared', Boolean, default=False),
     Column('private', Boolean, default=False),
     Column('deleted', Boolean, default=False),
     Column('memory', Integer),
@@ -705,25 +730,6 @@ distro_tag_map = Table('distro_tag_map', metadata,
     mysql_engine='InnoDB',
 )
 
-# the identity schema
-
-visits_table = Table('visit', metadata,
-    Column('visit_key', String(40), primary_key=True),
-    Column('created', DateTime, nullable=False, default=datetime.utcnow),
-    Column('expiry', DateTime),
-    mysql_engine='InnoDB',
-)
-
-
-visit_identity_table = Table('visit_identity', metadata,
-    Column('visit_key', String(40), primary_key=True, unique=True),
-    Column('user_id', Integer, ForeignKey('tg_user.user_id'),
-            nullable=False, index=True),
-    Column('proxied_by_user_id', Integer, ForeignKey('tg_user.user_id'),
-            nullable=True),
-    mysql_engine='InnoDB',
-)
-
 users_table = Table('tg_user', metadata,
     Column('user_id', Integer, primary_key=True),
     Column('user_name', Unicode(255), unique=True),
@@ -770,7 +776,6 @@ system_group_table = Table('system_group', metadata,
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     Column('group_id', Integer, ForeignKey('tg_group.group_id',
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    Column('admin', Boolean, nullable=False, default=False),
     mysql_engine='InnoDB',
 )
 
@@ -1334,7 +1339,7 @@ rendered_kickstart_table = Table('rendered_kickstart', metadata,
 task_table = Table('task',metadata,
         Column('id', Integer, primary_key=True),
         Column('name', Unicode(255), unique=True),
-        Column('rpm', Unicode(2048)),
+        Column('rpm', Unicode(255), unique=True),
         Column('path', Unicode(4096)),
         Column('description', Unicode(2048)),
         Column('repo', Unicode(256)),
@@ -1452,21 +1457,43 @@ class MappedObject(object):
     query = session.query_property()
 
     @classmethod
-    def lazy_create(cls, **kwargs):
+    def lazy_create(cls, _extra_attrs={}, **kwargs):
         """
         Returns the instance identified by the given uniquely-identifying 
-        attributes. If it doesn't exist yet, it is inserted first. If it is
-        not in the session, it is added.
+        attributes. If it doesn't exist yet, it is inserted first.
+
+        _extra_attrs is for attributes which do not make up the unique 
+        identity, but which need to be specified during creation because they 
+        are not NULLable. Subclasses should override this and pass attributes 
+        up in _extra_attrs if needed.
+
+        BEWARE: this method bypasses SQLAlchemy's ORM machinery. Pass column 
+        properties instead of relationship properties (for example, osmajor_id 
+        not osmajor).
         """
-        session.begin_nested()
-        try:
-            item = cls(**kwargs)
-            session.add(item)
-            session.commit()
-        except IntegrityError:
-            session.rollback()
-            item = cls.query.filter_by(**kwargs).one()
-        return item
+        # We do a conditional INSERT, which will always succeed or 
+        # silently have no effect.
+        # http://stackoverflow.com/a/6527838/120202
+        # Note that (contrary to that StackOverflow answer) on InnoDB the 
+        # INSERT must come before the UPDATE to avoid deadlocks.
+        unique_params = {}
+        extra_params = {}
+        assert len(class_mapper(cls).tables) == 1
+        table = class_mapper(cls).tables[0]
+        for k, v in kwargs.iteritems():
+            unique_params[table.c[k]] = v
+        for k, v in _extra_attrs.iteritems():
+            extra_params[table.c[k]] = v
+
+        session.connection(cls).execute(ConditionalInsert(table,
+                unique_params, extra_params))
+
+        if extra_params:
+            session.connection(cls).execute(table.update()
+                    .values(extra_params)
+                    .where(and_(*[col == value for col, value in unique_params.iteritems()])))
+
+        return cls.query.with_lockmode('update').filter_by(**kwargs).one()
 
     def __init__(self, **kwargs):
         for k, v in kwargs.iteritems():
@@ -1538,23 +1565,6 @@ class ActivityMixin(object):
                            service=service, action=action,
                            field=field, old=old, new=new)
         log.debug(self._log_fmt, log_details)
-
-
-# the identity model
-class Visit(MappedObject):
-    """
-    A visit to your site
-    """
-    def lookup_visit(cls, visit_key):
-        return cls.query.get(visit_key)
-    lookup_visit = classmethod(lookup_visit)
-
-
-class VisitIdentity(MappedObject):
-    """
-    A Visit that is link to a User object
-    """
-    pass
 
 
 class SubmissionDelegate(DeclBase, MappedObject):
@@ -1681,38 +1691,94 @@ class User(MappedObject, ActivityMixin):
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,
                     timeout=get('identity.soldapprovider.timeout', 20))
-            ldap_users = [object[1]['uid'][0].decode('utf8') for object in objects]
+            ldap_users = [(object[1]['uid'][0].decode('utf8'),
+                    object[1]['cn'][0].decode('utf8'))
+                    for object in objects]
         if find_anywhere:
             f = User.user_name.like('%%%s%%' % username)
         else:
             f = User.user_name.like('%s%%' % username)
         # Don't return Removed Users
         # They may still be listed in ldap though.
-        db_users = [user.user_name for user in cls.query.filter(f).\
-                    filter(User.removed==None)]
+        db_users = [(user.user_name, user.display_name)
+                for user in cls.query.filter(f).filter(User.removed==None)]
         return list(set(db_users + ldap_users))
-        
-    def _set_password(self, password):
-        """
-        encrypts password on the fly using the encryption
-        algo defined in the configuration
-        """
-        self._password = identity.encrypt_password(password)
+
+    def _hashed_password(self, raw_password):
+        # Inherited from TurboGears...
+        # This is pretty pathetic, should be salted at least!
+        return sha1(raw_password.encode('utf8')).hexdigest()
+
+    def _set_password(self, raw_password):
+        self._password = self._hashed_password(raw_password)
 
     def _get_password(self):
-        """
-        returns password
-        """
         return self._password
 
     password = property(_get_password, _set_password)
+
+    def can_change_password(self):
+        if get('identity.ldap.enabled', False):
+            filter = ldap.filter.filter_format('(uid=%s)', [self.user_name])
+            ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
+            objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
+                    ldap.SCOPE_SUBTREE, filter,
+                    timeout=get('identity.soldapprovider.timeout', 20))
+            if len(objects) != 0:
+                # LDAP user. No chance of changing password.
+                return False
+            else:
+                # Assume non LDAP user
+                return True
+        else:
+            return True
+
+    def check_password(self, raw_password):
+        # Empty passwords are not accepted.
+        if not raw_password:
+            return False
+
+        if self._hashed_password(raw_password) == self._password:
+            return True
+
+        # If LDAP is enabled, try an LDAP bind.
+        ldapenabled = get('identity.ldap.enabled', False)
+        # Presence of '/' indicates a Kerberos service principal.
+        if ldapenabled and '/' not in self.user_name:
+            filter = ldap.filter.filter_format('(uid=%s)', [self.user_name])
+            ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
+            objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
+                    ldap.SCOPE_SUBTREE, filter,
+                    timeout=get('identity.soldapprovider.timeout', 20))
+            if len(objects) == 0:
+                return False
+            elif len(objects) > 1:
+                return False
+            dn = objects[0][0]
+            try:
+                rc = ldapcon.simple_bind(dn, raw_password)
+                ldapcon.result(rc)
+                return True
+            except ldap.INVALID_CREDENTIALS:
+                return False
+
+        return False
+
+    def can_log_in(self):
+        if self.disabled:
+            log.warning('Login attempt from disabled account %s', self.user_name)
+            return False
+        if self.removed:
+            log.warning('Login attempt from removed account %s', self.user_name)
+            return False
+        return True
 
     def _set_root_password(self, password):
         "Set the password to be used for root on provisioned systems, hashing if necessary"
         if password:
             if len(password.split('$')) != 4:
-                salt = ''.join([random.choice(string.digits + string.ascii_letters)
-                                for i in range(8)])
+                salt = ''.join(random.choice(string.digits + string.ascii_letters)
+                                for i in range(8))
                 self._root_password = crypt.crypt(cracklib.VeryFascistCheck(password), "$1$%s$" % salt)
             else:
                 self._root_password = password
@@ -1727,8 +1793,8 @@ class User(MappedObject, ActivityMixin):
         else:
             pw = ConfigItem.by_name(u'root_password').current_value()
             if pw:
-                salt = ''.join([random.choice(string.digits + string.ascii_letters)
-                                for i in range(8)])
+                salt = ''.join(random.choice(string.digits + string.ascii_letters)
+                                for i in range(8))
                 return crypt.crypt(pw, "$1$%s$" % salt)
 
     root_password = property(_get_root_password, _set_root_password)
@@ -1785,7 +1851,7 @@ class Permission(MappedObject):
     """
     @classmethod
     def by_id(cls, id):
-      return cls.query.filter_by(permission_id=id).one()
+        return cls.query.filter_by(permission_id=id).one()
 
     @classmethod
     def by_name(cls, permission_name, anywhere=False):
@@ -1855,7 +1921,7 @@ class Group(DeclBase, MappedObject, ActivityMixin):
     __table_args__ = {'mysql_engine': 'InnoDB'}
 
     group_id = Column(Integer, primary_key=True)
-    group_name = Column(Unicode(16), unique=True, nullable=False)
+    group_name = Column(Unicode(255), unique=True, nullable=False)
     display_name = Column(Unicode(255))
     _root_password = Column('root_password', String(255), nullable=True,
         default=None)
@@ -1911,8 +1977,8 @@ class Group(DeclBase, MappedObject, ActivityMixin):
         """
         if password:
             if len(password.split('$')) != 4:
-                salt = ''.join([random.choice(string.digits + string.ascii_letters)
-                                for i in range(8)])
+                salt = ''.join(random.choice(string.digits + string.ascii_letters)
+                                for i in range(8))
                 try:
                     # If you change VeryFascistCheck, please also modify
                     # bkr.server.validators.StrongPassword
@@ -2048,7 +2114,11 @@ class Group(DeclBase, MappedObject, ActivityMixin):
             creator=lambda user: UserGroup(user=user))
 
 
-class System(SystemObject):
+class System(SystemObject, ActivityMixin):
+
+    @property
+    def activity_type(self):
+        return SystemActivity
 
     def __init__(self, fqdn=None, status=SystemStatus.broken, contact=None, location=None,
                        model=None, type=SystemType.machine, serial=None, vendor=None,
@@ -2107,7 +2177,7 @@ class System(SystemObject):
         if user is None:
             try:
                 user = identity.current.user
-            except AttributeError, e:
+            except AttributeError:
                 user = None
 
         if user:
@@ -2115,7 +2185,6 @@ class System(SystemObject):
                not user.has_permission(u'secret_visible'):
                 query = query.filter(
                             or_(System.private==False,
-                                System.groups.any(Group.users.contains(user)),
                                 System.owner == user,
                                 System.loaned == user,
                                 System.user == user))
@@ -2130,7 +2199,9 @@ class System(SystemObject):
         """
         Builds on available.  Only systems with no users, and not Loaned.
         """
-        return System.available(user,systems).filter(and_(System.user==None, or_(System.loaned==None, System.loaned==user)))
+        return System.available(user,systems).\
+            filter(and_(System.user==None, or_(System.loaned==None, System.loaned==user))). \
+            join(System.lab_controller).filter(LabController.disabled==False)
 
     @classmethod
     def available_for_schedule(cls, user, systems=None):
@@ -2155,16 +2226,11 @@ class System(SystemObject):
         else:
             query = query.filter(System.status==system_status)
 
-        query = query.filter(or_(and_(System.owner==user), 
-                                System.loaned == user,
-                                and_(System.shared==True, 
-                                     System.group_assocs==None,
-                                    ),
-                                and_(System.shared==True,
-                                     System.groups.any(Group.users.contains(user)),
-                                    )
-                                )
-                            )
+        # these filter conditions correspond to can_reserve
+        query = query.outerjoin(System.custom_access_policy).filter(or_(
+                System.owner == user,
+                System.loaned == user,
+                SystemAccessPolicy.grants(user, SystemPermission.reserve)))
         return query
 
 
@@ -2176,10 +2242,16 @@ class System(SystemObject):
         return cls._available(user, systems=systems)
 
     @classmethod
-    def available_order(cls, user, systems=None):
-        return cls.available_for_schedule(user,systems=systems).order_by(case([(System.owner==user, 1),
-                          (and_(System.owner!=user, System.group_assocs != None), 2)],
-                              else_=3))
+    def scheduler_ordering(cls, user, query):
+        # Order by:
+        #   System Owner
+        #   System group
+        #   Single procesor bare metal system
+        return query.outerjoin(System.cpu).order_by(
+            case([(System.owner==user, 1),
+                (and_(System.owner!=user, System.group_assocs != None), 2)],
+                else_=3),
+                and_(System.hypervisor == None, Cpu.processors == 1))
 
     @classmethod
     def mine(cls, user):
@@ -2213,7 +2285,7 @@ class System(SystemObject):
     @classmethod
     def by_group(cls,group_id,*args,**kw):
         return System.query.join(SystemGroup,Group).filter(Group.group_id == group_id)
-    
+
     @classmethod
     def by_type(cls,type,user=None,systems=None):
         if systems:
@@ -2302,55 +2374,123 @@ class System(SystemObject):
         else:
             return False
 
-    def is_admin(self, user=None, *args, **kw):
-        # We are either using a passed in user, or the current user, not both
-        if not user:
-            try:
-                user = identity.current.user
-            except AttributeError, e: pass #May not be logged in
-
-        if not user: #Can't verify anything
-            return False
-
-        if user.is_admin(): #first let's see if we are an _admin_
-            return True
-
-        #If we are the owner....
+    def can_change_owner(self, user):
+        """
+        Does the given user have permission to change the owner of this system?
+        """
         if self.owner == user:
             return True
-
-        user_groups = user.groups
-        if user_groups:
-            if any(ga.admin and ga.group in user_groups
-                    for ga in self.group_assocs):
-                return True
-
-        return False
-
-    def can_admin(self,user=None):
-        # XXX Refactor this out, use is_admin() instead.
-        if user:
-            if user == self.owner or user.is_admin() or self.is_admin(user=user):
-                return True
-        return False
-
-    def can_provision_now(self,user=None):
-        if user is None:
-            return False
-        elif self.loaned == user:
+        if user.is_admin():
             return True
-        elif self._user_in_systemgroup(user):
-            return True
-        elif user is None:
-            return False
-        if self.status==SystemStatus.manual: #If it's manual then we us our original perm system.
-            return self._has_regular_perms(user)
         return False
 
-    def can_loan(self, user=None):
-        if user and not self.loaned:
-            if self.can_admin(user):
-                return True
+    def can_edit_policy(self, user):
+        """
+        Does the given user have permission to edit this system's access policy?
+        """
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.edit_policy)):
+            return True
+        return False
+
+    def can_edit(self, user):
+        """
+        Does the given user have permission to edit details (inventory info, 
+        power config, etc) of this system?
+        """
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.edit_system)):
+            return True
+        return False
+
+    def can_loan(self, user):
+        """
+        Does the given user have permission to loan this system to another user?
+        """
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.loan_any)):
+            return True
+        return False
+
+    def can_loan_to_self(self, user):
+        """
+        Does the given user have permission to loan this system to themselves?
+        """
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.loan_any) or
+            self.custom_access_policy.grants(user, SystemPermission.loan_self)):
+            return True
+        return False
+
+    def can_return_loan(self, user):
+        """
+        Does the given user have permission to cancel the current loan for this 
+        system?
+        """
+        if self.loaned == user:
+            return True
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        return False
+
+    def can_reserve(self, user):
+        """
+        Does the given user have permission to reserve this system?
+        """
+        if self.owner == user:
+            return True
+        if self.loaned == user:
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.reserve)):
+            return True
+        return False
+
+    def can_unreserve(self, user):
+        """
+        Does the given user have permission to return the current reservation 
+        on this system?
+        """
+        if self.user and self.user == user:
+            return True
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        return False
+
+    def can_power(self, user):
+        """
+        Does the given user have permission to run power/netboot commands on 
+        this system?
+        """
+        if self.user and self.user == user:
+            return True
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.control_system)):
+            return True
         return False
 
     def change_loan(self, user_name, comment=None, service='WEBUI'):
@@ -2366,146 +2506,40 @@ class System(SystemObject):
 
         Returns the user holding the loan.
         """
-        def _update_loanee():
-            if user != self.loaned:
-                activity = SystemActivity(identity.current.user, service,
-                    u'Changed', u'Loaned To', u'%s' % self.loaned if self.loaned else '' ,
-                    u'%s' % user if user else '')
-                self.loaned = user
-                self.activity.append(activity)
-
         loaning_to = user_name
         if loaning_to:
             user = User.by_user_name(loaning_to)
-            # This is an error condition
             if not user:
+                # This is an error condition
                 raise ValueError('user name %s is invalid' % loaning_to)
+            if user == identity.current.user:
+                if not self.can_loan_to_self(identity.current.user):
+                    raise BX(_("Insufficient permissions to create loan"))
+            else:
+                if not self.can_loan(identity.current.user):
+                    raise BX(_("Insufficient permissions to create loan"))
         else:
-            user = None
-
-        # This implies a Change to another user
-        if self.loaned and loaning_to:
-            if self.is_admin():
-                _update_loanee()
-            else:
-                raise BX(_("Insufficient permissions to change loanee of system"))
-        # This implies a Return
-        elif self.loaned and not loaning_to:
-            # Check permission
-            if self.current_loan(identity.current.user):
-                # Clear any existing comments
-                _update_loanee()
-                comment = None
-            else:
+            if not self.can_return_loan(identity.current.user):
                 raise BX(_("Insufficient permissions to return loan"))
-        # This is a new loan
-        elif not self.loaned and loaning_to:
-            # Check permission
-            if self.is_admin():
-                _update_loanee()
-            else:
-                raise BX(_("Insufficient permissions to create loan"))
-        self._update_loan_comment(comment)
+            user = None
+            comment = None
+
+        if user != self.loaned:
+            activity = SystemActivity(identity.current.user, service,
+                u'Changed', u'Loaned To', u'%s' % self.loaned if self.loaned else '' ,
+                u'%s' % user if user else '')
+            self.loaned = user
+            self.activity.append(activity)
+
+        if self.loan_comment != comment:
+            activity = SystemActivity(identity.current.user, service,
+                u'Changed', u'Loan Comment', u'%s' % self.loan_comment if
+                self.loan_comment else '' , u'%s' % comment if
+                comment else '')
+            self.activity.append(activity)
+            self.loan_comment = comment
+
         return loaning_to if loaning_to else ''
-
-    def current_loan(self, user=None):
-        if user and self.loaned:
-            if self.loaned == user or \
-               self.is_admin():
-                return True
-        return False
-
-    def current_user(self, user=None):
-        if user and self.user:
-            if self.user  == user \
-               or self.can_admin(user):
-                return True
-        return False
-
-    def _user_in_systemgroup(self,user=None):
-        if self.groups:
-            for group in user.groups:
-                if group in self.groups:
-                    return True
-
-    def _update_loan_comment(self, comment=None, service=u'WEBUI'):
-        """Updates the comment associated with a loan
-
-        Checks permissions and adds SystemActivity entry.
-        """
-        if not self.loaned and comment:
-            raise BX(_(u'Cannot add a loan comment without a current loan'))
-
-        def _update_comment():
-            if self.loan_comment != comment:
-                activity = SystemActivity(identity.current.user, service,
-                    u'Changed', u'Loan Comment', u'%s' % self.loan_comment if
-                    self.loan_comment else '' , u'%s' % comment if
-                    comment else '')
-                self.activity.append(activity)
-                self.loan_comment = comment
-        if self.can_admin(identity.current.user):
-            _update_comment()
-        # This is the case when returning a loan by a loanee
-        elif not self.loaned and not comment:
-            _update_comment()
-        else:
-            raise BX(_('Insufficient permissions to change loan comment'))
-
-    def is_available(self,user=None):
-        """
-        is_available() will return true if this system is allowed to be used by the user.
-        """
-        if user:
-            if self.shared:
-                # If the user is in the Systems groups
-                if self.groups:
-                    if self._user_in_systemgroup(user):
-                        return True
-                else:
-                    return True
-            elif self.loaned and self.loaned == user:
-                return True
-            elif self.owner == user:
-                return True
-        
-    def can_share(self, user=None):
-        """
-        can_share() will return True id the system is currently free and allwoed to be used by the user
-        """
-        if user and not self.user:
-            return self._has_regular_perms(user)
-        return False
-
-    def _has_regular_perms(self, user=None, *args, **kw):
-        """
-        This represents the basic system perms,loanee, owner,  shared and in group or shared and no group
-        """
-        # If user is None then probably not logged in.
-        if not user:
-            return False
-        if self.loaned:
-            if user == self.loaned:
-                return True
-            else:
-                return False
-        # If its the owner always allow.
-        if user == self.owner:
-            return True
-        if self.shared:
-            # If the user is in the Systems groups
-            return self._in_group(user)
-
-    def _in_group(self, user=None, *args, **kw):
-            if user is None:
-                return False
-            if self.groups:
-                for group in user.groups:
-                    if group in self.groups:
-                        return True
-            else:
-                # If the system has no groups
-                return True
 
     ALLOWED_ATTRS = ['vendor', 'model', 'memory'] #: attributes which the inventory scripts may set
     PRESERVED_ATTRS = ['vendor', 'model'] #: attributes which should only be set when empty
@@ -2919,7 +2953,7 @@ class System(SystemObject):
                 Distro.tags.contains(reliable_distro_tag.decode('utf8')),
                 Recipe.start_time >
                     func.ifnull(status_change_subquery.as_scalar(), self.date_added),
-                Recipe.finish_time > nonaborted_recipe_subquery.as_scalar()))\
+                Recipe.finish_time > nonaborted_recipe_subquery.as_scalar().correlate(None)))\
             .value(func.count(DistroTree.id.distinct()))
         if count >= 2:
             # Broken!
@@ -2929,15 +2963,29 @@ class System(SystemObject):
             log.warn(reason)
             self.mark_broken(reason=reason)
 
+    def reserve_manually(self, service, user=None):
+        if self.status == SystemStatus.automated:
+            raise BX(_(u'Cannot manually reserve automated system, '
+                    'schedule a job instead'))
+        return self.reserve(service, user=user, reservation_type=u'manual')
+
     def reserve(self, service, user=None, reservation_type=u'manual'):
         if user is None:
             user = identity.current.user
+
         if self.user is not None and self.user == user:
             raise StaleSystemUserException(_(u'User %s has already reserved '
                 'system %s') % (user, self))
-        if not self.can_share(user):
+        if not self.can_reserve(user):
             raise InsufficientSystemPermissions(_(u'User %s cannot '
                 'reserve system %s') % (user, self))
+        if self.loaned:
+            # loans give exclusive rights to reserve
+            if user != self.loaned and user != self.owner:
+                raise InsufficientSystemPermissions(_(u'User %s cannot reserve '
+                        'system %s while it is loaned to user %s')
+                        % (user, self, self.loaned))
+
         # Atomic operation to reserve the system
         session.flush()
         if session.connection(System).execute(system_table.update(
@@ -2960,11 +3008,12 @@ class System(SystemObject):
         if user is None:
             user = identity.current.user
 
-        # Some sanity checks
         if self.user is None:
             raise BX(_(u'System is not reserved'))
-        if not self.current_user(user):
-            raise BX(_(u'System is reserved by a different user'))
+        if not self.can_unreserve(user):
+            raise InsufficientSystemPermissions(
+                    _(u'User %s cannot unreserve system %s, reserved by %s')
+                    % (user, self, self.user))
 
         # Update reservation atomically first, to avoid races
         session.flush()
@@ -3077,6 +3126,117 @@ class Hypervisor(SystemObject):
     @classmethod
     def by_name(cls, hvisor):
         return cls.query.filter_by(hypervisor=hvisor).one()
+
+
+class SystemAccessPolicy(DeclBase, MappedObject):
+
+    """
+    A list of rules controlling who is allowed to do what to a system.
+    """
+    __tablename__ = 'system_access_policy'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, nullable=False, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id',
+            name='system_access_policy_system_id_fk'))
+    system = relationship(System,
+            backref=backref('custom_access_policy', uselist=False))
+
+    @hybrid_method
+    def grants(self, user, permission):
+        """
+        Does this policy grant the given permission to the given user?
+        """
+        return any(rule.permission == permission and
+                (rule.user == user or rule.group in user.groups or rule.everybody)
+                for rule in self.rules)
+
+    @grants.expression
+    def grants(cls, user, permission):
+        # need to avoid passing an empty list to in_
+        clauses = [SystemAccessPolicyRule.user == user, SystemAccessPolicyRule.everybody]
+        if user.groups:
+            clauses.append(SystemAccessPolicyRule.group_id.in_(
+                    [g.group_id for g in user.groups]))
+        return cls.rules.any(and_(SystemAccessPolicyRule.permission == permission,
+                or_(*clauses)))
+
+    @hybrid_method
+    def grants_everybody(self, permission):
+        """
+        Does this policy grant the given permission to all users?
+        """
+        return any(rule.permission == permission and rule.everybody
+                for rule in self.rules)
+
+    @grants_everybody.expression
+    def grants_everybody(cls, permission):
+        return cls.rules.any(and_(SystemAccessPolicyRule.permission == permission,
+                SystemAccessPolicyRule.everybody))
+
+    def add_rule(self, permission, user=None, group=None, everybody=False):
+        """
+        Pass either user, or group, or everybody=True.
+        """
+        if user is not None and group is not None:
+            raise RuntimeError('Rules are for a user or a group, not both')
+        if user is None and group is None and not everybody:
+            raise RuntimeError('Did you mean to pass everybody=True to add_rule?')
+        session.flush() # make sure self is persisted, for lazy_create
+        self.rules.append(SystemAccessPolicyRule.lazy_create(policy_id=self.id,
+                permission=permission,
+                user_id=user.user_id if user else None,
+                group_id=group.group_id if group else None))
+        return self.rules[-1]
+
+class SystemPermission(DeclEnum):
+
+    symbols = [
+        ('edit_policy',    u'edit_policy',    dict(label=_(u'Edit this policy'))),
+        ('edit_system',    u'edit_system',    dict(label=_(u'Edit system details'))),
+        ('loan_any',       u'loan_any',       dict(label=_(u'Loan to anyone'))),
+        ('loan_self',      u'loan_self',      dict(label=_(u'Loan to self'))),
+        ('control_system', u'control_system', dict(label=_(u'Control power'))),
+        ('reserve',        u'reserve',        dict(label=_(u'Reserve'))),
+    ]
+
+class SystemAccessPolicyRule(DeclBase, MappedObject):
+
+    """
+    A single rule in a system access policy. Policies can have one or more of these.
+
+    The existence of a row in this table means that the given permission is 
+    granted to the given user or group in this policy.
+    """
+    __tablename__ = 'system_access_policy_rule'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+
+    # It would be nice to have a constraint like:
+    #    UniqueConstraint('policy_id', 'user_id', 'group_id', 'permission')
+    # but we can't because user_id and group_id are NULLable and MySQL has
+    # non-standard behaviour for that which makes the constraint useless :-(
+
+    id = Column(Integer, nullable=False, primary_key=True)
+    policy_id = Column(Integer, ForeignKey('system_access_policy.id',
+            name='system_access_policy_rule_policy_id_fk'), nullable=False)
+    policy = relationship(SystemAccessPolicy, backref=backref('rules',
+            cascade='all, delete, delete-orphan'))
+    # Either user or group is set, to indicate who the rule applies to.
+    # If both are NULL, the rule applies to everyone.
+    user_id = Column(Integer, ForeignKey('tg_user.user_id',
+            name='system_access_policy_rule_user_id_fk'))
+    user = relationship(User)
+    group_id = Column(Integer, ForeignKey('tg_group.group_id',
+            name='system_access_policy_rule_group_id_fk'))
+    group = relationship(Group)
+    permission = Column(SystemPermission.db_type())
+
+    def __repr__(self):
+        return '<grant %s to %s>' % (self.permission,
+                self.group or self.user or 'everybody')
+
+    @hybrid_property
+    def everybody(self):
+        return (self.user == None) & (self.group == None)
 
 
 class Arch(MappedObject):
@@ -3213,6 +3373,12 @@ class OSMajorInstallOptions(MappedObject): pass
 
 
 class OSVersion(MappedObject):
+
+    @classmethod
+    def lazy_create(cls, osmajor, osminor):
+        return super(OSVersion, cls).lazy_create(osmajor_id=osmajor.id,
+                osminor=osminor)
+
     def __init__(self, osmajor, osminor, arches=None):
         super(OSVersion, self).__init__()
         self.osmajor = osmajor
@@ -3247,7 +3413,14 @@ class OSVersion(MappedObject):
     def __repr__(self):
         return "%s.%s" % (self.osmajor,self.osminor)
 
-    
+    def add_arch(self, arch):
+        """
+        Adds the given arch to this OSVersion if it's not already present.
+        """
+        session.connection(self.__class__).execute(ConditionalInsert(
+                osversion_arch_map,
+                {osversion_arch_map.c.osversion_id: self.id,
+                 osversion_arch_map.c.arch_id: arch.id}))
 
 
 class LabControllerDistroTree(MappedObject):
@@ -3361,7 +3534,7 @@ class Cpu(SystemObject):
 
     def updateFlags(self,flags):
         if flags != None:
-	    for cpuflag in flags:
+            for cpuflag in flags:
                 new_flag = CpuFlag(flag=cpuflag)
                 self.flags.append(new_flag)
 
@@ -3480,35 +3653,12 @@ class Install(MappedObject):
         self.name = name
 
 
-def _create_tag(tag):
-    """A creator function."""
-    try:
-        tag = DistroTag.by_tag(tag)
-    except InvalidRequestError:
-        tag = DistroTag(tag=tag)
-        session.add(tag)
-        session.flush([tag])
-    return tag
-
-
 class Distro(MappedObject):
 
     @classmethod
     def lazy_create(cls, name, osversion):
-        """
-        Distro is unique on name only, but osversion_id also needs to be
-        supplied on insertion because it is not NULLable. So this is
-        a specialisation of the usual lazy_create method.
-        """
-        session.begin_nested()
-        try:
-            item = cls(name=name, osversion=osversion)
-            session.commit()
-        except IntegrityError:
-            session.rollback()
-            item = cls.query.filter_by(name=name).one()
-            item.osversion = osversion
-        return item
+        return super(Distro, cls).lazy_create(name=name,
+                _extra_attrs=dict(osversion_id=osversion.id))
 
     @classmethod
     def by_name(cls, name):
@@ -3529,13 +3679,29 @@ class Distro(MappedObject):
         return make_link(url = '/distros/view?id=%s' % self.id,
                          text = self.name)
 
-    def expire(self, service='XMLRPC'):
+    def expire(self, service=u'XMLRPC'):
         for tree in self.trees:
             tree.expire(service=service)
 
-    tags = association_proxy('_tags', 'tag', creator=_create_tag)
+    tags = association_proxy('_tags', 'tag',
+            creator=lambda tag: DistroTag.lazy_create(tag=tag))
+
+    def add_tag(self, tag):
+        """
+        Adds the given tag to this distro if it's not already present.
+        """
+        tagobj = DistroTag.lazy_create(tag=tag)
+        session.connection(self.__class__).execute(ConditionalInsert(
+                distro_tag_map,
+                {distro_tag_map.c.distro_id: self.id,
+                 distro_tag_map.c.distro_tag_id: tagobj.id}))
 
 class DistroTree(MappedObject):
+
+    @classmethod
+    def lazy_create(cls, distro, variant, arch):
+        return super(DistroTree, cls).lazy_create(distro_id=distro.id,
+                variant=variant, arch_id=arch.id)
 
     @classmethod
     def by_filter(cls, filter):
@@ -3622,7 +3788,8 @@ class DistroTree(MappedObject):
         Limit to what is available to user if user passed in.
         """
         if user:
-            systems = System.available_order(user, systems=systems)
+            systems = System.available_for_schedule(user, systems=systems)
+            systems = System.scheduler_ordering(user, query=systems)
         elif not systems:
             systems = System.query
         
@@ -3705,11 +3872,21 @@ class DistroTree(MappedObject):
 
 class DistroTreeRepo(MappedObject):
 
-    pass
+    @classmethod
+    def lazy_create(cls, distro_tree, repo_id, repo_type, path):
+        return super(DistroTreeRepo, cls).lazy_create(
+                distro_tree_id=distro_tree.id,
+                repo_id=repo_id,
+                _extra_attrs=dict(repo_type=repo_type, path=path))
 
 class DistroTreeImage(MappedObject):
 
-    pass
+    @classmethod
+    def lazy_create(cls, distro_tree, image_type, kernel_type, path):
+        return super(DistroTreeImage, cls).lazy_create(
+                distro_tree_id=distro_tree.id,
+                image_type=image_type, kernel_type_id=kernel_type.id,
+                _extra_attrs=dict(path=path))
 
 class DistroTag(MappedObject):
     def __init__(self, tag=None):
@@ -3753,9 +3930,10 @@ class Activity(MappedObject):
         self.user = user
         self.service = service
         try:
-            self.service = identity.current.visit_link.proxied_by_user.user_name
-        except (AttributeError, identity.exceptions.RequestRequiredException):
-            pass # probably running in beakerd or such
+            if identity.current.proxied_by_user is not None:
+                self.service = identity.current.proxied_by_user.user_name
+        except identity.RequestRequiredException:
+            pass
         self.field_name = field_name
         self.action = action
         # These values are likely to be truncated by MySQL, so let's make sure 
@@ -3848,6 +4026,13 @@ class Note(MappedObject):
     @classmethod
     def all(cls):
         return cls.query
+
+    @property
+    def html(self):
+        """
+        The note's text rendered to HTML using Markdown.
+        """
+        return XML(markdown(self.text))
 
 
 class Key(SystemObject):
@@ -3956,21 +4141,7 @@ class Log(MappedObject):
 
     @classmethod
     def lazy_create(cls, path=None, **kwargs):
-        """
-        Unlike the "real" lazy_create above, we can't rely on unique
-        constraints here because 'path' and 'filename' are TEXT columns and
-        MySQL can't index those. :-(
-
-        So we just use a query-then-insert approach. There is a race window
-        between querying and inserting, but it's about the best we can do.
-        """
-        item = cls.query.filter_by(path=cls._normalized_path(path),
-                **kwargs).first()
-        if item is None:
-            item = cls(path=path, **kwargs)
-            session.add(item)
-            session.flush()
-        return item
+        return super(Log, cls).lazy_create(path=cls._normalized_path(path), **kwargs)
 
     def __init__(self, path=None, filename=None,
                  server=None, basepath=None, parent=None):
@@ -4044,7 +4215,7 @@ class Log(MappedObject):
 
     @classmethod 
     def by_id(cls,id): 
-       return cls.query.filter_by(id=id).one()
+        return cls.query.filter_by(id=id).one()
 
     def __cmp__(self, other):
         """ Used to compare logs that are already stored. Log(path,filename) in Recipe.logs  == True
@@ -4087,7 +4258,7 @@ class TaskBase(MappedObject):
         task_type,id = t_id.split(":")
         try:
             class_str = cls.t_id_types[task_type]
-        except KeyError, e:
+        except KeyError:
             raise BeakerException(_('You have have specified an invalid task type:%s' % task_type))
 
         class_ref = globals()[class_str]
@@ -4161,31 +4332,26 @@ class TaskBase(MappedObject):
             return None
         if getattr(self, 'ptasks', None):
             completed += self.ptasks
-            pwidth = int(float(self.ptasks)/float(self.ttasks)*100)
+            pwidth = int(round(float(self.ptasks)/float(self.ttasks)*100))
         if getattr(self, 'wtasks', None):
             completed += self.wtasks
-            wwidth = int(float(self.wtasks)/float(self.ttasks)*100)
+            wwidth = int(round(float(self.wtasks)/float(self.ttasks)*100))
         if getattr(self, 'ftasks', None):
             completed += self.ftasks
-            fwidth = int(float(self.ftasks)/float(self.ttasks)*100)
+            fwidth = int(round(float(self.ftasks)/float(self.ttasks)*100))
         if getattr(self, 'ktasks', None):
             completed += self.ktasks
-            kwidth = int(float(self.ktasks)/float(self.ttasks)*100)
-        percentCompleted = int(float(completed)/float(self.ttasks)*100)
-        div   = Element('div', {'class': 'dd'})
-        div.append(Element('div', {'class': 'green', 'style': 'width:%s%%' % pwidth}))
-        div.append(Element('div', {'class': 'orange', 'style': 'width:%s%%' % wwidth}))
-        div.append(Element('div', {'class': 'red', 'style': 'width:%s%%' % fwidth}))
-        div.append(Element('div', {'class': 'blue', 'style': 'width:%s%%' % kwidth}))
-
-        percents = Element('div', {'class': 'progressPercentage'})
-        percents.text = "%s%%" % percentCompleted
-
-        span = Element('span')
-        span.append(percents)
-        span.append(div)
-
-        return span
+            kwidth = int(round(float(self.ktasks)/float(self.ttasks)*100))
+        percentCompleted = int(round(float(completed)/float(self.ttasks)*100))
+        div = Element('div', {'class': 'progress'})
+        div.append(Element('div', {'class': 'bar bar-success', 'style': 'width:%s%%' % pwidth}))
+        div.append(Element('div', {'class': 'bar bar-warning', 'style': 'width:%s%%' % wwidth}))
+        div.append(Element('div', {'class': 'bar bar-danger', 'style': 'width:%s%%' % fwidth}))
+        div.append(Element('div', {'class': 'bar bar-info', 'style': 'width:%s%%' % kwidth}))
+        container = Element('div')
+        container.text = "%s%%" % percentCompleted
+        container.append(div)
+        return container
     progress_bar = property(progress_bar)
 
 
@@ -4299,18 +4465,17 @@ class Job(TaskBase):
                 if log_B.startswith(log_A) and log_A != log_B:
                     try:
                         logs_to_return.remove(log_B)
-                    except KeyError, e:
+                    except KeyError:
                         pass # Possibly already removed
         return logs_to_return
 
     @classmethod
     def expired_logs(cls, limit=None):
-        """Return log files for expired recipes
+        """Iterate over log files for expired recipes
 
-        Will not return recipes that have already been deleted. Does
-        return recipes that are marked to be deleted though.
+        Will not yield recipes that have already been deleted. Does
+        yield recipes that are marked to be deleted though.
         """
-        expired_logs = []
         job_ids = [job_id for job_id, in cls.marked_for_deletion().values(Job.id)]
         for tag in RetentionTag.get_transient():
             expire_in = tag.expire_in_days
@@ -4433,7 +4598,8 @@ class Job(TaskBase):
             recipe.distro_tree = distro_tree
             # Don't report panic's for reserve workflow.
             recipe.panic = 'ignore'
-            if kw.get('system_id'):
+            system_id = kw.get('system_id')
+            if system_id:
                 try:
                     system = System.by_id(kw.get('system_id'), identity.current.user)
                 except InvalidRequestError:
@@ -4524,6 +4690,13 @@ class Job(TaskBase):
                 log.exception(err_msg)
                 raise BX(err_msg)
         return query
+
+    @classmethod
+    def cancel_jobs_by_user(cls, user, msg = None):
+        jobs = Job.query.filter(and_(Job.owner == user,
+                                     Job.status.in_([s for s in TaskStatus if not s.finished])))
+        for job in jobs:
+            job.cancel(msg=msg)
 
     @classmethod
     def delete_jobs(cls, jobs=None, query=None):
@@ -4823,7 +4996,7 @@ class Job(TaskBase):
             return False
         if self.group:
             if self.group in user.groups:
-               return True
+                return True
         return self.is_owner(user) or user.is_admin() or \
             self.submitter == user
 
@@ -4832,8 +5005,11 @@ class Job(TaskBase):
         This fills the gap between the new permissions system with group
         jobs and the old permission model without it.
 
-        XXX Remove this the next release AFTER 0.13
+        XXX Using a config option to enable this deprecated function.
+        This code will be removed. Eventually. See BZ#1000861
         """
+        if not get('beaker.deprecated_job_group_permissions.on', True):
+            return False
         if not user:
             return False
         return bool(set(user.groups).intersection(set(self.owner.groups)))
@@ -4974,17 +5150,16 @@ class RecipeSetResponse(MappedObject):
 
     @classmethod 
     def by_id(cls,id): 
-       return cls.query.filter_by(recipe_set_id=id).one()
+        return cls.query.filter_by(recipe_set_id=id).one()
 
     @classmethod
     def by_jobs(cls,job_ids):
-        job_ids_type = type(job_ids)
-        if job_ids_type == type(list()):
+        if isinstance(job_ids, list):
             clause = Job.id.in_(job_ids)
-        elif job_ids_type == int:
-            clause = Job.id == job_id
+        elif isinstance(job_ids, int):
+            clause = Job.id == job_ids
         else:
-            raise BeakerException('job_ids needs to be either type \'int\' or \'list\'. Found %s' % job_ids_type)
+            raise BeakerException('job_ids needs to be either type \'int\' or \'list\'. Found %s' % type(job_ids))
         queri = cls.query.outerjoin('recipesets','job').filter(clause)
         results = {}
         for elem in queri:
@@ -5029,7 +5204,7 @@ class RecipeSet(TaskBase):
         """Return True iff the given user can change the response to this recipeset"""
         return self.job.can_set_response(user)
 
-    def can_stop(sel, user=None):
+    def can_stop(self, user=None):
         """Returns True iff the given user can stop this recipeset"""
         return self.job.can_stop(user)
 
@@ -5107,7 +5282,7 @@ class RecipeSet(TaskBase):
 
     @classmethod 
     def by_id(cls,id): 
-       return cls.query.filter_by(id=id).one()
+        return cls.query.filter_by(id=id).one()
 
     @classmethod
     def by_job_id(cls,job_id):
@@ -5158,7 +5333,7 @@ class RecipeSet(TaskBase):
                 min_status = recipe.status
             if recipe.result.severity > max_result.severity:
                 max_result = recipe.result
-        status_changed = self._change_status(min_status)
+        self._change_status(min_status)
         self.result = max_result
 
         # Return systems if recipeSet finished
@@ -5266,9 +5441,8 @@ class Recipe(TaskBase):
     @property
     def link(self):
         """ Return a link to this recipe. """
-        link = make_link(url='/recipes/%s' % self.id, text=self.t_id)
-        link.attrib['class'] += ' recipe-id'
-        return link
+        return make_link(url='/recipes/%s' % self.id, text=self.t_id,
+                elem_class='recipe-id')
 
     def filepath(self):
         """
@@ -6614,7 +6788,7 @@ class VirtResource(RecipeResource):
                     self.system_name, self.recipe.id)
             with VirtManager() as manager:
                 manager.destroy_vm(self.system_name)
-        except Exception, e:
+        except Exception:
             log.exception('Failed to destroy vm %s, leaked!',
                     self.system_name)
             # suppress exception, nothing more we can do now
@@ -6688,18 +6862,19 @@ class TaskLibrary(object):
         # Internal call that assumes the flock is already held
         # Removed --baseurl, if upgrading you will need to manually
         # delete repodata directory before this will work correctly.
-        p = subprocess.Popen(['createrepo', '-q', '--update',
+        createrepo_command = get('beaker.createrepo_command', 'createrepo')
+        p = subprocess.Popen([createrepo_command, '-q', '--update',
                 '--checksum', 'sha', '.'], cwd=self.rpmspath,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, err = p.communicate()
         if output:
-           log.debug("stdout from createrepo: %s", output)
+            log.debug("stdout from %s: %s", createrepo_command, output)
         if err:
-           log.warn("stderr from createrepo: %s", err)
+            log.warn("stderr from %s: %s", createrepo_command, err)
         retcode = p.poll()
         if retcode:
-            raise ValueError('createrepo failed with exit status %d:\n%s'
-                    % (retcode, err))
+            raise ValueError('%s failed with exit status %d:\n%s'
+                    % (createrepo_command, retcode, err))
 
     def update_repo(self):
         """Update the task library yum repo metadata"""
@@ -6823,10 +6998,12 @@ class TaskLibrary(object):
         if taskinfo_file:
             fd.seek(0)
             p1 = subprocess.Popen(["rpm2cpio"],
-                                  stdin=fd.fileno(), stdout=subprocess.PIPE)
+                                  stdin=fd.fileno(), stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
             p2 = subprocess.Popen(["cpio", "--quiet", "--extract",
                                    "--to-stdout", ".%s" % taskinfo_file],
-                                  stdin=p1.stdout, stdout=subprocess.PIPE)
+                                  stdin=p1.stdout, stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
             taskinfo['desc'] = p2.communicate()[0]
         return taskinfo
 
@@ -6881,14 +7058,15 @@ class Task(MappedObject):
         """Create a new task object based on details retrieved from an RPM"""
 
         tinfo = testinfo.parse_string(raw_taskinfo['desc'])
-        task = cls.lazy_create(name=tinfo.test_name)
 
-        if len(task.name) > 255:
+        if len(tinfo.test_name) > 255:
             raise BX(_("Task name should be <= 255 characters"))
-        if task.name.endswith('/'):
+        if tinfo.test_name.endswith('/'):
             raise BX(_(u'Task name must not end with slash'))
-        if '//' in task.name:
+        if '//' in tinfo.test_name:
             raise BX(_(u'Task name must not contain redundant slashes'))
+
+        task = cls.lazy_create(name=tinfo.test_name)
 
         # RPM is the same version we have. don't process
         if task.version == raw_taskinfo['hdr']['ver']:
@@ -6954,7 +7132,7 @@ class Task(MappedObject):
 
         try:
             task.uploader = identity.current.user
-        except IdentityException:
+        except identity.RequestRequiredException:
             task.uploader = User.query.get(1)
 
         task.valid = True
@@ -7064,7 +7242,7 @@ class Task(MappedObject):
             task.append(excluded)
         return lxml.etree.tostring(task, pretty_print=pretty)
 
-    def elapsed_time(self, suffixes=[' year',' week',' day',' hour',' minute',' second'], add_s=True, separator=', '):
+    def elapsed_time(self, suffixes=(' year',' week',' day',' hour',' minute',' second'), add_s=True, separator=', '):
         """
         Takes an amount of seconds and turns it into a human-readable amount of 
         time.
@@ -7242,7 +7420,7 @@ class ConfigItem(MappedObject):
         if user is None:
             try:
                 user = identity.current.user
-            except AttributeError, e:
+            except AttributeError:
                 raise BX(_('Settings may not be changed anonymously'))
         if valid_from:
             if valid_from < datetime.utcnow():
@@ -7409,7 +7587,6 @@ class ExternalReport(DeclBase, MappedObject):
     def __init__(self, *args, **kw):
         super(ExternalReport, self).__init__(*args, **kw)
 
-# set up mappers between identity tables and classes
 Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
 KernelType.mapper = mapper(KernelType, kernel_type_table)
 System.mapper = mapper(System, system_table,
@@ -7598,16 +7775,6 @@ mapper(DistroTreeImage, distro_tree_image_table, properties={
     'distro_tree': relation(DistroTree, backref=backref('images',
         cascade='all, delete-orphan')),
     'kernel_type':relation(KernelType, uselist=False),
-})
-
-mapper(Visit, visits_table)
-
-mapper(VisitIdentity, visit_identity_table, properties={
-    'user': relation(User,
-        primaryjoin=visit_identity_table.c.user_id == users_table.c.user_id,
-        backref='visit_identity'),
-    'proxied_by_user': relation(User,
-        primaryjoin=visit_identity_table.c.proxied_by_user_id == users_table.c.user_id),
 })
 
 mapper(User, users_table,
@@ -7884,7 +8051,6 @@ mapper(ConfigValueString, config_value_string_table,
 
 
 ## Static list of device_classes -- used by master.kid
-global _device_classes
 _device_classes = None
 def device_classes():
     global _device_classes
@@ -7895,8 +8061,8 @@ def device_classes():
 
 # available in python 2.7+ importlib
 def import_module(modname):
-     __import__(modname)
-     return sys.modules[modname]
+    __import__(modname)
+    return sys.modules[modname]
 
 def auto_cmd_handler(command, new_status):
     if not command.system.open_reservation:

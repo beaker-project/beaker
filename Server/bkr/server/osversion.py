@@ -1,26 +1,14 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from turbogears.widgets import AutoCompleteField
-from turbogears import identity, redirect
-from cherrypy import request, response
-from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
-from kid import Element
-from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
-from bkr.server.widgets import AlphaNavBar, myPaginateDataGrid
+from turbogears import expose, flash, widgets, validate, \
+    validators, redirect, paginate, url
+from sqlalchemy.exc import InvalidRequestError
+from bkr.server import identity
+from bkr.server.helpers import make_link
+from bkr.server.widgets import myPaginateDataGrid, HorizontalForm, \
+        CheckBoxList
 from bkr.server.admin_page import AdminPage
 
-import cherrypy
-
-from BasicAuthTransport import BasicAuthTransport
-import xmlrpclib
-
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-#import model
-from model import *
-import string
+from bkr.server.model import Arch, OSMajor, OSVersion, OSMajorInstallOptions
 
 # Validation Schemas
 
@@ -30,16 +18,16 @@ class OSVersions(AdminPage):
 
     id      = widgets.HiddenField(name="id")
     alias   = widgets.TextField(name="alias")
-    arches  = widgets.CheckBoxList(name="arches", label="Arches",
+    arches  = CheckBoxList(name="arches", label="Arches",
                                       options=lambda: [(arch.id, arch.arch) for arch in Arch.query],
                                       validator=validators.Int())
 
-    osmajor_form = widgets.TableForm(
+    osmajor_form = HorizontalForm(
         fields      = [id, alias],
         submit_text = _(u"Edit OSMajor"),
     )
 
-    osversion_form = widgets.TableForm(
+    osversion_form = HorizontalForm(
         fields      = [id, arches],
         action      = "edit osversion",
         submit_text = _(u"Edit OSVersion"),
@@ -63,7 +51,7 @@ class OSVersions(AdminPage):
         except InvalidRequestError:
             flash(_(u"Invalid OSVersion ID %s" % id))
             redirect(".")
-        return dict(title   = "OSVersion",
+        return dict(title   = unicode(osversion),
                     value   = dict(id     = osversion.id,
                                    arches = [arch.id for arch in osversion.arches]),
                     form    = self.osversion_form,
@@ -110,8 +98,8 @@ class OSVersions(AdminPage):
             redirect(".")
         for arch, options in installopts.iteritems():
             # arch=None means applied to all arches
-            io = OSMajorInstallOptions.lazy_create(osmajor=osmajor,
-                    arch=Arch.by_name(arch) if arch else None)
+            io = OSMajorInstallOptions.lazy_create(osmajor_id=osmajor.id,
+                    arch_id=Arch.by_name(arch).id if arch else None)
             io.ks_meta = options['ks_meta']
             io.kernel_options = options['kernel_options']
             io.kernel_options_post = options['kernel_options_post']
@@ -181,7 +169,6 @@ class OSVersions(AdminPage):
                     grid = osversions_grid, 
                     search_widget = self.search_widget_form,
                     addable = False,              
-                    object_count = osversions.count(), 
                     list = osversions)
 
     default = index

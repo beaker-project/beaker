@@ -310,7 +310,8 @@ def abort_dead_recipes(*args):
         filters.append(and_(not_(Recipe.systems.any()),
                 Recipe.virt_status != RecipeVirtStatus.possible))
     else:
-        filters.append(not_(Recipe.systems.any()))
+        filters.append(not_(Recipe.systems. \
+            any(System.status==SystemStatus.automated)))
     recipes = MachineRecipe.query\
             .join(MachineRecipe.recipeset).join(RecipeSet.job)\
             .filter(Job.dirty_version == Job.clean_version)\
@@ -335,12 +336,14 @@ def abort_dead_recipes(*args):
 
 def abort_dead_recipe(recipe_id):
     recipe = MachineRecipe.by_id(recipe_id)
-    if len(recipe.systems) == 0:
-        msg = u"R:%s does not match any systems, aborting." % recipe.id
+    # There are two ways to have your recipe aborted;
+    # no distros, or no automated systems available
+    if len(recipe.distro_tree.lab_controller_assocs) == 0:
+        msg = u"R:%s does not have a valid distro tree, aborting." % recipe.id
         log.info(msg)
         recipe.recipeset.abort(msg)
-    elif len(recipe.distro_tree.lab_controller_assocs) == 0:
-        msg = u"R:%s does not have a valid distro tree, aborting." % recipe.id
+    else:
+        msg = u"R:%s does not match any systems, aborting." % recipe.id
         log.info(msg)
         recipe.recipeset.abort(msg)
 
@@ -431,11 +434,11 @@ def schedule_queued_recipes(*args):
 def schedule_queued_recipe(recipe_id):
     recipe = MachineRecipe.by_id(recipe_id)
     systems = recipe.dyn_systems\
-               .outerjoin(System.cpu)\
                .join(System.lab_controller)\
                .filter(and_(System.user==None,
                           LabController._distro_trees.any(
-                            LabControllerDistroTree.distro_tree == recipe.distro_tree),
+                              LabControllerDistroTree.distro_tree== 
+                                  recipe.distro_tree),
                           LabController.disabled==False,
                           System.status==SystemStatus.automated,
                           or_(
@@ -457,15 +460,7 @@ def schedule_queued_recipe(recipe_id):
     # </recipe>
     user = recipe.recipeset.job.owner
     if True: #FIXME if pools are defined add them here in the order requested.
-        # Order by:
-        #   System Owner
-        #   System group
-        #   Single procesor bare metal system
-        systems = systems.order_by(
-            case([(System.owner==user, 1),
-                (and_(System.owner!=user, System.group_assocs != None), 1)],
-                else_=3),
-                and_(System.hypervisor == None, Cpu.processors == 1))
+        systems = System.scheduler_ordering(user, query=systems)
     if recipe.recipeset.lab_controller:
         # First recipe of a recipeSet determines the lab_controller
         systems = systems.filter(
@@ -481,7 +476,7 @@ def schedule_queued_recipe(recipe_id):
     if not system:
         return
     log.debug("System : %s is available for Recipe %s" % (system, recipe.id))
-    # Check to see if user still has proper permissions to use system
+    # Check to see if user still has proper permissions to use the system.
     # Remember the mapping of available systems could have happend hours or even
     # days ago and groups or loans could have been put in place since.
     if not System.free(user).filter(System.id == system.id).first():
@@ -680,9 +675,8 @@ def _system_count_metrics_for_query_grouped(name, grouping, query):
 def system_count_metrics():
     _system_count_metrics_for_query('all', System.query)
     _system_count_metrics_for_query('shared', System.query
-            .filter(System.private == False)
-            .filter(System.shared == True)
-            .filter(System.group_assocs == None))
+            .outerjoin(System.custom_access_policy)
+            .filter(SystemAccessPolicy.grants_everybody(SystemPermission.reserve)))
     _system_count_metrics_for_query_grouped('by_arch', Arch.arch,
             System.query.join(System.arch))
     _system_count_metrics_for_query_grouped('by_lab', LabController.fqdn,

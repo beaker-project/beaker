@@ -64,38 +64,6 @@ def write_ignore(path, content):
         logger.debug("%s didn't exist, writing it", path)
         f.write(content)
 
-def cached_filename(url):
-    return urllib.quote(url, '') # ugly, but safe
-
-def clean_image_cache():
-    cached_images_dir = os.path.join(get_tftp_root(), 'cached-images')
-    try:
-        entries = os.listdir(cached_images_dir)
-    except OSError, e:
-        if e.errno == errno.ENOENT:
-            return
-        else:
-            raise
-    max_entries = get_conf().get('IMAGE_CACHE_MAX_ENTRIES', 20)
-    if len(entries) <= max_entries:
-        return
-    ctimes = {}
-    for entry in entries:
-        try:
-            stat = os.stat(os.path.join(cached_images_dir, entry))
-        except OSError, e:
-            if e.errno == errno.ENOENT:
-                continue
-            else:
-                raise
-        ctimes[entry] = stat.st_ctime
-    old_entries = sorted(entries,
-            key=lambda entry: ctimes[entry],
-            reverse=True)[max_entries:]
-    for entry in old_entries:
-        logger.debug('Cleaning %s from image cache', entry)
-        unlink_ignore(os.path.join(cached_images_dir, entry))
-
 def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
     """
     Creates references to kernel and initrd files at:
@@ -106,7 +74,6 @@ def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
     images_dir = os.path.join(get_tftp_root(), 'images', fqdn)
     makedirs_ignore(images_dir, 0755)
     distrotree_dir = os.path.join(get_tftp_root(), 'distrotrees', str(distro_tree_id))
-    cached_images_dir = os.path.join(get_tftp_root(), 'cached-images')
 
     # beaker-pxemenu might have already fetched the images, so let's try there
     # before anywhere else.
@@ -122,20 +89,6 @@ def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
             raise
     # No luck there, so try something else...
 
-    if get_conf().get('IMAGE_CACHE', False):
-        # Try the cache first.
-        try:
-            atomic_link(os.path.join(cached_images_dir, cached_filename(kernel_url)),
-                    os.path.join(images_dir, 'kernel'))
-            atomic_link(os.path.join(cached_images_dir, cached_filename(initrd_url)),
-                    os.path.join(images_dir, 'initrd'))
-            logger.debug('Using cached images for %s', fqdn)
-            return
-        except OSError, e:
-            if e.errno != errno.ENOENT:
-                raise
-        # Okay, fall back to fetching...
-
     logger.debug('Fetching kernel %s for %s', kernel_url, fqdn)
     with atomically_replaced_file(os.path.join(images_dir, 'kernel')) as dest:
         siphon(urllib2.urlopen(kernel_url), dest)
@@ -143,25 +96,11 @@ def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
     with atomically_replaced_file(os.path.join(images_dir, 'initrd')) as dest:
         siphon(urllib2.urlopen(initrd_url), dest)
 
-    if get_conf().get('IMAGE_CACHE', False):
-        logger.debug('Linking fetched images for %s to cache', fqdn)
-        makedirs_ignore(cached_images_dir, 0755)
-        try:
-            # Do them in the opposite order to above
-            atomic_link(os.path.join(images_dir, 'initrd'),
-                    os.path.join(cached_images_dir, cached_filename(initrd_url)))
-            atomic_link(os.path.join(images_dir, 'kernel'),
-                    os.path.join(cached_images_dir, cached_filename(kernel_url)))
-        except OSError, e:
-            if e.errno != errno.EEXIST:
-                raise
-        clean_image_cache()
-
 def have_images(fqdn):
     return os.path.exists(os.path.join(get_tftp_root(), 'images', fqdn))
 
 def clear_images(fqdn):
-    """Removes kernel and initrd images (images will remain in image cache)"""
+    """Removes kernel and initrd images """
     images_dir = os.path.join(get_tftp_root(), 'images', fqdn)
     logger.debug('Removing images for %s', fqdn)
     shutil.rmtree(images_dir, ignore_errors=True)

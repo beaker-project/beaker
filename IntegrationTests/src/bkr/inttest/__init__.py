@@ -26,14 +26,16 @@ import time
 import threading
 import subprocess
 import shutil
+import tempfile
+import re
 from StringIO import StringIO
 import logging, logging.config
 import signal
 import cherrypy
 import turbogears
-from turbogears import update_config
 from turbogears.database import session
 from bkr.server.controllers import Root
+from bkr.server.util import load_config
 from bkr.log import log_to_stream
 
 # hack to make turbogears.testutil not do dumb stuff at import time
@@ -41,6 +43,8 @@ orig_cwd = os.getcwd()
 os.chdir('/tmp')
 import turbogears.testutil
 os.chdir(orig_cwd)
+
+CONFIG_FILE = os.environ.get('BEAKER_CONFIG_FILE')
 
 # workaround for delayed log formatting in nose
 # https://groups.google.com/forum/?fromgroups=#!topic/nose-users/5uZVDfDf1ZI
@@ -54,8 +58,6 @@ class EagerFormattedLogRecord(orig_LogRecord):
 logging.LogRecord = EagerFormattedLogRecord
 
 log = logging.getLogger(__name__)
-
-CONFIG_FILE = os.environ.get('BEAKER_CONFIG_FILE', 'server-test.cfg')
 
 def get_server_base():
     return os.environ.get('BEAKER_SERVER_BASE_URL',
@@ -126,12 +128,20 @@ class Process(object):
         self.exec_dir = exec_dir
 
     def start(self):
-        log.info('Spawning %s: %s %r', self.name, ' '.join(self.args), self.env)
+        _cmd_line = ' '.join(self.args)
+        if self.env is None:
+            log.info('Spawning %s: %r', self.name, _cmd_line)
+        else:
+            log.info('Spawning %s in %r: %r', self.name, self.env, _cmd_line)
         env = dict(os.environ)
         if self.env:
             env.update(self.env)
-        self.popen = subprocess.Popen(self.args, stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT, env=env, cwd=self.exec_dir)
+        try:
+            self.popen = subprocess.Popen(self.args, stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT, env=env, cwd=self.exec_dir)
+        except:
+            log.info('Failed to spawn %s', self.name)
+            raise
         self.communicate_thread = CommunicateThread(popen=self.popen)
         self.communicate_thread.start()
         if self.listen_port:
@@ -248,10 +258,37 @@ olcAccess: to * by * read
 
 processes = []
 
+def edit_file(file, old_text, new_text):
+    with open(file, 'r') as f:
+        contents = f.read()
+    contents = re.sub(old_text, new_text, contents)
+    tmp_config = tempfile.NamedTemporaryFile()
+    tmp_config.write(contents)
+    tmp_config.flush()
+    return tmp_config
+
+def start_process(name, env=None):
+    found = False
+    for p in processes:
+        if name == p.name:
+            p.env = env
+            found = True
+            p.start()
+    if found is False:
+        raise ValueError('%s is not a valid process name')
+
+def stop_process(name):
+    found = False
+    for p in processes:
+        if name == p.name:
+            found = True
+            p.stop()
+    if found is False:
+        raise ValueError('%s is not a valid process name')
+
 def setup_package():
-    log.info('Loading test configuration from %s', CONFIG_FILE)
     assert os.path.exists(CONFIG_FILE), 'Config file %s must exist' % CONFIG_FILE
-    update_config(configfile=CONFIG_FILE, modulename='bkr.server.config')
+    load_config(configfile=CONFIG_FILE)
     log_to_stream(sys.stdout, level=logging.DEBUG)
 
     from bkr.inttest import data_setup
@@ -278,11 +315,17 @@ def setup_package():
 
     if 'BEAKER_SERVER_BASE_URL' not in os.environ:
         # need to start the server ourselves
-        # (this only works from the IntegrationTests dir of a Beaker checkout)
+        # Usual pkg_resources ugliness is needed to ensure gunicorn doesn't
+        # import pkg_resources before we get a chance to specify our
+        # requirements in bkr.server.wsgi
         processes.extend([
-            Process('beaker', args=['../Server/start-server.py', CONFIG_FILE],
-                    listen_port=turbogears.config.get('server.socket_port'),
-                    stop_signal=signal.SIGINT)
+            Process('gunicorn', args=[sys.executable, '-c',
+                '__requires__ = ["CherryPy < 3.0"]; import pkg_resources; ' \
+                'from gunicorn.app.wsgiapp import run; run()',
+                '--bind', ':%s' % turbogears.config.get('server.socket_port'),
+                '--workers', '8', '--access-logfile', '-', '--preload',
+                'bkr.server.wsgi:application'],
+                listen_port=turbogears.config.get('server.socket_port')),
         ])
     processes.extend([
         Process('slapd', args=['slapd', '-d0', '-F/tmp/beaker-tests-slapd-config',

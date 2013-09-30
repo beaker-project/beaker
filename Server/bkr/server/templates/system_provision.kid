@@ -1,88 +1,84 @@
 <form xmlns:py="http://purl.org/kid/ns#"
  name="${name}"
- action="${tg.url(action)}"
+ action="${action}"
  method="${method}" width="100%">
- <span py:if="lab_controller and will_provision is True">
-  <span py:if="not tg.identity.anonymous">
+  <span py:if="lab_controller">
+    <span py:if="(automated and can_reserve) or (not automated and reserved)">
    <script language="JavaScript" type="text/JavaScript">
     ${name}_0 = new Provision('${id.field_id}', '${prov_install.field_id}', '${ks_meta.field_id}','${koptions.field_id}','${koptions_post.field_id}','${tg.url('/get_installoptions')}');
     addLoadEvent(${name}_0.initialize);
    </script>
-   <table>
-    <tr>
-     <td rowspan="6">
+      <div class="row-fluid">
+        <div class="span4">
       ${display_field_for("prov_install")}
-     </td>
-    </tr>
-    <tr>
-     <td><label class="fieldlabel"
-                for="${ks_meta.field_id"
+        </div>
+        <div class="span8 form-horizontal">
+          <div class="control-group">
+            <label class="control-label"
+                for="${ks_meta.field_id}"
                 py:content="ks_meta.label"/>
-     </td>
-     <td>${display_field_for("ks_meta")}
-     </td>
-    </tr>
-    <tr>
-     <td><label class="fieldlabel"
-                for="${koptions.field_id"
+            <div class="controls">
+              ${display_field_for("ks_meta")}
+            </div>
+          </div>
+          <div class="control-group">
+            <label class="control-label"
+                for="${koptions.field_id}"
                 py:content="koptions.label"/>
-     </td>
-     <td>${display_field_for("koptions")}
-     </td>
-    </tr>
-    <tr>
-     <td><label class="fieldlabel"
-                for="${koptions_post.field_id"
+            <div class="controls">
+              ${display_field_for("koptions")}
+            </div>
+          </div>
+          <div class="control-group">
+            <label class="control-label"
+                for="${koptions_post.field_id}"
                 py:content="koptions_post.label"/>
-     </td>
-     <td>${display_field_for("koptions_post")}
-     </td>
-    </tr>
-    <span py:if="provision_now_rights">
-    <tr py:if="power_enabled">
-     <td>${display_field_for("reboot")}</td>
-     <td><label class="fieldlabel"
-                for="${reboot.field_id"
-                py:content="reboot.label"/>
-     </td>
-    </tr>
-    <tr py:if="not power_enabled">
-     <td colspan="2">This system is not configured for reboot support</td>
-    </tr>
-    <tr>
-     <td>&nbsp;</td>
-     <td>
-      <a class="button" href="javascript:document.${name}.submit();">Provision</a>
-     </td>
-    </tr>
+            <div class="controls">
+              ${display_field_for("koptions_post")}
+            </div>
+          </div>
+    <span py:if="not automated">
+          <div class="control-group" py:if="power_enabled">
+            <div class="controls">
+              <label class="checkbox">
+                ${display_field_for("reboot")}
+                ${reboot.label}
+              </label>
+            </div>
+          </div>
+          <div py:if="not power_enabled">
+            This system is not configured for reboot support
+          </div>
     </span>
-    <span py:if="not provision_now_rights">
-    <tr> 
-     <td><label class="fieldlabel" py:content="schedule_reserve_days.label"/>
-     </td>
-     <td>
+    <span py:if="automated">
+          <div class="control-group">
+            <label class="control-label"
+                for="${schedule_reserve_days.field_id}"
+                py:content="schedule_reserve_days.label"/>
+            <div class="controls">
      ${schedule_reserve_days.display()}
-     </td>
-    </tr>
-    <tr>
-     <td>&nbsp;</td>
-     <td>
-      <a class="button" href="javascript:document.${name}.submit();">Schedule provision</a>
-     </td>
-    </tr>
+            </div>
+          </div>
     </span>
-   </table>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" py:if="not automated">Provision</button>
+        <button type="submit" class="btn btn-primary" py:if="automated">Schedule provision</button>
+      </div>
 
    ${display_field_for("id")}
-  </span>
- </span>
-  <span py:if="not will_provision and provision_now_rights">
+    </span>
+    <span py:if="automated and not can_reserve">
+      You do not have access to schedule a job on this system.
+    </span>
+    <span py:if="not automated and not reserved and can_reserve">
    You can only provision if you have reserved the system.
+    </span>
+    <span py:if="not automated and not reserved and not can_reserve">
+      You do not have access to reserve this system.
+    </span>
   </span>
-  <span py:if="not will_provision and not provision_now_rights">
-   You do not have access to provision or schedule a job on this system.
-  </span>
-
  <span py:if="not lab_controller">
   This system is not associated to a lab controller
  </span>

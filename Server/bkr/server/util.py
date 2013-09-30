@@ -22,6 +22,7 @@ import logging
 import socket
 import datetime
 import time
+from sqlalchemy import create_engine
 from sqlalchemy.orm import create_session
 import turbogears
 from turbogears import config, url
@@ -30,8 +31,38 @@ import socket
 
 log = logging.getLogger(__name__)
 
+_config_loaded = None
 def load_config(configfile=None):
     """ Loads Beaker's configuration and configures logging. """
+    setupdir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    curdir = os.getcwd()
+    if configfile and os.path.exists(configfile):
+        pass
+    elif 'BEAKER_CONFIG_FILE' in os.environ:
+        configfile = os.environ['BEAKER_CONFIG_FILE']
+    elif os.path.exists(os.path.join(setupdir, 'setup.py')) \
+            and os.path.exists(os.path.join(setupdir, 'dev.cfg')):
+        configfile = os.path.join(setupdir, 'dev.cfg')
+    elif os.path.exists(os.path.join(curdir, 'beaker.cfg')):
+        configfile = os.path.join(curdir, 'beaker.cfg')
+    elif os.path.exists('/etc/beaker.cfg'):
+        configfile = '/etc/beaker.cfg'
+    elif os.path.exists('/etc/beaker/server.cfg'):
+        configfile = '/etc/beaker/server.cfg'
+    else:
+        raise RuntimeError("Unable to find configuration to load!")
+
+    # We only allow the config to be loaded once, update_config()
+    # doesn't seem to update the config when called more than once
+    # anyway
+    configfile = os.path.realpath(configfile)
+    global _config_loaded
+    if _config_loaded is not None and configfile == _config_loaded:
+        return
+    elif _config_loaded is not None and configfile != _config_loaded:
+        raise RuntimeError('Config has already been loaded from %s' % \
+            _config_loaded)
+
     # In general, we want all messages from application code.
     logging.getLogger().setLevel(logging.DEBUG)
     # Well-behaved libraries will set their own log levels to something 
@@ -46,22 +77,6 @@ def load_config(configfile=None):
     # stderr at WARNING level). The main entry point for the program should 
     # call bkr.log.log_to_{syslog,stream} to set up a handler.
 
-    setupdir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    curdir = os.getcwd()
-    if configfile and os.path.exists(configfile):
-        pass
-    elif os.path.exists(os.path.join(setupdir, 'setup.py')) \
-            and os.path.exists(os.path.join(setupdir, 'dev.cfg')):
-        configfile = os.path.join(setupdir, 'dev.cfg')
-    elif os.path.exists(os.path.join(curdir, 'beaker.cfg')):
-        configfile = os.path.join(curdir, 'beaker.cfg')
-    elif os.path.exists('/etc/beaker.cfg'):
-        configfile = '/etc/beaker.cfg'
-    elif os.path.exists('/etc/beaker/server.cfg'):
-        configfile = '/etc/beaker/server.cfg'
-    else:
-        raise RuntimeError("Unable to find configuration to load!")
-
     # We do not want TurboGears to touch the logging config, so let's 
     # double-check the user hasn't left an old [logging] section in their 
     # config file.
@@ -72,6 +87,7 @@ def load_config(configfile=None):
                 'remove [logging] section from config file %s' % configfile)
 
     turbogears.update_config(configfile=configfile, modulename="bkr.server.config")
+    _config_loaded = configfile
 
 def to_unicode(obj, encoding='utf-8'):
     if isinstance(obj, basestring):

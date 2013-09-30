@@ -1,8 +1,8 @@
-import unittest, time, re, os
 from turbogears.database import session
 from bkr.inttest import get_server_base
-from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, is_text_present
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login, is_text_present, \
+        click_menu_item, logout
 from bkr.inttest import data_setup
 
 
@@ -66,7 +66,7 @@ class AddUserWD(WebDriverTestCase):
         b = self.browser
         login(b)
         b.get(get_server_base() + 'users')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
 
         # Test with all blank fields
         b.find_element_by_xpath('//form[@id=\'User\']').submit()
@@ -90,7 +90,7 @@ class AddUserWD(WebDriverTestCase):
 
         # Enter duplicate user name
         b.get(get_server_base() + 'users')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
         b.find_element_by_name('user_name').send_keys(existing_name)
         b.find_element_by_name('display_name').send_keys(data_setup.unique_name('display%s'))
         b.find_element_by_name('email_address').send_keys(data_setup.unique_name('thisguysemail%s@my.com'))
@@ -103,12 +103,12 @@ class AddUserWD(WebDriverTestCase):
 
         valid_user_2 = data_setup.unique_name('user%s')
         b.find_element_by_name('user_name').send_keys(valid_user_2)
-        b.find_element_by_class_name('submitbutton').click()
+        b.find_element_by_id('User').submit()
         is_text_present(b, '%s saved' % valid_user_2)
 
         # Check our custom email address validator
         b.get(get_server_base() + 'users')
-        b.find_element_by_link_text('Add ( + )').click()
+        b.find_element_by_link_text('Add').click()
         valid_user_3 = data_setup.unique_name('user%s')
         b.find_element_by_name('user_name').send_keys(valid_user_3)
         b.find_element_by_name('display_name').send_keys(valid_user_3)
@@ -124,12 +124,14 @@ class AddUserWD(WebDriverTestCase):
         b.find_element_by_xpath('//form[@id=\'User\']').submit()
         is_text_present(b, '%s saved' % valid_user_3)
 
-class AddUser(SeleniumTestCase):
+class AddUser(WebDriverTestCase):
 
     def setUp(self):
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-        self.login()
+        self.browser = self.get_browser()
+        login(self.browser)
+
+    def tearDown(self):
+        self.browser.quit()
 
     def test_adduser(self):
         user_1_name = data_setup.unique_name('anonymous%s')
@@ -140,89 +142,73 @@ class AddUser(SeleniumTestCase):
         user_2_email = data_setup.unique_name('anonymous%s@my.com')
         user_2_pass = 'password'
 
-        session.flush()
-        sel = self.selenium
-        sel.open("")
-        sel.click("link=Accounts")
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=Add ( + )")
-        sel.wait_for_page_to_load("30000")
-        sel.type("User_user_name", "%s" % user_1_name)
-        sel.type("User_display_name", "%s" % user_1_name)
-        sel.type("User_email_address", "%s" % user_1_email)
-        sel.type("User_password", "%s" % user_1_pass)
-        sel.click("//input[@value='Save']")
-        sel.wait_for_page_to_load("30000")
+        b = self.browser
+        b.get(get_server_base())
+        click_menu_item(b, 'Admin', 'Accounts')
+        b.find_element_by_link_text('Add').click()
+        b.find_element_by_name('user_name').send_keys(user_1_name)
+        b.find_element_by_name('display_name').send_keys(user_1_name)
+        b.find_element_by_name('email_address').send_keys(user_1_email)
+        b.find_element_by_name('password').send_keys(user_1_pass)
+        b.find_element_by_id('User').submit()
         #Test Saved message came up
-        self.failUnless(sel.is_text_present("saved"))
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                '%s saved' % user_1_name)
 
-        sel.open("users")
+        b.get(get_server_base() + 'users')
         #Test that user 1 is listed as part of users
-        self.failUnless(sel.is_text_present("%s" % user_1_name))
+        self.failUnless(is_text_present(b, user_1_name))
 
         #Add user 2
-        sel.click("link=Add ( + )")
-        sel.wait_for_page_to_load("30000")
-        sel.type("User_user_name", "%s" % user_2_name)
-        sel.type("User_display_name", "%s" % user_2_name)
-        sel.type("User_email_address", "%s" % user_2_email)
-        sel.type("User_password", "%s" % user_2_pass)
-        sel.click("//input[@value='Save']")
-        sel.wait_for_page_to_load("30000")
+        b.find_element_by_link_text('Add').click()
+        b.find_element_by_name('user_name').send_keys(user_2_name)
+        b.find_element_by_name('display_name').send_keys(user_2_name)
+        b.find_element_by_name('email_address').send_keys(user_2_email)
+        b.find_element_by_name('password').send_keys(user_2_pass)
+        b.find_element_by_id('User').submit()
         #Test Saved message came up
-        self.failUnless(sel.is_text_present("%s saved" % user_2_name))
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                '%s saved' % user_2_name)
 
-        sel.open("users")
+        b.get(get_server_base() + 'users')
         #Test that user 2 is listed as part of users
-        self.failUnless(sel.is_text_present("%s" % user_2_name))
+        self.failUnless(is_text_present(b, user_2_name))
 
 
     def test_disable(self):
-
-        #BEAKER_DISABLE_USER = os.environ.get('BEAKER_TEST_USER_2','disabled')
         user_pass = 'password'
         user_name = 'disabled'
         email = 'disabled@my.com'
 
-        sel = self.selenium
-        sel.open("")
-        sel.click("link=Accounts")
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=Add ( + )")
-        sel.wait_for_page_to_load("30000")
-        sel.type("User_user_name", "%s" % user_name)
-        sel.type("User_display_name", "%s" % user_name)
-        sel.type("User_email_address", "%s" % email)
-        sel.type("User_password", "%s" % user_pass)
-        sel.click("//input[@value='Save']")
-        sel.wait_for_page_to_load("30000")
+        b = self.browser
+        b.get(get_server_base())
+        click_menu_item(b, 'Admin', 'Accounts')
+        b.find_element_by_link_text('Add').click()
+        b.find_element_by_name('user_name').send_keys(user_name)
+        b.find_element_by_name('display_name').send_keys(user_name)
+        b.find_element_by_name('email_address').send_keys(email)
+        b.find_element_by_name('password').send_keys(user_pass)
+        b.find_element_by_id('User').submit()
         #Test Saved message came up
-        self.failUnless(sel.is_text_present("saved"))
-        self.logout()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                '%s saved' % user_name)
+        logout(b)
 
         # First verify you can login as user.
-        self.login(user=user_name, password=user_pass)
-        self.logout()
+        login(b, user=user_name, password=user_pass)
+        logout(b)
 
         # Login as admin and disable user TEST 1
-        self.login()
-        sel.open("")
-        sel.click("link=Accounts")
-        sel.wait_for_page_to_load("30000")
-        sel.click("link=%s" % user_name)
-        sel.wait_for_page_to_load("30000")
-        sel.click("User_disabled")
-        sel.click("//input[@value='Save']")
-        sel.wait_for_page_to_load("30000")
-        self.logout()
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Admin', 'Accounts')
+        b.find_element_by_link_text(user_name).click()
+        b.find_element_by_name('disabled').click()
+        b.find_element_by_id('User').submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                '%s saved' % user_name)
+        logout(b)
 
         # Try and login as Disabled User
-        self.login(user=user_name, password=user_pass)
-        self.failUnless(sel.is_text_present("The credentials you supplied were not correct or did not grant access to this resource" ))
-
-
-    def tearDown(self):
-        self.selenium.stop()
-
-if __name__ == "__main__":
-    unittest.main()
+        login(b, user=user_name, password=user_pass)
+        self.failUnless(is_text_present(b, "The credentials you supplied were not correct or did not grant access to this resource" ))

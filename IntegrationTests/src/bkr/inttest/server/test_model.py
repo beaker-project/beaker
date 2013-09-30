@@ -1,4 +1,5 @@
 import sys
+import re
 import time
 import datetime
 import unittest
@@ -16,7 +17,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
-        Group, User, ActivityMixin
+        Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 import netaddr
@@ -148,6 +149,77 @@ class TestSystemKeyValue(unittest.TestCase):
         self.assertEqual(reloaded_system.key_values_string, [])
         self.assertEqual(reloaded_system.key_values_int, [])
 
+class SystemPermissionsTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+        self.owner = data_setup.create_user()
+        self.system = data_setup.create_system(owner=self.owner, shared=False)
+        self.policy = self.system.custom_access_policy
+        self.unprivileged = data_setup.create_user()
+
+    def tearDown(self):
+        session.rollback()
+
+    def test_can_change_owner(self):
+        self.assertTrue(self.system.can_change_owner(self.owner))
+        self.assertFalse(self.system.can_change_owner(self.unprivileged))
+
+    def test_can_edit_policy(self):
+        self.assertTrue(self.system.can_edit_policy(self.owner))
+        self.assertFalse(self.system.can_edit_policy(self.unprivileged))
+        self.policy.add_rule(SystemPermission.edit_policy, user=self.unprivileged)
+        self.assertTrue(self.system.can_edit_policy(self.unprivileged))
+
+    def test_can_edit(self):
+        self.assertTrue(self.system.can_edit(self.owner))
+        self.assertFalse(self.system.can_edit(self.unprivileged))
+        self.policy.add_rule(SystemPermission.edit_system, user=self.unprivileged)
+        self.assertTrue(self.system.can_edit(self.unprivileged))
+
+    def test_can_loan(self):
+        self.assertTrue(self.system.can_loan(self.owner))
+        self.assertFalse(self.system.can_loan(self.unprivileged))
+        self.policy.add_rule(SystemPermission.loan_any, user=self.unprivileged)
+        self.assertTrue(self.system.can_loan(self.unprivileged))
+
+    def test_can_loan_to_self(self):
+        self.assertTrue(self.system.can_loan_to_self(self.owner))
+        self.assertFalse(self.system.can_loan_to_self(self.unprivileged))
+        self.policy.add_rule(SystemPermission.loan_self, user=self.unprivileged)
+        self.assertTrue(self.system.can_loan_to_self(self.unprivileged))
+
+    def test_can_return_loan(self):
+        self.assertTrue(self.system.can_return_loan(self.owner))
+        self.assertFalse(self.system.can_return_loan(self.unprivileged))
+        self.system.loaned = self.unprivileged
+        self.assertTrue(self.system.can_return_loan(self.unprivileged))
+
+    def test_can_reserve(self):
+        self.assertTrue(self.system.can_reserve(self.owner))
+        self.assertFalse(self.system.can_reserve(self.unprivileged))
+        self.policy.add_rule(SystemPermission.reserve, user=self.unprivileged)
+        self.assertTrue(self.system.can_reserve(self.unprivileged))
+
+    def test_can_unreserve(self):
+        self.assertTrue(self.system.can_unreserve(self.owner))
+        self.assertFalse(self.system.can_unreserve(self.unprivileged))
+        self.system.user = self.unprivileged
+        self.assertTrue(self.system.can_unreserve(self.unprivileged))
+
+    def test_can_power(self):
+        # owner
+        self.assertTrue(self.system.can_power(self.owner))
+        # system's current user
+        user = data_setup.create_user()
+        self.assertFalse(self.system.can_power(user))
+        self.system.user = user
+        self.assertTrue(self.system.can_power(user))
+        # granted by policy
+        self.assertFalse(self.system.can_power(self.unprivileged))
+        self.policy.add_rule(SystemPermission.control_system, user=self.unprivileged)
+        self.assertTrue(self.system.can_power(self.unprivileged))
+
 class TestBrokenSystemDetection(unittest.TestCase):
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=637260
@@ -218,6 +290,79 @@ class TestBrokenSystemDetection(unittest.TestCase):
         self.assertEqual(self.system.status, SystemStatus.broken)
         self.assert_(self.system.date_modified > orig_date_modified)
 
+class SystemAccessPolicyTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+        self.system = data_setup.create_system()
+        self.system.custom_access_policy = SystemAccessPolicy()
+        self.policy = self.system.custom_access_policy
+
+    def tearDown(self):
+        session.rollback()
+
+    def test_add_rule_for_user(self):
+        perm = SystemPermission.reserve
+        user = data_setup.create_user()
+        self.policy.add_rule(perm, user=user)
+
+        self.assertEquals(len(self.policy.rules), 1)
+        self.assertEquals(self.policy.rules[0].permission, perm)
+        self.assertEquals(self.policy.rules[0].user, user)
+        self.assert_(self.policy.rules[0].group is None)
+
+        self.assertTrue(self.policy.grants(user, perm))
+        self.assert_(SystemAccessPolicy.query
+                .filter(SystemAccessPolicy.id == self.policy.id)
+                .filter(SystemAccessPolicy.grants(user, perm)).count())
+        other_user = data_setup.create_user()
+        self.assertFalse(self.policy.grants(other_user, perm))
+        self.assert_(not SystemAccessPolicy.query
+                .filter(SystemAccessPolicy.id == self.policy.id)
+                .filter(SystemAccessPolicy.grants(other_user, perm)).count())
+
+    def test_add_rule_for_group(self):
+        perm = SystemPermission.reserve
+        group = data_setup.create_group()
+        member = data_setup.create_user()
+        member.groups.append(group)
+        self.policy.add_rule(perm, group=group)
+
+        self.assertEquals(len(self.policy.rules), 1)
+        self.assertEquals(self.policy.rules[0].permission, perm)
+        self.assert_(self.policy.rules[0].user is None)
+        self.assertEquals(self.policy.rules[0].group, group)
+
+        self.assertTrue(self.policy.grants(member, perm))
+        self.assert_(SystemAccessPolicy.query
+                .filter(SystemAccessPolicy.id == self.policy.id)
+                .filter(SystemAccessPolicy.grants(member, perm)).count())
+        non_member = data_setup.create_user()
+        self.assertFalse(self.policy.grants(non_member, perm))
+        self.assert_(not SystemAccessPolicy.query
+                .filter(SystemAccessPolicy.id == self.policy.id)
+                .filter(SystemAccessPolicy.grants(non_member, perm)).count())
+
+    def test_add_rule_for_everybody(self):
+        perm = SystemPermission.reserve
+        self.policy.add_rule(perm, everybody=True)
+
+        self.assertEquals(len(self.policy.rules), 1)
+        self.assertEquals(self.policy.rules[0].permission, perm)
+        self.assert_(self.policy.rules[0].user is None
+                and self.policy.rules[0].group is None)
+        self.assertTrue(self.policy.rules[0].everybody)
+
+        self.assertTrue(self.policy.grants_everybody(perm))
+        self.assert_(SystemAccessPolicy.query
+                .filter(SystemAccessPolicy.id == self.policy.id)
+                .filter(SystemAccessPolicy.grants_everybody(perm)).count())
+        user = data_setup.create_user()
+        self.assertTrue(self.policy.grants(user, perm))
+        self.assert_(SystemAccessPolicy.query
+                .filter(SystemAccessPolicy.id == self.policy.id)
+                .filter(SystemAccessPolicy.grants(user, perm)).count())
+
 class TestJob(unittest.TestCase):
 
     def setUp(self):
@@ -268,6 +413,22 @@ class TestJob(unittest.TestCase):
         job.update_status()
         self.assertEquals(job.status, TaskStatus.cancelled)
         self.assertEquals(job.result, TaskResult.warn)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=660633
+    def test_progress_bar_sums_to_100(self):
+        recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/reservesys')] * 3)
+        job = data_setup.create_job_for_recipes([recipe])
+        recipe.tasks[0].pass_(u'/', 0, u'')
+        recipe.tasks[1].fail(u'/', 0, u'')
+        recipe.tasks[2].fail(u'/', 0, u'')
+        data_setup.mark_job_complete(job)
+        job.update_status()
+        progress_bar = job.progress_bar
+        widths = [int(re.match(r'width:(\d+)%', elem.get('style')).group(1))
+                for elem in progress_bar.getchildren()[0].getchildren()]
+        self.assertEquals(widths, [33, 0, 67, 0])
+        self.assertEquals(sum(widths), 100)
 
 class DistroTreeByFilterTest(unittest.TestCase):
 
@@ -2149,9 +2310,9 @@ class LogRecipeTest(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=865265
     def test_path_is_normalized(self):
         lr1 = LogRecipe.lazy_create(path=u'/', filename=u'dummy.log',
-                parent=self.recipe)
+                recipe_id=self.recipe.id)
         lr2 = LogRecipe.lazy_create(path=u'', filename=u'dummy.log',
-                parent=self.recipe)
+                recipe_id=self.recipe.id)
         self.assert_(lr1 is lr2, (lr1, lr2))
 
 

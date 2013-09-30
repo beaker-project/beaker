@@ -33,7 +33,7 @@ being upgraded to a new version.
 
        release-1.0/*
 
-.. uncomment this once we have some pending changes for 0.15
+.. uncomment when first pending notes are published for 0.16
 
     Unreleased changes
     ------------------
@@ -41,10 +41,27 @@ being upgraded to a new version.
     The following changes will appear in the next Beaker release.
 
     .. toctree::
-       :maxdepth: 2
-       :glob:
+    :maxdepth: 2
+    :glob:
 
-       next/*
+    next/*
+
+
+Beaker 0.15
+-----------
+
+Beaker 0.15 introduces the concept of "system access policies", the initial
+phase of the `Access Policies for Systems
+<../../dev/proposals/access-policies-for-systems.html>`__
+design proposal. It also includes a major update to the main web UI, along
+with a number of other new features and bug fixes.
+
+.. toctree::
+   :maxdepth: 2
+
+   release-0.15
+   upgrade-0.15
+
 
 Beaker 0.14
 -----------

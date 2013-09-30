@@ -15,23 +15,21 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, config
-from turbogears import identity, redirect
-from cherrypy import request, response
-from kid import Element
+from turbogears import expose
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
-from bkr.server.widgets import myPaginateDataGrid
+from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
-from bexceptions import *
+#from bkr.server.helpers import *
+from bkr.common.bexceptions import BX
 import urlparse
 #from turbogears.scheduler import add_interval_task
 
 import cherrypy
 
-from model import *
-import string
+from bkr.server.model import (RecipeTask, LogRecipeTask,
+                              RecipeTaskResult, LogRecipeTaskResult,
+                              LabController, Watchdog)
 
 class RecipeTasks(RPCRoot):
     # For XMLRPC methods in this class.
@@ -52,7 +50,7 @@ class RecipeTasks(RPCRoot):
                     % recipetask.t_id)
 
         # Add the log to the DB if it hasn't been recorded yet.
-        log_recipe = LogRecipeTask.lazy_create(parent=recipetask,
+        log_recipe = LogRecipeTask.lazy_create(recipe_task_id=recipetask.id,
                                                path=path, 
                                                filename=filename,
                                               )
@@ -75,7 +73,7 @@ class RecipeTasks(RPCRoot):
             raise BX('Cannot register file for finished task %s'
                     % result.recipetask.t_id)
 
-        log_recipe = LogRecipeTaskResult.lazy_create(parent=result,
+        log_recipe = LogRecipeTaskResult.lazy_create(recipe_task_result_id=result.id,
                                                      path=path, 
                                                      filename=filename,
                                                     )

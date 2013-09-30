@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:py="http://purl.org/kid/ns#"
     py:extends="'master.kid'">
 
@@ -8,7 +8,6 @@
     <script type="text/javascript" src="${tg.url('/static/javascript/priority_manager_v4.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/rettag_manager_v2.js')}"></script>
     <script type="text/javascript" src="${tg.url('/static/javascript/jquery.timers-1.2.js')}"></script>
-    <script type="text/javascript" src="${tg.url('/static/javascript/jquery.cookie.js')}"></script>
     <script type='text/javascript'>
 //TODO I should move a lot of this out to a seperate JS file
  pri_manager = new PriorityManager()
@@ -19,7 +18,7 @@
  NOT_PARENT = 0
 
  $(document).ready(function() {
-    $('ul.ackpanel input').change(function () {  
+    $('.ackpanel input').change(function () {
         var response_id = $(this).val()
         changed_to_text = $(this).next().text().toLowerCase() 
         if (changed_to_text != 'ack' || changed_to_text != 'nak') { //this is a bit hackey, but basically if we're deselecting "Needs Review" we want to delete it.
@@ -40,7 +39,6 @@
 
 
 
-    $("#toggle_job_history").click(function() { $("#job_history").toggle() })
     $("select[id^='priority']").change(function() {
 
         var callback = {'function' : ShowPriorityResults }
@@ -101,82 +99,65 @@
     </script>
     <title>Job ${job.t_id} - ${job.whiteboard} | ${job.status} | ${job.result}</title>
 </head>
-
-<script type="text/javascript">
-
-</script>
-
-
-<body class="flora">
- <a id='toggle_job_history' style="color: rgb(34, 67, 127); cursor: pointer;">Toggle Job history</a>
- <div style='padding-bottom:0.25em' id="job_history" class="hidden">
+<body>
+ <a data-toggle="collapse" href="#job_history">Toggle Job history</a>
+ <div style='padding-bottom:0.25em' id="job_history" class="collapse">
    ${job_history_grid.display(job_history)}
  </div>
  <div id='dialog-confirm'> </div>
- <table width="97%" class="show">
+ <table class="table job">
+ <tbody>
   <tr>
-   <td class="title"><b>Job ID</b></td>
-   <td class="value" style="min-width: 100px;">
-    <a class="list" href="${tg.url('/jobs/%s' % job.id)}">${job.t_id}</a>
+   <th>Job ID</th>
+   <td>
+    <a href="${tg.url('/jobs/%s' % job.id)}">${job.t_id}</a>
    </td>
-   <td class='title'><b>Group</b></td>
-   <td class="value" style="min-width: 100px;">
-    <a py:if="job.group" class="list"
+   <th>Group</th>
+   <td style="min-width: 100px;">
+    <a py:if="job.group"
      href="${tg.url('/groups/edit?group_id=%d' % job.group.group_id)}">
      ${job.group}
     </a>
    </td>
-   <td class="title"><b>Status</b></td>
-   <td class="value">
+   <th>Status</th>
+   <td>
     <span py:if="job.is_dirty" class="statusDirty">Updating…</span>
-    <span py:if="not job.is_dirty" py:strip="True">${job.status}</span>
+    <span py:if="not job.is_dirty" class="status${job.status}">${job.status}</span>
    </td>
-   <td class="title"><b>Result</b></td>
-   <td class="value">${job.result}</td>
+   <th>Result</th>
+   <td class="result${job.result}">${job.result}</td>
   </tr>
   <tr>
-   <td class="title"><b>Owner</b></td>
-   <td class="value">${job.owner.email_link}</td>
-   <td class="title"><b>CC</b></td>
-   <td class="value">${'; '.join(job.cc)}</td>
-   <td class="title"><b>Progress</b></td>
-   <td class="value">${job.progress_bar}</td>
-   <td class="title" rowspan="2"><b>Action(s)</b></td>
-   <td class="value" rowspan="2" style="vertical-align: top;">${action_widget(job, delete_action=delete_action, export=tg.url("/to_xml?taskid=%s" % job.t_id))}</td>
+   <th>Owner</th>
+   <td>${job.owner.email_link}</td>
+   <th>CC</th>
+   <td>${'; '.join(job.cc)}</td>
+   <th>Progress</th>
+   <td>${job.progress_bar}</td>
+   <th rowspan="2">Action(s)</th>
+   <td rowspan="2">${action_widget(job, delete_action=delete_action, export=tg.url("/to_xml?taskid=%s" % job.t_id))}</td>
   </tr>
   <tr>
-  <td class="title"><b>Retention Tag</b></td>
-  <td py:if="job.can_change_retention_tag(tg.identity.user)"
-   class='value'
-   style="vertical-align:top;">
+  <th>Retention Tag</th>
+  <td py:if="job.can_change_retention_tag(tg.identity.user)">
     ${retention_tag_widget.display(value=job.retention_tag.id, job_id=job.id)}
   </td>
-  <td py:if="not job.can_change_retention_tag(tg.identity.user)"
-   class="value"
-   style="vertical-align:top;">
+  <td py:if="not job.can_change_retention_tag(tg.identity.user)">
     ${retention_tag_widget.display(value=job.retention_tag.id,
         job_id=job.id,attrs=dict(disabled='1'))}
   </td>
-  <td class="title"><b>Product</b></td>
-  <td py:if="job.can_change_product(tg.identity.user)"
-   class='value'
-   colspan="3"
-   style="vertical-align:top;">
+  <th>Product</th>
+  <td py:if="job.can_change_product(tg.identity.user)" colspan="3">
     ${product_widget.display(value=getattr(job.product,'id', 0), job_id=job.id)}
   </td>
-  <td py:if="not job.can_change_product(tg.identity.user)"
-   class='value'
-   colspan="3"
-   style="vertical-align:top;">
+  <td py:if="not job.can_change_product(tg.identity.user)" colspan="3">
     ${product_widget.display(value=getattr(job.product, 'id', 0),
         job_id=job.id, attrs=dict(disabled='1'))}
   </td>
   </tr>
   <tr>
-   <td class="title"><b>Whiteboard</b></td>
-   <td class="value"
-    colspan="7"
-    style="vertical-align: top; white-space: normal;">
+   <th>Whiteboard</th>
+   <td colspan="7">
      ${whiteboard_widget(value=job.whiteboard, job_id=job.id,
         readonly=not job.can_change_whiteboard(tg.identity.user))}
    </td>
@@ -187,7 +168,7 @@
          pri_manager.register('priority_job_${job.id}','parent')
     </script> 
   </tr>
-
+ </tbody>
  </table>
   <div py:for="recipeset in job.recipesets" class="recipeset">
     <?python 

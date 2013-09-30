@@ -1,10 +1,11 @@
 from turbogears import validators, url, config
 import model
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
-                                AutoCompleteField, SingleSelectField, CheckBox,
+                                SingleSelectField, CheckBox,
                                 HiddenField, RemoteForm, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid)
+from bkr.server.widgets import AutoCompleteField
 
 
 class LocalJSLink(JSLink):
@@ -61,7 +62,7 @@ class Search(CompoundFormField):
     params_doc = {'powertypes_callback' : ''}
 
     def __init__(self, callback, search_controller, *args, **kw):
-        super(Power,self).__init__(*args, **kw)
+        super(Search,self).__init__(*args, **kw)
 
         self.search_controller=search_controller
         self.powercontroller_field = SingleSelectField(name="powercontroller", options=callback)

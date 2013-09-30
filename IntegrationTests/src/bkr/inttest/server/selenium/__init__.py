@@ -22,7 +22,7 @@ import re
 import logging
 import subprocess
 from selenium import selenium, webdriver
-import unittest
+import unittest2 as unittest
 import xmlrpclib
 from urlparse import urljoin
 import kobo.xmlrpc
@@ -72,7 +72,7 @@ class SeleniumTestCase(unittest.TestCase):
         if sel is not None:
             sel.open("")
             try:
-                sel.click("link=Logout")
+                sel.click("link=Log out")
             except Exception, e:
                 raise BX(unicode(e))
             sel.wait_for_page_to_load("30000")
@@ -89,7 +89,7 @@ class SeleniumTestCase(unittest.TestCase):
         if sel is not None:
             sel.open("")
             try:
-                sel.click("link=Login")
+                sel.click("link=Log in")
             except Exception, e:
                 raise BX(_(unicode(e)))
             sel.wait_for_page_to_load("30000")
@@ -102,8 +102,11 @@ class SeleniumTestCase(unittest.TestCase):
 
     def assert_system_view_text(self, field, val):
         sel = self.selenium
-        text = sel.get_text("//td[preceding-sibling::"
-            "th/label[@for='form_%s']]" % field)
+        if field == 'fqdn':
+            text = sel.get_text('//h1')
+        else:
+            text = sel.get_text('//div[@class="controls" and '
+                    'preceding-sibling::label/@for="form_%s"]/span' % field)
         self.assertEqual(text.strip(), val)
 
 class WebDriverTestCase(unittest.TestCase):
@@ -150,7 +153,7 @@ def setup_package():
                 '-screen', '0', '1024x768x24'], listen_port=6004),
         Process('selenium-server', args=['java',
                 '-Djava.io.tmpdir=/tmp/selenium',
-                '-jar', '/usr/local/share/selenium/selenium-server-standalone-2.33.0.jar',
+                '-jar', '/usr/local/share/selenium/selenium-server-standalone-2.35.0.jar',
                 '-log', 'selenium.log'], env={'DISPLAY': ':4'},
                 listen_port=4444),
     ])

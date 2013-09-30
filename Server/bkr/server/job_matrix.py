@@ -1,11 +1,9 @@
-from sqlalchemy import select, distinct, Table, Column, Integer, String
+from sqlalchemy import select
 from sqlalchemy.sql.expression import case, func, and_, bindparam, not_
-from turbogears import controllers, identity, expose, url, database, flash
-from turbogears.widgets import DataGrid
-from turbogears.database import session, metadata, mapper
+from turbogears import expose, url, flash
+from turbogears.database import session
 from kid import Element, SubElement
 from bkr.server.widgets import JobMatrixReport as JobMatrixWidget, MatrixDataGrid
-from bkr.server.helpers import make_link
 from bkr.server import model
 import logging
 log = logging.getLogger(__name__)
@@ -15,7 +13,7 @@ class TaskR:
     def __init__(self,task_name,*args,**kw):
         self.task_name = task_name
         self.results = {}
-                      
+
     def add_result(self,arch,whiteboard,results): 
         try:
             self.results[arch][whiteboard] = results
@@ -31,7 +29,7 @@ class TaskR:
                 return return_list
             else:
                 return self.results[arch][whiteboard]
-        except KeyError, (e): #This is fine, just means that this task has no entry for a given arch/whiteboard
+        except KeyError: #This is fine, just means that this task has no entry for a given arch/whiteboard
             #log.debug('Index does not exist Arch %s whiteboard:%s ' % (arch,whiteboard))
             return []
 
@@ -123,13 +121,13 @@ class JobMatrix:
 
         """
         def f(x):
-                try:
-                    dyn_objs = x.get_results(arch,whiteboard)
-                    for d in dyn_objs: 
-                        if d.arch == arch and d.whiteboard == whiteboard:
-                            return self.make_result_box(d)
-                except Exception, (e):
-                    log.error('Error %s' % e)
+            try:
+                dyn_objs = x.get_results(arch,whiteboard)
+                for d in dyn_objs:
+                    if d.arch == arch and d.whiteboard == whiteboard:
+                        return self.make_result_box(d)
+            except Exception, (e):
+                log.error('Error %s' % e)
         return f
 
     def _job_grid_fields(self,arches_used,**kw):
@@ -193,9 +191,7 @@ class JobMatrix:
         else: #Likely this is the initial page load for these Jobs. No modifying the nack db.
             exclude_recipe_sets = [] 
             #recipes = recipes.filter(not_(model.RecipeSet.id.in_(exclude_recipe_sets))) 
-        """
-        Let's get all the tasks that will be run, and the arch/whiteboard
-        """
+        # Let's get all the tasks that will be run, and the arch/whiteboard
         the_tasks = {}
         for recipe,arch in recipes:
             the_tasks.update(dict([(rt.task.name,{}) for rt in recipe.tasks]))
@@ -248,10 +244,11 @@ class JobMatrix:
                                    arch_alias.c.arch == bindparam('arch'), 
                                    recipe_table_alias.c.whiteboard==None]
 
+                # FIXME: Should this be "if exclude_recipe_sets" instead?
                 try:
-                    ex = locals()['exclude_recipe_sets'] 
+                    locals()['exclude_recipe_sets']
                     my_and.append(not_(model.recipe_set_table.c.id.in_(exclude_recipe_sets)))
-                except KeyError, e: pass
+                except KeyError: pass
 
                 s2 = select(my_select,from_obj=my_from,whereclause=and_(*my_and)).alias('foo')
                 s2 = s2.params(arch=arch_val)
@@ -272,7 +269,7 @@ class JobMatrix:
                               s2.c.task_id.label('task_id_pk')],
                               s2.c.task_id == model.task_table.c.id,
                               from_obj=[model.task_table,s2]).group_by(model.task_table.c.name).order_by(model.task_table.c.name).alias()
-                results = s1.execute()
+                results = session.connection(model.Recipe).execute(s1)
                 for task_details in results:
                     if task_details.arch in the_tasks[task_details.task_name]:
                         if (whiteboard_val not in

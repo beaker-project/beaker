@@ -1,19 +1,20 @@
 import cherrypy
-import sys
 from datetime import datetime
-from turbogears import widgets, expose, identity, validators, \
+from turbogears import widgets, expose, \
 	error_handler, validate, flash, redirect, url
 from turbogears.database import session
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
+from bkr.server import identity
 from bkr.server.model import ConfigItem, SSHPubKey, User
 from bkr.server import validators as beaker_validators
 from bkr.server.widgets import BeakerDataGrid, DeleteLinkWidgetForm, \
-    DoAndConfirmForm
+    DoAndConfirmForm, AutoCompleteField, HorizontalForm, InlineForm
 from bkr.server.xmlrpccontroller import RPCRoot
+from bkr.common.bexceptions import BX, BeakerException
 from bkr.server.bexceptions import NoChangeException
-from bkr.server.helpers import make_link
 
-from bexceptions import *
+# from bexceptions import *
 
 __all__ = ['Preferences']
 
@@ -28,7 +29,7 @@ class Preferences(RPCRoot):
                                       attrs={'disabled': True})
     email = widgets.TextField(name='email_address', label='Email Address',
                                    validator=beaker_validators.CheckUniqueEmail())
-    prefs_form   = widgets.TableForm(
+    prefs_form   = HorizontalForm(
         'UserPrefs',
         fields = [email, beaker_password, root_password, rootpw_expiry],
         action = 'save',
@@ -37,7 +38,7 @@ class Preferences(RPCRoot):
 
     sshkey = widgets.TextArea(name='ssh_pub_key', label='Public SSH Key',
             validator=beaker_validators.SSHPubKey(not_empty=True))
-    ssh_key_add_form = widgets.TableForm(
+    ssh_key_add_form = InlineForm(
         'ssh_key_add',
         fields = [sshkey],
         action = 'ssh_key_add',
@@ -45,15 +46,17 @@ class Preferences(RPCRoot):
     )
 
     rootpw_grid = BeakerDataGrid(fields=[
-                    ('Root Password', lambda x: x.value),
-                    ('Effective from', lambda x: x.valid_from)
-                 ])
+        BeakerDataGrid.Column('root_password', title=_(u'Root Password'),
+            getter=lambda x: x.value),
+        BeakerDataGrid.Column('effective_from', title=_(u'Effective from'),
+            getter=lambda x: x.valid_from, options=dict(datetime=True)),
+    ])
 
-    auto_users = widgets.AutoCompleteField(name='user',
-                                   search_controller = url("../users/by_name"),
-                                   search_param = "input",
-                                   result_name = "matches")
-    submission_delegate_form = widgets.TableForm(
+    auto_users = AutoCompleteField(name='user',
+        search_controller = url("../users/by_name"),
+        search_param = "input", result_name = "matches")
+
+    submission_delegate_form = InlineForm(
         'SubmissionDelegates',
         fields = [auto_users],
         action = 'save_data',
@@ -69,7 +72,7 @@ class Preferences(RPCRoot):
                 action=url('remove_submission_delegate'), look='link',
                 msg='Are you sure you want to remove %s as a submitter?' % x,
                 action_text='Remove (-)')),]
-        return widgets.DataGrid(fields=user_fields)
+        return BeakerDataGrid(fields=user_fields)
 
     @expose(template='bkr.server.templates.prefs')
     @identity.require(identity.not_anonymous())
@@ -106,7 +109,7 @@ class Preferences(RPCRoot):
     def remove_submission_delegate_by_name(self, delegate_name, service=u'XMLRPC'):
         user = identity.current.user
         try:
-           submission_delegate = User.by_user_name(delegate_name)
+            submission_delegate = User.by_user_name(delegate_name)
         except NoResultFound:
             raise BX(_(u'%s is not a valid user name' % delegate_name))
         try:
@@ -122,7 +125,7 @@ class Preferences(RPCRoot):
     def remove_submission_delegate(self, delegate_id, service=u'WEBUI'):
         user = identity.current.user
         try:
-           submission_delegate = User.by_id(delegate_id)
+            submission_delegate = User.by_id(delegate_id)
         except NoResultFound:
             flash(_(u'%s is not a valid user id' % delegate_id))
             redirect('.')
@@ -163,29 +166,21 @@ class Preferences(RPCRoot):
         redirect('.')
 
     @expose()
-    @identity.require(identity.not_anonymous())
     @error_handler(index)
     @validate(form=prefs_form)
+    @identity.require(identity.not_anonymous())
     def save(self, *args, **kw):
         email = kw.get('email_address', None)
         beaker_password = kw.get('password', None)
         root_password = kw.get('_root_password', None)
         changes = []
 
-        def _do_password_change(password):
-            identity.current.user.password = password
-            changes.append(u'Beaker password changed')
-
-        if kw['password'] != identity.current.user.password:
-            check_change_password = getattr(identity.current_provider,
-                'can_change_password', None)
-            if check_change_password:
-                if check_change_password(identity.current.user.user_name):
-                    _do_password_change(kw['password'])
-                else:
-                    changes.append(u'Cannot change password')
+        if beaker_password != identity.current.user.password:
+            if not identity.current.user.can_change_password():
+                changes.append(u'Cannot change password')
             else:
-                _do_password_change(kw['password'])
+                identity.current.user.password = beaker_password
+                changes.append(u'Beaker password changed')
 
         if email and email != identity.current.user.email_address:
             changes.append("Email address changed")
@@ -246,9 +241,9 @@ class Preferences(RPCRoot):
         redirect('.')
 
     @expose()
-    @identity.require(identity.not_anonymous())
     @error_handler(index)
     @validate(form=ssh_key_add_form)
+    @identity.require(identity.not_anonymous())
     def ssh_key_add(self, ssh_pub_key=None):
         user = identity.current.user
         k = SSHPubKey(*ssh_pub_key)

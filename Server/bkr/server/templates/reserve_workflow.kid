@@ -13,39 +13,54 @@ jQuery(function () {
         policy for Beaker systems</a>.
     </p>
 
-    <form action="">
-        <h3>Distro</h3>
-        <div>
-            <label for="${field_for('osmajor').field_id}">${field_for('osmajor').label}</label>
+    <form action="" class="form-horizontal">
+      <fieldset>
+        <legend>Distro</legend>
+        <div class="control-group">
+          <label class="control-label" for="${field_for('osmajor').field_id}">${field_for('osmajor').label}</label>
+          <div class="controls">
             ${display_field_for('osmajor')}
+          </div>
         </div>
-        <div>
-            <label for="${field_for('tag').field_id}">${field_for('tag').label}</label>
+        <div class="control-group">
+          <label class="control-label" for="${field_for('tag').field_id}">${field_for('tag').label}</label>
+          <div class="controls">
             ${display_field_for('tag')}
+          </div>
         </div>
-        <div>
-            <label for="${field_for('distro').field_id}">${field_for('distro').label}</label>
+        <div class="control-group">
+          <label class="control-label" for="${field_for('distro').field_id}">${field_for('distro').label}</label>
+          <div class="controls">
             ${display_field_for('distro')}
+          </div>
         </div>
+      </fieldset>
     </form>
 
-    <form action="${tg.url(action)}">
-        <h3>Distro Tree</h3>
-        <div>
-            <label for="${field_for('lab_controller_id').field_id}">${field_for('lab_controller_id').label}</label>
+    <form action="${tg.url(action)}" class="form-horizontal">
+      <fieldset>
+        <legend>Distro Tree</legend>
+        <div class="control-group">
+          <label class="control-label" for="${field_for('lab_controller_id').field_id}">${field_for('lab_controller_id').label}</label>
+          <div class="controls">
             ${display_field_for('lab_controller_id')}
+          </div>
         </div>
-        <div>
+        <div class="control-group">
+          <label class="control-label" for="${field_for('distro_tree_id').field_id}">${field_for('distro_tree_id').label}</label>
+          <div class="controls">
             ${display_field_for('distro_tree_id')}
+          </div>
         </div>
-        <div>
-            <button class="search" type="submit" name="system_id" value="search">
+        <div class="form-actions">
+            <button class="btn search" type="submit" name="system_id" value="search">
                 Show systems
             </button>
-            <button class="auto_pick" type="submit">
+            <button class="btn auto_pick" type="submit">
                 Auto pick system
             </button>
         </div>
+      </fieldset>
     </form>
 </div>
 </div>

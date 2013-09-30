@@ -5,7 +5,7 @@ from kid import Element
 from sqlalchemy.sql import exists
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
-from turbogears import expose, flash, redirect, paginate, identity, widgets, url
+from turbogears import expose, flash, redirect, paginate
 from bkr.server.model import session, DistroTree, Distro, OSVersion, OSMajor, \
         LabController, LabControllerDistroTree, DistroTreeActivity, \
         distro_tree_lab_controller_map, lab_controller_table, Arch, DistroTag
@@ -14,7 +14,7 @@ from bkr.server.widgets import TaskSearchForm, myPaginateDataGrid, SearchBar, \
 from bkr.server.helpers import make_link
 from bkr.server.controller_utilities import Utility, restrict_http_method
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server import search_utility, needpropertyxml
+from bkr.server import search_utility, needpropertyxml, identity
 
 __all__ = ['DistroTrees']
 
@@ -76,7 +76,6 @@ class DistroTrees(RPCRoot):
                     search_bar=search_bar,
                     searchvalue=kwargs.get('search'),
                     options=options,
-                    object_count=query.count(),
                     list=query)
 
     def _provision_system_link(self, distro_tree):
@@ -107,7 +106,6 @@ class DistroTrees(RPCRoot):
         is_admin = identity.current.user and identity.current.user.is_admin() or False
         return dict(title='Distro Tree',
                     value=distro_tree,
-                    tabber=widgets.Tabber(use_cookie=True),
                     install_options_widget=DistroTreeInstallOptionsWidget(),
                     form_task=form_task,
                     delete_link=self.delete_link,

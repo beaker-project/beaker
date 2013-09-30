@@ -3,7 +3,7 @@ import unittest2 as unittest
 import subprocess
 import json
 import pkg_resources
-from copy import copy
+from copy import copy, deepcopy
 from bkr.inttest import Process
 from bkr.server.model import OSMajor
 from turbogears.database import session
@@ -473,6 +473,75 @@ class DistroImportTest(unittest.TestCase):
                                  u'arch': u'i386',
                                  u'ks_meta': None}
 
+        self.i386_fedora_rawhide = {u'osmajor': u'Fedorarawhide',
+                                    u'name': u'Fedora-rawhide-20130905',
+                                    u'tree_build_time': u'1378389545.99',
+                                    u'osminor': u'0',
+                                    u'tags': [],
+                                    u'kernel_options_post': None,
+                                    u'repos': [{u'path': u'.', u'type': u'variant',
+                                                u'repoid': u'Fedora'},
+                                               {u'path': u'../../i386/debug', u'type': u'debug',
+                                                u'repoid': u'Fedora-debuginfo'}],
+                                    u'variant': u'Fedora',
+                                    u'kernel_options': None,
+                                    u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                                 u'type': u'kernel'},
+                                                {u'path': u'images/pxeboot/initrd.img',
+                                                 u'type': u'initrd'}],
+                                    u'arches': [],
+                                    u'urls': [u'http://localhost:19998/Fedora-rawhide/i386/os/'],
+                                    u'arch': u'i386',
+                                    u'ks_meta': None}
+
+        self.x86_64_fedora_rawhide = {u'osmajor': u'Fedorarawhide',
+                                    u'name': u'Fedora-rawhide-20130905',
+                                    u'tree_build_time': u'1378389431.7',
+                                    u'osminor': u'0',
+                                    u'tags': [],
+                                    u'kernel_options_post': None,
+                                    u'repos': [{u'path': u'.', u'type': u'variant',
+                                                u'repoid': u'Fedora'},
+                                               {u'path': u'../../x86_64/debug', u'type': u'debug',
+                                                u'repoid': u'Fedora-debuginfo'}],
+                                    u'variant': u'Fedora',
+                                    u'kernel_options': None,
+                                    u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                                 u'type': u'kernel'},
+                                                {u'path': u'images/pxeboot/initrd.img',
+                                                 u'type': u'initrd'}],
+                                    u'arches': [],
+                                    u'urls': [u'http://localhost:19998/Fedora-rawhide/x86_64/os/'],
+                                    u'arch': u'x86_64',
+                                    u'ks_meta': None}
+
+        self.armhfp_fedora_rawhide = {u'osmajor': u'Fedorarawhide',
+                                      u'name': u'Fedora-rawhide-20130905',
+                                      u'tree_build_time': u'1378390877.19',
+                                      u'osminor': u'0',
+                                      u'tags': [],
+                                      u'kernel_options_post': None,
+                                      u'repos': [{u'path': u'.', u'type': u'variant',
+                                                u'repoid': u'Fedora'},
+                                                 {u'path': u'../../armhfp/debug', u'type': u'debug',
+                                                  u'repoid': u'Fedora-debuginfo'}],
+                                      u'variant': u'Fedora',
+                                    u'kernel_options': None,
+                                      u'images': [{u'path': u'images/pxeboot/vmlinuz',
+                                                   u'type': u'kernel'},
+                                                  {u'path': u'images/pxeboot/initrd.img',
+                                                   u'type': u'initrd'},
+                                                  {u'path': u'images/pxeboot/uImage',
+                                                   u'type': u'uimage'},
+                                                  {u'path': u'images/pxeboot/uInitrd',
+                                                   u'type': u'uinitrd'},],
+                                      u'arches': [
+                                                  ],
+                                      u'arches': [],
+                                      u'urls': [u'http://localhost:19998/Fedora-rawhide/armhfp/os/'],
+                                      u'arch': u'armhfp',
+                                      u'ks_meta': None}
+
         self.x86_64_rhel6_naked =  {u'arch': u'x86_64',
                                     u'arches': [u'x86_64'],
                                     u'images': [{u'path': u'/RHEL-6-Server-RHEV/6.4/6.4.1.1/vmlinuz0',
@@ -490,6 +559,7 @@ class DistroImportTest(unittest.TestCase):
                                     u'tree_build_time': 1366007531.817827,
                                     u'urls': [u'http://localhost:19998/RHEL-6-Server-RHEV/6.4/6.4.1.1/'],
                                     u'variant': u'Server'}
+
 
     def _run_import(self, import_args):
         p = subprocess.Popen(import_args,
@@ -677,6 +747,65 @@ class DistroImportTest(unittest.TestCase):
         self.assertEquals(i386_tree, self.i386_f18_compose)
         self.assertEquals(x86_64_tree, self.x86_64_f18_compose)
 
+    def _rawhide_treeinfo(self, compose_tree):
+        # "derive" the expected treeinfo data from the
+        # composeinfo data
+        compose_tree['name'] = u'Fedora-rawhide'
+        compose_tree['variant'] = u''
+        for repo in compose_tree['repos']:
+            if repo['type'] == 'debug':
+                repo['path'] = u'../debug'
+
+        return compose_tree
+
+    def test_fedora_rawhide_tree_import_i386(self):
+
+        trees = self.dry_run_import_trees(['%sFedora-rawhide/i386/os'
+                                           % self.distro_url])
+        self.assertTrue(len(trees) == 1)
+        tree = trees.pop()
+
+        expected_tree = self._rawhide_treeinfo(
+            compose_tree = deepcopy(self.i386_fedora_rawhide))
+        self.assertEquals(tree, expected_tree)
+
+    def test_fedora_rawhide_tree_import_x86_64(self):
+
+        trees = self.dry_run_import_trees(['%sFedora-rawhide/x86_64/os'
+                                           % self.distro_url])
+        self.assertTrue(len(trees) == 1)
+        tree = trees.pop()
+
+        expected_tree = self._rawhide_treeinfo(
+            compose_tree = deepcopy(self.x86_64_fedora_rawhide))
+        self.assertEquals(tree, expected_tree)
+
+    def test_fedora_rawhide_tree_import_armhfp(self):
+
+        trees = self.dry_run_import_trees(['%sFedora-rawhide/armhfp/os'
+                                           % self.distro_url])
+        self.assertTrue(len(trees) == 1)
+        tree = trees.pop()
+
+        expected_tree = self._rawhide_treeinfo(
+            compose_tree = deepcopy(self.armhfp_fedora_rawhide))
+        self.assertEquals(tree, expected_tree)
+
+    def test_fedora_rawhide_import_compose(self):
+
+        trees = self.dry_run_import_trees(['%sFedora-rawhide/' % self.distro_url])
+        self.assertTrue(len(trees) == 3)
+        for tree in trees:
+            if tree['arch'] == u'i386':
+                i386_tree = tree
+            if tree['arch'] == u'x86_64':
+                x86_64_tree = tree
+            if tree['arch'] == u'armhfp':
+                armhfp_tree = tree
+
+        self.assertEquals(i386_tree, self.i386_fedora_rawhide)
+        self.assertEquals(x86_64_tree, self.x86_64_fedora_rawhide)
+        self.assertEquals(armhfp_tree, self.armhfp_fedora_rawhide)
 
     def test_selective_compose_import(self):
         trees = self.dry_run_import_trees(['--arch', 'i386',

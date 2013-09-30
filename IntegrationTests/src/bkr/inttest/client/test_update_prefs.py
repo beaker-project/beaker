@@ -7,12 +7,8 @@ class UpdatePrefsTest(unittest.TestCase):
 
     @with_transaction
     def setUp(self):
-        self.user1 = data_setup.create_user(user_name="foo",
-                                            password=u'asdf',
-                                            email_address="foo@example.com")
-        self.user2 = data_setup.create_user(user_name="bar",
-                                            password=u'qwerty',
-                                            email_address="bar@example.com")
+        self.user1 = data_setup.create_user(password=u'asdf')
+        self.user2 = data_setup.create_user(password=u'qwerty')
 
         self.client_config1 = create_client_config(username=self.user1.user_name,
                 password='asdf')
@@ -21,14 +17,14 @@ class UpdatePrefsTest(unittest.TestCase):
 
     def test_user_edit_email(self):
         try:
-            run_client(['bkr', 'update-prefs', '--email=foo@example.com'],
+            run_client(['bkr', 'update-prefs', '--email=%s' % self.user1.email_address],
                        config=self.client_config1)
             fail('should raise')
         except ClientError, e:
             self.assert_('is same as before' in e.stderr_output)
 
         try:
-            run_client(['bkr', 'update-prefs', '--email=bar@example.com'],
+            run_client(['bkr', 'update-prefs', '--email=%s' % self.user2.email_address],
                        config=self.client_config1)
             fail('should raise')
         except ClientError, e:

@@ -1,11 +1,20 @@
 
 from turbogears.database import session
-from turbogears import expose, widgets, identity
+from turbogears import expose, widgets
+from sqlalchemy.exc import InvalidRequestError
+from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
 from tempfile import NamedTemporaryFile
 from cherrypy.lib.cptools import serve_file
-from bkr.server.model import *
+from bkr.server.model import (System, SystemType, Activity, SystemActivity,
+                              User, Group, LabController, LabInfo,
+                              OSMajor, OSVersion,
+                              ExcludeOSMajor, ExcludeOSVersion,
+                              SystemStatus, Power, PowerType, Arch,
+                              Provision, ProvisionFamily,
+                              ProvisionFamilyUpdate,
+                              Key, Key_Value_Int, Key_Value_String)
+from bkr.server.widgets import HorizontalForm, RadioButtonList
 import csv
 import datetime
 import logging
@@ -26,7 +35,7 @@ class CSV(RPCRoot):
     exposed = False
 
     upload     = widgets.FileField(name='csv_file', label='Import CSV')
-    download   = widgets.RadioButtonList(name='csv_type', label='CSV Type',
+    download   = RadioButtonList(name='csv_type', label='CSV Type',
                                options=[('system', 'Systems'), 
                                         ('labinfo', 'System LabInfo'), 
                                         ('power', 'System Power'),
@@ -37,14 +46,14 @@ class CSV(RPCRoot):
                                         ('user_group', 'User Groups')], 
                                                           default='system')
 
-    importform = widgets.TableForm(
+    importform = HorizontalForm(
         'import',
         fields = [upload],
         action = 'import data',
         submit_text = _(u'Import CSV'),
     )
 
-    exportform = widgets.TableForm(
+    exportform = HorizontalForm(
         'export',
         fields = [download],
         action = 'export data',
@@ -56,6 +65,7 @@ class CSV(RPCRoot):
     def index(self, **kw):
         return dict(
             form = self.exportform,
+            title=_(u'CSV Export'),
             action = './action_export',
             options = {},
             value = kw,
@@ -66,6 +76,7 @@ class CSV(RPCRoot):
     def csv_import(self, **kw):
         return dict(
             form = self.importform,
+            title=_(u'CSV Import'),
             action = './action_import',
             options = {},
             value = kw,
@@ -117,7 +128,7 @@ class CSV(RPCRoot):
                                             owner=identity.current.user,
                                             type=SystemType.machine,
                                             status=SystemStatus.broken)
-                        if system.can_admin(identity.current.user):
+                        if system.can_edit(identity.current.user):
                             # Remove fqdn, can't change that via csv.
                             data.pop('fqdn')
                             if not self.from_csv(system, data, log):
@@ -228,7 +239,7 @@ class CSV_System(CSV):
     csv_type = 'system'
     reg_keys = ['fqdn', 'deleted', 'lender', 'location', 
                 'mac_address', 'memory', 'model',
-                'serial', 'shared', 'vendor']
+                'serial', 'vendor']
 
     spec_keys = ['arch', 'lab_controller', 'owner', 
                  'secret', 'status','type','cc']
@@ -371,7 +382,6 @@ class CSV_System(CSV):
         self.owner = system.owner
         self.secret = system.private
         self.serial = system.serial
-        self.shared = system.shared
         self.status = system.status
         self.type = system.type
         self.vendor = system.vendor
@@ -783,12 +793,12 @@ class CSV_GroupUser(CSV):
         """
         if 'group' in data and data['group']:
             try:
-               group = Group.by_name(data['group'])
+                group = Group.by_name(data['group'])
             except InvalidRequestError:
-               group = Group(group_name=data['group'],
-                             display_name=data['group'])
-               session.add(group)
-               session.flush([group])
+                group = Group(group_name=data['group'],
+                              display_name=data['group'])
+                session.add(group)
+                session.flush([group])
             deleted = False
             if 'deleted' in data:
                 deleted = smart_bool(data['deleted'])
@@ -827,12 +837,12 @@ class CSV_GroupSystem(CSV):
         """
         if 'group' in data and data['group']:
             try:
-               group = Group.by_name(data['group'])
+                group = Group.by_name(data['group'])
             except InvalidRequestError:
-               group = Group(group_name=data['group'],
-                             display_name=data['group'])
-               session.add(group)
-               session.flush([group])
+                group = Group(group_name=data['group'],
+                              display_name=data['group'])
+                session.add(group)
+                session.flush([group])
             deleted = False
             if 'deleted' in data:
                 deleted = smart_bool(data['deleted'])

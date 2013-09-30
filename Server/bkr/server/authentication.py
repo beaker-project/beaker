@@ -1,38 +1,17 @@
-from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, \
-        error_handler, validators, redirect, paginate, identity
-from turbogears.widgets import AutoCompleteField
-from turbogears.identity import IdentityException
-from turbogears.identity.saprovider import SqlAlchemyIdentity
-from cherrypy import request, response
-from kid import Element
+from turbogears.config import get
+from bkr.common.bexceptions import BX
+from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
-from bkr.server.model import *
-from xmlrpclib import ProtocolError
+from bkr.server.model import User
 import cherrypy
-import time
-import re
 import logging
-import string
+import socket
 
 log = logging.getLogger(__name__)
 
 __all__ = ['Auth']
 
-def proxy_identity(current_identity, proxy_user_name):
-    if 'proxy_auth' not in current_identity.permissions:
-        raise IdentityException('%s does not have proxy_auth permission' % current_identity.user_name)
-    proxy_user = User.by_user_name(proxy_user_name)
-    if not proxy_user:
-        log.warning('Attempted to proxy as nonexistent user %s', proxy_user_name)
-        return None
-    log.info("Associating proxy user (%s) with visit (%s)",
-            proxy_user_name, current_identity.visit_key)
-    # XXX shouldn't assume a particular implementation class here:
-    proxied_identity = SqlAlchemyIdentity(current_identity.visit_key, proxy_user)
-    proxied_identity.visit_link.proxied_by_user = current_identity.user
-    return proxied_identity
+class LoginException(BX): pass
 
 class Auth(RPCRoot):
     # For XMLRPC methods in this class.
@@ -57,8 +36,8 @@ class Auth(RPCRoot):
         """
         retval = {'username': identity.current.user.user_name,
                   'email_address' : identity.current.user.email_address}
-        if identity.current.visit_link.proxied_by_user is not None:
-            retval['proxied_by_username'] = identity.current.visit_link.proxied_by_user.user_name
+        if identity.current.proxied_by_user is not None:
+            retval['proxied_by_username'] = identity.current.proxied_by_user.user_name
         return retval
 
     @cherrypy.expose
@@ -82,15 +61,23 @@ class Auth(RPCRoot):
         :param proxy_user: username on whose behalf the caller is proxying
         :type proxy_user: string or None
         """
-        visit_key = turbogears.visit.current().key
-        user = identity.current_provider.validate_identity(username, password, visit_key)
+        user = User.by_user_name(username)
         if user is None:
-            raise IdentityException("Invalid username or password")
+            raise LoginException(_(u'Invalid username or password'))
+        if not user.can_log_in():
+            raise LoginException(_(u'Invalid username or password'))
+        if not user.check_password(password):
+            raise LoginException(_(u'Invalid username or password'))
         if proxy_user:
-            proxied_user = proxy_identity(user, proxy_user)
+            if not user.has_permission(u'proxy_auth'):
+                raise LoginException(_(u'%s does not have proxy_auth permission') % user.user_name)
+            proxied_user = User.by_user_name(proxy_user)
             if proxied_user is None:
-                raise IdentityException('Failed to authenticate on behalf of %s' % proxy_user)
-        return identity.current.visit_key
+                raise LoginException(_(u'Proxy user %s does not exist') % proxy_user)
+            identity.set_authentication(proxied_user, proxied_by=user)
+        else:
+            identity.set_authentication(user)
+        return user.user_name
 
     @cherrypy.expose
     def login_krbV(self, krb_request, proxy_user=None):
@@ -128,17 +115,21 @@ class Auth(RPCRoot):
     
         # remove @REALM
         username = cprinc.name.split("@")[0]
-        visit_key = turbogears.visit.current().key
-        user = identity.current_provider.validate_identity(
-                user_name=username, password=None,
-                visit_key=visit_key, krb=True)
+        user = User.by_user_name(username)
         if user is None:
-            raise IdentityException()
+            raise LoginException(_(u'Invalid username'))
+        if not user.can_log_in():
+            raise LoginException(_(u'Invalid username'))
         if proxy_user:
-            proxied_identity = proxy_identity(user, proxy_user)
-            if proxied_identity is None:
-                raise IdentityException('Failed to authenticate on behalf of %s' % proxy_user)
-        return identity.current.visit_key
+            if not user.has_permission(u'proxy_auth'):
+                raise LoginException(_(u'%s does not have proxy_auth permission') % user.user_name)
+            proxied_user = User.by_user_name(proxy_user)
+            if proxied_user is None:
+                raise LoginException(_(u'Proxy user %s does not exist') % proxy_user)
+            identity.set_authentication(proxied_user, proxied_by=user)
+        else:
+            identity.set_authentication(user)
+        return username
 
     # Alias kerberos login
     login_krbv = login_krbV
@@ -148,7 +139,7 @@ class Auth(RPCRoot):
         """
         Invalidates the current session.
         """
-        identity.current.logout()
+        identity.clear_authentication()
         return True
 
 # this is just a hack for sphinx autodoc

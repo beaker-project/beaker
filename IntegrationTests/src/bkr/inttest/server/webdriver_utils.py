@@ -7,19 +7,21 @@ from selenium import webdriver
 from bkr.inttest import data_setup, get_server_base
 
 def delete_and_confirm(browser, ancestor_xpath, delete_text='Delete'):
-    browser.find_element_by_xpath("%s//a[normalize-space(text())='%s']" % (ancestor_xpath, delete_text)).click()
-    browser.find_element_by_xpath("//button[@type='button' and text()='Yes']").click()
+    browser.find_element_by_xpath(ancestor_xpath)\
+           .find_element_by_link_text(delete_text)\
+           .click()
+    browser.find_element_by_xpath("//button[@type='button' and .//text()='Yes']").click()
 
 def logout(browser):
     browser.get(get_server_base())
-    browser.find_element_by_link_text('Logout').click()
+    browser.find_element_by_link_text('Log out').click()
 
 def login(browser, user=None, password=None):
     if user is None and password is None:
         user = data_setup.ADMIN_USER
         password = data_setup.ADMIN_PASSWORD
     browser.get(get_server_base())
-    browser.find_element_by_link_text('Login').click()
+    browser.find_element_by_link_text('Log in').click()
     browser.find_element_by_name('user_name').click()
     browser.find_element_by_name('user_name').send_keys(user)
     browser.find_element_by_name('password').click()
@@ -28,7 +30,7 @@ def login(browser, user=None, password=None):
 
 def logout(browser):
     browser.get(get_server_base())
-    browser.find_element_by_link_text('Logout').click()
+    browser.find_element_by_link_text('Log out').click()
 
 def is_text_present(browser, text):
     return bool(browser.find_elements_by_xpath(
@@ -54,7 +56,7 @@ def is_activity_row_present(b, via=u'testdata', object_=None, property_=None,
     return False
 
 def search_for_system(browser, system):
-    browser.find_element_by_link_text('Toggle Search').click()
+    browser.find_element_by_link_text('Show Search Options').click()
     Select(browser.find_element_by_name('systemsearch-0.table'))\
             .select_by_visible_text('System/Name')
     Select(browser.find_element_by_name('systemsearch-0.operation'))\
@@ -69,3 +71,33 @@ def wait_for_animation(browser, selector):
     WebDriverWait(browser, 10).until(lambda browser: browser.execute_script(
             'return jQuery(%s).is(":animated")' % json.dumps(selector))
             == False)
+
+def check_system_search_results(browser, present=[], absent=[]):
+    for system in absent:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                'not(.//td[1]/a/text()="%s")]' % system.fqdn)
+    for system in present:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                './/td[1]/a/text()="%s"]' % system.fqdn)
+
+def check_job_search_results(browser, present=[], absent=[]):
+    for job in absent:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                    'not(.//td[1]/a/text()="%s")]' % job.t_id)
+    for job in present:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                    './/td[1]/a/text()="%s"]' % job.t_id)
+
+def check_distro_search_results(browser, present=[], absent=[]):
+    for distro in absent:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                    'not(.//td[1]/a/text()="%s")]' % distro.id)
+    for distro in present:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                    './/td[1]/a/text()="%s"]' % distro.id)
+
+def click_menu_item(browser, menu_item, submenu_item):
+    browser.find_element_by_link_text(menu_item).click()
+    browser.find_element_by_css_selector('.dropdown.open')\
+           .find_element_by_link_text(submenu_item)\
+           .click()

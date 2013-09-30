@@ -1,23 +1,24 @@
 from turbogears.database import session
-from turbogears import controllers, expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
-from turbogears.widgets import AutoCompleteField
-from turbogears import identity, redirect
-from cherrypy import request, response
-from kid import Element
-from bkr.server.xmlrpccontroller import RPCRoot
-from bkr.server.helpers import *
-from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, BeakerDataGrid
+from turbogears import (expose, widgets, flash, error_handler,
+                        validate, validators, redirect, paginate, url)
+from sqlalchemy import and_, or_
+from sqlalchemy.exc import InvalidRequestError
+from kid import XML
+from bkr.common.bexceptions import BX
+from flask import request, jsonify
+from bkr.server import identity
+from bkr.server.helpers import make_edit_link
+from bkr.server.widgets import myPaginateDataGrid, AlphaNavBar, \
+    BeakerDataGrid, HorizontalForm
 from bkr.server.admin_page import AdminPage
+from bkr.server.app import app
 from bkr.server import validators as beaker_validators
+from sqlalchemy import and_
 
 import cherrypy
+from datetime import datetime
 
-# from bkr.server import json
-# import logging
-# log = logging.getLogger("bkr.server.controllers")
-#import model
-from model import *
-import string
+from bkr.server.model import User, Job, System, SystemActivity, TaskStatus
 
 
 class UserFormSchema(validators.Schema):
@@ -34,7 +35,7 @@ class UserFormSchema(validators.Schema):
 
 class Users(AdminPage):
     # For XMLRPC methods in this class.
-    exposed = False
+    exposed = True
 
     user_id     = widgets.HiddenField(name='user_id')
     user_name   = widgets.TextField(name='user_name', label=_(u'Login'))
@@ -42,7 +43,7 @@ class Users(AdminPage):
     email_address = widgets.TextField(name='email_address', label=_(u'Email Address'))
     password     = widgets.PasswordField(name='password', label=_(u'Password'))
     disabled = widgets.CheckBox(name='disabled', label=_(u'Disabled'))
-    user_form = widgets.TableForm(
+    user_form = HorizontalForm(
         'User',
         fields = [user_id, user_name, display_name,
                   email_address, password, disabled
@@ -72,10 +73,19 @@ class Users(AdminPage):
     @identity.require(identity.in_group("admin"))
     @expose(template='bkr.server.templates.user_edit_form')
     def edit(self, id=None, **kw):
+        if id:
+            user = User.by_id(id)
+            title = _(u'User %s') % user.user_name
+            value = user
+        else:
+            user = None
+            title = _(u'New user')
+            value = kw
         return_vals = dict(form=self.user_form,
                            action='./save',
+                           title=title,
                            options={},
-                           value=id and User.by_id(id) or kw,)
+                           value=value)
         if id:
             return_vals['groupsgrid'] = self.show_groups()
         else:
@@ -106,12 +116,11 @@ class Users(AdminPage):
 
     def make_remove_link(self, user):
         if user.removed is not None:
-            link =  make_link(url = 'unremove?id=%s' % user.user_id,
-                              text = 'Re-Add (+)')
+            return XML('<a class="btn" href="unremove?id=%s">'
+                    '<i class="icon-plus"/> Re-Add</a>' % user.user_id)
         else:
-            link =  make_link(url = 'remove?id=%s' % user.user_id,
-                              text = 'Remove (-)')
-        return link
+            return XML('<a class="btn" href="remove?id=%s">'
+                    '<i class="icon-remove"/> Remove</a>' % user.user_id)
 
     @expose(template="bkr.server.templates.admin_grid")
     @paginate('list', default_order='user_name',limit=20)
@@ -129,13 +138,12 @@ class Users(AdminPage):
                                   ('Display Name', lambda x: x.display_name),
                                   ('Disabled', lambda x: x.disabled),
                                   ('', lambda x: self.make_remove_link(x)),
-                              ])
+                              ],
+                              add_action='./new')
         return dict(title="Users",
                     grid = users_grid,
-                    object_count = users.count(),
                     alpha_nav_bar = AlphaNavBar(list_by_letters,'user'),
                     search_widget = self.search_widget_form,
-                    addable = self.add, 
                     list = users)
 
     @identity.require(identity.in_group("admin"))
@@ -146,16 +154,14 @@ class Users(AdminPage):
         except InvalidRequestError:
             flash(_(u'Invalid user id %s' % id))
             raise redirect('.')
-        flash( _(u'%s Removed') % user.display_name )
         try:
             self._remove(user=user, method='WEBUI')
         except BX, e:
-            flash( _(u'Failed to Remove User %s, due to %s' % (user.user_name,
-                                                               e
-                                                              )
-                    )
-                 )
-        raise redirect('.')
+            flash( _(u'Failed to remove User %s, due to %s' % (user.user_name, e)))
+            raise redirect('.')
+        else:
+            flash( _(u'User %s removed') % user.user_name )
+            redirect('.')
 
     @identity.require(identity.in_group("admin"))
     @expose()
@@ -174,29 +180,44 @@ class Users(AdminPage):
 
     @cherrypy.expose
     @identity.require(identity.in_group('admin'))
-    def close_account(self, username):
+    def remove_account(self, username):
+        """
+        Remove a user account.
+
+        Removing a user account cancels any running job(s), returns all
+        the systems in use by the user, modifies the ownership of the
+        systems owned to the admin closing the account, and disables the
+        account for further login.
+
+        :param username: An existing username
+        :type username: string
+        """
+
         try:
             user = User.by_user_name(username)
         except InvalidRequestError:
             raise BX(_('Invalid User %s ' % username))
+
+        if user.removed:
+            raise BX(_('User already removed %s' % username))
+
         self._remove(user=user, method='XMLRPC')
 
-    def _disable(self, user, method, 
+    def _disable(self, user, method,
                  msg='Your account has been temporarily disabled'):
+
         # cancel all queued and running jobs
-        jobs = Job.query.filter(and_(Job.owner==user,
-                                    or_(Job.status==TaskStatus.queued,
-                                        Job.status==TaskStatus.running
-                                           ),
-                                       ),
-                                  )
-        for job in jobs:
-            job.cancel(msg=msg)
+        Job.cancel_jobs_by_user(user, msg)
 
     def _remove(self, user, method, **kw):
-        # Return all systems in use by this user
+
         if user == identity.current.user:
-            raise BX(_('You can''t remove yourself'))
+            raise BX(_('You cannot remove yourself'))
+
+        # cancel all running and queued jobs
+        Job.cancel_jobs_by_user(user, 'User %s removed' % user.user_name)
+
+        # Return all systems in use by this user
         for system in System.query.filter(System.user==user):
             msg = ''
             try:
@@ -225,8 +246,28 @@ class Users(AdminPage):
     @expose(format='json')
     def by_name(self, input,anywhere=False,ldap=True):
         input = input.lower()
-        return dict(matches=User.list_by_name(input,anywhere,ldap))
+        matches = [user_name for user_name, display_name
+                in User.list_by_name(input, anywhere, ldap)]
+        return dict(matches=matches)
 
     def show_groups(self):
         group = ('Group', lambda x: x.display_name)
         return BeakerDataGrid(fields=[group])
+
+@app.route('/users/+typeahead')
+def users_typeahead():
+    if 'q' in request.args:
+        ldap = (len(request.args['q']) >= 3) # be nice to the LDAP server
+        users = User.list_by_name(request.args['q'],
+                find_anywhere=False, find_ldap_users=ldap)
+    else:
+        # not sure if this is wise, the response may be several hundred KB...
+        users = User.query.filter(User.removed == None)\
+                .values(User.user_name, User.display_name)
+    data = [{'user_name': user_name, 'display_name': display_name,
+             'tokens': [user_name]}
+            for user_name, display_name in users]
+    return jsonify(data=data)
+
+# for sphinx
+users = Users
