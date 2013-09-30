@@ -1,6 +1,12 @@
+[compose]
+date = 20130930
+id = RHEL-7.0-20130930.n.0
+respin = 0
+type = nightly
+
 [product]
 family = Red Hat Enterprise Linux
-name = RHEL-7.0-20120711.2
+name = RHEL-7.0-20130930.n.0
 short = RHEL
 variants = Client,ComputeNode,Server,Workstation
 version = 7.0
@@ -17,30 +23,38 @@ variants = Client-optional
 arches = x86_64
 id = optional
 name = optional
-parent = Client
 type = optional
 uid = Client-optional
 
 [variant-Client-optional.x86_64]
-arch = x86_64
-debuginfo = Client-optional/x86_64/debuginfo/tree
+debug_dir = Client-optional/x86_64/debug/tree
+debug_packages = Client-optional/x86_64/debug/tree/Packages
+debug_repository = Client-optional/x86_64/debug/tree
+debug_tree = Client-optional/x86_64/debug/tree
+debuginfo = Client-optional/x86_64/debug/tree
 os_dir = Client-optional/x86_64/os
+os_tree = Client-optional/x86_64/os
 packages = Client-optional/x86_64/os/Packages
-parent = Client.x86_64
 repository = Client-optional/x86_64/os
+source_dir = Client-optional/source/tree
 source_packages = Client-optional/source/tree/Packages
 source_repository = Client-optional/source/tree
+source_tree = Client-optional/source/tree
 
 [variant-Client.x86_64]
-arch = x86_64
-debuginfo = Client/x86_64/debuginfo/tree
-isos = Client/x86_64/iso
+debug_dir = Client/x86_64/debug/tree
+debug_packages = Client/x86_64/debug/tree/Packages
+debug_repository = Client/x86_64/debug/tree
+debug_tree = Client/x86_64/debug/tree
+debuginfo = Client/x86_64/debug/tree
 os_dir = Client/x86_64/os
+os_tree = Client/x86_64/os
 packages = Client/x86_64/os/Packages
 repository = Client/x86_64/os
-source_isos = Client/source/iso
+source_dir = Client/source/tree
 source_packages = Client/source/tree/Packages
 source_repository = Client/source/tree
+source_tree = Client/source/tree
 
 [variant-ComputeNode]
 arches = x86_64
@@ -54,30 +68,38 @@ variants = ComputeNode-optional
 arches = x86_64
 id = optional
 name = optional
-parent = ComputeNode
 type = optional
 uid = ComputeNode-optional
 
 [variant-ComputeNode-optional.x86_64]
-arch = x86_64
-debuginfo = ComputeNode-optional/x86_64/debuginfo/tree
+debug_dir = ComputeNode-optional/x86_64/debug/tree
+debug_packages = ComputeNode-optional/x86_64/debug/tree/Packages
+debug_repository = ComputeNode-optional/x86_64/debug/tree
+debug_tree = ComputeNode-optional/x86_64/debug/tree
+debuginfo = ComputeNode-optional/x86_64/debug/tree
 os_dir = ComputeNode-optional/x86_64/os
+os_tree = ComputeNode-optional/x86_64/os
 packages = ComputeNode-optional/x86_64/os/Packages
-parent = ComputeNode.x86_64
 repository = ComputeNode-optional/x86_64/os
+source_dir = ComputeNode-optional/source/tree
 source_packages = ComputeNode-optional/source/tree/Packages
 source_repository = ComputeNode-optional/source/tree
+source_tree = ComputeNode-optional/source/tree
 
 [variant-ComputeNode.x86_64]
-arch = x86_64
-debuginfo = ComputeNode/x86_64/debuginfo/tree
-isos = ComputeNode/x86_64/iso
+debug_dir = ComputeNode/x86_64/debug/tree
+debug_packages = ComputeNode/x86_64/debug/tree/Packages
+debug_repository = ComputeNode/x86_64/debug/tree
+debug_tree = ComputeNode/x86_64/debug/tree
+debuginfo = ComputeNode/x86_64/debug/tree
 os_dir = ComputeNode/x86_64/os
+os_tree = ComputeNode/x86_64/os
 packages = ComputeNode/x86_64/os/Packages
 repository = ComputeNode/x86_64/os
-source_isos = ComputeNode/source/iso
+source_dir = ComputeNode/source/tree
 source_packages = ComputeNode/source/tree/Packages
 source_repository = ComputeNode/source/tree
+source_tree = ComputeNode/source/tree
 
 [variant-Server]
 arches = ppc64,s390x,x86_64
@@ -85,150 +107,170 @@ id = Server
 name = Server
 type = variant
 uid = Server
-variants = Server-HighAvailability,Server-LoadBalancer,Server-ResilientStorage,Server-ScalableFileSystem,Server-optional
+variants = Server-HighAvailability,Server-LoadBalancer,Server-ResilientStorage,Server-optional
 
 [variant-Server-HighAvailability]
 arches = x86_64
 id = HighAvailability
 name = High Availability
-parent = Server
 type = addon
 uid = Server-HighAvailability
 
 [variant-Server-HighAvailability.x86_64]
-arch = x86_64
-debuginfo = Server/x86_64/debuginfo/tree/addons/HighAvailability
+debug_dir = Server/x86_64/debug/tree
+debug_packages = Server/x86_64/debug/tree/addons/HighAvailability
+debug_repository = Server/x86_64/debug/tree/addons/HighAvailability
+debug_tree = Server/x86_64/debug/tree
+debuginfo = Server/x86_64/debug/tree/addons/HighAvailability
 os_dir = Server/x86_64/os
+os_tree = Server/x86_64/os
 packages = Server/x86_64/os/addons/HighAvailability
-parent = Server.x86_64
 repository = Server/x86_64/os/addons/HighAvailability
+source_dir = Server/source/tree
 source_packages = Server/source/tree/addons/HighAvailability
 source_repository = Server/source/tree/addons/HighAvailability
+source_tree = Server/source/tree
 
 [variant-Server-LoadBalancer]
 arches = x86_64
 id = LoadBalancer
 name = Load Balancer
-parent = Server
 type = addon
 uid = Server-LoadBalancer
 
 [variant-Server-LoadBalancer.x86_64]
-arch = x86_64
-debuginfo = Server/x86_64/debuginfo/tree/addons/LoadBalancer
+debug_dir = Server/x86_64/debug/tree
+debug_packages = Server/x86_64/debug/tree/addons/LoadBalancer
+debug_repository = Server/x86_64/debug/tree/addons/LoadBalancer
+debug_tree = Server/x86_64/debug/tree
+debuginfo = Server/x86_64/debug/tree/addons/LoadBalancer
 os_dir = Server/x86_64/os
+os_tree = Server/x86_64/os
 packages = Server/x86_64/os/addons/LoadBalancer
-parent = Server.x86_64
 repository = Server/x86_64/os/addons/LoadBalancer
+source_dir = Server/source/tree
 source_packages = Server/source/tree/addons/LoadBalancer
 source_repository = Server/source/tree/addons/LoadBalancer
+source_tree = Server/source/tree
 
 [variant-Server-ResilientStorage]
 arches = x86_64
 id = ResilientStorage
 name = Resilient Storage
-parent = Server
 type = addon
 uid = Server-ResilientStorage
 
 [variant-Server-ResilientStorage.x86_64]
-arch = x86_64
-debuginfo = Server/x86_64/debuginfo/tree/addons/ResilientStorage
+debug_dir = Server/x86_64/debug/tree
+debug_packages = Server/x86_64/debug/tree/addons/ResilientStorage
+debug_repository = Server/x86_64/debug/tree/addons/ResilientStorage
+debug_tree = Server/x86_64/debug/tree
+debuginfo = Server/x86_64/debug/tree/addons/ResilientStorage
 os_dir = Server/x86_64/os
+os_tree = Server/x86_64/os
 packages = Server/x86_64/os/addons/ResilientStorage
-parent = Server.x86_64
 repository = Server/x86_64/os/addons/ResilientStorage
+source_dir = Server/source/tree
 source_packages = Server/source/tree/addons/ResilientStorage
 source_repository = Server/source/tree/addons/ResilientStorage
-
-[variant-Server-ScalableFileSystem]
-arches = x86_64
-id = ScalableFileSystem
-name = Scalable Filesystem Support
-parent = Server
-type = addon
-uid = Server-ScalableFileSystem
-
-[variant-Server-ScalableFileSystem.x86_64]
-arch = x86_64
-debuginfo = Server/x86_64/debuginfo/tree/addons/ScalableFileSystem
-os_dir = Server/x86_64/os
-packages = Server/x86_64/os/addons/ScalableFileSystem
-parent = Server.x86_64
-repository = Server/x86_64/os/addons/ScalableFileSystem
-source_packages = Server/source/tree/addons/ScalableFileSystem
-source_repository = Server/source/tree/addons/ScalableFileSystem
+source_tree = Server/source/tree
 
 [variant-Server-optional]
 arches = ppc64,s390x,x86_64
 id = optional
 name = optional
-parent = Server
 type = optional
 uid = Server-optional
 
 [variant-Server-optional.ppc64]
-arch = ppc64
-debuginfo = Server-optional/ppc64/debuginfo/tree
+debug_dir = Server-optional/ppc64/debug/tree
+debug_packages = Server-optional/ppc64/debug/tree/Packages
+debug_repository = Server-optional/ppc64/debug/tree
+debug_tree = Server-optional/ppc64/debug/tree
+debuginfo = Server-optional/ppc64/debug/tree
 os_dir = Server-optional/ppc64/os
+os_tree = Server-optional/ppc64/os
 packages = Server-optional/ppc64/os/Packages
-parent = Server.ppc64
 repository = Server-optional/ppc64/os
+source_dir = Server-optional/source/tree
 source_packages = Server-optional/source/tree/Packages
 source_repository = Server-optional/source/tree
+source_tree = Server-optional/source/tree
 
 [variant-Server-optional.s390x]
-arch = s390x
-debuginfo = Server-optional/s390x/debuginfo/tree
+debug_dir = Server-optional/s390x/debug/tree
+debug_packages = Server-optional/s390x/debug/tree/Packages
+debug_repository = Server-optional/s390x/debug/tree
+debug_tree = Server-optional/s390x/debug/tree
+debuginfo = Server-optional/s390x/debug/tree
 os_dir = Server-optional/s390x/os
+os_tree = Server-optional/s390x/os
 packages = Server-optional/s390x/os/Packages
-parent = Server.s390x
 repository = Server-optional/s390x/os
+source_dir = Server-optional/source/tree
 source_packages = Server-optional/source/tree/Packages
 source_repository = Server-optional/source/tree
+source_tree = Server-optional/source/tree
 
 [variant-Server-optional.x86_64]
-arch = x86_64
-debuginfo = Server-optional/x86_64/debuginfo/tree
+debug_dir = Server-optional/x86_64/debug/tree
+debug_packages = Server-optional/x86_64/debug/tree/Packages
+debug_repository = Server-optional/x86_64/debug/tree
+debug_tree = Server-optional/x86_64/debug/tree
+debuginfo = Server-optional/x86_64/debug/tree
 os_dir = Server-optional/x86_64/os
+os_tree = Server-optional/x86_64/os
 packages = Server-optional/x86_64/os/Packages
-parent = Server.x86_64
 repository = Server-optional/x86_64/os
+source_dir = Server-optional/source/tree
 source_packages = Server-optional/source/tree/Packages
 source_repository = Server-optional/source/tree
+source_tree = Server-optional/source/tree
 
 [variant-Server.ppc64]
-arch = ppc64
-debuginfo = Server/ppc64/debuginfo/tree
-isos = Server/ppc64/iso
+debug_dir = Server/ppc64/debug/tree
+debug_packages = Server/ppc64/debug/tree/Packages
+debug_repository = Server/ppc64/debug/tree
+debug_tree = Server/ppc64/debug/tree
+debuginfo = Server/ppc64/debug/tree
 os_dir = Server/ppc64/os
+os_tree = Server/ppc64/os
 packages = Server/ppc64/os/Packages
 repository = Server/ppc64/os
-source_isos = Server/source/iso
+source_dir = Server/source/tree
 source_packages = Server/source/tree/Packages
 source_repository = Server/source/tree
+source_tree = Server/source/tree
 
 [variant-Server.s390x]
-arch = s390x
-debuginfo = Server/s390x/debuginfo/tree
-isos = Server/s390x/iso
+debug_dir = Server/s390x/debug/tree
+debug_packages = Server/s390x/debug/tree/Packages
+debug_repository = Server/s390x/debug/tree
+debug_tree = Server/s390x/debug/tree
+debuginfo = Server/s390x/debug/tree
 os_dir = Server/s390x/os
+os_tree = Server/s390x/os
 packages = Server/s390x/os/Packages
 repository = Server/s390x/os
-source_isos = Server/source/iso
+source_dir = Server/source/tree
 source_packages = Server/source/tree/Packages
 source_repository = Server/source/tree
+source_tree = Server/source/tree
 
 [variant-Server.x86_64]
-arch = x86_64
-debuginfo = Server/x86_64/debuginfo/tree
-isos = Server/x86_64/iso
+debug_dir = Server/x86_64/debug/tree
+debug_packages = Server/x86_64/debug/tree/Packages
+debug_repository = Server/x86_64/debug/tree
+debug_tree = Server/x86_64/debug/tree
+debuginfo = Server/x86_64/debug/tree
 os_dir = Server/x86_64/os
+os_tree = Server/x86_64/os
 packages = Server/x86_64/os/Packages
 repository = Server/x86_64/os
-source_isos = Server/source/iso
+source_dir = Server/source/tree
 source_packages = Server/source/tree/Packages
 source_repository = Server/source/tree
+source_tree = Server/source/tree
 
 [variant-Workstation]
 arches = x86_64
@@ -236,52 +278,41 @@ id = Workstation
 name = Workstation
 type = variant
 uid = Workstation
-variants = Workstation-ScalableFileSystem,Workstation-optional
-
-[variant-Workstation-ScalableFileSystem]
-arches = x86_64
-id = ScalableFileSystem
-name = Scalable Filesystem Support
-parent = Workstation
-type = addon
-uid = Workstation-ScalableFileSystem
-
-[variant-Workstation-ScalableFileSystem.x86_64]
-arch = x86_64
-debuginfo = Workstation/x86_64/debuginfo/tree/addons/ScalableFileSystem
-os_dir = Workstation/x86_64/os
-packages = Workstation/x86_64/os/addons/ScalableFileSystem
-parent = Workstation.x86_64
-repository = Workstation/x86_64/os/addons/ScalableFileSystem
-source_packages = Workstation/source/tree/addons/ScalableFileSystem
-source_repository = Workstation/source/tree/addons/ScalableFileSystem
+variants = Workstation-optional
 
 [variant-Workstation-optional]
 arches = x86_64
 id = optional
 name = optional
-parent = Workstation
 type = optional
 uid = Workstation-optional
 
 [variant-Workstation-optional.x86_64]
-arch = x86_64
-debuginfo = Workstation-optional/x86_64/debuginfo/tree
+debug_dir = Workstation-optional/x86_64/debug/tree
+debug_packages = Workstation-optional/x86_64/debug/tree/Packages
+debug_repository = Workstation-optional/x86_64/debug/tree
+debug_tree = Workstation-optional/x86_64/debug/tree
+debuginfo = Workstation-optional/x86_64/debug/tree
 os_dir = Workstation-optional/x86_64/os
+os_tree = Workstation-optional/x86_64/os
 packages = Workstation-optional/x86_64/os/Packages
-parent = Workstation.x86_64
 repository = Workstation-optional/x86_64/os
+source_dir = Workstation-optional/source/tree
 source_packages = Workstation-optional/source/tree/Packages
 source_repository = Workstation-optional/source/tree
+source_tree = Workstation-optional/source/tree
 
 [variant-Workstation.x86_64]
-arch = x86_64
-debuginfo = Workstation/x86_64/debuginfo/tree
-isos = Workstation/x86_64/iso
+debug_dir = Workstation/x86_64/debug/tree
+debug_packages = Workstation/x86_64/debug/tree/Packages
+debug_repository = Workstation/x86_64/debug/tree
+debug_tree = Workstation/x86_64/debug/tree
+debuginfo = Workstation/x86_64/debug/tree
 os_dir = Workstation/x86_64/os
+os_tree = Workstation/x86_64/os
 packages = Workstation/x86_64/os/Packages
 repository = Workstation/x86_64/os
-source_isos = Workstation/source/iso
+source_dir = Workstation/source/tree
 source_packages = Workstation/source/tree/Packages
 source_repository = Workstation/source/tree
-
+source_tree = Workstation/source/tree
