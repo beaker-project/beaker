@@ -1,28 +1,51 @@
 [checksums]
-LiveOS/squashfs.img = sha256:b17623a530b61734e1246d0e4c3c39ff23056ea3d677f44a9bc786e842fa2ea5
-images/boot.iso = sha256:19ecc7050fe720adfff488a06ee6708cc77c1b888590c0d66972aa1b733ada78
-images/netboot/ppc64.img = sha256:50c0c62e7d412c39aa2010a45ed02dfc62e4cca790785ee8e2020d29eb20950d
-images/product.img = sha256:9ad2d5eb6446883cf04dc1ce0f752ba1a4cc1a6e27d318b1bf020aaf9224d0e8
-ppc/ppc64/initrd.img = sha256:1c2f9beedf75d24a2f93434e527f608457184ca17d86c8c0365b87db4393b921
-ppc/ppc64/vmlinuz = sha256:9a89ce2e53f0709f7aa6b762a8e677058fec1cb4b6aa935e7c2301a7dcd884d3
-repodata/repomd.xml = sha256:d685a85a133c28a3851f588b6524ecc4d934b5f1d7f1ebac9c83861066be8f7b
+LiveOS/squashfs.img = sha256:826f8b78fe2544961c22b186e28bf0988926bb91f82af111fa34ee915046b5d5
+images/boot.iso = sha256:18522c2512a07f373ce852ebefb39cf300fa18ed8343be0cb0a830a885678093
+images/netboot/ppc64.img = sha256:0984e7fde1f750cd2e6ee39411d7c4c0c79313b32af5f81064cad29a6962fbda
+ppc/ppc64/initrd.img = sha256:0c2588d4b3e6283f90aeb11a8dfcea8a50f12f0910f1673138f02c27bb9bd16e
+ppc/ppc64/vmlinuz = sha256:4f84bb6f6d7d4cc387025032c4eda03605b83374ac04526f790485b70fa1ef0c
+repodata/repomd.xml = sha256:59f94ab7eda76ca0c6b535dc95565f177d0b6b03b71989e71db254069f0a4301
 
 [general]
+; WARNING.0 = THIS SECTION IS DEPRECATED
+; WARNING.1 = See productmd (treeinfo(5)) documentation for more details about the current format
 arch = ppc64
 family = Red Hat Enterprise Linux
-packages = Packages
-repository = 
-timestamp = 1342048133.432813
+name = Red Hat Enterprise Linux 7.0
+packagedir = Packages
+platforms = ppc64
+repository = .
+timestamp = 1380519647
 variant = Server
 version = 7.0
+
+[header]
+version = 0.3
 
 [images-ppc64]
 boot.iso = images/boot.iso
 initrd = ppc/ppc64/initrd.img
 kernel = ppc/ppc64/vmlinuz
-product.img = images/product.img
 zimage = images/netboot/ppc64.img
+
+[product]
+name = Red Hat Enterprise Linux
+short = RHEL
+version = 7.0
 
 [stage2]
 mainimage = LiveOS/squashfs.img
 
+[tree]
+arch = ppc64
+build_timestamp = 1380519647
+platforms = ppc64
+variants = Server
+
+[variant-Server]
+id = Server
+name = Server
+packages = Packages
+repository = .
+type = variant
+uid = Server
