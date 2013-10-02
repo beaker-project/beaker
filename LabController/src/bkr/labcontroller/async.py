@@ -43,11 +43,23 @@ def _read_from_pipe(f):
 
 def _timeout_kill(p, timeout):
     gevent.sleep(timeout)
-    if p.poll() is None:
-        os.kill(p.pid, signal.SIGTERM)
-    gevent.sleep(1)
-    if p.poll() is None:
-        os.kill(p.pid, signal.SIGKILL)
+    _kill_process_group(p.pid)
+
+def _kill_process_group(pgid):
+    # Try SIGTERM first, then SIGKILL just to be safe
+    try:
+        os.killpg(pgid, signal.SIGTERM)
+    except OSError, e:
+        if e.errno != errno.ESRCH:
+            raise
+    else:
+        gevent.sleep(1)
+        try:
+            os.killpg(pgid, signal.SIGKILL)
+        except OSError, e:
+            if e.errno != errno.ESRCH:
+                raise
+
 
 class MonitoredSubprocess(subprocess.Popen):
 
@@ -70,6 +82,14 @@ class MonitoredSubprocess(subprocess.Popen):
         self._running.append(self)
         self.dead = gevent.event.Event()
         timeout = kwargs.pop('timeout', None)
+        orig_preexec_fn = kwargs.get("preexec_fn", None)
+
+        def preexec_fn():
+            os.setpgid(0, 0)
+            if orig_preexec_fn is not None:
+                orig_preexec_fn()
+
+        kwargs["preexec_fn"] = preexec_fn
         super(MonitoredSubprocess, self).__init__(*args, **kwargs)
         if kwargs.get('stdout') == subprocess.PIPE:
             self.stdout_reader = gevent.spawn(_read_from_pipe, self.stdout)
@@ -91,7 +111,9 @@ class MonitoredSubprocess(subprocess.Popen):
     def _reap_children(cls):
         for child in list(cls._running):
             if child.poll() is not None:
+                # Let's try SIGTERM, and then SIGKILL just to be safe
                 cls._running.remove(child)
+                _kill_process_group(child.pid)
                 child.dead.set()
                 if hasattr(child, 'timeout_killer'):
                     child.timeout_killer.kill(block=False)
