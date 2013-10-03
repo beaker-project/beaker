@@ -4329,16 +4329,22 @@ class TaskBase(MappedObject):
         """ 
         return self.status.queued
 
+    @hybrid_method
     def is_failed(self):
         """ 
         Return True if the task has failed
         """
-        if self.result in [TaskResult.warn,
-                           TaskResult.fail,
-                           TaskResult.panic]:
-            return True
-        else:
-            return False
+        return (self.result in [TaskResult.warn,
+                                TaskResult.fail,
+                                TaskResult.panic])
+    @is_failed.expression
+    def is_failed(cls):
+        """
+        Return SQL expression that is true if the task has failed
+        """
+        return cls.result.in_([TaskResult.warn,
+                               TaskResult.fail,
+                               TaskResult.panic])
 
     # TODO: it would be good to split the bar definition out to a utility
     # module accepting a mapping of div classes to percentages and then
