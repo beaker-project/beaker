@@ -4032,7 +4032,7 @@ class Note(MappedObject):
         """
         The note's text rendered to HTML using Markdown.
         """
-        return XML(markdown(self.text))
+        return XML(markdown(self.text, safe_mode='escape'))
 
 
 class Key(SystemObject):
