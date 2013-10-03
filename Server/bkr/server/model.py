@@ -1,5 +1,6 @@
 import sys
 import re
+from time import sleep
 from turbogears.database import metadata, session
 from turbogears.config import get
 from turbogears import url
@@ -17,7 +18,7 @@ from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.orm.util import has_identity
 from sqlalchemy.sql import exists, union, literal, Insert
-from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.exc import InvalidRequestError, OperationalError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.types import TypeDecorator, BINARY
 from bkr.server.installopts import InstallOptions, global_install_options
@@ -1484,9 +1485,26 @@ class MappedObject(object):
             unique_params[table.c[k]] = v
         for k, v in _extra_attrs.iteritems():
             extra_params[table.c[k]] = v
-
-        session.connection(cls).execute(ConditionalInsert(table,
-                unique_params, extra_params))
+        succeeded = False
+        for attempt in range(1, 7):
+            if attempt > 1:
+                delay = random.uniform(0.001, 0.1)
+                log.debug('Backing off %0.3f seconds for insertion into table %s' % (delay, table))
+                sleep(delay)
+            try:
+                session.connection(cls).execute(ConditionalInsert(table,
+                    unique_params, extra_params))
+                succeeded = True
+                break
+            except OperationalError, e:
+                # This seems like a reasonable way to check the string.
+                # We could use a regex, but this is more straightforward.
+                # XXX MySQL-specific
+                if '(OperationalError) (1213' not in unicode(e):
+                    raise
+        if not succeeded:
+            log.debug('Exhausted maximum attempts of conditional insert')
+            raise e
 
         if extra_params:
             session.connection(cls).execute(table.update()
