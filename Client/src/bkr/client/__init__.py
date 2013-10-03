@@ -63,7 +63,7 @@ class BeakerCommand(ClientCommand):
                 # turn 'json' parameter into a suitably formatted request
                 if 'json' in kwargs:
                     kwargs['data'] = json.dumps(kwargs.pop('json'))
-                    kwargs.setdefault('headers', []).append(('Content-Type', 'application/json'))
+                    kwargs.setdefault('headers', {}).update({'Content-Type': 'application/json'})
                 return super(BeakerClientRequestsSession, self).request(method, url, **kwargs)
         return BeakerClientRequestsSession()
 
