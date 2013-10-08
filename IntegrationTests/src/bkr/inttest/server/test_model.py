@@ -2,7 +2,7 @@ import sys
 import re
 import time
 import datetime
-import unittest
+import unittest2 as unittest
 import pkg_resources
 import lxml.etree
 import email
@@ -415,8 +415,29 @@ class TestJob(unittest.TestCase):
         self.assertEquals(job.status, TaskStatus.cancelled)
         self.assertEquals(job.result, TaskResult.warn)
 
+    # Check progress bar proportions are reasonable
     # https://bugzilla.redhat.com/show_bug.cgi?id=660633
-    def test_progress_bar_sums_to_100(self):
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1014938
+
+    # TODO: these integration tests just cover a couple of known bad cases
+    # that previously rendered as 99% or 101% width. More systematic unit
+    # tests would be desirable but require refactoring the progress bar
+    # generation out to a data model independent helper function
+    def check_progress_bar(self, bar, *expected_widths):
+        # Check bar text reports 100% completion
+        self.assertEqual(bar.text, "100%")
+        # Check percentages are as expected
+        expected_styles = ['width:%.3f%%' % width
+                                 for width in expected_widths]
+        styles = [elem.get('style')
+                      for elem in bar.getchildren()[0].getchildren()]
+        self.assertEquals(styles, expected_styles)
+        widths = [float(re.match(r'width:(\d+\.\d{3})%', style).group(1))
+                        for style in styles]
+        # Check percentages add up to almost exactly 100%
+        self.assertAlmostEqual(sum(widths), 100, delta=0.01)
+
+    def test_progress_bar_sums_to_100_pass1_fail2(self):
         recipe = data_setup.create_recipe(
                 task_list=[Task.by_name(u'/distribution/reservesys')] * 3)
         job = data_setup.create_job_for_recipes([recipe])
@@ -425,11 +446,24 @@ class TestJob(unittest.TestCase):
         recipe.tasks[2].fail(u'/', 0, u'')
         data_setup.mark_job_complete(job)
         job.update_status()
-        progress_bar = job.progress_bar
-        widths = [int(re.match(r'width:(\d+)%', elem.get('style')).group(1))
-                for elem in progress_bar.getchildren()[0].getchildren()]
-        self.assertEquals(widths, [33, 0, 67, 0])
-        self.assertEquals(sum(widths), 100)
+        self.check_progress_bar(job.progress_bar,
+                                33.333, 0, 66.667, 0)
+
+    def test_progress_bar_sums_to_100_pass4_warn1_fail1(self):
+        recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/reservesys')] * 6)
+        job = data_setup.create_job_for_recipes([recipe])
+        recipe.tasks[0].pass_(u'/', 0, u'')
+        recipe.tasks[1].pass_(u'/', 0, u'')
+        recipe.tasks[2].pass_(u'/', 0, u'')
+        recipe.tasks[3].pass_(u'/', 0, u'')
+        recipe.tasks[4].warn(u'/', 0, u'')
+        recipe.tasks[5].fail(u'/', 0, u'')
+        data_setup.mark_job_complete(job)
+        job.update_status()
+        self.check_progress_bar(job.progress_bar,
+                                66.667, 16.667, 16.667, 0)
+
 
 class DistroTreeByFilterTest(unittest.TestCase):
 

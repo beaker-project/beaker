@@ -4340,37 +4340,49 @@ class TaskBase(MappedObject):
         else:
             return False
 
+    # TODO: it would be good to split the bar definition out to a utility
+    # module accepting a mapping of div classes to percentages and then
+    # unit test it without needing to create dummy recipes
+    @property
     def progress_bar(self):
-        pwidth=0
-        wwidth=0
-        fwidth=0
-        kwidth=0
-        completed=0
+        """Return proportional progress bar as a HTML div
+
+        Returns None if there are no tasks at all
+        """
         if not getattr(self, 'ttasks', None):
             return None
+        # Get the width for individual items, using 3 decimal places
+        # Even on large screens, this should be a fine enough resolution
+        # to fill the bar reliably when all tasks are complete without needing
+        # to fiddle directly with the width of any of the subelements
+        fmt_style = 'width:%.3f%%'
+        pstyle = wstyle = fstyle = kstyle = fmt_style % 0
+        completed = 0
         if getattr(self, 'ptasks', None):
             completed += self.ptasks
-            pwidth = int(round(float(self.ptasks)/float(self.ttasks)*100))
+            pstyle = fmt_style % (100.0 * self.ptasks / self.ttasks)
         if getattr(self, 'wtasks', None):
             completed += self.wtasks
-            wwidth = int(round(float(self.wtasks)/float(self.ttasks)*100))
+            wstyle = fmt_style % (100.0 * self.wtasks / self.ttasks)
         if getattr(self, 'ftasks', None):
             completed += self.ftasks
-            fwidth = int(round(float(self.ftasks)/float(self.ttasks)*100))
+            fstyle = fmt_style % (100.0 * self.ftasks / self.ttasks)
         if getattr(self, 'ktasks', None):
             completed += self.ktasks
-            kwidth = int(round(float(self.ktasks)/float(self.ttasks)*100))
-        percentCompleted = int(round(float(completed)/float(self.ttasks)*100))
+            kstyle = fmt_style % (100.0 * self.ktasks / self.ttasks)
+        # Truncate the overall percentage to ensure it nevers hits 100%
+        # before we finish (even if only one task remains in a large recipe)
+        percentCompleted = "%d%%" % int(100.0 * completed / self.ttasks)
+        # Build the HTML
         div = Element('div', {'class': 'progress'})
-        div.append(Element('div', {'class': 'bar bar-success', 'style': 'width:%s%%' % pwidth}))
-        div.append(Element('div', {'class': 'bar bar-warning', 'style': 'width:%s%%' % wwidth}))
-        div.append(Element('div', {'class': 'bar bar-danger', 'style': 'width:%s%%' % fwidth}))
-        div.append(Element('div', {'class': 'bar bar-info', 'style': 'width:%s%%' % kwidth}))
+        div.append(Element('div', {'class': 'bar bar-success', 'style': pstyle}))
+        div.append(Element('div', {'class': 'bar bar-warning', 'style': wstyle}))
+        div.append(Element('div', {'class': 'bar bar-danger', 'style': fstyle}))
+        div.append(Element('div', {'class': 'bar bar-info', 'style': kstyle}))
         container = Element('div')
-        container.text = "%s%%" % percentCompleted
+        container.text = percentCompleted
         container.append(div)
         return container
-    progress_bar = property(progress_bar)
 
 
     def t_id(self):
