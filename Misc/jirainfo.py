@@ -52,7 +52,8 @@ from collections import namedtuple
 
 JIRA_CONFIG = os.path.expanduser("~/.beaker-jira.cfg")
 CONFIG_DIR = os.path.dirname(JIRA_CONFIG)
-BZ_ISSUE_CRITERIA = 'summary ~ "BZ#" or cf[10400] is not NULL'
+BZ_ISSUE_CRITERIA = ('(type=Bug or type=Improvement or type="New Feature") and '
+                    '(summary ~ "BZ#" or cf[10400] is not NULL)')
 EXTERNAL_LINK_FIELD = "customfield_10400"
 STORY_POINTS_FIELD = "customfield_10002"
 
@@ -92,13 +93,16 @@ class JiraInfo(object):
                                 for v in jira.project(project).versions)
         # Retrieving every issue that references bugzilla probably won't
         # scale as the project accumulates more issues, but it'll do for now
-        issues = jira.search_issues('project=%s and type != Sub-task '
-                                          'and (%s)' %
+        issues = jira.search_issues('project=%s and (%s)' %
                                           (project, BZ_ISSUE_CRITERIA),
                                           maxResults=10000)
-        self._issues = [issue for issue in issues
-                            if "bugzilla" in
-                                getattr(issue.fields, EXTERNAL_LINK_FIELD)]
+        bz_issues = []
+        for issue in issues:
+            summary = issue.fields.summary.strip()
+            external_link = getattr(issue.fields, EXTERNAL_LINK_FIELD) or ""
+            if summary.startswith("BZ#") or "bugzilla" in external_link:
+                bz_issues.append(issue)
+        self._issues = bz_issues
         self._make_bz_caches()
 
     def _make_bz_caches(self):

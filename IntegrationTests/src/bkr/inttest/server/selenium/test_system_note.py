@@ -152,3 +152,14 @@ Also a URL <http://example.com/>.''')
         b.find_element_by_xpath('//td/p[1][text()="Here is my note."]')
         b.find_element_by_xpath('//td/p[2][em/text()="and emphasis"]')
         b.find_element_by_xpath('//td/p[2][a/@href="http://example.com/"]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1014870
+    def test_html_is_escaped(self):
+        bad_note = 'Console is available via: console -l <user> <system_fqdn>'
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
+        b.find_element_by_link_text('Notes').click()
+        b.find_element_by_id('notes_note').send_keys(bad_note)
+        b.find_element_by_name('notes').submit()
+        b.find_element_by_xpath('//td/p[1][text()="%s"]' % bad_note)
