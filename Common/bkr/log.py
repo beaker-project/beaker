@@ -43,6 +43,7 @@ class SysLogHandler(logging.Handler):
         msg = self.format(record)
         if isinstance(msg, unicode):
             msg = msg.encode('utf8')
+        msg = msg.replace('\x00', r'\x00')
         for i, line in enumerate(msg.splitlines()):
             if i > 0:
                 line = ' ' + line
