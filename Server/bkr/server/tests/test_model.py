@@ -1,7 +1,7 @@
 # These are unit tests which don't need a MySQL database. Tests which need to
 # talk to external services belong in the IntegrationTests subdir.
 
-import unittest
+import unittest2 as unittest
 import gzip
 import os
 import re
@@ -173,15 +173,16 @@ class TaskLibraryTest(unittest.TestCase):
             recipe_repo_dir = os.path.join(recipe_repo_parent, 'repodata')
             recipe_repo_dir_list = os.listdir(recipe_repo_dir)
             # Assert the contents at least appear to be the same
-            self.assertEquals(recipe_repo_dir_list, repo_dir_list)
+            self.assertItemsEqual(recipe_repo_dir_list, repo_dir_list)
             # Now test the actual content
             for filename in repo_dir_list:
-                if re.search('\.gz$', filename):
+                if filename.endswith(".gz"):
                     open_file = gzip.open
-                elif re.search('\.xml$', filename):
+                elif filename.endswith(".xml"):
                     open_file = open
                 else:
-                    raise AssertionError('Only expecing gzip and xml files')
+                    raise AssertionError('Expected gzip or xml, not %r' %
+                                                                     filename)
                 repo_filename = os.path.join(repo_dir, filename)
                 recipe_repo_filename = os.path.join(recipe_repo_dir, filename)
                 repo_file = open_file(repo_filename)
