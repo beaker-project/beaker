@@ -575,7 +575,7 @@ class AckPanel(RadioButtonList):
 
     javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),
                   LocalJSLink('bkr','/static/javascript/loader_v2.js'),
-                  LocalJSLink('bkr','/static/javascript/response_v3.js')]
+                  LocalJSLink('bkr','/static/javascript/response_v4.js')]
 
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     params = ['widget_name','unreal_response','comment_id','comment_class']
