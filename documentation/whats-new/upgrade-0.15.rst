@@ -34,25 +34,62 @@ the additional database upgrade instructions below.
 System access policies changes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. important:: In the original release of Beaker 0.15.0 these upgrade instructions did not 
+   create all necessary access policy rules (see :issue:`1015328`). The amended 
+   SQL statements appear below.
+   
+   If you previously followed the upgrade instructions for Beaker 0.15.0, run 
+   the SQL statements again to ensure all necessary rules are created.
+
 Run ``beaker-init`` to create the new tables. Then run the following SQL to
 populate them based on the Shared and Group configuration of existing systems::
 
     INSERT INTO system_access_policy (system_id)
-    SELECT id FROM system;
+    SELECT id FROM system
+    WHERE NOT EXISTS (SELECT 1 FROM system_access_policy
+        WHERE system_id = system.id);
 
-    INSERT INTO system_access_policy_rule (policy_id, user_id, group_id, permission)
+    INSERT INTO system_access_policy_rule
+        (policy_id, user_id, group_id, permission)
     SELECT system_access_policy.id, NULL, NULL, 'control_system'
     FROM system_access_policy
-    INNER JOIN system ON system_access_policy.system_id = system.id;
+    INNER JOIN system ON system_access_policy.system_id = system.id
+    WHERE NOT EXISTS (SELECT 1 FROM system_access_policy_rule
+        WHERE policy_id = system_access_policy.id
+            AND user_id IS NULL
+            AND group_id IS NULL
+            AND permission = 'control_system');
 
-    INSERT INTO system_access_policy_rule (policy_id, user_id, group_id, permission)
+    INSERT INTO system_access_policy_rule
+        (policy_id, user_id, group_id, permission)
     SELECT system_access_policy.id, NULL, NULL, 'reserve'
     FROM system_access_policy
     INNER JOIN system ON system_access_policy.system_id = system.id
-    WHERE shared = TRUE AND
-        NOT EXISTS (SELECT 1 FROM system_group WHERE system_id = system.id);
+    WHERE shared = TRUE
+        AND NOT EXISTS (SELECT 1 FROM system_group
+            WHERE system_id = system.id)
+        AND NOT EXISTS (SELECT 1 FROM system_access_policy_rule
+            WHERE policy_id = system_access_policy.id
+                AND user_id IS NULL
+                AND group_id IS NULL
+                AND permission = 'reserve');
 
-    INSERT INTO system_access_policy_rule (policy_id, user_id, group_id, permission)
+    INSERT INTO system_access_policy_rule
+        (policy_id, user_id, group_id, permission)
+    SELECT system_access_policy.id, NULL, system_group.group_id, 'reserve'
+    FROM system_access_policy
+    INNER JOIN system ON system_access_policy.system_id = system.id
+    INNER JOIN system_group ON system_group.system_id = system.id
+    WHERE shared = TRUE
+        AND system_group.admin = FALSE
+        AND NOT EXISTS (SELECT 1 FROM system_access_policy_rule
+            WHERE policy_id = system_access_policy.id
+                AND user_id IS NULL
+                AND group_id = system_group.group_id
+                AND permission = 'reserve');
+
+    INSERT INTO system_access_policy_rule
+        (policy_id, user_id, group_id, permission)
     SELECT system_access_policy.id, NULL, system_group.group_id, permission.p
     FROM system_access_policy
     INNER JOIN system ON system_access_policy.system_id = system.id
@@ -63,7 +100,12 @@ populate them based on the Shared and Group configuration of existing systems::
         UNION SELECT 'loan_self' p
         UNION SELECT 'control_system' p
         UNION SELECT 'reserve' p) permission
-    WHERE shared = TRUE AND system_group.admin = TRUE;
+    WHERE system_group.admin = TRUE
+        AND NOT EXISTS (SELECT 1 FROM system_access_policy_rule
+            WHERE policy_id = system_access_policy.id
+                AND user_id IS NULL
+                AND group_id = system_group.group_id
+                AND permission = permission.p);
 
 To roll back, drop the newly created tables::
 
