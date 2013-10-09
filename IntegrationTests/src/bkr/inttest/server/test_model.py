@@ -155,6 +155,7 @@ class SystemPermissionsTest(unittest.TestCase):
     def setUp(self):
         session.begin()
         self.owner = data_setup.create_user()
+        self.admin = data_setup.create_admin()
         self.system = data_setup.create_system(owner=self.owner, shared=False)
         self.policy = self.system.custom_access_policy
         self.unprivileged = data_setup.create_user()
@@ -164,53 +165,193 @@ class SystemPermissionsTest(unittest.TestCase):
 
     def test_can_change_owner(self):
         self.assertTrue(self.system.can_change_owner(self.owner))
+        self.assertTrue(self.system.can_change_owner(self.admin))
         self.assertFalse(self.system.can_change_owner(self.unprivileged))
 
     def test_can_edit_policy(self):
+        # Default state
         self.assertTrue(self.system.can_edit_policy(self.owner))
+        self.assertTrue(self.system.can_edit_policy(self.admin))
         self.assertFalse(self.system.can_edit_policy(self.unprivileged))
-        self.policy.add_rule(SystemPermission.edit_policy, user=self.unprivileged)
-        self.assertTrue(self.system.can_edit_policy(self.unprivileged))
+        # Check policy editing permission
+        editor = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.edit_policy, user=editor)
+        self.assertTrue(self.system.can_edit_policy(editor))
+        # Check other users are unaffected
+        self.assertTrue(self.system.can_edit_policy(self.owner))
+        self.assertTrue(self.system.can_edit_policy(self.admin))
+        self.assertFalse(self.system.can_edit_policy(self.unprivileged))
 
     def test_can_edit(self):
+        # Default state
         self.assertTrue(self.system.can_edit(self.owner))
+        self.assertTrue(self.system.can_edit(self.admin))
         self.assertFalse(self.system.can_edit(self.unprivileged))
-        self.policy.add_rule(SystemPermission.edit_system, user=self.unprivileged)
-        self.assertTrue(self.system.can_edit(self.unprivileged))
+        # Check system editing permission
+        editor = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.edit_system, user=editor)
+        self.assertTrue(self.system.can_edit(editor))
+        # Check other users are unaffected
+        self.assertTrue(self.system.can_edit(self.owner))
+        self.assertTrue(self.system.can_edit(self.admin))
+        self.assertFalse(self.system.can_edit(self.unprivileged))
 
-    def test_can_loan(self):
-        self.assertTrue(self.system.can_loan(self.owner))
-        self.assertFalse(self.system.can_loan(self.unprivileged))
-        self.policy.add_rule(SystemPermission.loan_any, user=self.unprivileged)
-        self.assertTrue(self.system.can_loan(self.unprivileged))
+    def check_lending_permissions(self, allow=(), deny=()):
+        self.assertTrue(self.system.can_lend(self.owner))
+        self.assertTrue(self.system.can_lend(self.admin))
+        self.assertFalse(self.system.can_lend(self.unprivileged))
+        for user in allow:
+            msg = "%s cannot lend system"
+            self.assertTrue(self.system.can_lend(user), msg % user)
+        for user in deny:
+            msg = "%s can lend system"
+            self.assertFalse(self.system.can_lend(user), msg % user)
 
-    def test_can_loan_to_self(self):
-        self.assertTrue(self.system.can_loan_to_self(self.owner))
-        self.assertFalse(self.system.can_loan_to_self(self.unprivileged))
-        self.policy.add_rule(SystemPermission.loan_self, user=self.unprivileged)
-        self.assertTrue(self.system.can_loan_to_self(self.unprivileged))
+    def test_can_lend(self):
+        # Default state
+        self.check_lending_permissions()
+        # Check loan_any grants permission to lend
+        lender = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_any, user=lender)
+        self.check_lending_permissions(allow=[lender])
+        # Check loan_self *does not* grant permission to lend
+        borrower = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_self, user=borrower)
+        self.check_lending_permissions(allow=[lender], deny=[borrower])
+        # Check loaning the system doesn't grant permission to pass it on
+        self.system.loaned = borrower
+        self.check_lending_permissions(allow=[lender], deny=[borrower])
+
+    def check_borrowing_permissions(self, allow=(), deny=()):
+        self.assertTrue(self.system.can_borrow(self.owner))
+        self.assertTrue(self.system.can_borrow(self.admin))
+        self.assertFalse(self.system.can_borrow(self.unprivileged))
+        for user in allow:
+            msg = "%s cannot borrow system"
+            self.assertTrue(self.system.can_borrow(user), msg % user)
+        for user in deny:
+            msg = "%s can borrow system"
+            self.assertFalse(self.system.can_borrow(user), msg % user)
+
+    def test_can_borrow(self):
+        # Default state
+        self.check_borrowing_permissions()
+        # Check loan_any grants permission to borrow
+        lender = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_any, user=lender)
+        self.check_borrowing_permissions(allow=[lender])
+        # Check loan_self grants permission to borrow
+        borrower = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_self, user=borrower)
+        self.check_borrowing_permissions(allow=[lender, borrower])
+        # Check loan_self grants permission to update an existing loan
+        self.system.loaned = borrower
+        self.policy.add_rule(SystemPermission.loan_self, user=borrower)
+        self.check_borrowing_permissions(allow=[lender, borrower])
+        # Check ordinary users *cannot* update granted loans
+        self.system.loaned = self.unprivileged
+        self.check_borrowing_permissions(allow=[lender],
+                                         deny=[borrower])
+
+    def check_loan_return_permissions(self, allow=(), deny=()):
+        self.assertTrue(self.system.can_return_loan(self.owner))
+        self.assertTrue(self.system.can_return_loan(self.admin))
+        self.assertFalse(self.system.can_return_loan(self.unprivileged))
+        for user in allow:
+            msg = "%s cannot return loan"
+            self.assertTrue(self.system.can_return_loan(user), msg % user)
+        for user in deny:
+            msg = "%s can return loan"
+            self.assertFalse(self.system.can_return_loan(user), msg % user)
 
     def test_can_return_loan(self):
-        self.assertTrue(self.system.can_return_loan(self.owner))
-        self.assertFalse(self.system.can_return_loan(self.unprivileged))
-        self.system.loaned = self.unprivileged
-        self.assertTrue(self.system.can_return_loan(self.unprivileged))
+        # Default state
+        self.check_loan_return_permissions()
+        # Check loan_any grants permission to return loans
+        lender = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_any, user=lender)
+        self.check_loan_return_permissions(allow=[lender])
+        # Check loan_self *does not* grant permission to return loans
+        borrower = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_self, user=borrower)
+        self.check_loan_return_permissions(allow=[lender], deny=[borrower])
+        # Check loaning the system grants permission to return it
+        self.system.loaned = borrower
+        self.check_loan_return_permissions(allow=[lender, borrower])
+        # Check loaning it to someone else does not
+        self.system.loaned = lender
+        self.check_loan_return_permissions(allow=[lender], deny=[borrower])
+
+    def check_reserve_permissions(self, allow=(), deny=()):
+        # Unlike most permissions, Beaker admins can't reserve by default
+        # This ensures jobs they submit don't end up running on random systems
+        self.assertTrue(self.system.can_reserve(self.owner))
+        self.assertFalse(self.system.can_reserve(self.admin))
+        self.assertFalse(self.system.can_reserve(self.unprivileged))
+        for user in allow:
+            msg = "%s cannot reserve system"
+            self.assertTrue(self.system.can_reserve(user), msg % user)
+        for user in deny:
+            msg = "%s can reserve system"
+            self.assertFalse(self.system.can_reserve(user), msg % user)
 
     def test_can_reserve(self):
-        self.assertTrue(self.system.can_reserve(self.owner))
-        self.assertFalse(self.system.can_reserve(self.unprivileged))
-        self.policy.add_rule(SystemPermission.reserve, user=self.unprivileged)
-        self.assertTrue(self.system.can_reserve(self.unprivileged))
+        # Default state
+        self.check_reserve_permissions()
+        # Check "reserve" grants permission to reserve system
+        user = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.reserve, user=user)
+        self.check_reserve_permissions(allow=[user])
+        # Check "loan_any" *does not* grant permission to reserve system
+        lender = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_any, user=lender)
+        self.check_reserve_permissions(allow=[user], deny=[lender])
+        # Check "loan_self" *does not* grant permission to reserve system
+        borrower = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_self, user=borrower)
+        self.check_reserve_permissions(allow=[user], deny=[lender, borrower])
+        # Check loans grant the ability to reserve the system and that
+        # "can_reserve" *doesn't* enforce loan exclusivity (that's handled
+        # where appropriate by a separate call to is_free())
+        self.system.loaned = borrower
+        self.check_reserve_permissions(allow=[user, borrower], deny=[lender])
+        # Check current reservations are also ignored
+        self.system.user = self.unprivileged
+        self.check_reserve_permissions(allow=[user, borrower], deny=[lender])
+
+    def check_unreserve_permissions(self, allow=(), deny=()):
+        self.assertTrue(self.system.can_unreserve(self.owner))
+        self.assertTrue(self.system.can_unreserve(self.admin))
+        self.assertFalse(self.system.can_unreserve(self.unprivileged))
+        for user in allow:
+            msg = "%s cannot unreserve system"
+            self.assertTrue(self.system.can_unreserve(user), msg % user)
+        for user in deny:
+            msg = "%s can unreserve system"
+            self.assertFalse(self.system.can_unreserve(user), msg % user)
 
     def test_can_unreserve(self):
-        self.assertTrue(self.system.can_unreserve(self.owner))
-        self.assertFalse(self.system.can_unreserve(self.unprivileged))
-        self.system.user = self.unprivileged
-        self.assertTrue(self.system.can_unreserve(self.unprivileged))
+        # Default state
+        self.check_unreserve_permissions()
+        # Check "loan_any" grants permission to unreserve system
+        lender = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_any, user=lender)
+        self.check_unreserve_permissions(allow=[lender])
+        # Check "reserve" *does not* grant permission to unreserve system
+        user = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.reserve, user=user)
+        self.check_unreserve_permissions(allow=[lender], deny=[user])
+        self.system.user = lender
+        self.check_unreserve_permissions(allow=[lender], deny=[user])
+        # Check current user can always unreserve system
+        self.system.user = user
+        self.check_unreserve_permissions(allow=[lender, user])
 
     def test_can_power(self):
         # owner
         self.assertTrue(self.system.can_power(self.owner))
+        # admin
+        self.assertTrue(self.system.can_power(self.admin))
         # system's current user
         user = data_setup.create_user()
         self.assertFalse(self.system.can_power(user))

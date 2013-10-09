@@ -49,14 +49,20 @@ Name           Label               Description
 ============== =================== ===========================================
 edit_policy    Edit this policy    The user can edit the access policy to grant
                                    or revoke permissions, including adding new 
-                                   users and groups to the policy.
+                                   users and groups to the policy. Users with
+                                   permission to edit the policy can grant
+                                   themselves any of the other permissions.
 edit_system    Edit system details The user can edit system details and
                                    configuration, however they cannot take 
                                    ownership of it or grant new permissions to 
                                    themselves or any other user.
-loan_any       Loan to anyone      The user can loan the system to any Beaker
-                                   user, including themselves.
-loan_self      Loan to self        The user can loan the system to themselves only.
+loan_any       Loan to anyone      The user can lend the system to any Beaker
+                                   user, including themselves. Users with this
+                                   permission can also return and update any
+                                   existing loan, as well as return other
+                                   user's manual reservations.
+loan_self      Loan to self        The user can borrow the system by loaning
+                                   it to themselves.
 control_system Control power       The user can run power commands and netboot
                                    commands for the system *even when they have 
                                    not reserved it*.
@@ -66,5 +72,19 @@ reserve        Reserve             The user can reserve the system, either
                                    (if the system is Manual).
 ============== =================== ===========================================
 
-In Beaker's web UI, the human-friendly label is used to identify permissions. 
+In Beaker's web UI, the human-friendly label is used to identify permissions.
 In the command-line client, the symbolic name is used.
+
+The owner of the system is implicitly granted all of the above permissions,
+and also has the ability to change the system owner.
+
+Administrators of the Beaker instance are implicitly granted all of the same
+permissions as the system owner except the ability to reserve the system (this
+ensures admins don't accidentally run automated jobs on arbitrary systems).
+If an administrator needs to reserve a system and do not already have access
+to do so, they must first loan it to themselves or grant themselves the
+relevant permission.
+
+System reservations made through the automated scheduler can only be
+terminated by cancelling the relevant job rather than by returning the system
+directly through the web UI or command-line client.

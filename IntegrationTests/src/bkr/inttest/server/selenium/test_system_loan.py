@@ -39,6 +39,14 @@ class SystemLoanTest(WebDriverTestCase):
         b.find_element_by_xpath('//span[@id="loanee-name" and '
             'normalize-space(text())="%s"]' % user)
 
+    def verify_loan_error(self, status, error):
+        # Error details are not currently displayed :(
+        fmt = 'Your request failed with the following error: Status %d'
+        msg = fmt % status
+        b = self.browser
+        b.find_element_by_xpath('//p[normalize-space(text())="%s"]' % msg)
+
+
     def test_return_loan(self):
         with session.begin():
             user = data_setup.create_user(password='password')
@@ -124,7 +132,7 @@ class SystemLoanTest(WebDriverTestCase):
         self.assertEqual(comment, loan_comment)
 
 
-    def test_can_loan_when_system_has_user(self):
+    def test_can_lend_when_system_has_user(self):
         with session.begin():
             user = data_setup.create_user()
             self.system.user = user
@@ -134,7 +142,7 @@ class SystemLoanTest(WebDriverTestCase):
         self.change_loan(user.user_name)
         self.verify_loan_update(user.user_name)
 
-    def test_owner_can_loan_to_themself(self):
+    def test_owner_can_borrow(self):
         p_word='password'
         with session.begin():
             user = data_setup.create_user(password=p_word)
@@ -178,7 +186,7 @@ class SystemLoanTest(WebDriverTestCase):
             self.assertEqual(reserved_activity.new_value, user2.user_name)
             self.assertEqual(reserved_activity.service, 'WEBUI')
 
-    def test_user_with_perms_can_loan_to_self(self):
+    def test_user_with_perms_can_borrow(self):
         with session.begin():
             user = data_setup.create_user(password='password')
             self.system.custom_access_policy.add_rule(
@@ -188,3 +196,29 @@ class SystemLoanTest(WebDriverTestCase):
         self.go_to_loan_page()
         self.change_loan(user.user_name)
         self.verify_loan_update(user.user_name)
+
+    def test_user_with_borrow_perms_cannot_lend(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            self.system.custom_access_policy.add_rule(
+                    permission=SystemPermission.loan_self, user=user)
+            loanee_name = data_setup.create_user().user_name
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+        self.go_to_loan_page()
+        self.change_loan(loanee_name)
+        error = "%s cannot lend system to %s" % (user.user_name, loanee_name)
+        self.verify_loan_error(403, error)
+
+    def test_cannot_lend_to_invalid_user(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            self.system.custom_access_policy.add_rule(
+                    permission=SystemPermission.loan_self, user=user)
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+        self.go_to_loan_page()
+        loanee_name = "this_is_not_a_valid_user_name_for_any_test"
+        self.change_loan(loanee_name)
+        error = "user name %s is invalid" % loanee_name
+        self.verify_loan_error(400, error)
