@@ -17,12 +17,14 @@ import urlparse
 import shutil
 import yum, yum.misc, yum.packages
 import urllib
+import logging
 
 __version__ = '0.1'
 __description__ = 'Script to update harness repos'
 
 USAGE_TEXT = """ Usage: repo_update """
 
+log = logging.getLogger(__name__)
 
 def get_parser():
     usage = "usage: %prog [options]"
@@ -34,6 +36,8 @@ def get_parser():
                       default=None,
                       help="Optionally specify the harness dest.")
     parser.add_option("-c","--config-file",dest="configfile",default=None)
+    parser.add_option('--debug', action='store_true',
+            help='Show detailed progress information')
     return parser
 
 
@@ -56,12 +60,14 @@ class RepoSyncer(yum.YumBase):
         self.repos.disableRepo('*')
         repo_id = repo_url.replace('/', '-')
         self.add_enable_repo(repo_id, baseurls=[repo_url])
+        self.repo_url = repo_url
         self.output_dir = output_dir
 
         # yum foolishness: http://lists.baseurl.org/pipermail/yum-devel/2010-June/007168.html
         yum.packages.base = None
 
     def sync(self):
+        log.info('Syncing packages from %s to %s', self.repo_url, self.output_dir)
         self.doRepoSetup()
         # have to list every possible arch here, ughhhh
         self.doSackSetup(archlist='noarch i386 i686 x86_64 ia64 ppc ppc64 s390 s390x'.split())
@@ -73,9 +79,9 @@ class RepoSyncer(yum.YumBase):
         for package in package_sack.returnNewestByNameArch():
             dest = os.path.join(self.output_dir, os.path.basename(package.relativepath))
             if os.path.exists(dest) and os.path.getsize(dest) == package.size:
-                print 'Skipping %s' % dest
+                log.info('Skipping %s', dest)
                 continue
-            print 'Fetching %s' % dest
+            log.info('Fetching %s', dest)
             package.localpath = dest
             cached_package = repo.getPackage(package)
             # Based on some confusing cache configuration, yum may or may not 
@@ -95,7 +101,7 @@ def update_repos(baseurl, basepath):
         except KeyboardInterrupt:
             raise
         except Exception, e:
-            print >>sys.stderr, str(e)
+            log.warning('%s', e)
             continue
         createrepo_results = run_createrepo(cwd=dest)
         returncode = createrepo_results.returncode
@@ -112,7 +118,7 @@ def main():
     configfile = opts.configfile
     baseurl = opts.baseurl
     load_config(configfile)
-    log_to_stream(sys.stderr)
+    log_to_stream(sys.stderr, level=logging.DEBUG if opts.debug else logging.WARNING)
     if opts.basepath:
         basepath = opts.basepath
     else:

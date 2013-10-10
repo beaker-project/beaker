@@ -44,8 +44,8 @@ class RepoUpdate(unittest.TestCase):
             faux_remote_harness2 = self._create_remote_harness(base_path, 'foobazmajor')
             faux_local_harness = mkdtemp('local_harness')
             with session.begin():
-                OSMajor('foobangmajor')
-                OSMajor('foobazmajor')
+                OSMajor.lazy_create(osmajor=u'foobangmajor')
+                OSMajor.lazy_create(osmajor=u'foobazmajor')
             # I'm not testing the config here, so just use createrepo
             update_repos('file://%s/' % base_path,
                 faux_local_harness)
