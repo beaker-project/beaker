@@ -17,7 +17,8 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
-        Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission
+        Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
+        RecipeTask, RecipeTaskResult
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
@@ -2624,6 +2625,32 @@ class TaskTest(unittest.TestCase):
 
         tasks = Task.query.filter(Task.name == 'Task1').all()
         self.assertEquals(len(tasks), 1)
+
+class RecipeTaskResultTest(unittest.TestCase):
+
+    def test_short_path(self):
+        task = data_setup.create_task(name=u'/distribution/install')
+        rt = RecipeTask(task=task)
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install/Sysinfo')
+        self.assertEquals(rtr.short_path, u'Sysinfo')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/start')
+        self.assertEquals(rtr.short_path, u'/start')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install')
+        self.assertEquals(rtr.short_path, u'./')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install/')
+        self.assertEquals(rtr.short_path, u'./')
+        rtr = RecipeTaskResult(recipetask=rt, path=None)
+        self.assertEquals(rtr.short_path, u'./')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'')
+        self.assertEquals(rtr.short_path, u'./')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/')
+        self.assertEquals(rtr.short_path, u'./')
+        rtr = RecipeTaskResult(recipetask=rt, path=None, log='Cancelled it')
+        self.assertEquals(rtr.short_path, u'Cancelled it')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'', log='Cancelled it')
+        self.assertEquals(rtr.short_path, u'Cancelled it')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/', log='Cancelled it')
+        self.assertEquals(rtr.short_path, u'Cancelled it')
 
 if __name__ == '__main__':
     unittest.main()

@@ -4232,7 +4232,7 @@ class Log(MappedObject):
     def link(self):
         """ Return a link to this Log
         """
-        text = '/%s' % self._combined_path()
+        text = self._combined_path()
         text = text[-50:]
         return make_link(url = self.href,
                          text = text)
@@ -6697,25 +6697,20 @@ class RecipeTaskResult(TaskBase):
         return "TR:%s" % self.id
     t_id = property(t_id)
 
+    @property
     def short_path(self):
         """
         Remove the parent from the begining of the path if present
-        Try really hard to start path with ./
         """
-        short_path = self.path
-        if self.path and self.path.startswith(self.recipetask.task.name):
-            short_path = self.path.replace(self.recipetask.task.name,'')
-        if not short_path:
+        if not self.path or self.path == '/':
+            short_path = self.log or './'
+        elif self.path.rstrip('/') == self.recipetask.task.name:
             short_path = './'
-        if short_path.startswith('/'):
-            short_path = '.%s' % short_path
-        elif not short_path.startswith('.'):
-            short_path = './%s' % short_path
-        if self.path == '/' and self.log:
-            short_path = self.log
+        elif self.path.startswith(self.recipetask.task.name + '/'):
+            short_path = self.path.replace(self.recipetask.task.name + '/', '', 1)
+        else:
+            short_path = self.path
         return short_path
-
-    short_path = property(short_path)
 
 class RecipeResource(MappedObject):
     """
