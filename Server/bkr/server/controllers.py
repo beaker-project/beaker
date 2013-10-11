@@ -679,11 +679,11 @@ class Root(RPCRoot):
         options['loan_widget'] = LoanWidget()
 
         if our_user:
-            if (system.open_reservation and system.open_reservation.type != 'recipe'
-                and system.can_unreserve(our_user)):
+            if (system.open_reservation and
+                  system.open_reservation.type != 'recipe' and
+                  system.can_unreserve(our_user)):
                 options['user_change_text'] = 'Return'
-            elif (system.status != SystemStatus.automated and
-                  system.is_free() and system.can_reserve(our_user)):
+            elif system.is_free() and system.can_reserve_manually(our_user):
                 options['user_change_text'] = 'Take'
 
         if system.open_reservation is not None and \
@@ -728,11 +728,13 @@ class Root(RPCRoot):
         if our_user:
             readonly = not system.can_edit(our_user)
             is_user = (system.user == our_user)
+            has_loan = (system.loaned == our_user)
             can_reserve = system.can_reserve(our_user)
             can_power = system.can_power(our_user)
         else:
             readonly = True
             is_user = False
+            has_loan = False
             can_reserve = False
             can_power = False
         title = system.fqdn
@@ -821,6 +823,7 @@ class Root(RPCRoot):
                                                 provisions = system.provisions,
                                                 prov_arch = [(arch.id, arch.arch) for arch in system.arch]),
                                    provision = dict(reserved=is_user,
+                                                    borrowed=has_loan,
                                                     automated=system.status == SystemStatus.automated,
                                                     can_reserve=can_reserve,
                                                     lab_controller = system.lab_controller,
@@ -945,22 +948,23 @@ class Root(RPCRoot):
     @expose()
     @identity.require(identity.not_anonymous())
     def user_change(self, id):
-        current_identity = identity.current.user
         try:
-            system = System.by_id(id, current_identity)
+            system = System.by_id(id, identity.current.user)
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
         if system.user:
             try:
-                system.unreserve_manually_reserved(service=u'WEBUI')
+                system.unreserve_manually_reserved(service=u'WEBUI',
+                                                   user=identity.current.user)
                 flash(_(u'Returned %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to return')
                 flash(_(u'Failed to return %s: %s') % (system.fqdn, e))
         else:
             try:
-                system.reserve_manually(service=u'WEBUI')
+                system.reserve_manually(service=u'WEBUI',
+                                        user=identity.current.user)
                 flash(_(u'Reserved %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to reserve')

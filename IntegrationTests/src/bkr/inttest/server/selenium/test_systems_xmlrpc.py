@@ -160,7 +160,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
                     status=u'Manual', shared=True)
             user = data_setup.create_user(password=u'password')
             other_user = data_setup.create_user()
-            system.reserve(service=u'testdata', user=other_user)
+            system.reserve_manually(service=u'testdata', user=other_user)
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
         try:
@@ -175,7 +175,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
                     owner=User.by_user_name(data_setup.ADMIN_USER),
                     status=u'Manual', shared=True)
             user = data_setup.create_user(password=u'password')
-            system.reserve(service=u'testdata', user=user)
+            system.reserve_manually(service=u'testdata', user=user)
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
         server.systems.release(system.fqdn)
@@ -202,7 +202,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
                     owner=User.by_user_name(data_setup.ADMIN_USER),
                     status=u'Manual', shared=True)
             user = data_setup.create_user(password=u'password')
-            system.reserve(service=u'testdata', user=user)
+            system.reserve_manually(service=u'testdata', user=user)
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
         server.systems.release(system.fqdn)
@@ -219,7 +219,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
                     shared=True, lab_controller=self.lab_controller)
             system.release_action = ReleaseAction.leave_on
             user = data_setup.create_user(password=u'password')
-            system.reserve(service=u'testdata', user=user)
+            system.reserve_manually(service=u'testdata', user=user)
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
         server.systems.release(system.fqdn)
@@ -237,7 +237,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             system.reprovision_distro_tree = data_setup.create_distro_tree(
                     osmajor=u'Fedora')
             user = data_setup.create_user(password=u'password')
-            system.reserve(service=u'testdata', user=user)
+            system.reserve_manually(service=u'testdata', user=user)
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
         server.systems.release(system.fqdn)
@@ -257,7 +257,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             system.reprovision_distro_tree = data_setup.create_distro_tree(
                     osmajor=u'BrokenDistro')
             user = data_setup.create_user(password=u'password')
-            system.reserve(service=u'testdata', user=user)
+            system.reserve_manually(service=u'testdata', user=user)
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
         server.systems.release(system.fqdn)
@@ -273,7 +273,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
                     shared=True, lab_controller=self.lab_controller)
             system.release_action = None
             user = data_setup.create_user(password=u'password')
-            system.reserve(service=u'testdata', user=user)
+            system.reserve_manually(service=u'testdata', user=user)
         server = self.get_server()
         server.auth.login_password(user.user_name, 'password')
         server.systems.release(system.fqdn)

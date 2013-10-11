@@ -1169,7 +1169,7 @@ class SystemProvision(Form):
     member_widgets = ["id", "prov_install", "ks_meta", "power",
                       "koptions", "koptions_post", "reboot","schedule_reserve_days"]
     params = ['options', 'lab_controller', 'power_enabled',
-              'automated', 'reserved', 'can_reserve']
+              'automated', 'reserved', 'can_reserve', 'borrowed']
     MAX_DAYS_PROVISION = 7
     DEFAULT_RESERVE_DAYS = 0.5
 
@@ -1199,7 +1199,8 @@ class SystemProvision(Form):
 
     def update_params(self, d): 
         super(SystemProvision, self).update_params(d)
-        for param in ['automated', 'reserved', 'can_reserve', 'lab_controller']:
+        for param in ['automated', 'reserved', 'can_reserve',
+                      'lab_controller', 'borrowed']:
             d[param] = d['options'].get(param)
         if 'power' in d['value']:
             if d['value']['power']:

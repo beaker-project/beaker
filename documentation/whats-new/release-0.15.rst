@@ -26,7 +26,8 @@ systems. The available permissions are:
 * Issuing power and netboot commands to the system (even when not the current
   user)
 * Loaning the system to themselves
-* Loaning the system to others
+* Loaning the system to others (as well as returning loans and manual
+  reservations on behalf of other users)
 * Editing the system details (including switching between Manual and
   Automated operation)
 * Editing the system access policy (the system owner can always edit the
@@ -45,7 +46,12 @@ For more details on using the new access policy mechanism, refer to:
 Note that the new Beaker client commands require Python 2.6 or later, and
 are thus not supported on Red Hat Enterprise Linux 5.
 
-(Contributed by Dan Callaghan)
+(Contributed by Dan Callaghan and Nick Coghlan)
+
+.. versionchanged:: 0.15.1
+
+   Beaker 0.15.0 included a more restrictive version of these changes.
+
 
 Default power command and netboot configuration permissions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -187,22 +193,27 @@ know who to contact to request membership in a group.
 (Contributed by Amit Saha in :issue:`990860`)
 
 
-Simplified "Take", "Schedule Provision", and "Provision Now" in the web UI
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Clarified "Take", "Schedule Provision", and "Provision" in the web UI
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The :guilabel:`Take` and :guilabel:`Return` buttons on the system page no
-longer appear for systems set to Automated, as this was a common source of
-confusion for new users. To temporarily give a user exclusive access to run
-scheduled jobs on a system, loan it to them. If a system owner needs to
-reserve a system directly, bypassing the scheduler, they should first
-set the system to Manual.
+The :guilabel:`Take` button on the system page no longer appears by default
+for systems set to Automated, as this was a common source of confusion for
+new users, and could result in users accidentally interrupting a running job.
 
-The :guilabel:`Provision` tab on the system page now always schedules a new
-job for Automated systems, and always provisions immediately for Manual
-systems, instead of varying its behaviour according to a complicated set
-of rules.
+The :guilabel:`Provision` tab on the system page now displays more details
+regarding the current state of the provisioning mechanism, including whether
+provisioning will occur directly or through the scheduler.
 
-(Contributed by Dan Callaghan in :issue:`855333`)
+To temporarily give a user exclusive access to a system, loan it to them.
+Once a loan is in place, the user with the loan will always have the ability
+to :guilabel:`Take` the system, even if it is marked as Automated.
+
+(Contributed by Dan Callaghan in :issue:`855333` and Nick Coghlan in
+:issue:`1015131`)
+
+.. versionchanged:: 0.15.1
+
+   Beaker 0.15.0 included a more restrictive version of these changes.
 
 
 Command line support for removing accounts
@@ -360,4 +371,13 @@ release.
 Maintenance updates
 -------------------
 
-There have been no Beaker 0.15 maintenance updates.
+The following fixes have been included in Beaker 0.15 maintenance updates.
+
+
+Beaker 0.15.1
+~~~~~~~~~~~~~
+
+* Restoring feature parity with Beaker 0.14:
+
+  * :issue:`1015131`: Automated systems may once again be manually reserved,
+    as long as a loan to a specific user is in place.

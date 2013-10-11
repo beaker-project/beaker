@@ -2494,6 +2494,17 @@ class System(SystemObject, ActivityMixin):
         # system to themselves)
         return False
 
+    def can_reserve_manually(self, user):
+        """
+        Does the given user have permission to manually reserve this system?
+        """
+        # Manual reservations are permitted only for systems that are
+        # either not automated or are currently loaned to this user
+        if (self.status != SystemStatus.automated or
+              (self.loaned and self.loaned == user)):
+            return self.can_reserve(user)
+        return False
+
     def can_unreserve(self, user):
         """
         Does the given user have permission to return the current reservation 
@@ -3002,15 +3013,22 @@ class System(SystemObject, ActivityMixin):
             self.mark_broken(reason=reason)
 
     def reserve_manually(self, service, user=None):
-        if self.status == SystemStatus.automated:
-            raise BX(_(u'Cannot manually reserve automated system, '
-                    'schedule a job instead'))
-        return self.reserve(service, user=user, reservation_type=u'manual')
-
-    def reserve(self, service, user=None, reservation_type=u'manual'):
         if user is None:
             user = identity.current.user
+        self._check_can_reserve(user)
+        if not self.can_reserve_manually(user):
+            raise BX(_(u'Cannot manually reserve automated system, '
+                    'without borrowing it first. Schedule a job instead'))
+        return self._reserve(service, user, u'manual')
 
+    def reserve_for_recipe(self, service, user=None):
+        if user is None:
+            user = identity.current.user
+        self._check_can_reserve(user)
+        return self._reserve(service, user, u'recipe')
+
+    def _check_can_reserve(self, user):
+        # Throw an exception if the given user can't reserve the system.
         if self.user is not None and self.user == user:
             raise StaleSystemUserException(_(u'User %s has already reserved '
                 'system %s') % (user, self))
@@ -3024,6 +3042,7 @@ class System(SystemObject, ActivityMixin):
                         'system %s while it is loaned to user %s')
                         % (user, self, self.loaned))
 
+    def _reserve(self, service, user, reservation_type):
         # Atomic operation to reserve the system
         session.flush()
         if session.connection(System).execute(system_table.update(
@@ -6782,9 +6801,9 @@ class SystemResource(RecipeResource):
 
     def allocate(self):
         log.debug('Reserving system %s for recipe %s', self.system, self.recipe.id)
-        self.reservation = self.system.reserve(service=u'Scheduler',
-                user=self.recipe.recipeset.job.owner,
-                reservation_type=u'recipe')
+        self.reservation = self.system.reserve_for_recipe(
+                                         service=u'Scheduler',
+                                         user=self.recipe.recipeset.job.owner)
 
     def release(self):
         # system_resource rows for very old recipes may have no reservation
