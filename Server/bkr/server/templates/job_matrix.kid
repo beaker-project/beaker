@@ -33,7 +33,7 @@ $(document).ready( function() {
      <div style='float:left'> 
     
          <h3 style="display:inline"> ${whiteboard.label}</h3><br />
-         <div class='margined' onclick="javascript:matrix.clicked_whiteboard()" py:content="whiteboard.display(options=whiteboard_options)" />
+         <div onclick="javascript:matrix.clicked_whiteboard()" py:content="whiteboard.display(options=whiteboard_options)" />
 
          <strong class='smallfont'>${whiteboard_filter.label}</strong>
          <span style='display:inline'  py:content='whiteboard_filter.display()' />
@@ -43,11 +43,11 @@ $(document).ready( function() {
       
     <div style="float:left;padding-bottom:3em;">
         <h3 style="display:inline">${job_ids.label}</h3><br />
-        <div class="margined" onclick="javascript:matrix.clicked_jobs()" py:content="job_ids.display(value=job_ids_vals)" />
+        <div onclick="javascript:matrix.clicked_jobs()" py:content="job_ids.display(value=job_ids_vals)" />
     </div>
         <br style="clear:both" />
-       <input class='submit-button' type='submit' value='Generate' />
-        <div style="clear:left"  class="margined"  id="nacks">
+       <button class='btn' type='submit'>Generate</button>
+        <div style="clear:left" id="nacks">
         <h5 style="display:inline">${nack_list.label}</h5>
             <input py:if="toggle_nacks_on" id="toggle_nacks_on" name="toggle_nacks_on" type="checkbox" checked="" />
             <input py:if="not toggle_nacks_on" id="toggle_nacks_on" name="toggle_nacks_on" type="checkbox" />

@@ -659,8 +659,7 @@ class AckPanel(RadioButtonList):
 class JobMatrixReport(Form):     
     javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),
                   LocalJSLink('bkr', '/static/javascript/job_matrix_v2.js')]
-    css = [LocalCSSLink('bkr','/static/css/job_matrix.css'),
-        LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
+    css = [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css'),]
     template = 'bkr.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button','nack_list', 'whiteboard_filter',
         'whiteboard_filter_button']
