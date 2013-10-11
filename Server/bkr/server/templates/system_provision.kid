@@ -2,7 +2,19 @@
      name="${name}"
      action="${action}"
      method="${method}" width="100%">
+  <span py:if="not lab_controller">
+    This system is not associated to a lab controller
+  </span>
   <span py:if="lab_controller">
+    <span py:if="automated and not can_reserve">
+      You do not have access to schedule a job on this system.
+    </span>
+    <span py:if="not automated and not reserved and can_reserve">
+      You can only provision if you have reserved the system.
+    </span>
+    <span py:if="not automated and not reserved and not can_reserve">
+      You do not have access to reserve this system.
+    </span>
     <span py:if="(automated and can_reserve) or (not automated and reserved)">
       <script language="JavaScript" type="text/JavaScript">
         ${name}_0 = new Provision('${id.field_id}', '${prov_install.field_id}', '${ks_meta.field_id}','${koptions.field_id}','${koptions_post.field_id}','${tg.url('/get_installoptions')}');
@@ -68,17 +80,5 @@
       </div>
       ${display_field_for("id")}
     </span>
-    <span py:if="automated and not can_reserve">
-      You do not have access to schedule a job on this system.
-    </span>
-    <span py:if="not automated and not reserved and can_reserve">
-      You can only provision if you have reserved the system.
-    </span>
-    <span py:if="not automated and not reserved and not can_reserve">
-      You do not have access to reserve this system.
-    </span>
-  </span>
-  <span py:if="not lab_controller">
-    This system is not associated to a lab controller
   </span>
 </form>
