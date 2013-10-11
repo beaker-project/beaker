@@ -4229,14 +4229,11 @@ class Log(MappedObject):
         else:
             return os.path.join('/logs', self.parent.filepath, self._combined_path())
 
+    @property
     def link(self):
         """ Return a link to this Log
         """
-        text = self._combined_path()
-        text = text[-50:]
-        return make_link(url = self.href,
-                         text = text)
-    link = property(link)
+        return make_link(url=self.href, text=self._combined_path())
 
     @property
     def dict(self):
