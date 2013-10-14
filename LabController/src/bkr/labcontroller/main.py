@@ -117,6 +117,17 @@ class WSGIHandler(gevent.wsgi.WSGIHandler):
         self.close_connection = True
         return result
 
+# decorator to log uncaught exceptions in the WSGI application
+def log_failed_requests(func):
+    def _log_failed_requests(environ, start_response):
+        try:
+            return func(environ, start_response)
+        except Exception, e:
+            logger.exception('Error handling request %s %s',
+                    environ.get('REQUEST_METHOD'), environ.get('PATH_INFO'))
+            raise
+    return _log_failed_requests
+
 def daemon_shutdown(signum, frame):
     logger.info('Received signal %s, shutting down', signum)
     shutting_down.set()
@@ -136,7 +147,8 @@ def main_loop(proxy=None, conf=None):
     login.daemon = True
     login.start()
 
-    server = gevent.wsgi.WSGIServer(('', 8000), WSGIApplication(proxy),
+    server = gevent.wsgi.WSGIServer(('', 8000),
+            log_failed_requests(WSGIApplication(proxy)),
             handler_class=WSGIHandler, spawn=gevent.pool.Pool())
     server.stop_timeout = None
     server.start()
