@@ -143,12 +143,12 @@ from bkr.server.reports import Reports
     </div>
 </nav>
 
-<div class="container">
+<div class="container-fluid">
 
     <?python
     from bkr.server import motd
     ?>
-    <div class="alert alert-info alert-block" py:if="motd.get_motd()">
+    <div class="alert motd alert-info alert-block" py:if="motd.get_motd()">
         <h4>Message of the day</h4>
         ${XML(motd.get_motd())}
     </div>

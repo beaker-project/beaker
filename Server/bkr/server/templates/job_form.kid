@@ -22,7 +22,7 @@ textarea {
         <div py:for="field in hidden_fields"
             py:replace="field.display(value_for(field), **params_for(field))"
         />
-  <div class="row">
+  <div class="row-fluid">
     <div class="span10">
       <textarea name="textxml" rows="40" class="input-block-level">${value_for('textxml')}</textarea>
     </div>
