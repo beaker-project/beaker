@@ -7,8 +7,8 @@ import sys
 from optparse import Option, IndentedHelpFormatter
 import xmlrpclib
 import cgi
-
-from bkr.client.command import CommandOptionParser, ClientCommandContainer, Command
+import krbV
+from bkr.client.command import CommandOptionParser, ClientCommandContainer
 from bkr.common import __version__
 
 
@@ -55,6 +55,12 @@ def main():
     cmd, cmd_opts, cmd_args = parser.parse_args()
     try:
         return cmd.run(*cmd_args, **cmd_opts.__dict__)
+    except krbV.Krb5Error, e:
+        if e.args[0] == krbV.KRB5KRB_AP_ERR_TKT_EXPIRED:
+            sys.stderr.write('Kerberos ticket expired (run kinit to obtain a new ticket)\n')
+            return 1
+        else:
+            raise
     except xmlrpclib.Fault, e:
         sys.stderr.write('XML-RPC fault: %s\n' % e.faultString)
         return 1
