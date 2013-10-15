@@ -2429,30 +2429,35 @@ class System(SystemObject, ActivityMixin):
             return True
         return False
 
-    def can_loan(self, user):
+    def can_lend(self, user):
         """
         Does the given user have permission to loan this system to another user?
         """
+        # System owner is always a loan admin
         if self.owner == user:
             return True
+        # Beaker instance admins are loan admins for every system
         if user.is_admin():
             return True
+        # Anyone else needs the "loan_any" permission
         if (self.custom_access_policy and
             self.custom_access_policy.grants(user, SystemPermission.loan_any)):
             return True
         return False
 
-    def can_loan_to_self(self, user):
+    def can_borrow(self, user):
         """
         Does the given user have permission to loan this system to themselves?
         """
-        if self.owner == user:
+        # Loan admins can always loan to themselves
+        if self.can_lend(user):
             return True
-        if user.is_admin():
-            return True
-        if (self.custom_access_policy and
-            self.custom_access_policy.grants(user, SystemPermission.loan_any) or
-            self.custom_access_policy.grants(user, SystemPermission.loan_self)):
+        # "loan_self" only lets you take an unloaned system and update the
+        # details on a loan already granted to you
+        if ((not self.loaned or self.loaned == user) and
+                self.custom_access_policy and
+                self.custom_access_policy.grants(user,
+                                                 SystemPermission.loan_self)):
             return True
         return False
 
@@ -2461,25 +2466,32 @@ class System(SystemObject, ActivityMixin):
         Does the given user have permission to cancel the current loan for this 
         system?
         """
-        if self.loaned == user:
+        # Users can always return their own loans
+        if self.loaned and self.loaned == user:
             return True
-        if self.owner == user:
-            return True
-        if user.is_admin():
-            return True
-        return False
+        # Loan admins can return anyone's loan
+        return self.can_lend(user)
 
     def can_reserve(self, user):
         """
         Does the given user have permission to reserve this system?
+
+        Note that if is_free() returns False, the user may still not be able
+        to reserve it *right now*.
         """
+        # System owner can always reserve the system
         if self.owner == user:
             return True
-        if self.loaned == user:
+        # Loans grant the ability to reserve the system
+        if self.loaned and self.loaned == user:
             return True
+        # Anyone else needs the "reserve" permission
         if (self.custom_access_policy and
             self.custom_access_policy.grants(user, SystemPermission.reserve)):
             return True
+        # Beaker admins can effectively reserve any system, but need to
+        # grant themselves the appropriate permissions first (or loan the
+        # system to themselves)
         return False
 
     def can_unreserve(self, user):
@@ -2487,25 +2499,27 @@ class System(SystemObject, ActivityMixin):
         Does the given user have permission to return the current reservation 
         on this system?
         """
+        # Users can always return their own reservations
         if self.user and self.user == user:
             return True
-        if self.owner == user:
-            return True
-        if user.is_admin():
-            return True
-        return False
+        # Loan admins can return anyone's reservation
+        return self.can_lend(user)
 
     def can_power(self, user):
         """
         Does the given user have permission to run power/netboot commands on 
         this system?
         """
+        # Current user can always control the system
         if self.user and self.user == user:
             return True
+        # System owner can always control the system
         if self.owner == user:
             return True
+        # Beaker admins can control any system
         if user.is_admin():
             return True
+        # Anyone else needs the "control_system" permission
         if (self.custom_access_policy and
             self.custom_access_policy.grants(user, SystemPermission.control_system)):
             return True
@@ -2522,7 +2536,8 @@ class System(SystemObject, ActivityMixin):
         It checks all permissions that are needed and
         updates SystemActivity.
 
-        Returns the user holding the loan.
+        Returns the name of the user now holding the loan (if any), otherwise
+        returns the empty string.
         """
         loaning_to = user_name
         if loaning_to:
@@ -2531,20 +2546,25 @@ class System(SystemObject, ActivityMixin):
                 # This is an error condition
                 raise ValueError('user name %s is invalid' % loaning_to)
             if user == identity.current.user:
-                if not self.can_loan_to_self(identity.current.user):
-                    raise BX(_("Insufficient permissions to create loan"))
+                if not self.can_borrow(identity.current.user):
+                    msg = '%s cannot borrow this system' % user
+                    raise InsufficientSystemPermissions(msg)
             else:
-                if not self.can_loan(identity.current.user):
-                    raise BX(_("Insufficient permissions to create loan"))
+                if not self.can_lend(identity.current.user):
+                    msg = ('%s cannot lend this system to %s' %
+                                           (identity.current.user, user))
+                    raise InsufficientSystemPermissions(msg)
         else:
             if not self.can_return_loan(identity.current.user):
-                raise BX(_("Insufficient permissions to return loan"))
+                msg = '%s cannot return system loan' % identity.current.user
+                raise InsufficientSystemPermissions(msg)
             user = None
             comment = None
 
         if user != self.loaned:
             activity = SystemActivity(identity.current.user, service,
-                u'Changed', u'Loaned To', u'%s' % self.loaned if self.loaned else '' ,
+                u'Changed', u'Loaned To',
+                u'%s' % self.loaned if self.loaned else '',
                 u'%s' % user if user else '')
             self.loaned = user
             self.activity.append(activity)
@@ -4209,14 +4229,11 @@ class Log(MappedObject):
         else:
             return os.path.join('/logs', self.parent.filepath, self._combined_path())
 
+    @property
     def link(self):
         """ Return a link to this Log
         """
-        text = '/%s' % self._combined_path()
-        text = text[-50:]
-        return make_link(url = self.href,
-                         text = text)
-    link = property(link)
+        return make_link(url=self.href, text=self._combined_path())
 
     @property
     def dict(self):
@@ -4329,16 +4346,22 @@ class TaskBase(MappedObject):
         """ 
         return self.status.queued
 
+    @hybrid_method
     def is_failed(self):
         """ 
         Return True if the task has failed
         """
-        if self.result in [TaskResult.warn,
-                           TaskResult.fail,
-                           TaskResult.panic]:
-            return True
-        else:
-            return False
+        return (self.result in [TaskResult.warn,
+                                TaskResult.fail,
+                                TaskResult.panic])
+    @is_failed.expression
+    def is_failed(cls):
+        """
+        Return SQL expression that is true if the task has failed
+        """
+        return cls.result.in_([TaskResult.warn,
+                               TaskResult.fail,
+                               TaskResult.panic])
 
     # TODO: it would be good to split the bar definition out to a utility
     # module accepting a mapping of div classes to percentages and then
@@ -6671,25 +6694,20 @@ class RecipeTaskResult(TaskBase):
         return "TR:%s" % self.id
     t_id = property(t_id)
 
+    @property
     def short_path(self):
         """
         Remove the parent from the begining of the path if present
-        Try really hard to start path with ./
         """
-        short_path = self.path
-        if self.path and self.path.startswith(self.recipetask.task.name):
-            short_path = self.path.replace(self.recipetask.task.name,'')
-        if not short_path:
+        if not self.path or self.path == '/':
+            short_path = self.log or './'
+        elif self.path.rstrip('/') == self.recipetask.task.name:
             short_path = './'
-        if short_path.startswith('/'):
-            short_path = '.%s' % short_path
-        elif not short_path.startswith('.'):
-            short_path = './%s' % short_path
-        if self.path == '/' and self.log:
-            short_path = self.log
+        elif self.path.startswith(self.recipetask.task.name + '/'):
+            short_path = self.path.replace(self.recipetask.task.name + '/', '', 1)
+        else:
+            short_path = self.path
         return short_path
-
-    short_path = property(short_path)
 
 class RecipeResource(MappedObject):
     """

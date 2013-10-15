@@ -16,13 +16,12 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import unittest
 import logging
 import re
 from turbogears.database import session
 from nose.plugins.skip import SkipTest
 
-from bkr.server.model import Job, TaskResult, RecipeTaskResult
+from bkr.server.model import Job, TaskStatus, TaskResult, RecipeTaskResult
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present
 from selenium.webdriver.support.ui import WebDriverWait
@@ -232,3 +231,112 @@ class TestRecipeView(WebDriverTestCase):
         for r in recipes:
             # "Hide Results" should be activated for the recipe
             b.find_element_by_css_selector('#recipe%s .hide-results-tab.active' % r.id)
+
+    def test_no_failed_results(self):
+        with session.begin():
+            the_recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([the_recipe],
+                                                    owner=self.user)
+
+        b = self.browser
+        # Recipe without failed results should not show the button
+        self.go_to_recipe_view(the_recipe)
+        b.find_element_by_xpath(
+            '//div[@id="recipe%s" and not(.//a[text()="Show Failed Results"])]'
+            % the_recipe.id)
+
+    def check_task_not_loaded(self, recipe, task):
+        fmt = '//div[@id="recipe%s" and not(.//a[text()="T:%s"])]'
+        self.browser.find_element_by_xpath(fmt % (recipe.id, task.id))
+
+    def check_task_visible(self, recipe, task):
+        fmt = '//div[@id="recipe%s"]//a[text()="T:%s"]'
+        t = self.browser.find_element_by_xpath(fmt % (recipe.id, task.id))
+        msg = "R:%s T:%s unexpectedly hidden"
+        self.assertTrue(t.is_displayed(), msg % (recipe.id, task.id))
+
+    def check_task_hidden(self, recipe, task):
+        fmt = '//div[@id="recipe%s"]//a[text()="T:%s"]'
+        t = self.browser.find_element_by_xpath(fmt % (recipe.id, task.id))
+        msg = "R:%s T:%s unexpectedly visible"
+        self.assertFalse(t.is_displayed(), msg % (recipe.id, task.id))
+
+    def test_show_all_results(self):
+        with session.begin():
+            tasks = [data_setup.create_task() for t in range(5)]
+            recipe = data_setup.create_recipe(task_list=tasks)
+            job = data_setup.create_job_for_recipes([recipe], owner=self.user)
+
+        b = self.browser
+        self.go_to_recipe_view(recipe)
+        # Tasks should only be loaded on demand
+        for t in recipe.tasks:
+            self.check_task_not_loaded(recipe, t)
+        # Full result tab should have all tasks
+        b.find_element_by_xpath(
+                '//div[@id="recipe%s"]//a[text()="Show Results"]'
+                % recipe.id).click()
+        for t in recipe.tasks:
+            self.check_task_visible(recipe, t)
+        # Clicking "Hide" should hide all tasks again
+        b.find_element_by_xpath(
+                '//div[@id="recipe%s"]//a[text()="Hide"]'
+                % recipe.id).click()
+        for t in recipe.tasks:
+            self.check_task_hidden(recipe, t)
+
+    def test_show_failed_results(self):
+        # To check correct display of failed results
+        #   - create 3 recipes with 2 tasks each
+        #   - for each recipe, mark the first task as failed in some way
+        #     (Fail, Warn, Panic)
+        #   - check clicking "Show Failed Results" tab shows only the first
+        #   - check clicking "Hide" hides the loaded task
+        status_result_pairs = []
+        for result in (TaskResult.fail, TaskResult.warn, TaskResult.panic):
+            for status in (TaskStatus.completed, TaskStatus.cancelled,
+                            TaskStatus.aborted):
+                status_result_pairs.append((status, result))
+
+        with session.begin():
+            recipes = []
+            for __ in status_result_pairs:
+                tasks = [data_setup.create_task() for i in range(2)]
+                recipe = data_setup.create_recipe(task_list=tasks)
+                recipes.append(recipe)
+            job = data_setup.create_job_for_recipes(recipes, owner=self.user)
+            data_setup.mark_job_queued(job)
+            data_setup.mark_job_running(job)
+            for recipe, (status, result) in zip(recipes, status_result_pairs):
+                task_result = RecipeTaskResult(path=u'failure_result',
+                                                result=result)
+                recipe.tasks[0].results = [task_result]
+                recipe.tasks[0].status = status
+                recipe.tasks[1].start()
+            job.update_status()
+
+        b = self.browser
+        for recipe in recipes:
+            failed, incomplete = recipe.tasks
+            expected_result = failed.results[0].result
+            # These assertions ensure the task setup code above is correct
+            self.assertEqual(recipe.status, TaskStatus.running)
+            self.assertEqual(recipe.result, expected_result)
+            self.assertEqual(failed.result, expected_result)
+            self.assertEqual(incomplete.result, TaskResult.new)
+            self.go_to_recipe_view(recipe)
+            # Tasks should only be loaded on demand
+            for t in recipe.tasks:
+                self.check_task_not_loaded(recipe, t)
+            # Failed result tab should only load the first task
+            b.find_element_by_xpath(
+                '//div[@id="recipe%s"]//a[text()="Show Failed Results"]'
+                    % recipe.id).click()
+            self.check_task_visible(recipe, failed)
+            self.check_task_not_loaded(recipe, incomplete)
+            # Clicking "Hide" should hide the loaded task
+            b.find_element_by_xpath(
+                    '//div[@id="recipe%s"]//a[text()="Hide"]'
+                    % recipe.id).click()
+            self.check_task_hidden(recipe, failed)
+            self.check_task_not_loaded(recipe, incomplete)

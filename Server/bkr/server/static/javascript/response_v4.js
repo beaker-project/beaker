@@ -94,10 +94,10 @@ AckPanel.prototype.get_response_comment = function (id) {
 AckPanel.prototype.show_comment = function(result) {
         var rs_id = result.rs_id
         var comment = result.comment
-        var newspan = $('<span></span>').attr('id','comment_remote_response_text_' + rs_id).addClass('hidden').attr('title','Comment for RS# ' + rs_id).html(comment)
+        var newspan = $('<span></span>').attr('id','comment_remote_response_text_' + rs_id).attr('title','Comment for RS# ' + rs_id).html(comment)
         $('#response_'+rs_id).after(newspan)
 
-        $('#comment_remote_response_text_' + rs_id).dialog({height:140,
+        $('#comment_remote_response_text_' + rs_id).dialog({height:200,
                                                         modal:true,
                                                         buttons: { 
                                                         'Edit' : function() {
@@ -108,7 +108,7 @@ AckPanel.prototype.show_comment = function(result) {
                                                                                 attr('id','comment_textbox_' + rs_id)
                                                                                 //addClass('hidden');
 
-                                                                t_box.dialog({height:140,
+                                                                t_box.dialog({height:200,
                                                                                  modal:true,
                                                                                  buttons: {
                                                                                  'Save' : function() {

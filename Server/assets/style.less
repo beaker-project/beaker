@@ -108,6 +108,11 @@ div.recipe {
     border-top: 2px solid @tableBorder;
     padding-top: 1em;
 }
+div.recipe .tab-content {
+    // if the results table overflows we want the viewport to scroll, not the tab pane
+    // https://bugzilla.redhat.com/show_bug.cgi?id=1014962
+    overflow: visible !important;
+}
 table.recipe {
     margin-bottom: 0;
 }
@@ -122,17 +127,35 @@ table.tasks {
             background-color: @tableBackgroundAccent;
         }
     }
+    // need to set even tbodies to white instead of leaving them transparent so
+    // that they occlude the recipe set border underneath them, in case the
+    // results table overflows
+    // https://bugzilla.redhat.com/show_bug.cgi?id=1014962
+    & > tbody:nth-child(even) > tr {
+        & > td, & > th {
+            background-color: #ffffff;
+        }
+    }
     // need to repeat hover style here to override the striping
     & > tbody > tr:hover {
         & > td, & > th {
             background-color: @tableBackgroundHover;
         }
     }
+    td.logs ul {
+        margin: 0;
+    }
+    td.logs li {
+        max-width: 18em;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
 }
 
 // elements from master.kid
-.container {
-    padding-top: 20px;
+.motd, .flash {
+    margin-top: 20px;
 }
 footer {
     .muted;

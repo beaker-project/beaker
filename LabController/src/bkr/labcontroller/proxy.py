@@ -560,7 +560,11 @@ class Proxy(ProxyHelper):
     def clear_netboot(self, fqdn):
         ''' Called from %post section to remove netboot entry '''
         logger.debug('clear_netboot %s', fqdn)
-        subprocess.check_call(["sudo", "/usr/bin/beaker-clear-netboot", fqdn])
+        p = subprocess.Popen(["sudo", "/usr/bin/beaker-clear-netboot", fqdn],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output, _ = p.communicate()
+        if p.returncode:
+            raise RuntimeError('sudo beaker-clear-netboot failed: %s' % output.strip())
         logger.debug('clear_netboot %s completed', fqdn)
         return self.hub.labcontrollers.add_completed_command(fqdn, "clear_netboot")
 

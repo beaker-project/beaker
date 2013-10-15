@@ -47,7 +47,7 @@ window.RecipeTasksView = Backbone.View.extend({
         var $pane = this.$('.failed-pane');
         $pane.html('<i class="icon-spinner icon-spin"></i> Loading&hellip;');
         return $.ajax({
-            url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&result=Fail&recipe_id=' + this.options.recipe_id,
+            url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&is_failed=1&recipe_id=' + this.options.recipe_id,
             dataType: 'html',
             success: function (data) { $pane.html(data); },
             error: function (jqxhr, status, error) { $pane.addClass('alert alert-error').text(error); },

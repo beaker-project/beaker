@@ -575,7 +575,7 @@ class AckPanel(RadioButtonList):
 
     javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),
                   LocalJSLink('bkr','/static/javascript/loader_v2.js'),
-                  LocalJSLink('bkr','/static/javascript/response_v3.js')]
+                  LocalJSLink('bkr','/static/javascript/response_v4.js')]
 
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     params = ['widget_name','unreal_response','comment_id','comment_class']
@@ -1404,8 +1404,8 @@ class SystemForm(Form):
             if identity.current.user:
                 params['show_loan_options'] = \
                     value.can_return_loan(identity.current.user) or \
-                    value.can_loan(identity.current.user) or \
-                    value.can_loan_to_self(identity.current.user)
+                    value.can_lend(identity.current.user) or \
+                    value.can_borrow(identity.current.user)
             else:
                 params['show_loan_options'] = False
         else:
@@ -1768,8 +1768,8 @@ class LoanWidget(RPC, TableForm, CompoundWidget):
             d['name'], jsonify.encode(self.get_options(d)), url('../systems/return_loan'))})
 
         system = model.System.by_fqdn(d['value']['fqdn'], identity.current.user)
-        if identity.current.user and system.can_loan(identity.current.user) \
-                or system.can_loan_to_self(identity.current.user):
+        if identity.current.user and system.can_lend(identity.current.user) \
+                or system.can_borrow(identity.current.user):
             for field in d['fields']:
                 if field.attrs.get('disabled'):
                     del field.attrs['disabled']

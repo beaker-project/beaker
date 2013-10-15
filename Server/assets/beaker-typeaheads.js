@@ -8,12 +8,13 @@ var results_filter = function (response) {
     return response.data;
 };
 
+// window.beaker_url_prefix is set by master.kid
 $.fn.beaker_typeahead = function (type) {
     var options = ({
         'group-name': {
             name: 'beaker-group-name',
             prefetch: {
-                url: '/groups/+typeahead', // XXX tg.url
+                url: beaker_url_prefix + 'groups/+typeahead',
                 filter: results_filter,
             },
             valueKey: 'group_name',
@@ -23,11 +24,11 @@ $.fn.beaker_typeahead = function (type) {
         'user-name': {
             name: 'beaker-user-name',
             prefetch: {
-                url: '/users/+typeahead',
+                url: beaker_url_prefix + 'users/+typeahead',
                 filter: results_filter,
             },
             remote: {
-                url: '/users/+typeahead?q=%QUERY',
+                url: beaker_url_prefix + 'users/+typeahead?q=%QUERY',
                 filter: results_filter,
             },
             valueKey: 'user_name',

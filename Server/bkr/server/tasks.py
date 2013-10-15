@@ -305,7 +305,9 @@ class Tasks(RPCRoot):
                     .filter(Arch.id == kw.get('arch_id'))
         if kw.get('status'):
             tasks = tasks.filter(RecipeTask.status == kw['status'])
-        if kw.get('result'):
+        if kw.get('is_failed'):
+            tasks = tasks.filter(RecipeTask.is_failed())
+        elif kw.get('result'):
             tasks = tasks.filter(RecipeTask.result == kw['result'])
         if kw.get('osmajor_id'):
             tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree,

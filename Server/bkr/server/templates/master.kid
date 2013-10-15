@@ -4,7 +4,9 @@
 <head py:match="item.tag=='{http://www.w3.org/1999/xhtml}head'" py:attrs="item.items()">
     <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
     <title py:replace="''">Your title goes here</title>
-
+    <script type="text/javascript">
+    window.beaker_url_prefix = ${tg.to_json(tg.url('/'))};
+    </script>
     <meta py:replace="item[:]"/>
 </head>
 
@@ -141,12 +143,12 @@ from bkr.server.reports import Reports
     </div>
 </nav>
 
-<div class="container">
+<div class="container-fluid">
 
     <?python
     from bkr.server import motd
     ?>
-    <div class="alert alert-info alert-block" py:if="motd.get_motd()">
+    <div class="alert motd alert-info alert-block" py:if="motd.get_motd()">
         <h4>Message of the day</h4>
         ${XML(motd.get_motd())}
     </div>
