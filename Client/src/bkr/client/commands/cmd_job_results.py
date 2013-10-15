@@ -79,7 +79,10 @@ class Job_Results(BeakerCommand):
         self.set_hub(**kwargs)
         for task in args:
             myxml = self.hub.taskactions.to_xml(task)
+            # XML is really bytes, the fact that the server is sending the bytes as an
+            # XML-RPC Unicode string is just a mistake in Beaker's API
+            myxml = myxml.encode('utf8')
             if prettyxml:
-                print parseString(myxml).toprettyxml()
+                print parseString(myxml).toprettyxml(encoding='utf8')
             else:
                 print myxml

@@ -125,16 +125,20 @@ class Job_Clone(BeakerCommand):
                     from_job = False
                 else:
                     from_job = True
-                jobxml = self.hub.taskactions.to_xml(task,clone,from_job)
+                jobxml = self.hub.taskactions.to_xml(task, clone, from_job)
+                # XML is really bytes, the fact that the server is sending the bytes as an
+                # XML-RPC Unicode string is just a mistake in Beaker's API
+                jobxml = jobxml.encode('utf8')
                 if pretty:
-                    print parseString(jobxml).toprettyxml()
+                    print parseString(jobxml).toprettyxml(encoding='utf8')
                 elif xml:
-                    print parseString(jobxml).toxml()
+                    print parseString(jobxml).toxml(encoding='utf8')
                 if not dryrun:
                     submitted_jobs.append(self.hub.jobs.upload(jobxml))
             except Exception, ex:
                 failed = True
-                print ex
+                raise
+                print >>sys.stderr, ex
         if not dryrun:
             print "Submitted: %s" % submitted_jobs
             if wait:
