@@ -31,6 +31,16 @@ class ReserveWorkflow(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
+    def test_default_tag_is_none_selected(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'reserveworkflow')
+        selected_options = Select(b.find_element_by_name('tag')). \
+            all_selected_options
+        # There should only be one selected option
+        self.assertTrue(len(selected_options), 1)
+        self.assertEquals(selected_options[0].text, 'None selected')
+
     def test_reserve_multiple_arch_got_distro(self):
         login(self.browser)
         b = self.browser

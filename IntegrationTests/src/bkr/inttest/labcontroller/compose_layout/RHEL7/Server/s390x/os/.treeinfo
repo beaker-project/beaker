@@ -1,21 +1,27 @@
 [checksums]
 generic.ins = sha256:a5c38204422ae7f176b7f73adf496fbc876fcf30366a6bc7c5064c12e480c6bf
 images/generic.prm = sha256:ceba2331929035423f3597e04b4a3a0820b282294e2b624bf49f648dd10a9d77
-images/initrd.addrsize = sha256:749b5f039bf3508fa95245e4e7bc7bae86260f195dcfb2cb4d9b8ea45f5c924c
-images/initrd.img = sha256:c4ea792eb533baf76c34ddd340b7c34260a813623b3d4b1a30a500c8ac03d2e4
-images/install.img = sha256:75d4d479a47e8595fc16e544545112bed8299c7625c316d0b842476e1d821513
-images/kernel.img = sha256:b5e4da79b5029cb4ee215453e9d08055f6601e87483d512654142b4c8ccc621d
-images/product.img = sha256:9ad2d5eb6446883cf04dc1ce0f752ba1a4cc1a6e27d318b1bf020aaf9224d0e8
-repodata/repomd.xml = sha256:ecde38b5c97c29941c8f6ca8b49ffd87aeba6b1194d9027ac4a54fa15970da9b
+images/initrd.addrsize = sha256:435abfe9e11988df4c24d1213d8a92c49b5bb824f09eec4f4c420c98abf44d3d
+images/initrd.img = sha256:7cc6fd2c2c1aa4500bfddb108996464ba2c12c2de0da25d575c3385144d1748b
+images/install.img = sha256:865626b7b6efca9b82556611c296286451bec44eceb299e99d364080b514f073
+images/kernel.img = sha256:9b0aaf0d43e2f1632e680b5b75d9c8fa7fd78efdcb5b835eaa2884400072813d
+repodata/repomd.xml = sha256:3148db62e949eecfcefdbe70191b355abb48187e93472e0695809464a7bcabba
 
 [general]
+; WARNING.0 = THIS SECTION IS DEPRECATED
+; WARNING.1 = See productmd (treeinfo(5)) documentation for more details about the current format
 arch = s390x
 family = Red Hat Enterprise Linux
-packages = Packages
-repository = 
-timestamp = 1342048144.836192
+name = Red Hat Enterprise Linux 7.0
+packagedir = Packages
+platforms = s390x
+repository = .
+timestamp = 1380519659
 variant = Server
 version = 7.0
+
+[header]
+version = 0.3
 
 [images-s390x]
 generic.ins = generic.ins
@@ -23,8 +29,26 @@ generic.prm = images/generic.prm
 initrd = images/initrd.img
 initrd.addrsize = images/initrd.addrsize
 kernel = images/kernel.img
-product.img = images/product.img
+
+[product]
+name = Red Hat Enterprise Linux
+short = RHEL
+version = 7.0
 
 [stage2]
 mainimage = images/install.img
+
+[tree]
+arch = s390x
+build_timestamp = 1380519659
+platforms = s390x
+variants = Server
+
+[variant-Server]
+id = Server
+name = Server
+packages = Packages
+repository = .
+type = variant
+uid = Server
 

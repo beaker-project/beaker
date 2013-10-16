@@ -83,12 +83,13 @@ class ReserveWorkflow:
     @identity.require(identity.not_anonymous())
     @expose(template='bkr.server.templates.generic') 
     def index(self, **kwargs):
-        kwargs.setdefault('tag', 'STABLE')
         value = dict((k, v) for k, v in kwargs.iteritems()
                 if k in ['osmajor', 'tag', 'distro'])
-
         options = {}
         tags = DistroTag.used()
+        # It's important that  'None selected' is prepended
+        # rather then appended to the list of tags, as that will ensure
+        # it is the default option in the drop down.
         options['tag'] = [('', 'None selected')] + \
                 [(tag.tag, tag.tag) for tag in tags]
         options['osmajor'] = [('', 'None selected')] + \

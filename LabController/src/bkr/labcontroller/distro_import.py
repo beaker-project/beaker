@@ -1429,6 +1429,56 @@ mainimage = images/install.img
         return repos
 
 
+class TreeInfoRhel7(TreeInfoBase, Importer):
+
+    @classmethod
+    def is_importer_for(cls, url, options=None):
+        parser = Tparser()
+        if not parser.parse(url):
+            return False
+        for r in cls.required:
+            if parser.get(r['section'], r['key'], '') == '':
+                return False
+        for e in cls.excluded:
+            if parser.get(e['section'], e['key'], '') != '':
+                return False
+        # XXX Can I use 'short' ?
+        if not (parser.get('product', 'short', '') == "RHEL"
+            and parser.get('product', 'version', '') == '7.0'):
+            return False
+        # Arm uses a different importer because of all the kernel types.
+        if parser.get('general', 'arch') in ['arm', 'armhfp']:
+            return False
+        return parser
+
+    def find_repos(self):
+        repos = []
+        try:
+            addons = self.parser.get('variant-%s' % self.tree['variant'], 'variants')
+            addons = addons.split(',')
+            for addon in addons:
+                addon_section = 'variant-%s' % addon
+                addon_type = self.parser.get(addon_section, 'type', '')
+                # The type should be self-evident, but let's double check
+                if addon_type == 'addon':
+                    repopath = self.parser.get(addon_section,'repository', '')
+                    if repopath:
+                        repos.append(dict(
+                            repoid=self.parser.get(addon_section,'id'),
+                                type='addon',
+                                path=repopath,)
+                                )
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
+                logging.debug('no addon repos for %s, %s' % (self.parser.url, e))
+        return repos
+
+    def get_kernel_path(self):
+        return self.parser.get('images-%s' % self.tree['arch'],'kernel')
+
+    def get_initrd_path(self):
+        return self.parser.get('images-%s' % self.tree['arch'],'initrd')
+
+
 class TreeInfoRhel(TreeInfoBase, Importer):
     """
 [addon-HighAvailability]
