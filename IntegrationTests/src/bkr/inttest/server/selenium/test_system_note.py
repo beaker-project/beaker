@@ -163,3 +163,15 @@ Also a URL <http://example.com/>.''')
         b.find_element_by_id('notes_note').send_keys(bad_note)
         b.find_element_by_name('notes').submit()
         b.find_element_by_xpath('//td/p[1][text()="%s"]' % bad_note)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1020153
+    def test_rendering_errors_are_ignored(self):
+        bad_note = '<this will break python-markdown in RHEL 6.4>'
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
+        b.find_element_by_link_text('Notes').click()
+        b.find_element_by_id('notes_note').send_keys(bad_note)
+        b.find_element_by_name('notes').submit()
+        b.find_element_by_xpath("//form[@name='notes']/../table//td/"
+            "p[normalize-space(text())='%s']" % bad_note)

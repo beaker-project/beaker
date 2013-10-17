@@ -1483,11 +1483,9 @@ class Root(RPCRoot):
             redirect("/")
         # Add a Note
         if kw.get('note'):
-            note = Note(user=identity.current.user,text=kw['note'])
-            system.notes.append(note)
-            activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Note', "", kw['note'])
-            system.activity.append(activity)
-            system.date_modified = datetime.utcnow()
+            system.add_note(text=kw['note'],
+                            user=identity.current.user,
+                            service='WEBUI')
         redirect("/view/%s" % system.fqdn)
 
     @expose()

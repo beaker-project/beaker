@@ -2167,7 +2167,7 @@ class System(SystemObject, ActivityMixin):
                       hostname    = 'fqdn',
                       system_type = 'type',
                      )
-                      
+
         host_requires = xmldoc.createElement('hostRequires')
         xmland = xmldoc.createElement('and')
         for key in fields.keys():
@@ -3088,6 +3088,14 @@ class System(SystemObject, ActivityMixin):
                 service=service, action=u'Returned', field_name=u'User',
                 old_value=old_user.user_name, new_value=u'')
         self.activity.append(activity)
+
+    def add_note(self, text, user, service=u'WEBUI'):
+        note = Note(user=user, text=text)
+        self.notes.append(note)
+        self.record_activity(user=user, service=service,
+                             action='Added', field='Note',
+                             old='', new=text)
+        self.date_modified = datetime.utcnow()
 
     cc = association_proxy('_system_ccs', 'email_address')
 
@@ -4089,7 +4097,14 @@ class Note(MappedObject):
         """
         The note's text rendered to HTML using Markdown.
         """
-        return XML(markdown(self.text, safe_mode='escape'))
+        # Try rendering as markdown, if that fails for any reason, just
+        # return the raw text string. The template will take care of the
+        # difference (this really doesn't belong in the model, though...)
+        try:
+            rendered = markdown(self.text, safe_mode='escape')
+        except Exception:
+            return self.text
+        return XML(rendered)
 
 
 class Key(SystemObject):
