@@ -318,6 +318,10 @@ class SystemAvailabilityTest(WebDriverTestCase):
         # Ensure provisioning is not offered
         b.find_element_by_xpath('//*[@id="provision" and not(.//button)]')
 
+
+    # XXX There's a *lot* of logic spread across controllers.py,
+    # the system_provision.kid template and the SystemProvision
+    #
     def check_schedule_provision(self, system, message):
         self.go_to_system_view(system)
         b = self.browser
@@ -325,8 +329,14 @@ class SystemAvailabilityTest(WebDriverTestCase):
         # Check for a specific info message
         if message is not None:
             b.find_element_by_xpath('//span[normalize-space(text())="%s"]' % message)
-        # Ensure manual provisioning is not offered
-        b.find_element_by_xpath('//*[@id="provision" and not(.//button[text()="Provision"])]')
+        # Ensure the provision form is configured to schedule the provision
+        b.find_element_by_xpath('//*[@id="scheduled-provisioning"]')
+        # Ensure the scheduled provision settings are included
+        b.find_element_by_xpath('//*[@id="scheduled-provisioning-settings"]')
+        # Ensure only scheduled provisioning is offered
+        b.find_element_by_xpath('//*[@id="provision" and '
+                                    './/button[text()="Schedule provision"] and '
+                                    'not(.//button[text()="Provision"])]')
         # Schedule the provisioning job
         Select(b.find_element_by_name('prov_install'))\
             .select_by_visible_text(unicode(self.distro_tree))
@@ -340,6 +350,10 @@ class SystemAvailabilityTest(WebDriverTestCase):
         # Check for a specific info message
         if message is not None:
             b.find_element_by_xpath('//span[normalize-space(text())="%s"]' % message)
+        # Ensure the provision panel is configured for direct provisioning
+        b.find_element_by_xpath('//*[@id="direct-provisioning"]')
+        # Ensure the direct provision settings are included
+        b.find_element_by_xpath('//*[@id="direct-provisioning-settings"]')
         # Ensure only manual provisioning is offered
         b.find_element_by_xpath('//*[@id="provision" and '
                                     './/button[text()="Provision"] and '

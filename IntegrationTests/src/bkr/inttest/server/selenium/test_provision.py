@@ -21,7 +21,7 @@ class SystemManualProvisionTest(SeleniumTestCase):
             self.system = data_setup.create_system(arch=u'i386',
                     owner=self.user, status=u'Manual', shared=True)
             self.system.lab_controller = self.lab_controller
-            self.system.user = self.user
+            self.system.reserve_manually('test_provision', user=self.user)
         self.login(user=self.user.user_name,password='password')
 
     def test_manual_provision_with_ssh_keys(self):
@@ -71,7 +71,7 @@ class SystemManualProvisionInstallOptionsTest(WebDriverTestCase):
             self.user = data_setup.create_user(password=u'password')
             self.system = data_setup.create_system(lab_controller=self.lab_controller, \
                                                        owner=self.user,status=u'Manual', shared=True)
-            self.system.user = self.user
+            self.system.reserve_manually('test_provision', user=self.user)
             self.distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora', arch=u'i386',
                     lab_controllers=[self.lab_controller])
             self.system.provisions[self.distro_tree.arch] = \

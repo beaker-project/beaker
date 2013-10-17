@@ -2322,6 +2322,12 @@ class System(SystemObject, ActivityMixin):
         else:
             return System.query.filter(System.arch.any(Arch.arch == arch))
 
+    def has_manual_reservation(self, user):
+        """Does the specified user currently have a manual reservation?"""
+        reservation = self.open_reservation
+        return (reservation and reservation.type == u'manual' and
+                user and self.user == user)
+
     def unreserve_manually_reserved(self, *args, **kw):
         open_reservation = self.open_reservation
         if not open_reservation:
