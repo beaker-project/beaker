@@ -463,3 +463,7 @@ Beaker 0.15.1
   * :issue:`600232`: Long log file names are now truncated.
     (Contributed by Dan Callaghan)
 
+  * :issue:`1008509`: ``beaker-provision`` will now kill a whole process group
+    in order to avoid problems caused by a wayward child process.
+    (Contributed by Raymond Mancy)
+
