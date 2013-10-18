@@ -381,3 +381,85 @@ Beaker 0.15.1
 
   * :issue:`1015131`: Automated systems may once again be manually reserved,
     as long as a loan to a specific user is in place.
+    (Contributed by Nick Coghlan)
+
+  * :issue:`1015328`: This fills in some gaps in the 0.15 access migration
+    rules.
+    (Contributed by Dan Callaghan)
+
+  * :issue:`1015081`: This makes the job matrix usable again. Also, some of the
+    job matrix has been updated to use Bootstrap's default styling.
+    (Contributed by Raymond Mancy)
+
+  * :issue:`1014962`: Stops long task names from inhibiting the view of the
+    task status.
+    (Contributed by Dan Callaghan)
+
+  * :issue:`1014875`: This fixes a deadlock introduced by conditional inserts.
+    (Contributed by Raymond Mancy)
+
+  * :issue:`1011858`: System loans are now handled in a consistent manner.
+    (Contributed by Nick Coghlan)
+
+* Logging
+
+  * :issue:`1014868`: Anything that is logged by Beaker is now cleaned of
+    NUL bytes, and replaced with the '\x00' literal.
+    (Contributed by Dan Callaghan)
+
+  * :issue:`1003709`: beaker-proxy was logging HTTP responses to stderr.
+    They are now being logged via Beaker's regular logging handlers.
+    (Contributed by Dan Callaghan)
+
+* Job view
+
+  * :issue:`7041601`: Recipe task result sub-tasks (or 'phases') no longer
+    have a '/' or './' prepended to them.
+    (Contributed by Dan Callaghan)
+
+  * :issue:`1015017`: The :guilabel:`comment` link now works for failed
+    recipes.
+    (Contributed by Dan Callaghan)
+
+  * :issue:`1014876`: Clicking the :guilabel:`Show Failed Results` button now
+    displays all failures including fail/warn/panic.
+
+* Beaker client
+
+  * :issue:`1014623`: We now encode XML received on the client side in utf-8.
+    This ensures non ascii characters are rendered properly, and encoding errors
+    are avoided.
+    (Contributed by Martin Kyral and Dan Callaghan)
+
+  * :issue:`1009903`: Format the output of ``bkr list-labcontroller`` in a
+    manner that is easier to read.
+    (Contributed by Marian Ganisin)
+
+* Other updates
+
+  * :issue:`1013414`: When importing the latest RHEL7 distros, their addon
+    repos will now be correctly added.
+    (Contributed by Raymond Mancy)
+
+  * :issue:`1009583`: The reserve workflow will now default to
+    'None selected' in the :guilabel:`Tag` select field.
+    (Contributed by Raymond Mancy)
+
+  * :issue:`1017496`: Fixes a bug with typeaheads when Beaker is not mounted
+    under '/'.
+    (Contributed by Dan Callaghan)
+
+  * :issue:`1014870`: Any HTML entered into the system notes are now escaped.
+    (Contributed by Dan Callaghan)
+
+  * :issue:`1014938`: The percentage bar should actually show the correct
+    percentage now.
+    (Contributed by Nick Coghlan)
+
+  * :issue:`670438`: Stops the top menu from splitting when there is not enough
+    horizontal space.
+    (Contributed by Dan Callaghan)
+
+  * :issue:`600232`: Long log file names are now truncated.
+    (Contributed by Dan Callaghan)
+
