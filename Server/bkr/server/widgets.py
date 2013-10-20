@@ -659,8 +659,7 @@ class AckPanel(RadioButtonList):
 class JobMatrixReport(Form):     
     javascript = [LocalJSLink('bkr','/static/javascript/jquery-ui-1.9.2.min.js', order=3),
                   LocalJSLink('bkr', '/static/javascript/job_matrix_v2.js')]
-    css = [LocalCSSLink('bkr','/static/css/job_matrix.css'),
-        LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
+    css = [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css'),]
     template = 'bkr.server.templates.job_matrix' 
     member_widgets = ['whiteboard','job_ids','generate_button','nack_list', 'whiteboard_filter',
         'whiteboard_filter_button']
@@ -1168,8 +1167,10 @@ class SystemProvision(Form):
     template = "bkr.server.templates.system_provision"
     member_widgets = ["id", "prov_install", "ks_meta", "power",
                       "koptions", "koptions_post", "reboot","schedule_reserve_days"]
-    params = ['options', 'lab_controller', 'power_enabled',
-              'automated', 'reserved', 'can_reserve']
+    params = ['options', 'lab_controller', 'power_enabled', 'reserved',
+              'provisioning_notes', 'provisioning_panel_id',
+              'provisioning_button_label']
+
     MAX_DAYS_PROVISION = 7
     DEFAULT_RESERVE_DAYS = 0.5
 
@@ -1199,7 +1200,8 @@ class SystemProvision(Form):
 
     def update_params(self, d): 
         super(SystemProvision, self).update_params(d)
-        for param in ['automated', 'reserved', 'can_reserve', 'lab_controller']:
+        for param in ['reserved', 'lab_controller', 'provisioning_notes',
+                      'provisioning_panel_id', 'provisioning_button_label']:
             d[param] = d['options'].get(param)
         if 'power' in d['value']:
             if d['value']['power']:

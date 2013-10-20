@@ -1,0 +1,74 @@
+#matrix-report {
+    .task-header {
+        text-align: left;
+        padding-left:25px;
+        background-color:#4F4F4F;
+        color:#FFFFFF;
+        min-width: 200px;
+    }
+
+    .whiteboard {
+        width:600px;
+    }
+
+    .matrix-header {
+        background-color:#4F4F4F;
+        color:#FFFFFF;
+        padding-top: 5px;
+        vertical-align:top;
+    }
+
+    .matrix-whiteboard {
+        padding:5px 5px 5px 5px;
+        min-width:95px;
+    }
+
+
+    .outlined-cell-border {
+        border-width:0 1px 0 0;
+        border-style:solid;
+    }
+
+    .result {
+        min-width: 50px;
+    }
+
+    .label-result-pass {
+      .result;
+      background-color: @resultPassColor;
+    }
+
+    .label-result-fail {
+      .result;
+      background-color: @resultFailColor;
+    }
+
+    .label-result-warn {
+      .result;
+      background-color: @resultWarnColor;
+    }
+
+    .label-result-new {
+      .result;
+      background-color: @resultNewColor;
+    }
+
+    .label-result-panic {
+      .result;
+      background-color: @resultPanicColor;
+    }
+
+    .results {
+       text-align:center;
+    }
+
+    tr.odd {
+        background-color: #F1F1F1;
+        border-bottom: 1px solid #BCBCBC;
+    }
+
+    tr.even {
+        background-color: #FFFFFF;
+        border-bottom: 1px solid #BCBCBC;
+    }
+}

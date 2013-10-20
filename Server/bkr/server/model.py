@@ -2167,7 +2167,7 @@ class System(SystemObject, ActivityMixin):
                       hostname    = 'fqdn',
                       system_type = 'type',
                      )
-                      
+
         host_requires = xmldoc.createElement('hostRequires')
         xmland = xmldoc.createElement('and')
         for key in fields.keys():
@@ -2321,6 +2321,12 @@ class System(SystemObject, ActivityMixin):
             return query.filter(System.arch.any(Arch.arch == arch))
         else:
             return System.query.filter(System.arch.any(Arch.arch == arch))
+
+    def has_manual_reservation(self, user):
+        """Does the specified user currently have a manual reservation?"""
+        reservation = self.open_reservation
+        return (reservation and reservation.type == u'manual' and
+                user and self.user == user)
 
     def unreserve_manually_reserved(self, *args, **kw):
         open_reservation = self.open_reservation
@@ -2492,6 +2498,17 @@ class System(SystemObject, ActivityMixin):
         # Beaker admins can effectively reserve any system, but need to
         # grant themselves the appropriate permissions first (or loan the
         # system to themselves)
+        return False
+
+    def can_reserve_manually(self, user):
+        """
+        Does the given user have permission to manually reserve this system?
+        """
+        # Manual reservations are permitted only for systems that are
+        # either not automated or are currently loaned to this user
+        if (self.status != SystemStatus.automated or
+              (self.loaned and self.loaned == user)):
+            return self.can_reserve(user)
         return False
 
     def can_unreserve(self, user):
@@ -3002,15 +3019,22 @@ class System(SystemObject, ActivityMixin):
             self.mark_broken(reason=reason)
 
     def reserve_manually(self, service, user=None):
-        if self.status == SystemStatus.automated:
-            raise BX(_(u'Cannot manually reserve automated system, '
-                    'schedule a job instead'))
-        return self.reserve(service, user=user, reservation_type=u'manual')
-
-    def reserve(self, service, user=None, reservation_type=u'manual'):
         if user is None:
             user = identity.current.user
+        self._check_can_reserve(user)
+        if not self.can_reserve_manually(user):
+            raise BX(_(u'Cannot manually reserve automated system, '
+                    'without borrowing it first. Schedule a job instead'))
+        return self._reserve(service, user, u'manual')
 
+    def reserve_for_recipe(self, service, user=None):
+        if user is None:
+            user = identity.current.user
+        self._check_can_reserve(user)
+        return self._reserve(service, user, u'recipe')
+
+    def _check_can_reserve(self, user):
+        # Throw an exception if the given user can't reserve the system.
         if self.user is not None and self.user == user:
             raise StaleSystemUserException(_(u'User %s has already reserved '
                 'system %s') % (user, self))
@@ -3024,6 +3048,7 @@ class System(SystemObject, ActivityMixin):
                         'system %s while it is loaned to user %s')
                         % (user, self, self.loaned))
 
+    def _reserve(self, service, user, reservation_type):
         # Atomic operation to reserve the system
         session.flush()
         if session.connection(System).execute(system_table.update(
@@ -3069,6 +3094,14 @@ class System(SystemObject, ActivityMixin):
                 service=service, action=u'Returned', field_name=u'User',
                 old_value=old_user.user_name, new_value=u'')
         self.activity.append(activity)
+
+    def add_note(self, text, user, service=u'WEBUI'):
+        note = Note(user=user, text=text)
+        self.notes.append(note)
+        self.record_activity(user=user, service=service,
+                             action='Added', field='Note',
+                             old='', new=text)
+        self.date_modified = datetime.utcnow()
 
     cc = association_proxy('_system_ccs', 'email_address')
 
@@ -4070,7 +4103,14 @@ class Note(MappedObject):
         """
         The note's text rendered to HTML using Markdown.
         """
-        return XML(markdown(self.text, safe_mode='escape'))
+        # Try rendering as markdown, if that fails for any reason, just
+        # return the raw text string. The template will take care of the
+        # difference (this really doesn't belong in the model, though...)
+        try:
+            rendered = markdown(self.text, safe_mode='escape')
+        except Exception:
+            return self.text
+        return XML(rendered)
 
 
 class Key(SystemObject):
@@ -6782,9 +6822,9 @@ class SystemResource(RecipeResource):
 
     def allocate(self):
         log.debug('Reserving system %s for recipe %s', self.system, self.recipe.id)
-        self.reservation = self.system.reserve(service=u'Scheduler',
-                user=self.recipe.recipeset.job.owner,
-                reservation_type=u'recipe')
+        self.reservation = self.system.reserve_for_recipe(
+                                         service=u'Scheduler',
+                                         user=self.recipe.recipeset.job.owner)
 
     def release(self):
         # system_resource rows for very old recipes may have no reservation

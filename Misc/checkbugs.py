@@ -102,6 +102,9 @@ class BugzillaInfo(object):
                 raise RuntimeError('Invalid BZ credentials, try running "bugzilla login"')
         return self._bz
 
+    def _get_release_flag(self, release):
+        return 'Beaker-%s' % release
+
     def get_bugs(self, milestone, release, sprint, states):
         bz = self.get_bz_proxy()
         criteria = {'product': 'Beaker'}
@@ -110,7 +113,7 @@ class BugzillaInfo(object):
         if sprint:
             criteria['devel_whiteboard'] = sprint
         if release:
-            criteria['flag'] = ['beaker-%s+' % release]
+            criteria['flag'] = [self._get_release_flag(release) + '+']
         if states:
             criteria['status'] = list(states)
         bugs = bz.query(bz.build_query(**criteria))
@@ -130,10 +133,25 @@ class BugzillaInfo(object):
             bug = self._bz_cache[bug_id] = result[0]
             return bug
 
+    def set_target_milestone(self, bug_id, target_milestone):
+        bz = self.get_bz_proxy()
+        updates = bz.build_update(target_milestone=target_milestone)
+        bz.update_bugs([bug_id], updates)
+
+    def is_acked_for_release(self, bug_id, release):
+        bug = self.get_bug(bug_id)
+        flag = self._get_release_flag(release)
+        return bug.get_flag_status(flag) == "+"
+
+    def ack_for_release(self, bug_id, release):
+        bz = self.get_bz_proxy()
+        flag = self._get_release_flag(release)
+        bz.update_flags([bug_id], [{"name": flag, "status": "+"}])
+
 # Simple module level API for the default Bugzilla URL
-_bz_info = BugzillaInfo()
-get_bugs = _bz_info.get_bugs
-get_bug = _bz_info.get_bug
+bz_info = BugzillaInfo()
+get_bugs = bz_info.get_bugs
+get_bug = bz_info.get_bug
 
 ################################################
 # Gerrit access
@@ -250,6 +268,9 @@ def main():
     parser.add_option('--syncjirainfo', action='store_true',
             help='Selectively adjust JIRA info based on BZ info '
                  '(implies --jira)')
+    parser.add_option('--syncbzinfo', action='store_true',
+            help='Selectively adjust Bugzilla info based on JIRA info '
+                 '(implies --jira)')
     parser.add_option('-i', '--include', metavar='STATE', action="append",
             help='Include bugs in the specified state '
                  '(may be given multiple times)')
@@ -260,7 +281,7 @@ def main():
     options.sprint = None
     if not (options.milestone or options.release or options.sprint):
         parser.error('Specify a milestone, release or sprint')
-    if options.syncjirainfo:
+    if options.syncbzinfo or options.syncjirainfo:
         options.jira = True
     if options.verbose:
         print "Building git revision list for HEAD"
@@ -298,7 +319,8 @@ def main():
             # Check internal consistency of BZ references
             bz_summary_ref = issue.bz_summary_ref
             bz_link_ref = issue.bz_link_ref
-            sync_info = options.syncjirainfo
+            update_jira = options.syncjirainfo
+            update_bz = options.syncbzinfo
             if bz_summary_ref is None:
                 problem('Issue %s summary is missing reference to BZ#%d' %
                                 (issue.id, bz_link_ref))
@@ -307,7 +329,7 @@ def main():
                 problem('Issue %s is missing link to BZ#%d' %
                                 (issue.id, bz_summary_ref))
             elif bz_summary_ref != bz_link_ref:
-                sync_info = False
+                update_jira = update_bz = False
                 problem('Issue %s references BZ#%d in summary, '
                         'but links to BZ#%d' %
                         (issue.id, bz_summary_ref, bz_link_ref))
@@ -325,20 +347,19 @@ def main():
             elif bz_status in in_work_states:
                 if issue.status != "In Progress":
                     problem(state_err)
+                # TODO: Check of verify subtasks for ON_QA bugs
             elif bz_status in done_states:
                 if issue.status != "Done":
                     problem(state_err)
             else:
-                problem('Issue %s references BZ#%s in unknown state %s' %
+                problem('Issue %s tracks BZ#%s in unknown state %s' %
                              (issue.id, bz_link_ref, bz_status))
-                if sync_info:
-                    print("  Status syncing is not currently supported")
             # Check description starts with an appropriate link
             if bug.weburl not in issue.description:
                 problem('Issue %s tracks BZ#%d but description does not '
                         'contain the corresponding link' %
                         (issue.id, bz_link_ref))
-                if sync_info:
+                if update_jira:
                     prompt = "  Insert link into %r" % issue.description
                     if confirm(prompt):
                         neat_link = "[BZ#%s|%s] " % (bz_link_ref, bug.weburl)
@@ -351,10 +372,20 @@ def main():
                 problem('Issue %s story points not set for '
                         'BZ#%d with estimated hours to first patch (%s) ' %
                         (issue.id, bz_link_ref, hours))
-                if sync_info:
+                if update_jira:
                     prompt = "  Set story points to %s" % hours
                     if confirm(prompt):
                         jira.update_story_points(issue, hours)
+            # Check 1.0 release flag is set appropriately
+            if (not options.release and
+                    not bz_info.is_acked_for_release(bz_link_ref, "1.0")):
+                problem('Issue %s tracks BZ#%d but Beaker 1.0 release flag '
+                        'is not set' %
+                        (issue.id, bz_link_ref))
+                if update_bz:
+                    prompt = "  Set Beaker 1.0 release flag?"
+                    if confirm(prompt):
+                        bz_info.ack_for_release(bz_link_ref, "1.0")
             # Check target milestone matches fix version
             version = issue.target_version
             milestone = bug.target_milestone
@@ -363,10 +394,14 @@ def main():
                 problem('Issue %s target version (%s) does not match '
                         'BZ#%d target milestone (%s) ' %
                         (issue.id, version, bz_link_ref, milestone))
-                if sync_info and milestone != "---":
+                if update_jira and milestone != "---":
                     prompt = "  Set target version to %s" % bz_version
                     if confirm(prompt):
                         jira.update_target_version(issue, bz_version)
+                if update_bz:
+                    prompt = "  Set target milestone to %s?" % version
+                    if confirm(prompt):
+                        bz_info.set_target_milestone(bz_link_ref, version)
 
 
     # Consistency check on all bugs in the specified sprint, release or

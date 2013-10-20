@@ -64,7 +64,7 @@ class TestSystem(unittest.TestCase):
         session.begin()
 
     def tearDown(self):
-        session.commit()
+        session.rollback()
         session.close()
 
     def test_create_system_params(self):
@@ -124,13 +124,33 @@ class TestSystem(unittest.TestCase):
         self.assertEqual(system_activity.old_value, u'Automated')
         self.assertEqual(system_activity.new_value, u'Broken')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1020153
+    def test_markdown_rendering_errors_ignored(self):
+        # Set up system and expected note output
+        system = data_setup.create_system()
+        note_text = "<this will break python-markdown in RHEL 6.4>"
+        system.add_note(note_text, system.owner)
+        # Ensure the markdown call fails
+        def bad_markdown(data, *args, **kwds):
+            self.assertEqual(data, note_text)
+            raise Exception("HTML converter should have stopped this...")
+        orig_markdown = model.markdown
+        model.markdown = bad_markdown
+        try:
+            actual = system.notes[0].html
+        finally:
+            model.markdown = orig_markdown
+        self.assertEqual(actual, note_text)
+
+
 class TestSystemKeyValue(unittest.TestCase):
 
     def setUp(self):
         session.begin()
 
     def tearDown(self):
-        session.commit()
+        session.rollback()
+        session.close()
 
     def test_removing_key_type_cascades_to_key_value(self):
         # https://bugzilla.redhat.com/show_bug.cgi?id=647566

@@ -2,6 +2,8 @@
 @import "bootstrap/less/responsive.less";
 @import "font-awesome/less/font-awesome.less";
 @import "typeahead.js-bootstrap.less";
+@import "job-matrix.less";
+@import "datatables-bootstrap.less";
 
 // overrides for Bootstrap variables
 @sansFontFamily:  "Liberation Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -79,6 +81,17 @@ td form, td input, td select {
         font-style: italic;
     }
 }
+
+@resultPassColor: @green;
+@resultFailColor: @red;
+@resultWarnColor: @orange;
+@resultNewColor: @blue;
+@resultPanicColor: @black;
+
+// XXX The above colours are used in the job matrix and are carried over
+// from our pre Bootstrap styling.
+// We  should probably resolve the above colours with the below at some
+// point.
 
 // colour-coded status and result in jobs/recipes grid
 .statusCompleted, .resultPass { color: @green; }

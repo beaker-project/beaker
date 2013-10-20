@@ -47,7 +47,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'matrix')
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % whiteboard).click()
-        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         self.failUnless(is_text_present(b, "Your whiteboard contains %d jobs, only %s will be used" % (c, Job.max_by_whiteboard)))
 
     def test_whiteboard_filtering(self):
@@ -105,7 +105,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         login(b, user=owner.user_name, password='password')
         b.get(get_server_base() + 'matrix')
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
-        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
         self.assert_('Pass: 1' in report_text)
 
@@ -116,7 +116,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         # Assert it is no longer there
         b.get(get_server_base() + 'matrix')
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
-        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
         self.assert_('Pass: 1' not in report_text)
 
@@ -135,7 +135,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.get(get_server_base() + 'matrix')
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
         b.find_element_by_xpath("//input[@name='toggle_nacks_on']").click()
-        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
         self.assert_('Pass: 1' in report_text)
 
@@ -148,7 +148,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.get(get_server_base() + 'matrix')
         b.find_element_by_xpath("//select[@name='whiteboard']/option[@value='%s']" % self.job_whiteboard).click()
         b.find_element_by_xpath("//input[@name='toggle_nacks_on']").click()
-        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         report_text = b.find_element_by_xpath("//div[@id='matrix-report']").text
         self.assert_('Pass: 1' not in report_text)
 
@@ -174,7 +174,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         # No need to filter the whiteboard, we just created the jobs so they 
         # will be at the top of the list of whiteboards.
         b.find_element_by_xpath("//select/option[@value='%s']" % unique_whiteboard).click()
-        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         b.find_element_by_link_text('Pass: 1').click()
         task_id = b.find_element_by_xpath('//table/tbody/tr[1]/td').text
         self.assertEqual(task_id,
@@ -190,7 +190,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'matrix')
         b.find_element_by_id('remote_form_job_ids').send_keys(str(single_job_2.id))
-        b.find_element_by_xpath('//input[@value="Generate"]').click()
+        b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         b.find_element_by_link_text('Pass: 1').click()
 
         # This tests that we are indeed only looking at one recipe task.
@@ -237,7 +237,7 @@ class TestJobMatrix(SeleniumTestCase):
         sel.select('whiteboard', self.job_whiteboard)
         sel.click('//select[@name="whiteboard"]//option[@value="%s"]'
                 % self.job_whiteboard)
-        sel.click('//input[@value="Generate"]')
+        sel.click('//button[@type="submit" and text()="Generate"]')
         sel.wait_for_page_to_load('30000')
         body = sel.get_text('//body')
         self.assert_('Pass: 1' in body)
@@ -245,7 +245,7 @@ class TestJobMatrix(SeleniumTestCase):
             new_job = data_setup.create_completed_job(
                 whiteboard=self.job_whiteboard, result=TaskResult.pass_,
                 recipe_whiteboard=self.recipe_whiteboard)
-        sel.click('//input[@value="Generate"]')
+        sel.click('//button[@type="submit" and text()="Generate"]')
         sel.wait_for_page_to_load('30000')
         body_2 = sel.get_text('//body')
         self.assert_('Pass: 2' in body_2)
@@ -259,7 +259,7 @@ class TestJobMatrix(SeleniumTestCase):
         sel.wait_for_page_to_load('30000')
         sel.add_selection("whiteboard", "label=%s" % self.job_whiteboard)
         sel.add_selection("whiteboard", "label=%s" % self.job_whiteboard_2)
-        sel.click('//input[@value="Generate"]')
+        sel.click('//button[@type="submit" and text()="Generate"]')
         sel.wait_for_page_to_load('30000')
         body = sel.get_text('//body')
         self.assert_('Pass: 3' in body)
@@ -270,7 +270,7 @@ class TestJobMatrix(SeleniumTestCase):
         sel.click('link=Matrix')
         sel.wait_for_page_to_load('30000')
         sel.type('remote_form_whiteboard_filter', self.job_whiteboard)
-        sel.click('//input[@value="Generate"]')
+        sel.click('//button[@type="submit" and text()="Generate"]')
         sel.wait_for_page_to_load('30000')
         # why are both .select and .click necessary?? weird
         # Because there are two fields and we need to know from which we are
@@ -278,7 +278,7 @@ class TestJobMatrix(SeleniumTestCase):
         sel.select('whiteboard', 'label=%s' % self.job_whiteboard)
         sel.click('//select[@name="whiteboard"]//option[@value="%s"]'
                 % self.job_whiteboard)
-        sel.click('//input[@value="Generate"]')
+        sel.click('//button[@type="submit" and text()="Generate"]')
         sel.wait_for_page_to_load('30000')
 
         self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[1]/th[1]"), 'Task')
