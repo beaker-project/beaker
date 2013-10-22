@@ -13,7 +13,6 @@ from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         SystemPermission, SystemAccessPolicyRule
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
-from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.app import app
 from turbogears.database import session
 import cherrypy
@@ -41,7 +40,12 @@ class SystemsController(controllers.Controller):
         # The formal param 'loaned' is dictated to us by widgets.SystemForm...
         loaning_to = loaned
         system = System.by_fqdn(fqdn, identity.current.user)
-        system.change_loan(loaning_to, loan_comment)
+        try:
+            system.change_loan(loaning_to, loan_comment)
+        except ValueError as exc:
+            raise cherrypy.HTTPError(400, str(exc))
+        except InsufficientSystemPermissions as exc:
+            raise cherrypy.HTTPError(403, str(exc))
         return loaning_to if loaning_to else ''
 
     @expose()

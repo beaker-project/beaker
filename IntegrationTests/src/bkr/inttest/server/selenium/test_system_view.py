@@ -651,8 +651,8 @@ class SystemViewTest(SeleniumTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=664482
     def test_cannot_change_lab_controller_while_system_in_use(self):
         with session.begin():
-            self.system.reserve(service=u'testdata', reservation_type=u'manual',
-                    user=data_setup.create_user())
+            self.system.reserve_manually(service=u'testdata',
+                                         user=data_setup.create_user())
         self.login()
         sel = self.selenium
         self.go_to_system_edit()

@@ -120,6 +120,8 @@ class WebDriverTestCase(unittest.TestCase):
         p.native_events_enabled = False
         b = webdriver.Firefox(p)
         b.implicitly_wait(10) # XXX is this really what we want???
+        b.set_window_position(0, 0)
+        b.set_window_size(1920, 1200)
         return b
 
 class XmlRpcTestCase(unittest.TestCase):
@@ -150,7 +152,7 @@ def setup_package():
         os.mkdir('/tmp/selenium')
     processes.extend([
         Process('Xvfb', args=['Xvfb', ':4', '-extension', 'GLX',
-                '-screen', '0', '1024x768x24'], listen_port=6004),
+                '-screen', '0', '1920x1200x24'], listen_port=6004),
         Process('selenium-server', args=['java',
                 '-Djava.io.tmpdir=/tmp/selenium',
                 '-jar', '/usr/local/share/selenium/selenium-server-standalone-2.35.0.jar',

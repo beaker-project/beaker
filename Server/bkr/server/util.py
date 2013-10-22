@@ -22,6 +22,8 @@ import logging
 import socket
 import datetime
 import time
+import subprocess
+from collections import namedtuple
 from sqlalchemy import create_engine
 from sqlalchemy.orm import create_session
 import turbogears
@@ -187,3 +189,18 @@ def total_seconds(td):
     represented by the given timedelta.
     """
     return (float(td.microseconds) + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
+
+def run_createrepo(cwd=None):
+    createrepo_command = config.get('beaker.createrepo_command', 'createrepo')
+    p = subprocess.Popen([createrepo_command, '-q', '--no-database',
+        '--checksum', 'sha', '.'], cwd=cwd, stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    # Perhaps a bit fragile, but maybe better than checking version?
+    if p.returncode != 0 and 'no such option: --no-database' in err:
+        p = subprocess.Popen([createrepo_command, '-q', '--checksum',
+            'sha', '.'], cwd=cwd, stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE)
+        out, err = p.communicate()
+    RepoCreate = namedtuple("RepoCreate", "command returncode out err")
+    return RepoCreate(createrepo_command, p.returncode, out, err)

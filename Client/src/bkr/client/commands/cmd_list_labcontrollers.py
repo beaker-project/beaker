@@ -48,4 +48,5 @@ class List_LabControllers(BeakerCommand):
 
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
-        print self.hub.lab_controllers()
+        for lab_controller in self.hub.lab_controllers():
+            print lab_controller

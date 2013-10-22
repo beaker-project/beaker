@@ -20,11 +20,10 @@
  $(document).ready(function() {
     $('.ackpanel input').change(function () {
         var response_id = $(this).val()
-        changed_to_text = $(this).next().text().toLowerCase() 
-        if (changed_to_text != 'ack' || changed_to_text != 'nak') { //this is a bit hackey, but basically if we're deselecting "Needs Review" we want to delete it.
-            $(this).parents('ul:first').find('#unreal_response').parent().remove()
-            $(this).parents('ul:first').find("a[id ^='comment_response_box']").removeClass('hidden')
-        }
+        var widget = $(this).closest('.ackpanel');
+        //this is a bit hackey, but basically if we're deselecting "Needs Review" we want to delete it.
+        widget.find('#unreal_response').parent().remove();
+        widget.find("a[id ^='comment_response_box']").removeClass('hidden');
         var parent_span = $(this).parents('span:first')
         var span_id = parent_span.attr('id') 
         var rs_id = span_id.replace(/^response_(\d{1,})$/,"$1") 

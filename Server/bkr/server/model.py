@@ -1,5 +1,6 @@
 import sys
 import re
+from time import sleep
 from turbogears.database import metadata, session
 from turbogears.config import get
 from turbogears import url
@@ -17,7 +18,7 @@ from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.orm.util import has_identity
 from sqlalchemy.sql import exists, union, literal, Insert
-from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.exc import InvalidRequestError, OperationalError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.types import TypeDecorator, BINARY
 from bkr.server.installopts import InstallOptions, global_install_options
@@ -35,7 +36,7 @@ from bkr.server.bexceptions import BeakerException, BX, \
 from bkr.server.enum import DeclEnum
 from bkr.server.hybrid import hybrid_property, hybrid_method
 from bkr.server.helpers import make_link, make_fake_link
-from bkr.server.util import unicode_truncate, absolute_url
+from bkr.server.util import unicode_truncate, absolute_url, run_createrepo
 from bkr.server import mail, metrics, identity
 import os
 import shutil
@@ -1484,9 +1485,26 @@ class MappedObject(object):
             unique_params[table.c[k]] = v
         for k, v in _extra_attrs.iteritems():
             extra_params[table.c[k]] = v
-
-        session.connection(cls).execute(ConditionalInsert(table,
-                unique_params, extra_params))
+        succeeded = False
+        for attempt in range(1, 7):
+            if attempt > 1:
+                delay = random.uniform(0.001, 0.1)
+                log.debug('Backing off %0.3f seconds for insertion into table %s' % (delay, table))
+                sleep(delay)
+            try:
+                session.connection(cls).execute(ConditionalInsert(table,
+                    unique_params, extra_params))
+                succeeded = True
+                break
+            except OperationalError, e:
+                # This seems like a reasonable way to check the string.
+                # We could use a regex, but this is more straightforward.
+                # XXX MySQL-specific
+                if '(OperationalError) (1213' not in unicode(e):
+                    raise
+        if not succeeded:
+            log.debug('Exhausted maximum attempts of conditional insert')
+            raise e
 
         if extra_params:
             session.connection(cls).execute(table.update()
@@ -2149,7 +2167,7 @@ class System(SystemObject, ActivityMixin):
                       hostname    = 'fqdn',
                       system_type = 'type',
                      )
-                      
+
         host_requires = xmldoc.createElement('hostRequires')
         xmland = xmldoc.createElement('and')
         for key in fields.keys():
@@ -2304,6 +2322,12 @@ class System(SystemObject, ActivityMixin):
         else:
             return System.query.filter(System.arch.any(Arch.arch == arch))
 
+    def has_manual_reservation(self, user):
+        """Does the specified user currently have a manual reservation?"""
+        reservation = self.open_reservation
+        return (reservation and reservation.type == u'manual' and
+                user and self.user == user)
+
     def unreserve_manually_reserved(self, *args, **kw):
         open_reservation = self.open_reservation
         if not open_reservation:
@@ -2411,30 +2435,35 @@ class System(SystemObject, ActivityMixin):
             return True
         return False
 
-    def can_loan(self, user):
+    def can_lend(self, user):
         """
         Does the given user have permission to loan this system to another user?
         """
+        # System owner is always a loan admin
         if self.owner == user:
             return True
+        # Beaker instance admins are loan admins for every system
         if user.is_admin():
             return True
+        # Anyone else needs the "loan_any" permission
         if (self.custom_access_policy and
             self.custom_access_policy.grants(user, SystemPermission.loan_any)):
             return True
         return False
 
-    def can_loan_to_self(self, user):
+    def can_borrow(self, user):
         """
         Does the given user have permission to loan this system to themselves?
         """
-        if self.owner == user:
+        # Loan admins can always loan to themselves
+        if self.can_lend(user):
             return True
-        if user.is_admin():
-            return True
-        if (self.custom_access_policy and
-            self.custom_access_policy.grants(user, SystemPermission.loan_any) or
-            self.custom_access_policy.grants(user, SystemPermission.loan_self)):
+        # "loan_self" only lets you take an unloaned system and update the
+        # details on a loan already granted to you
+        if ((not self.loaned or self.loaned == user) and
+                self.custom_access_policy and
+                self.custom_access_policy.grants(user,
+                                                 SystemPermission.loan_self)):
             return True
         return False
 
@@ -2443,25 +2472,43 @@ class System(SystemObject, ActivityMixin):
         Does the given user have permission to cancel the current loan for this 
         system?
         """
-        if self.loaned == user:
+        # Users can always return their own loans
+        if self.loaned and self.loaned == user:
             return True
-        if self.owner == user:
-            return True
-        if user.is_admin():
-            return True
-        return False
+        # Loan admins can return anyone's loan
+        return self.can_lend(user)
 
     def can_reserve(self, user):
         """
         Does the given user have permission to reserve this system?
+
+        Note that if is_free() returns False, the user may still not be able
+        to reserve it *right now*.
         """
+        # System owner can always reserve the system
         if self.owner == user:
             return True
-        if self.loaned == user:
+        # Loans grant the ability to reserve the system
+        if self.loaned and self.loaned == user:
             return True
+        # Anyone else needs the "reserve" permission
         if (self.custom_access_policy and
             self.custom_access_policy.grants(user, SystemPermission.reserve)):
             return True
+        # Beaker admins can effectively reserve any system, but need to
+        # grant themselves the appropriate permissions first (or loan the
+        # system to themselves)
+        return False
+
+    def can_reserve_manually(self, user):
+        """
+        Does the given user have permission to manually reserve this system?
+        """
+        # Manual reservations are permitted only for systems that are
+        # either not automated or are currently loaned to this user
+        if (self.status != SystemStatus.automated or
+              (self.loaned and self.loaned == user)):
+            return self.can_reserve(user)
         return False
 
     def can_unreserve(self, user):
@@ -2469,25 +2516,27 @@ class System(SystemObject, ActivityMixin):
         Does the given user have permission to return the current reservation 
         on this system?
         """
+        # Users can always return their own reservations
         if self.user and self.user == user:
             return True
-        if self.owner == user:
-            return True
-        if user.is_admin():
-            return True
-        return False
+        # Loan admins can return anyone's reservation
+        return self.can_lend(user)
 
     def can_power(self, user):
         """
         Does the given user have permission to run power/netboot commands on 
         this system?
         """
+        # Current user can always control the system
         if self.user and self.user == user:
             return True
+        # System owner can always control the system
         if self.owner == user:
             return True
+        # Beaker admins can control any system
         if user.is_admin():
             return True
+        # Anyone else needs the "control_system" permission
         if (self.custom_access_policy and
             self.custom_access_policy.grants(user, SystemPermission.control_system)):
             return True
@@ -2504,7 +2553,8 @@ class System(SystemObject, ActivityMixin):
         It checks all permissions that are needed and
         updates SystemActivity.
 
-        Returns the user holding the loan.
+        Returns the name of the user now holding the loan (if any), otherwise
+        returns the empty string.
         """
         loaning_to = user_name
         if loaning_to:
@@ -2513,20 +2563,25 @@ class System(SystemObject, ActivityMixin):
                 # This is an error condition
                 raise ValueError('user name %s is invalid' % loaning_to)
             if user == identity.current.user:
-                if not self.can_loan_to_self(identity.current.user):
-                    raise BX(_("Insufficient permissions to create loan"))
+                if not self.can_borrow(identity.current.user):
+                    msg = '%s cannot borrow this system' % user
+                    raise InsufficientSystemPermissions(msg)
             else:
-                if not self.can_loan(identity.current.user):
-                    raise BX(_("Insufficient permissions to create loan"))
+                if not self.can_lend(identity.current.user):
+                    msg = ('%s cannot lend this system to %s' %
+                                           (identity.current.user, user))
+                    raise InsufficientSystemPermissions(msg)
         else:
             if not self.can_return_loan(identity.current.user):
-                raise BX(_("Insufficient permissions to return loan"))
+                msg = '%s cannot return system loan' % identity.current.user
+                raise InsufficientSystemPermissions(msg)
             user = None
             comment = None
 
         if user != self.loaned:
             activity = SystemActivity(identity.current.user, service,
-                u'Changed', u'Loaned To', u'%s' % self.loaned if self.loaned else '' ,
+                u'Changed', u'Loaned To',
+                u'%s' % self.loaned if self.loaned else '',
                 u'%s' % user if user else '')
             self.loaned = user
             self.activity.append(activity)
@@ -2964,15 +3019,22 @@ class System(SystemObject, ActivityMixin):
             self.mark_broken(reason=reason)
 
     def reserve_manually(self, service, user=None):
-        if self.status == SystemStatus.automated:
-            raise BX(_(u'Cannot manually reserve automated system, '
-                    'schedule a job instead'))
-        return self.reserve(service, user=user, reservation_type=u'manual')
-
-    def reserve(self, service, user=None, reservation_type=u'manual'):
         if user is None:
             user = identity.current.user
+        self._check_can_reserve(user)
+        if not self.can_reserve_manually(user):
+            raise BX(_(u'Cannot manually reserve automated system, '
+                    'without borrowing it first. Schedule a job instead'))
+        return self._reserve(service, user, u'manual')
 
+    def reserve_for_recipe(self, service, user=None):
+        if user is None:
+            user = identity.current.user
+        self._check_can_reserve(user)
+        return self._reserve(service, user, u'recipe')
+
+    def _check_can_reserve(self, user):
+        # Throw an exception if the given user can't reserve the system.
         if self.user is not None and self.user == user:
             raise StaleSystemUserException(_(u'User %s has already reserved '
                 'system %s') % (user, self))
@@ -2986,6 +3048,7 @@ class System(SystemObject, ActivityMixin):
                         'system %s while it is loaned to user %s')
                         % (user, self, self.loaned))
 
+    def _reserve(self, service, user, reservation_type):
         # Atomic operation to reserve the system
         session.flush()
         if session.connection(System).execute(system_table.update(
@@ -3031,6 +3094,14 @@ class System(SystemObject, ActivityMixin):
                 service=service, action=u'Returned', field_name=u'User',
                 old_value=old_user.user_name, new_value=u'')
         self.activity.append(activity)
+
+    def add_note(self, text, user, service=u'WEBUI'):
+        note = Note(user=user, text=text)
+        self.notes.append(note)
+        self.record_activity(user=user, service=service,
+                             action='Added', field='Note',
+                             old='', new=text)
+        self.date_modified = datetime.utcnow()
 
     cc = association_proxy('_system_ccs', 'email_address')
 
@@ -4032,7 +4103,14 @@ class Note(MappedObject):
         """
         The note's text rendered to HTML using Markdown.
         """
-        return XML(markdown(self.text))
+        # Try rendering as markdown, if that fails for any reason, just
+        # return the raw text string. The template will take care of the
+        # difference (this really doesn't belong in the model, though...)
+        try:
+            rendered = markdown(self.text, safe_mode='escape')
+        except Exception:
+            return self.text
+        return XML(rendered)
 
 
 class Key(SystemObject):
@@ -4191,14 +4269,11 @@ class Log(MappedObject):
         else:
             return os.path.join('/logs', self.parent.filepath, self._combined_path())
 
+    @property
     def link(self):
         """ Return a link to this Log
         """
-        text = '/%s' % self._combined_path()
-        text = text[-50:]
-        return make_link(url = self.href,
-                         text = text)
-    link = property(link)
+        return make_link(url=self.href, text=self._combined_path())
 
     @property
     def dict(self):
@@ -4311,48 +4386,66 @@ class TaskBase(MappedObject):
         """ 
         return self.status.queued
 
+    @hybrid_method
     def is_failed(self):
         """ 
         Return True if the task has failed
         """
-        if self.result in [TaskResult.warn,
-                           TaskResult.fail,
-                           TaskResult.panic]:
-            return True
-        else:
-            return False
+        return (self.result in [TaskResult.warn,
+                                TaskResult.fail,
+                                TaskResult.panic])
+    @is_failed.expression
+    def is_failed(cls):
+        """
+        Return SQL expression that is true if the task has failed
+        """
+        return cls.result.in_([TaskResult.warn,
+                               TaskResult.fail,
+                               TaskResult.panic])
 
+    # TODO: it would be good to split the bar definition out to a utility
+    # module accepting a mapping of div classes to percentages and then
+    # unit test it without needing to create dummy recipes
+    @property
     def progress_bar(self):
-        pwidth=0
-        wwidth=0
-        fwidth=0
-        kwidth=0
-        completed=0
+        """Return proportional progress bar as a HTML div
+
+        Returns None if there are no tasks at all
+        """
         if not getattr(self, 'ttasks', None):
             return None
+        # Get the width for individual items, using 3 decimal places
+        # Even on large screens, this should be a fine enough resolution
+        # to fill the bar reliably when all tasks are complete without needing
+        # to fiddle directly with the width of any of the subelements
+        fmt_style = 'width:%.3f%%'
+        pstyle = wstyle = fstyle = kstyle = fmt_style % 0
+        completed = 0
         if getattr(self, 'ptasks', None):
             completed += self.ptasks
-            pwidth = int(round(float(self.ptasks)/float(self.ttasks)*100))
+            pstyle = fmt_style % (100.0 * self.ptasks / self.ttasks)
         if getattr(self, 'wtasks', None):
             completed += self.wtasks
-            wwidth = int(round(float(self.wtasks)/float(self.ttasks)*100))
+            wstyle = fmt_style % (100.0 * self.wtasks / self.ttasks)
         if getattr(self, 'ftasks', None):
             completed += self.ftasks
-            fwidth = int(round(float(self.ftasks)/float(self.ttasks)*100))
+            fstyle = fmt_style % (100.0 * self.ftasks / self.ttasks)
         if getattr(self, 'ktasks', None):
             completed += self.ktasks
-            kwidth = int(round(float(self.ktasks)/float(self.ttasks)*100))
-        percentCompleted = int(round(float(completed)/float(self.ttasks)*100))
+            kstyle = fmt_style % (100.0 * self.ktasks / self.ttasks)
+        # Truncate the overall percentage to ensure it nevers hits 100%
+        # before we finish (even if only one task remains in a large recipe)
+        percentCompleted = "%d%%" % int(100.0 * completed / self.ttasks)
+        # Build the HTML
         div = Element('div', {'class': 'progress'})
-        div.append(Element('div', {'class': 'bar bar-success', 'style': 'width:%s%%' % pwidth}))
-        div.append(Element('div', {'class': 'bar bar-warning', 'style': 'width:%s%%' % wwidth}))
-        div.append(Element('div', {'class': 'bar bar-danger', 'style': 'width:%s%%' % fwidth}))
-        div.append(Element('div', {'class': 'bar bar-info', 'style': 'width:%s%%' % kwidth}))
+        div.append(Element('div', {'class': 'bar bar-success', 'style': pstyle}))
+        div.append(Element('div', {'class': 'bar bar-warning', 'style': wstyle}))
+        div.append(Element('div', {'class': 'bar bar-danger', 'style': fstyle}))
+        div.append(Element('div', {'class': 'bar bar-info', 'style': kstyle}))
         container = Element('div')
-        container.text = "%s%%" % percentCompleted
+        container.text = percentCompleted
         container.append(div)
         return container
-    progress_bar = property(progress_bar)
 
 
     def t_id(self):
@@ -6641,25 +6734,20 @@ class RecipeTaskResult(TaskBase):
         return "TR:%s" % self.id
     t_id = property(t_id)
 
+    @property
     def short_path(self):
         """
         Remove the parent from the begining of the path if present
-        Try really hard to start path with ./
         """
-        short_path = self.path
-        if self.path and self.path.startswith(self.recipetask.task.name):
-            short_path = self.path.replace(self.recipetask.task.name,'')
-        if not short_path:
+        if not self.path or self.path == '/':
+            short_path = self.log or './'
+        elif self.path.rstrip('/') == self.recipetask.task.name:
             short_path = './'
-        if short_path.startswith('/'):
-            short_path = '.%s' % short_path
-        elif not short_path.startswith('.'):
-            short_path = './%s' % short_path
-        if self.path == '/' and self.log:
-            short_path = self.log
+        elif self.path.startswith(self.recipetask.task.name + '/'):
+            short_path = self.path.replace(self.recipetask.task.name + '/', '', 1)
+        else:
+            short_path = self.path
         return short_path
-
-    short_path = property(short_path)
 
 class RecipeResource(MappedObject):
     """
@@ -6734,9 +6822,9 @@ class SystemResource(RecipeResource):
 
     def allocate(self):
         log.debug('Reserving system %s for recipe %s', self.system, self.recipe.id)
-        self.reservation = self.system.reserve(service=u'Scheduler',
-                user=self.recipe.recipeset.job.owner,
-                reservation_type=u'recipe')
+        self.reservation = self.system.reserve_for_recipe(
+                                         service=u'Scheduler',
+                                         user=self.recipe.recipeset.job.owner)
 
     def release(self):
         # system_resource rows for very old recipes may have no reservation
@@ -6862,19 +6950,14 @@ class TaskLibrary(object):
         # Internal call that assumes the flock is already held
         # Removed --baseurl, if upgrading you will need to manually
         # delete repodata directory before this will work correctly.
-        createrepo_command = get('beaker.createrepo_command', 'createrepo')
-        p = subprocess.Popen([createrepo_command, '-q', '--update',
-                '--checksum', 'sha', '.'], cwd=self.rpmspath,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, err = p.communicate()
-        if output:
-            log.debug("stdout from %s: %s", createrepo_command, output)
+        command, returncode, out, err = run_createrepo(cwd=self.rpmspath)
+        if out:
+            log.debug("stdout from %s: %s", command, out)
         if err:
-            log.warn("stderr from %s: %s", createrepo_command, err)
-        retcode = p.poll()
-        if retcode:
-            raise ValueError('%s failed with exit status %d:\n%s'
-                    % (createrepo_command, retcode, err))
+            log.warn("stderr from %s: %s", command, err)
+        if returncode != 0:
+            raise RuntimeError('Createrepo failed.\nreturncode:%s cmd:%s err:%s'
+                % (returncode, command, err))
 
     def update_repo(self):
         """Update the task library yum repo metadata"""

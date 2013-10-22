@@ -2,6 +2,8 @@
 @import "bootstrap/less/responsive.less";
 @import "font-awesome/less/font-awesome.less";
 @import "typeahead.js-bootstrap.less";
+@import "job-matrix.less";
+@import "datatables-bootstrap.less";
 
 // overrides for Bootstrap variables
 @sansFontFamily:  "Liberation Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -80,6 +82,17 @@ td form, td input, td select {
     }
 }
 
+@resultPassColor: @green;
+@resultFailColor: @red;
+@resultWarnColor: @orange;
+@resultNewColor: @blue;
+@resultPanicColor: @black;
+
+// XXX The above colours are used in the job matrix and are carried over
+// from our pre Bootstrap styling.
+// We  should probably resolve the above colours with the below at some
+// point.
+
 // colour-coded status and result in jobs/recipes grid
 .statusCompleted, .resultPass { color: @green; }
 .statusAborted, .resultFail { color: @red; }
@@ -108,6 +121,11 @@ div.recipe {
     border-top: 2px solid @tableBorder;
     padding-top: 1em;
 }
+div.recipe .tab-content {
+    // if the results table overflows we want the viewport to scroll, not the tab pane
+    // https://bugzilla.redhat.com/show_bug.cgi?id=1014962
+    overflow: visible !important;
+}
 table.recipe {
     margin-bottom: 0;
 }
@@ -122,21 +140,49 @@ table.tasks {
             background-color: @tableBackgroundAccent;
         }
     }
+    // need to set even tbodies to white instead of leaving them transparent so
+    // that they occlude the recipe set border underneath them, in case the
+    // results table overflows
+    // https://bugzilla.redhat.com/show_bug.cgi?id=1014962
+    & > tbody:nth-child(even) > tr {
+        & > td, & > th {
+            background-color: #ffffff;
+        }
+    }
     // need to repeat hover style here to override the striping
     & > tbody > tr:hover {
         & > td, & > th {
             background-color: @tableBackgroundHover;
         }
     }
+    td.logs ul {
+        margin: 0;
+    }
+    td.logs li {
+        max-width: 18em;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
 }
 
 // elements from master.kid
-.container {
-    padding-top: 20px;
+.motd, .flash {
+    margin-top: 20px;
 }
 footer {
     .muted;
     text-align: right;
+}
+@media (max-width: 1200px) {
+    .navbar .navbar-wide-viewport-only {
+        display: none;
+    }
+}
+@media (max-width: 1024px) {
+    .navbar .brand {
+        display: none;
+    }
 }
 
 // typeaheads

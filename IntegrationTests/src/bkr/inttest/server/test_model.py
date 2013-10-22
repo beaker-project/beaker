@@ -2,7 +2,7 @@ import sys
 import re
 import time
 import datetime
-import unittest
+import unittest2 as unittest
 import pkg_resources
 import lxml.etree
 import email
@@ -17,9 +17,11 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
-        Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission
+        Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
+        RecipeTask, RecipeTaskResult
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
+from sqlalchemy.exc import OperationalError
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
 from nose.plugins.skip import SkipTest
@@ -62,7 +64,7 @@ class TestSystem(unittest.TestCase):
         session.begin()
 
     def tearDown(self):
-        session.commit()
+        session.rollback()
         session.close()
 
     def test_create_system_params(self):
@@ -122,13 +124,33 @@ class TestSystem(unittest.TestCase):
         self.assertEqual(system_activity.old_value, u'Automated')
         self.assertEqual(system_activity.new_value, u'Broken')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1020153
+    def test_markdown_rendering_errors_ignored(self):
+        # Set up system and expected note output
+        system = data_setup.create_system()
+        note_text = "<this will break python-markdown in RHEL 6.4>"
+        system.add_note(note_text, system.owner)
+        # Ensure the markdown call fails
+        def bad_markdown(data, *args, **kwds):
+            self.assertEqual(data, note_text)
+            raise Exception("HTML converter should have stopped this...")
+        orig_markdown = model.markdown
+        model.markdown = bad_markdown
+        try:
+            actual = system.notes[0].html
+        finally:
+            model.markdown = orig_markdown
+        self.assertEqual(actual, note_text)
+
+
 class TestSystemKeyValue(unittest.TestCase):
 
     def setUp(self):
         session.begin()
 
     def tearDown(self):
-        session.commit()
+        session.rollback()
+        session.close()
 
     def test_removing_key_type_cascades_to_key_value(self):
         # https://bugzilla.redhat.com/show_bug.cgi?id=647566
@@ -154,6 +176,7 @@ class SystemPermissionsTest(unittest.TestCase):
     def setUp(self):
         session.begin()
         self.owner = data_setup.create_user()
+        self.admin = data_setup.create_admin()
         self.system = data_setup.create_system(owner=self.owner, shared=False)
         self.policy = self.system.custom_access_policy
         self.unprivileged = data_setup.create_user()
@@ -163,53 +186,193 @@ class SystemPermissionsTest(unittest.TestCase):
 
     def test_can_change_owner(self):
         self.assertTrue(self.system.can_change_owner(self.owner))
+        self.assertTrue(self.system.can_change_owner(self.admin))
         self.assertFalse(self.system.can_change_owner(self.unprivileged))
 
     def test_can_edit_policy(self):
+        # Default state
         self.assertTrue(self.system.can_edit_policy(self.owner))
+        self.assertTrue(self.system.can_edit_policy(self.admin))
         self.assertFalse(self.system.can_edit_policy(self.unprivileged))
-        self.policy.add_rule(SystemPermission.edit_policy, user=self.unprivileged)
-        self.assertTrue(self.system.can_edit_policy(self.unprivileged))
+        # Check policy editing permission
+        editor = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.edit_policy, user=editor)
+        self.assertTrue(self.system.can_edit_policy(editor))
+        # Check other users are unaffected
+        self.assertTrue(self.system.can_edit_policy(self.owner))
+        self.assertTrue(self.system.can_edit_policy(self.admin))
+        self.assertFalse(self.system.can_edit_policy(self.unprivileged))
 
     def test_can_edit(self):
+        # Default state
         self.assertTrue(self.system.can_edit(self.owner))
+        self.assertTrue(self.system.can_edit(self.admin))
         self.assertFalse(self.system.can_edit(self.unprivileged))
-        self.policy.add_rule(SystemPermission.edit_system, user=self.unprivileged)
-        self.assertTrue(self.system.can_edit(self.unprivileged))
+        # Check system editing permission
+        editor = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.edit_system, user=editor)
+        self.assertTrue(self.system.can_edit(editor))
+        # Check other users are unaffected
+        self.assertTrue(self.system.can_edit(self.owner))
+        self.assertTrue(self.system.can_edit(self.admin))
+        self.assertFalse(self.system.can_edit(self.unprivileged))
 
-    def test_can_loan(self):
-        self.assertTrue(self.system.can_loan(self.owner))
-        self.assertFalse(self.system.can_loan(self.unprivileged))
-        self.policy.add_rule(SystemPermission.loan_any, user=self.unprivileged)
-        self.assertTrue(self.system.can_loan(self.unprivileged))
+    def check_lending_permissions(self, allow=(), deny=()):
+        self.assertTrue(self.system.can_lend(self.owner))
+        self.assertTrue(self.system.can_lend(self.admin))
+        self.assertFalse(self.system.can_lend(self.unprivileged))
+        for user in allow:
+            msg = "%s cannot lend system"
+            self.assertTrue(self.system.can_lend(user), msg % user)
+        for user in deny:
+            msg = "%s can lend system"
+            self.assertFalse(self.system.can_lend(user), msg % user)
 
-    def test_can_loan_to_self(self):
-        self.assertTrue(self.system.can_loan_to_self(self.owner))
-        self.assertFalse(self.system.can_loan_to_self(self.unprivileged))
-        self.policy.add_rule(SystemPermission.loan_self, user=self.unprivileged)
-        self.assertTrue(self.system.can_loan_to_self(self.unprivileged))
+    def test_can_lend(self):
+        # Default state
+        self.check_lending_permissions()
+        # Check loan_any grants permission to lend
+        lender = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_any, user=lender)
+        self.check_lending_permissions(allow=[lender])
+        # Check loan_self *does not* grant permission to lend
+        borrower = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_self, user=borrower)
+        self.check_lending_permissions(allow=[lender], deny=[borrower])
+        # Check loaning the system doesn't grant permission to pass it on
+        self.system.loaned = borrower
+        self.check_lending_permissions(allow=[lender], deny=[borrower])
+
+    def check_borrowing_permissions(self, allow=(), deny=()):
+        self.assertTrue(self.system.can_borrow(self.owner))
+        self.assertTrue(self.system.can_borrow(self.admin))
+        self.assertFalse(self.system.can_borrow(self.unprivileged))
+        for user in allow:
+            msg = "%s cannot borrow system"
+            self.assertTrue(self.system.can_borrow(user), msg % user)
+        for user in deny:
+            msg = "%s can borrow system"
+            self.assertFalse(self.system.can_borrow(user), msg % user)
+
+    def test_can_borrow(self):
+        # Default state
+        self.check_borrowing_permissions()
+        # Check loan_any grants permission to borrow
+        lender = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_any, user=lender)
+        self.check_borrowing_permissions(allow=[lender])
+        # Check loan_self grants permission to borrow
+        borrower = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_self, user=borrower)
+        self.check_borrowing_permissions(allow=[lender, borrower])
+        # Check loan_self grants permission to update an existing loan
+        self.system.loaned = borrower
+        self.policy.add_rule(SystemPermission.loan_self, user=borrower)
+        self.check_borrowing_permissions(allow=[lender, borrower])
+        # Check ordinary users *cannot* update granted loans
+        self.system.loaned = self.unprivileged
+        self.check_borrowing_permissions(allow=[lender],
+                                         deny=[borrower])
+
+    def check_loan_return_permissions(self, allow=(), deny=()):
+        self.assertTrue(self.system.can_return_loan(self.owner))
+        self.assertTrue(self.system.can_return_loan(self.admin))
+        self.assertFalse(self.system.can_return_loan(self.unprivileged))
+        for user in allow:
+            msg = "%s cannot return loan"
+            self.assertTrue(self.system.can_return_loan(user), msg % user)
+        for user in deny:
+            msg = "%s can return loan"
+            self.assertFalse(self.system.can_return_loan(user), msg % user)
 
     def test_can_return_loan(self):
-        self.assertTrue(self.system.can_return_loan(self.owner))
-        self.assertFalse(self.system.can_return_loan(self.unprivileged))
-        self.system.loaned = self.unprivileged
-        self.assertTrue(self.system.can_return_loan(self.unprivileged))
+        # Default state
+        self.check_loan_return_permissions()
+        # Check loan_any grants permission to return loans
+        lender = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_any, user=lender)
+        self.check_loan_return_permissions(allow=[lender])
+        # Check loan_self *does not* grant permission to return loans
+        borrower = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_self, user=borrower)
+        self.check_loan_return_permissions(allow=[lender], deny=[borrower])
+        # Check loaning the system grants permission to return it
+        self.system.loaned = borrower
+        self.check_loan_return_permissions(allow=[lender, borrower])
+        # Check loaning it to someone else does not
+        self.system.loaned = lender
+        self.check_loan_return_permissions(allow=[lender], deny=[borrower])
+
+    def check_reserve_permissions(self, allow=(), deny=()):
+        # Unlike most permissions, Beaker admins can't reserve by default
+        # This ensures jobs they submit don't end up running on random systems
+        self.assertTrue(self.system.can_reserve(self.owner))
+        self.assertFalse(self.system.can_reserve(self.admin))
+        self.assertFalse(self.system.can_reserve(self.unprivileged))
+        for user in allow:
+            msg = "%s cannot reserve system"
+            self.assertTrue(self.system.can_reserve(user), msg % user)
+        for user in deny:
+            msg = "%s can reserve system"
+            self.assertFalse(self.system.can_reserve(user), msg % user)
 
     def test_can_reserve(self):
-        self.assertTrue(self.system.can_reserve(self.owner))
-        self.assertFalse(self.system.can_reserve(self.unprivileged))
-        self.policy.add_rule(SystemPermission.reserve, user=self.unprivileged)
-        self.assertTrue(self.system.can_reserve(self.unprivileged))
+        # Default state
+        self.check_reserve_permissions()
+        # Check "reserve" grants permission to reserve system
+        user = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.reserve, user=user)
+        self.check_reserve_permissions(allow=[user])
+        # Check "loan_any" *does not* grant permission to reserve system
+        lender = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_any, user=lender)
+        self.check_reserve_permissions(allow=[user], deny=[lender])
+        # Check "loan_self" *does not* grant permission to reserve system
+        borrower = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_self, user=borrower)
+        self.check_reserve_permissions(allow=[user], deny=[lender, borrower])
+        # Check loans grant the ability to reserve the system and that
+        # "can_reserve" *doesn't* enforce loan exclusivity (that's handled
+        # where appropriate by a separate call to is_free())
+        self.system.loaned = borrower
+        self.check_reserve_permissions(allow=[user, borrower], deny=[lender])
+        # Check current reservations are also ignored
+        self.system.user = self.unprivileged
+        self.check_reserve_permissions(allow=[user, borrower], deny=[lender])
+
+    def check_unreserve_permissions(self, allow=(), deny=()):
+        self.assertTrue(self.system.can_unreserve(self.owner))
+        self.assertTrue(self.system.can_unreserve(self.admin))
+        self.assertFalse(self.system.can_unreserve(self.unprivileged))
+        for user in allow:
+            msg = "%s cannot unreserve system"
+            self.assertTrue(self.system.can_unreserve(user), msg % user)
+        for user in deny:
+            msg = "%s can unreserve system"
+            self.assertFalse(self.system.can_unreserve(user), msg % user)
 
     def test_can_unreserve(self):
-        self.assertTrue(self.system.can_unreserve(self.owner))
-        self.assertFalse(self.system.can_unreserve(self.unprivileged))
-        self.system.user = self.unprivileged
-        self.assertTrue(self.system.can_unreserve(self.unprivileged))
+        # Default state
+        self.check_unreserve_permissions()
+        # Check "loan_any" grants permission to unreserve system
+        lender = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.loan_any, user=lender)
+        self.check_unreserve_permissions(allow=[lender])
+        # Check "reserve" *does not* grant permission to unreserve system
+        user = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.reserve, user=user)
+        self.check_unreserve_permissions(allow=[lender], deny=[user])
+        self.system.user = lender
+        self.check_unreserve_permissions(allow=[lender], deny=[user])
+        # Check current user can always unreserve system
+        self.system.user = user
+        self.check_unreserve_permissions(allow=[lender, user])
 
     def test_can_power(self):
         # owner
         self.assertTrue(self.system.can_power(self.owner))
+        # admin
+        self.assertTrue(self.system.can_power(self.admin))
         # system's current user
         user = data_setup.create_user()
         self.assertFalse(self.system.can_power(user))
@@ -414,8 +577,29 @@ class TestJob(unittest.TestCase):
         self.assertEquals(job.status, TaskStatus.cancelled)
         self.assertEquals(job.result, TaskResult.warn)
 
+    # Check progress bar proportions are reasonable
     # https://bugzilla.redhat.com/show_bug.cgi?id=660633
-    def test_progress_bar_sums_to_100(self):
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1014938
+
+    # TODO: these integration tests just cover a couple of known bad cases
+    # that previously rendered as 99% or 101% width. More systematic unit
+    # tests would be desirable but require refactoring the progress bar
+    # generation out to a data model independent helper function
+    def check_progress_bar(self, bar, *expected_widths):
+        # Check bar text reports 100% completion
+        self.assertEqual(bar.text, "100%")
+        # Check percentages are as expected
+        expected_styles = ['width:%.3f%%' % width
+                                 for width in expected_widths]
+        styles = [elem.get('style')
+                      for elem in bar.getchildren()[0].getchildren()]
+        self.assertEquals(styles, expected_styles)
+        widths = [float(re.match(r'width:(\d+\.\d{3})%', style).group(1))
+                        for style in styles]
+        # Check percentages add up to almost exactly 100%
+        self.assertAlmostEqual(sum(widths), 100, delta=0.01)
+
+    def test_progress_bar_sums_to_100_pass1_fail2(self):
         recipe = data_setup.create_recipe(
                 task_list=[Task.by_name(u'/distribution/reservesys')] * 3)
         job = data_setup.create_job_for_recipes([recipe])
@@ -424,11 +608,24 @@ class TestJob(unittest.TestCase):
         recipe.tasks[2].fail(u'/', 0, u'')
         data_setup.mark_job_complete(job)
         job.update_status()
-        progress_bar = job.progress_bar
-        widths = [int(re.match(r'width:(\d+)%', elem.get('style')).group(1))
-                for elem in progress_bar.getchildren()[0].getchildren()]
-        self.assertEquals(widths, [33, 0, 67, 0])
-        self.assertEquals(sum(widths), 100)
+        self.check_progress_bar(job.progress_bar,
+                                33.333, 0, 66.667, 0)
+
+    def test_progress_bar_sums_to_100_pass4_warn1_fail1(self):
+        recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/reservesys')] * 6)
+        job = data_setup.create_job_for_recipes([recipe])
+        recipe.tasks[0].pass_(u'/', 0, u'')
+        recipe.tasks[1].pass_(u'/', 0, u'')
+        recipe.tasks[2].pass_(u'/', 0, u'')
+        recipe.tasks[3].pass_(u'/', 0, u'')
+        recipe.tasks[4].warn(u'/', 0, u'')
+        recipe.tasks[5].fail(u'/', 0, u'')
+        data_setup.mark_job_complete(job)
+        job.update_status()
+        self.check_progress_bar(job.progress_bar,
+                                66.667, 16.667, 16.667, 0)
+
 
 class DistroTreeByFilterTest(unittest.TestCase):
 
@@ -2307,6 +2504,55 @@ class LogRecipeTest(unittest.TestCase):
     def tearDown(self):
         session.rollback()
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1014875
+    def test_lazy_create_can_deal_with_deadlocks(self):
+        global _raise_counter
+        _max_valid_attempts = 6
+        orig_ConditionalInsert = model.ConditionalInsert
+        def _raise_deadlock_exception(raise_this_many=0):
+
+            global _raise_counter
+            _raise_counter = 0
+            def inner(*args, **kwargs):
+                global _raise_counter
+                if _raise_counter < raise_this_many:
+                    _raise_counter += 1
+                    raise OperationalError('statement', {}, '(OperationalError) (1213, blahlbha')
+                model.ConditionalInsert = orig_ConditionalInsert
+                return model.ConditionalInsert(*args, **kwargs)
+
+            return inner
+
+        try:
+            # This should raise 3 times and then just work
+            model.ConditionalInsert = _raise_deadlock_exception(3)
+            lr1 = LogRecipe.lazy_create(path=u'/', filename=u'dummy.log',
+                    recipe_id=self.recipe.id)
+            self.assertEquals(_raise_counter, 3)
+            self.assertTrue(lr1.id)
+
+            # We should have no deadlock exception now
+            _raise_counter = 0
+            model.ConditionalInsert = _raise_deadlock_exception(0)
+            lr2 = LogRecipe.lazy_create(path=u'/', filename=u'dummy2.log',
+                    recipe_id=self.recipe.id)
+            self.assertEquals(_raise_counter, 0)
+            self.assertTrue(lr2.id)
+
+            # We should exhaust our max number of attempts.
+            _raise_counter = 0
+            model.ConditionalInsert = _raise_deadlock_exception(_max_valid_attempts + 1)
+            try:
+                LogRecipe.lazy_create(path=u'/', filename=u'dummy3.log',
+                        recipe_id=self.recipe.id)
+                self.fail('We should only allow %s attempts' % _max_valid_attempts)
+            except OperationalError, e:
+                if '(OperationalError) (1213, blahlbha' not in unicode(e):
+                    raise
+            self.assertEquals(_raise_counter, _max_valid_attempts)
+        finally:
+            model.ConditionalInsert = orig_ConditionalInsert
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=865265
     def test_path_is_normalized(self):
         lr1 = LogRecipe.lazy_create(path=u'/', filename=u'dummy.log',
@@ -2399,6 +2645,32 @@ class TaskTest(unittest.TestCase):
 
         tasks = Task.query.filter(Task.name == 'Task1').all()
         self.assertEquals(len(tasks), 1)
+
+class RecipeTaskResultTest(unittest.TestCase):
+
+    def test_short_path(self):
+        task = data_setup.create_task(name=u'/distribution/install')
+        rt = RecipeTask(task=task)
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install/Sysinfo')
+        self.assertEquals(rtr.short_path, u'Sysinfo')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/start')
+        self.assertEquals(rtr.short_path, u'/start')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install')
+        self.assertEquals(rtr.short_path, u'./')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install/')
+        self.assertEquals(rtr.short_path, u'./')
+        rtr = RecipeTaskResult(recipetask=rt, path=None)
+        self.assertEquals(rtr.short_path, u'./')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'')
+        self.assertEquals(rtr.short_path, u'./')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/')
+        self.assertEquals(rtr.short_path, u'./')
+        rtr = RecipeTaskResult(recipetask=rt, path=None, log='Cancelled it')
+        self.assertEquals(rtr.short_path, u'Cancelled it')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'', log='Cancelled it')
+        self.assertEquals(rtr.short_path, u'Cancelled it')
+        rtr = RecipeTaskResult(recipetask=rt, path=u'/', log='Cancelled it')
+        self.assertEquals(rtr.short_path, u'Cancelled it')
 
 if __name__ == '__main__':
     unittest.main()

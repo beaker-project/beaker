@@ -679,11 +679,11 @@ class Root(RPCRoot):
         options['loan_widget'] = LoanWidget()
 
         if our_user:
-            if (system.open_reservation and system.open_reservation.type != 'recipe'
-                and system.can_unreserve(our_user)):
+            if (system.open_reservation and
+                  system.open_reservation.type != 'recipe' and
+                  system.can_unreserve(our_user)):
                 options['user_change_text'] = 'Return'
-            elif (system.status != SystemStatus.automated and
-                  system.is_free() and system.can_reserve(our_user)):
+            elif system.is_free() and system.can_reserve_manually(our_user):
                 options['user_change_text'] = 'Take'
 
         if system.open_reservation is not None and \
@@ -697,6 +697,88 @@ class Root(RPCRoot):
         options['report_problem'] = {'system' : system,
             'name' : 'report_problem', 'action' : '../system_action/report_system_problem'}
         return options
+
+    # Automated systems may still be provisioned directly if loaned to
+    # a user who then takes out a manual reservation
+    # See https://bugzilla.redhat.com/show_bug.cgi?id=1015131
+    def _get_provisioning_details(self, system, user):
+        # Automated provisioning may be direct or through the scheduler
+        # We avoid the word "immediate", as it is misleading when the system
+        # has no automatic power control configured (the netboot files are
+        # written immediately, but you have to reboot the system to trigger
+        # reprovisioning).
+        # We avoid "on next reboot", as it is misleading when automatic power
+        # control *is* configured (since Beaker will reboot the system
+        # automatically).
+        # We avoid the word "manually" as it suggests there may be more to do
+        # after clicking the "Provision" button (which is only the case if
+        # power control is not configured).
+        _scheduled_panel = "scheduled"
+        _direct_panel = "direct"
+        # Figure out exactly what the user is allowed to do
+        # This is annoyingly complicated, but hard to simplify at all without
+        # breaking existing use cases :P
+        automated = (system.status == SystemStatus.automated)
+        reserved = system.has_manual_reservation(user)
+        borrowed = (system.loaned == user)
+        can_reserve = system.can_reserve(user)
+        notes = []
+        show_panel = None
+        if reserved:
+            show_panel = _direct_panel
+            if automated and can_reserve:
+                # Automated mode, but currently have a manual reservation
+                notes.append(_("System will be provisioned directly. Return this system to use a scheduled job instead."))
+            else:
+                # Either in manual mode and currently have a manual reservation
+                # or else in automated mode and don't have access to reserve it again
+                notes.append(_("System will be provisioned directly."))
+            if not can_reserve:
+                # We don't have permission to reserve it again (e.g. loan returned, access policy changed)
+                notes.append(_("After returning this system, you will no longer be able to provision it."))
+        elif not can_reserve:
+            # No access at all, cannot provision
+            notes.append(_("You do not have access to provision this system."))
+        elif not automated:
+            # Manual mode, just need to reserve it first
+            notes.append(_("Reserve this system to provision it."))
+        else:
+            # Automated mode, can schedule a job, but also want to give
+            # instructions on how to manually provision it instead.
+            show_panel = _scheduled_panel
+            if not borrowed:
+                # Automated mode, need a loan *and* a reservation first
+                notes.append(_("Provisioning will use a scheduled job. Borrow and reserve this system to provision it directly instead."))
+            else:
+                # Automated mode, have a loan, just need to reserve it
+                notes.append(_("Provisioning will use a scheduled job. Reserve this system to provision it directly instead."))
+        # Determine provisioning panel details
+        if show_panel == _scheduled_panel:
+            panel_id = "scheduled-provisioning"
+            button_label = "Schedule provision"
+        elif show_panel == _direct_panel:
+            panel_id = "direct-provisioning"
+            button_label = "Provision"
+        else:
+            panel_id = button_label = None
+        # Provisioning command action
+        if reserved:
+            provision_action = '/action_provision'
+        else:
+            provision_action = '/schedule_provision'
+        # Additional provisioning details
+        distro_trees = [(dt.id, unicode(dt)) for dt in
+                          system.distro_trees().order_by(Distro.name,
+                                                         DistroTree.variant,
+                                                         DistroTree.arch_id)]
+        provision_options = dict(reserved = reserved,
+                                 lab_controller = system.lab_controller,
+                                 prov_install = distro_trees,
+                                 provisioning_notes = notes,
+                                 provisioning_panel_id = panel_id,
+                                 provisioning_button_label = button_label)
+        return provision_action, provision_options
+
 
     @expose(template="bkr.server.templates.system")
     @paginate('history_data',limit=30,default_order='-created')
@@ -728,20 +810,20 @@ class Root(RPCRoot):
         if our_user:
             readonly = not system.can_edit(our_user)
             is_user = (system.user == our_user)
+            has_loan = (system.loaned == our_user)
             can_reserve = system.can_reserve(our_user)
             can_power = system.can_power(our_user)
         else:
             readonly = True
             is_user = False
+            has_loan = False
             can_reserve = False
             can_power = False
         title = system.fqdn
         options = self._get_system_options(system)
         options['edit'] = False
-        if system.status == SystemStatus.automated:
-            provision_action = '/schedule_provision'
-        else:
-            provision_action = '/action_provision'
+        provision_action, provision_options = (
+            self._get_provisioning_details(system, our_user))
 
         if 'activities_found' in histories_return:
             historical_data = histories_return['activities_found']
@@ -820,11 +902,7 @@ class Root(RPCRoot):
                                    install   = dict(readonly = readonly,
                                                 provisions = system.provisions,
                                                 prov_arch = [(arch.id, arch.arch) for arch in system.arch]),
-                                   provision = dict(reserved=is_user,
-                                                    automated=system.status == SystemStatus.automated,
-                                                    can_reserve=can_reserve,
-                                                    lab_controller = system.lab_controller,
-                                                    prov_install = [(dt.id, unicode(dt)) for dt in system.distro_trees().order_by(Distro.name, DistroTree.variant, DistroTree.arch_id)]),
+                                   provision = provision_options,
                                    commands_form = dict(is_user=is_user,
                                                         can_power=can_power),
                                    arches    = dict(readonly = readonly,
@@ -945,22 +1023,23 @@ class Root(RPCRoot):
     @expose()
     @identity.require(identity.not_anonymous())
     def user_change(self, id):
-        current_identity = identity.current.user
         try:
-            system = System.by_id(id, current_identity)
+            system = System.by_id(id, identity.current.user)
         except InvalidRequestError:
             flash( _(u"Unable to find system with id of %s" % id) )
             redirect("/")
         if system.user:
             try:
-                system.unreserve_manually_reserved(service=u'WEBUI')
+                system.unreserve_manually_reserved(service=u'WEBUI',
+                                                   user=identity.current.user)
                 flash(_(u'Returned %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to return')
                 flash(_(u'Failed to return %s: %s') % (system.fqdn, e))
         else:
             try:
-                system.reserve_manually(service=u'WEBUI')
+                system.reserve_manually(service=u'WEBUI',
+                                        user=identity.current.user)
                 flash(_(u'Reserved %s') % system.fqdn)
             except BeakerException, e:
                 log.exception('Failed to reserve')
@@ -1479,11 +1558,9 @@ class Root(RPCRoot):
             redirect("/")
         # Add a Note
         if kw.get('note'):
-            note = Note(user=identity.current.user,text=kw['note'])
-            system.notes.append(note)
-            activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Note', "", kw['note'])
-            system.activity.append(activity)
-            system.date_modified = datetime.utcnow()
+            system.add_note(text=kw['note'],
+                            user=identity.current.user,
+                            service='WEBUI')
         redirect("/view/%s" % system.fqdn)
 
     @expose()

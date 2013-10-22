@@ -323,7 +323,7 @@ class JobMatrix:
         for result in model.TaskResult:
             how_many = getattr(query_obj, result.value, None)
             if how_many is not None and how_many > 0:            
-                sub_span = SubElement(elem,'span', {'class':'rounded-side-pad %s' % result.value.lower()})
+                sub_span = SubElement(elem,'span', {'class':'label label-result-%s' % result.value.lower()})
                 SubElement(elem,'br') 
                 task_list_params = self._create_task_list_params(query_obj, result.value)
                 sub_link = SubElement(sub_span,

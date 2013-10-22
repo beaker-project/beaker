@@ -11,18 +11,32 @@ of doing this, which are outlined below.
 Provision by system
 ~~~~~~~~~~~~~~~~~~~
 
-Go to the System details page (see Section 5.1.3, “System Details Tabs”)
-of a System that is free (see Section 5.1.1, “System Searching”) and
-click on Take in the Current User field. After successfully taking the
-System, click the Provision tab of the System details page to provision
-the System.
+Go to the System details page (see :ref:`system-details`)
+of a System that is free (see :ref:`system-searching`). For
+systems marked as Manual or Broken, click on Take in the Current User
+field. After successfully taking the System, click the Provision tab of
+the System details page to find the form that allows the System to be
+provisioned directly (without going through the job scheduler).
+
+For systems in Automated mode, additional options are available. By default,
+the Provision tab will support scheduling a job through the scheduler that
+just runs the standard :ref:`reservesys-task`. However, if the user has the
+system loaned directly to them, they may also take the system and provision
+it directly, as in the Manual and Broken case. This allows the system to be
+provisioned without a time limit, whereas provisioning by running a job is
+covered by the scheduler's watchdog timers and will return the system
+automatically when the duration expires.
+
+If the "Take" option does not appear, it usually means you do not currently
+have the relevant access to reserve the system. The Provision tab will
+contain an appropriate message when this is the case.
 
 .. admonition:: Returning a System
 
-   After provisioning a system, you can manually return it by going to the 
-   above mentioned system details page, clicking on the "Return" link in the 
-   "Current User" field. However this is only allowed if the system was 
-   provisioned manually (i.e not via a recipe)
+   After taking a system, you can return it by going to the above mentioned
+   system details page, clicking on the "Return" link in the "Current User"
+   field. However this is only allowed if the system was provisioned manually
+   (i.e not via a recipe)
 
 .. figure:: system_provision_by_system.png
    :width: 100%

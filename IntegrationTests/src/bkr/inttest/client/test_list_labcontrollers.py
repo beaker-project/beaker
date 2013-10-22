@@ -1,5 +1,5 @@
 
-import unittest
+import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client
@@ -12,4 +12,5 @@ class ListLabcontrollersTest(unittest.TestCase):
 
     def test_list_lab_controller(self):
         out = run_client(['bkr', 'list-labcontrollers'])
-        self.assert_(self.lc.fqdn in out, out)
+        fqdns = out.splitlines()
+        self.assertIn(self.lc.fqdn, fqdns)

@@ -31,7 +31,7 @@
    <th py:if="not hidden.has_key('distro_tree')">Distro Tree</th>
    <th py:if="not hidden.has_key('system')">System</th>
    <th py:if="not hidden.has_key('start')">StartTime<br/>[FinishTime]<br/>[Duration]</th>
-   <th py:if="not hidden.has_key('logs')">Logs</th>
+   <th py:if="not hidden.has_key('logs')" class="logs">Logs</th>
    <th py:if="not hidden.has_key('status')">Status</th>
    <th py:if="not hidden.has_key('result')">Result</th>
    <th py:if="not hidden.has_key('score')">Score</th>
@@ -60,8 +60,10 @@
       <span class="datetime">${task.finish_time}</span><br/>
       ${task.duration}
     </td>
-    <td class="task" py:if="not hidden.has_key('logs')">
-     <span py:for="log in task.logs">${log.link}<br/></span>
+    <td class="task logs" py:if="not hidden.has_key('logs')">
+      <ul class="unstyled">
+        <li py:for="log in task.logs">${log.link}</li>
+      </ul>
     </td>
     <td class="task status${task.status}" py:if="not hidden.has_key('status')">
      ${task.status}
@@ -82,7 +84,7 @@
      &nbsp;
     </td>
     <td class="result">
-     &nbsp;&nbsp;${task_result.short_path}
+     ${task_result.short_path}
     </td>
     <td class="result" py:if="not hidden.has_key('distro_tree')">
      &nbsp;
@@ -93,8 +95,10 @@
     <td class="result" style="white-space:nowrap;" py:if="not hidden.has_key('start')">
       <span class="datetime">${task_result.start_time}</span>
     </td>
-    <td class="result" py:if="not hidden.has_key('logs')">
-     <span py:for="log in task_result.logs">${log.link}<br/></span>
+    <td class="result logs" py:if="not hidden.has_key('logs')">
+      <ul class="unstyled">
+        <li py:for="log in task_result.logs">${log.link}</li>
+      </ul>
     </td>
     <td class="result" py:if="not hidden.has_key('status')">
      &nbsp;
