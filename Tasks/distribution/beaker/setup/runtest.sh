@@ -123,7 +123,7 @@ function Inventory()
     # Backup /etc/my.cnf and make INNODB the default engine.
     rlRun "cp /etc/my.cnf /etc/my.cnf-orig" 0
     cat /etc/my.cnf-orig | awk '
-        {print $1};
+        {print $0};
         /\[mysqld\]/ {
             print "default-storage-engine=INNODB";
             print "max_allowed_packet=50M";
