@@ -526,7 +526,6 @@ class TestGroupsWD(WebDriverTestCase):
             self.assertEquals(group.activity[-1].old_value, user1.user_name)
             self.assertEquals(group.activity[-1].service, u'WEBUI')
 
-
     #https://bugzilla.redhat.com/show_bug.cgi?id=990349
     #https://bugzilla.redhat.com/show_bug.cgi?id=990821
     #XXX: the error message "enter a value less than " is technically
@@ -600,6 +599,7 @@ class TestGroupsWD(WebDriverTestCase):
 
         self.assertTrue(user_name in [member1.user_name, member2.user_name])
         self.assertTrue(ownership, 'No')
+
 
 class GroupSystemTest(WebDriverTestCase):
 

@@ -3,7 +3,8 @@ What's New in Beaker 0.14?
 
 The principle feature added in Beaker 0.14 is the introduction of
 "submission delegates", completing the
-:ref:`proposal-enhanced-user-groups` design proposal.
+`Enhanced User Groups <../../dev/proposals/enhanced-user-groups.html>`_ 
+design proposal.
 
 
 Migrating to Beaker 0.14
@@ -175,3 +176,79 @@ Beaker 0.14.1
 
 * :issue:`990408`: TurboMail is now started in beakerd, so that it does not 
   fail to send notification e-mails
+
+
+Beaker 0.14.2
+~~~~~~~~~~~~~
+
+Task updates (refer to :ref:`updating-harness-packages` to apply):
+
+* :issue:`1022261`: The inventory task once again handles 390x and
+  ppc64 systems (using the ``iasl`` packages published in Beaker's
+  harness repositories) (Contributed by Amit Saha)
+
+This maintenance release also backported several fixes and smaller features
+from Beaker 0.15 and 0.15.1 to the Beaker 0.14.x series. See the `Beaker
+0.15 Release Notes
+<http://beaker-project.org/docs/whats-new/release-0.15.html>`__ for more
+details on some of these changes.
+
+Provisioning updates:
+
+* :issue:`989924`: Beaker now uses the default authentication configuration
+  on all distributions by default. This can be controlled through the new
+  ``auth`` setting in the ``ks_meta`` attribute of a recipe specification
+  in the job XML. (Contributed by Amit Saha)
+* :issue:`1002928`: the ``ntp`` package is no longer removed by default
+  (Contributed by Amit Saha)
+* :issue:`1002261`: The btrfs technical preview can once again be selected
+  as a partition filetype in Red Hat Enterprise Linux 6
+  (Contributed by Nick Coghlan)
+* :issue:`997629`/:issue:`994677`: Beaker now correctly forces all EFI
+  systems to attempt netboot prior to local boot, even if the boot order
+  is implicitly switched to prefer local boot during installation. This is
+  needed to ensure the system can be automatically reprovisioned after use
+  (Contributed by Raymond Mancy)
+* :issue:`1006690`: Provisioning Fedora rawhide is now supported
+  (Contributed by Amit Saha)
+* :issue:`1013414`: When importing the latest RHEL7 distros into Beaker,
+  their addon repos will now be correctly added.
+  (Contributed by Raymond Mancy)
+
+Automated scheduling failure handling improvements:
+
+* :issue:`977562`: Recipes will now be aborted if there are no candidate
+  systems in Automated mode. Previously, affected recipes would remain
+  queued indefinitely, even if all candidate systems were configured for
+  Manual mode or marked as Broken. (Contributed by Raymond Mancy)
+* :issue:`953543`: the external watchdog now fires correctly even if the
+  system is stuck in panic loop (Contributed by Raymond Mancy)
+* :issue:`954219`: the external watchdog now fires correctly even if the
+  system is stuck in an install loop due to an Anaconda failure
+  (Contributed by Amit Saha)
+* :issue:`1008509`: beaker-provision now kills the entire process group
+  for failed power scripts, avoiding problems due to wayward child processes
+  in some power control clients (Contributed by Raymond Mancy)
+
+Web UI improvements
+
+* :issue:`990860`: group owners are now identified on the group page for
+  all users (making it easier for non-group members to request membership)
+  (Contributed by Amit Saha)
+* :issue:`920018`: the system list no longer shows systems on disabled
+  lab controllers (Contributed by Amit Saha)
+* :issue:`988848`: Searching for multiple CPU/Flags entries now gives the
+  appropriate results (Contributed by Raymond Mancy)
+
+Other backported fixes:
+
+* :issue:`999967`: The ``bkr job-list`` command once again works with the
+  ``python-json`` package on Red Hat Enterprise Linux 5
+  (Contributed by Amit Saha)
+* :issue:`999733`: Individual recipe sets can now be cancelled over XML-RPC
+  (Contributed by Nick Coghlan)
+* :issue:`1014623`: We now encode XML received on the client side in utf-8.
+  This ensures non ascii characters are rendered properly, and encoding
+  errors are avoided. (Contributed by Martin Kyral and Dan Callaghan)
+* :issue:`759269`: An empty MOTD no longer causes tracebacks in
+  server-errors.log (Contributed by Dan Callaghan)
