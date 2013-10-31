@@ -3,7 +3,7 @@ from glob import glob
 
 setup(
     name = "bkr.labcontroller",
-    version="0.14.1",
+    version='0.14.2rc1',
     license = "GPLv2+",
 
     packages=find_packages('src'),
