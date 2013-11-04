@@ -173,3 +173,4 @@ wget -O - http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}
 curl http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}
 {% endif %}
 {% endif %}
+{% snippet 'disable_rhts_compat' %}

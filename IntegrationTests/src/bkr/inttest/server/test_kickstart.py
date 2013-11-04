@@ -1322,7 +1322,68 @@ echo Hello World
                 in recipe.rendered_kickstart.kickstart,
                 recipe.rendered_kickstart.kickstart)
 
-    def test_custom_kickstart(self):
+    def test_custom_kickstart_rhel6(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <kickstart><![CDATA[
+install
+lang en_AU.UTF-8
+timezone --utc Australia/Brisbane
+rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
+selinux --enforcing
+firewall --service=ssh
+bootloader --location=mbr
+
+%packages 
+mysillypackage
+%end
+                        ]]></kickstart>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_(k.startswith('nfs --server lab.test-kickstart.invalid '
+                                  '--dir /distros/RHEL-6.2/Server/x86_64/os/'), k)
+        self.assert_('''
+install
+lang en_AU.UTF-8
+timezone --utc Australia/Brisbane
+rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
+selinux --enforcing
+firewall --service=ssh
+bootloader --location=mbr
+'''
+                in k, k)
+
+        self.assertNotIn('''
+cat >> /etc/profile.d/task-overrides-rhts.sh <<END
+export RHTS_OPTION_COMPATIBLE=
+export RHTS_OPTION_COMPAT_SERVICE=
+END
+%end''', k)
+
+        klines = k.splitlines()
+        self.assert_('mysillypackage' in klines, k)
+        # should also contain the various Beaker bits
+        self.assert_('%pre --log=/dev/console' in klines, k)
+        self.assert_('# Check in with Beaker Server' in klines, k)
+        self.assert_('%post --log=/dev/console' in klines, k)
+        self.assert_('# Add Harness Repo' in klines, k)
+        self.assert_('yum -y install beah rhts-test-env beakerlib' in klines, k)
+
+    def test_custom_kickstart_rhel7(self):
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
@@ -1343,7 +1404,7 @@ selinux --enforcing
 firewall --service=ssh
 bootloader --location=mbr
 
-%packages
+%packages 
 mysillypackage
 %end
                         ]]></kickstart>
@@ -1366,6 +1427,14 @@ firewall --service=ssh
 bootloader --location=mbr
 '''
                 in k, k)
+
+        self.assertIn('''
+cat >> /etc/profile.d/task-overrides-rhts.sh <<END
+export RHTS_OPTION_COMPATIBLE=
+export RHTS_OPTION_COMPAT_SERVICE=
+END
+%end''', k)
+
         klines = k.splitlines()
         self.assert_('mysillypackage' in klines, k)
         # should also contain the various Beaker bits
@@ -1374,6 +1443,127 @@ bootloader --location=mbr
         self.assert_('%post --log=/dev/console' in klines, k)
         self.assert_('# Add Harness Repo' in klines, k)
         self.assert_('yum -y install beah rhts-test-env beakerlib' in klines, k)
+
+    def test_custom_kickstart_fedora_rawhide(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <kickstart><![CDATA[
+install
+lang en_AU.UTF-8
+timezone --utc Australia/Brisbane
+rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
+selinux --enforcing
+firewall --service=ssh
+bootloader --location=mbr
+
+%packages 
+mysillypackage
+%end
+                        ]]></kickstart>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_(k.startswith('nfs --server lab.test-kickstart.invalid '
+                                  '--dir /distros/development/rawhide/x86_64/os/'), k)
+        self.assert_('''
+install
+lang en_AU.UTF-8
+timezone --utc Australia/Brisbane
+rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
+selinux --enforcing
+firewall --service=ssh
+bootloader --location=mbr
+'''
+                in k, k)
+
+        self.assertIn('''
+cat >> /etc/profile.d/task-overrides-rhts.sh <<END
+export RHTS_OPTION_COMPATIBLE=
+export RHTS_OPTION_COMPAT_SERVICE=
+END
+%end''', k)
+
+        klines = k.splitlines()
+        self.assert_('mysillypackage' in klines, k)
+        # should also contain the various Beaker bits
+        self.assert_('%pre --log=/dev/console' in klines, k)
+        self.assert_('# Check in with Beaker Server' in klines, k)
+        self.assert_('%post --log=/dev/console' in klines, k)
+        self.assert_('# Add Harness Repo' in klines, k)
+        self.assert_('yum -y install beah rhts-test-env beakerlib' in klines, k)
+
+    def test_custom_kickstart_fedora(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <kickstart><![CDATA[
+install
+lang en_AU.UTF-8
+timezone --utc Australia/Brisbane
+rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
+selinux --enforcing
+firewall --service=ssh
+bootloader --location=mbr
+
+%packages 
+mysillypackage
+%end
+                        ]]></kickstart>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_(k.startswith('nfs --server lab.test-kickstart.invalid ' 
+                                  '--dir /distros/F-18/GOLD/Fedora/x86_64/os/'), k)
+        self.assert_('''
+install
+lang en_AU.UTF-8
+timezone --utc Australia/Brisbane
+rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
+selinux --enforcing
+firewall --service=ssh
+bootloader --location=mbr
+'''
+                in k, k)
+
+        self.assertIn('''
+cat >> /etc/profile.d/task-overrides-rhts.sh <<END
+export RHTS_OPTION_COMPATIBLE=
+export RHTS_OPTION_COMPAT_SERVICE=
+END
+%end''', k)
+
+        klines = k.splitlines()
+        self.assert_('mysillypackage' in klines, k)
+        # should also contain the various Beaker bits
+        self.assert_('%pre --log=/dev/console' in klines, k)
+        self.assert_('# Check in with Beaker Server' in klines, k)
+        self.assert_('%post --log=/dev/console' in klines, k)
+        self.assert_('# Add Harness Repo' in klines, k)
+        self.assert_('yum -y install beah rhts-test-env beakerlib' in klines, k)
+
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=801676
     def test_custom_kickstart_ssh_keys(self):
