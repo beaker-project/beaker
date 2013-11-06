@@ -121,7 +121,7 @@ Basic metadata:
 Extra metadata:
   -z VERSION      test version [1.0]
   -p PRIORITY     priority [Normal]
-  -l LICENSE      license [GPLv2]
+  -l LICENSE      license [GPLv2+]
   -i INTERNAL     confidential [No]
   -u UGLY         destructive [No]
 
@@ -213,7 +213,7 @@ details and ``-y`` to skip unnecessary questions.
                       Time : 5m
 
                   Priority : Normal
-                   License : GPLv2
+                   License : GPLv2+
               Confidential : No
                Destructive : No
 
@@ -262,7 +262,7 @@ create a test skeleton for each of wget's feature areas::
                       Time : 10m
 
                   Priority : Normal
-                   License : GPLv2
+                   License : GPLv2+
               Confidential : No
                Destructive : No
 
@@ -411,7 +411,7 @@ PreferencesTemplate = """<?xml version="1.0" ?>
         <prefix>Yes</prefix>
         <namespace>CoreOS</namespace>
         <priority>Normal</priority>
-        <license>GPLv2</license>
+        <license>GPLv2+</license>
         <confidential>No</confidential>
         <destructive>No</destructive>
     </test>
@@ -570,12 +570,20 @@ def addToGit(path):
 class Preferences:
     """ Test's author preferences """
 
-    def __init__(self):
+    def __init__(self, load_user_prefs=True):
         """ Set (in future get) user preferences / defaults """
         self.template = parseString(PreferencesTemplate)
         self.firstRun = False
-        self.load()
+        if load_user_prefs:
+            self.load()
+        else:
+            self.xml = self.template
+            self.parse()
 
+
+    # XXX (ncoghlan): all of these exec invocations should be replaced with
+    # appropriate usage of setattr and getattr. However, beaker-wizard needs
+    # decent test coverage before embarking on that kind of refactoring...
     def parse(self):
         """ Parse values from the xml file """
         # parse list nodes
@@ -840,8 +848,10 @@ class Options:
     self.pref ... user preferences / defaults
     """
 
-    def __init__(self):
-        self.pref = Preferences()
+    def __init__(self, argv=None, load_user_prefs=True):
+        if argv is None:
+            argv = sys.argv
+        self.pref = Preferences(load_user_prefs)
         formatter = IndentedHelpFormatter(max_help_position=40)
         #formatter._long_opt_fmt = "%s"
 
@@ -985,7 +995,7 @@ class Options:
 
         # convert all args to unicode
         uniarg = []
-        for arg in sys.argv[1:]:
+        for arg in argv[1:]:
              uniarg.append(unicode(arg, "utf-8"))
 
         # and parse it!
@@ -1417,6 +1427,74 @@ class MultipleChoice(SingleChoice):
                 return False
         return True
 
+# TODO: Make the licensing organisation configurable
+LICENSE_ORGANISATION = "Red Hat, Inc"
+
+GPLv2_ONLY_LICENSE = ("""Copyright (c) %s %s.
+
+This copyrighted material is made available to anyone wishing
+to use, modify, copy, or redistribute it subject to the terms
+and conditions of the GNU General Public License version 2.
+
+This program is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; without even the implied
+warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public
+License along with this program; if not, write to the Free
+Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA."""
+% (date.today().year, LICENSE_ORGANISATION))
+
+GPLv2_OR_LATER_LICENSE = ("""Copyright (c) %s %s.
+
+This program is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation, either version 2 of
+the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; without even the implied
+warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/."""
+% (date.today().year, LICENSE_ORGANISATION))
+
+GPLv3_OR_LATER_LICENSE = ("""Copyright (c) %s %s.
+
+This program is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation, either version 3 of
+the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be
+useful, but WITHOUT ANY WARRANTY; without even the implied
+warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see http://www.gnu.org/licenses/."""
+% (date.today().year, LICENSE_ORGANISATION))
+
+PROPRIETARY_LICENSE_TEMPLATE = ("""Copyright (c) %s %s. All rights reserved.
+
+%%s"""
+% (date.today().year, LICENSE_ORGANISATION))
+
+DEFINED_LICENSES = {
+# Annoyingly, the bare "GPLv2" and "GPLv3" options differ in whether or not
+# they include the "or later" clause. Unfortunately, changing it now could
+# result in GPLv3 tests intended to be GPLv3+ getting mislabeled.
+"GPLv2" : GPLv2_ONLY_LICENSE,
+"GPLv3" : GPLv3_OR_LATER_LICENSE,
+# The GPLvX+ variants consistently use the "or later" phrasing
+"GPLv2+" : GPLv2_OR_LATER_LICENSE,
+"GPLv3+" : GPLv3_OR_LATER_LICENSE,
+"other" : PROPRIETARY_LICENSE_TEMPLATE,
+}
 
 class License(Inquisitor):
     """ License to be included in test files """
@@ -1424,46 +1502,10 @@ class License(Inquisitor):
     def init(self):
         self.name = "License"
         self.question = "What licence should be used?"
-        self.description = "Just supply a license GPLv2, GPLv3, ..."
+        self.description = "Just supply a license GPLv2+, GPLv3+, ..."
         self.common = False
         self.default(self.options.license())
-        self.licenses = {
-            "GPLv2" : """Copyright (c) %s Red Hat, Inc. All rights reserved.
-            
-            This copyrighted material is made available to anyone wishing
-            to use, modify, copy, or redistribute it subject to the terms
-            and conditions of the GNU General Public License version 2.
-            
-            This program is distributed in the hope that it will be
-            useful, but WITHOUT ANY WARRANTY; without even the implied
-            warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-            PURPOSE. See the GNU General Public License for more details.
-            
-            You should have received a copy of the GNU General Public
-            License along with this program; if not, write to the Free
-            Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-            Boston, MA 02110-1301, USA.""" % date.today().year,
-
-
-            "GPLv3" : """Copyright (c) %s Red Hat, Inc. All rights reserved.
-            
-            This program is free software: you can redistribute it and/or
-            modify it under the terms of the GNU General Public License as
-            published by the Free Software Foundation, either version 3 of
-            the License, or (at your option) any later version.
-            
-            This program is distributed in the hope that it will be
-            useful, but WITHOUT ANY WARRANTY; without even the implied
-            warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-            PURPOSE.  See the GNU General Public License for more details.
-            
-            You should have received a copy of the GNU General Public License
-            along with this program. If not, see http://www.gnu.org/licenses/."""
-            % date.today().year,
-
-            "other" : """Copyright (c) %s Red Hat, Inc. All rights reserved.
-
-            %s"""}
+        self.licenses = DEFINED_LICENSES
 
     def get(self):
         """ Return license corresponding to user choice """
@@ -1473,10 +1515,10 @@ class License(Inquisitor):
             license = self.options.pref.getLicenseContent(self.data)
             if license: # user defined license from preferences
                 return dedentText(self.licenses["other"] % (
-                        date.today().year, license), count = 12)
+                        license,), count = 12)
             else: # anything else
                 return dedentText(self.licenses["other"] % (
-                        date.today().year, "PROVIDE YOUR LICENSE TEXT HERE."))
+                        "PROVIDE YOUR LICENSE TEXT HERE.",))
 
 
 class Time(Inquisitor):
