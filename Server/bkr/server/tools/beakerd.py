@@ -41,6 +41,8 @@ from turbogears import config
 from turbomail.control import interface
 from xmlrpclib import ProtocolError
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.sql.expression import func, select
+from sqlalchemy.orm import aliased
 
 import socket
 import exceptions
@@ -350,31 +352,81 @@ def abort_dead_recipe(recipe_id):
 def schedule_queued_recipes(*args):
     session.begin()
     try:
+        # This query returns a queued host recipe and and the guest which has
+        # the most recent distro tree. It is to be used as a derived table.
+        latest_guest_distro = select([machine_guest_map.c.machine_recipe_id.label('host_id'),
+            func.max(DistroTree.date_created).label('latest_distro_date')],
+            from_obj=[machine_guest_map.join(guest_recipe_table,
+                    machine_guest_map.c.guest_recipe_id==guest_recipe_table.c.id). \
+                join(recipe_table).join(distro_tree_table)],
+            whereclause=Recipe.status=='Queued',
+            group_by=machine_guest_map.c.machine_recipe_id).alias()
+
+        hosts_lab_controller_distro_map = aliased(LabControllerDistroTree)
+        hosts_distro_tree = aliased(DistroTree)
+        guest_recipe = aliased(Recipe)
+        guests_distro_tree = aliased(DistroTree)
+        guests_lab_controller = aliased(LabController)
+
+        # This query will return queued recipes that are eligible to be scheduled.
+        # They are determined to be eligible if:
+        # * They are clean
+        # * There are systems available (see the filter criteria) in lab controllers where
+        #   the recipe's distro tree is available.
+        # * If it is a host recipe, the most recently created distro of all
+        #   the guest recipe's distros is available in at least one of the same
+        #   lab controllers as that of the host's distro tree.
+        #
+        # Also note that we do not try to handle the situation where the guest and host never
+        # have a common labcontroller. In that situation the host and guest would stay queued
+        # until that situation was rectified.
         recipes = MachineRecipe.query\
-                        .join(Recipe.recipeset, RecipeSet.job)\
-                        .filter(Job.dirty_version == Job.clean_version)\
-                        .join(Recipe.systems)\
-                        .join(Recipe.distro_tree)\
-                        .join(DistroTree.lab_controller_assocs,
-                            (LabController, and_(
-                                LabControllerDistroTree.lab_controller_id == LabController.id,
-                                System.lab_controller_id == LabController.id)))\
-                        .filter(
-                             and_(Recipe.status==TaskStatus.queued,
-                                  System.user==None,
-                                  System.status==SystemStatus.automated,
-                                  LabController.disabled==False,
-                                  or_(
-                                      RecipeSet.lab_controller==None,
-                                      RecipeSet.lab_controller_id==System.lab_controller_id,
-                                     ),
-                                  or_(
-                                      System.loan_id==None,
-                                      System.loan_id==Job.owner_id,
-                                     ),
-                                 )
-                               )
-        # FIXME Add order by number of matched systems.
+            .join(Recipe.recipeset, RecipeSet.job)\
+            .filter(Job.dirty_version == Job.clean_version)\
+            .outerjoin((guest_recipe, MachineRecipe.guests))\
+            .outerjoin((guests_distro_tree, guest_recipe.distro_tree_id == guests_distro_tree.id))\
+            .outerjoin((latest_guest_distro,
+                and_(latest_guest_distro.c.host_id == MachineRecipe.id,
+                    latest_guest_distro.c.latest_distro_date == \
+                    guests_distro_tree.date_created)))\
+            .outerjoin(guests_distro_tree.lab_controller_assocs, guests_lab_controller)\
+            .join(Recipe.systems)\
+            .join((hosts_distro_tree, hosts_distro_tree.id == MachineRecipe.distro_tree_id))\
+            .join((hosts_lab_controller_distro_map, hosts_distro_tree.lab_controller_assocs),
+                (LabController, and_(
+                    hosts_lab_controller_distro_map.lab_controller_id == LabController.id,
+                    System.lab_controller_id == LabController.id)))\
+            .filter(
+                and_(Recipe.status == TaskStatus.queued,
+                    System.user == None,
+                    System.status == SystemStatus.automated,
+                    LabController.disabled == False,
+                    or_(
+                        RecipeSet.lab_controller == None,
+                        RecipeSet.lab_controller_id == System.lab_controller_id,
+                       ),
+                    or_(
+                        System.loan_id == None,
+                        System.loan_id == Job.owner_id,
+                       ),
+                    or_(
+                        # We either have no guest
+                        guest_recipe.id == None,
+                        # Or we have a guest of which the latest
+                        # is in a common lab controller.
+                        and_(guests_lab_controller.id == LabController.id,
+                            latest_guest_distro.c.latest_distro_date != None
+                            ),
+                        ) # or
+                    ) # and
+                  )
+        # Get out of here if we have no recipes
+        if not recipes.count():
+            return False
+        # This should be the guest recipe with the latest distro.
+        # We return it in this query, to save us from re-running the
+        # derived table query in schedule_queued_recipe()
+        recipes = recipes.add_column(guest_recipe.id)
         # Effective priority is given in the following order:
         # * Multi host recipes with already scheduled siblings
         # * Priority level (i.e Normal, High etc)
@@ -384,13 +436,13 @@ def schedule_queued_recipes(*args):
             order_by(RecipeSet.priority.desc()). \
             order_by(RecipeSet.id). \
             order_by(MachineRecipe.id)
-        if not recipes.count():
-            return False
+        # Don't do a GROUP BY before here, it is not needed.
+        recipes = recipes.group_by(MachineRecipe.id)
         log.debug("Entering schedule_queued_recipes")
-        for recipe_id, in recipes.values(MachineRecipe.id.distinct()):
+        for recipe_id, guest_recipe_id in recipes.values(MachineRecipe.id, guest_recipe.id):
             session.begin(nested=True)
             try:
-                schedule_queued_recipe(recipe_id)
+                schedule_queued_recipe(recipe_id, guest_recipe_id)
                 session.commit()
             except (StaleSystemUserException, InsufficientSystemPermissions,
                  StaleTaskStatusException), e:
@@ -431,23 +483,49 @@ def schedule_queued_recipes(*args):
             session.rollback()
         session.close()
 
-def schedule_queued_recipe(recipe_id):
-    recipe = MachineRecipe.by_id(recipe_id)
-    systems = recipe.dyn_systems\
-               .outerjoin(System.cpu)\
-               .join(System.lab_controller)\
-               .filter(and_(System.user==None,
-                          LabController._distro_trees.any(
-                              LabControllerDistroTree.distro_tree== 
-                                  recipe.distro_tree),
-                          LabController.disabled==False,
-                          System.status==SystemStatus.automated,
-                          or_(
-                              System.loan_id==None,
-                              System.loan_id==recipe.recipeset.job.owner_id,
-                             ),
-                           )
-                      )
+def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
+    guest_recipe = aliased(Recipe)
+    guest_distros_map = aliased(LabControllerDistroTree)
+    guest_labcontroller = aliased(LabController)
+    # This query will return all the systems that a recipe is
+    # able to run on. A system is deemed eligible if:
+    # * If the recipe's distro tree is available to the system's lab controller
+    # * The system is available (see the filter criteria).
+    # * If it's a host recipe, then the system needs to be on a lab controller
+    #   that can access the distro tree of both the host recipe,
+    #   and the guest recipe.
+    systems = System.query.join(System.queued_recipes) \
+        .outerjoin(System.cpu) \
+        .join(Recipe.recipeset, RecipeSet.job) \
+        .join(System.lab_controller, LabController._distro_trees)\
+        .join((DistroTree,
+            and_(distro_tree_lab_controller_map.c.distro_tree_id ==
+                DistroTree.id, recipe_table.c.distro_tree_id == DistroTree.id)))\
+        .outerjoin((machine_guest_map,
+            Recipe.id == machine_guest_map.c.machine_recipe_id))\
+        .outerjoin((guest_recipe,
+            machine_guest_map.c.guest_recipe_id == guest_recipe.id ))\
+        .outerjoin((guest_distros_map,
+            guest_recipe.distro_tree_id == guest_distros_map.distro_tree_id))\
+        .outerjoin((guest_labcontroller,
+            guest_distros_map.lab_controller_id == guest_labcontroller.id))\
+        .filter(Recipe.id == recipe_id) \
+        .filter(or_(guest_recipe.id == guest_recipe_id,
+            guest_recipe.id == None))\
+        .filter(and_(System.user == None,
+                or_(guest_distros_map.id == None,
+                    and_(guest_distros_map.id != None,
+                        guest_labcontroller.id == LabController.id,
+                        ),
+                   ),
+                LabController.disabled == False,
+                System.status == SystemStatus.automated,
+                or_(System.loan_id == None,
+                    System.loan_id == Job.owner_id,
+                   ),
+                    ), # and
+                )
+
     # Order systems by owner, then Group, finally shared for everyone.
     # FIXME Make this configurable, so that a user can specify their scheduling
     # Implemented order, still need to do pool
@@ -459,6 +537,9 @@ def schedule_queued_recipe(recipe_id):
     #   <pool>public</pool>
     #  </autopick>
     # </recipe>
+    if not systems.count():
+        return
+    recipe = MachineRecipe.by_id(recipe_id)
     user = recipe.recipeset.job.owner
     if True: #FIXME if pools are defined add them here in the order requested.
         # Order by:
@@ -476,14 +557,10 @@ def schedule_queued_recipe(recipe_id):
                      System.lab_controller==recipe.recipeset.lab_controller
                               )
     if recipe.autopick_random:
-        try:
-            system = systems[random.randrange(0,systems.count())]
-        except (IndexError, ValueError):
-            system = None
+        system = systems[random.randrange(0,systems.count())]
     else:
         system = systems.first()
-    if not system:
-        return
+
     log.debug("System : %s is available for Recipe %s" % (system, recipe.id))
     # Check to see if user still has proper permissions to use the system.
     # Remember the mapping of available systems could have happend hours or even

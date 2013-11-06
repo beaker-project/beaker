@@ -2,7 +2,8 @@ import unittest, datetime, os, threading
 import bkr
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
-        Provision, TaskPriority, RecipeSet, Task
+        Provision, TaskPriority, RecipeSet, Task,  DistroTree, \
+        MachineRecipe, GuestRecipe, LabControllerDistroTree
 import sqlalchemy.orm
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
@@ -24,8 +25,6 @@ class TestBeakerd(unittest.TestCase):
     def setUp(self):
         with session.begin():
             self.lab_controller = data_setup.create_labcontroller()
-            data_setup.create_system(lab_controller=self.lab_controller,
-                    shared=True)
         self.task_id, self.rpm_name = self.add_example_task()
         self.mail_capture = MailCaptureThread()
         self.mail_capture.start()
@@ -55,6 +54,134 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             task = Task.by_id(task_id)
             task.disable()
+
+    def test_host_uses_latest_guest(self):
+        # This tests that the lab controller corresponding to that
+        # of the latest guest distro is used.
+        with session.begin():
+            host_lab_controller1= self.lab_controller
+            host_lab_controller2 = data_setup.create_labcontroller()
+            host_lab_controller3 = data_setup.create_labcontroller()
+            host_lab_controller4 = data_setup.create_labcontroller()
+
+            data_setup.create_system(lab_controller=host_lab_controller1)
+            data_setup.create_system(lab_controller=host_lab_controller2)
+            data_setup.create_system(lab_controller=host_lab_controller3)
+            data_setup.create_system(lab_controller=host_lab_controller4)
+            j1 = data_setup.create_job(num_guestrecipes=2)
+
+            older_dt = data_setup.create_distro_tree()
+            newer_dt = data_setup.create_distro_tree(
+                lab_controllers=[host_lab_controller2])
+            newer_dt.date_created = datetime.datetime.utcnow()
+            older_dt.date_created = datetime.datetime.utcnow() - \
+                datetime.timedelta(hours=10)
+
+        guest_recipe1 = j1.recipesets[0].recipes[1]
+        guest_recipe2 = j1.recipesets[0].recipes[2]
+        self.assertTrue(type(guest_recipe1), GuestRecipe)
+        self.assertTrue(type(guest_recipe2), GuestRecipe)
+
+        guest_recipe1_id = guest_recipe1.id
+        guest_recipe2_id = guest_recipe2.id
+        with session.begin():
+            guest_recipe1 = Recipe.by_id(guest_recipe1_id)
+            guest_recipe1.distro_tree = older_dt
+            guest_recipe2 = Recipe.by_id(guest_recipe2_id)
+            guest_recipe2.distro_tree = newer_dt
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+        j1_id = j1.id
+        with session.begin():
+            j1 = Job.by_id(j1_id)
+            self.assertEquals(j1.status, TaskStatus.scheduled, j1.status)
+            host_recipe = j1.recipesets[0].recipes[0]
+            self.assertEqual(host_recipe.resource.system.lab_controller.id,
+                host_lab_controller2.id, host_recipe.resource.system.lab_controller)
+
+    def test_host_and_guest_latest_guest_distro_not_in_host_lc(self):
+        # This tests the case when there are more than one guest distro trees
+        # and the latest guest distro tree's lc is not available to the host,
+        # so the host recipe remains queued
+        with session.begin():
+            host_lab_controller= self.lab_controller
+            system = data_setup.create_system(lab_controller=host_lab_controller)
+            j1 = data_setup.create_job(num_guestrecipes=2)
+
+        with session.begin():
+            older_dt = data_setup.create_distro_tree(
+                lab_controllers=[host_lab_controller])
+            # Just to make sure that this distro is a bit newer
+            another_lab_controller = data_setup.create_labcontroller()
+            newer_dt = data_setup.create_distro_tree(
+                lab_controllers=[another_lab_controller])
+            newer_dt.date_created = datetime.datetime.utcnow()
+            older_dt.date_created = datetime.datetime.utcnow() - \
+                datetime.timedelta(hours=10)
+
+        guest_recipe1 = j1.recipesets[0].recipes[1]
+        guest_recipe2 = j1.recipesets[0].recipes[2]
+        self.assertTrue(type(guest_recipe1), GuestRecipe)
+        self.assertTrue(type(guest_recipe2), GuestRecipe)
+
+        guest_recipe1_id = guest_recipe1.id
+        guest_recipe2_id = guest_recipe2.id
+        with session.begin():
+            guest_recipe1 = Recipe.by_id(guest_recipe1_id)
+            guest_recipe1.distro_tree = older_dt
+            guest_recipe2 = Recipe.by_id(guest_recipe2_id)
+            guest_recipe2.distro_tree = newer_dt
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_queued_recipes()
+        j1_id = j1.id
+        with session.begin():
+            j1 = Job.by_id(j1_id)
+            j1.update_status()
+            self.assertEquals(j1.status, TaskStatus.queued, j1.status)
+
+    def test_host_and_guest_no_common_lab_controllers_stay_queued(self):
+        # This tests that a host recipe where the guest distro is not availble
+        # in any common lab controller remains queued, rather than aborts
+        with session.begin():
+            host_lab_controller = self.lab_controller
+            guest_lab_controller = data_setup.create_labcontroller()
+            host_system = data_setup.create_system(lab_controller=host_lab_controller)
+            dt_for_host = data_setup.create_distro_tree(lab_controllers=[host_lab_controller])
+            dt_for_guest = data_setup.create_distro_tree(lab_controllers=[guest_lab_controller])
+            j1 = data_setup.create_job(num_guestrecipes=1, distro_tree=dt_for_host)
+            host_recipe = j1.recipesets[0].recipes[0]
+            self.assertTrue(type(host_recipe), MachineRecipe)
+            guest_recipe = j1.recipesets[0].recipes[1]
+            self.assertTrue(type(guest_recipe), GuestRecipe)
+            guest_recipe.distro_tree = dt_for_guest
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_queued_recipes()
+        j1_id = j1.id
+        dt_for_guest_id = dt_for_guest.id
+        with session.begin():
+            j1 = Job.by_id(j1_id)
+            j1.update_status()
+            self.assertEquals(j1.status, TaskStatus.queued, j1.status)
+            dt_for_guest = DistroTree.by_id(dt_for_guest_id)
+            dt_for_guest.lab_controller_assocs.append(
+                LabControllerDistroTree(lab_controller=host_lab_controller,
+                    url='http://whatevs.com'))
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            j1 = Job.by_id(j1_id)
+            j1.update_status()
+            self.assertEquals(j1.status, TaskStatus.scheduled, j1.status)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=977562
     def test_jobs_with_no_systems_process_beyond_queued(self):
@@ -130,7 +257,7 @@ class TestBeakerd(unittest.TestCase):
             sysA_id = systemA.id
             sysB_id = systemB.id
 
-            def mock_sqrs(run_number):
+            def mock_sqrs(run_number, guest_recipe_id=None):
                 with session.begin():
                     systemA = System.by_id(sysA_id, User.by_user_name('admin'))
                     systemB = System.by_id(sysB_id, User.by_user_name('admin'))
@@ -232,7 +359,7 @@ class TestBeakerd(unittest.TestCase):
         original_sqr = beakerd.schedule_queued_recipe
         # Need to pass by ref
         abort_ = [False]
-        def mock_sqr(recipe_id):
+        def mock_sqr(recipe_id, guest_id=None):
             if abort_[0] is True:
                 raise Exception('ouch')
             else:
@@ -320,7 +447,7 @@ class TestBeakerd(unittest.TestCase):
         session1 = SessionFactory()
 
         original_sqr = beakerd.schedule_queued_recipe
-        def mock_sqr(recipe_id):
+        def mock_sqr(recipe_id, guest_id=None):
             if recipe_id == spare_recipe.id:
                 # We need to now release System B
                 # to make sure it is not picked up
