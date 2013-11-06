@@ -1,5 +1,5 @@
 import unittest
-import json_compat
+from bkr.client import json_compat
 
 class JsonDumpsTest(unittest.TestCase):
 
