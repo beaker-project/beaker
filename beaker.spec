@@ -21,12 +21,12 @@
 %global with_systemd 0
 %endif
 
-%global upstream_version 0.14.2
+%global upstream_version 0.14.3
 
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.14.2
+Version:        0.14.3
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
