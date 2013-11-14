@@ -37,6 +37,7 @@ own man page. This man page is reserved for common options and features.
 * :manpage:`bkr-machine-test(1)` -- Generate Beaker job to test a system
 * :manpage:`bkr-policy-grant(1)` -- Grant permissions through an access policy
 * :manpage:`bkr-policy-revoke(1)` -- Remove grant permissions from an access policy
+* :manpage:`bkr-policy-list(1)` -- List access policy rules for a system
 * :manpage:`bkr-remove-account(1)` -- Remove Beaker user account
 * :manpage:`bkr-system-details(1)` -- Export RDF/XML description of a Beaker system
 * :manpage:`bkr-system-power(1)` -- Control power for a Beaker system
@@ -253,8 +254,18 @@ Options for job configuration:
 
 .. option:: --repo <url>
 
-   Make the yum repository at <url> available during the job. This option may 
-   be specified multiple times.
+   Make the yum repository at <url> available during initial installation of
+   the system and afterwards. This option may be specified multiple times.
+   The installation may fail if the repo is not actually available.
+
+.. option:: --repo-post <url>
+
+   Make the yum repository at <url> available AFTER the installation. This 
+   option may be specified multiple times. The repo config will be appended to
+   the kickstart's %post section. Whether or not the installation succeeds is
+   not affected by the availability of the repo.
+
+   .. versionadded:: 0.14.3
 
 .. option:: --ignore-panic 
 

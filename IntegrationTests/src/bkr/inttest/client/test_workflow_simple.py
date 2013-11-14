@@ -1,7 +1,8 @@
 import os
-import unittest
+import unittest2 as unittest
 import subprocess
 import re
+import textwrap
 from threading import Thread
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
@@ -84,6 +85,15 @@ class WorkflowSimpleTest(unittest.TestCase):
         returncode = proc.wait()
         self.assert_(returncode == 1)
 
+    def test_clean_defaults(self):
+        out = run_client(['bkr', 'workflow-simple',
+                '--dryrun', '--prettyxml',
+                '--arch', self.distro_tree.arch.arch,
+                '--family', self.distro.osversion.osmajor.osmajor,
+                '--task', self.task.name])
+        # Try to minimise noise in the default output
+        self.assertNotIn('ks_appends', out)
+
     def test_hostrequire(self):
         out = run_client(['bkr', 'workflow-simple',
                 '--dryrun', '--prettyxml',
@@ -91,7 +101,53 @@ class WorkflowSimpleTest(unittest.TestCase):
                 '--arch', self.distro_tree.arch.arch,
                 '--family', self.distro.osversion.osmajor.osmajor,
                 '--task', self.task.name])
-        self.assert_('<hostlabcontroller op="=" value="lab.example.com"/>' in out, out)
+        self.assertIn('<hostlabcontroller op="=" value="lab.example.com"/>', out)
+
+    def test_repo(self):
+        first_url = 'http://repo1.example.invalid'
+        second_url = 'ftp://repo2.example.invalid'
+        out = run_client(['bkr', 'workflow-simple',
+                '--dryrun', '--prettyxml',
+                '--repo', first_url,
+                '--repo', second_url,
+                '--arch', self.distro_tree.arch.arch,
+                '--family', self.distro.osversion.osmajor.osmajor,
+                '--task', self.task.name])
+        expected_snippet = '<repo name="myrepo_%(idx)s" url="%(repoloc)s"/>'
+        first_repo = expected_snippet % dict(idx=0, repoloc=first_url)
+        self.assertIn(first_repo, out)
+        second_repo = expected_snippet % dict(idx=1, repoloc=second_url)
+        self.assertIn(second_repo, out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=867087
+    def test_repopost(self):
+        first_url = 'http://repo1.example.invalid'
+        second_url = 'ftp://repo2.example.invalid'
+        out = run_client(['bkr', 'workflow-simple',
+                '--dryrun', '--prettyxml',
+                '--repo-post', first_url,
+                '--repo-post', second_url,
+                '--arch', self.distro_tree.arch.arch,
+                '--family', self.distro.osversion.osmajor.osmajor,
+                '--task', self.task.name])
+        expected_snippet = textwrap.dedent('''\
+            cat << EOF >/etc/yum.repos.d/beaker-postrepo%(idx)s.repo
+            [beaker-postrepo%(idx)s]
+            name=beaker-postrepo%(idx)s
+            baseurl=%(repoloc)s
+            enabled=1
+            gpgcheck=0
+            skip_if_unavailable=1
+            EOF
+            ''')
+        first_repo = expected_snippet % dict(idx=0, repoloc=first_url)
+        self.assertIn(first_repo, out)
+        second_repo = expected_snippet % dict(idx=1, repoloc=second_url)
+        self.assertIn(second_repo, out)
+        # Also check these *aren't* included as install time repos
+        install_repo_url_attribute = 'url="%s"'
+        self.assertNotIn(install_repo_url_attribute % first_url, out)
+        self.assertNotIn(install_repo_url_attribute % second_url, out)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=972417
     def test_servers_default_zero(self):

@@ -233,6 +233,26 @@ class JiraInfo(object):
                             details[EXTERNAL_LINK_FIELD],
                             bug.bug_id, bug.bug_id, issue)
 
+    def get_bz_verification_subtask(self, bug):
+        issue = self.get_bz_issue(bug.bug_id).apiref
+        expected_summary = "Verify BZ#%s" % bug.bug_id
+        verify_subtasks = [st for st in issue.fields.subtasks
+                               if st.fields.summary.startswith("Verify")]
+        return verify_subtasks[0].key if verify_subtasks else None
+
+    def create_bz_verification_subtask(self, bug):
+        issue = self.get_bz_issue(bug.bug_id).apiref
+        subtask_summary = "Verify BZ#%s" % bug.bug_id
+        subtask_details = {
+            "project": {"key": self._jira_project},
+            "summary": subtask_summary,
+            "issuetype": {"name": "Sub-task"},
+            "parent": {"key": issue.key},
+            "assignee": None,
+        }
+        subtask = self._jira.create_issue(fields=subtask_details)
+        return subtask.key
+
 if __name__ == "__main__":
     from getpass import getpass
     info = JiraInfo("checkbugs", getpass)

@@ -326,7 +326,8 @@ def get_system_access_policy(fqdn):
     try:
         system = System.by_fqdn(fqdn, identity.current.user)
     except NoResultFound:
-        abort(404)
+        return ('System not found', 404, {'content-type':'text/plain'})
+
     policy = system.custom_access_policy
     # For now, we don't distinguish between an empty policy and an absent one.
     if not policy:

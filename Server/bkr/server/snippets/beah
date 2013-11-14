@@ -44,7 +44,4 @@ EOF
 chkconfig --level 345 beah-srv on
 chkconfig --level 345 beah-beaker-backend on
 chkconfig --level 345 beah-fwd-backend on
-
-# turn on rhts-compat by default (it will save us one reboot):
-chkconfig --add rhts-compat
-chkconfig --level 345 rhts-compat on
+{% snippet 'default_rhts_compat' %}

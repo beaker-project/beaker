@@ -51,6 +51,8 @@ will be unable to report in to Beaker, so the effects may include missing
 results, missing logs, and recipes terminated by the external watchdog even 
 though they ran successfully.
 
+.. _updating-harness-packages:
+
 New harness packages
 --------------------
 
