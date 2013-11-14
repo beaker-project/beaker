@@ -125,7 +125,7 @@ your own option or press return to accept the default answer::
                       Time : 5m
 
                   Priority : Normal
-                   License : GPLv2
+                   License : GPLv2+
               Confidential : No
                Destructive : No
 
@@ -151,15 +151,15 @@ assumed default values for some of the options such as ``Run for packages``,
 ``Required packages``, ``License`` and others without asking for more details.
 As per the instructions displayed by the wizard, you can edit any of these or
 the ones you specified earlier before creating the task. For example, if this
-task is licensed under a license other than the default GPLv2, you can change
-it, like so::
+task is licensed under a license other than the default "GPLv2 or later", you
+can change it, like so::
 
     [Everything OK?] Lic
 
     What licence should be used?
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Just supply a license GPLv2, GPLv3, ...
-    [GPLv2?] GPLv3
+    Just supply a license GPLv2+, GPLv3+, ...
+    [GPLv2+?] GPLv3+
 
     Ready to create the test, please review
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -194,21 +194,20 @@ contain something similar to the following::
     #
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #
-    #   Copyright (c) 2012 Red Hat, Inc. All rights reserved.
+    #   Copyright (c) 2013 Red Hat, Inc.
     #
-    #   This copyrighted material is made available to anyone wishing
-    #   to use, modify, copy, or redistribute it subject to the terms
-    #   and conditions of the GNU General Public License version 2.
+    #   This program is free software: you can redistribute it and/or
+    #   modify it under the terms of the GNU General Public License as
+    #   published by the Free Software Foundation, either version 2 of
+    #   the License, or (at your option) any later version.
     #
     #   This program is distributed in the hope that it will be
     #   useful, but WITHOUT ANY WARRANTY; without even the implied
     #   warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
     #   PURPOSE. See the GNU General Public License for more details.
     #
-    #   You should have received a copy of the GNU General Public
-    #   License along with this program; if not, write to the Free
-    #   Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
-    #   Boston, MA 02110-1301, USA.
+    #   You should have received a copy of the GNU General Public License
+    #   along with this program. If not, see http://www.gnu.org/licenses/.
     #
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -238,11 +237,11 @@ contain something similar to the following::
     rlJournalPrintText
     rlJournalEnd
 
-The GPLv2 license header in the beginning is the default for a task. You can
-change the license to something more appropriate for your needs during
-the task creation. :program:`beaker-wizard` will try to find a license header
-corresponding to the specified license and if it is not present will
-insert a default text where you can add the appropriate header
+The "GPLv2 or later" license header in the beginning is the default for a
+task. You can change the license to something more appropriate for your
+needs during the task creation. :program:`beaker-wizard` will try to find
+a license header corresponding to the specified license and if it is not
+present will insert a default text where you can add the appropriate header
 information and copyright notice. Please consult the :program:`beaker-wizard`
 :ref:`man page <beaker-wizard>` for details on how you can add your own
 license text using a preference file.
@@ -283,7 +282,7 @@ The modified ``runtest.sh`` file looks like::
     #
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     #
-    #   Copyright (c) 2012 Red Hat, Inc. All rights reserved.
+    #   Copyright (c) 2013 Red Hat, Inc.
     #
     #   This copyrighted material is made available to anyone wishing
     #   to use, modify, copy, or redistribute it subject to the terms

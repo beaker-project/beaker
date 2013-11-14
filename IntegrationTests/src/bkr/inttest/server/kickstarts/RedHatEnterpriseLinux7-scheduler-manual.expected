@@ -209,10 +209,6 @@ chkconfig --level 345 beah-srv on
 chkconfig --level 345 beah-beaker-backend on
 chkconfig --level 345 beah-fwd-backend on
 
-# turn on rhts-compat by default (it will save us one reboot):
-chkconfig --add rhts-compat
-chkconfig --level 345 rhts-compat on
-
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
 cat <<"EOF" >/etc/profile.d/beaker.sh
@@ -242,16 +238,13 @@ setenv BUILDURL http://download.test-kickstart.invalid
 EOF
 # Check in with Beaker Server, record our postinstall time.
 curl http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
-# no snippet data for RedHatEnterpriseLinux7_post
-# no snippet data for system_post
-%end
-
-# Disable rhts-compat for Fedora15 and newer.
-%post --log=/dev/console
+# Disable rhts-compat for Fedora15/RHEL7 and newer.
 cat >> /etc/profile.d/task-overrides-rhts.sh <<END
 export RHTS_OPTION_COMPATIBLE=
 export RHTS_OPTION_COMPAT_SERVICE=
 END
+# no snippet data for RedHatEnterpriseLinux7_post
+# no snippet data for system_post
 %end
 
 

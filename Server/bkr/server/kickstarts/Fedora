@@ -101,19 +101,6 @@ chrony
 {% snippet 'system_post' %}
 %end
 
-# Disable rhts-compat for Fedora15 and newer.
-{% if distro.osversion.osmajor.osmajor.startswith('Fedora') %}
-{% set releasever = distro.osversion.osmajor.osmajor[6:] %}
-{% if releasever|int >= 15 or releasever == 'rawhide' %}
-%post --log=/dev/console
-cat >> /etc/profile.d/task-overrides-rhts.sh <<END
-export RHTS_OPTION_COMPATIBLE=
-export RHTS_OPTION_COMPAT_SERVICE=
-END
-%end
-{% endif %}
-{% endif %}
-
 {{ ks_appends|join('\n') }}
 {% snippet 'post_s390_reboot' %}
 {% snippet 'postreboot' %}

@@ -528,10 +528,6 @@ class TestGroupsWD(WebDriverTestCase):
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=990349
     #https://bugzilla.redhat.com/show_bug.cgi?id=990821
-    #XXX: the error message "enter a value less than " is technically
-    #wrong and has been corrected in a newer version of formencode
-    #so, this test will need updating with the new error message when
-    #that happens
     def test_check_group_name_display_name_length(self):
 
         max_length_group_name = Group.group_name.property.columns[0].type.length
@@ -550,12 +546,12 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_id('Group').submit()
         error_text = b.find_element_by_xpath('//span[contains(@class, "error") '
                 'and preceding-sibling::input/@name="group_name"]').text
-        self.assertEquals(u'Enter a value less than %r characters long' % max_length_group_name,
-                          error_text)
+        self.assertRegexpMatches(error_text,
+                                 'Enter a value (less|not more) than %r characters long' % max_length_group_name)
         error_text = b.find_element_by_xpath('//span[contains(@class, "error") '
                 'and preceding-sibling::input/@name="display_name"]').text
-        self.assertEquals(u'Enter a value less than %r characters long' %
-                          max_length_group_name, error_text)
+        self.assertRegexpMatches(error_text,
+                                 'Enter a value (less|not more) than %r characters long' % max_length_disp_name)
 
         # modify existing group
         with session.begin():
@@ -566,12 +562,12 @@ class TestGroupsWD(WebDriverTestCase):
                                  'A really long group display name'*20)
         error_text = b.find_element_by_xpath('//span[contains(@class, "error") '
                 'and preceding-sibling::input/@name="group_name"]').text
-        self.assertEquals(u'Enter a value less than %r characters long' % max_length_group_name,
-                          error_text)
+        self.assertRegexpMatches(error_text,
+                                 'Enter a value (less|not more) than %r characters long' % max_length_group_name)
         error_text = b.find_element_by_xpath('//span[contains(@class, "error") '
                 'and preceding-sibling::input/@name="display_name"]').text
-        self.assertEquals(u'Enter a value less than %r characters long' %
-                          max_length_disp_name, error_text)
+        self.assertRegexpMatches(error_text,
+                                 'Enter a value (less|not more) than %r characters long' % max_length_disp_name)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=990860
     def test_show_group_owners(self):

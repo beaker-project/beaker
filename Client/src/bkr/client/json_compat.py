@@ -10,9 +10,13 @@ except ImportError:
 
 try:
     dumps = json.dumps
+    loads = json.loads
 except AttributeError:
     # Support python-json from EPEL on RHEL5
     # We just silently ignore the pretty-printing arg
     # in this case, since python-json doesn't support it
     def dumps(obj, indent=None):
         return json.write(obj)
+
+    def loads(obj):
+        return json.read(obj)
