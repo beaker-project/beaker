@@ -1,0 +1,17 @@
+{% set default_rhts_compat = True %}
+{% if distro.osversion.osmajor.osmajor.startswith('Fedora') %}
+{% set releasever = distro.osversion.osmajor.osmajor[6:] %}
+{% if releasever|int >= 15 or releasever == 'rawhide'%}
+{% set default_rhts_compat = False %}
+{% endif %}
+{% else %}
+{% if distro is osmajor('RedHatEnterpriseLinux7') %}
+{% set default_rhts_compat = False %}
+{% endif %}
+{% endif %}
+{% if default_rhts_compat == True %}
+
+# turn on rhts-compat by default (it will save us one reboot):
+chkconfig --add rhts-compat
+chkconfig --level 345 rhts-compat on
+{% endif %}

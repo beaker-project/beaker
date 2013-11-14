@@ -254,8 +254,18 @@ Options for job configuration:
 
 .. option:: --repo <url>
 
-   Make the yum repository at <url> available during the job. This option may 
-   be specified multiple times.
+   Make the yum repository at <url> available during initial installation of
+   the system and afterwards. This option may be specified multiple times.
+   The installation may fail if the repo is not actually available.
+
+.. option:: --repo-post <url>
+
+   Make the yum repository at <url> available AFTER the installation. This 
+   option may be specified multiple times. The repo config will be appended to
+   the kickstart's %post section. Whether or not the installation succeeds is
+   not affected by the availability of the repo.
+
+   .. versionadded:: 0.14.3
 
 .. option:: --ignore-panic 
 

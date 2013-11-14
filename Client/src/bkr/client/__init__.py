@@ -273,7 +273,16 @@ class BeakerWorkflow(BeakerCommand):
             "--repo", metavar="URL",
             action="append",
             default=[],
-            help="Include this repo in job",
+            help=("Configure repo at <URL> in the kickstart. The repo "
+                  "will be available during initial package installation "
+                  "and subsequent recipe execution."),
+        )
+        job_options.add_option(
+            "--repo-post", metavar="URL",
+            default=[], action="append",
+            help=("Configure repo at <URL> as part of kickstart %post "
+                  "execution. The repo will NOT be available during "
+                  "initial package installation."),
         )
         job_options.add_option(
             "--ignore-panic",
@@ -605,6 +614,7 @@ class BeakerRecipeBase(BeakerBase):
         keyvalues = kwargs.get("keyvalue", [])
         requires = kwargs.get("hostrequire", [])
         repos = kwargs.get("repo", [])
+        postrepos = kwargs.get("repo_post", [])
         random = kwargs.get("random", False)
         ignore_panic = kwargs.get("ignore_panic", False)
         if distro:
@@ -646,6 +656,8 @@ class BeakerRecipeBase(BeakerBase):
             myrepo.setAttribute('name', 'myrepo_%s' % i)
             myrepo.setAttribute('url', '%s' % repo)
             self.addRepo(myrepo)
+        if postrepos:
+            self.addPostRepo(postrepos)
         if systype:
             systemType = self.doc.createElement('system_type')
             systemType.setAttribute('op', '=')
@@ -678,6 +690,33 @@ class BeakerRecipeBase(BeakerBase):
 
     def addRepo(self, node):
         self.repos.appendChild(node.cloneNode(True))
+
+    def addPostRepo(self,repourl_lst):
+        """ function to add repos only in %post section of kickstart
+
+        addRepo() function does add the repos to be available during the
+        installation time whereas this function appends the yum repo config
+        files in the %post section of the kickstart so that they are ONLY
+        available after the installation.
+        """
+        post_repo_config = ""
+        for i, repoloc in enumerate(repourl_lst):
+
+            post_repo_config += '''
+cat << EOF >/etc/yum.repos.d/beaker-postrepo%(i)s.repo
+[beaker-postrepo%(i)s]
+name=beaker-postrepo%(i)s
+baseurl=%(repoloc)s
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+''' % dict(i=i, repoloc=repoloc)
+
+        post_repo_config = "\n%post" + post_repo_config + "%end\n"
+        ks_append = self.doc.createElement('ks_append')
+        ks_append.appendChild(self.doc.createCDATASection(post_repo_config))
+        self.ks_appends.appendChild(ks_append.cloneNode(True))
 
     def addHostRequires(self, nodes):
         """ Accepts either xml, dom.Element or a list of dom.Elements """
@@ -807,6 +846,14 @@ class BeakerRecipeBase(BeakerBase):
         return self.node.getElementsByTagName('partitions')[0]
     partitions = property(get_partitions)
 
+    @property
+    def ks_appends(self):
+        existing = self.node.getElementsByTagName('ks_appends')
+        if existing:
+            return existing[0]
+        ks_appends = self.doc.createElement('ks_appends')
+        self.node.appendChild(ks_appends)
+        return ks_appends
 
 class BeakerRecipe(BeakerRecipeBase):
     def __init__(self, *args, **kwargs):

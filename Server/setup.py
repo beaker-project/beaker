@@ -170,7 +170,6 @@ setup(
     name="bkr.server",
     namespace_packages = ['bkr'],
     version='0.15.1',
-
     # uncomment the following lines if you fill them out in release.py
     description=description,
     author=author,

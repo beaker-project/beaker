@@ -252,3 +252,31 @@ Other backported fixes:
   errors are avoided. (Contributed by Martin Kyral and Dan Callaghan)
 * :issue:`759269`: An empty MOTD no longer causes tracebacks in
   server-errors.log (Contributed by Dan Callaghan)
+
+
+Beaker 0.14.3
+~~~~~~~~~~~~~
+
+Provisioning updates:
+
+* :issue:`967479`: The scheduler now ensures that, when testing a freshly
+  imported distro (which may not be available in all labs) as a guest on a
+  more stable distro (which *is* available in all labs), the host system will
+  only be provisioned in a lab that has both distros available.
+  (Contributed by Raymond Mancy)
+* :issue:`1012452`: ``rhts-compat`` is now correctly disabled for RHEL7
+  recipes that use a custom kickstart (Contributed by Amit Saha)
+
+Client updates:
+
+* :issue:`1027036`: GPLv2+ is now the default task license in beaker-wizard
+  (Contributed by Nick Coghlan)
+* :issue:`867087`: The new --repo-post workflow option allows a custom repo
+  to easily be configured to only be available after initial installation of
+  the system (Contributed by Gurhan Ozen and Nick Coghlan)
+
+Test harness updates:
+
+* :issue:`1004381`: The beah test harness no longer emits spurious
+  "ERROR: Unhandled error in Deferred" messages after completion of the
+  final task in a recipe (Contributed by Amit Saha)
