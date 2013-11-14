@@ -38,7 +38,10 @@ if [ "$commitcount" -gt 0 ] ; then
         "$workdir/beaker.spec"
 fi
 
+# We force the use of md5 hashes for RHEL5 compatibility
 rpmbuild \
+    --define "_source_filedigest_algorithm md5" \
+    --define "_binary_filedigest_algorithm md5" \
     --define "_topdir $workdir" \
     --define "_sourcedir $workdir" \
     --define "_specdir $workdir" \
