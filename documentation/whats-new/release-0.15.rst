@@ -467,3 +467,13 @@ Beaker 0.15.1
     in order to avoid problems caused by a wayward child process.
     (Contributed by Raymond Mancy)
 
+
+Beaker 0.15.2
+~~~~~~~~~~~~~
+
+* Beaker client
+
+  * :issue:`1011378`: A new subcommand, ``policy-list`` has been
+    added. Using this command you can retrieve the current access policy
+    rules for a system.
+    (Contributed by Amit Saha)
