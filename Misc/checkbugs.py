@@ -259,6 +259,8 @@ def main():
             help='Check bugs approved for RELEASE (using flags)')
     #parser.add_option('-s', '--sprint', metavar='SPRINT',
     #        help='Check bugs approved for SPRINT (using devel whiteboard)')
+    parser.add_option('-g', '--gerrit', action='store_true',
+            help='Check consistency between Bugzilla and Gerrit')
     parser.add_option('-j', '--jira', action='store_true',
             help='Check consistency between Bugzilla and JIRA (see '
                  'jirainfo.py for configuration details)')
@@ -280,6 +282,8 @@ def main():
         parser.error('Specify a milestone, release or sprint')
     if options.syncbzinfo or options.syncjirainfo:
         options.jira = True
+    if not (options.gerrit or options.jira):
+        parser.error('Must check consistency with Gerrit, JIRA or both')
 
     if options.jira:
         if JiraInfo is None:
@@ -288,9 +292,10 @@ def main():
             print "Connecting to JIRA"
         jira = JiraInfo("checkbugs", retrieve_info=False)
 
-    if options.verbose:
-        print "Building git revision list for HEAD"
-    build_git_revlist()
+    if options.gerrit:
+        if options.verbose:
+            print "Building git revision list for HEAD"
+        build_git_revlist()
     if options.verbose:
         print "Retrieving bug list from Bugzilla"
     bugs = get_bugs(options.milestone, options.release, options.sprint,
@@ -298,10 +303,14 @@ def main():
     bug_ids = set(bug.bug_id for bug in bugs)
     if options.verbose:
         print "  Retrieved %d bugs" % len(bugs)
-        print "Retrieving code review details from Gerrit"
-    changes = get_gerrit_changes(bug_ids)
-    if options.verbose:
-        print "  Retrieved %d patch reviews" % len(changes)
+    if options.gerrit:
+        if options.verbose:
+            print "Retrieving code review details from Gerrit"
+        changes = get_gerrit_changes(bug_ids)
+        if options.verbose:
+            print "  Retrieved %d patch reviews" % len(changes)
+    else:
+        changes = ()
 
     # Check consistency between JIRA and Bugzilla
     # Always checks internal consistency of all issues that reference
@@ -441,33 +450,36 @@ def main():
                         '%s (%d/%d)' % (change['status'], verified, reviewed),
                         abbrev_user(change['owner']['email']), change['url'])
 
-        # check for inconsistencies
-        if bug.bug_status in ('NEW', 'ASSIGNED') and \
-                any(change['status'] != 'ABANDONED' for change in bug_changes):
-            if all(change['status'] == 'MERGED' for change in bug_changes):
-                problem('Bug %s should be MODIFIED, not %s' % (bug.bug_id, bug.bug_status))
-            else:
-                problem('Bug %s should be POST, not %s' % (bug.bug_id, bug.bug_status))
-        elif bug.bug_status == 'POST' and \
-                not any(change['status'] == 'NEW' for change in bug_changes):
-            if bug_changes and all(change['status'] == 'MERGED' for change in bug_changes):
-                problem('Bug %s should be MODIFIED, not %s' % (bug.bug_id, bug.bug_status))
-            else:
-                problem('Bug %s should be ASSIGNED, not %s' % (bug.bug_id, bug.bug_status))
-        elif bug.bug_status in ('MODIFIED', 'ON_DEV', 'ON_QA', 'VERIFIED', 'RELEASE_PENDING', 'CLOSED'):
-            if bug.bug_status == 'CLOSED' and bug.resolution == 'DUPLICATE':
-                if bug.dupe_of not in bug_ids:
-                    dupe = get_bug(bug.dupe_of)
-                    if dupe.bug_status != 'CLOSED':
-                        for target_kind in "release", "milestone", "sprint":
-                            if getattr(options, target_kind, False):
-                                break
-                        problem('Bug %s marked as DUPLICATE of %s, which is not in this %s'
-                                                  % (bug.bug_id, bug.dupe_of, target_kind))
-            elif bug.bug_status == 'MODIFIED' and not bug_changes:
-                problem('Bug %s should be ASSIGNED, not %s' % (bug.bug_id, bug.bug_status))
-            elif not all(change['status'] in ('ABANDONED', 'MERGED') for change in bug_changes):
-                problem('Bug %s should be POST, not %s' % (bug.bug_id, bug.bug_status))
+        # check for patch state inconsistencies
+        if options.gerrit:
+            if bug.bug_status in ('NEW', 'ASSIGNED') and \
+                    any(change['status'] != 'ABANDONED' for change in bug_changes):
+                if all(change['status'] == 'MERGED' for change in bug_changes):
+                    problem('Bug %s should be MODIFIED, not %s' % (bug.bug_id, bug.bug_status))
+                else:
+                    problem('Bug %s should be POST, not %s' % (bug.bug_id, bug.bug_status))
+            elif bug.bug_status == 'POST' and \
+                    not any(change['status'] == 'NEW' for change in bug_changes):
+                if bug_changes and all(change['status'] == 'MERGED' for change in bug_changes):
+                    problem('Bug %s should be MODIFIED, not %s' % (bug.bug_id, bug.bug_status))
+                else:
+                    problem('Bug %s should be ASSIGNED, not %s' % (bug.bug_id, bug.bug_status))
+            elif bug.bug_status in ('MODIFIED', 'ON_DEV', 'ON_QA', 'VERIFIED', 'RELEASE_PENDING', 'CLOSED'):
+                if bug.bug_status == 'CLOSED' and bug.resolution == 'DUPLICATE':
+                    if bug.dupe_of not in bug_ids:
+                        dupe = get_bug(bug.dupe_of)
+                        if dupe.bug_status != 'CLOSED':
+                            for target_kind in "release", "milestone", "sprint":
+                                if getattr(options, target_kind, False):
+                                    break
+                            problem('Bug %s marked as DUPLICATE of %s, which is not in this %s'
+                                                    % (bug.bug_id, bug.dupe_of, target_kind))
+                elif bug.bug_status == 'MODIFIED' and not bug_changes:
+                    problem('Bug %s should be ASSIGNED, not %s' % (bug.bug_id, bug.bug_status))
+                elif not all(change['status'] in ('ABANDONED', 'MERGED') for change in bug_changes):
+                    problem('Bug %s should be POST, not %s' % (bug.bug_id, bug.bug_status))
+
+        # Check for release/milestone inconsistencies
         if options.release:
             if options.release == "1.0":
                 # All currently completed work for 1.0 should target 0.x
@@ -492,6 +504,8 @@ def main():
                     # refer to an earlier major version
                     problem('Bug %s target milestone should be %s or earlier, not %s' %
                                     (bug.bug_id, options.release, bug.target_milestone))
+
+        # Check merge consistency
         for change in bug_changes:
             if change['status'] == 'MERGED' and change['project'] == 'beaker':
                 sha = change['currentPatchSet']['revision']
