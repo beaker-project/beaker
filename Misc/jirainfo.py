@@ -41,14 +41,22 @@ The JIRA support needs to know where to find the JIRA instance. Create a
 checkbugs only needs read-only access (if not using --syncjirainfo),
 bz2jira always needs write access (hence the separate config sections)
 
-Kerberos login is not currently supported, so checkbugs is configured to
-prompt for a password with getpass
+To use Kerberos to access JIRA, set "krb_auth_path" in the instance config, so
+the client knows what URL to hit on the server in order to submit the Kerberos
+ticket. If this isn't set, jirainfo prompts for a password with the supplied
+getpass callback.
 """
 
 import os.path
 from ConfigParser import RawConfigParser as ConfigParser
 from jira.client import JIRA
 from collections import namedtuple
+from getpass import getpass
+import urlparse
+try:
+    import kerberos
+except ImportError:
+    kerberos = None
 
 JIRA_CONFIG = os.path.expanduser("~/.beaker-jira.cfg")
 CONFIG_DIR = os.path.dirname(JIRA_CONFIG)
@@ -65,6 +73,20 @@ Use {{Misc/checkbugs.py}} to ensure bug and issue states are aligned.
 def relative_config_path(target):
     return os.path.normpath(os.path.join(CONFIG_DIR, target))
 
+def _jira_kerberos_login(session, server, krb_auth_path):
+    """Helping to log in to a JIRA instance set up for Kerberos auth"""
+    krb_service = "HTTP@" + urlparse.urlparse(server).netloc
+    krb_auth_url = urlparse.urljoin(server, krb_auth_path)
+    __, krb_context = kerberos.authGSSClientInit(krb_service)
+    kerberos.authGSSClientStep(krb_context, "")
+    krb_auth_header = ("Negotiate " +
+                        kerberos.authGSSClientResponse(krb_context))
+    r = session.get(krb_auth_url,
+                    headers={"Authorization": krb_auth_header})
+    if r.status_code != 200:
+        raise RuntimeError("Kerberos auth failed. HTTP error %d on %s"
+                            % (r.status_code, krb_auth_url))
+
 class IssueDetails(namedtuple("IssueDetails",
                               ["id", "status", "summary", "description",
                                "target_version", "story_points",
@@ -74,21 +96,26 @@ class IssueDetails(namedtuple("IssueDetails",
 
 class JiraInfo(object):
 
-    def __init__(self, config_section, getpasscb=None, retrieve_info=True):
-        cfg = ConfigParser({"verify": None})
+    def __init__(self, config_section, getpasscb=getpass, retrieve_info=True):
+        cfg = ConfigParser({"verify": None, "krb_auth_path": None})
         cfg_files = cfg.read(JIRA_CONFIG)
         if not cfg_files:
             raise RuntimeError("Please provide %s" % JIRA_CONFIG)
         server = cfg.get(config_section, "server")
         verify = cfg.get(config_section, "verify")
+        krb_auth_path = cfg.get(config_section, "krb_auth_path")
         username = cfg.get(config_section, "username")
-        self._jira_project = project = cfg.get(config_section, "project")
+        self._jira_project = cfg.get(config_section, "project")
         options = {"server": server}
         if verify:
             options["verify"] = relative_config_path(verify)
-        if getpasscb is None:
-            raise RuntimeError("Kerberos auth not yet supported")
-        self._jira = jira = JIRA(options, basic_auth=(username, getpasscb()))
+        if krb_auth_path is None:
+            self._jira = JIRA(options, basic_auth=(username, getpasscb()))
+        elif kerberos is None:
+            raise RuntimeError("python-kerberos is not installed")
+        else:
+            self._jira = jira = JIRA(options)
+            _jira_kerberos_login(jira._session, server, krb_auth_path)
         if retrieve_info:
             self.retrieve_info()
 

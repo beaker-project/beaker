@@ -30,9 +30,6 @@ try:
     from jirainfo import JiraInfo
 except ImportError:
     JiraInfo = None
-else:
-    # Initially using basic auth, will eventually switch to Kerberos
-    from getpass import getpass
 
 # These are in Python 2.6
 def any(iterable):
@@ -289,7 +286,7 @@ def main():
             raise RuntimeError("Could not import jirainfo. Is the virtualenv active?")
         if options.verbose:
             print "Connecting to JIRA"
-        jira = JiraInfo("checkbugs", getpass, retrieve_info=False)
+        jira = JiraInfo("checkbugs", retrieve_info=False)
 
     if options.verbose:
         print "Building git revision list for HEAD"
