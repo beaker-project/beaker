@@ -74,7 +74,7 @@ class IssueDetails(namedtuple("IssueDetails",
 
 class JiraInfo(object):
 
-    def __init__(self, config_section, getpasscb=None):
+    def __init__(self, config_section, getpasscb=None, retrieve_info=True):
         cfg = ConfigParser({"verify": None})
         cfg_files = cfg.read(JIRA_CONFIG)
         if not cfg_files:
@@ -89,6 +89,12 @@ class JiraInfo(object):
         if getpasscb is None:
             raise RuntimeError("Kerberos auth not yet supported")
         self._jira = jira = JIRA(options, basic_auth=(username, getpasscb()))
+        if retrieve_info:
+            self.retrieve_info()
+
+    def retrieve_info(self):
+        jira = self._jira
+        project = self._jira_project
         self._versions = dict((v.name, v)
                                 for v in jira.project(project).versions)
         # Retrieving every issue that references bugzilla probably won't

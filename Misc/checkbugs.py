@@ -283,6 +283,14 @@ def main():
         parser.error('Specify a milestone, release or sprint')
     if options.syncbzinfo or options.syncjirainfo:
         options.jira = True
+
+    if options.jira:
+        if JiraInfo is None:
+            raise RuntimeError("Could not import jirainfo. Is the virtualenv active?")
+        if options.verbose:
+            print "Connecting to JIRA"
+        jira = JiraInfo("checkbugs", getpass, retrieve_info=False)
+
     if options.verbose:
         print "Building git revision list for HEAD"
     build_git_revlist()
@@ -306,11 +314,7 @@ def main():
         in_work_states = set(("ASSIGNED", "POST", "MODIFIED", "ON_QA"))
         to_do_states = set(("NEW",))
 
-        if JiraInfo is None:
-            raise RuntimeError("Could not import jirainfo. Is the virtualenv active?")
-        if options.verbose:
-            print "Checking JIRA and Bugzilla cross-reference consistency"
-        jira = JiraInfo("checkbugs", getpass)
+        jira.retrieve_info()
         jira_bz_issues = list(jira.iter_bz_issues())
         if options.verbose:
             print ("  Retrieved %d issues with Bugzilla refs" %
