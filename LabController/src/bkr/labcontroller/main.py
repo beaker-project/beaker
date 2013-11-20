@@ -136,7 +136,7 @@ def main_loop(proxy=None, conf=None):
     login.daemon = True
     login.start()
 
-    server = gevent.wsgi.WSGIServer(('', 8000), WSGIApplication(proxy),
+    server = gevent.wsgi.WSGIServer(('::', 8000), WSGIApplication(proxy),
             handler_class=WSGIHandler, spawn=gevent.pool.Pool())
     server.stop_timeout = None
     server.start()
