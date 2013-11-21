@@ -5784,9 +5784,12 @@ class Recipe(TaskBase):
         """
         Method for exporting Recipe status for TaskWatcher
         """
+        worker = {}
+        if self.resource:
+            worker['name'] = self.resource.fqdn
         return dict(
                     id              = "R:%s" % self.id,
-                    worker          = dict(name = self.resource.fqdn),
+                    worker          = worker,
                     state_label     = "%s" % self.status,
                     state           = self.status.value,
                     method          = "%s" % self.whiteboard,
@@ -6267,9 +6270,12 @@ class RecipeTask(TaskBase):
         """
         Method for exporting Task status for TaskWatcher
         """
+        worker = {}
+        if self.recipe.resource:
+            worker['name'] = self.recipe.resource.fqdn
         return dict(
                     id              = "T:%s" % self.id,
-                    worker          = dict(name = self.recipe.resource.fqdn),
+                    worker          = worker,
                     state_label     = "%s" % self.status,
                     state           = self.status.value,
                     method          = "%s" % self.task.name,
