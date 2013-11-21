@@ -5,15 +5,69 @@ Adding your system to Beaker
 ============================
 
 To add a system, go to any system search page, then click the :guilabel:`Add` 
-button at the bottom of the page. After filling in the system's details, click 
-the :guilabel:`Save Changes` button.
+button at the bottom of the page. Fill in the system's details and click the 
+:guilabel:`Save Changes` button to create a new record for your system. Define 
+which architectures your system supports on the :guilabel:`Arches` tab. Then 
+fill in the other details as described below.
 
-You will then need to update the Power details. To test they work, try hitting 
-the power action buttons to ensure the system is responding correctly. The Arch 
-details should then be updated, and then update the Install options with 
-``console=ttyS1,115200n8 ksdevice=link`` for each arch. See 
-:ref:`system-details-tabs`. You'll need to ensure that your System is hooked up 
-to the conserver. Try provisioning a system (see :ref:`provisioning-a-system`). 
+DHCP and DNS
+------------
+
+In order to provision the system, Beaker needs to be able to resolve its FQDN 
+consistently. The system must have a static IPv4 address assigned by DHCP and 
+a matching ``A`` record in DNS which resolves to that address. It is also 
+recommended to add a corresponding ``PTR`` record so that reverse hostname 
+lookups work correctly on the system after it is provisioned.
+
+If the system has multiple network interfaces, ensure that the MAC address in 
+the DHCP reservation matches the network interface which the system's firmware 
+boots from.
+
+The DHCP server must include suitable netboot options for the system. Typically 
+DHCP option 66 ("TFTP server") is set to the address of the lab controller and 
+option 67 ("bootfile") is set to ``pxelinux.0`` or some other boot loader image 
+served by the lab controller.
+
+DHCP option 42 ("NTP servers") must also be set, so that the system's clock can 
+be synchronized at the start of each recipe. Use a public NTP server if none 
+are available in your lab.
+
+Power control
+-------------
+
+If the system supports remote power control, either through an out-of-band 
+management controller or using a switchable power port, configure the details 
+on the :guilabel:`Power Config` tab. Virtual machines can use the ``virsh`` 
+power type.
+
+.. todo:: refer to docs for power types once they exist
+
+This is a prerequisite for automatic (unattended) provisioning. If the system 
+has no remote power control, you will have to reboot it manually when Beaker 
+provisions it.
+
+Boot order
+----------
+
+For automatic provisioning, you must also configure the system's firmware
+to boot from the network first. Beaker will ensure that the system either boots 
+an installer image over the network or falls back to booting from the local 
+hard disk as appropriate. See :ref:`provisioning-process` for details about how 
+automatic provisioning works in Beaker.
+
+Remote console
+--------------
+
+If your system supports remote console access (serial-over-LAN or similar), you 
+can hook it up to the conserver in your lab. This will allow Beaker to capture 
+console logs and detect kernel panics.
+
+.. todo:: refer to docs about setting up conserver once they exist
+
+Testing your system's configuration
+-----------------------------------
+
+Try provisioning a system (see :ref:`provisioning-a-system`). 
 You can watch the provisioning process through the console. Please, be patient. 
 The provisioning may take some time.
 
