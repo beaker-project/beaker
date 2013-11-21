@@ -141,6 +141,23 @@ EOF
             DistroTreeRepo(repo_id=u'debug', repo_type=u'debug',
                     path=u'../debug'),
         ]
+        cls.rhel58server_ia64 = data_setup.create_distro_tree(
+                distro=cls.rhel58server, variant=None, arch=u'ia64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-5-Server/U8/ia64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/RHEL-5-Server/U8/ia64/os/'])
+        cls.rhel58server_ia64.repos[:] = [
+            DistroTreeRepo(repo_id=u'Cluster', repo_type=u'addon',
+                    path=u'Cluster'),
+            DistroTreeRepo(repo_id=u'ClusterStorage', repo_type=u'addon',
+                    path=u'ClusterStorage'),
+            DistroTreeRepo(repo_id=u'Server', repo_type=u'os',
+                    path=u'Server'),
+            DistroTreeRepo(repo_id=u'VT', repo_type=u'addon',
+                    path=u'VT'),
+            DistroTreeRepo(repo_id=u'debug', repo_type=u'debug',
+                    path=u'../debug'),
+        ]
 
         cls.rhel62 = data_setup.create_distro(name=u'RHEL-6.2',
                 osmajor=u'RedHatEnterpriseLinux6', osminor=u'2')
@@ -292,9 +309,11 @@ EOF
         job = Jobs().process_xmljob(xmljob, self.user)
         recipe = job.recipesets[0].recipes[0]
         session.flush()
-        data_setup.mark_recipe_waiting(recipe, system=system,
+        data_setup.mark_job_waiting(job, system=system,
                 virt=virt, lab_controller=self.lab_controller)
         recipe.provision()
+        for guest in recipe.guests:
+            guest.provision()
         return recipe
 
     def test_rhel3_defaults(self):
@@ -688,8 +707,6 @@ EOF
                 </recipeSet>
             </job>''')
         guest = recipe.guests[0]
-        data_setup.mark_recipe_waiting(guest)
-        guest.provision()
         ks = guest.rendered_kickstart.kickstart
         self.assert_(r'''bootloader --location=mbr  --append="console=ttyS0,115200 console=ttyS1,115200"''' in ks.splitlines(), ks)
         self.assert_('cat << EOF >/etc/init/ttyS0.conf\n'
@@ -2203,3 +2220,31 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
         ks = recipe.rendered_kickstart.kickstart
         self.assertIn('http://example.com/myanamon', ks)
         self.assertNotIn('http://lab.test-kickstart.invalid/beaker/anamon', ks)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1029681
+    def test_boot_order_manipulation_skipped_for_guest_recipes(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <guestrecipe guestargs="--ram=1024 vcpus=1">
+                            <distroRequires>
+                                <distro_name op="=" value="RHEL5-Server-U8" />
+                                <distro_arch op="=" value="ia64" />
+                            </distroRequires>
+                            <hostRequires/>
+                            <task name="/distribution/install" />
+                        </guestrecipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL5-Server-U8" />
+                            <distro_arch op="=" value="ia64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>''')
+        guest = recipe.guests[0]
+        ks = guest.rendered_kickstart.kickstart
+        self.assertNotIn('efibootmgr', ks)

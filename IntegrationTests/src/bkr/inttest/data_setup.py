@@ -489,10 +489,10 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
     recipe.recipeset.job.update_status()
     log.debug('Marked %s as waiting with system %s', recipe.t_id, recipe.resource.fqdn)
 
-def mark_job_waiting(job):
+def mark_job_waiting(job, **kwargs):
     for recipeset in job.recipesets:
         for recipe in recipeset.recipes:
-            mark_recipe_waiting(recipe)
+            mark_recipe_waiting(recipe, **kwargs)
 
 def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
     if not only:

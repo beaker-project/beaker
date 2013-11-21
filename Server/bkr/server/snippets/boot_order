@@ -1,7 +1,12 @@
 {#
  # EFI is currently the only firmware where we have to stuff around with the
  # boot order. If efibootmgr fails, we assume this is not an EFI system.
+ #
+ # In addition, we skip the snippet for guest recipes because we don't need to
+ # worry about boot order there, and efibootmgr can apparently crash ia64 Xen
+ # domains (bug 1029681).
  #}
+{% if not recipe|attr('hostrecipe') %}
 if efibootmgr &>/dev/null ; then
     # The installer should have added a new boot entry for the OS
     # at the top of the boot order. We take that out of the order
@@ -23,3 +28,4 @@ if efibootmgr &>/dev/null ; then
     # save the boot entry for later, so that rhts-reboot can set BootNext as well
     echo "$os_boot_entry" >/root/EFI_BOOT_ENTRY.TXT
 fi
+{% endif %}
