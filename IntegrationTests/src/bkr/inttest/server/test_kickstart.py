@@ -1761,10 +1761,7 @@ mysillypackage
         tree = self.rhel62_server_x86_64
         ks = generate_kickstart(self.system.install_options(tree),
                                 tree, self.system, None).kickstart
-        self.assert_("export BEAKER_JOB_WHITEBOARD=''" in ks, ks)
-        self.assert_("export BEAKER_RECIPE_WHITEBOARD=''" in ks, ks)
-        self.assert_("setenv BEAKER_JOB_WHITEBOARD ''" in ks, ks)
-        self.assert_("setenv BEAKER_RECIPE_WHITEBOARD ''" in ks, ks)
+        compare_expected('RedHatEnterpriseLinux6-manual-defaults', None, ks)
 
     def test_no_system_or_recipe(self):
         # We need one or the other in order to find the lab controller
