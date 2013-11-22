@@ -160,6 +160,36 @@ class AtomicFileReplacement(object):
 # Backwards compatibility alias
 atomically_replaced_file = AtomicFileReplacement
 
+def atomic_link(source, dest):
+    temp_path = tempfile.mktemp(prefix=os.path.basename(dest),
+            dir=os.path.dirname(dest))
+    os.link(source, temp_path)
+    try:
+        os.rename(temp_path, dest)
+    except:
+        # Clean up the temp file, but suppress any exception if the cleaning fails
+        try:
+            os.unlink(temp_path)
+        finally:
+            pass
+        # Now re-raise the original exception
+        raise
+
+def atomic_symlink(source, dest):
+    temp_path = tempfile.mktemp(prefix=os.path.basename(dest),
+            dir=os.path.dirname(dest))
+    os.symlink(source, temp_path)
+    try:
+        os.rename(temp_path, dest)
+    except:
+        # Clean up the temp file, but suppress any exception if the cleaning fails
+        try:
+            os.unlink(temp_path)
+        finally:
+            pass
+        # Now re-raise the original exception
+        raise
+
 def makedirs_ignore(path, mode):
     """
     Creates the given directory (and any parents), but succeeds if it already

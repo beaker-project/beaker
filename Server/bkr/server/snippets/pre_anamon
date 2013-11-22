@@ -1,4 +1,4 @@
 {% if recipe %}
-wget -O /tmp/anamon 'http://{{ lab_controller.fqdn }}/beaker/anamon'
+wget -O /tmp/anamon '{{ anamon|default('http://' + lab_controller.fqdn + '/beaker/anamon') }}'
 python /tmp/anamon --recipe-id {{ recipe.id }} --xmlrpc-url 'http://{{ lab_controller.fqdn }}:8000/RPC2'
 {% endif %}

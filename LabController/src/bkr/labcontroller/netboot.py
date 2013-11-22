@@ -13,42 +13,12 @@ import urllib
 import urllib2
 from bkr.labcontroller.config import get_conf
 from bkr.common.helpers import (atomically_replaced_file, makedirs_ignore,
-        siphon, unlink_ignore)
+        siphon, unlink_ignore, atomic_link, atomic_symlink)
 
 logger = logging.getLogger(__name__)
 
 def get_tftp_root():
     return get_conf().get('TFTP_ROOT', '/var/lib/tftpboot')
-
-def atomic_link(source, dest):
-    temp_path = tempfile.mktemp(prefix=os.path.basename(dest),
-            dir=os.path.dirname(dest))
-    os.link(source, temp_path)
-    try:
-        os.rename(temp_path, dest)
-    except:
-        # Clean up the temp file, but suppress any exception if the cleaning fails
-        try:
-            os.unlink(temp_path)
-        finally:
-            pass
-        # Now re-raise the original exception
-        raise
-
-def atomic_symlink(source, dest):
-    temp_path = tempfile.mktemp(prefix=os.path.basename(dest),
-            dir=os.path.dirname(dest))
-    os.symlink(source, temp_path)
-    try:
-        os.rename(temp_path, dest)
-    except:
-        # Clean up the temp file, but suppress any exception if the cleaning fails
-        try:
-            os.unlink(temp_path)
-        finally:
-            pass
-        # Now re-raise the original exception
-        raise
 
 def write_ignore(path, content):
     """
