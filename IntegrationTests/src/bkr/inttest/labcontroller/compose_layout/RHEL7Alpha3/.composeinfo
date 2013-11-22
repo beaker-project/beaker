@@ -200,7 +200,7 @@ source_repository = Server-optional/source/tree
 [variant-Server.ppc64]
 arch = ppc64
 debuginfo = Server/ppc64/debuginfo/tree
-isos = Server/ppc64/iso
+isos = Server/ppc64/isore
 os_dir = Server/ppc64/os
 packages = Server/ppc64/os/Packages
 repository = Server/ppc64/os
@@ -211,7 +211,7 @@ source_repository = Server/source/tree
 [variant-Server.s390x]
 arch = s390x
 debuginfo = Server/s390x/debuginfo/tree
-isos = Server/s390x/iso
+isos = Server/s390x/isobar
 os_dir = Server/s390x/os
 packages = Server/s390x/os/Packages
 repository = Server/s390x/os
@@ -277,7 +277,7 @@ source_repository = Workstation-optional/source/tree
 [variant-Workstation.x86_64]
 arch = x86_64
 debuginfo = Workstation/x86_64/debuginfo/tree
-isos = Workstation/x86_64/iso
+isos = Workstation/x86_64/isometric
 os_dir = Workstation/x86_64/os
 packages = Workstation/x86_64/os/Packages
 repository = Workstation/x86_64/os

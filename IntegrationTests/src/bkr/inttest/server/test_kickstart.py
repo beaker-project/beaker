@@ -203,7 +203,8 @@ EOF
         cls.rhel70nightly_workstation_x86_64 = data_setup.create_distro_tree(
                 distro=cls.rhel70nightly, variant=u'Workstation', arch=u'x86_64',
                 lab_controllers=[cls.lab_controller],
-                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/'])
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/',
+                      u'nfs+iso://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/iso/'])
         cls.rhel70nightly_workstation_x86_64.repos[:] = [
             DistroTreeRepo(repo_id=u'repos_debug_Workstation_optional',
                     repo_type=u'debug',
@@ -739,6 +740,28 @@ EOF
             ''', self.system)
         compare_expected('RedHatEnterpriseLinux7-scheduler-defaults', recipe.id,
                 recipe.rendered_kickstart.kickstart)
+
+    def test_rhel7_nfs_iso(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="method=nfs+iso">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assert_(r'''nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/iso/'''
+                     in recipe.rendered_kickstart.kickstart.splitlines(),
+                     recipe.rendered_kickstart.kickstart)
 
     def test_rhel7_auth(self):
         recipe = self.provision_recipe('''
