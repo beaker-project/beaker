@@ -1,2 +1,0 @@
-This test runs a Beaker recipe with a custom kickstart (<kickstart/> element)
-and checks that the resulting kickstart used for provisioning matches.
