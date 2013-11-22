@@ -1,0 +1,35 @@
+// recipe tasks on job and recipe pages (and elsewhere)
+table.tasks {
+    & > tbody {
+        border-top: 2px solid @tableBorder;
+    }
+    & > tbody:nth-child(odd) > tr {
+        & > td, & > th {
+            background-color: @tableBackgroundAccent;
+        }
+    }
+    // need to set even tbodies to white instead of leaving them transparent so
+    // that they occlude the recipe set border underneath them, in case the
+    // results table overflows
+    // https://bugzilla.redhat.com/show_bug.cgi?id=1014962
+    & > tbody:nth-child(even) > tr {
+        & > td, & > th {
+            background-color: #ffffff;
+        }
+    }
+    // need to repeat hover style here to override the striping
+    & > tbody > tr:hover {
+        & > td, & > th {
+            background-color: @tableBackgroundHover;
+        }
+    }
+    td.logs ul {
+        margin: 0;
+    }
+    td.logs li {
+        max-width: 18em;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+}

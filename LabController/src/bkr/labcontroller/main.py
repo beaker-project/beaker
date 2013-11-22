@@ -147,7 +147,7 @@ def main_loop(proxy=None, conf=None):
     login.daemon = True
     login.start()
 
-    server = gevent.wsgi.WSGIServer(('', 8000),
+    server = gevent.wsgi.WSGIServer(('::', 8000),
             log_failed_requests(WSGIApplication(proxy)),
             handler_class=WSGIHandler, spawn=gevent.pool.Pool())
     server.stop_timeout = None

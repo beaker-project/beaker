@@ -2182,3 +2182,27 @@ part /mnt/testarea1 --size=10240 --fstype btrfs
 part /mnt/testarea2 --size=10240 --fstype btrfs
 ''',
                      recipe.rendered_kickstart.kickstart)
+
+    def test_anamon(self):
+        # Test that we can override the anamon URL
+        recipe_xml = '''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="anamon=http://example.com/myanamon">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            '''
+        recipe = self.provision_recipe(recipe_xml, self.system)
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('http://example.com/myanamon', ks)
+        self.assertNotIn('http://lab.test-kickstart.invalid/beaker/anamon', ks)
