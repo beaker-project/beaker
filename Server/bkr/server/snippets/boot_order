@@ -1,0 +1,25 @@
+{#
+ # EFI is currently the only firmware where we have to stuff around with the
+ # boot order. If efibootmgr fails, we assume this is not an EFI system.
+ #}
+if efibootmgr &>/dev/null ; then
+    # The installer should have added a new boot entry for the OS
+    # at the top of the boot order. We take that out of the order
+    # and set it as BootNext instead.
+{#
+    # Some extra considerations for EFI:
+    #   - We can't rely on the BootCurrent variable because some
+    #     implementations do not provide it (bug 1031876)
+    #   - We need to preserve all existing entries in the boot order. Some
+    #     implementations will freak out if their built-in boot entries
+    #     ("Vendor...") are removed from the order and will re-add them, making
+    #     a mess of things in the process (bug 1030612)
+#}
+    boot_order=$(efibootmgr | awk '/BootOrder/ { print $2 }')
+    os_boot_entry=$(cut -d, -f1 <<<"$boot_order")
+    new_boot_order=$(cut -d, -f2- <<<"$boot_order")
+    efibootmgr -o "$new_boot_order"
+    efibootmgr -n "$os_boot_entry"
+    # save the boot entry for later, so that rhts-reboot can set BootNext as well
+    echo "$os_boot_entry" >/root/EFI_BOOT_ENTRY.TXT
+fi

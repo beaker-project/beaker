@@ -140,20 +140,17 @@ if [ -e /etc/chrony.conf ] ; then
 fi
 
 
-# If efibootmgr exists then re-order boot options
-if [ -x '/usr/sbin/efibootmgr' ]; then
-    BOOT=$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print $2}' | awk -F, '{print $1}')
-    PXE_SLOT=$(/usr/sbin/efibootmgr -v | grep -i BootCurrent | awk '{print $2}')
-    # This will put the boot order back to what it was before the install.
-    # When first setting up a system make sure you put the netboot entry first.
-    if [ ! -z $PXE_SLOT ]; then
-       NEWBOOT=$(echo $BOOT| sed -e 's/$PXE_SLOT,//')
-       # its cheesy. but it works.
-       NEWBOOT=$(echo $NEWBOOT| sed -e 's/,$PXE_SLOT,//')
-       NEWBOOT=$(echo $NEWBOOT| sed -e 's/,$PXE_SLOT//')
-       /usr/sbin/efibootmgr -o $PXE_SLOT,$NEWBOOT
-       /usr/sbin/efibootmgr -n $BOOT
-    fi
+if efibootmgr &>/dev/null ; then
+    # The installer should have added a new boot entry for the OS
+    # at the top of the boot order. We take that out of the order
+    # and set it as BootNext instead.
+    boot_order=$(efibootmgr | awk '/BootOrder/ { print $2 }')
+    os_boot_entry=$(cut -d, -f1 <<<"$boot_order")
+    new_boot_order=$(cut -d, -f2- <<<"$boot_order")
+    efibootmgr -o "$new_boot_order"
+    efibootmgr -n "$os_boot_entry"
+    # save the boot entry for later, so that rhts-reboot can set BootNext as well
+    echo "$os_boot_entry" >/root/EFI_BOOT_ENTRY.TXT
 fi
 
 

@@ -78,21 +78,7 @@ elif [ -e "/etc/default/grub" ]; then
 fi
 {% endif %}
 
-# If efibootmgr exists then re-order boot options
-if [ -x '/usr/sbin/efibootmgr' ]; then
-    BOOT=$(/usr/sbin/efibootmgr -v | grep BootOrder | awk '{print $2}' | awk -F, '{print $1}')
-    PXE_SLOT=$(/usr/sbin/efibootmgr -v | grep -i BootCurrent | awk '{print $2}')
-    # This will put the boot order back to what it was before the install.
-    # When first setting up a system make sure you put the netboot entry first.
-    if [ ! -z $PXE_SLOT ]; then
-       NEWBOOT=$(echo $BOOT| sed -e 's/$PXE_SLOT,//')
-       # its cheesy. but it works.
-       NEWBOOT=$(echo $NEWBOOT| sed -e 's/,$PXE_SLOT,//')
-       NEWBOOT=$(echo $NEWBOOT| sed -e 's/,$PXE_SLOT//')
-       /usr/sbin/efibootmgr -o $PXE_SLOT,$NEWBOOT
-       /usr/sbin/efibootmgr -n $BOOT
-    fi
-fi
+{% snippet 'boot_order' %}
 
 {% if not yum %}
 {% if distro is osmajor('RedHatEnterpriseLinux3') %}
