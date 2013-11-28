@@ -35,7 +35,7 @@ def url_exists(url):
 
 class IncompleteTree(BX):
     """
-    IncompleteTree is raised when there is a discrepency between
+    IncompleteTree is raised when there is a discrepancy between
     what is specified in a .composeinfo/.treeinfo, and what is actually
     found on disk.
     """
@@ -835,12 +835,11 @@ class TreeInfoBase(object):
         if nfs_url:
             try:
                 nfs_isos_url = self._installable_isos_url(nfs_url, isos_path)
-                if nfs_isos_url:
-                    self.tree['urls'].append(nfs_isos_url)
-            except NotImplementedError, e:
-                logging.info(str(e))
             except IncompleteTree, e:
                 logging.warn(str(e))
+            else:
+                if nfs_isos_url:
+                    self.tree['urls'].append(nfs_isos_url)
 
         if options.json:
             print json.dumps(self.tree)
@@ -1414,10 +1413,6 @@ repository = LoadBalancer
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
             logging.debug('.treeinfo has no addon repos for %s, %s' % (self.parser.url,e))
         return repos
-
-    def _installable_isos_url(self, *args, **kwargs):
-        raise NotImplementedError('BZ#846103 must be resolved before RHEL6 can'
-            ' utilize this feature')
 
 
 class TreeInfoRHS(TreeInfoBase, Importer):

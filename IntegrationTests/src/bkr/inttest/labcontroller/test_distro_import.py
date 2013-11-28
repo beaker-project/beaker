@@ -864,13 +864,19 @@ class DistroImportTest(unittest.TestCase):
                 'nfs+iso://fake.example.com:/nfs/RHEL5-Server/i386/iso/'])
         self.assertEquals(tree, self.i386_rhel5)
 
-    def test_rhel6_wont_import_iso(self):
-        trees = self.import_trees(
-            ['%sRHEL6-Server/x86_64/os' % self.distro_url,
-            'nfs://fake.example.com:/nfs/RHEL6-Server/x86_64/os'])
+    def test_rhel6_import_tree_with_iso(self):
+        trees = self.dry_run_import_trees(['%sRHEL6-Server/x86_64/os/'
+            % self.distro_url,
+            'nfs://invalid.example.com/RHEL6-Server/x86_64/os/'])
+        self.assertTrue(len(trees) == 1)
         tree = trees.pop()
-        self.x86_64_rhel6['name'] = 'RedHatEnterpriseLinux-6.0'
-        self.x86_64_rhel6['urls'].append(u'nfs://fake.example.com:/nfs/RHEL6-Server/x86_64/os/')
+        # See https://bugzilla.redhat.com/show_bug.cgi?id=910243
+        # The following is actually a bug, but current behaviour
+        # if there is no 'name' in .treeinfo's [general] section
+        self.x86_64_rhel6['name'] = u'RedHatEnterpriseLinux-6.0'
+        self.x86_64_rhel6['urls'].extend(
+            ['nfs://invalid.example.com/RHEL6-Server/x86_64/os/',
+            'nfs+iso://invalid.example.com/RHEL6-Server/x86_64/iso/'])
         self.assertEquals(tree, self.x86_64_rhel6)
 
     def test_rhel6_tree_import_tree(self):
