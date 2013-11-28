@@ -75,6 +75,14 @@ correspond to the similarly-named kickstart option.
     effect is similar to booting from install media with no kickstart. 
     Typically it is also necessary to set ``mode=vnc``.
 
+``method=<method>``
+   Installation method to use. Default is ``nfs``, supported alternatives
+   include ``http`` and ``nfs+iso``. The specific installation methods
+   supported for a particular distro tree in a particular lab will depend on
+   how the distro was imported into Beaker. The available methods can be
+   determined through the web UI by looking at the URL schemes listed for
+   the distro tree.
+
 ``mode=<mode>``
     Installation mode to use. Valid values are ``text`` (curses-like 
     interface), ``cmdline`` (plain text with no interaction), ``graphical`` 
