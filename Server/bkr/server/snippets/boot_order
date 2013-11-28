@@ -9,7 +9,7 @@
 {% if not recipe|attr('hostrecipe') %}
 if efibootmgr &>/dev/null ; then
     # The installer should have added a new boot entry for the OS
-    # at the top of the boot order. We take that out of the order
+    # at the top of the boot order. We move it to the end of the order
     # and set it as BootNext instead.
 {#
     # Some extra considerations for EFI:
@@ -19,10 +19,12 @@ if efibootmgr &>/dev/null ; then
     #     implementations will freak out if their built-in boot entries
     #     ("Vendor...") are removed from the order and will re-add them, making
     #     a mess of things in the process (bug 1030612)
+    #   - We can't remove the OS boot entry from the order entirely, because
+    #     some implementations will just delete it
 #}
     boot_order=$(efibootmgr | awk '/BootOrder/ { print $2 }')
     os_boot_entry=$(cut -d, -f1 <<<"$boot_order")
-    new_boot_order=$(cut -d, -f2- <<<"$boot_order")
+    new_boot_order=$(cut -d, -f2- <<<"$boot_order"),"$os_boot_entry"
     efibootmgr -o "$new_boot_order"
     efibootmgr -n "$os_boot_entry"
     # save the boot entry for later, so that rhts-reboot can set BootNext as well

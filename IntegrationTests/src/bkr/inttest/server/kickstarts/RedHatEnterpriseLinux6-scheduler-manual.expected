@@ -99,11 +99,11 @@ fi
 
 if efibootmgr &>/dev/null ; then
     # The installer should have added a new boot entry for the OS
-    # at the top of the boot order. We take that out of the order
+    # at the top of the boot order. We move it to the end of the order
     # and set it as BootNext instead.
     boot_order=$(efibootmgr | awk '/BootOrder/ { print $2 }')
     os_boot_entry=$(cut -d, -f1 <<<"$boot_order")
-    new_boot_order=$(cut -d, -f2- <<<"$boot_order")
+    new_boot_order=$(cut -d, -f2- <<<"$boot_order"),"$os_boot_entry"
     efibootmgr -o "$new_boot_order"
     efibootmgr -n "$os_boot_entry"
     # save the boot entry for later, so that rhts-reboot can set BootNext as well
