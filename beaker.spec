@@ -78,6 +78,7 @@ BuildRequires:  python-decorator
 BuildRequires:  python-flask
 BuildRequires:  python-markdown
 BuildRequires:  python-webassets
+BuildRequires:  python-passlib
 %if %{with_systemd}
 BuildRequires:  systemd
 %endif
@@ -153,6 +154,7 @@ Requires:       python-decorator
 Requires:       python-flask
 Requires:       python-markdown
 Requires:       python-webassets
+Requires:       python-passlib
 %if %{with_systemd}
 Requires:       systemd-units
 Requires(post): systemd

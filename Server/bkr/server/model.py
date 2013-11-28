@@ -52,7 +52,8 @@ import netaddr
 import ovirtsdk.api
 from collections import defaultdict
 from datetime import timedelta, datetime
-from hashlib import md5, sha1
+from hashlib import md5
+import passlib.context
 import xml.dom.minidom
 
 # These are only here for TaskLibrary. It would be nice to factor that out,
@@ -736,7 +737,7 @@ users_table = Table('tg_user', metadata,
     Column('user_name', Unicode(255), unique=True),
     Column('email_address', Unicode(255), unique=True),
     Column('display_name', Unicode(255)),
-    Column('password', Unicode(40)),
+    Column('password', UnicodeText, nullable=True, default=None),
     Column('root_password', String(255), nullable=True, default=None),
     Column('rootpw_changed', DateTime, nullable=True, default=None),
     Column('created', DateTime, default=datetime.utcnow),
@@ -1722,13 +1723,16 @@ class User(MappedObject, ActivityMixin):
                 for user in cls.query.filter(f).filter(User.removed==None)]
         return list(set(db_users + ldap_users))
 
-    def _hashed_password(self, raw_password):
-        # Inherited from TurboGears...
-        # This is pretty pathetic, should be salted at least!
-        return sha1(raw_password.encode('utf8')).hexdigest()
+    _password_context = passlib.context.CryptContext(
+        schemes=['pbkdf2_sha512', 'hex_sha1'],
+        # unsalted SHA1 was the scheme inherited from TurboGears 1.0,
+        # this allows passwords to match against the old hashes but we will
+        # replace it with a new hash on successful login
+        deprecated=['hex_sha1'],
+    )
 
     def _set_password(self, raw_password):
-        self._password = self._hashed_password(raw_password)
+        self._password = self._password_context.encrypt(raw_password)
 
     def _get_password(self):
         return self._password
@@ -1756,7 +1760,13 @@ class User(MappedObject, ActivityMixin):
         if not raw_password:
             return False
 
-        if self._hashed_password(raw_password) == self._password:
+        verified, new_hash = self._password_context.verify_and_update(
+                raw_password, self._password)
+        if verified:
+            if new_hash:
+                log.info('Upgrading obsolete password hash for user %s', self)
+                # replace obsolete hash with new one
+                self._password = new_hash
             return True
 
         # If LDAP is enabled, try an LDAP bind.

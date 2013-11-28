@@ -23,6 +23,7 @@ import turbogears.config
 from turbogears.database import session
 import unittest
 import xmlrpclib
+from hashlib import sha1
 from nose.plugins.skip import SkipTest
 try:
     import krbV
@@ -115,6 +116,19 @@ class LoginTest(WebDriverTestCase):
         self.assertEquals(b.find_element_by_css_selector('#message').text,
                 'The credentials you supplied were not correct or '
                 'did not grant access to this resource.')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=994751
+    def test_old_password_hashes_are_migrated(self):
+        with session.begin():
+            # unsalted SHA1 is the old hash format from TurboGears 1.0
+            self.user._password = sha1(self.password).hexdigest()
+        b = self.browser
+        login(b, self.user.user_name, self.password)
+        b.find_element_by_xpath('//title[text()="Systems"]')
+        with session.begin():
+            session.refresh(self.user)
+            self.assert_(self.user._password.startswith('$pbkdf2-sha512$'),
+                    self.user._password)
 
 class XmlRpcLoginTest(XmlRpcTestCase):
 
