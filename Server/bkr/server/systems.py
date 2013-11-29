@@ -14,6 +14,8 @@ from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
+from bkr.server.flask_util import BadRequest400, NotFound404
+
 from turbogears.database import session
 import cherrypy
 
@@ -326,7 +328,7 @@ def get_system_access_policy(fqdn):
     try:
         system = System.by_fqdn(fqdn, identity.current.user)
     except NoResultFound:
-        return ('System not found', 404, {'content-type':'text/plain'})
+        raise NotFound404('System not found')
 
     policy = system.custom_access_policy
     # For now, we don't distinguish between an empty policy and an absent one.
@@ -339,6 +341,24 @@ def get_system_access_policy(fqdn):
                  'label': unicode(permission.label)}
                 for permission in SystemPermission],
         })
+
+    # filtering, if any
+    if len(request.args.keys()) > 1:
+        raise BadRequest400('Only one filtering criteria allowd')
+
+    query = SystemAccessPolicyRule.query.\
+        filter(SystemAccessPolicyRule.policy == policy)
+
+    if request.args.get('mine'):
+        query = query.join(SystemAccessPolicyRule.user)\
+            .filter(User.user_name.in_([identity.current.user.user_name]))
+    elif request.args.get('user', None):
+        query = query.join(SystemAccessPolicyRule.user)\
+            .filter(User.user_name.in_(request.args.getlist('user')))
+    elif request.args.get('group', None):
+        query = query.join(SystemAccessPolicyRule.group)\
+            .filter(Group.group_name.in_(request.args.getlist('group')))
+
     return jsonify({
         'id': policy.id,
         'rules': [
@@ -347,7 +367,7 @@ def get_system_access_policy(fqdn):
              'group': rule.group.group_name if rule.group else None,
              'everybody': rule.everybody,
              'permission': unicode(rule.permission)}
-            for rule in policy.rules],
+            for rule in query],
         'possible_permissions': [
             {'value': unicode(permission),
              'label': unicode(permission.label)}
