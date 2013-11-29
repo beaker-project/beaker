@@ -24,6 +24,9 @@ The following sequence of events takes place when Beaker provisions a system:
 
 #. The system reboots and the harness begins running the Beaker recipe.
 
+
+.. _boot-order-details:
+
 Boot order
 ----------
 

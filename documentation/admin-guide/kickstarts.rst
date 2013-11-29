@@ -38,17 +38,61 @@ Kickstart snippets
 ------------------
 
 Each snippet provides a small unit of functionality within the
-kickstart. The name and purpose of all defined snippets are given below.
+kickstart. The name and purpose of all defined snippets are given below,
+along with details of how administrators can selectively override them
+for particular distros, labs and systems.
+
+The following snippets provide required functionality for Beaker integration,
+and should never be overridden by the administrator. However, they may be
+useful when implementing custom templates and snippets:
+
+``rhts_pre``; ``rhts_post``
+    Scripts necessary for running a Beaker recipe on the system after it
+    is provisioned. Most of the other snippets listed below are included
+    from one of these snippets rather than directly from the kickstart
+    templates.
+
+``beah``; ``harness``
+    Handles installation of the default Beaker test harness (``beah``), or
+    installation of an alternative harness.
+
+``clear_netboot``
+    Instructs the lab controller to remove the current netboot configuration
+    for this system.
+
+``linkdelay``
+    Handles the ``linkdelay`` ks_meta variable.
+
+``password``
+    Handles setting the root password for the system.
+
+``pre_anamon``; ``post_anamon``
+    Configures anamon, a small daemon which runs during the Anaconda
+    install process and uploads log files to the Beaker scheduler.
+
+``rhts_packages``
+    Provides a list of packages to be installed by Anaconda, based on
+    the packages required by and requested in the recipe.
+
+``rhts_partitions``
+    Defines the partitions to be created by Anaconda, based on the partition
+    configuration requested in the recipe.
 
 For the following snippets Beaker ships a default template, which should
 be sufficient in most cases. However, administrators may choose to
 override these if necessary.
 
-``print_anaconda_repos``
-    Provides the ``repo`` kickstart commands which tell Anaconda where
-    to find the distro tree’s Yum repositories for installation. This
-    includes any custom repos passed in the job XML as well, e.g.
-    ``<repo name="repo_id" url="http://server/path/to/repo"/>``
+``boot_order``
+    On EFI systems, Anaconda adds a new default boot entry that boots from the
+    local disk rather than the network. To ensure Beaker can reprovision the
+    system later, Beaker removes this entry and sets the "BootNext" setting
+    instead. The ``rhts-reboot`` command also sets "BootNext" to the entry
+    added by Anaconda rather than booting from the network. See
+    :ref:`boot-order-details` for more information.
+
+   .. versionadded:: 0.14.4
+      The boot order adjustment was moved to its own snippet, allowing it
+      to be overridden without replacing the entirety of rhts_post.
 
 ``install_method``
     Provides the ``url`` or ``nfs`` kickstart command which tells
@@ -64,9 +108,11 @@ override these if necessary.
 ``post_s390_reboot``
     Reportedly this does not work and should probably be deleted.
 
-``pre_anamon``; ``post_anamon``
-    Configures anamon, a small daemon which runs during the Anaconda
-    install process and uploads log files to the Beaker scheduler.
+``print_anaconda_repos``
+    Provides the ``repo`` kickstart commands which tell Anaconda where
+    to find the distro tree’s Yum repositories for installation. This
+    includes any custom repos passed in the job XML as well, e.g.
+    ``<repo name="repo_id" url="http://server/path/to/repo"/>``
 
 ``print_repos``
     Sets up the system’s Yum repo configuration after install.
@@ -77,15 +123,6 @@ override these if necessary.
 ``rhts_devices``; ``rhts_scsi_ethdevices``
     Provides ``device`` commands (if necessary) which tell Anaconda to
     load additional device modules.
-
-``rhts_packages``
-    Provides a list of packages to be installed by Anaconda, based on
-    the packages required by and requested in the recipe.
-
-``rhts_pre``; ``rhts_post``
-    Scripts necessary for running a Beaker recipe on the system after it
-    is provisioned. These should never be overridden by the
-    administrator.
 
 ``ssh_keys``
     Adds the Beaker user’s SSH public keys to
@@ -118,6 +155,9 @@ unless customized by the administrator:
 ``system_post``; ``<distro_major_version>_post``
     Can be used to insert extra shell commands into the %post section of
     the kickstart.
+
+Overridding kickstart snippets
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When a snippet is included in a kickstart template, Beaker tries to load
 the snippet from the following locations on the server’s filesystem, in
