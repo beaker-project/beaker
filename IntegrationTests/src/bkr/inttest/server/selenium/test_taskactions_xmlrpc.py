@@ -26,3 +26,28 @@ class TaskactionsTest(XmlRpcTestCase):
         self.assertEquals(self.server.taskactions.task_info(
                 job.recipesets[0].recipes[0].tasks[0].t_id)['state'],
                 'Running')
+
+    def test_worker_info(self):
+        with session.begin():
+            job = data_setup.create_job(owner=self.user)
+            system = data_setup.create_system()
+            data_setup.mark_job_running(job, system=system)
+            recipe = job.recipesets[0].recipes[0]
+        self.assertEquals(self.server.taskactions.task_info(
+                recipe.t_id)['worker'],
+                {'name': system.fqdn})
+        self.assertEquals(self.server.taskactions.task_info(
+                recipe.tasks[0].t_id)['worker'],
+                {'name': system.fqdn})
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1032653
+    def test_worker_info_for_recipe_without_resource(self):
+        with session.begin():
+            job = data_setup.create_job(owner=self.user)
+            job.cancel()
+            recipe = job.recipesets[0].recipes[0]
+            self.assertEquals(recipe.resource, None)
+        self.assertEquals(self.server.taskactions.task_info(
+                recipe.t_id)['worker'], {})
+        self.assertEquals(self.server.taskactions.task_info(
+                recipe.tasks[0].t_id)['worker'], {})

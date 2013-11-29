@@ -183,6 +183,73 @@ class TestBeakerd(unittest.TestCase):
             j1.update_status()
             self.assertEquals(j1.status, TaskStatus.scheduled, j1.status)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1033032
+    def test_multihost_no_common_lab_controller_stays_queued(self):
+        # This tests that a multihost recipe where two recipes both have free
+        # candidate systems, but they're in different labs, stays queued
+
+        with session.begin():
+            lab_controller_A = self.lab_controller
+            lab_controller_B = data_setup.create_labcontroller()
+            system_A1 = data_setup.create_system(lab_controller=lab_controller_A)
+            system_A2 = data_setup.create_system(lab_controller=lab_controller_A)
+            system_B1 = data_setup.create_system(lab_controller=lab_controller_B)
+            system_B2 = data_setup.create_system(lab_controller=lab_controller_B)
+            # Set up a recipe set that can run in either lab
+            r1 = data_setup.create_recipe()
+            r2 = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([r1,r2])
+            r1.systems[:] = [system_A1, system_B1]
+            r2.systems[:] = [system_A2, system_B2]
+            # Ensure both recipes have a free system, but in different labs
+            user = data_setup.create_user()
+            system_A1.user = user
+            system_B2.user = user
+
+        # Turn the crank
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_queued_recipes()
+
+        import logging
+        # Check only the first recipe is scheduled at this point
+        job_id = job.id
+        r1_id = r1.id
+        r2_id = r2.id
+        system_B2_id = system_B2.id
+        with session.begin():
+            job = Job.by_id(job_id)
+            job.update_status()
+            self.assertEqual(job.status, TaskStatus.queued)
+            r1 = Recipe.by_id(r1_id)
+            self.assertEqual(r1.status, TaskStatus.scheduled)
+            self.assertEqual(r1.resource.system.fqdn, system_B1.fqdn)
+            r2 = Recipe.by_id(r2_id)
+            self.assertEqual(r2.status, TaskStatus.queued)
+            # Free the possible r2 system in lab B
+            user = data_setup.create_user()
+            system_B2 = System.by_id(system_B2_id, user)
+            system_B2.user = None
+        session.expire_all()
+
+        # Check the job is scheduled once the relevant system becomes free
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.by_id(job_id)
+            job.update_status()
+            self.assertEqual(job.status, TaskStatus.scheduled)
+            r1 = Recipe.by_id(r1_id)
+            self.assertEqual(r1.status, TaskStatus.scheduled)
+            r2 = Recipe.by_id(r2_id)
+            self.assertEqual(r2.status, TaskStatus.scheduled)
+            user = data_setup.create_user()
+            system_B2 = System.by_id(system_B2_id, user)
+            self.assertEqual(r2.resource.system.fqdn, system_B2.fqdn)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=977562
     def test_jobs_with_no_systems_process_beyond_queued(self):
         with session.begin():

@@ -1,9 +1,11 @@
-nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-4/U9/AS/x86_64/tree/
-#url --url=nfs://lab.test-kickstart.invalid:/distros/RHEL-4/U9/AS/x86_64/tree/
+nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-6.2/Server/x86_64/os/
+#url --url=nfs://lab.test-kickstart.invalid:/distros/RHEL-6.2/Server/x86_64/os/
+
+key --skip
 
 # System bootloader configuration
 bootloader --location=mbr
-
+cmdline
 
 # no specific network configuration
 firewall --disabled
@@ -11,60 +13,48 @@ firewall --disabled
 keyboard us
 # System language
 lang en_US.UTF-8
-langsupport --default en_US.UTF-8 en_US.UTF-8
 
 reboot
 #Root password
-rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
+rootpw --iscrypted 
 # SELinux configuration
 selinux --enforcing
 
+# Configure the X Window System
+xconfig --startxonboot
 
 # System timezone
 timezone America/New_York
 # Install OS instead of upgrade
 install
 
+repo --name=beaker-HighAvailability --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/HighAvailability
+repo --name=beaker-LoadBalancer --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/LoadBalancer
+repo --name=beaker-optional-x86_64-os --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/os
+repo --name=beaker-ResilientStorage --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ResilientStorage
+repo --name=beaker-ScalableFileSystem --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ScalableFileSystem
+repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/debug
+repo --name=beaker-optional-x86_64-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/debug
+repo --name=beaker-Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/Server
 zerombr
 clearpart --all --initlabel
 
 autopart
-# no snippet data for RedHatEnterpriseLinux4
+# no snippet data for RedHatEnterpriseLinux6
 # no snippet data for system
 
-%packages --resolvedeps --ignoremissing
-@desktop-platform-devel
-@development
-@development-libs
-@development-tools
-@server-platform-devel
-emacs
-expect
-gcc
-libxml2-python
-make
-nfs-utils
-ntp
-procmail
-pyOpenSSL
-redhat-lsb
-sendmail
-unifdef
-vim-enhanced
-wget
-# no snippet data for packages
 
+%packages --ignoremissing --default
+# no snippet data for packages
+%end
 
 
 %pre --log=/dev/console
 set -x
-# Check in with Beaker Server
-wget -O - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
 
-wget -O /tmp/anamon 'http://lab.test-kickstart.invalid/beaker/anamon'
-python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
-# no snippet data for RedHatEnterpriseLinux4_pre
+# no snippet data for RedHatEnterpriseLinux6_pre
 # no snippet data for system_pre
+%end
 
 %post --log=/dev/console
 set -x
@@ -81,10 +71,9 @@ if [[ -z "$REPORTED_FQDN" || $REPORTED_FQDN == localhost || $REPORTED_FQDN == lo
         REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
     fi
 fi
-wget -O - http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN
+curl http://lab.test-kickstart.invalid:8000/install_done//$REPORTED_FQDN
 
-wget -O - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
-echo @RECIPEID@ > /root/RECIPE.TXT
+curl http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
 
 # If netboot_method= is found in /proc/cmdline record it to /root
 netboot_method=$(perl -n -e'/netboot_method=([^\s]+)/ && print $1' /proc/cmdline)
@@ -93,21 +82,19 @@ echo $netboot_method >/root/NETBOOT_METHOD.TXT
 fi
 
 # Enable post-install boot notification
+# readahead conflicts with auditd, see bug 561486 for detailed explanation.
 
-wget -O /usr/local/sbin/anamon "http://lab.test-kickstart.invalid/beaker/anamon"
-wget -O /etc/rc.d/init.d/anamon "http://lab.test-kickstart.invalid/beaker/anamon.init"
+cat << EOF >>/etc/sysconfig/readahead
 
-chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
-test -d /selinux && restorecon /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+# readahead conflicts with auditd, see bug 561486 for detailed explanation.
+#
+# Should a task need to change these settings, it must revert to this state
+# when test is done.
 
-chkconfig --add anamon
+READAHEAD_COLLECT="no"
+READAHEAD_COLLECT_ON_RPM="no"
 
-cat << __EOT__ > /etc/sysconfig/anamon
-XMLRPC_URL="http://lab.test-kickstart.invalid:8000/RPC2"
-RECIPE_ID="@RECIPEID@"
-LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
-__EOT__
-
+EOF
 
 if [ -e /etc/sysconfig/ntpdate ] ; then
     /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
@@ -147,36 +134,73 @@ if efibootmgr &>/dev/null ; then
 fi
 
 
-# Install Yum
-pushd /root
-/usr/bin/wget -N http://lab.test-kickstart.invalid/beaker/yum-2.2.2-1.rhts.EL4.noarch.rpm
-/bin/rpm -Uvh yum-2.2.2-1.rhts.EL4.noarch.rpm
-popd
 
 #Add Task Repo
-cat <<"EOF" >/etc/yum.repos.d/beaker-tasks.repo
-[beaker-tasks]
-name=beaker-tasks
-baseurl=@REPOS@@RECIPEID@
-enabled=1
-gpgcheck=0
-EOF
 
 
 # Add Harness Repo
-cat <<"EOF" >/etc/yum.repos.d/beaker-harness.repo
-[beaker-harness]
-name=beaker-harness
-baseurl=@HARNESS@RedHatEnterpriseLinux4/
-enabled=1
-gpgcheck=0
-EOF
 
 # Add distro and custom Repos
-cat <<"EOF" >/etc/yum.repos.d/beaker-AS.repo
-[beaker-AS]
-name=beaker-AS
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-4/U9/AS/x86_64/repo-AS-x86_64
+cat <<"EOF" >/etc/yum.repos.d/beaker-HighAvailability.repo
+[beaker-HighAvailability]
+name=beaker-HighAvailability
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/HighAvailability
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-LoadBalancer.repo
+[beaker-LoadBalancer]
+name=beaker-LoadBalancer
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/LoadBalancer
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-optional-x86_64-os.repo
+[beaker-optional-x86_64-os]
+name=beaker-optional-x86_64-os
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/os
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-ResilientStorage.repo
+[beaker-ResilientStorage]
+name=beaker-ResilientStorage
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ResilientStorage
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-ScalableFileSystem.repo
+[beaker-ScalableFileSystem]
+name=beaker-ScalableFileSystem
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ScalableFileSystem
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-debug.repo
+[beaker-debug]
+name=beaker-debug
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/debug
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-optional-x86_64-debug.repo
+[beaker-optional-x86_64-debug]
+name=beaker-optional-x86_64-debug
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/debug
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-Server.repo
+[beaker-Server]
+name=beaker-Server
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/Server
 enabled=1
 gpgcheck=0
 skip_if_unavailable=1
@@ -187,54 +211,6 @@ EOF
 # This speeds up yum because of a bug where it will update stdout too often.
 # http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
 yum check-update > /dev/null 2>&1 || true
-yum -y install beah rhts-test-env beakerlib
-# This may fail if you are outside of Red Hat..
-yum -y install beakerlib-redhat
-
-cp /etc/beah_beaker.conf{,.default}
-cat << EOF > /etc/beah_beaker.conf
-# see /etc/beah_beaker.conf.default for commented configuration
-
-[DEFAULT]
-# LAB_CONTROLLER: URI of Beaker's XML-RPC handler
-LAB_CONTROLLER=http://lab.test-kickstart.invalid:8000
-#
-# HOSTNAME: Pretend to be machine with given name.
-# NOTE: This is mostly pointless as usually correct name is assigned by DHCP.
-HOSTNAME=test01.test-kickstart.invalid
-RECIPEID=@RECIPEID@
-
-# Turn on hard limits on upload sizes:
-FILE_SIZE_LIMIT=200000000
-TASK_SIZE_LIMIT=800000000
-
-EOF
-
-cp /etc/beah.conf{,.default}
-cat << EOF > /etc/beah.conf
-# see /etc/beah.conf.default for commented configuration
-
-[DEFAULT]
-# Turn on more verbose logging and redirect to console. This is useful for
-# debugging harness' problems.
-LOG=Info
-CONSOLE_LOG=Console
-# To turn on debug logging uncomment the following line. Warning: this is
-# rather verbose! This also requires LOG to be Debug.
-#DEVEL=True
-
-[TASK]
-INTERFACE=
-
-EOF
-
-chkconfig --level 345 beah-srv on
-chkconfig --level 345 beah-beaker-backend on
-chkconfig --level 345 beah-fwd-backend on
-
-# turn on rhts-compat by default (it will save us one reboot):
-chkconfig --add rhts-compat
-chkconfig --level 345 rhts-compat on
 
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
@@ -263,10 +239,9 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
-# Check in with Beaker Server, record our postinstall time.
-wget -O - http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
-# no snippet data for RedHatEnterpriseLinux4_post
+# no snippet data for RedHatEnterpriseLinux6_post
 # no snippet data for system_post
+%end
 
 
 
