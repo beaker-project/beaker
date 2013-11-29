@@ -105,7 +105,7 @@ Requires:       python-lxml
 Requires:       python-requests
 %endif
 Requires:       libxslt-python
-%if !(0%{?rhel} >= 6) || !(0%{?fedora} >= 14)
+%if !(0%{?rhel} >= 6 || 0%{?fedora} >= 14)
 Requires:       python-simplejson
 %endif
 Requires:       libxml2-python

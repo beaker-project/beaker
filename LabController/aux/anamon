@@ -167,16 +167,20 @@ def anamon_loop():
     alog = WatchedFile("/tmp/anaconda.log", "anaconda.log")
     alog.lookfor("step installpackages$")
 
-    slog = WatchedFile("/tmp/syslog", "sys.log")
-    xlog = WatchedFile("/tmp/X.log", "X.log")
-    llog = WatchedFile("/tmp/lvmout", "lvmout.log")
-    storage_log = WatchedFile("/tmp/storage.log", "storage.log")
-    prgm_log = WatchedFile("/tmp/program.log", "program.log")
-    vnc_log = WatchedFile("/tmp/vncserver.log", "vncserver.log")
-    kcfg = WatchedFile("/tmp/ks.cfg", "ks.cfg")
-    scrlog = WatchedFile("/tmp/ks-script.log", "ks-script.log")
-    dump = WatchedFile("/tmp/anacdump.txt", "anacdump.txt")
-    mod = WatchedFile("/tmp/modprobe.conf", "modprobe.conf")
+    default_watchlist = [
+        alog,
+        WatchedFile("/tmp/syslog", "sys.log"),
+        WatchedFile("/tmp/X.log", "X.log"),
+        WatchedFile("/tmp/lvmout", "lvmout.log"),
+        WatchedFile("/tmp/storage.log", "storage.log"),
+        WatchedFile("/tmp/program.log", "program.log"),
+        WatchedFile("/tmp/vncserver.log", "vncserver.log"),
+        WatchedFile("/tmp/ks.cfg", "ks.cfg"),
+        WatchedFile("/tmp/ks-script.log", "ks-script.log"),
+        WatchedFile("/tmp/anacdump.txt", "anacdump.txt"),
+        WatchedFile("/tmp/modprobe.conf", "modprobe.conf"),
+        WatchedFile("/tmp/ifcfg.log", "ifcfg.log"),
+    ]
 
     # Setup '/mnt/sysimage' watcher
     sysimage = MountWatcher("/mnt/sysimage")
@@ -209,7 +213,7 @@ def anamon_loop():
 
     # Use the default watchlist and waitlist
     else:
-        watchlist = [alog, slog, dump, scrlog, mod, llog, kcfg, storage_log, prgm_log, vnc_log, xlog]
+        watchlist = list(default_watchlist)
         waitlist.extend(package_logs)
         waitlist.extend(bootloader_cfgs)
 

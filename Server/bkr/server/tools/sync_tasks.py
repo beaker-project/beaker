@@ -109,7 +109,7 @@ class TaskLibrarySync:
 
         # Initialize core attributes
         if remote:
-            self.remote = remote
+            self.remote = remote.rstrip("/")
             remote_proxy = self._get_server_proxy(self.remote)
             self.proxy={'remote':remote_proxy,
                         }
@@ -315,8 +315,7 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    remote = options.remote.rstrip('/')
-    task_sync = TaskLibrarySync(remote)
+    task_sync = TaskLibrarySync(options.remote)
     task_sync.check_perms()
 
     if options.debug:

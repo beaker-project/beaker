@@ -4,6 +4,7 @@ import xmlrpclib
 import string
 import ConfigParser
 import getopt
+import urlparse
 from optparse import OptionParser, OptionGroup
 import urllib2
 import logging
@@ -30,6 +31,15 @@ def url_exists(url):
         else:
             raise
     return True
+
+
+class IncompleteTree(BX):
+    """
+    IncompleteTree is raised when there is a discrepancy between
+    what is specified in a .composeinfo/.treeinfo, and what is actually
+    found on disk.
+    """
+    pass
 
 
 class _DummyProxy:
@@ -662,7 +672,12 @@ sources = Workstation/source/SRPMS
                     options.variant = [variant]
                     options.arch = [arch]
                     build = Build(os.path.join(self.parser.url, os_dir))
-                    build.process(urls_variant_arch, options, repos)
+                    try:
+                        isos_path = self.parser.get('variant-%s.%s' % (variant, arch), 'isos')
+                        isos_path = os.path.join(rpath, isos_path)
+                    except ConfigParser.NoOptionError:
+                        isos_path = None
+                    build.process(urls_variant_arch, options, repos, isos_path)
                     self.distro_trees.append(build.tree)
                 except BX, err:
                     exit_status = 1
@@ -681,6 +696,10 @@ class TreeInfoBase(object):
                ]
     excluded = []
 
+    # This is a best guess for the relative iso path
+    # for RHEL5/6/7 and Fedora trees
+    isos_path = '../iso/'
+
     def check_input(self, options):
         self.check_variants(options.variant, single=False)
         self.check_arches(options.arch, single=False)
@@ -697,8 +716,49 @@ class TreeInfoBase(object):
             raise BX('%s no os_dir found: %s' % (self.parser.url, e))
         return os_dir
 
+    def _installable_isos_url(self, nfs_url, isos_path_from_compose=None):
+        """Returns the URL of an installable iso.
 
-    def process(self, urls, options, repos=None):
+        The scheme of the returned URL is 'nfs+iso',
+        which only has meaning to Beaker.
+        """
+
+        isos_path = isos_path_from_compose
+        if not isos_path_from_compose:
+            # Let's just guess! These are based on
+            # well known locations for each family
+            isos_path = self.isos_path
+        http_url_components = list(urlparse.urlparse(self.parser.url))
+        http_url_path = http_url_components[2]
+        normalized_isos_path = os.path.normpath(os.path.join(http_url_path, isos_path))
+        if not normalized_isos_path.endswith('/'):
+            normalized_isos_path += '/'
+        http_url_components[2] = normalized_isos_path
+        http_isos_url = urlparse.urlunparse(http_url_components)
+        reachable_iso_dir = url_exists(http_isos_url)
+        if isos_path_from_compose and not reachable_iso_dir:
+            # If .composeinfo says the isos path is there but it isn't, we
+            # should let it be known.
+            raise IncompleteTree('Could not find iso url %s as specified '
+                'in composeinfo' % http_isos_url)
+        elif not isos_path_from_compose and not reachable_iso_dir:
+            # We can't find the isos path, but we were only ever guessing.
+            return None
+        elif reachable_iso_dir:
+            # We've found the isos path via http, convert it back to
+            # nfs+iso URL.
+            nfs_url_components = list(urlparse.urlparse(nfs_url))
+            nfs_url_path = nfs_url_components[2]
+            normalized_isos_path = os.path.normpath(os.path.join(nfs_url_path,
+                isos_path))
+            if not normalized_isos_path.endswith('/'):
+                normalized_isos_path += '/'
+            nfs_isos_url_components = list(nfs_url_components)
+            nfs_isos_url_components[2] = normalized_isos_path
+            nfs_isos_url_components[0] = 'nfs+iso'
+            return urlparse.urlunparse(nfs_isos_url_components)
+
+    def process(self, urls, options, repos=None, isos_path=None):
         '''
         distro_data = dict(
                 name='RHEL-6-U1',
@@ -771,6 +831,15 @@ class TreeInfoBase(object):
         self.tree['kernel_options'] = self.options.kopts
         self.tree['kernel_options_post'] = self.options.kopts_post
         self.tree['ks_meta'] = self.options.ks_meta
+        nfs_url = _get_url_by_scheme(urls, 'nfs')
+        if nfs_url:
+            try:
+                nfs_isos_url = self._installable_isos_url(nfs_url, isos_path)
+            except IncompleteTree, e:
+                logging.warn(str(e))
+            else:
+                if nfs_isos_url:
+                    self.tree['urls'].append(nfs_isos_url)
 
         if options.json:
             print json.dumps(self.tree)
@@ -851,6 +920,8 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
                'ppc/chrp/ramdisk.image.gz',
                # We don't support iSeries right now 'ppc/iSeries/ramdisk.image.gz',
               ]
+
+    isos_path = '../ftp-isos/'
 
     @classmethod
     def is_importer_for(cls, url, options=None):
@@ -1824,6 +1895,15 @@ def _get_primary_url(urls):
             primary = url
             return primary
     return None
+
+def _get_url_by_scheme(urls, scheme):
+    """Return the first url that matches the given scheme"""
+    for url in urls:
+        method = url.split(':',1)[0]
+        if method == scheme:
+            return url
+    return None
+
 
 def main():
     usage = "usage: %prog [options] distro_url [distro_url] [distro_url]"

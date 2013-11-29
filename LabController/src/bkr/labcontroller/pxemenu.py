@@ -8,8 +8,9 @@ import xmlrpclib
 import shutil
 import urllib2
 import urlparse
+import contextlib
 from optparse import OptionParser
-from bkr.labcontroller.netboot import atomically_replaced_file, siphon, makedirs_ignore
+from bkr.common.helpers import atomically_replaced_file, siphon, makedirs_ignore, atomic_symlink
 
 def _get_url(available):
     for lc, url in available:
@@ -42,10 +43,24 @@ def _get_images(tftp_root, distro_tree_id, url, images):
                 with atomically_replaced_file(dest_path) as dest:
                     siphon(urllib2.urlopen(image_url), dest)
 
+pxe_menu_entry_template = string.Template('''
+label ${distro_name}-${variant}-${arch}
+    menu title ${distro_name} ${variant} ${arch}
+    kernel /distrotrees/${distro_tree_id}/kernel
+    append initrd=/distrotrees/${distro_tree_id}/initrd method=${url} repo=${url} ${kernel_options}
+''')
+
+efi_menu_entry_template = string.Template('''
+title ${distro_name} ${variant} ${arch}
+    root (nd)
+    kernel /distrotrees/${distro_tree_id}/kernel method=${url} repo=${url}
+    initrd /distrotrees/${distro_tree_id}/initrd
+''')
+
 def main():
-    parser = OptionParser(description='''Writes a PXE menu to
-pxelinux.cfg/beaker_menu containing distros from Beaker.
-Use the generated menu with menu.c32 from SYSLINUX.''')
+    parser = OptionParser(description='''Writes a netboot menu to the TFTP root
+directory, containing distros from Beaker. Supports menu.c32 from SYSLINUX
+(for PXE systems) and the EFI GRUB boot menu (for EFI systems).''')
     parser.add_option('--tag', metavar='TAG', action='append', dest='tags',
             help='Only include distros tagged with TAG')
     parser.add_option('--xml-filter', metavar='XML',
@@ -86,11 +101,15 @@ Use the generated menu with menu.c32 from SYSLINUX.''')
     for obs in obsolete_tree_ids:
         shutil.rmtree(os.path.join(opts.tftp_root, 'distrotrees', obs), ignore_errors=True)
 
-    print 'Generating PXE menu for %s distro trees' % len(distrotrees)
+    print 'Generating menu for %s distro trees' % len(distrotrees)
     osmajors = _group_distro_trees(distrotrees)
     makedirs_ignore(os.path.join(opts.tftp_root, 'pxelinux.cfg'), mode=0755)
-    with atomically_replaced_file(os.path.join(opts.tftp_root, 'pxelinux.cfg', 'beaker_menu')) as menu:
-        menu.write('''default menu
+    pxe_menu = atomically_replaced_file(os.path.join(opts.tftp_root, 'pxelinux.cfg', 'beaker_menu'))
+    makedirs_ignore(os.path.join(opts.tftp_root, 'grub'), mode=0755)
+    atomic_symlink('../distrotrees', os.path.join(opts.tftp_root, 'grub', 'distrotrees'))
+    efi_menu = atomically_replaced_file(os.path.join(opts.tftp_root, 'grub', 'efidefault'))
+    with contextlib.nested(pxe_menu, efi_menu) as (pxe_menu, efi_menu):
+        pxe_menu.write('''default menu
 prompt 0
 timeout 6000
 ontimeout local
@@ -103,13 +122,13 @@ label local
 
         for osmajor, osversions in sorted(osmajors.iteritems(), reverse=True):
             print 'Writing submenu %s' % osmajor
-            menu.write('''
+            pxe_menu.write('''
 menu begin
 menu title %s
 ''' % osmajor)
             for osversion, distro_trees in sorted(osversions.iteritems(), reverse=True):
                 print 'Writing submenu %s -> %s' % (osmajor, osversion)
-                menu.write('''
+                pxe_menu.write('''
 menu begin
 menu title %s
 ''' % osversion)
@@ -123,16 +142,14 @@ menu title %s
                                 (distro_tree['distro_tree_id'], e))
                     else:
                         print 'Writing menu entry for distro tree %s' % distro_tree['distro_tree_id']
-                        menu.write(string.Template('''
-label ${distro_name}-${variant}-${arch}
-    menu title ${distro_name} ${variant} ${arch}
-    kernel /distrotrees/${distro_tree_id}/kernel
-    append initrd=/distrotrees/${distro_tree_id}/initrd method=${url} repo=${url} ${kernel_options}
-''').substitute(distro_tree, url=url))
-                menu.write('''
+                        pxe_menu.write(pxe_menu_entry_template.substitute(
+                                distro_tree, url=url))
+                        efi_menu.write(efi_menu_entry_template.substitute(
+                                distro_tree, url=url))
+                pxe_menu.write('''
 menu end
 ''')
-            menu.write('''
+            pxe_menu.write('''
 menu end
 ''')
     return 0

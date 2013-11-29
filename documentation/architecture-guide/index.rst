@@ -36,3 +36,4 @@ Contents
    :maxdepth: 2
 
    capabilities
+   provisioning-process
