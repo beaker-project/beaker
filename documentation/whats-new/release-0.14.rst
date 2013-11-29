@@ -280,3 +280,68 @@ Test harness updates:
 * :issue:`1004381`: The beah test harness no longer emits spurious
   "ERROR: Unhandled error in Deferred" messages after completion of the
   final task in a recipe (Contributed by Amit Saha)
+
+
+Beaker 0.14.4
+~~~~~~~~~~~~~
+
+.. note::
+
+   As an important step in improving Beaker's support for IPv6-only testing,
+   the ``beaker-proxy`` daemon now listens on both IPv4 and IPv6 network
+   interfaces on the lab controller. The way this is implemented in Beaker
+   0.14.4 means that the lab controller *must* have an IPv6 interface
+   defined or the ``beaker-proxy`` daemon won't start.
+
+Provisioning updates:
+
+* :issue:`1013413`: beaker-import now detects and imports ISO install images
+  available in distribution trees, allowing use of the ks_meta"method=nfs+iso"
+  option in recipe definitions. Note that some distros may currently still
+  require an appropriate explicit "stage2" setting to install via this
+  method (see :issue:`846103` for details) (Contributed by Raymond Mancy)
+* :issue:`1033032`: A multihost recipe set scheduling error introduced by the
+  fix for :issue:`967479` in 0.14.3 that could cause recipe sets to be Aborted
+  rather than Queued has been fixed (Contributed by Nick Coghlan)
+* :issue:`1030612`: Beaker now preserves all existing EFI boot order entries
+  while ensuring the system remains configured to boot from the network by
+  default. This avoids a problem where some EFI firmware would incorrectly
+  create multiple copies of the default boot entries, along with another
+  where some EFI firmware deletes any entries not explicitly listed in the
+  boot order (Contributed by Dan Callaghan)
+* :issue:`1031876`: Beaker and the default test harness no longer assume
+  all EFI firmware will define a BootCurrent variable (Contributed by Dan
+  Callaghan)
+* :issue:`1029681`: Beaker no longer attempts to run efibootmgr in guest
+  recipes, as doing so could break Xen guests on ia64/HVM
+  (Contributed by Dan Callaghan)
+* :issue:`994635`: Beaker now generates a suitable network boot menu for EFI
+  systems (Contributed by Dan Callaghan)
+* :issue:`1031999`: Beaker's Anaconda installation monitoring now captures
+  ``/tmp/ifcfg.log`` (Contributed by Dan Callaghan)
+
+Test harness updates:
+
+* :issue:`894159`: rhts-sync-block no longer spams the console with
+  "rhts-sync-block: <Fault 8002: 'error'> messages" (Contributed by
+  Dan Callaghan)
+* :issue:`1001304`: The obsolete ControlGroup option has been removed from
+  the beah service file (Contributed by Amit Saha)
+
+Documentation updates:
+
+* :issue:`1030172`: the architecture guide now includes an overview of
+  the :ref:`bare metal provisioning process <provisioning-process>`
+  (Contributed by Dan Callaghan)
+* several additional kickstart snippets, including the new ``boot_order``
+  snippet added as part of resolving the EFI boot order issues in
+  :issue:`1030612`, are now documented (Contributed by Nick Coghlan)
+
+Other updates:
+
+* :issue:`1030909`: the various fixes made to beaker-sync-tasks in Beaker
+  0.15 have been backported to Beaker 0.14.4 (Contributed by Nick Coghlan)
+* :issue:`1032377` and :issue:`1004622`: several fixes and additions have
+  been made to the Beaker installation guide (Contributed by Nick Coghlan)
+* :issue:`1032653`: taskactions.task_info() should once again work for
+  recipes that were never assigned to a system (Contributed by Dan Callaghan)

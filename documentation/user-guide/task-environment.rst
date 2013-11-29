@@ -82,6 +82,8 @@ Sends a power command to another system in the recipe set.
    Power command to send. These correspond to the power commands available in 
    Beaker. Valid values are ``on``, ``off``, ``reboot``, and ``interrupt``.
 
+.. _rhts-reboot:
+
 rhts-reboot
 -----------
 

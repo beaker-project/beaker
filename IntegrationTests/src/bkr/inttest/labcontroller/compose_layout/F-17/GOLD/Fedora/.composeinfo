@@ -15,6 +15,7 @@ debuginfo = i386/debug
 os_dir = i386/os
 arch = i386
 sources = source/SRPMS
+isos = i386/iso
 
 [variant-Fedora]
 variants = 

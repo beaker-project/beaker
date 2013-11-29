@@ -61,7 +61,9 @@ class DistroImportTest(unittest.TestCase):
                                       u'type': u'variant'}],
                           u'tree_build_time': 0.0,
                           u'tags': [u'RELEASED'],
-                          u'urls': [u'http://localhost:19998/RHEL-4/U9/AS/i386/tree/'],
+                          u'urls': [u'nfs://fake.example.com:/nfs/RHEL-4/U9/AS/i386/tree/',
+                                    u'http://localhost:19998/RHEL-4/U9/AS/i386/tree/',
+                                    u'nfs+iso://fake.example.com:/nfs/RHEL-4/U9/AS/i386/ftp-isos/'],
                           u'variant': u'AS'}
 
         self.x86_64_rhel5 = {u'osmajor': u'RedHatEnterpriseLinuxServer5',
@@ -233,7 +235,9 @@ class DistroImportTest(unittest.TestCase):
                                                 u'type': u'debug'}],
                                     u'tags': [],
                                     u'tree_build_time': u'1342048152.161907',
-                                    u'urls': [u'http://localhost:19998/RHEL7Alpha3/Workstation/x86_64/os/'],
+                                    u'urls': [u'http://localhost:19998/RHEL7Alpha3/Workstation/x86_64/os/',
+                                              u'nfs://fake.example.com:/nfes/RHEL7Alpha3/Workstation/x86_64/os/',
+                                              u'nfs+iso://fake.example.com:/nfes/RHEL7Alpha3/Workstation/x86_64/isometric/'],
                                     u'variant': u'Workstation'}
 
         self.s390x_rhel7_alpha3_compose= {u'arch': u's390x',
@@ -260,7 +264,9 @@ class DistroImportTest(unittest.TestCase):
                                                u'type': u'debug'}],
                                    u'tags': [],
                                    u'tree_build_time': u'1342048144.836192',
-                                   u'urls': [u'http://localhost:19998/RHEL7Alpha3/Server/s390x/os/'],
+                                   u'urls': [u'http://localhost:19998/RHEL7Alpha3/Server/s390x/os/',
+                                             u'nfs://fake.example.com:/nfes/RHEL7Alpha3/Server/s390x/os/',
+                                             u'nfs+iso://fake.example.com:/nfes/RHEL7Alpha3/Server/s390x/isobar/'],
                                    u'variant': u'Server'}
 
         self.ppc64_rhel7_alpha3_compose = { u'arch': u'ppc64',
@@ -287,7 +293,9 @@ class DistroImportTest(unittest.TestCase):
                                                  u'type': u'debug'}],
                                      u'tags': [],
                                      u'tree_build_time': u'1342048133.432813',
-                                     u'urls': [u'http://localhost:19998/RHEL7Alpha3/Server/ppc64/os/'],
+                                     u'urls': [u'http://localhost:19998/RHEL7Alpha3/Server/ppc64/os/',
+                                               u'nfs://fake.example.com:/nfes/RHEL7Alpha3/Server/ppc64/os/',
+                                               u'nfs+iso://fake.example.com:/nfes/RHEL7Alpha3/Server/ppc64/isore/'],
                                      u'variant': u'Server'}
 
         self.x86_64_rhel7_client_compose = {
@@ -601,7 +609,9 @@ class DistroImportTest(unittest.TestCase):
                                      {u'path': u'images/pxeboot/initrd.img',
                                       u'type': u'initrd'}],
                          u'arches': [],
-                         u'urls': [u'http://localhost:19998/F-18/GOLD/Fedora/i386/os/'],
+                         u'urls': [u'http://localhost:19998/F-18/GOLD/Fedora/i386/os/',
+                                   u'nfs://fake.example.com:/nfs/F-18/GOLD/Fedora/i386/os/',
+                                   u'nfs+iso://fake.example.com:/nfs/F-18/GOLD/Fedora/i386/iso/'],
                          u'arch': u'i386',
                          u'ks_meta': None}
 
@@ -799,8 +809,10 @@ class DistroImportTest(unittest.TestCase):
         tree['tree_build_time'] = 1366007531.817827
         self.assertEquals(tree, self.x86_64_rhel6_naked)
 
-    def test_rhel4_tree_import_compose(self):
-        trees = self.dry_run_import_trees(['%sRHEL-4/U9/AS/' % self.distro_url])
+    def test_rhel4_tree_import_compose_with_iso(self):
+        trees = self.dry_run_import_trees(
+            ['nfs://fake.example.com:/nfs/RHEL-4/U9/AS',
+            '%sRHEL-4/U9/AS/' % self.distro_url])
         self.assertTrue(len(trees) == 1)
         tree = trees.pop()
         self.assertEquals(tree, self.i386_rhel4)
@@ -838,6 +850,35 @@ class DistroImportTest(unittest.TestCase):
         self.i386_rhel5['name'] = 'RedHatEnterpriseLinuxServer-5.9'
         self.assertEquals(tree, self.i386_rhel5)
 
+    def test_rhel5_tree_import_tree_with_iso(self):
+        trees = self.dry_run_import_trees(['%sRHEL5-Server/i386/os/'
+            % self.distro_url, 'nfs://fake.example.com:/nfs/RHEL5-Server/i386/os/'])
+        self.assertTrue(len(trees) == 1)
+        tree = trees.pop()
+        # See https://bugzilla.redhat.com/show_bug.cgi?id=910243
+        # The following is actually a bug, but current behaviour
+        # if there is no 'name' in .treeinfo's [general] section
+        self.i386_rhel5['name'] = u'RedHatEnterpriseLinuxServer-5.9'
+        self.i386_rhel5['urls']. \
+            extend(['nfs://fake.example.com:/nfs/RHEL5-Server/i386/os/',
+                'nfs+iso://fake.example.com:/nfs/RHEL5-Server/i386/iso/'])
+        self.assertEquals(tree, self.i386_rhel5)
+
+    def test_rhel6_import_tree_with_iso(self):
+        trees = self.dry_run_import_trees(['%sRHEL6-Server/x86_64/os/'
+            % self.distro_url,
+            'nfs://invalid.example.com/RHEL6-Server/x86_64/os/'])
+        self.assertTrue(len(trees) == 1)
+        tree = trees.pop()
+        # See https://bugzilla.redhat.com/show_bug.cgi?id=910243
+        # The following is actually a bug, but current behaviour
+        # if there is no 'name' in .treeinfo's [general] section
+        self.x86_64_rhel6['name'] = u'RedHatEnterpriseLinux-6.0'
+        self.x86_64_rhel6['urls'].extend(
+            ['nfs://invalid.example.com/RHEL6-Server/x86_64/os/',
+            'nfs+iso://invalid.example.com/RHEL6-Server/x86_64/iso/'])
+        self.assertEquals(tree, self.x86_64_rhel6)
+
     def test_rhel6_tree_import_tree(self):
         trees = self.dry_run_import_trees(['%sRHEL6-Server/x86_64/os/'
             % self.distro_url])
@@ -858,8 +899,9 @@ class DistroImportTest(unittest.TestCase):
             self.x86_64_rhel7_computenode_compose,
             self.x86_64_rhel7_workstation_compose])
 
-    def test_rhel7_alpha3_tree_import_compose(self):
-        trees = self.dry_run_import_trees(['%sRHEL7Alpha3/'% self.distro_url])
+    def test_rhel7_alpha3_tree_import_compose_with_iso(self):
+        trees = self.dry_run_import_trees(['%sRHEL7Alpha3/'% self.distro_url,
+            'nfs://fake.example.com:/nfes/RHEL7Alpha3/'])
 
         self.assertTrue(len(trees) == 6)
         for tree in trees:
@@ -873,7 +915,6 @@ class DistroImportTest(unittest.TestCase):
         self.assertEquals(x86_64_tree, self.x86_64_rhel7_alpha3_compose)
         self.assertEquals(s390x_tree, self.s390x_rhel7_alpha3_compose)
         self.assertEquals(ppc64_tree, self.ppc64_rhel7_alpha3_compose)
-
 
     def test_f17_tree_import_i386(self):
 
@@ -905,10 +946,11 @@ class DistroImportTest(unittest.TestCase):
         self.assertEquals(x86_64_tree, self.x86_64_f17_compose)
 
 
-    def test_f18_tree_import_i386(self):
+    def test_f18_tree_import_i386_with_iso(self):
 
-        trees = self.dry_run_import_trees(['%sF-18/GOLD/Fedora/i386/os'
-                                    % self.distro_url])
+        trees = self.dry_run_import_trees(
+            ['%sF-18/GOLD/Fedora/i386/os' % self.distro_url,
+            'nfs://fake.example.com:/nfs/F-18/GOLD/Fedora/i386/os'])
         self.assertTrue(len(trees) == 1)
         tree = trees.pop()
         self.assertEquals(tree, self.i386_f18)
@@ -916,7 +958,7 @@ class DistroImportTest(unittest.TestCase):
     def test_f18_tree_import_x86_64(self):
 
         trees = self.dry_run_import_trees(['%sF-18/GOLD/Fedora/x86_64/os'
-                                    % self.distro_url])
+            % self.distro_url])
         self.assertTrue(len(trees) == 1)
         tree = trees.pop()
         self.assertEquals(tree, self.x86_64_f18)

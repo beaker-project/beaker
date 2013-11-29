@@ -526,6 +526,18 @@ def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
                     ), # and
                 )
 
+    # We reapply this filter here in case a peer recipe has locked the recipe
+    # set in to a particular lab controller earlier in this scheduling pass
+    recipe = MachineRecipe.by_id(recipe_id)
+    if recipe.recipeset.lab_controller:
+        systems = systems.filter(
+                     System.lab_controller==recipe.recipeset.lab_controller)
+
+    # Something earlier in this pass meant we can't schedule this recipe
+    # right now after all. We'll try again next pass.
+    if not systems.count():
+        return
+
     # Order systems by owner, then Group, finally shared for everyone.
     # FIXME Make this configurable, so that a user can specify their scheduling
     # Implemented order, still need to do pool
@@ -537,17 +549,9 @@ def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
     #   <pool>public</pool>
     #  </autopick>
     # </recipe>
-    if not systems.count():
-        return
-    recipe = MachineRecipe.by_id(recipe_id)
     user = recipe.recipeset.job.owner
     if True: #FIXME if pools are defined add them here in the order requested.
         systems = System.scheduler_ordering(user, query=systems)
-    if recipe.recipeset.lab_controller:
-        # First recipe of a recipeSet determines the lab_controller
-        systems = systems.filter(
-                     System.lab_controller==recipe.recipeset.lab_controller
-                              )
     if recipe.autopick_random:
         system = systems[random.randrange(0,systems.count())]
     else:
