@@ -168,7 +168,7 @@ data_files = \
 setup(
     name="bkr.server",
     namespace_packages = ['bkr'],
-    version='0.14.3',
+    version='0.14.4',
 
     # uncomment the following lines if you fill them out in release.py
     description=description,

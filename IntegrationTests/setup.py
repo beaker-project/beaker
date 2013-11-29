@@ -12,7 +12,7 @@ def get_compose_layout():
 
 setup(
     name='bkr.inttest',
-    version='0.14.3',
+    version='0.14.4',
     packages=find_packages('src'),
     package_dir={'': 'src'},
     package_data={'': [
