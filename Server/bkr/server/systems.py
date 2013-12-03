@@ -15,8 +15,8 @@ from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
 from bkr.server.flask_util import BadRequest400, Unauthorised401, \
-    Forbidden403, NotFound404, MethodNotAllowed405, auth_required
-
+        Forbidden403, NotFound404, MethodNotAllowed405, \
+        convert_internal_errors, auth_required, read_json_request
 from turbogears.database import session
 import cherrypy
 
@@ -323,13 +323,55 @@ class SystemsController(controllers.Controller):
             result.setdefault(osmajor, []).append(arch)
         return result
 
+
+def _get_system_by_FQDN(fqdn):
+    """Get system by FQDN, reporting HTTP 404 if the system is not found"""
+    try:
+        return System.by_fqdn(fqdn, identity.current.user)
+    except NoResultFound:
+        raise NotFound404('System not found')
+
+
+@app.route('/systems/<fqdn>/loans/', methods=['POST'])
+@auth_required
+def grant_loan(fqdn):
+    """
+    Lends the system to the specified user (or borrows the system for
+    the current user if no other user is specified)
+
+    """
+    system = _get_system_by_FQDN(fqdn)
+    data = read_json_request(request)
+    recipient = data.get("recipient")
+    comment = data.get("comment")
+    with convert_internal_errors():
+        system.grant_loan(recipient, comment, service=u'HTTP')
+    return jsonify(system.get_loan_details())
+
+@app.route('/systems/<fqdn>/loans/+current', methods=['PATCH', 'PUT'])
+@auth_required
+def update_loan(fqdn):
+    """
+    Updates a loan on the system with the given fully-qualified
+    domain name.
+
+    Currently, the only permitted update is to return it.
+    """
+    system = _get_system_by_FQDN(fqdn)
+    data = read_json_request(request)
+    # This interprets both PATCH and PUT as PATCH
+    finish = data.get("finish")
+    with convert_internal_errors():
+        if finish == "now":
+            system.return_loan(service=u'HTTP')
+        else:
+            raise ValueError("Loan durations are not yet configurable")
+    return jsonify(system.get_loan_details())
+
 # XXX need to move /view/FQDN to /systems/FQDN/
 @app.route('/systems/<fqdn>/access-policy', methods=['GET'])
 def get_system_access_policy(fqdn):
-    try:
-        system = System.by_fqdn(fqdn, identity.current.user)
-    except NoResultFound:
-        raise NotFound404('System not found')
+    system = _get_system_by_FQDN(fqdn)
 
     policy = system.custom_access_policy
     # For now, we don't distinguish between an empty policy and an absent one.
@@ -376,22 +418,16 @@ def get_system_access_policy(fqdn):
     })
 
 @app.route('/systems/<fqdn>/access-policy', methods=['POST', 'PUT'])
+@auth_required
 def save_system_access_policy(fqdn):
-    if not identity.current.user:
-        raise Unauthorised401
-    try:
-        system = System.by_fqdn(fqdn, identity.current.user)
-    except NoResultFound:
-        raise NotFound404('System not found')
+    system = _get_system_by_FQDN(fqdn)
     if not system.can_edit_policy(identity.current.user):
         raise Forbidden403('Cannot edit system policy')
     if system.custom_access_policy:
         policy = system.custom_access_policy
     else:
         policy = system.custom_access_policy = SystemAccessPolicy()
-    data = request.json
-    if not data:
-        raise BadRequest400
+    data = read_json_request(request)
     # Figure out what is added, what is removed.
     # Rules are immutable, so if it has an id it is unchanged, 
     # if it has no id it is new.
@@ -420,19 +456,14 @@ def save_system_access_policy(fqdn):
 @app.route('/systems/<fqdn>/access-policy/rules/', methods=['POST'])
 @auth_required
 def add_system_access_policy_rule(fqdn):
-    try:
-        system = System.by_fqdn(fqdn, identity.current.user)
-    except NoResultFound:
-        raise NotFound404('System not found')
+    system = _get_system_by_FQDN(fqdn)
     if not system.can_edit_policy(identity.current.user):
         raise Forbidden403('Cannot edit system policy')
     if system.custom_access_policy:
         policy = system.custom_access_policy
     else:
         policy = system.custom_access_policy = SystemAccessPolicy()
-    rule = request.json
-    if not rule:
-        raise BadRequest400
+    rule = read_json_request(request)
     user = User.by_user_name(rule['user']) if rule['user'] else None
     group = Group.by_name(rule['group']) if rule['group'] else None
     try:
@@ -449,11 +480,7 @@ def add_system_access_policy_rule(fqdn):
 @app.route('/systems/<fqdn>/access-policy/rules/', methods=['DELETE'])
 @auth_required
 def delete_system_access_policy_rules(fqdn):
-
-    try:
-        system = System.by_fqdn(fqdn, identity.current.user)
-    except NoResultFound:
-        raise NotFound404('System not found')
+    system = _get_system_by_FQDN(fqdn)
     if not system.can_edit_policy(identity.current.user):
         raise Forbidden403('Cannot edit system policy')
     if system.custom_access_policy:

@@ -2542,6 +2542,25 @@ class System(SystemObject, ActivityMixin):
             return True
         return False
 
+    def get_loan_details(self):
+        """Returns details of the loan as a dict"""
+        if not self.loaned:
+            return {}
+        return {
+                   "recipient": self.loaned.user_name,
+                   "comment": self.loan_comment,
+               }
+
+    def grant_loan(self, recipient, comment, service):
+        """Grants a loan to the designated user if permitted"""
+        if recipient is None:
+            recipient = identity.current.user.user_name
+        self.change_loan(recipient, comment, service)
+
+    def return_loan(self, service):
+        """Grants a loan to the designated user if permitted"""
+        self.change_loan(None, None, service)
+
     def change_loan(self, user_name, comment=None, service='WEBUI'):
         """Changes the current system loan
 
