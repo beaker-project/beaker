@@ -112,6 +112,13 @@ class AtomicFileReplacement(object):
         self.mode = mode
         self._temp_info = None
 
+    @property
+    def temp_file(self):
+        if not self._temp_info:
+            msg = "Replacement for %r not yet created" % self.dest_path
+            raise RuntimeError(msg)
+        return self._temp_info[0]
+
     def create_temp(self):
         """Create the temporary file that may later be renamed"""
         dirname, basename = os.path.split(self.dest_path)
