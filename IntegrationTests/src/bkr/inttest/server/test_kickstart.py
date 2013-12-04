@@ -954,8 +954,11 @@ EOF
         compare_expected('Fedorarawhide-scheduler-defaults', recipe.id,
                          recipe.rendered_kickstart.kickstart)
 
-    def test_job_group_password(self):
-        group = data_setup.create_group(group_name='group1', root_password='blappy7')
+    def test_job_group_clear_text_password(self):
+        # set clear text password
+        root_password = 'blappy7'
+        group = data_setup.create_group(group_name='group1',
+                                        root_password=root_password)
         self.user.groups.append(group)
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
                 lab_controller=self.lab_controller)
@@ -979,12 +982,47 @@ EOF
                 </recipeSet>
             </job>
             ''', system)
+
+        for line in recipe.rendered_kickstart.kickstart.splitlines():
+            if line.startswith('rootpw'):
+                crypted_root_password = line.split()[2]
+                self.assertEquals(crypt.crypt(root_password, crypted_root_password),
+                                  crypted_root_password)
+                break
+
+    def test_group_job_crypted_password(self):
+        # set crypted password
+        crypted_root_password = crypt.crypt('blappy7', "$1$%s$")
+        group = data_setup.create_group(group_name='group1',
+                                        root_password=crypted_root_password)
+        self.user.groups.append(group)
+        system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
+                lab_controller=self.lab_controller)
+        session.commit()
+        session.begin()
+
+        recipe = self.provision_recipe('''
+            <job group='group1'>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+
         self.assert_(
-                'rootpw --iscrypted %s' % group.root_password
-                in recipe.rendered_kickstart.kickstart.splitlines(),
-                recipe.rendered_kickstart.kickstart)
-
-
+            'rootpw --iscrypted %s' % crypted_root_password
+            in recipe.rendered_kickstart.kickstart.splitlines(),
+            recipe.rendered_kickstart.kickstart)
 
     def test_ignoredisk(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',

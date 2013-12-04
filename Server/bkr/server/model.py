@@ -1994,16 +1994,13 @@ class Group(DeclBase, MappedObject, ActivityMixin):
 
         """
         if password:
-            if len(password.split('$')) != 4:
-                salt = ''.join(random.choice(string.digits + string.ascii_letters)
-                                for i in range(8))
-                try:
-                    # If you change VeryFascistCheck, please also modify
-                    # bkr.server.validators.StrongPassword
-                    self._root_password = crypt.crypt(cracklib.VeryFascistCheck(password), "$1$%s$" % salt)
-                except ValueError, msg:
-                    msg = re.sub(r'^it is', 'the password is', str(msg))
-                    raise ValueError(msg)
+            try:
+                # If you change VeryFascistCheck, please also modify
+                # bkr.server.validators.StrongPassword
+                cracklib.VeryFascistCheck(password)
+            except ValueError, msg:
+                msg = re.sub(r'^it is', 'the password is', str(msg))
+                raise ValueError(msg)
             else:
                 self._root_password = password
         else:
@@ -2040,13 +2037,7 @@ class Group(DeclBase, MappedObject, ActivityMixin):
         return self.group_name in (u'admin', u'queue_admin', u'lab_controller')
 
     def set_root_password(self, user, service, password):
-        if len(password.split('$')) == 4:
-            # Password is hashed
-            hashed_root_password = password
-        else:
-            # Password is cleartext
-            hashed_root_password = crypt.crypt(password, self.root_password)
-        if self.root_password != hashed_root_password:
+        if self.root_password != password:
             self.root_password = password
             self.record_activity(user=user, service=service,
                 field=u'Root Password', old='*****', new='*****')
@@ -5522,6 +5513,19 @@ class Recipe(TaskBase):
     def __init__(self, ttasks=0):
         # Intentionally not chaining to super(), to avoid session.add(self)
         self.ttasks = ttasks
+
+    def crypt_root_password(self):
+        if self.recipeset.job.group:
+            group_pw = self.recipeset.job.group.root_password
+            if group_pw:
+                if len(group_pw.split('$')) != 4:
+                    salt = ''.join(random.choice(string.digits + string.ascii_letters)
+                                   for i in range(8))
+                    return crypt.crypt(group_pw, "$1$%s$" % salt)
+                else:
+                    return group_pw
+        # if it is not a group job or the group password is not set
+        return self.owner.root_password
 
     @property
     def harnesspath(self):

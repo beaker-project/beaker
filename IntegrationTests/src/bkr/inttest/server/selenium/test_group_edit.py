@@ -157,9 +157,48 @@ class TestGroupsWD(WebDriverTestCase):
             u'OK')
         b.get(get_server_base() + 'groups/mine')
         b.find_element_by_link_text(self.group.group_name).click()
-        new_hash = b.find_element_by_xpath('//input[@id="Group_root_password"]').get_attribute('value')
-        self.failUnless(new_hash)
-        self.failUnless(crypt.crypt(self.clear_password, new_hash) == new_hash)
+        clear_pass = b.find_element_by_xpath('//input[@id="Group_root_password"]').get_attribute('value')
+        self.assertEquals(clear_pass, self.clear_password)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1020091
+    def test_password_visibility_members(self):
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        self._make_and_go_to_owner_page(self.user, self.group)
+        e = b.find_element_by_xpath('//input[@id="Group_root_password"]')
+        e.clear()
+        e.send_keys(self.clear_password)
+        b.find_element_by_id('Group').submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+            u'OK')
+        logout(b)
+
+        # add a new user as a group member
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            user.groups.append(self.group)
+        # login as the new user
+        login(b, user=user.user_name, password='password')
+        b.get(get_server_base() + 'groups/mine')
+        b.find_element_by_link_text(self.group.group_name).click()
+        self.assertEquals(b.find_element_by_xpath("//div[@id='root_pw_display']/p").text,
+                          "The group root password is: %s" % self.clear_password)
+
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1020091
+    def test_password_not_set_visibility_members(self):
+        b = self.browser
+        # add a new user as a group member
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            user.groups.append(self.group)
+        # login as the new user
+        login(b, user=user.user_name, password='password')
+        b.get(get_server_base() + 'groups/mine')
+        b.find_element_by_link_text(self.group.group_name).click()
+        self.assertEquals(b.find_element_by_xpath("//div[@id='root_pw_display']/p").text,
+                          "No group root password set. "
+                          "Group jobs will use the root password preferences of the submitting user.")
 
     def test_create_new_group(self):
         b = self.browser
@@ -190,8 +229,7 @@ class TestGroupsWD(WebDriverTestCase):
             self.assertEquals(group.activity[-2].field_name, u'User')
             self.assertEquals(group.activity[-2].new_value, self.user.user_name)
             self.assertEquals(group.activity[-2].service, u'WEBUI')
-            self.failUnless(crypt.crypt('blapppy7', group.root_password) ==
-                group.root_password, group.root_password)
+            self.assertEquals('blapppy7', group.root_password)
 
     def test_create_new_group_sans_password(self):
         b = self.browser
@@ -226,8 +264,7 @@ class TestGroupsWD(WebDriverTestCase):
         self.assertEquals(b.find_element_by_class_name('flash').text,
             u'OK')
         session.expire(self.group)
-        self.failUnless(crypt.crypt('blapppy7', self.group.root_password) ==
-            self.group.root_password)
+        self.assertEquals('blapppy7', self.group.root_password)
 
     def test_cannot_edit_unowned_group(self):
         with session.begin():
