@@ -13,3 +13,6 @@
 [submodule "backbone"]
 	path = Server/assets/backbone
 	url = https://github.com/jashkenas/backbone.git
+[submodule "moment"]
+	path = Server/assets/moment
+	url = https://github.com/moment/moment.git
