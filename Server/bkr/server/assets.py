@@ -36,7 +36,6 @@ def _create_env(**kwargs):
             'bootstrap/js/bootstrap-button.js',
             'bootstrap/js/bootstrap-collapse.js',
             'typeahead.js/dist/typeahead.js',
-            'jquery.cookie.js',
             'underscore/underscore.js',
             'backbone/backbone.js',
             # ours

@@ -206,19 +206,23 @@ class TestRecipeView(WebDriverTestCase):
 
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=674025
-    def test_task_anchor(self):
+    def test_task_anchor_on_recipe_page(self):
         with session.begin():
-            recipes = [data_setup.create_recipe(distro_tree=self.distro_tree) for _ in range(10)]
-            job = data_setup.create_job_for_recipes(recipes, owner=self.user)
-
+            job = data_setup.create_job(owner=self.user)
+            recipe = job.recipesets[0].recipes[0]
+            task = recipe.tasks[0]
         b = self.browser
-        recipe = recipes[0]
-        task = job.recipesets[0].recipes[0].tasks[0].id
         # bkr/recipes/id#task<id>
-        b.get(get_server_base() + 'recipes/%s#task%s' %(recipe.id,task))
+        b.get(get_server_base() + 'recipes/%s#task%s' % (recipe.id, task.id))
         # "Show Results" should be activated for the recipe
         b.find_element_by_css_selector('#recipe%s .results-tab.active' % recipe.id)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=674025
+    def test_task_anchor_on_job_page(self):
+        with session.begin():
+            recipes = [data_setup.create_recipe(distro_tree=self.distro_tree) for _ in range(10)]
+            job = data_setup.create_job_for_recipes(recipes, owner=self.user)
+        b = self.browser
         # bkr/jobs/id#task<id>
         # for multi recipe jobs, only the recipe to which the task belongs should be visible
         # choose a recipe and task somewhere in the middle

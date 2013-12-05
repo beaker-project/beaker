@@ -169,6 +169,8 @@ ${form_task.display(value=dict(distro_tree_id=value.id),
 
 </div>
 
-<script type="text/javascript">$(link_tabs_to_anchor);</script>
+<script type="text/javascript">
+    $(function () { link_tabs_to_anchor('beaker_distrotree_tabs'); });
+</script>
 </body>
 </html>

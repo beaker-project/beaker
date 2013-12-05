@@ -128,6 +128,8 @@
     <div id="task_items">&nbsp;</div>
    </div>
   </div>
-  <script type="text/javascript">$(link_tabs_to_anchor);</script>
+  <script type="text/javascript">
+    $(function () { link_tabs_to_anchor('beaker_system_tabs'); });
+  </script>
  </body>
 </html>
