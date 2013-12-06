@@ -2508,7 +2508,7 @@ class LogRecipeTest(unittest.TestCase):
     def test_lazy_create_can_deal_with_deadlocks(self):
         global _raise_counter
         _max_valid_attempts = 6
-        orig_ConditionalInsert = model.ConditionalInsert
+        orig_ConditionalInsert = model.base.ConditionalInsert
         def _raise_deadlock_exception(raise_this_many=0):
 
             global _raise_counter
@@ -2518,14 +2518,14 @@ class LogRecipeTest(unittest.TestCase):
                 if _raise_counter < raise_this_many:
                     _raise_counter += 1
                     raise OperationalError('statement', {}, '(OperationalError) (1213, blahlbha')
-                model.ConditionalInsert = orig_ConditionalInsert
-                return model.ConditionalInsert(*args, **kwargs)
+                model.base.ConditionalInsert = orig_ConditionalInsert
+                return model.base.ConditionalInsert(*args, **kwargs)
 
             return inner
 
         try:
             # This should raise 3 times and then just work
-            model.ConditionalInsert = _raise_deadlock_exception(3)
+            model.base.ConditionalInsert = _raise_deadlock_exception(3)
             lr1 = LogRecipe.lazy_create(path=u'/', filename=u'dummy.log',
                     recipe_id=self.recipe.id)
             self.assertEquals(_raise_counter, 3)
@@ -2533,7 +2533,7 @@ class LogRecipeTest(unittest.TestCase):
 
             # We should have no deadlock exception now
             _raise_counter = 0
-            model.ConditionalInsert = _raise_deadlock_exception(0)
+            model.base.ConditionalInsert = _raise_deadlock_exception(0)
             lr2 = LogRecipe.lazy_create(path=u'/', filename=u'dummy2.log',
                     recipe_id=self.recipe.id)
             self.assertEquals(_raise_counter, 0)
@@ -2541,7 +2541,7 @@ class LogRecipeTest(unittest.TestCase):
 
             # We should exhaust our max number of attempts.
             _raise_counter = 0
-            model.ConditionalInsert = _raise_deadlock_exception(_max_valid_attempts + 1)
+            model.base.ConditionalInsert = _raise_deadlock_exception(_max_valid_attempts + 1)
             try:
                 LogRecipe.lazy_create(path=u'/', filename=u'dummy3.log',
                         recipe_id=self.recipe.id)
@@ -2551,7 +2551,7 @@ class LogRecipeTest(unittest.TestCase):
                     raise
             self.assertEquals(_raise_counter, _max_valid_attempts)
         finally:
-            model.ConditionalInsert = orig_ConditionalInsert
+            model.base.ConditionalInsert = orig_ConditionalInsert
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=865265
     def test_path_is_normalized(self):
