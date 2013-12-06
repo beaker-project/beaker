@@ -7,6 +7,9 @@
     <script type="text/javascript">
     window.beaker_url_prefix = ${tg.to_json(tg.url('/'))};
     </script>
+    <script type="text/javascript" py:if="tg.identity.user">
+    window.beaker_current_user = new User(${tg.to_json(tg.identity.user)});
+    </script>
     <meta py:replace="item[:]"/>
 </head>
 

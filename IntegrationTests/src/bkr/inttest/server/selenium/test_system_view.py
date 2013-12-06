@@ -125,34 +125,19 @@ class SystemViewTestWD(WebDriverTestCase):
         b = self.browser
         login(b)
         b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs" and '
+        b.find_element_by_xpath('//ul[contains(@class, "system-nav") and '
                 'not(.//a/text()="Lab Info")]')
 
-    def go_to_system_edit(self, system=None):
-        if system is None:
-            system = self.system
-        b = self.browser
-        self.go_to_system_view(system)
-        b.find_element_by_link_text('Edit System').click()
-        b.find_element_by_xpath('//h1[text()="%s"]' % system.fqdn)
-
-    def go_to_system_view(self, system=None):
+    def go_to_system_view(self, system=None, tab=None):
         if system is None:
             system = self.system
         b = self.browser
         b.get(get_server_base() + 'view/%s' % system.fqdn)
         b.find_element_by_xpath('//title[normalize-space(text())="%s"]' % \
             system.fqdn)
-
-    def assert_system_view_text(self, field, val):
-        if field == 'fqdn':
-            self.browser.find_element_by_xpath(
-                    '//h1[normalize-space(text())="%s"]' % val)
-        else:
-            self.browser.find_element_by_xpath(
-                    '//div[@class="controls" and preceding-sibling::label/@for="form_%s"]'
-                    '/span[normalize-space(text())="%s"]'
-                    % (field, val))
+        if tab:
+            b.find_element_by_xpath('//ul[contains(@class, "system-nav")]'
+                    '//a[text()="%s"]' % tab).click()
 
     def test_system_view_condition_report(self):
         b = self.browser
@@ -171,10 +156,11 @@ class SystemViewTestWD(WebDriverTestCase):
             job = data_setup.create_job(owner=self.system.owner,
                     distro_tree=self.distro_tree)
             data_setup.mark_job_running(job, system=self.system)
-            job_id = job.id
+            recipe = job.recipesets[0].recipes[0]
         self.go_to_system_view()
-        b.find_element_by_link_text('(Current Job)').click()
-        b.find_element_by_xpath('//title[contains(text(), "J:%s")]' % job_id)
+        usage = b.find_element_by_class_name('system-quick-usage')
+        usage.find_element_by_xpath('//span[@class="label" and text()="Reserved"]')
+        usage.find_element_by_xpath('//a[text()="%s"]' % recipe.t_id)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=631421
     def test_page_title_shows_fqdn(self):
@@ -359,8 +345,7 @@ class SystemViewTestWD(WebDriverTestCase):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Key/Values"]').click()
+        self.go_to_system_view(tab='Key/Values')
         b.find_element_by_name('key_name').send_keys('NR_DISKS')
         b.find_element_by_name('key_value').send_keys('100')
         b.find_element_by_name('keys').submit()
@@ -379,8 +364,7 @@ class SystemViewTestWD(WebDriverTestCase):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Key/Values"]').click()
+        self.go_to_system_view(tab='Key/Values')
         b.find_element_by_xpath(
                 '//td[normalize-space(preceding-sibling::td[1]/text())'
                 '="NR_DISKS" and '
@@ -407,8 +391,7 @@ class SystemViewTestWD(WebDriverTestCase):
         # as admin, assign the system to our test group
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Groups"]').click()
+        self.go_to_system_view(tab='Groups')
         b.find_element_by_name('group.text').send_keys(group.group_name)
         b.find_element_by_name('groups').submit()
         b.find_element_by_xpath(
@@ -433,8 +416,7 @@ class SystemViewTestWD(WebDriverTestCase):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Groups"]').click()
+        self.go_to_system_view(tab='Groups')
         b.find_element_by_xpath(
                 '//td[normalize-space(text())="%s"]' % group.group_name)
         delete_and_confirm(b, '//tr[normalize-space(td[1]/text())="%s"]'
@@ -451,12 +433,10 @@ class SystemViewTestWD(WebDriverTestCase):
     def test_update_power_quiescent_validator(self):
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Power Config"]').click()
+        self.go_to_system_view(tab='Power')
         # Empty value
         b.find_element_by_name('power_quiescent_period').clear()
         b.find_element_by_xpath("//form[@id='power']").submit()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Power Config"]').click()
         error_text = b.find_element_by_xpath('//span[@class="help-block error"'
             ' and preceding-sibling::'
             'input[@id="power_power_quiescent_period"]]').text
@@ -475,9 +455,7 @@ class SystemViewTestWD(WebDriverTestCase):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//'
-            'a[text()="Power Config"]').click()
+        self.go_to_system_view(tab='Power')
         b.find_element_by_name('power_address').clear()
         b.find_element_by_name('power_address').send_keys('nowhere.example.com')
 
@@ -529,8 +507,7 @@ class SystemViewTestWD(WebDriverTestCase):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Install Options"]').click()
+        self.go_to_system_view(tab='Install Options')
         b.find_element_by_name('prov_ksmeta').send_keys('skipx asdflol')
         b.find_element_by_name('prov_koptions').send_keys('init=/bin/true')
         b.find_element_by_name('prov_koptionspost').send_keys('vga=0x31b')
@@ -544,8 +521,7 @@ class SystemViewTestWD(WebDriverTestCase):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Install Options"]').click()
+        self.go_to_system_view(tab='Install Options')
         delete_and_confirm(b, '//tr[th/text()="Architecture"]')
         b.find_element_by_xpath('//h1[text()="%s"]' % self.system.fqdn)
         with session.begin():
@@ -569,8 +545,7 @@ class SystemViewTestWD(WebDriverTestCase):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Lab Info"]').click()
+        self.go_to_system_view(tab='Lab Info')
         changes = {
             'orig_cost': '1,000.00',
             'curr_cost': '500.00',
@@ -679,12 +654,8 @@ class SystemViewTestWD(WebDriverTestCase):
             distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
             self.system.provisions[distro_tree.arch] = Provision(arch=distro_tree.arch)
 
-        self.go_to_system_view(self.system)
+        self.go_to_system_view(tab='Excluded Families')
         b = self.browser
-
-        # go to the Excluded Families Tab
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]'
-                '//a[text()="Excluded Families"]').click()
 
         # simulate the label click for i386
         b.find_element_by_xpath('//li[normalize-space(text())="i386"]'

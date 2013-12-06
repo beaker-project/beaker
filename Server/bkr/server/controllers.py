@@ -829,7 +829,6 @@ class Root(RPCRoot):
             can_power = False
         title = system.fqdn
         options = self._get_system_options(system)
-        options['edit'] = False
         provision_action, provision_options = (
             self._get_provisioning_details(system, our_user))
 
@@ -859,11 +858,8 @@ class Root(RPCRoot):
                         exclude   = self.system_exclude,
                         keys      = self.system_keys,
                         notes     = self.system_notes,
-                        groups    = self.system_groups,
-                        install   = self.system_installoptions,
                         arches    = self.arches_form,
                       )
-        widgets['provision'] = self.system_provision
         widgets['power'] = self.power_form
         widgets['commands_form'] = self.commands_form
         widgets['power_history'] = self.power_history
@@ -873,13 +869,14 @@ class Root(RPCRoot):
         return dict(
             title           = title,
             readonly        = readonly,
-            form            = self.system_form,
-            action          = url('/save'),
             value           = system,
             options         = options,
             history_data    = historical_data,
             task_widget     = self.task_form,
             history_widget  = self.system_activity,
+            groups_widget   = self.system_groups,
+            install_widget  = self.system_installoptions,
+            provision_widget = self.system_provision,
             widgets         = widgets,
             widgets_action  = dict( power     = url('/save_power'),
                                     history   = url('/view/%s' % fqdn),

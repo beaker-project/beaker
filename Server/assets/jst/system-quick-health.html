@@ -1,0 +1,37 @@
+<p>
+  <% if (status == 'Removed') { %>
+    <span class="label label-important">Removed</span>
+  <% } else if (status == 'Broken') { %>
+    <span class="label label-warning">Out of service</span> since
+  <% } else if (status == 'Automated' || status == 'Manual') { %>
+    <span class="label label-success">Operational</span> since
+  <% } else { %>
+    <span class="label"><%- status %></span> since
+  <% } %>
+  <time datetime="<%- moment.utc(status_since).toISOString() %>"
+        title="<%- status_since %>">
+    <%- moment.utc(status_since).local().fromNow() %>
+  </time>.
+</p>
+<% if (status_reason) { %>
+<p class="system-status-reason"><%- status_reason %></p>
+<% } %>
+<% if (recipes_run_past_week) { %>
+  <p>
+    <%- Math.round(recipes_aborted_past_week * 100. / recipes_run_past_week) %>% of recipes
+    (<%- recipes_aborted_past_week %> out of <%- recipes_run_past_week %>)
+    aborted in the past week.
+  </p>
+<% } %>
+<!-- XXX most recent note? most recent power failure output? -->
+<p>
+<% if (can_change_status && (status == 'Broken' || status == 'Removed')) { %>
+  <a href="#IMPLEMENTME" class="btn btn-block">Return to service</a>
+<% } else if (can_change_status) { %>
+  <a href="#IMPLEMENTME" class="btn btn-block">Remove from service</a>
+<% } else if (_.isEmpty(window.beaker_current_user)) { %>
+  <button type="button" class="btn btn-block" disabled="disabled">Not logged in</button>
+<% } else if (status != 'Broken' && status != 'Removed') { %>
+  <a href="#IMPLEMENTME" class="btn btn-block">Report problem</a>
+<% } %>
+</p>

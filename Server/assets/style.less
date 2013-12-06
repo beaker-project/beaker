@@ -31,6 +31,11 @@ h1 small { font-size: @baseFontSize * 1.5; }
 h2 small { font-size: @baseFontSize * 1.25; }
 h3 small { font-size: @baseFontSize * 1.25; }
 
+// Friendly datetimes with the real timestamp in title.
+time[title] {
+    border-bottom: 1px dashed @gray;
+}
+
 // We have some forms in table cells, and the bottom margin (from Bootstrap) 
 // ruins the row height.
 td form, td input, td select {
@@ -111,6 +116,7 @@ td form, td input, td select {
 }
 
 @import "master.less";
+@import "system.less";
 @import "job.less";
 @import "recipe-tasks.less";
 @import "reserve-workflow.less";

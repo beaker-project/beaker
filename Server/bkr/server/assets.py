@@ -49,6 +49,8 @@ def _create_env(**kwargs):
             'link-tabs-to-anchor.js',
             'beaker-typeaheads.js',
             'recipe-tasks.js',
+            'system-model.js',
+            'system-quick-info.js',
             'access-policy.js',
             filters=['uglifyjs'],
             output='generated/beaker-%(version)s.js')

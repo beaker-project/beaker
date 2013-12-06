@@ -1,14 +1,28 @@
+// system page
 
-.system-form-readonly {
-    .control-group {
-        margin-bottom: 6px;
+.system-tabs {
+    overflow: visible;
+}
+
+.system-quick-info {
+    // Matches the style of .page-header immediately above it.
+    padding-bottom: @baseLineHeight;
+    border-bottom: 1px solid @grayLighter;
+    margin-bottom: @baseLineHeight;
+    > div {
+        // vertical border between columns
+        border-left: 1px solid @grayLighter;
+        padding-left: @fluidGridGutterWidth;
+        &:first-child {
+            border-left: none;
+            padding-left: 0;
+        }
     }
-    .control-label {
-        .muted;
-        padding-top: 3px;
-        margin-bottom: 3px;
-    }
-    .form-control-static {
-        padding-top: 3px;
-    }
+}
+
+.system-status-reason {
+    .well;
+    .well-small;
+    // reset bottom margin to match p
+    margin-bottom: @baseLineHeight / 2;
 }

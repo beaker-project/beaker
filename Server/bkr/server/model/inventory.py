@@ -347,6 +347,74 @@ class System(DeclarativeMappedObject, ActivityMixin):
         host_requires.appendChild(xmland)
         return host_requires
 
+    def __json__(self):
+        # Delayed import to avoid circular dependency
+        from . import Recipe
+        data = {
+            'id': self.id,
+            'fqdn': self.fqdn,
+            'lab_controller_id': None,
+            'status': self.status,
+            'status_reason': self.status_reason,
+            'arches': [arch.arch for arch in self.arch],
+            'has_power': bool(self.power) and bool(self.power.power_type),
+            'has_console': False, # IMPLEMENTME
+            'created_date': self.date_added,
+            'model': self.model,
+            'vendor': self.vendor,
+            'memory': self.memory,
+            'cpu_model_name': None,
+            'disk_space': None,
+            'queue_size': None,
+        }
+        if self.lab_controller:
+            data['lab_controller_id'] = self.lab_controller.id
+        if self.cpu:
+            data.update({
+                'cpu_model_name': self.cpu.model_name,
+            })
+        if self.disks:
+            data['disk_space'] = sum(disk.size for disk in self.disks)
+        if self.status == SystemStatus.automated:
+            data['queue_size'] = Recipe.query\
+                .filter(Recipe.status == TaskStatus.queued)\
+                .filter(Recipe.systems.contains(self))\
+                .count()
+        # XXX replace with actual recipe data
+        recipes = self.dyn_recipes.filter(
+                Recipe.finish_time >= datetime.utcnow() - timedelta(days=7))
+        data['recipes_run_past_week'] = recipes.count()
+        data['recipes_aborted_past_week'] = recipes.filter(
+                Recipe.status == TaskStatus.aborted).count()
+        # XXX replace with actual status duration data?
+        data['status_since'] = self.status_durations[0].start_time
+        if self.open_reservation:
+            data['current_reservation'] = self.open_reservation
+        else:
+            data['current_reservation'] = None
+        data['previous_reservation'] = self.dyn_reservations\
+                .filter(Reservation.finish_time != None)\
+                .order_by(Reservation.finish_time.desc()).first()
+        # XXX replace with actual loan data
+        data['loaned'] = self.loaned
+        # XXX replace with actual access policy data?
+        if identity.current.user:
+            u = identity.current.user
+            data['can_change_status'] = self.can_edit(u)
+            data['can_take'] = self.is_free() and self.can_reserve_manually(u)
+            data['can_return'] = (self.open_reservation is not None
+                    and self.open_reservation.type != 'recipe'
+                    and self.can_unreserve(u))
+            data['can_borrow'] = self.can_borrow(u)
+            data['can_reserve'] = self.can_reserve(u)
+        else:
+            data['can_change_status'] = False
+            data['can_take'] = False
+            data['can_return'] = False
+            data['can_borrow'] = False
+            data['can_reserve'] = False
+        return data
+
     @classmethod
     def all(cls, user=None, system=None):
         """

@@ -93,6 +93,13 @@ class User(DeclarativeMappedObject, ActivityMixin):
 
     activity_type = UserActivity
 
+    def __json__(self):
+        return {
+            'user_name': self.user_name,
+            'display_name': self.display_name,
+            'email_address': self.email_address,
+        }
+
     def permissions(self):
         perms = set()
         for g in self.groups:

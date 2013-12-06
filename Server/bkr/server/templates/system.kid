@@ -5,30 +5,50 @@
  <head>
   <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
   <title>${title}</title>
+  <script type="text/javascript">
+    var system = new System(${tg.to_json(value)}, {parse: true});
+    $(function () {
+        new SystemQuickInfo({model: system, el: $('.system-quick-info')});
+    });
+  </script>
  </head>
 
 <body>
   <div class="page-header">
     <h1>${value.fqdn}</h1>
   </div>
-  ${form.display(method='get', action=action, value=value, options=options)}
-  <ul class="nav nav-tabs">
-    <li><a data-toggle="tab" href="#details">Details</a></li>
-    <li><a data-toggle="tab" href="#arches">Arch(s)</a></li>
-    <li><a data-toggle="tab" href="#keys">Key/Values</a></li>
-    <li><a data-toggle="tab" href="#groups">Groups</a></li>
-    <li><a data-toggle="tab" href="#access-policy">Access Policy</a></li>
-    <li><a data-toggle="tab" href="#exclude">Excluded Families</a></li>
-    <li><a data-toggle="tab" href="#commands">Commands</a></li>
-    <li><a data-toggle="tab" href="#power">Power Config</a></li>
-    <li><a data-toggle="tab" href="#notes">Notes</a></li>
-    <li><a data-toggle="tab" href="#install">Install Options</a></li>
-    <li><a data-toggle="tab" href="#provision">Provision</a></li>
-    <li py:if="widgets['labinfo']"><a data-toggle="tab" href="#labinfo">Lab Info</a></li>
-    <li><a data-toggle="tab" href="#history">History</a></li>
-    <li><a data-toggle="tab" href="#tasks">Tasks</a></li>
-  </ul>
-  <div class="tab-content">
+  <div class="system-quick-info"></div>
+  <div class="row-fluid">
+    <ul class="span3 nav nav-list system-nav">
+      <li class="nav-header">Hardware</li>
+      <li><a data-toggle="tab" href="#IMPLEMENTME">Essentials</a></li>
+      <li><a data-toggle="tab" href="#arches">Architectures</a></li>
+      <li><a data-toggle="tab" href="#details">Details</a></li>
+      <li><a data-toggle="tab" href="#keys">Key/Values</a></li>
+      <li py:if="widgets['labinfo']"><a data-toggle="tab" href="#labinfo">Lab Info</a></li>
+      <li class="nav-header">Control</li>
+      <li><a data-toggle="tab" href="#commands">Commands</a></li>
+      <li><a data-toggle="tab" href="#provision">Provision</a></li>
+      <li class="nav-header">Access</li>
+      <li><a data-toggle="tab" href="#IMPLEMENTME">Owner</a></li>
+      <li><a data-toggle="tab" href="#groups">Groups</a></li>
+      <li><a data-toggle="tab" href="#IMPLEMENTME">Loan</a></li>
+      <li><a data-toggle="tab" href="#access-policy">Access Policy</a></li>
+      <li class="nav-header">Configuration</li>
+      <li><a data-toggle="tab" href="#power">Power</a></li>
+      <li><a data-toggle="tab" href="#IMPLEMENTME">Scheduler</a></li>
+      <li><a data-toggle="tab" href="#exclude">Excluded Families</a></li>
+      <li><a data-toggle="tab" href="#install">Install Options</a></li>
+      <li><a data-toggle="tab" href="#notes">Notes</a></li>
+      <li class="nav-header">History</li>
+      <li><a data-toggle="tab" href="#history">Activity</a></li>
+      <!--
+      <li><a data-toggle="tab" href="#IMPLEMENTME">Reservations</a></li>
+      <li><a data-toggle="tab" href="#IMPLEMENTME">Loans</a></li>
+      -->
+      <li><a data-toggle="tab" href="#tasks">Executed Tasks</a></li>
+    </ul>
+    <div class="span9 tab-content system-tabs">
    <div class="tab-pane" id="details">
     ${widgets['details'].display(system=value)} 
    </div>
@@ -39,7 +59,7 @@
     ${widgets['keys'].display(method='get', action=widgets_action['keys'], value=value, options=widgets_options['keys'])} 
    </div>
    <div class="tab-pane" id="groups">
-    ${widgets['groups'].display(method='get', action=widgets_action['groups'], value=value, options=widgets_options['groups'])}
+    ${groups_widget.display(method='get', action=widgets_action['groups'], value=value, options=widgets_options['groups'])}
    </div>
    <div class="tab-pane" id="access-policy">
     <div id="access-policy-${value.id}">
@@ -48,7 +68,7 @@
     <script>
       $(function () {
         // defer until tab is shown
-        $('.nav-tabs a[href="#access-policy"]').one('show', function () {
+        $('.system-nav a[href="#access-policy"]').one('show', function () {
           var policy = new AccessPolicy({}, {url:
               ${tg.to_json(tg.url('/systems/%s/access-policy' % value.fqdn))}});
           policy.fetch({
@@ -96,7 +116,7 @@
    </div>
    <div class="tab-pane" id="install">
     <span py:if="value.lab_controller and value.arch">
-     ${widgets['install'].display(method='get', action=widgets_action['install'], value=value, options=widgets_options['install'])} 
+     ${install_widget.display(method='get', action=widgets_action['install'], value=value, options=widgets_options['install'])}
     </span>
     <span py:if="not value.lab_controller or not value.arch">
      System must be associated to a lab controller and have at least one architecture specified to edit install options.
@@ -104,7 +124,7 @@
    </div>
    <div class="tab-pane" id="provision">
     <span py:if="value.lab_controller and value.arch">
-     ${widgets['provision'].display(method='get', action=widgets_action['provision'], value=value, options=widgets_options['provision'])} 
+     ${provision_widget.display(method='get', action=widgets_action['provision'], value=value, options=widgets_options['provision'])}
     </span>
     <span py:if="not value.lab_controller or not value.arch">
      System must be associated to a lab controller and have at least one architecture specified in order to provision.
@@ -127,9 +147,10 @@
     )}
     <div id="task_items">&nbsp;</div>
    </div>
+    </div>
   </div>
   <script type="text/javascript">
-    $(function () { link_tabs_to_anchor('beaker_system_tabs'); });
+    $(function () { link_tabs_to_anchor('beaker_system_tabs', '.system-nav'); });
   </script>
  </body>
 </html>
