@@ -574,12 +574,6 @@ disk_table = Table('disk', metadata,
     mysql_engine='InnoDB',
 )
 
-locked_table = Table('locked', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    mysql_engine='InnoDB',
-)
-
 power_type_table = Table('power_type', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -598,24 +592,6 @@ power_table = Table('power', metadata,
     Column('power_user', String(255)),
     Column('power_passwd', String(255)),
     Column('power_id', String(255)),
-    mysql_engine='InnoDB',
-)
-
-serial_table = Table('serial', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    mysql_engine='InnoDB',
-)
-
-serial_type_table = Table('serial_type', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    mysql_engine='InnoDB',
-)
-
-install_table = Table('install', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
     mysql_engine='InnoDB',
 )
 
@@ -3686,12 +3662,6 @@ class Disk(SystemObject):
         self.phys_sector_size = int(phys_sector_size)
         self.model = model
 
-class Locked(MappedObject):
-    def __init__(self, name=None):
-        super(Locked, self).__init__()
-        self.name = name
-
-
 class PowerType(MappedObject):
 
     def __init__(self, name=None):
@@ -3724,24 +3694,6 @@ class PowerType(MappedObject):
 
 class Power(SystemObject):
     pass
-
-
-class Serial(MappedObject):
-    def __init__(self, name=None):
-        super(Serial, self).__init__()
-        self.name = name
-
-
-class SerialType(MappedObject):
-    def __init__(self, name=None):
-        super(SerialType, self).__init__()
-        self.name = name
-
-
-class Install(MappedObject):
-    def __init__(self, name=None):
-        super(Install, self).__init__()
-        self.name = name
 
 
 class Distro(MappedObject):
@@ -7859,16 +7811,11 @@ Device.mapper = mapper(Device, device_table,
        properties = {'device_class': relation(DeviceClass)})
 mapper(DeviceClass, device_class_table)
 mapper(Disk, disk_table)
-mapper(Locked, locked_table)
 mapper(PowerType, power_type_table)
 mapper(Power, power_table,
         properties = {'power_type':relation(PowerType,
                                            backref='power_control')
     })
-
-mapper(Serial, serial_table)
-mapper(SerialType, serial_type_table)
-mapper(Install, install_table)
 
 mapper(LabControllerDistroTree, distro_tree_lab_controller_map)
 mapper(LabController, lab_controller_table,
