@@ -25,7 +25,7 @@ import itertools
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session
-from bkr.server import model
+from bkr.server import dynamic_virt
 from bkr.server.model import LabController, User, Group, UserGroup, Distro, DistroTree, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
@@ -473,7 +473,7 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
                 if not lab_controller:
                     lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
                 recipe.recipeset.lab_controller = lab_controller
-                with model.VirtManager() as manager:
+                with dynamic_virt.VirtManager() as manager:
                     recipe.resource.allocate(manager, [lab_controller])
             else:
                 if not system:

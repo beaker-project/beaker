@@ -9,7 +9,7 @@ import email
 import inspect
 from turbogears.database import session
 from bkr.server.installopts import InstallOptions
-from bkr.server import model
+from bkr.server import model, dynamic_virt
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
         Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
@@ -2402,8 +2402,8 @@ class GuestRecipeTest(unittest.TestCase):
 class MACAddressAllocationTest(unittest.TestCase):
 
     def setUp(self):
-        self.orig_VirtManager = model.VirtManager
-        model.VirtManager = DummyVirtManager
+        self.orig_VirtManager = dynamic_virt.VirtManager
+        dynamic_virt.VirtManager = DummyVirtManager
         session.begin()
         # Other tests might have left behind running recipes using MAC
         # addresses, let's cancel them all
@@ -2414,7 +2414,7 @@ class MACAddressAllocationTest(unittest.TestCase):
             rs.job.update_status()
 
     def tearDown(self):
-        model.VirtManager = self.orig_VirtManager
+        dynamic_virt.VirtManager = self.orig_VirtManager
         session.rollback()
 
     def test_lowest_free_mac_none_in_use(self):

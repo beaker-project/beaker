@@ -24,7 +24,7 @@ from bkr.common.bexceptions import BX
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import RecipeWidget
 from bkr.server.widgets import SearchBar
-from bkr.server import search_utility, identity
+from bkr.server import search_utility, identity, dynamic_virt
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server.recipetasks import RecipeTasks
@@ -36,7 +36,7 @@ import cherrypy
 
 from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
                               MachineRecipe, SystemResource, VirtResource,
-                              VirtManager, LogRecipe, LogRecipeTask,
+                              LogRecipe, LogRecipeTask,
                               LogRecipeTaskResult)
 
 import logging
@@ -282,7 +282,7 @@ class Recipes(RPCRoot):
                     service=u'XMLRPC', delay=30)
         elif isinstance(recipe.resource, VirtResource):
             # XXX this should also be delayed 30 seconds but there is no way
-            with VirtManager() as manager:
+            with dynamic_virt.VirtManager() as manager:
                 vm = manager.api.vms.get(recipe.resource.system_name)
                 vm.stop()
                 vm.start()

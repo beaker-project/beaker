@@ -8,7 +8,7 @@ import pipes
 import jinja2
 import xmltramp
 import crypt
-from bkr.server import model
+from bkr.server import dynamic_virt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
         CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch
 from bkr.server.kickstart import template_env, generate_kickstart
@@ -73,8 +73,8 @@ EOF
                     'snippets/per_system/packages/bz728410-system-with-packages':
                         'special-weird-driver-package\n',
                 })])
-        cls.orig_VirtManager = model.VirtManager
-        model.VirtManager = DummyVirtManager
+        cls.orig_VirtManager = dynamic_virt.VirtManager
+        dynamic_virt.VirtManager = DummyVirtManager
 
         cls.lab_controller = data_setup.create_labcontroller(
                 fqdn=u'lab.test-kickstart.invalid')
@@ -299,7 +299,7 @@ EOF
 
     @classmethod
     def tearDownClass(cls):
-        model.VirtManager = cls.orig_VirtManager
+        dynamic_virt.VirtManager = cls.orig_VirtManager
         template_env.loader = cls.orig_template_loader
 
     def provision_recipe(self, xml, system=None, virt=False):

@@ -3,7 +3,7 @@ import pkg_resources
 import datetime
 from decimal import Decimal
 from turbogears.database import session
-from bkr.server import model
+from bkr.server import dynamic_virt
 from bkr.server.model import System, RecipeTask, Cpu, SystemStatus, \
     SystemActivity, TaskPriority, RecipeSetActivity
 from bkr.inttest import data_setup, DummyVirtManager
@@ -11,12 +11,12 @@ from bkr.inttest import data_setup, DummyVirtManager
 class ReportingQueryTest(unittest.TestCase):
 
     def setUp(self):
-        self.orig_VirtManager = model.VirtManager
-        model.VirtManager = DummyVirtManager
+        self.orig_VirtManager = dynamic_virt.VirtManager
+        dynamic_virt.VirtManager = DummyVirtManager
         session.begin()
 
     def tearDown(self):
-        model.VirtManager = self.orig_VirtManager
+        dynamic_virt.VirtManager = self.orig_VirtManager
         session.rollback()
 
     def execute_reporting_query(self, name):

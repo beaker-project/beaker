@@ -29,14 +29,14 @@ import sys
 import os
 import random
 from bkr.log import log_to_stream, log_to_syslog
-from bkr.server import needpropertyxml, utilisation, metrics
+from bkr.server import needpropertyxml, utilisation, metrics, dynamic_virt
 from bkr.server.bexceptions import BX, VMCreationFailedException, \
     StaleTaskStatusException, InsufficientSystemPermissions, \
     StaleSystemUserException
 from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
         GuestRecipe, RecipeVirtStatus, TaskStatus, TaskPriority, LabController,
         Watchdog, System, DistroTree, LabControllerDistroTree, SystemStatus,
-        VirtManager, VirtResource, SystemResource, GuestResource, Arch,
+        VirtResource, SystemResource, GuestResource, Arch,
         SystemAccessPolicy, SystemPermission, ConfigItem, recipe_table,
         distro_tree_lab_controller_map, machine_guest_map, guest_recipe_table,
         distro_tree_table)
@@ -639,7 +639,7 @@ def provision_virt_recipes(*args):
             try:
                 # Don't leak the vm if it was created
                 if system_name:
-                    with VirtManager() as manager:
+                    with dynamic_virt.VirtManager() as manager:
                         manager.destroy_vm(system_name)
                 # As an added precaution, let's try and avoid this recipe in future
                 session.begin()
@@ -671,7 +671,7 @@ def provision_virt_recipe(system_name, recipe_id):
     recipe.systems = []
     recipe.watchdog = Watchdog()
     recipe.resource = VirtResource(system_name=system_name)
-    with VirtManager() as manager:
+    with dynamic_virt.VirtManager() as manager:
         recipe.resource.allocate(manager, lab_controllers)
     recipe.recipeset.lab_controller = recipe.resource.lab_controller
     recipe.schedule()
