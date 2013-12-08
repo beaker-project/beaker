@@ -134,12 +134,12 @@ class TestSystem(unittest.TestCase):
         def bad_markdown(data, *args, **kwds):
             self.assertEqual(data, note_text)
             raise Exception("HTML converter should have stopped this...")
-        orig_markdown = model.markdown
-        model.markdown = bad_markdown
+        orig_markdown = model.inventory.markdown
+        model.inventory.markdown = bad_markdown
         try:
             actual = system.notes[0].html
         finally:
-            model.markdown = orig_markdown
+            model.inventory.markdown = orig_markdown
         self.assertEqual(actual, note_text)
 
 
