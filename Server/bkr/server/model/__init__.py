@@ -64,6 +64,7 @@ from .activity import Activity, ActivityMixin, activity_table
 from .config import ConfigItem
 from .identity import (User, Group, Permission, SSHPubKey, SystemGroup,
         UserGroup, UserActivity, GroupActivity, users_table)
+from .lab import LabController, LabControllerActivity, lab_controller_table
 
 import logging
 log = logging.getLogger(__name__)
@@ -426,17 +427,6 @@ distro_tree_lab_controller_map = Table('distro_tree_lab_controller_map', metadat
     mysql_engine='InnoDB',
 )
 
-lab_controller_table = Table('lab_controller', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('fqdn',Unicode(255), unique=True),
-    Column('disabled', Boolean, nullable=False, default=False),
-    Column('removed', DateTime, nullable=True, default=None),
-    Column('user_id', Integer,
-           ForeignKey('tg_user.user_id'), nullable=False),
-    mysql_engine='InnoDB',
-)
-
 osmajor_table = Table('osmajor', metadata,
     Column('id', Integer, autoincrement=True,
            nullable=False, primary_key=True),
@@ -524,13 +514,6 @@ response_table = Table('response', metadata,
 system_activity_table = Table('system_activity', metadata,
     Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
     Column('system_id', Integer, ForeignKey('system.id'), nullable=True),
-    mysql_engine='InnoDB',
-)
-
-lab_controller_activity_table = Table('lab_controller_activity', metadata,
-    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
-    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id'),
-        nullable=False),
     mysql_engine='InnoDB',
 )
 
@@ -2451,45 +2434,6 @@ class LabControllerDistroTree(MappedObject):
     pass
 
 
-class LabController(SystemObject):
-    def __repr__(self):
-        return "%s" % (self.fqdn)
-
-    @classmethod
-    def by_id(cls, id):
-        return cls.query.filter_by(id=id).one()
-
-    @classmethod
-    def by_name(cls, name):
-        return cls.query.filter_by(fqdn=name).one()
-
-    @classmethod
-    def get_all(cls, valid=False):
-        """
-        Desktop, Server, Virtual
-        """
-        all = cls.query
-        if valid:
-            all = cls.query.filter_by(removed=None)
-        return [(lc.id, lc.fqdn) for lc in all]
-
-class LabControllerDataCenter(DeclBase, MappedObject):
-    """
-    A mapping from a lab controller to an oVirt data center.
-    """
-    __tablename__ = 'lab_controller_data_center'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-
-    id = Column(Integer, autoincrement=True,
-            nullable=False, primary_key=True)
-    lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
-            name='lab_controller_data_center_lab_controller_id_fk'),
-            nullable=False)
-    lab_controller = relationship(LabController, backref='data_centers')
-    data_center = Column(Unicode(255), nullable=False)
-    storage_domain = Column(Unicode(255))
-
-
 class Watchdog(MappedObject):
     """ Every running task has a corresponding watchdog which will
         Return the system if it runs too long
@@ -2915,12 +2859,6 @@ class DistroTag(MappedObject):
         if query is None:
             query = cls.query
         return query.filter(DistroTag.distros.any())
-
-
-class LabControllerActivity(Activity):
-    def object_name(self):
-        return 'LabController: %s' % self.object.fqdn
-
 
 class SystemActivity(Activity):
     def object_name(self):
@@ -6651,19 +6589,10 @@ mapper(Power, power_table,
                                            backref='power_control')
     })
 
-mapper(LabControllerDistroTree, distro_tree_lab_controller_map)
-mapper(LabController, lab_controller_table,
-        properties = {'_distro_trees': relation(LabControllerDistroTree,
-                        backref='lab_controller', cascade='all, delete-orphan'),
-                      'dyn_systems' : dynamic_loader(System),
-                      'user'        : relation(User, backref=backref('lab_controller', uselist=False)),
-                      'write_activity': relation(LabControllerActivity, lazy='noload'),
-                      'activity' : relation(LabControllerActivity,
-                                            order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
-                                            cascade='all, delete',
-                                            backref='object'),
-                     }
-      )
+mapper(LabControllerDistroTree, distro_tree_lab_controller_map, properties={
+    'lab_controller': relation(LabController,
+        backref=backref('_distro_trees', cascade='all, delete-orphan')),
+})
 mapper(Distro, distro_table,
         properties = {'osversion':relation(OSVersion, uselist=False,
                                            backref='distros'),
@@ -6722,9 +6651,6 @@ mapper(CommandActivity, command_queue_table, inherits=Activity,
                    'system':relation(System),
                    'distro_tree': relation(DistroTree),
                   })
-
-mapper(LabControllerActivity, lab_controller_activity_table, inherits=Activity,
-    polymorphic_identity=u'lab_controller_activity')
 
 mapper(Note, note_table,
         properties=dict(user=relation(User, uselist=False,
@@ -6918,6 +6844,7 @@ mapper(Reservation, reservation_table, properties={
                 recipe_resource_table.c.recipe_id == recipe_table.c.id)),
 })
 
+class_mapper(LabController).add_property('dyn_systems', dynamic_loader(System))
 
 ## Static list of device_classes -- used by master.kid
 _device_classes = None
