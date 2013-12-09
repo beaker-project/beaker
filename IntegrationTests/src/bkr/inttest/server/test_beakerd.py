@@ -205,11 +205,9 @@ class TestBeakerd(unittest.TestCase):
             user = data_setup.create_user()
             system_A1.user = user
             system_B2.user = user
+            data_setup.mark_job_queued(job)
 
         # Turn the crank
-        beakerd.process_new_recipes()
-        beakerd.update_dirty_jobs()
-        beakerd.queue_processed_recipesets()
         beakerd.update_dirty_jobs()
         beakerd.schedule_queued_recipes()
 
