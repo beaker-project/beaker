@@ -15,7 +15,10 @@ version="${tag##beaker-}"
 commitcount=$(git rev-list "$tag..HEAD" | wc -l)
 commitsha=$(git rev-parse --short HEAD)
 if [ "$commitcount" -gt 0 ] ; then
-    version="${version}.git.${commitcount}.${commitsha}"
+    # git builds count as a pre-release of the next version
+    rpmver="${version%.*}.$((${version##*.} + 1))"
+    rpmrel="0.git.${commitcount}.${commitsha}"
+    version="${version%.*}.$((${version##*.} + 1)).git.${commitcount}.${commitsha}"
 fi
 
 workdir="$(mktemp -d)"
@@ -30,7 +33,8 @@ if [ "$commitcount" -gt 0 ] ; then
     # need to hack the spec
     sed --regexp-extended --in-place \
         -e "/%global upstream_version /c\%global upstream_version ${version}" \
-        -e "/^Release:/s@Release: *(.+)%\{\?dist\}@Release: \1.git.${commitcount}.${commitsha}%{?dist}@" \
+        -e "/^Version:/cVersion: ${rpmver}" \
+        -e "/^Release:/cRelease: ${rpmrel}%{?dist}" \
         "$workdir/beaker.spec"
 fi
 
