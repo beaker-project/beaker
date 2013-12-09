@@ -14,7 +14,8 @@ from nose.plugins.skip import SkipTest
 from sqlalchemy.schema import MetaData, Table, Column
 from sqlalchemy.types import Integer, Unicode
 from turbogears.config import get, update
-from bkr.server.model import ConditionalInsert, TaskLibrary
+from bkr.server.model.sql import ConditionalInsert
+from bkr.server.model.tasklibrary import TaskLibrary
 
 
 class ConditionalInsertTest(unittest.TestCase):

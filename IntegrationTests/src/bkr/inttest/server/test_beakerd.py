@@ -516,13 +516,10 @@ class TestBeakerd(unittest.TestCase):
             if recipe_id == spare_recipe.id:
                 # We need to now release System B
                 # to make sure it is not picked up
-                complete_me = session1.query(Recipe).filter(Recipe.id ==
-                    holds_deadlocking_resource_recipe.id).one()
-                orig_session = bkr.server.model.session
-                bkr.server.model.session = session1
-                data_setup.mark_recipe_complete(complete_me, only=True)
-                session1.commit()
-                bkr.server.model.session = orig_session
+                with session1.begin():
+                    complete_me = session1.query(Recipe).filter(Recipe.id ==
+                        holds_deadlocking_resource_recipe.id).one()
+                    data_setup.mark_recipe_complete(complete_me, only=True)
             else:
                 pass
             original_sqr(recipe_id)

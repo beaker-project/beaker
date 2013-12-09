@@ -9,7 +9,9 @@ from bkr.server.util import total_seconds
 from bkr.server.widgets import LabControllerDataGrid, LabControllerForm
 from bkr.server.distrotrees import DistroTrees
 from bkr.common.bexceptions import BX
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import contains_eager
+from sqlalchemy.orm.exc import NoResultFound
 import cherrypy
 from datetime import datetime, timedelta
 import urlparse
@@ -19,8 +21,7 @@ from bkr.server.model import \
     Arch, Distro, DistroTree, DistroTreeRepo, DistroTreeImage, \
     DistroTreeActivity, LabControllerDistroTree, ImageType, KernelType, \
     System, SystemStatus, SystemActivity, system_table, \
-    Watchdog, CommandActivity, CommandStatus, command_queue_table, \
-    NoResultFound, InvalidRequestError
+    Watchdog, CommandActivity, CommandStatus, command_queue_table
 
 import logging
 log = logging.getLogger(__name__)
