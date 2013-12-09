@@ -2,7 +2,8 @@
 import unittest2 as unittest
 from bkr.server.model import session, SystemPermission, User
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client, ClientError
+from bkr.inttest.client import run_client, ClientError,\
+    create_client_config
 import bkr.client.json_compat as json
 from prettytable import PrettyTable
 
@@ -75,6 +76,16 @@ class PolicyListTest(unittest.TestCase):
         expected_output = self.gen_expected_pretty_table(
             (['edit_system', 'admin', 'X', 'No'], )) + '\n'
         self.assertEquals(out, expected_output)
+
+        # --mine without authentication
+        try:
+            out = run_client(['bkr', 'policy-list',
+                              '--mine', self.system.fqdn],
+                             config = create_client_config(anonymous=True))
+            self.fail('Must fail or die')
+        except ClientError as e:
+            self.assertIn("The 'mine' access policy filter requires authentication",
+                          e.stderr_output)
 
     def test_list_policy_filter_user(self):
 

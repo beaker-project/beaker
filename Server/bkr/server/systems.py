@@ -393,6 +393,8 @@ def get_system_access_policy(fqdn):
         filter(SystemAccessPolicyRule.policy == policy)
 
     if request.args.get('mine'):
+        if not identity.current.user:
+            raise Unauthorised401("The 'mine' access policy filter requires authentication")
         query = query.join(SystemAccessPolicyRule.user)\
             .filter(User.user_name.in_([identity.current.user.user_name]))
     elif request.args.get('user', None):
