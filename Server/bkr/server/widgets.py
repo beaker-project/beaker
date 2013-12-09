@@ -73,13 +73,13 @@ class AutoCompleteField(widgets.AutoCompleteField):
 
 class Hostname(validators.Regex):
     messages = {'invalid': 'The supplied value is not a valid hostname'}
-    def __init__(self):
+    def __init__(self, **kwargs):
         super(Hostname, self).__init__(
                 # http://stackoverflow.com/questions/1418423/_/1420225#1420225
                 r'^(?=.{1,255}$)[0-9A-Za-z]'
                 r'(?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?'
                 r'(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*\.?$',
-                strip=True)
+                strip=True, **kwargs)
     def _to_python(self, value, state):
         # Hostnames are case-insensitive, so let's force it to lowercase here 
         # for consistency
@@ -1344,7 +1344,7 @@ class SystemForm(Form):
                HiddenField(name='id'),
                TextField(name='fqdn',
                          label=_(u'System Name'),
-                         validator=Hostname(),
+                         validator=Hostname(not_empty=True),
                          attrs={'maxlength':'255',
                                 'size':'60'}),
                SingleSelectField(name='status',

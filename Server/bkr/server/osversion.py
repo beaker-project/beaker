@@ -149,6 +149,7 @@ class OSVersions(AdminPage):
         template_data = self.osversions(osversions,*args, **kw)
         nav_bar = self._build_nav_bar(alpha_nav_data,self.search_name)
         template_data['alpha_nav_bar'] = nav_bar
+        template_data['search_widget'] = self.search_widget_form
         return template_data
          
 
@@ -167,7 +168,6 @@ class OSVersions(AdminPage):
  
         return dict(title="OS Versions", 
                     grid = osversions_grid, 
-                    search_widget = self.search_widget_form,
                     addable = False,              
                     list = osversions)
 
