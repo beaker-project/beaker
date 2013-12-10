@@ -49,7 +49,7 @@ Examples
 
 Temporarily grant a user exclusive access to a particular system::
 
-    bkr loan-grant --user jdoe system1.example.invalid
+    bkr loan-grant --recipient jdoe system1.example.invalid
     # jdoe now has almost exclusive access to use the system
     bkr loan-return system1.example.invalid
     # Either jdoe or a user with permission to loan the system to other users
