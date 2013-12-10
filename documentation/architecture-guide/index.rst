@@ -37,3 +37,4 @@ Contents
 
    capabilities
    provisioning-process
+   log-storage
