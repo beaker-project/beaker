@@ -25,6 +25,44 @@ window.System = Backbone.Model.extend({
                 new Reservation(data['previous_reservation'], {parse: true}) : null);
         return data;
     },
+    add_cc: function (cc, options) {
+        var model = this;
+        options = options || {};
+        $.ajax({
+            url: this.url + 'cc/' + encodeURIComponent(cc),
+            type: 'PUT',
+            dataType: 'json',
+            success: function (data, status, jqxhr) {
+                if (options.success)
+                    options.success(model, data, options);
+                // response body should have the new list of CC
+                model.set(data);
+            },
+            error: function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            },
+        });
+    },
+    remove_cc: function (cc, options) {
+        var model = this;
+        options = options || {};
+        $.ajax({
+            url: this.url + 'cc/' + encodeURIComponent(cc),
+            type: 'DELETE',
+            dataType: 'json',
+            success: function (data, status, jqxhr) {
+                if (options.success)
+                    options.success(model, data, options);
+                // response body should have the new list of CC
+                model.set(data);
+            },
+            error: function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            },
+        });
+    },
 });
 
 })();

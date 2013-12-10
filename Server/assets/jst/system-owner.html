@@ -1,0 +1,24 @@
+<p>
+  The system is owned by
+  <a href="mailto:<%- owner.get('email_address') %>" title="<%- owner.get('display_name') %> &lt;<%- owner.get('email_address') %>&gt;"><%- owner.get('user_name') %></a>.
+  <% if (can_change_owner) { %>
+    <button type="button" class="btn change"><i class="icon-edit"></i> Change</button>
+  <% } %>
+</p>
+<p>
+  Notifications sent to the owner will be copied to these addresses:
+  <% /* Bootstrap 3 list group would be handy here */ %>
+  <ul class="system-notify-cc">
+    <% _.each(notify_cc, function (cc_email) { %>
+      <li>
+        <%- cc_email %>
+        <% if (can_change_notify_cc) { %>
+          <a href="#" class="cc-remove" data-cc="<%- cc_email %>" title="Remove"><i class="icon-remove-sign"></i></a>
+        <% } %>
+      </li>
+    <% }) %>
+    <% if (_.isEmpty(notify_cc)) { %>
+      <li>(none)</li>
+    <% } %>
+  </ul>
+</p>

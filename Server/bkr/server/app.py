@@ -1,6 +1,7 @@
 
 from flask import Flask
 from turbogears import config
+import turbojson.jsonify
 
 # This is NOT the right way to do this, we should just use SCRIPT_NAME properly instead.
 # But this is needed to line up with TurboGears server.webpath way of doing things.
@@ -10,3 +11,6 @@ class PrefixedFlask(Flask):
         return super(PrefixedFlask, self).add_url_rule(prefixed_rule, *args, **kwargs)
 
 app = PrefixedFlask('bkr.server', static_folder='../../assets')
+
+# Make flask.jsonify use TurboJson
+app.json_encoder = turbojson.jsonify.GenericJSON

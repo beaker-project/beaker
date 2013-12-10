@@ -354,6 +354,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'id': self.id,
             'fqdn': self.fqdn,
             'lab_controller_id': None,
+            'owner': self.owner,
+            'notify_cc': list(self.cc),
             'status': self.status,
             'status_reason': self.status_reason,
             'arches': [arch.arch for arch in self.arch],
@@ -400,6 +402,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
         # XXX replace with actual access policy data?
         if identity.current.user:
             u = identity.current.user
+            data['can_change_owner'] = self.can_change_owner(u)
+            data['can_change_notify_cc'] = self.can_edit(u)
             data['can_change_status'] = self.can_edit(u)
             data['can_take'] = self.is_free() and self.can_reserve_manually(u)
             data['can_return'] = (self.open_reservation is not None
@@ -408,6 +412,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_borrow'] = self.can_borrow(u)
             data['can_reserve'] = self.can_reserve(u)
         else:
+            data['can_change_owner'] = False
+            data['can_change_notify_cc'] = False
             data['can_change_status'] = False
             data['can_take'] = False
             data['can_return'] = False

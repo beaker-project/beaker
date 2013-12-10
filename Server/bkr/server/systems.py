@@ -331,6 +331,61 @@ def _get_system_by_FQDN(fqdn):
     except NoResultFound:
         raise NotFound404('System not found')
 
+# XXX this is a hack to trigger fallback to TurboGears for /systems/clear_netboot_form
+# Once that is ported to Flask, delete this hack
+@app.route('/systems/clear_netboot_form', methods=['GET', 'POST'])
+def _clear_netboot_form_trigger_fallback():
+    raise NotFound404('This is a TurboGears controller method')
+
+# XXX need to move /view/FQDN to /systems/FQDN/
+@app.route('/systems/<fqdn>/', methods=['PATCH', 'POST'])
+@auth_required
+def update_system(fqdn):
+    system = _get_system_by_FQDN(fqdn)
+    data = read_json_request(request)
+    with convert_internal_errors():
+        changed = False
+        if 'owner' in data and data['owner'].get('user_name') != system.owner.user_name:
+            if not system.can_change_owner(identity.current.user):
+                raise Forbidden403('Cannot change owner')
+            new_owner = User.by_user_name(data['owner'].get('user_name'))
+            if new_owner is None:
+                raise BadRequest400('No such user %s' % data['owner'].get('user_name'))
+            system.record_activity(user=identity.current.user, service=u'HTTP',
+                    action=u'Changed', field=u'Owner', old=system.owner,
+                    new=new_owner)
+            system.owner = new_owner
+            changed = True
+        if changed:
+            system.date_modified = datetime.datetime.utcnow()
+    return jsonify(system.__json__())
+
+# Not sure if this is a sane API...
+@app.route('/systems/<fqdn>/cc/<email>', methods=['PUT'])
+@auth_required
+def add_cc(fqdn, email):
+    system = _get_system_by_FQDN(fqdn)
+    if not system.can_edit(identity.current.user):
+        raise Forbidden403('Cannot change notify cc')
+    if email not in system.cc:
+        system.cc.append(email)
+        system.record_activity(user=identity.current.user, service=u'HTTP',
+                action=u'Added', field=u'Cc', old=None, new=email)
+        system.date_modified = datetime.datetime.utcnow()
+    return jsonify({'notify_cc': list(system.cc)})
+
+@app.route('/systems/<fqdn>/cc/<email>', methods=['DELETE'])
+@auth_required
+def remove_cc(fqdn, email):
+    system = _get_system_by_FQDN(fqdn)
+    if not system.can_edit(identity.current.user):
+        raise Forbidden403('Cannot change notify cc')
+    if email in system.cc:
+        system.cc.remove(email)
+        system.record_activity(user=identity.current.user, service=u'HTTP',
+                action=u'Removed', field=u'Cc', old=email, new=None)
+        system.date_modified = datetime.datetime.utcnow()
+    return jsonify({'notify_cc': list(system.cc)})
 
 @app.route('/systems/<fqdn>/loans/', methods=['POST'])
 @auth_required
@@ -368,7 +423,6 @@ def update_loan(fqdn):
             raise ValueError("Loan durations are not yet configurable")
     return jsonify(system.get_loan_details())
 
-# XXX need to move /view/FQDN to /systems/FQDN/
 @app.route('/systems/<fqdn>/access-policy', methods=['GET'])
 def get_system_access_policy(fqdn):
     system = _get_system_by_FQDN(fqdn)

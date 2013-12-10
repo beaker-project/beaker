@@ -50,6 +50,7 @@ def _create_env(**kwargs):
             'beaker-typeaheads.js',
             'recipe-tasks.js',
             'system-model.js',
+            'system-owner.js',
             'system-quick-info.js',
             'access-policy.js',
             filters=['uglifyjs'],

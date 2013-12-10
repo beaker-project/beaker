@@ -1337,10 +1337,8 @@ class SystemForm(Form):
     template = "bkr.server.templates.system_form"
     params = ['id','readonly',
               'user_change','user_change_text', 'running_job',
-              'show_loan_options',
-              'owner_change', 'owner_change_text']
+              'show_loan_options']
     user_change = '/user_change'
-    owner_change = '/owner_change'
     fields = [
                HiddenField(name='id'),
                TextField(name='fqdn',
@@ -1453,12 +1451,8 @@ class SystemForm(Form):
             d['system_actions'] = None
         if d["options"].has_key("system"):
             d["system"] = d["options"]["system"]
-        if d["options"].has_key("owner_change"):
-            d["owner_change"] = d["options"]["owner_change"]
         if d["options"].has_key("user_change"):
             d["user_change"] = d["options"]["user_change"]
-        if d["options"].has_key("owner_change_text"):
-            d["owner_change_text"] = d["options"]["owner_change_text"]
         if d["options"].has_key("user_change_text"):
             d["user_change_text"] = d["options"]["user_change_text"]
         if d["options"].has_key("loan_widget"):

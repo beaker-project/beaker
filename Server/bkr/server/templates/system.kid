@@ -6,9 +6,10 @@
   <meta content="text/html; charset=UTF-8" http-equiv="content-type" py:replace="''"/>
   <title>${title}</title>
   <script type="text/javascript">
-    var system = new System(${tg.to_json(value)}, {parse: true});
+    var system = new System(${tg.to_json(value)}, {parse: true, url: ${tg.to_json(tg.url('/systems/%s/' % value.fqdn))}});
     $(function () {
         new SystemQuickInfo({model: system, el: $('.system-quick-info')});
+        new SystemOwnerView({model: system, el: $('#owner')});
     });
   </script>
  </head>
@@ -30,7 +31,7 @@
       <li><a data-toggle="tab" href="#commands">Commands</a></li>
       <li><a data-toggle="tab" href="#provision">Provision</a></li>
       <li class="nav-header">Access</li>
-      <li><a data-toggle="tab" href="#IMPLEMENTME">Owner</a></li>
+      <li><a data-toggle="tab" href="#owner">Owner</a></li>
       <li><a data-toggle="tab" href="#groups">Groups</a></li>
       <li><a data-toggle="tab" href="#IMPLEMENTME">Loan</a></li>
       <li><a data-toggle="tab" href="#access-policy">Access Policy</a></li>
@@ -58,6 +59,7 @@
    <div class="tab-pane" id="keys">
     ${widgets['keys'].display(method='get', action=widgets_action['keys'], value=value, options=widgets_options['keys'])} 
    </div>
+      <div class="tab-pane" id="owner"></div>
    <div class="tab-pane" id="groups">
     ${groups_widget.display(method='get', action=widgets_action['groups'], value=value, options=widgets_options['groups'])}
    </div>

@@ -150,9 +150,6 @@ $(document).ready(function(){
         ${label_for('owner')}
         <div class="controls">
           <span class="form-control-static">${owner_email_link}</span>
-        <a py:if="owner_change_text" class="btn btn-mini" href="${tg.url(owner_change)}?id=${id}">
-         <span py:content="owner_change_text"/>
-        </a>
         <span py:if="not tg.identity.anonymous and system_actions is not None" py:strip="1">
             ${system_actions.display(loan_options=options['loan'], report_problem_options=options['report_problem'])}
         </span>
@@ -189,7 +186,6 @@ $(document).ready(function(){
         ${label_for('cc')}
         <div class="controls">
         ${'; '.join(value_for("cc") or [])}
-        <a class="btn btn-mini" href="${tg.url('/cc_change', system_id=id)}">Change</a>
         </div>
       </div>
     </div>

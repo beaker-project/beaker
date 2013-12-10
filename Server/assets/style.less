@@ -19,6 +19,11 @@
 // overrides for FontAwesome variables
 @FontAwesomePath: "generated/font-awesome-3.2.1";
 
+// workaround for https://github.com/twitter/typeahead.js/issues/147
+.modal-body {
+    overflow: visible;
+}
+
 // heading sizes (Bootstrap's are too generous)
 h1, h2, h3 { line-height: @baseLineHeight * 2; }
 h1 { font-size: @baseFontSize * 2.25; }
@@ -39,6 +44,10 @@ time[title] {
 // We have some forms in table cells, and the bottom margin (from Bootstrap) 
 // ruins the row height.
 td form, td input, td select {
+    margin-bottom: 0 !important;
+}
+// Same for forms in modals.
+.modal form {
     margin-bottom: 0 !important;
 }
 

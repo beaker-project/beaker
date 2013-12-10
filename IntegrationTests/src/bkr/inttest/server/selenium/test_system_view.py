@@ -167,16 +167,6 @@ class SystemViewTestWD(WebDriverTestCase):
         self.go_to_system_view()
         self.browser.find_element_by_xpath('//title[text()="%s"]' % self.system.fqdn)
 
-    def test_links_to_cc_change(self):
-        b = self.browser
-        login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath( # link inside cell beside "Notify CC" cell
-                '//div[normalize-space(label/text())="Notify CC"]'
-                '//a[normalize-space(string(.))="Change"]').click()
-        b.find_element_by_xpath('//title[text()="Notify CC list for %s"]'
-                % self.system.fqdn)
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=747086
     def test_update_system_no_lc(self):
         with session.begin():
@@ -571,14 +561,13 @@ class SystemViewTestWD(WebDriverTestCase):
             new_owner = data_setup.create_user()
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath( # '(Change)' link inside cell beside 'Owner' cell
-                '//div[normalize-space(label/text())="Owner"]'
-                '//a[normalize-space(string(.))="Change"]').click()
-        b.find_element_by_id('Owner_user').send_keys(new_owner.user_name)
-        b.find_element_by_id('Owner').submit()
-        b.find_element_by_xpath('//h1[text()="%s"]' % self.system.fqdn)
-        self.assertEquals(b.find_element_by_class_name('flash').text, 'OK')
+        self.go_to_system_view(tab='Owner')
+        tab = b.find_element_by_id('owner')
+        tab.find_element_by_xpath('.//button[contains(text(), "Change")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('user_name').send_keys(new_owner.user_name)
+        modal.find_element_by_tag_name('form').submit()
+        tab.find_element_by_xpath('p[1]/a[text()="%s"]' % new_owner.user_name)
         with session.begin():
             session.refresh(self.system)
             self.assertEquals(self.system.owner, new_owner)
@@ -587,14 +576,15 @@ class SystemViewTestWD(WebDriverTestCase):
     def test_cannot_set_owner_to_none(self):
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath( # '(Change)' link inside cell beside 'Owner' cell
-                '//div[normalize-space(label/text())="Owner"]'
-                '//a[normalize-space(string(.))="Change"]').click()
-        b.find_element_by_id('Owner_user').clear()
-        b.find_element_by_id('Owner').submit()
-        b.find_element_by_xpath(
-                '//span[@class="fielderror" and text()="Please enter a value"]')
+        self.go_to_system_view(tab='Owner')
+        tab = b.find_element_by_id('owner')
+        tab.find_element_by_xpath('.//button[contains(text(), "Change")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('user_name').clear()
+        modal.find_element_by_tag_name('form').submit()
+        # we can't actually check the HTML5 validation error,
+        # but we should still be at the system modal
+        modal.find_element_by_css_selector('input[name=user_name]:required')
         with session.begin():
             session.refresh(self.system)
             self.assertEquals(self.system.owner, self.system_owner)
@@ -684,77 +674,57 @@ class SystemViewTestWD(WebDriverTestCase):
                 '//input[@name="excluded_families_subsection.i386" and @value="%s"]'
                 % self.distro_tree.distro.osversion_id).is_selected())
 
-class SystemCcTest(WebDriverTestCase):
-
-    def setUp(self):
-        with session.begin():
-            user = data_setup.create_user(password=u'swordfish')
-            self.system = data_setup.create_system(owner=user)
-        self.browser = self.get_browser()
-        login(self.browser, user=user.user_name, password='swordfish')
-
-    def tearDown(self):
-        self.browser.quit()
-
-    def test_add_email_addresses(self):
+    def test_add_cc(self):
         with session.begin():
             self.system.cc = []
         b = self.browser
-        b.get(get_server_base() + 'cc_change?system_id=%s' % self.system.id)
-        b.find_element_by_id('cc_cc_0_email_address').send_keys('roy.baty@pkd.com')
-        b.find_element_by_id('doclink').click()
-        b.find_element_by_id('cc_cc_1_email_address').send_keys('deckard@police.gov')
-        b.find_element_by_xpath('//input[@value="Change"]').click()
+        login(b)
+        self.go_to_system_view(tab='Owner')
+        tab = b.find_element_by_id('owner')
+        tab.find_element_by_name('cc').send_keys('roy.baty@pkd.com')
+        tab.find_element_by_class_name('cc-add').submit()
+        tab.find_element_by_xpath('.//li[contains(text(), "roy.baty@pkd.com")]')
+        tab.find_element_by_name('cc').send_keys('deckard@police.gov')
+        tab.find_element_by_class_name('cc-add').submit()
+        tab.find_element_by_xpath('.//li[contains(text(), "deckard@police.gov")]')
+        tab.find_element_by_xpath('.//li[contains(text(), "roy.baty@pkd.com")]')
         with session.begin():
             session.refresh(self.system)
             self.assertEquals(set(self.system.cc),
                     set([u'roy.baty@pkd.com', u'deckard@police.gov']))
-            activity = self.system.activity[-1]
-            self.assertEquals(activity.field_name, u'Cc')
-            self.assertEquals(activity.service, u'WEBUI')
-            self.assertEquals(activity.action, u'Changed')
-            self.assertEquals(activity.old_value, u'')
-            self.assertEquals(activity.new_value,
-                    u'roy.baty@pkd.com; deckard@police.gov')
+            self.assertEquals(self.system.activity[0].field_name, u'Cc')
+            self.assertEquals(self.system.activity[0].service, u'HTTP')
+            self.assertEquals(self.system.activity[0].action, u'Added')
+            self.assertEquals(self.system.activity[0].new_value, u'deckard@police.gov')
+            self.assertEquals(self.system.activity[1].field_name, u'Cc')
+            self.assertEquals(self.system.activity[1].service, u'HTTP')
+            self.assertEquals(self.system.activity[1].action, u'Added')
+            self.assertEquals(self.system.activity[1].new_value, u'roy.baty@pkd.com')
 
-    def test_remove_email_addresses(self):
+    def test_remove_cc(self):
         with session.begin():
             self.system.cc = [u'roy.baty@pkd.com', u'deckard@police.gov']
         b = self.browser
-        b.get(get_server_base() + 'cc_change?system_id=%s' % self.system.id)
-        b.find_element_by_xpath('//tr[@id="cc_cc_1"]//a[text()="Remove (-)"]').click()
-        # The tg_expanding_widget javascript doesn't let us remove the last element,
-        # so we have to just clear it instead :-S
-        b.find_element_by_id('cc_cc_0_email_address').clear()
-        b.find_element_by_xpath('//input[@value="Change"]').click()
+        login(b)
+        self.go_to_system_view(tab='Owner')
+        tab = b.find_element_by_id('owner')
+        tab.find_element_by_xpath('.//li[contains(text(), "roy.baty@pkd.com")]'
+                '/a[@title="Remove"]').click()
+        tab.find_element_by_xpath('.//ul[not(./li[contains(text(), "roy.baty@pkd.com")])]')
+        tab.find_element_by_xpath('.//li[contains(text(), "deckard@police.gov")]'
+                '/a[@title="Remove"]').click()
+        tab.find_element_by_xpath('.//ul[not(./li[contains(text(), "deckard@police.gov")])]')
         with session.begin():
             session.refresh(self.system)
             self.assertEquals(self.system.cc, [])
-            activity = self.system.activity[-1]
-            self.assertEquals(activity.field_name, u'Cc')
-            self.assertEquals(activity.service, u'WEBUI')
-            self.assertEquals(activity.action, u'Changed')
-            self.assertEquals(activity.old_value,
-                    u'deckard@police.gov; roy.baty@pkd.com')
-            self.assertEquals(activity.new_value, u'')
-
-    def test_replace_existing_email_address(self):
-        with session.begin():
-            self.system.cc = [u'roy.baty@pkd.com']
-        b = self.browser
-        b.get(get_server_base() + 'cc_change?system_id=%s' % self.system.id)
-        b.find_element_by_id('cc_cc_0_email_address').clear()
-        b.find_element_by_id('cc_cc_0_email_address').send_keys('deckard@police.gov')
-        b.find_element_by_xpath('//input[@value="Change"]').click()
-        with session.begin():
-            session.refresh(self.system)
-            self.assertEquals(self.system.cc, [u'deckard@police.gov'])
-            activity = self.system.activity[-1]
-            self.assertEquals(activity.field_name, u'Cc')
-            self.assertEquals(activity.service, u'WEBUI')
-            self.assertEquals(activity.action, u'Changed')
-            self.assertEquals(activity.old_value, u'roy.baty@pkd.com')
-            self.assertEquals(activity.new_value, u'deckard@police.gov')
+            self.assertEquals(self.system.activity[0].field_name, u'Cc')
+            self.assertEquals(self.system.activity[0].service, u'HTTP')
+            self.assertEquals(self.system.activity[0].action, u'Removed')
+            self.assertEquals(self.system.activity[0].old_value, u'deckard@police.gov')
+            self.assertEquals(self.system.activity[1].field_name, u'Cc')
+            self.assertEquals(self.system.activity[1].service, u'HTTP')
+            self.assertEquals(self.system.activity[1].action, u'Removed')
+            self.assertEquals(self.system.activity[1].old_value, u'roy.baty@pkd.com')
 
 class TestSystemViewRDF(unittest.TestCase):
 

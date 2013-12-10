@@ -181,17 +181,6 @@ class Root(RPCRoot):
         submit_text = _(u'Change'),
     )
 
-    class OwnerFormValidatorSchema(validators.Schema):
-        user = validators.NotEmpty()
-
-    owner_form    = widgets.TableForm(
-        'Owner',
-        fields = [id, autoUsers,],
-        action = 'save_data',
-        submit_text = _(u'Change'),
-        validator=OwnerFormValidatorSchema(),
-    )
-
     system_form = SystemForm()
     power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')
@@ -674,9 +663,6 @@ class Root(RPCRoot):
     def _get_system_options(self, system):
         options = {}
         our_user = identity.current.user
-        if our_user and system.can_change_owner(our_user):
-            options['owner_change_text'] = 'Change'
-
         options['loan_widget'] = LoanWidget()
 
         if our_user:
@@ -983,48 +969,6 @@ class Root(RPCRoot):
         session.flush()
         return ('1',)
 
-    @expose(template='bkr.server.templates.form')
-    @identity.require(identity.not_anonymous())
-    def owner_change(self, id=None, **kwargs):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to find system with id of %s" % id) )
-            redirect("/")
-        if not system.can_change_owner(identity.current.user):
-            flash( _(u"Insufficient permissions to change owner"))
-            redirect("/")
-
-        return dict(
-            title   = "Change Owner for %s" % system.fqdn,
-            form = self.owner_form,
-            action = '/save_owner',
-            options = None,
-            value = {'id': system.id},
-        )
-    
-    @expose()
-    @validate(form=owner_form)
-    @error_handler(owner_change)
-    @identity.require(identity.not_anonymous())
-    def save_owner(self, id, *args, **kw):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to find system with id of %s" % id) )
-            redirect("/")
-        if not system.can_change_owner(identity.current.user):
-            flash( _(u"Insufficient permissions to change owner"))
-            redirect("/")
-        user = User.by_user_name(kw['user'])
-        activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed',
-                u'Owner', unicode(system.owner), unicode(user))
-        system.activity.append(activity)
-        system.owner = user
-        system.date_modified = datetime.utcnow()
-        flash( _(u"OK") )
-        redirect("/view/%s" % system.fqdn)
-
     @expose()
     @identity.require(identity.not_anonymous())
     def user_change(self, id):
@@ -1050,66 +994,6 @@ class Root(RPCRoot):
                 log.exception('Failed to reserve')
                 flash(_(u'Failed to reserve %s: %s') % (system.fqdn, e))
         redirect("/view/%s" % system.fqdn)
-
-    system_cc_form = widgets.TableForm(
-        'cc',
-        fields=[
-            id,
-            ExpandingForm(
-                name='cc',
-                label=_(u'Notify CC'),
-                fields=[
-                    widgets.TextField(name='email_address', label=_(u'E-mail address'),
-                        validator=validators.Email()),
-                ],
-            ),
-        ],
-        submit_text=_(u'Change'),
-    )
-
-    @expose(template='bkr.server.templates.form-post')
-    @identity.require(identity.not_anonymous())
-    def cc_change(self, system_id):
-        try:
-            system = System.by_id(system_id, identity.current.user)
-        except InvalidRequestError:
-            flash(_(u'Unable to find system with id of %s' % system_id))
-            redirect('/')
-        if not system.can_edit(identity.current.user):
-            flash(_(u'Insufficient permissions to edit CC list'))
-            redirect('/')
-        return dict(
-            title=_(u'Notify CC list for %s') % system.fqdn,
-            form=self.system_cc_form,
-            action=url('/save_cc'),
-            options=None,
-            value={'id': system.id, 'cc': system._system_ccs},
-        )
-
-    @error_handler(cc_change)
-    @expose()
-    @identity.require(identity.not_anonymous())
-    @validate(form=system_cc_form)
-    def save_cc(self, id, cc):
-        try:
-            system = System.by_id(id, identity.current.user)
-        except InvalidRequestError:
-            flash(_(u'Unable to find system with id of %s' % id))
-            redirect('/')
-        if not system.can_edit(identity.current.user):
-            flash(_(u'Insufficient permissions to edit CC list'))
-            redirect('/')
-        orig_value = list(system.cc)
-        new_value = [item['email_address']
-                for item in cc if item['email_address']]
-        system.cc = new_value
-        system.activity.append(SystemActivity(user=identity.current.user,
-                service=u'WEBUI', action=u'Changed', field_name=u'Cc',
-                old_value=u'; '.join(orig_value),
-                new_value=u'; '.join(new_value)))
-        system.date_modified = datetime.utcnow()
-        flash(_(u'Notify CC list for system %s changed') % system.fqdn)
-        redirect('/view/%s' % system.fqdn)
 
     @error_handler(view)
     @expose()
