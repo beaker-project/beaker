@@ -49,6 +49,7 @@ def _create_env(**kwargs):
             'link-tabs-to-anchor.js',
             'beaker-typeaheads.js',
             'recipe-tasks.js',
+            'system-hardware.js',
             'system-model.js',
             'system-owner.js',
             'system-quick-info.js',

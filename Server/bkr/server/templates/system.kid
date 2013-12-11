@@ -10,6 +10,7 @@
     $(function () {
         new SystemQuickInfo({model: system, el: $('.system-quick-info')});
         new SystemOwnerView({model: system, el: $('#owner')});
+        new SystemHardwareDetailsView({model: system, el: $('.system-hardware-details')});
     });
   </script>
  </head>
@@ -50,9 +51,10 @@
       <li><a data-toggle="tab" href="#tasks">Executed Tasks</a></li>
     </ul>
     <div class="span9 tab-content system-tabs">
-   <div class="tab-pane" id="details">
+      <div class="tab-pane" id="details">
+        <div class="system-hardware-details"></div>
     ${widgets['details'].display(system=value)} 
-   </div>
+      </div>
    <div class="tab-pane" id="arches">
     ${widgets['arches'].display(method='get', action=widgets_action['arches'], value=value, options=widgets_options['arches'])} 
    </div>

@@ -1,0 +1,47 @@
+<% if (hardware_scan_date) { %>
+  <p>Hardware scan was last run
+  <time datetime="<%- moment.utc(hardware_scan_date).toISOString() %>"
+        title="<%- hardware_scan_date %>">
+    <%- moment.utc(hardware_scan_date).local().fromNow() %>
+  </time>.</p>
+<% } else { %>
+  <p>Hardware scan has never been run.</p>
+<% } %>
+<h3>
+  System
+  <% if (can_change_hardware_details) { %>
+    <button type="button" class="btn edit"><i class="icon-edit"></i> Edit</button>
+  <% } %>
+</h3>
+<table class="table table-bordered" style="max-width: 30em;">
+  <tbody>
+    <tr>
+      <th>Host Hypervisor</th>
+      <td><%- hypervisor || '(not virtualized)' %></td>
+    </tr>
+    <tr>
+      <th>Vendor</th>
+      <td><%- vendor %></td>
+    </tr>
+    <tr>
+      <th>Model</th>
+      <td><%- model %></td>
+    </tr>
+    <tr>
+      <th>Serial Number</th>
+      <td><%- serial_number %></td>
+    </tr>
+    <tr>
+      <th>MAC Address</th>
+      <td><%- mac_address %></td>
+    </tr>
+    <tr>
+      <th>Memory</th>
+      <td><% if (memory) { %><%- memory %> MB<% } %></td>
+    </tr>
+    <tr>
+      <th>NUMA Nodes</th>
+      <td><%- numa_nodes %></td>
+    </tr>
+  </tbody>
+</table>

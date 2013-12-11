@@ -185,20 +185,24 @@ class SystemViewTestWD(WebDriverTestCase):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_edit()
+        self.go_to_system_view(tab='Details')
+        tab = b.find_element_by_id('details')
+        tab.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+        modal = b.find_element_by_class_name('modal')
         changes = {
-            'fqdn': 'zx80.example.com',
             'vendor': 'Sinclair',
             'model': 'ZX80',
-            'serial': '12345',
+            'serial_number': '12345',
             'mac_address': 'aa:bb:cc:dd:ee:ff',
         }
         for k, v in changes.iteritems():
-            b.find_element_by_name(k).clear()
-            b.find_element_by_name(k).send_keys(v)
-        b.find_element_by_link_text('Save Changes').click()
-        for k, v in changes.iteritems():
-            self.assert_system_view_text(k, v)
+            modal.find_element_by_name(k).clear()
+            modal.find_element_by_name(k).send_keys(v)
+        modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        tab.find_element_by_xpath('.//tr[th/text()="Vendor" and td/text()="Sinclair"]')
+        tab.find_element_by_xpath('.//tr[th/text()="Model" and td/text()="ZX80"]')
+        tab.find_element_by_xpath('.//tr[th/text()="Serial Number" and td/text()="12345"]')
+        tab.find_element_by_xpath('.//tr[th/text()="MAC Address" and td/text()="aa:bb:cc:dd:ee:ff"]')
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
@@ -609,10 +613,14 @@ class SystemViewTestWD(WebDriverTestCase):
     def test_change_hypervisor(self):
         b = self.browser
         login(b)
-        self.go_to_system_edit()
-        Select(b.find_element_by_name('hypervisor_id')).select_by_visible_text('KVM')
-        b.find_element_by_link_text('Save Changes').click()
-        self.assert_system_view_text('hypervisor_id', 'KVM')
+        self.go_to_system_view(tab='Details')
+        tab = b.find_element_by_id('details')
+        tab.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+        modal = b.find_element_by_class_name('modal')
+        Select(modal.find_element_by_name('hypervisor'))\
+            .select_by_visible_text('KVM')
+        modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        tab.find_element_by_xpath('.//tr[th/text()="Host Hypervisor" and td/text()="KVM"]')
         with session.begin():
             session.refresh(self.system)
             self.assertEqual(self.system.hypervisor, Hypervisor.by_name(u'KVM'))
@@ -622,11 +630,15 @@ class SystemViewTestWD(WebDriverTestCase):
         bad_mac_address = u'aяяяяяяяяяяяяяяяяя'
         b = self.browser
         login(b)
-        self.go_to_system_edit()
-        b.find_element_by_name('mac_address').clear()
-        b.find_element_by_name('mac_address').send_keys(bad_mac_address)
-        b.find_element_by_link_text('Save Changes').click()
-        self.assert_system_view_text('mac_address', bad_mac_address)
+        self.go_to_system_view(tab='Details')
+        tab = b.find_element_by_id('details')
+        tab.find_element_by_xpath('.//button[contains(text(), "Edit")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('mac_address').clear()
+        modal.find_element_by_name('mac_address').send_keys(bad_mac_address)
+        modal.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        tab.find_element_by_xpath('.//tr[th/text()="MAC Address" and td/text()="%s"]'
+                % bad_mac_address)
         with session.begin():
             session.refresh(self.system)
             self.assertEqual(self.system.mac_address, bad_mac_address)

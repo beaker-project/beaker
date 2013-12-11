@@ -10,7 +10,7 @@ from bkr.server import identity
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
-        SystemPermission, SystemAccessPolicyRule
+        SystemPermission, SystemAccessPolicyRule, Hypervisor, Numa
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
@@ -356,7 +356,83 @@ def update_system(fqdn):
                     new=new_owner)
             system.owner = new_owner
             changed = True
+        if 'hypervisor' in data:
+            if data['hypervisor']:
+                new_hypervisor = Hypervisor.by_name(data['hypervisor'])
+            else:
+                new_hypervisor = None
+            if new_hypervisor != system.hypervisor:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change hypervisor')
+                system.record_activity(user=identity.current.user, service=u'HTTP',
+                        action=u'Changed', field=u'Hypervisor', old=system.hypervisor,
+                        new=new_hypervisor)
+                system.hypervisor = new_hypervisor
+                changed = True
+        if 'vendor' in data:
+            new_vendor = data['vendor'] or None
+            if new_vendor != system.vendor:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change vendor')
+                system.record_activity(user=identity.current.user, service=u'HTTP',
+                        action=u'Changed', field='Vendor',
+                        old=system.vendor, new=new_vendor)
+                system.vendor = new_vendor
+                changed = True
+        if 'model' in data:
+            new_model = data['model'] or None
+            if new_model != system.model:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change model')
+                system.record_activity(user=identity.current.user, service=u'HTTP',
+                        action=u'Changed', field='Model',
+                        old=system.model, new=new_model)
+                system.model = new_model
+                changed = True
+        if 'serial_number' in data:
+            new_serial_number = data['serial_number'] or None
+            if new_serial_number != system.serial:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change serial_number')
+                system.record_activity(user=identity.current.user, service=u'HTTP',
+                        action=u'Changed', field='Serial Number',
+                        old=system.serial, new=new_serial_number)
+                system.serial = new_serial_number
+                changed = True
+        if 'mac_address' in data:
+            new_mac_address = data['mac_address'] or None
+            if new_mac_address != system.mac_address:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change mac_address')
+                system.record_activity(user=identity.current.user, service=u'HTTP',
+                        action=u'Changed', field='MAC Address',
+                        old=system.mac_address, new=new_mac_address)
+                system.mac_address = new_mac_address
+                changed = True
+        if 'memory' in data:
+            new_memory = int(data['memory']) if data['memory'] else None
+            if new_memory != system.memory:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change memory')
+                system.record_activity(user=identity.current.user, service=u'HTTP',
+                        action=u'Changed', field='Memory',
+                        old=system.memory, new=new_memory)
+                system.memory = new_memory
+                changed = True
+        if 'numa_nodes' in data:
+            new_numa_nodes = int(data['numa_nodes']) if data['numa_nodes'] else None
+            if not system.numa:
+                system.numa = Numa()
+            if new_numa_nodes != system.numa.nodes:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change numa_nodes')
+                system.record_activity(user=identity.current.user, service=u'HTTP',
+                        action=u'Changed', field='NUMA/Nodes',
+                        old=system.numa.nodes, new=new_numa_nodes)
+                system.numa.nodes = new_numa_nodes
+                changed = True
         if changed:
+            # XXX clear checksum!?
             system.date_modified = datetime.datetime.utcnow()
     return jsonify(system.__json__())
 

@@ -362,15 +362,25 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'has_power': bool(self.power) and bool(self.power.power_type),
             'has_console': False, # IMPLEMENTME
             'created_date': self.date_added,
+            'hardware_scan_date': self.date_lastcheckin,
+            'hypervisor': self.hypervisor,
+            'possible_hypervisors': Hypervisor.query.all(),
             'model': self.model,
             'vendor': self.vendor,
+            'serial_number': self.serial,
+            'mac_address': self.mac_address,
             'memory': self.memory,
+            'numa_nodes': None,
             'cpu_model_name': None,
             'disk_space': None,
             'queue_size': None,
         }
         if self.lab_controller:
             data['lab_controller_id'] = self.lab_controller.id
+        if self.numa:
+            data.update({
+                'numa_nodes': self.numa.nodes,
+            })
         if self.cpu:
             data.update({
                 'cpu_model_name': self.cpu.model_name,
@@ -405,6 +415,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_owner'] = self.can_change_owner(u)
             data['can_change_notify_cc'] = self.can_edit(u)
             data['can_change_status'] = self.can_edit(u)
+            data['can_change_hardware_details'] = self.can_edit(u)
             data['can_take'] = self.is_free() and self.can_reserve_manually(u)
             data['can_return'] = (self.open_reservation is not None
                     and self.open_reservation.type != 'recipe'
@@ -415,6 +426,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_owner'] = False
             data['can_change_notify_cc'] = False
             data['can_change_status'] = False
+            data['can_change_hardware_details'] = False
             data['can_take'] = False
             data['can_return'] = False
             data['can_borrow'] = False
@@ -984,10 +996,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
 
     def updateHypervisor(self, hypervisor):
         if hypervisor:
-            try:
-                hvisor = Hypervisor.by_name(hypervisor)
-            except InvalidRequestError:
-                raise BX(_('Invalid Hypervisor: %s' % hypervisor))
+            hvisor = Hypervisor.by_name(hypervisor)
         else:
             hvisor = None
         if self.hypervisor != hvisor:
@@ -1406,7 +1415,16 @@ class Hypervisor(DeclarativeMappedObject):
     hypervisor = Column(Unicode(100), nullable=False)
 
     def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__, self.hypervisor)
+
+    def __unicode__(self):
         return self.hypervisor
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __json__(self):
+        return unicode(self)
 
     @classmethod
     def get_all_types(cls):
@@ -1421,7 +1439,10 @@ class Hypervisor(DeclarativeMappedObject):
 
     @classmethod
     def by_name(cls, hvisor):
-        return cls.query.filter_by(hypervisor=hvisor).one()
+        try:
+            return cls.query.filter_by(hypervisor=hvisor).one()
+        except NoResultFound:
+            raise ValueError('No such hypervisor %r' % hvisor)
 
 
 class SystemAccessPolicy(DeclarativeMappedObject):
