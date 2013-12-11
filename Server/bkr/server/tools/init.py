@@ -26,8 +26,11 @@
 __requires__ = ['CherryPy < 3.0']
 
 import sys
+from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 from bkr.log import log_to_stream
-from bkr.server.model import *
+from bkr.server.model import (User, Group, Permission, Hypervisor, KernelType,
+        Arch, PowerType, Key, Response, RetentionTag, ConfigItem)
 from bkr.server.util import load_config
 from turbogears.database import session
 from os.path import dirname, exists, join

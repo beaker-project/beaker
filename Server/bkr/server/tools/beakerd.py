@@ -29,11 +29,17 @@ import sys
 import os
 import random
 from bkr.log import log_to_stream, log_to_syslog
-from bkr.server import needpropertyxml, utilisation
+from bkr.server import needpropertyxml, utilisation, metrics
 from bkr.server.bexceptions import BX, VMCreationFailedException, \
     StaleTaskStatusException, InsufficientSystemPermissions, \
     StaleSystemUserException
-from bkr.server.model import *
+from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
+        GuestRecipe, RecipeVirtStatus, TaskStatus, TaskPriority, LabController,
+        Watchdog, System, DistroTree, LabControllerDistroTree, SystemStatus,
+        VirtManager, VirtResource, SystemResource, GuestResource, Arch,
+        SystemAccessPolicy, SystemPermission, ConfigItem, recipe_table,
+        distro_tree_lab_controller_map, machine_guest_map, guest_recipe_table,
+        distro_tree_table)
 from bkr.server.util import load_config, log_traceback
 from bkr.server.recipetasks import RecipeTasks
 from turbogears.database import session
@@ -41,7 +47,7 @@ from turbogears import config
 from turbomail.control import interface
 from xmlrpclib import ProtocolError
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.sql.expression import func, select
+from sqlalchemy.sql.expression import func, select, and_, or_, not_
 from sqlalchemy.orm import aliased
 
 import socket
