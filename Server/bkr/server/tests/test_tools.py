@@ -24,7 +24,7 @@ class LogDelete(unittest.TestCase):
     def test_deprecated_command(self):
         # This is currently how we test if we are in a dogfood task.
         if 'BEAKER_LABCONTROLLER_HOSTNAME' in os.environ:
-            subprocess.Popen(['/usr/bin/log-delete', '--dry-run'], stderr=subprocess.PIPE)
+            p = subprocess.Popen(['/usr/bin/log-delete', '--dry-run'], stderr=subprocess.PIPE)
             _, err = p.communicate()
             self.assertIn('DeprecationWarning: Use beaker-log-delete instead', err)
             self.assertEquals(p.returncode, 0)
