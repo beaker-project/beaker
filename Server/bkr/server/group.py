@@ -275,6 +275,7 @@ class Groups(AdminPage):
             user_action = './save_user',
             options = {},
             value = group,
+            group_pw = group.root_password,
             usergrid = usergrid,
             systemgrid = systemgrid,
             disabled_fields=[],

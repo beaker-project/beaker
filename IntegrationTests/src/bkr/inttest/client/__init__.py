@@ -8,22 +8,27 @@ from bkr.inttest import get_server_base, data_setup
 log = logging.getLogger(__name__)
 
 def create_client_config(username=data_setup.ADMIN_USER,
-    password=data_setup.ADMIN_PASSWORD, hub_url=None,
-    qpid_broker='localhost',qpid_krb=False):
+                         password=data_setup.ADMIN_PASSWORD, hub_url=None,
+                         qpid_broker='localhost',qpid_krb=False, anonymous=False):
     if hub_url is None:
         hub_url = get_server_base()
     config = tempfile.NamedTemporaryFile(prefix='bkr-inttest-client-conf-')
+    if not anonymous:
+        config.write('\n'.join([
+            'AUTH_METHOD = "password"',
+            'USERNAME = "%s"' % username,
+            'PASSWORD = "%s"' % password,
+            ]))
+
     config.write('\n'.join([
-        # Kobo wigs out if HUB_URL ends with a trailing slash, not sure why..
-        'HUB_URL = "%s"' % hub_url.rstrip('/'),
-        'AUTH_METHOD = "password"',
-        'USERNAME = "%s"' % username,
-        'PASSWORD = "%s"' % password,
-        'QPID_TOPIC_EXCHANGE = "amqp.topic"',
-        'QPID_HEADERS_EXCHANGE = "amqp.headers"',
-        'QPID_BROKER = "%s"' % qpid_broker,
-        'QPID_KRB = %s' % qpid_krb,
-    ]))
+                # Kobo wigs out if HUB_URL ends with a trailing slash, not sure why..
+                'HUB_URL = "%s"' % hub_url.rstrip('/'),
+                'QPID_TOPIC_EXCHANGE = "amqp.topic"',
+                'QPID_HEADERS_EXCHANGE = "amqp.headers"',
+                'QPID_BROKER = "%s"' % qpid_broker,
+                'QPID_KRB = %s' % qpid_krb,
+        ]))
+
     config.flush()
     return config
 

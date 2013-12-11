@@ -57,3 +57,10 @@ def auth_required(f):
             raise Unauthorised401("Authenticated user required")
         return f(*args, **kwds)
     return wrapper
+
+def read_json_request(request):
+    """Helper that throws a 400 error if the request has no JSON data"""
+    data = request.json
+    if not data:
+        raise BadRequest400("No JSON payload in request")
+    return data

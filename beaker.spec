@@ -391,6 +391,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{python_sitelib}/bkr.server-*.egg-info/
 %{_bindir}/%{name}-init
 %{_bindir}/nag-mail
+%{_bindir}/beaker-log-delete
 %{_bindir}/log-delete
 %{_bindir}/beaker-check
 %{_bindir}/product-update

@@ -2004,16 +2004,13 @@ class Group(DeclBase, MappedObject, ActivityMixin):
 
         """
         if password:
-            if len(password.split('$')) != 4:
-                salt = ''.join(random.choice(string.digits + string.ascii_letters)
-                                for i in range(8))
-                try:
-                    # If you change VeryFascistCheck, please also modify
-                    # bkr.server.validators.StrongPassword
-                    self._root_password = crypt.crypt(cracklib.VeryFascistCheck(password), "$1$%s$" % salt)
-                except ValueError, msg:
-                    msg = re.sub(r'^it is', 'the password is', str(msg))
-                    raise ValueError(msg)
+            try:
+                # If you change VeryFascistCheck, please also modify
+                # bkr.server.validators.StrongPassword
+                cracklib.VeryFascistCheck(password)
+            except ValueError, msg:
+                msg = re.sub(r'^it is', 'the password is', str(msg))
+                raise ValueError(msg)
             else:
                 self._root_password = password
         else:
@@ -2050,13 +2047,7 @@ class Group(DeclBase, MappedObject, ActivityMixin):
         return self.group_name in (u'admin', u'queue_admin', u'lab_controller')
 
     def set_root_password(self, user, service, password):
-        if len(password.split('$')) == 4:
-            # Password is hashed
-            hashed_root_password = password
-        else:
-            # Password is cleartext
-            hashed_root_password = crypt.crypt(password, self.root_password)
-        if self.root_password != hashed_root_password:
+        if self.root_password != password:
             self.root_password = password
             self.record_activity(user=user, service=service,
                 field=u'Root Password', old='*****', new='*****')
@@ -2551,6 +2542,25 @@ class System(SystemObject, ActivityMixin):
             self.custom_access_policy.grants(user, SystemPermission.control_system)):
             return True
         return False
+
+    def get_loan_details(self):
+        """Returns details of the loan as a dict"""
+        if not self.loaned:
+            return {}
+        return {
+                   "recipient": self.loaned.user_name,
+                   "comment": self.loan_comment,
+               }
+
+    def grant_loan(self, recipient, comment, service):
+        """Grants a loan to the designated user if permitted"""
+        if recipient is None:
+            recipient = identity.current.user.user_name
+        self.change_loan(recipient, comment, service)
+
+    def return_loan(self, service):
+        """Grants a loan to the designated user if permitted"""
+        self.change_loan(None, None, service)
 
     def change_loan(self, user_name, comment=None, service='WEBUI'):
         """Changes the current system loan
@@ -4265,7 +4275,8 @@ class Log(MappedObject):
         if self.server:
             return self.href
         else:
-            return os.path.join(self.parent.logspath, self.parent.filepath, self._combined_path())
+            return os.path.join(self.parent.logspath, self.parent.filepath,
+                self._combined_path())
 
     @property
     def href(self):
@@ -4463,6 +4474,22 @@ class TaskBase(MappedObject):
             if self.__class__.__name__ == class_:
                 return '%s:%s' % (t, self.id)
     t_id = property(t_id)
+
+    def _get_log_dirs(self):
+        """
+        Returns the directory names of all a task's logs,
+        with a trailing slash.
+
+        URLs are also returned with a trailing slash.
+        """
+        logs_to_return = []
+        for log in self.logs:
+            full_path = os.path.dirname(log.full_path)
+            if not full_path.endswith('/'):
+                full_path += '/'
+            logs_to_return.append(full_path)
+        return logs_to_return
+
 
 class Job(TaskBase):
     """
@@ -5514,6 +5541,19 @@ class Recipe(TaskBase):
         # Intentionally not chaining to super(), to avoid session.add(self)
         self.ttasks = ttasks
 
+    def crypt_root_password(self):
+        if self.recipeset.job.group:
+            group_pw = self.recipeset.job.group.root_password
+            if group_pw:
+                if len(group_pw.split('$')) != 4:
+                    salt = ''.join(random.choice(string.digits + string.ascii_letters)
+                                   for i in range(8))
+                    return crypt.crypt(group_pw, "$1$%s$" % salt)
+                else:
+                    return group_pw
+        # if it is not a group job or the group password is not set
+        return self.owner.root_password
+
     @property
     def harnesspath(self):
         return get('basepath.harness', '/var/www/beaker/harness')
@@ -5558,13 +5598,12 @@ class Recipe(TaskBase):
     filepath = property(filepath)
 
     def get_log_dirs(self):
-        logs_to_return = [os.path.dirname(log.full_path) for log in self.logs]
-
+        recipe_logs = self._get_log_dirs()
         for task in self.tasks:
             rt_log = task.get_log_dirs()
             if rt_log:
-                logs_to_return.extend(rt_log)
-        return logs_to_return
+                recipe_logs.extend(rt_log)
+        return recipe_logs
 
     def owner(self):
         return self.recipeset.job.owner
@@ -6325,12 +6364,12 @@ class RecipeTask(TaskBase):
         return (self.recipe.recipeset.job.t_id, self.recipe.recipeset.t_id, self.recipe.t_id)
 
     def get_log_dirs(self):
-        logs_to_return = [os.path.dirname(log.full_path) for log in self.logs]
+        recipe_task_logs = self._get_log_dirs()
         for result in self.results:
             rtr_log = result.get_log_dirs()
             if rtr_log:
-                logs_to_return.extend(rtr_log)
-        return logs_to_return
+                recipe_task_logs.extend(rtr_log)
+        return recipe_task_logs
 
     def to_xml(self, clone=False, *args, **kw):
         task = xmldoc.createElement("task")
@@ -6729,7 +6768,7 @@ class RecipeTaskResult(TaskBase):
         return [mylog.dict for mylog in self.logs]
 
     def get_log_dirs(self):
-        return [os.path.dirname(log.full_path) for log in self.logs]
+        return self._get_log_dirs()
 
     def task_info(self):
         """
