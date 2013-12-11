@@ -2390,10 +2390,16 @@ class System(SystemObject, ActivityMixin):
         else:
             return False
 
+    def _ensure_user_is_authenticated(self, user):
+        if user is None:
+            raise RuntimeError("Cannot check permissions for an "
+                               "unauthenticated user.")
+
     def can_change_owner(self, user):
         """
         Does the given user have permission to change the owner of this system?
         """
+        self._ensure_user_is_authenticated(user)
         if self.owner == user:
             return True
         if user.is_admin():
@@ -2404,6 +2410,7 @@ class System(SystemObject, ActivityMixin):
         """
         Does the given user have permission to edit this system's access policy?
         """
+        self._ensure_user_is_authenticated(user)
         if self.owner == user:
             return True
         if user.is_admin():
@@ -2418,6 +2425,7 @@ class System(SystemObject, ActivityMixin):
         Does the given user have permission to edit details (inventory info, 
         power config, etc) of this system?
         """
+        self._ensure_user_is_authenticated(user)
         if self.owner == user:
             return True
         if user.is_admin():
@@ -2431,6 +2439,7 @@ class System(SystemObject, ActivityMixin):
         """
         Does the given user have permission to loan this system to another user?
         """
+        self._ensure_user_is_authenticated(user)
         # System owner is always a loan admin
         if self.owner == user:
             return True
@@ -2447,6 +2456,7 @@ class System(SystemObject, ActivityMixin):
         """
         Does the given user have permission to loan this system to themselves?
         """
+        self._ensure_user_is_authenticated(user)
         # Loan admins can always loan to themselves
         if self.can_lend(user):
             return True
@@ -2464,6 +2474,7 @@ class System(SystemObject, ActivityMixin):
         Does the given user have permission to cancel the current loan for this 
         system?
         """
+        self._ensure_user_is_authenticated(user)
         # Users can always return their own loans
         if self.loaned and self.loaned == user:
             return True
@@ -2477,6 +2488,7 @@ class System(SystemObject, ActivityMixin):
         Note that if is_free() returns False, the user may still not be able
         to reserve it *right now*.
         """
+        self._ensure_user_is_authenticated(user)
         # System owner can always reserve the system
         if self.owner == user:
             return True
@@ -2496,6 +2508,7 @@ class System(SystemObject, ActivityMixin):
         """
         Does the given user have permission to manually reserve this system?
         """
+        self._ensure_user_is_authenticated(user)
         # Manual reservations are permitted only for systems that are
         # either not automated or are currently loaned to this user
         if (self.status != SystemStatus.automated or
@@ -2508,6 +2521,7 @@ class System(SystemObject, ActivityMixin):
         Does the given user have permission to return the current reservation 
         on this system?
         """
+        self._ensure_user_is_authenticated(user)
         # Users can always return their own reservations
         if self.user and self.user == user:
             return True
@@ -2519,6 +2533,7 @@ class System(SystemObject, ActivityMixin):
         Does the given user have permission to run power/netboot commands on 
         this system?
         """
+        self._ensure_user_is_authenticated(user)
         # Current user can always control the system
         if self.user and self.user == user:
             return True
