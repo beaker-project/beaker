@@ -721,37 +721,44 @@ class Root(RPCRoot):
         automated = (system.status == SystemStatus.automated)
         reserved = system.has_manual_reservation(user)
         borrowed = (system.loaned == user)
-        can_reserve = system.can_reserve(user)
+        can_reserve = user and system.can_reserve(user)
         notes = []
         show_panel = None
-        if reserved:
-            show_panel = _direct_panel
-            if automated and can_reserve:
-                # Automated mode, but currently have a manual reservation
-                notes.append(_("System will be provisioned directly. Return this system to use a scheduled job instead."))
-            else:
-                # Either in manual mode and currently have a manual reservation
-                # or else in automated mode and don't have access to reserve it again
-                notes.append(_("System will be provisioned directly."))
-            if not can_reserve:
-                # We don't have permission to reserve it again (e.g. loan returned, access policy changed)
-                notes.append(_("After returning this system, you will no longer be able to provision it."))
-        elif not can_reserve:
-            # No access at all, cannot provision
-            notes.append(_("You do not have access to provision this system."))
-        elif not automated:
-            # Manual mode, just need to reserve it first
-            notes.append(_("Reserve this system to provision it."))
+        if user is None:
+            notes.append(_("You are not logged in."))
         else:
-            # Automated mode, can schedule a job, but also want to give
-            # instructions on how to manually provision it instead.
-            show_panel = _scheduled_panel
-            if not borrowed:
-                # Automated mode, need a loan *and* a reservation first
-                notes.append(_("Provisioning will use a scheduled job. Borrow and reserve this system to provision it directly instead."))
+            if reserved:
+                show_panel = _direct_panel
+                if automated and can_reserve:
+                    # Automated mode, but currently have a manual reservation
+                    notes.append(_("System will be provisioned directly. "
+                                   "Return this system to use a scheduled job instead."))
+                else:
+                    # Either in manual mode and currently have a manual reservation
+                    # or else in automated mode and don't have access to reserve it again
+                    notes.append(_("System will be provisioned directly."))
+                if not can_reserve:
+                    # We don't have permission to reserve it again (e.g. loan returned, access policy changed)
+                    notes.append(_("After returning this system, you will "
+                                   "no longer be able to provision it."))
+            elif not can_reserve:
+                # No access at all, cannot provision
+                notes.append(_("You do not have access to provision this system."))
+            elif not automated:
+                # Manual mode, just need to reserve it first
+                notes.append(_("Reserve this system to provision it."))
             else:
-                # Automated mode, have a loan, just need to reserve it
-                notes.append(_("Provisioning will use a scheduled job. Reserve this system to provision it directly instead."))
+                # Automated mode, can schedule a job, but also want to give
+                # instructions on how to manually provision it instead.
+                show_panel = _scheduled_panel
+                if not borrowed:
+                    # Automated mode, need a loan *and* a reservation first
+                    notes.append(_("Provisioning will use a scheduled job. "
+                                   "Borrow and reserve this system to provision it directly instead."))
+                else:
+                    # Automated mode, have a loan, just need to reserve it
+                    notes.append(_("Provisioning will use a scheduled job. "
+                                   "Reserve this system to provision it directly instead."))
         # Determine provisioning panel details
         if show_panel == _scheduled_panel:
             panel_id = "scheduled-provisioning"
