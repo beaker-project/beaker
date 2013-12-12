@@ -40,7 +40,10 @@ class LabController(DeclarativeMappedObject, ActivityMixin):
 
     @classmethod
     def by_id(cls, id):
-        return cls.query.filter_by(id=id).one()
+        try:
+            return cls.query.filter_by(id=id).one()
+        except NoResultFound:
+            raise ValueError('No lab controller with id %r' % id)
 
     @classmethod
     def by_name(cls, name):

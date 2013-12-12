@@ -47,6 +47,7 @@ Source3:        https://github.com/twitter/typeahead.js/archive/2bd1119ecdd5ed4b
 Source4:        https://github.com/jashkenas/underscore/archive/edbf2952c2b71f81c6449aef384bdf233a0d63bc/underscore-edbf2952c2b71f81c6449aef384bdf233a0d63bc.tar.gz
 Source5:        https://github.com/jashkenas/backbone/archive/699fe3271262043bb137bae97bd0003d6d193f27/backbone-699fe3271262043bb137bae97bd0003d6d193f27.tar.gz
 Source6:        https://github.com/moment/moment/archive/604c7942de38749e768ff8e327301ea6917c7c73/moment-604c7942de38749e768ff8e327301ea6917c7c73.tar.gz
+Source7:        https://github.com/silviomoreto/bootstrap-select/archive/c0c90090e5abeb5c10291430ae2a1778371f5630/bootstrap-select-c0c90090e5abeb5c10291430ae2a1778371f5630.tar.gz
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
@@ -277,6 +278,7 @@ tar -C Server/assets/typeahead.js --strip-components=1 -xzf %{SOURCE3}
 tar -C Server/assets/underscore --strip-components=1 -xzf %{SOURCE4}
 tar -C Server/assets/backbone --strip-components=1 -xzf %{SOURCE5}
 tar -C Server/assets/moment --strip-components=1 -xzf %{SOURCE6}
+tar -C Server/assets/bootstrap-select --strip-components=1 -xzf %{SOURCE7}
 
 %build
 [ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT;

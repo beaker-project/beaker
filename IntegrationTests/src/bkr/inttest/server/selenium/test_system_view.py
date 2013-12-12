@@ -34,7 +34,7 @@ from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System,
         SystemStatus, LabInfo
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_system_search_results, \
-        delete_and_confirm, logout, click_menu_item
+        delete_and_confirm, logout, click_menu_item, BootstrapSelect
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.assertions import wait_for_condition
 
@@ -295,42 +295,26 @@ class SystemViewTestWD(WebDriverTestCase):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Arch(s)"]').click()
-        b.find_element_by_name('arch.text').send_keys('s390')
-        b.find_element_by_name('arches').submit()
-        b.find_element_by_xpath(
-                '//div[@id="arches"]'
-                '//td[normalize-space(text())="s390"]')
+        self.go_to_system_view(tab='Essentials')
+        tab = b.find_element_by_id('essentials')
+        BootstrapSelect(tab.find_element_by_name('arches'))\
+            .select_by_visible_text('s390')
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]').click()
+        b.find_element_by_xpath('//div[@id="essentials"]//span[@class="sync-status" and not(text())]')
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=677951
-    def test_add_nonexistent_arch(self):
-        orig_date_modified = self.system.date_modified
-        b = self.browser
-        login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Arch(s)"]').click()
-        b.find_element_by_name('arch.text').send_keys('notexist')
-        b.find_element_by_name('arches').submit()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
-                u'No such arch notexist')
 
     def test_remove_arch(self):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Arch(s)"]').click()
-        b.find_element_by_xpath(
-                '//div[@id="arches"]'
-                '//td[normalize-space(text())="i386"]')
-        delete_and_confirm(b, '//tr[normalize-space(td[1]/text())="i386"]')
-        self.assertEquals(b.find_element_by_class_name('flash').text, 'i386 Removed')
-        b.find_element_by_xpath(
-                '//div[@id="arches" and not(.//td[normalize-space(text())="i386"])]')
+        self.go_to_system_view(tab='Essentials')
+        tab = b.find_element_by_id('essentials')
+        BootstrapSelect(tab.find_element_by_name('arches'))\
+            .select_by_visible_text('i386') # actually deselecting
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]').click()
+        b.find_element_by_xpath('//div[@id="essentials"]//span[@class="sync-status" and not(text())]')
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
@@ -600,14 +584,15 @@ class SystemViewTestWD(WebDriverTestCase):
                                          user=data_setup.create_user())
         b = self.browser
         login(b)
-        self.go_to_system_edit()
-        Select(b.find_element_by_name('lab_controller_id'))\
-            .select_by_visible_text('None')
-        b.find_element_by_link_text('Save Changes').click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
+        self.go_to_system_view(tab='Essentials')
+        tab = b.find_element_by_id('essentials')
+        BootstrapSelect(b.find_element_by_name('lab_controller_id'))\
+            .select_by_visible_text('(none)')
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]').click()
+        self.assertIn(
                 'Unable to change lab controller while system is in use '
-                '(return the system first)')
-        self.assert_system_view_text('lab_controller_id', self.lab_controller.fqdn)
+                '(return the system first)',
+                tab.find_element_by_class_name('alert-error').text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=714974
     def test_change_hypervisor(self):

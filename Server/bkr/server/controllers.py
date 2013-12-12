@@ -37,7 +37,7 @@ from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
 from bkr.server.systems import SystemsController
 from bkr.server.system_action import SystemAction as SystemActionController
-from bkr.server.widgets import TaskSearchForm, SystemArches, SearchBar, \
+from bkr.server.widgets import TaskSearchForm, SearchBar, \
     SystemForm, SystemProvision, SystemInstallOptions, SystemGroups, \
     SystemNotes, SystemKeys, SystemExclude, SystemHistory, SystemDetails, \
     SystemCommandsForm, LabInfoForm, PowerActionHistory, LoanWidget, \
@@ -194,7 +194,6 @@ class Root(RPCRoot):
     system_groups = SystemGroups(name='groups')
     system_installoptions = SystemInstallOptions(name='installoptions')
     system_provision = SystemProvision(name='provision')
-    arches_form = SystemArches(name='arches') 
     task_form = TaskSearchForm(name='tasks')
     system_actions = SystemActions()
 
@@ -592,34 +591,6 @@ class Root(RPCRoot):
     @expose()
     @identity.require(identity.not_anonymous())
     @restrict_http_method('post')
-    def arch_remove(self, system_id=None, arch_id=None):
-        removed = None
-        if system_id and arch_id:
-            try:
-                system = System.by_id(system_id,identity.current.user)
-            except NoResultFound:
-                flash(_(u"Invalid Permision"))
-                redirect("/")
-        else:
-            flash(_(u"system_id and arch_id must be provided"))
-            redirect("/")
-        if system.can_edit(identity.current.user):
-            for arch in system.arch:
-                if arch.id == int(arch_id):
-                    system.arch.remove(arch)
-                    removed = arch
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Arch', arch.arch, "")
-                    system.activity.append(activity)
-        if removed:
-            system.date_modified = datetime.utcnow()
-            flash(_(u"%s Removed" % removed.arch))
-        else:
-            flash(_(u"Arch ID not found"))
-        redirect("./view/%s" % system.fqdn)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    @restrict_http_method('post')
     def group_remove(self, system_id=None, group_id=None):
         removed = None
         if system_id and group_id:
@@ -844,7 +815,6 @@ class Root(RPCRoot):
                         exclude   = self.system_exclude,
                         keys      = self.system_keys,
                         notes     = self.system_notes,
-                        arches    = self.arches_form,
                       )
         widgets['power'] = self.power_form
         widgets['commands_form'] = self.commands_form
@@ -874,7 +844,6 @@ class Root(RPCRoot):
                                     install   = url('/save_install'),
                                     provision = url(provision_action),
                                     commands_form = url('/action_power'),
-                                    arches    = url('/save_arch'),
                                     tasks     = '/tasks/do_search',
                                   ),
             widgets_options = dict(power  = options,
@@ -896,8 +865,6 @@ class Root(RPCRoot):
                                    provision = provision_options,
                                    commands_form = dict(is_user=is_user,
                                                         can_power=can_power),
-                                   arches    = dict(readonly = readonly,
-                                                    arches = system.arch),
                                    tasks      = dict(system_id = system.id,
                                                      arch = [(0, 'All')] + [(arch.id, arch.arch) for arch in system.arch],
                                                      hidden = dict(system = 1)),
@@ -1263,28 +1230,6 @@ class Root(RPCRoot):
                 key_value = Key_Value_String(key,kw['key_value'])
                 system.key_values_string.append(key_value)
             activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Key/Value', "", "%s/%s" % (kw['key_name'],kw['key_value']) )
-            system.activity.append(activity)
-            system.date_modified = datetime.utcnow()
-        redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    @restrict_http_method('post')
-    def save_arch(self, id, **kw):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to Add arch for %s" % id) )
-            redirect("/")
-        # Add an Arch
-        if kw.get('arch').get('text'):
-            try:
-                arch = Arch.by_name(kw['arch']['text'])
-            except InvalidRequestError:
-                flash(_(u'No such arch %s') % kw['arch']['text'])
-                redirect('/view/%s' % system.fqdn)
-            system.arch.append(arch)
-            activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Arch', "", kw['arch']['text'])
             system.activity.append(activity)
             system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)

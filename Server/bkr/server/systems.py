@@ -10,12 +10,13 @@ from bkr.server import identity
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
-        SystemPermission, SystemAccessPolicyRule, Hypervisor, Numa
+        SystemPermission, SystemAccessPolicyRule, Hypervisor, Numa, \
+        LabController, KernelType
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
 from bkr.server.flask_util import BadRequest400, Unauthorised401, \
-        Forbidden403, NotFound404, MethodNotAllowed405, \
+        Conflict409, Forbidden403, NotFound404, MethodNotAllowed405, \
         convert_internal_errors, auth_required, read_json_request
 from turbogears.database import session
 import cherrypy
@@ -344,6 +345,8 @@ def update_system(fqdn):
     system = _get_system_by_FQDN(fqdn)
     data = read_json_request(request)
     with convert_internal_errors():
+        # XXX what a nightmare... need to use a validation/conversion library, 
+        # and maybe simplify/relocate the activity recording stuff somehow
         changed = False
         if 'owner' in data and data['owner'].get('user_name') != system.owner.user_name:
             if not system.can_change_owner(identity.current.user):
@@ -356,6 +359,69 @@ def update_system(fqdn):
                     new=new_owner)
             system.owner = new_owner
             changed = True
+        if 'arches' in data:
+            new_arches = [Arch.by_name(a) for a in (data['arches'] or [])]
+            added_arches = set(new_arches).difference(system.arch)
+            removed_arches = set(system.arch).difference(new_arches)
+            if added_arches or removed_arches:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change arches')
+                for added_arch in added_arches:
+                    system.record_activity(user=identity.current.user,
+                            service=u'HTTP', action=u'Added', field=u'Arch',
+                            old=None, new=added_arch)
+                for removed_arch in removed_arches:
+                    system.record_activity(user=identity.current.user,
+                            service=u'HTTP', action=u'Removed', field=u'Arch',
+                            old=removed_arch, new=None)
+                system.arch[:] = new_arches
+                changed = True
+        if 'lab_controller_id' in data:
+            if data['lab_controller_id']:
+                new_lc = LabController.by_id(data['lab_controller_id'])
+            else:
+                new_lc = None
+            if new_lc != system.lab_controller:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change lab controller')
+                if system.open_reservation is not None:
+                    raise Conflict409('Unable to change lab controller while system '
+                            'is in use (return the system first)')
+                system.record_activity(user=identity.current.user, service=u'HTTP',
+                        action=u'Changed', field=u'Lab Controller',
+                        old=system.lab_controller, new=new_lc)
+                system.lab_controller = new_lc
+                changed = True
+        if 'location' in data:
+            new_location = data['location'] or None
+            if new_location != system.location:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change location')
+                system.record_activity(user=identity.current.user, service=u'HTTP',
+                        action=u'Changed', field='Location',
+                        old=system.location, new=new_location)
+                system.location = new_location
+                changed = True
+        if 'lender' in data:
+            new_lender = data['lender'] or None
+            if new_lender != system.lender:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change lender')
+                system.record_activity(user=identity.current.user, service=u'HTTP',
+                        action=u'Changed', field='Lender',
+                        old=system.lender, new=new_lender)
+                system.lender = new_lender
+                changed = True
+        if 'kernel_type' in data:
+            new_kernel_type = KernelType.by_name(data['kernel_type'])
+            if new_kernel_type != system.kernel_type:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change kernel type')
+                system.record_activity(user=identity.current.user, service=u'HTTP',
+                        action=u'Changed', field=u'Kernel Type',
+                        old=system.kernel_type, new=new_kernel_type)
+                system.kernel_type = new_kernel_type
+                changed = True
         if 'hypervisor' in data:
             if data['hypervisor']:
                 new_hypervisor = Hypervisor.by_name(data['hypervisor'])

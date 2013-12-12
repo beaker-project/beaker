@@ -155,7 +155,7 @@ gpgcheck=0
             redirect('.')
         try:
             lab_controller = LabController.by_id(lab_controller_id)
-        except NoResultFound:
+        except ValueError:
             flash(_(u'Invalid lab controller id %s') % lab_controller_id)
             redirect(str(distro_tree.id))
 

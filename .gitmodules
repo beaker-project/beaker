@@ -16,3 +16,6 @@
 [submodule "moment"]
 	path = Server/assets/moment
 	url = https://github.com/moment/moment.git
+[submodule "bootstrap-select"]
+	path = Server/assets/bootstrap-select
+	url = https://github.com/silviomoreto/bootstrap-select

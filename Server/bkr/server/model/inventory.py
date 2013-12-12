@@ -354,11 +354,18 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'id': self.id,
             'fqdn': self.fqdn,
             'lab_controller_id': None,
+            'possible_lab_controllers': [{'id': lc.id, 'fqdn': lc.fqdn}
+                    for lc in LabController.query],
             'owner': self.owner,
             'notify_cc': list(self.cc),
             'status': self.status,
             'status_reason': self.status_reason,
-            'arches': [arch.arch for arch in self.arch],
+            'arches': self.arch,
+            'possible_arches': Arch.query.all(),
+            'kernel_type': self.kernel_type,
+            'possible_kernel_types': KernelType.query.all(),
+            'location': self.location,
+            'lender': self.lender,
             'has_power': bool(self.power) and bool(self.power.power_type),
             'has_console': False, # IMPLEMENTME
             'created_date': self.date_added,
@@ -415,7 +422,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_owner'] = self.can_change_owner(u)
             data['can_change_notify_cc'] = self.can_edit(u)
             data['can_change_status'] = self.can_edit(u)
-            data['can_change_hardware_details'] = self.can_edit(u)
+            data['can_change_hardware'] = self.can_edit(u)
             data['can_take'] = self.is_free() and self.can_reserve_manually(u)
             data['can_return'] = (self.open_reservation is not None
                     and self.open_reservation.type != 'recipe'
@@ -426,7 +433,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_owner'] = False
             data['can_change_notify_cc'] = False
             data['can_change_status'] = False
-            data['can_change_hardware_details'] = False
+            data['can_change_hardware'] = False
             data['can_take'] = False
             data['can_return'] = False
             data['can_borrow'] = False

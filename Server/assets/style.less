@@ -55,6 +55,7 @@
 
 @import "font-awesome/less/font-awesome.less";
 @import "typeahead.js-bootstrap.less";
+@import (less) "bootstrap-select/bootstrap-select.css";
 @import "datatables-bootstrap.less";
 
 // overrides for Bootstrap variables
@@ -75,6 +76,11 @@
 // workaround for https://github.com/twitter/typeahead.js/issues/147
 .modal-body {
     overflow: visible;
+}
+
+// workaround for missing margin above help-block with bootstrap-select
+.form-horizontal .bootstrap-select + .help-block {
+    margin-top: @baseLineHeight / 2;
 }
 
 // heading sizes (Bootstrap's are too generous)

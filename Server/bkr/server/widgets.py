@@ -1094,27 +1094,6 @@ class SystemKeys(Form):
                 d['options'].get('key_values_string', [])),
                 key=lambda kv: (kv.key.key_name, kv.key_value))
 
-class SystemArches(Form):
-    template = "bkr.server.templates.system_arches"
-    member_widgets = ["id", "arch", "delete_link"]
-    params = ['options', 'readonly', 'arches']
-    delete_link = DeleteLinkWidgetForm()
-
-    def __init__(self, *args, **kw):
-        super(SystemArches, self).__init__(*args, **kw)
-        self.id    = HiddenField(name="id")
-        self.arch  = AutoCompleteField(name='arch',
-                                      search_controller="/arches/by_name",
-                                      search_param="name",
-                                      result_name="arches")
-
-    def update_params(self, d):
-        super(SystemArches, self).update_params(d)
-        if 'readonly' in d['options']:
-            d['readonly'] = d['options']['readonly']
-        if 'arches' in d['options']:
-            d['arches'] = d['options']['arches']
-
 class DistroTags(Form):
     template = "bkr.server.templates.distro_tags"
     member_widgets = ["id", "tag", "delete_link"]

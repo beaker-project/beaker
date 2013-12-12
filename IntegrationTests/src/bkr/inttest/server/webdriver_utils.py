@@ -109,3 +109,23 @@ def click_menu_item(browser, menu_item, submenu_item):
     browser.find_element_by_css_selector('.dropdown.open')\
            .find_element_by_link_text(submenu_item)\
            .click()
+
+class BootstrapSelect(object):
+    """
+    Like selenium.webdriver.ui.support.Select but for bootstrap-select, 
+    which uses Bootstrap buttons and drop-downs rather than a real <select/> 
+    control.
+    """
+
+    def __init__(self, select_element):
+        # The select will be hidden, the bootstrap-select will be its sibling.
+        self.element = select_element.find_element_by_xpath(
+                'following-sibling::div[contains(@class, "bootstrap-select")]')
+
+    def select_by_visible_text(self, text):
+        self.element.find_element_by_tag_name('button').click()
+        self.element.find_element_by_link_text(text).click()
+
+    @property
+    def selected_option_text(self):
+        return self.element.find_element_by_tag_name('button').text.strip()

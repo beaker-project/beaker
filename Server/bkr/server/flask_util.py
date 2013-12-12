@@ -38,6 +38,9 @@ class NotFound404(PlainTextHTTPException):
 class MethodNotAllowed405(PlainTextHTTPException):
     code = 405
 
+class Conflict409(PlainTextHTTPException):
+    code = 409
+
 @contextlib.contextmanager
 def convert_internal_errors():
     """Context manager to convert Python exceptions to HTTP errors"""

@@ -307,7 +307,7 @@ class CSV_System(CSV):
                 for arch in arches:
                     try:
                         arch_obj = Arch.by_name(arch)
-                    except InvalidRequestError:
+                    except ValueError:
                         raise ValueError("%s: Invalid arch %s" %
                                          (system.fqdn, arch))
                     arch_objs.append(arch_obj)
@@ -564,7 +564,7 @@ class CSV_Exclude(CSV):
         """
         try:
             arch = Arch.by_name(data['arch'])
-        except InvalidRequestError:
+        except ValueError:
             log.append("%s: Invalid Arch %s" % (system.fqdn, data['arch']))
             return False
 
@@ -646,7 +646,7 @@ class CSV_Install(CSV):
         if 'arch' in data:
             try:
                 arch = Arch.by_name(data['arch'])
-            except InvalidRequestError:
+            except ValueError:
                 log.append("%s: Invalid arch %s" % (system.fqdn, data['arch']))
                 return False
         else:

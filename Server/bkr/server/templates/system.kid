@@ -11,6 +11,7 @@
         new SystemQuickInfo({model: system, el: $('.system-quick-info')});
         new SystemOwnerView({model: system, el: $('#owner')});
         new SystemHardwareDetailsView({model: system, el: $('.system-hardware-details')});
+        new SystemHardwareEssentialsView({model: system, el: $('#essentials')});
     });
   </script>
  </head>
@@ -23,8 +24,7 @@
   <div class="row-fluid">
     <ul class="span3 nav nav-list system-nav">
       <li class="nav-header">Hardware</li>
-      <li><a data-toggle="tab" href="#IMPLEMENTME">Essentials</a></li>
-      <li><a data-toggle="tab" href="#arches">Architectures</a></li>
+      <li><a data-toggle="tab" href="#essentials">Essentials</a></li>
       <li><a data-toggle="tab" href="#details">Details</a></li>
       <li><a data-toggle="tab" href="#keys">Key/Values</a></li>
       <li py:if="widgets['labinfo']"><a data-toggle="tab" href="#labinfo">Lab Info</a></li>
@@ -51,13 +51,11 @@
       <li><a data-toggle="tab" href="#tasks">Executed Tasks</a></li>
     </ul>
     <div class="span9 tab-content system-tabs">
+      <div class="tab-pane" id="essentials"/>
       <div class="tab-pane" id="details">
         <div class="system-hardware-details"></div>
     ${widgets['details'].display(system=value)} 
       </div>
-   <div class="tab-pane" id="arches">
-    ${widgets['arches'].display(method='get', action=widgets_action['arches'], value=value, options=widgets_options['arches'])} 
-   </div>
    <div class="tab-pane" id="keys">
     ${widgets['keys'].display(method='get', action=widgets_action['keys'], value=value, options=widgets_options['keys'])} 
    </div>

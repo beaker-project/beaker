@@ -70,7 +70,16 @@ class KernelType(DeclarativeMappedObject):
     uboot = Column(Boolean, default=False)
 
     def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__, self.kernel_type)
+
+    def __unicode__(self):
         return self.kernel_type
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __json__(self):
+        return unicode(self)
 
     @classmethod
     def get_all_types(cls):
@@ -85,7 +94,10 @@ class KernelType(DeclarativeMappedObject):
 
     @classmethod
     def by_name(cls, kernel_type):
-        return cls.query.filter_by(kernel_type=kernel_type).one()
+        try:
+            return cls.query.filter_by(kernel_type=kernel_type).one()
+        except NoResultFound:
+            raise ValueError('No such kernel type %r' % kernel_type)
 
 class Arch(DeclarativeMappedObject):
 
@@ -99,7 +111,16 @@ class Arch(DeclarativeMappedObject):
         self.arch = arch
 
     def __repr__(self):
-        return '%s' % self.arch
+        return '%s(%r)' % (self.__class__.__name__, self.arch)
+
+    def __unicode__(self):
+        return self.arch
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __json__(self):
+        return unicode(self)
 
     @classmethod
     def get_all(cls):
@@ -111,7 +132,10 @@ class Arch(DeclarativeMappedObject):
 
     @classmethod
     def by_name(cls, arch):
-        return cls.query.filter_by(arch=arch).one()
+        try:
+            return cls.query.filter_by(arch=arch).one()
+        except NoResultFound:
+            raise ValueError('No such arch %r' % arch)
 
     @classmethod
     def list_by_name(cls, name):
@@ -337,6 +361,9 @@ class Distro(DeclarativeMappedObject):
 
     def __unicode__(self):
         return self.name
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
 
     def __repr__(self):
         return '%s(name=%r)' % (self.__class__.__name__, self.name)
