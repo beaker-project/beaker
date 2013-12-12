@@ -81,14 +81,7 @@ from bkr.common.helpers import atomically_replaced_file, unlink_ignore, siphon, 
     Flock
 from bkr.server.model import TaskLibrary, Task
 from bkr.server.util import load_config
-
-# We need kobo
-try:
-    import kobo.xmlrpc
-    from kobo.client import HubProxy
-except ImportError:
-    print 'Please install kobo client library'
-    sys.exit(1)
+import xmlrpclib
 
 __description__ = 'Script to sync local task RPMs from a remote Beaker instance'
 __version__ = '0.1'
@@ -114,10 +107,7 @@ class TaskLibrarySync:
 
         # Initialize core attributes
         if remote:
-            self.remote = remote.rstrip("/")
-            remote_proxy = self._get_server_proxy(self.remote)
-            self.proxy={'remote':remote_proxy,
-                        }
+            self.proxy = xmlrpclib.ServerProxy(remote.rstrip("/"))
 
         self.tasks_added = []
         self.t_downloaded = 0
@@ -140,14 +130,6 @@ class TaskLibrarySync:
             self.logger.critical('You should run this script as user: %s' % pwd.getpwuid(task_dir_uid).pw_name)
             sys.exit(-1)
 
-    def _get_server_proxy(self, server):
-
-        kobo_conf = {}
-        kobo_conf['HUB_URL'] = server
-        hub = HubProxy(kobo_conf)
-
-        return hub
-
     def get_tasks(self, server):
 
         # if local, directly read the database
@@ -155,7 +137,7 @@ class TaskLibrarySync:
             tasks = Task.query.filter(Task.valid == True).all()
             tasks = [task.to_dict() for task in tasks]
         else:
-            tasks = self.proxy[server].tasks.filter({'valid':1})
+            tasks = self.proxy.tasks.filter({'valid':1})
 
         return [task['name'] for task in tasks]
 
@@ -172,7 +154,7 @@ class TaskLibrarySync:
 
         try:
             self.logger.debug('Getting task XML for %s from %s' % (task, getattr(self, server)))
-            return self.proxy[server].tasks.to_xml(task, False)
+            return self.proxy.tasks.to_xml(task, False)
         except (xmlrpclib.Fault, xmlrpclib.ProtocolError) as e:
             # If something goes wrong with this task, for example:
             # https://bugzilla.redhat.com/show_bug.cgi?id=915549
