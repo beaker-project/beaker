@@ -14,7 +14,7 @@ from sqlalchemy import (Table, Column, Index, ForeignKey, UniqueConstraint,
 
 from sqlalchemy.orm import relation, backref, dynamic_loader, \
         object_mapper, mapper, column_property, contains_eager, \
-        relationship, class_mapper
+        relationship, class_mapper, validates
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.orm.util import has_identity
@@ -37,8 +37,9 @@ from bkr.server.bexceptions import BeakerException, BX, \
 from bkr.server.enum import DeclEnum
 from bkr.server.hybrid import hybrid_property, hybrid_method
 from bkr.server.helpers import make_link, make_fake_link
-from bkr.server.util import unicode_truncate, absolute_url, run_createrepo
+from bkr.server.util import unicode_truncate, absolute_url, run_createrepo, is_valid_fqdn
 from bkr.server import mail, metrics, identity
+
 import os
 import shutil
 import urllib
@@ -2135,8 +2136,11 @@ class System(SystemObject, ActivityMixin):
                        owner=None, lab_controller=None, lender=None,
                        hypervisor=None, loaned=None, memory=None,
                        kernel_type=None, cpu=None):
-        super(System, self).__init__()
+
+        # Ensure the fqdn is valid
         self.fqdn = fqdn
+
+        super(System, self).__init__()
         self.status = status
         self.contact = contact
         self.location = location
@@ -2152,6 +2156,15 @@ class System(SystemObject, ActivityMixin):
         self.memory = memory
         self.kernel_type = kernel_type
         self.cpu = cpu
+
+    @validates('fqdn')
+    def validate_fqdn(self, key, fqdn):
+        if not fqdn:
+            raise ValueError('System must have an associated FQDN')
+        if not is_valid_fqdn(fqdn):
+            raise ValueError('System has an invalid FQDN: %s' % fqdn)
+
+        return fqdn
 
     def to_xml(self, clone=False):
         """ Return xml describing this system """

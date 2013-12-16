@@ -46,12 +46,12 @@ class SystemRDFTest(unittest.TestCase):
         self.assert_((None, INV.controlledBy, None) not in graph)
 
     def test_cpu_speed_is_decimal(self):
-        system = data_setup.create_system(fqdn=u'cpu_speed_decimal.test_rdf')
+        system = data_setup.create_system(fqdn=u'cpu-speed-decimal.test-rdf.invalid')
         system.cpu = Cpu(speed=2666.67)
         session.flush()
         graph = self.describe(system)
         speed_literal = graph.value(
-                subject=URIRef(get_server_base() + 'view/cpu_speed_decimal.test_rdf#system'),
+                subject=URIRef(get_server_base() + 'view/cpu-speed-decimal.test-rdf.invalid#system'),
                 predicate=INV.cpuSpeed, any=False)
         self.assertEqual(speed_literal.datatype,
                 URIRef('http://www.w3.org/2001/XMLSchema#decimal'))

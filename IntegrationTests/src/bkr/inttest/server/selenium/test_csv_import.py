@@ -2,7 +2,7 @@
 # vim: set fileencoding=utf-8 :
 
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, is_text_present
+from bkr.inttest.server.webdriver_utils import login, logout, is_text_present
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.assertions import assert_has_key_with_value
 from bkr.server.model import Arch, System, OSMajor
@@ -42,6 +42,21 @@ class CSVImportTest(WebDriverTestCase):
             self.assertEquals(self.system.location, u'Under my desk')
             self.assert_(Arch.by_name(u'ia64') in self.system.arch)
             self.assert_(self.system.date_modified > orig_date_modified)
+
+        # attempting to import a system with no FQDN should fail
+        logout(self.browser)
+        self.import_csv((u'csv_type,fqdn,location,arch\n'
+                         u'system,'',Under my desk,ia64').encode('utf8'))
+        self.assertTrue(is_text_present(self.browser,
+                                        "Error importing system on line 2: "
+                                        "System must have an associated FQDN"))
+        # attempting to import a system with an invalid FQDN should fail
+        logout(self.browser)
+        self.import_csv((u'csv_type,fqdn,location,arch\n'
+                         u'system,invalid--fqdn,Under my desk,ia64').encode('utf8'))
+        self.assertTrue(is_text_present(self.browser,
+                                        "Error importing system on line 2: "
+                                        "System has an invalid FQDN: invalid--fqdn"))
 
     def test_keyvalue(self):
         orig_date_modified = self.system.date_modified
