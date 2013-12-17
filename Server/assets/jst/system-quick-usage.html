@@ -1,7 +1,7 @@
-<% if (!_.isEmpty(loaned)) { %>
+<% if (!_.isEmpty(current_loan)) { %>
   <p>
     <span class="label label-info">Loaned</span>
-    to <a href="mailto:<%- loaned.get('email_address') %>" title="<%- loaned.get('display_name') %> &lt;<%- loaned.get('email_address') %>&gt;"><%- loaned.get('user_name') %></a>.
+    to <a href="mailto:<%- current_loan.get('recipient').get('email_address') %>" title="<%- current_loan.get('recipient').get('display_name') %> &lt;<%- current_loan.get('recipient').get('email_address') %>&gt;"><%- current_loan.get('recipient').get('user_name') %></a>.
     <% /* IMPLEMENTME add "since", needs proper loan records */ %>
   </p>
 <% } %>
@@ -34,7 +34,7 @@
   <% } else if (can_take) { %>
     <a href="#IMPLEMENTME" class="btn btn-block">Take</a>
   <% } else if (can_borrow) { %>
-    <a href="#IMPLEMENTME" class="btn btn-block">Borrow</a>
+    <button type="button" class="btn btn-block borrow">Borrow</button>
   <% } else if (can_reserve) { %>
     <a href="#IMPLEMENTME" class="btn btn-block">Reserve</a>
   <% } else if (_.isEmpty(window.beaker_current_user)) { %>

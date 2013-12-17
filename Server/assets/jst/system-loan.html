@@ -1,0 +1,25 @@
+<% if (!_.isEmpty(current_loan)) { %>
+  <p>
+    The system is currently loaned to
+    <a href="mailto:<%- current_loan.get('recipient').get('email_address') %>" title="<%- current_loan.get('recipient').get('display_name') %> &lt;<%- current_loan.get('recipient').get('email_address') %>&gt;"><%- current_loan.get('recipient').get('user_name') %></a>.
+  </p>
+  <% if (current_loan.get('comment')) { %>
+  <p class="system-loan-comment"><%- current_loan.get('comment') %></p>
+  <% } %>
+<% } else { %>
+  <p>The system is not currently loaned.</p>
+<% } %>
+<% if (can_borrow || can_lend || can_return_loan) { %>
+  <div class="btn-group">
+    <% if (can_borrow) { %>
+      <button type="button" class="btn borrow" title="Lend this system to yourself">Borrow</button>
+    <% } %>
+    <% if (can_lend) { %>
+      <button type="button" class="btn lend">Lend</button>
+    <% } %>
+    <% if (can_return_loan) { %>
+      <button type="button" class="btn return">Return Loan</button>
+    <% } %>
+  </div>
+  <span class="sync-status"></span>
+<% } %>

@@ -171,9 +171,6 @@ $(document).ready(function(){
         ${label_for('loaned')}
         <div class="controls" py:if="value">
         <span id='loanee-name' class="form-control-static">${value.get('loaned')}</span>
-        <span py:strip="1" py:if="show_loan_options">
-         ${loan_widget.display(value, comment=loan_comment)}
-        </span>
         </div>
       </div>
       <div class="control-group">

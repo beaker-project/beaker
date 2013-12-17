@@ -40,8 +40,8 @@ from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import TaskSearchForm, SearchBar, \
     SystemForm, SystemProvision, SystemInstallOptions, SystemGroups, \
     SystemNotes, SystemKeys, SystemExclude, SystemHistory, SystemDetails, \
-    SystemCommandsForm, LabInfoForm, PowerActionHistory, LoanWidget, \
-    myPaginateDataGrid, PowerForm, AutoCompleteTextField, SystemActions
+    SystemCommandsForm, LabInfoForm, PowerActionHistory, \
+    myPaginateDataGrid, PowerForm, SystemActions
 from bkr.server.preferences import Preferences
 from bkr.server.authentication import Auth
 from bkr.server.xmlrpccontroller import RPCRoot
@@ -166,20 +166,6 @@ class Root(RPCRoot):
         log.info('Attaching root extension controller %s as %s',
                 controller, entry_point.name)
         locals()[entry_point.name] = controller
-
-    id         = widgets.HiddenField(name='id')
-    submit     = widgets.SubmitButton(name='submit')
-
-    autoUsers = AutoCompleteTextField(name='user',
-        search_controller=url("/users/by_name"), search_param="input",
-        result_name="matches")
-
-    loan_form     = widgets.TableForm(
-        'Loan',
-        fields = [id, autoUsers,],
-        action = 'save_data',
-        submit_text = _(u'Change'),
-    )
 
     system_form = SystemForm()
     power_form = PowerForm(name='power')
@@ -634,7 +620,6 @@ class Root(RPCRoot):
     def _get_system_options(self, system):
         options = {}
         our_user = identity.current.user
-        options['loan_widget'] = LoanWidget()
 
         if our_user:
             if (system.open_reservation and

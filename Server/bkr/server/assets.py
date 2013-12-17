@@ -52,6 +52,7 @@ def _create_env(**kwargs):
             'bootstrap-select-defaults.js',
             'recipe-tasks.js',
             'system-hardware.js',
+            'system-loan.js',
             'system-model.js',
             'system-owner.js',
             'system-quick-info.js',

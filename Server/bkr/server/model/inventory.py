@@ -414,8 +414,10 @@ class System(DeclarativeMappedObject, ActivityMixin):
         data['previous_reservation'] = self.dyn_reservations\
                 .filter(Reservation.finish_time != None)\
                 .order_by(Reservation.finish_time.desc()).first()
-        # XXX replace with actual loan data
-        data['loaned'] = self.loaned
+        if self.loaned is not None:
+            data['current_loan'] = self.get_loan_details()
+        else:
+            data['current_loan'] = None
         # XXX replace with actual access policy data?
         if identity.current.user:
             u = identity.current.user
@@ -427,7 +429,10 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_return'] = (self.open_reservation is not None
                     and self.open_reservation.type != 'recipe'
                     and self.can_unreserve(u))
-            data['can_borrow'] = self.can_borrow(u)
+            data['can_borrow'] = (self.loaned is not u and self.can_borrow(u))
+            data['can_lend'] = self.can_lend(u)
+            data['can_return_loan'] = (self.loaned is not None
+                    and self.can_return_loan(u))
             data['can_reserve'] = self.can_reserve(u)
         else:
             data['can_change_owner'] = False
@@ -437,6 +442,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_take'] = False
             data['can_return'] = False
             data['can_borrow'] = False
+            data['can_lend'] = False
+            data['can_return_loan'] = False
             data['can_reserve'] = False
         return data
 
@@ -824,14 +831,12 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if not self.loaned:
             return {}
         return {
-                   "recipient": self.loaned.user_name,
+                   "recipient": self.loaned,
                    "comment": self.loan_comment,
                }
 
     def grant_loan(self, recipient, comment, service):
         """Grants a loan to the designated user if permitted"""
-        if recipient is None:
-            recipient = identity.current.user.user_name
         self.change_loan(recipient, comment, service)
 
     def return_loan(self, service):

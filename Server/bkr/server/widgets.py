@@ -1434,8 +1434,6 @@ class SystemForm(Form):
             d["user_change"] = d["options"]["user_change"]
         if d["options"].has_key("user_change_text"):
             d["user_change_text"] = d["options"]["user_change_text"]
-        if d["options"].has_key("loan_widget"):
-            d["loan_widget"] = d["options"]["loan_widget"]
         if d["options"].has_key("running_job"):
             d["running_job"] = d["options"]["running_job"]
         d["id"] = d["value_for"]("id")
@@ -1699,63 +1697,6 @@ class JobWhiteboard(RPC, CompoundWidget):
         super(JobWhiteboard, self).update_params(d)
         d['form_attrs']['onsubmit'] = "return !remoteFormRequest(this, null, %s);" % (
             jsonify.encode(self.get_options(d)))
-
-
-class LoanWidget(RPC, TableForm, CompoundWidget):
-    template = "bkr.server.templates.loan_widget"
-    fields = [TextField(name='loaned', label='Loan To'),
-              TextArea(name='loan_comment', label='Comment'),
-              HiddenField(name='fqdn'),]
-    member_widgets = ['update_loan', 'return_loan']
-    params = ['attrs']
-    # Displayed in dialog
-    attrs = {'style': 'display:none'}
-    action = url("../systems/update_loan")
-    update_loan = MyButton(name='update', button_label='Update Loan')
-    return_loan = MyButton(name='return', button_label='Return Loan')
-    name = 'update_loan'
-
-    def __init__(self, *args, **kw):
-        super(LoanWidget, self).__init__(*args, **kw)
-        self.javascript.extend([LocalJSLink('bkr',
-            '/static/javascript/loan_v1.js'),
-            LocalJSLink('bkr',
-            '/static/javascript/jquery.timers-1.2.js')])
-
-    def display(self, value, comment, *args, **params):
-        # Form fields use their name as the key in 'value' arg
-        # to get their value
-        value['loan_comment'] = comment
-        return super(LoanWidget, self).display(value, *args, **params)
-
-    def update_params(self, d):
-        super(LoanWidget, self).update_params(d)
-        d['update_loan'].attrs.update({'onClick' :  "return ! "
-            "loan_action_remote_form_request('%s', %s, '%s', "
-            "update_loan_callback);" % (
-            d['name'], jsonify.encode(self.get_options(d)), url('../systems/update_loan'))})
-
-        d['return_loan'].attrs.update({'onClick' :  "return ! "
-            "loan_action_remote_form_request('%s', %s, '%s', "
-            "update_loan_callback);" % (
-            d['name'], jsonify.encode(self.get_options(d)), url('../systems/return_loan'))})
-
-        system = model.System.by_fqdn(d['value']['fqdn'], identity.current.user)
-        if identity.current.user and system.can_lend(identity.current.user) \
-                or system.can_borrow(identity.current.user):
-            for field in d['fields']:
-                if field.attrs.get('disabled'):
-                    del field.attrs['disabled']
-            d['update_loan'].attrs.update({'style': 'display:block'})
-        else:
-            for field in d['fields']:
-                field.attrs.update({'disabled': 'readonly'})
-            d['update_loan'].attrs.update({'style': 'display:none'})
-
-        if system.can_return_loan(identity.current.user):
-            d['return_loan'].attrs.update({'style': 'display:block'})
-        else:
-            d['return_loan'].attrs.update({'style': 'display:none'})
 
 
 class SystemActions(CompoundWidget):

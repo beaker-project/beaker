@@ -31,29 +31,6 @@ class SystemsController(controllers.Controller):
 
     @expose()
     @identity.require(identity.not_anonymous())
-    def return_loan(self, fqdn=None, **kw):
-        return self.update_loan(fqdn=fqdn, loaned=None)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def update_loan(self, fqdn=None, loaned=None, loan_comment=None, **kw):
-        """Update system loan and loan comment.
-
-        Returns the loanee
-        """
-        # The formal param 'loaned' is dictated to us by widgets.SystemForm...
-        loaning_to = loaned
-        system = System.by_fqdn(fqdn, identity.current.user)
-        try:
-            system.change_loan(loaning_to, loan_comment)
-        except ValueError as exc:
-            raise cherrypy.HTTPError(400, str(exc))
-        except InsufficientSystemPermissions as exc:
-            raise cherrypy.HTTPError(403, str(exc))
-        return loaning_to if loaning_to else ''
-
-    @expose()
-    @identity.require(identity.not_anonymous())
     def reserve(self, fqdn):
         """
         "Reserves" (a.k.a. "takes") the system with the given fully-qualified domain 
@@ -339,6 +316,11 @@ def _clear_netboot_form_trigger_fallback():
     raise NotFound404('This is a TurboGears controller method')
 
 # XXX need to move /view/FQDN to /systems/FQDN/
+@app.route('/systems/<fqdn>/', methods=['GET'])
+def get_system(fqdn):
+    system = _get_system_by_FQDN(fqdn)
+    return jsonify(system.__json__())
+
 @app.route('/systems/<fqdn>/', methods=['PATCH', 'POST'])
 @auth_required
 def update_system(fqdn):
@@ -540,9 +522,15 @@ def grant_loan(fqdn):
     system = _get_system_by_FQDN(fqdn)
     data = read_json_request(request)
     recipient = data.get("recipient")
+    if recipient is None:
+        user_name = identity.current.user.user_name
+    elif isinstance(recipient, basestring):
+        user_name = recipient
+    else:
+        user_name = recipient.get('user_name')
     comment = data.get("comment")
     with convert_internal_errors():
-        system.grant_loan(recipient, comment, service=u'HTTP')
+        system.grant_loan(user_name, comment, service=u'HTTP')
     return jsonify(system.get_loan_details())
 
 @app.route('/systems/<fqdn>/loans/+current', methods=['PATCH', 'PUT'])
