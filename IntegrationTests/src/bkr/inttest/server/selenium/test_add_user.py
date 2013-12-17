@@ -6,13 +6,24 @@ from bkr.inttest.server.webdriver_utils import login, is_text_present, \
 from bkr.inttest import data_setup
 
 
-class AddUserWD(WebDriverTestCase):
+class AddUser(WebDriverTestCase):
 
     def setUp(self):
         self.browser = self.get_browser()
+        login(self.browser)
 
     def tearDown(self):
         self.browser.quit()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1043390
+    def test_filter_autocomplete_works(self):
+        with session.begin():
+            data_setup.create_user(user_name=u'barackobama')
+        b = self.browser
+        b.get(get_server_base() + 'users')
+        b.find_element_by_name('user.text').send_keys('bara')
+        b.find_element_by_xpath('//span[@id="autoCompleteResultsSearch_user"]'
+                '//td[string(.)="barackobama"]')
 
     def test_add_invalid_details_existing_user(self):
         with session.begin():
@@ -27,7 +38,6 @@ class AddUserWD(WebDriverTestCase):
                 email_address=existing_email2)
 
         b = self.browser
-        login(b)
         b.get(get_server_base() + 'users')
         # Test with duplicate name
         b.find_element_by_name('user.text').send_keys(existing_name)
@@ -64,7 +74,6 @@ class AddUserWD(WebDriverTestCase):
             data_setup.create_user(user_name=existing_name, password='password',
                 email_address=existing_email)
         b = self.browser
-        login(b)
         b.get(get_server_base() + 'users')
         b.find_element_by_link_text('Add').click()
 
@@ -123,15 +132,6 @@ class AddUserWD(WebDriverTestCase):
         b.find_element_by_name('email_address').send_keys(valid_email)
         b.find_element_by_xpath('//form[@id=\'User\']').submit()
         is_text_present(b, '%s saved' % valid_user_3)
-
-class AddUser(WebDriverTestCase):
-
-    def setUp(self):
-        self.browser = self.get_browser()
-        login(self.browser)
-
-    def tearDown(self):
-        self.browser.quit()
 
     def test_adduser(self):
         user_1_name = data_setup.unique_name('anonymous%s')
