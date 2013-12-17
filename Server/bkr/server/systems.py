@@ -11,7 +11,7 @@ from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
         SystemPermission, SystemAccessPolicyRule, Hypervisor, Numa, \
-        LabController, KernelType
+        LabController, KernelType, SystemType
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
@@ -341,6 +341,45 @@ def update_system(fqdn):
                     new=new_owner)
             system.owner = new_owner
             changed = True
+        if 'status' in data:
+            new_status = SystemStatus.from_string(data['status'])
+            if new_status != system.status:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change status')
+                system.record_activity(user=identity.current.user,
+                        service=u'HTTP', action=u'Changed', field=u'Status',
+                        old=system.status, new=new_status)
+                system.status = new_status
+                if not new_status.bad and system.status_reason:
+                    # clear the status reason for "good" statuses
+                    system.record_activity(user=identity.current.user,
+                            service=u'HTTP', action=u'Changed', field=u'Status Reason',
+                            old=system.status_reason, new=None)
+                    system.status_reason = None
+                changed = True
+        if 'status_reason' in data:
+            new_reason = data['status_reason'] or None
+            if new_reason and not system.status.bad:
+                raise ValueError('Cannot set status reason when status is %s'
+                        % system.status)
+            if new_reason != system.status_reason:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change status reason')
+                system.record_activity(user=identity.current.user,
+                        service=u'HTTP', action=u'Changed', field=u'Status Reason',
+                        old=system.status_reason, new=new_reason)
+                system.status_reason = new_reason
+                changed = True
+        if 'type' in data:
+            new_type = SystemType.from_string(data['type'])
+            if new_type != system.type:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change type')
+                system.record_activity(user=identity.current.user,
+                        service=u'HTTP', action=u'Changed', field=u'Type',
+                        old=system.type, new=new_type)
+                system.type = new_type
+                changed = True
         if 'arches' in data:
             new_arches = [Arch.by_name(a) for a in (data['arches'] or [])]
             added_arches = set(new_arches).difference(system.arch)

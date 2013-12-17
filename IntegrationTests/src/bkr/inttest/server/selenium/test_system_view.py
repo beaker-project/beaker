@@ -142,12 +142,12 @@ class SystemViewTestWD(WebDriverTestCase):
     def test_system_view_condition_report(self):
         b = self.browser
         login(b)
-        self.go_to_system_view()
-        self.assertFalse(b.find_element_by_id('condition_report_row').is_displayed())
+        self.go_to_system_view(tab='Scheduler')
+        self.assertFalse(b.find_element_by_name('status_reason').is_enabled())
         with session.begin():
             self.system.status = SystemStatus.broken
-        self.go_to_system_view()
-        self.assertTrue(b.find_element_by_id('condition_report_row').is_displayed())
+        self.go_to_system_view(tab='Scheduler')
+        self.assertTrue(b.find_element_by_name('status_reason').is_enabled())
 
     def test_current_job(self):
         b = self.browser
@@ -211,10 +211,13 @@ class SystemViewTestWD(WebDriverTestCase):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_edit()
-        Select(b.find_element_by_name('status')).select_by_visible_text('Broken')
-        b.find_element_by_link_text('Save Changes').click()
-        self.assert_system_view_text('status', u'Broken')
+        self.go_to_system_view(tab='Scheduler')
+        tab = b.find_element_by_id('scheduler')
+        BootstrapSelect(tab.find_element_by_name('status'))\
+            .select_by_visible_text('Broken')
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]').click()
+        b.find_element_by_xpath('//span[@class="label label-warning"'
+                ' and text()="Out of service"]')
         with session.begin():
             session.refresh(self.system)
             self.assertEqual(self.system.status, SystemStatus.broken)
@@ -241,11 +244,13 @@ class SystemViewTestWD(WebDriverTestCase):
             self.system.status = SystemStatus.automated
         b = self.browser
         login(b)
-        self.go_to_system_edit()
-        Select(b.find_element_by_name('status')).select_by_visible_text('Broken')
-        b.find_element_by_link_text('Save Changes').click()
-        b.find_element_by_xpath('//h1[text()="%s"]' % self.system.fqdn)
-        self.assert_system_view_text('status', u'Broken')
+        self.go_to_system_view(tab='Scheduler')
+        tab = b.find_element_by_id('scheduler')
+        BootstrapSelect(tab.find_element_by_name('status'))\
+            .select_by_visible_text('Broken')
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]').click()
+        b.find_element_by_xpath('//span[@class="label label-warning"'
+                ' and text()="Out of service"]')
 
     def test_strips_surrounding_whitespace_from_fqdn(self):
         b = self.browser

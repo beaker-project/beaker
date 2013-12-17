@@ -13,6 +13,7 @@
         new SystemHardwareDetailsView({model: system, el: $('.system-hardware-details')});
         new SystemHardwareEssentialsView({model: system, el: $('#essentials')});
         new SystemLoanView({model: system, el: $('#loan')});
+        new SystemSchedulerConfigView({model: system, el: $('#scheduler')});
     });
   </script>
  </head>
@@ -39,7 +40,7 @@
       <li><a data-toggle="tab" href="#access-policy">Access Policy</a></li>
       <li class="nav-header">Configuration</li>
       <li><a data-toggle="tab" href="#power">Power</a></li>
-      <li><a data-toggle="tab" href="#IMPLEMENTME">Scheduler</a></li>
+      <li><a data-toggle="tab" href="#scheduler">Scheduler</a></li>
       <li><a data-toggle="tab" href="#exclude">Excluded Families</a></li>
       <li><a data-toggle="tab" href="#install">Install Options</a></li>
       <li><a data-toggle="tab" href="#notes">Notes</a></li>
@@ -115,6 +116,7 @@
       You do not have access to edit power settings for this system.
     </span>
    </div>
+      <div class="tab-pane" id="scheduler"></div>
    <div class="tab-pane" id="notes">
     ${widgets['notes'].display(method='get', action=widgets_action['notes'], value=value, options=widgets_options['notes'])} 
    </div>

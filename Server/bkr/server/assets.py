@@ -56,6 +56,7 @@ def _create_env(**kwargs):
             'system-model.js',
             'system-owner.js',
             'system-quick-info.js',
+            'system-scheduler-config.js',
             'access-policy.js',
             filters=['uglifyjs'],
             output='generated/beaker-%(version)s.js')

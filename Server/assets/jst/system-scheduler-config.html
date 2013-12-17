@@ -1,0 +1,48 @@
+<form class="form-horizontal">
+  <div class="control-group">
+    <label class="control-label" for="status">Condition</label>
+    <div class="controls">
+      <select id="status" name="status" <% if (!can_change_status) { %>disabled<% } %>>
+        <% _.each(possible_statuses, function (s) { %>
+          <option value="<%- s %>"><%- s %></option>
+        <% }) %>
+      </select>
+      <span class="help-block">
+        Automated systems are available to the scheduler.<br/>
+        Manual systems are not available to the scheduler, but may be 
+        reserved explicitly by users.<br/>
+        Broken systems are temporarily removed from service.<br/>
+        Removed systems have been removed from Beaker’s inventory entirely.
+      </span>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="status_reason">Condition Report</label>
+    <div class="controls">
+      <textarea id="status_reason" name="status_reason"
+          class="input-block-level" rows="4"
+          <% if (!can_change_status) { %>disabled<% } %>></textarea>
+      <span class="help-block">The condition report is displayed to all users. 
+      You can use it to record the reason why the system has been removed from 
+      service.</span>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="type">Type</label>
+    <div class="controls">
+      <select id="type" name="type" <% if (!can_change_type) { %>disabled<% } %>>
+        <% _.each(possible_types, function (t) { %>
+          <option value="<%- t %>"><%- t %></option>
+        <% }) %>
+      </select>
+      <span class="help-block">By default a recipe will only run on systems of type Machine.</span>
+    </div>
+  </div>
+  <% if (can_change_status || can_change_type) { %>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <button type="reset" class="btn">Revert</button>
+      <span class="sync-status"></span>
+    </div>
+  <% } %>
+</form>
