@@ -42,8 +42,8 @@ def _create_env():
             'bootstrap/js/bootstrap-collapse.js',
             'typeahead.js/dist/typeahead.js',
             'jquery.cookie.js',
-            'underscore-1.5.1.js',
-            'backbone-1.0.0.js',
+            'underscore/underscore.js',
+            'backbone/backbone.js',
             # ours
             webassets.Bundle(
                 'jst/*/*.html',
