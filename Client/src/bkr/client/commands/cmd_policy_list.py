@@ -10,21 +10,31 @@ bkr policy-list: Lists access policy rules for a system
 Synopsis
 --------
 
-| :program:`bkr policy-list` [*options*] --system=<fqdn>
+| :program:`bkr policy-list` [*options*] <fqdn>
 
 Description
 -----------
 
-Retrieves and prints the access policy rules for a system.
+Retrieves and prints the access policy rules for a system whose FQDN is <fqdn>.
 
 (Note: this command requires Python 2.6 or later)
 
 Options
 -------
 
-.. option:: --system <fqdn>
+.. option:: --mine
 
-   Retrieve the access policy for <fqdn>. This option must be specified exactly once.
+   Retrieves the access policy rules that have been granted directly to your user account.
+   This does not include permissions granted indirectly via group permissions or the system's
+   default permissions.
+
+.. option:: --user <username>
+
+   Retrieve the access policy rules for <username>. This option can be specified multiple times.
+
+.. option:: --group <group>
+
+   Retrieve the access policy rules for group, <group>. This option can be specified multiple times.
 
 .. option:: --format tabular, --format json
 
@@ -45,7 +55,11 @@ Examples
 
 List current policy list for a system::
 
-    bkr policy-list --system test1.example.com
+    bkr policy-list test1.example.com
+
+List current policy list for a system for users, user1 and user2::
+
+    bkr policy-list --user user1 --user user2 test1.example.com
 
 See also
 --------
@@ -65,9 +79,14 @@ class Policy_List(BeakerCommand):
     enabled = True
 
     def options(self):
-        self.parser.usage = "%%prog %s <options>" % self.normalized_name
-        self.parser.add_option('--system', metavar='FQDN',
-                               help='List access policy for FQDN')
+        self.parser.usage = "%%prog %s <options> <fqdn>" % self.normalized_name
+        self.parser.add_option('--mine', action="store_true", default=False,
+                               help='List your access policy rules'
+                               'for a system')
+        self.parser.add_option('--user', metavar='USER', action="append",
+                               help='List access policy rules for USER')
+        self.parser.add_option('--group', metavar='GROUP', action="append",
+                               help='List access policy rules for GROUP')
         self.parser.add_option('--format',
                                type='choice',
                                choices=['tabular', 'json'],
@@ -77,21 +96,35 @@ class Policy_List(BeakerCommand):
 
     def run(self, *args, **kwargs):
 
-        system = kwargs.get('system', None)
-        format = kwargs['format']
+        if len(args) != 1:
+            self.parser.error('Exactly one system fqdn must be given')
+        fqdn = args[0]
 
-        if args:
-            self.parser.error('This command does not accept any arguments')
-        if not system:
-            self.parser.error('Specify system using --system')
+        rules_mine = kwargs.get('mine', None)
+        rules_user = kwargs.get('user', None)
+        rules_group = kwargs.get('group', None)
+
+        # only one or none of the filtering criteria must be specified
+        if len(filter(lambda x: x,
+                      [rules_mine, rules_user, rules_group])) > 1:
+            self.parser.error('Only one filtering criteria allowed')
+
+        # build the query string for filtering, if any
+        query_string = {}
+        if rules_mine:
+            query_string['mine'] = True
+        elif rules_user:
+            query_string['user' ] = rules_user
+        elif rules_group:
+            query_string['group'] = rules_group
 
         self.set_hub(**kwargs)
         requests_session = self.requests_session()
-        rules_url = 'systems/%s/access-policy' % urllib.quote(system, '')
-        res = requests_session.get(rules_url)
+        rules_url = 'systems/%s/access-policy' % urllib.quote(fqdn, '')
+        res = requests_session.get(rules_url, params=query_string)
         res.raise_for_status()
 
-        if format == 'json':
+        if kwargs['format'] == 'json':
             print res.text
         else:
             policy_dict = json.loads(res.text)

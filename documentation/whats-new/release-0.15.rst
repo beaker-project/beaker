@@ -270,6 +270,9 @@ considered deprecated and should not be used in new Beaker installations.
 Bug fixes and minor enhancements
 --------------------------------
 
+The initial Beaker 0.15 release was based on Beaker 0.14.1, and does not
+include changes made in later Beaker 0.14.x maintenance releases.
+
 A number of other smaller fixes and enhancements have been included in this
 release.
 
@@ -377,6 +380,9 @@ The following fixes have been included in Beaker 0.15 maintenance updates.
 Beaker 0.15.1
 ~~~~~~~~~~~~~
 
+Compatible changes from this release and the initial Beaker 0.15 release
+were backported to create the Beaker 0.14.2 maintenance release.
+
 * Restoring feature parity with Beaker 0.14:
 
   * :issue:`1015131`: Automated systems may once again be manually reserved,
@@ -471,9 +477,69 @@ Beaker 0.15.1
 Beaker 0.15.2
 ~~~~~~~~~~~~~
 
-* Beaker client
+.. note::
 
-  * :issue:`1011378`: A new subcommand, ``policy-list`` has been
-    added. Using this command you can retrieve the current access policy
-    rules for a system.
+   As an important step in improving Beaker's support for IPv6-only testing,
+   the ``beaker-proxy`` daemon now listens on both IPv4 and IPv6 network
+   interfaces on the lab controller. The way this is implemented means that
+   the lab controller *must* have IPv6 support enabled or the ``beaker-proxy``
+   daemon won't start. (If not actually conducting IPv6-only testing, the lab
+   controller doesn't need to be externally accessible over IPv6 - it just
+   needs to accept ``::`` as designating the "unspecified address", so the
+   daemon can listen on all IPv4 and IPv6 interfaces on the server)
+
+In addition to the changes listed below, this release also includes all
+changes from the Beaker 0.14.3 and 0.14.4 maintenance releases.
+
+* Client updates
+
+  * :issue:`1011378`, :issue:`1014899`: The new subcommand ``policy-list``
+    provides command line access to the current access policy rules for a
+    system.
+    (Contributed by Amit Saha)
+  * :issue:`734212`, :issue:`1039498`: The new subcommands ``loan-grant`` and
+    ``loan-return`` provide command line access to grant and return system
+    loans.
+    (Contributed by Nick Coghlan)
+  * :issue:`910750`: beaker-wizard now provides explicit support for
+    creating Beakerlib libraries
+    (Contributed by Iveta Senfeldova, Martin Kyral and Amit Saha)
+
+
+* Updates to server utilities
+
+  * :issue:`968847`: ``beaker-log-delete`` now supports basic-auth in addition
+    to Kerberos authentication for remote log deletion. It has also been
+    renamed from ``log-delete`` (although the latter name remains in place
+    for backwards compatibility).
+    (Contributed by Raymond Mancy)
+  * :issue:`1012783`: beaker-sync-tasks now ensures the database and task repo
+    remain consistent during task syncing, avoiding a race condition that
+    could cause spurious recipe failures in the instance being updated.
+    (Contributed by Raymond Mancy)
+
+* Documentation updates
+
+  * :issue:`968844`: The
+    :ref:`Architecture Guide <architecture-archive-server>` and
+    :ref:`Administration Guide <archive-server>` now cover how to configure
+    an archive server.
+    (Contributed by Raymond Mancy)
+
+
+* Other updates
+
+  * :issue:`1020091`: Group specific root passwords are now visible in the web
+    UI for all members of that group, allowing secure sharing within Beaker,
+    similar to the sharing of the system wide default password.
+    (Contributed by Amit Saha)
+  * :issue:`1039514`: A regression in Beaker 0.15.1 where viewing some
+    systems anonymously could trigger an internal server error has been
+    resolved.
+    (Contributed by Nick Coghlan)
+  * :issue:`1021425`: The search bar that was erroneously added to the OS
+    versions page in Beaker 0.15 has once again been removed.
+    (Contributed by Raymond Mancy)
+  * :issue:`1021737`: Attempting to add a system with no data now reports an
+    error rather than triggering an internal server error.
     (Contributed by Amit Saha)

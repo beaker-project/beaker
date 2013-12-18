@@ -4,7 +4,7 @@ import xmlrpclib
 import datetime
 from sqlalchemy import and_
 from sqlalchemy.orm.exc import NoResultFound
-from flask import request, abort, jsonify
+from flask import request, jsonify
 from turbogears import expose, controllers, flash, redirect
 from bkr.server import identity
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
@@ -14,6 +14,9 @@ from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
+from bkr.server.flask_util import BadRequest400, Unauthorised401, \
+        Forbidden403, NotFound404, MethodNotAllowed405, \
+        convert_internal_errors, auth_required, read_json_request
 from turbogears.database import session
 import cherrypy
 
@@ -320,13 +323,55 @@ class SystemsController(controllers.Controller):
             result.setdefault(osmajor, []).append(arch)
         return result
 
+
+def _get_system_by_FQDN(fqdn):
+    """Get system by FQDN, reporting HTTP 404 if the system is not found"""
+    try:
+        return System.by_fqdn(fqdn, identity.current.user)
+    except NoResultFound:
+        raise NotFound404('System not found')
+
+
+@app.route('/systems/<fqdn>/loans/', methods=['POST'])
+@auth_required
+def grant_loan(fqdn):
+    """
+    Lends the system to the specified user (or borrows the system for
+    the current user if no other user is specified)
+
+    """
+    system = _get_system_by_FQDN(fqdn)
+    data = read_json_request(request)
+    recipient = data.get("recipient")
+    comment = data.get("comment")
+    with convert_internal_errors():
+        system.grant_loan(recipient, comment, service=u'HTTP')
+    return jsonify(system.get_loan_details())
+
+@app.route('/systems/<fqdn>/loans/+current', methods=['PATCH', 'PUT'])
+@auth_required
+def update_loan(fqdn):
+    """
+    Updates a loan on the system with the given fully-qualified
+    domain name.
+
+    Currently, the only permitted update is to return it.
+    """
+    system = _get_system_by_FQDN(fqdn)
+    data = read_json_request(request)
+    # This interprets both PATCH and PUT as PATCH
+    finish = data.get("finish")
+    with convert_internal_errors():
+        if finish == "now":
+            system.return_loan(service=u'HTTP')
+        else:
+            raise ValueError("Loan durations are not yet configurable")
+    return jsonify(system.get_loan_details())
+
 # XXX need to move /view/FQDN to /systems/FQDN/
 @app.route('/systems/<fqdn>/access-policy', methods=['GET'])
 def get_system_access_policy(fqdn):
-    try:
-        system = System.by_fqdn(fqdn, identity.current.user)
-    except NoResultFound:
-        return ('System not found', 404, {'content-type':'text/plain'})
+    system = _get_system_by_FQDN(fqdn)
 
     policy = system.custom_access_policy
     # For now, we don't distinguish between an empty policy and an absent one.
@@ -339,6 +384,26 @@ def get_system_access_policy(fqdn):
                  'label': unicode(permission.label)}
                 for permission in SystemPermission],
         })
+
+    # filtering, if any
+    if len(request.args.keys()) > 1:
+        raise BadRequest400('Only one filtering criteria allowd')
+
+    query = SystemAccessPolicyRule.query.\
+        filter(SystemAccessPolicyRule.policy == policy)
+
+    if request.args.get('mine'):
+        if not identity.current.user:
+            raise Unauthorised401("The 'mine' access policy filter requires authentication")
+        query = query.join(SystemAccessPolicyRule.user)\
+            .filter(User.user_name.in_([identity.current.user.user_name]))
+    elif request.args.get('user', None):
+        query = query.join(SystemAccessPolicyRule.user)\
+            .filter(User.user_name.in_(request.args.getlist('user')))
+    elif request.args.get('group', None):
+        query = query.join(SystemAccessPolicyRule.group)\
+            .filter(Group.group_name.in_(request.args.getlist('group')))
+
     return jsonify({
         'id': policy.id,
         'rules': [
@@ -347,7 +412,7 @@ def get_system_access_policy(fqdn):
              'group': rule.group.group_name if rule.group else None,
              'everybody': rule.everybody,
              'permission': unicode(rule.permission)}
-            for rule in policy.rules],
+            for rule in query],
         'possible_permissions': [
             {'value': unicode(permission),
              'label': unicode(permission.label)}
@@ -355,22 +420,16 @@ def get_system_access_policy(fqdn):
     })
 
 @app.route('/systems/<fqdn>/access-policy', methods=['POST', 'PUT'])
+@auth_required
 def save_system_access_policy(fqdn):
-    if not identity.current.user:
-        abort(401)
-    try:
-        system = System.by_fqdn(fqdn, identity.current.user)
-    except NoResultFound:
-        abort(404)
+    system = _get_system_by_FQDN(fqdn)
     if not system.can_edit_policy(identity.current.user):
-        abort(403)
+        raise Forbidden403('Cannot edit system policy')
     if system.custom_access_policy:
         policy = system.custom_access_policy
     else:
         policy = system.custom_access_policy = SystemAccessPolicy()
-    data = request.json
-    if not data:
-        abort(400)
+    data = read_json_request(request)
     # Figure out what is added, what is removed.
     # Rules are immutable, so if it has an id it is unchanged, 
     # if it has no id it is new.
@@ -397,28 +456,22 @@ def save_system_access_policy(fqdn):
     return '', 204
 
 @app.route('/systems/<fqdn>/access-policy/rules/', methods=['POST'])
+@auth_required
 def add_system_access_policy_rule(fqdn):
-    if not identity.current.user:
-        abort(401)
-    try:
-        system = System.by_fqdn(fqdn, identity.current.user)
-    except NoResultFound:
-        abort(404)
+    system = _get_system_by_FQDN(fqdn)
     if not system.can_edit_policy(identity.current.user):
-        abort(403)
+        raise Forbidden403('Cannot edit system policy')
     if system.custom_access_policy:
         policy = system.custom_access_policy
     else:
         policy = system.custom_access_policy = SystemAccessPolicy()
-    rule = request.json
-    if not rule:
-        abort(400)
+    rule = read_json_request(request)
     user = User.by_user_name(rule['user']) if rule['user'] else None
     group = Group.by_name(rule['group']) if rule['group'] else None
     try:
         permission = SystemPermission.from_string(rule['permission'])
     except ValueError:
-        abort(400)
+        raise BadRequest400
     new_rule = policy.add_rule(user=user, group=group,
             everybody=rule['everybody'], permission=permission)
     system.record_activity(user=identity.current.user, service=u'HTTP',
@@ -427,15 +480,11 @@ def add_system_access_policy_rule(fqdn):
     return '', 204
 
 @app.route('/systems/<fqdn>/access-policy/rules/', methods=['DELETE'])
+@auth_required
 def delete_system_access_policy_rules(fqdn):
-    if not identity.current.user:
-        abort(401)
-    try:
-        system = System.by_fqdn(fqdn, identity.current.user)
-    except NoResultFound:
-        abort(404)
+    system = _get_system_by_FQDN(fqdn)
     if not system.can_edit_policy(identity.current.user):
-        abort(403)
+        raise Forbidden403('Cannot edit system policy')
     if system.custom_access_policy:
         policy = system.custom_access_policy
     else:
@@ -447,7 +496,7 @@ def delete_system_access_policy_rules(fqdn):
         query = query.filter(SystemAccessPolicyRule.permission.in_(
                 request.args.getlist('permission', type=SystemPermission.from_string)))
     else:
-        abort(405)
+        raise MethodNotAllowed405
     if 'user' in request.args:
         query = query.join(SystemAccessPolicyRule.user)\
                 .filter(User.user_name.in_(request.args.getlist('user')))
@@ -457,7 +506,7 @@ def delete_system_access_policy_rules(fqdn):
     elif 'everybody' in request.args:
         query = query.filter(SystemAccessPolicyRule.everybody)
     else:
-        abort(405)
+        raise MethodNotAllowed405
     for rule in query:
         system.record_activity(user=identity.current.user, service=u'HTTP',
                 field=u'Access Policy Rule', action=u'Removed',

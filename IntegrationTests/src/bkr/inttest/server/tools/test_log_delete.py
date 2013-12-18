@@ -1,4 +1,8 @@
-import unittest, datetime, os, errno, shutil
+import unittest2 as unittest
+import datetime
+import os
+import errno
+import shutil
 from nose.plugins.skip import SkipTest
 import tempfile
 import subprocess
@@ -8,18 +12,9 @@ from bkr.server.model import LogRecipe, TaskBase, Job, Recipe, RenderedKickstart
 from bkr.inttest import data_setup, with_transaction, Process
 from bkr.server.tools import log_delete
 from turbogears.database import session
+from turbogears import config
 
 def setUpModule():
-    try:
-        import kerberos
-    except ImportError:
-        raise SkipTest('kerberos module not available, but log-delete requires it')
-
-    try:
-        import requests_kerberos
-    except ImportError:
-        raise SkipTest('requests_kerberos module not available, but log-delete requires it')
-
     # It makes our tests simpler here if they only need to worry about deleting 
     # logs which they themselves have created, rather than ones which might have 
     # been left behind from earlier tests in the run.
@@ -156,47 +151,76 @@ class LogDelete(unittest.TestCase):
 class RemoteLogDeletionTest(unittest.TestCase):
 
     def setUp(self):
-        self.logs_dir = tempfile.mkdtemp(prefix='beaker-test-log-delete')
-        self.archive_server = Process('archive_server.py',
-                args=['python', os.path.join(os.path.dirname(__file__), '..', '..', 'archive_server.py'),
-                      '--base', self.logs_dir],
-                listen_port=19998)
-        self.archive_server.start()
+        # XXX We should eventually configure these redirect tests
+        # to work with apache, until then, we do this...
+        test_id = self.id()
+        if test_id.endswith('test_301_redirect') or \
+              test_id.endswith('test_302_redirect'):
+            self.force_local_archive_server = True
+        else:
+            self.force_local_archive_server = False
 
-    def tearDown(self):
-        self.archive_server.stop()
-        shutil.rmtree(self.logs_dir, ignore_errors=True)
+        if 'BEAKER_LABCONTROLLER_HOSTNAME' in os.environ and not \
+            self.force_local_archive_server:
+            self.logs_dir = config.get('basepath.logs')
+            self.recipe_logs_dir = os.path.join(self.logs_dir, 'recipe')
+            self.log_server = os.environ['BEAKER_LABCONTROLLER_HOSTNAME']
+            self.log_server_url = 'http://%s/logs' % self.log_server
+            self.addCleanup(shutil.rmtree, self.recipe_logs_dir,  ignore_errors=True)
+        else:
+            self.logs_dir = tempfile.mkdtemp(prefix='beaker-test-log-delete')
+            self.recipe_logs_dir = os.path.join(self.logs_dir, 'recipe')
+            self.archive_server = Process('archive_server.py',
+                    args=['python', os.path.join(os.path.dirname(__file__), '..', '..', 'archive_server.py'),
+                          '--base', self.logs_dir],
+                listen_port=19998)
+            self.archive_server.start()
+            self.log_server = 'localhost:19998'
+            self.log_server_url = 'http://%s' % self.log_server
+            self.addCleanup(shutil.rmtree, self.logs_dir, ignore_errors=True)
+            self.addCleanup(self.archive_server.stop)
+        try:
+            os.mkdir(self.recipe_logs_dir)
+        except OSError, e:
+            if e.errno == errno.EEXIST:
+                # perhaps something else created it and did not clean it up
+                pass
+            else:
+                raise
+        if 'BEAKER_LABCONTROLLER_HOSTNAME' in os.environ and not \
+            self.force_local_archive_server:
+            # XXX This assumes we are running against apache, and allows
+            # WebDAV to delete stuff.
+            os.chmod(self.recipe_logs_dir, 02777)
+            orig_umask =  os.umask(000)
+            self.addCleanup(os.umask, orig_umask)
 
     def create_deleted_job_with_log(self, path, filename):
         with session.begin():
             job = data_setup.create_completed_job()
             job.to_delete = datetime.datetime.utcnow()
             session.flush()
-            job.recipesets[0].recipes[0].log_server = u'localhost:19998'
+            job.recipesets[0].recipes[0].log_server = self.log_server
             job.recipesets[0].recipes[0].logs[:] = [
-                    LogRecipe(server=u'http://localhost:19998/%s' % path, filename=filename)]
+                    LogRecipe(server='%s/%s' % (self.log_server_url, path),
+                        filename=filename)]
             for rt in job.recipesets[0].recipes[0].tasks:
                 rt.logs[:] = []
 
     def test_deletion(self):
-        os.mkdir(os.path.join(self.logs_dir, 'recipe'))
-        open(os.path.join(self.logs_dir, 'recipe', 'dummy.txt'), 'w').write('dummy')
-        os.mkdir(os.path.join(self.logs_dir, 'dont_tase_me_bro'))
+        open(os.path.join(self.recipe_logs_dir, 'dummy.txt'), 'w').write('dummy')
         self.create_deleted_job_with_log(u'recipe/', u'dummy.txt')
         self.assertEquals(log_delete.log_delete(), 0) # exit status
         self.assert_(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
-        self.assert_(os.path.exists(os.path.join(self.logs_dir, 'dont_tase_me_bro')))
 
     def test_301_redirect(self):
-        os.mkdir(os.path.join(self.logs_dir, 'recipe'))
-        open(os.path.join(self.logs_dir, 'recipe', 'dummy.txt'), 'w').write('dummy')
+        open(os.path.join(self.recipe_logs_dir, 'dummy.txt'), 'w').write('dummy')
         self.create_deleted_job_with_log(u'redirect/301/recipe/', u'dummy.txt')
         self.assertEquals(log_delete.log_delete(), 0) # exit status
         self.assert_(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))
 
     def test_302_redirect(self):
-        os.mkdir(os.path.join(self.logs_dir, 'recipe'))
-        open(os.path.join(self.logs_dir, 'recipe', 'dummy.txt'), 'w').write('dummy')
+        open(os.path.join(self.recipe_logs_dir, 'dummy.txt'), 'w').write('dummy')
         self.create_deleted_job_with_log(u'redirect/302/recipe/', u'dummy.txt')
         self.assertEquals(log_delete.log_delete(), 0) # exit status
         self.assert_(not os.path.exists(os.path.join(self.logs_dir, 'recipe')))

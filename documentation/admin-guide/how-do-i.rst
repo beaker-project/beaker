@@ -29,3 +29,18 @@ definition::
          --arch=x86_64 --machine=<FQDN>
 
 Refer to :ref:`bkr-machine-test` for more details.
+
+
+… store my log files somewhere other than the lab controller?
+-------------------------------------------------------------
+
+Beaker has the option of moving it's log files from the default
+location of the lab controller, to a remote archive server, via rsync.
+
+If your primary aim in using the archive server is to free up space
+on the lab controller, mounting a file system backed by bulk storage
+may be a better solution. However if this is not a preferred option,
+and if the size of Beaker's job logs files exceeds the storage available to your
+lab controllers, or if you need to centralize log storage for administrative
+reasons, an :ref:`archive server <architecture-archive-server>` may be a suitable approach.
+

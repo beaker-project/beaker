@@ -10,8 +10,9 @@ import sys
 import errno
 import shutil
 import urlparse
+import warnings
 import requests
-import requests_kerberos
+from turbogears import config
 from bkr.common import __version__
 from bkr.log import log_to_stream
 from optparse import OptionParser
@@ -20,11 +21,36 @@ from bkr.server.util import load_config
 from turbogears.database import session
 import logging
 
+try:
+    import requests_kerberos
+    import kerberos
+    _kerberos_available = True
+except ImportError:
+    _kerberos_available = False
+
 logger = logging.getLogger(__name__)
+warnings.filterwarnings('always', 'Use beaker-log-delete instead', DeprecationWarning)
 
 __description__ = 'Script to delete expired log files'
 
-def main():
+
+class MultipleAuth(requests.auth.AuthBase):
+
+    def __init__(self, auths, *args, **kwargs):
+        super(MultipleAuth, self).__init__(*args, **kwargs)
+        self.auths = auths
+
+    def __call__(self, request):
+        for auth in self.auths:
+            request = auth(request)
+        return request
+
+
+def legacy_main(argv=None):
+    warnings.warn("Use beaker-log-delete instead", DeprecationWarning)
+    return main(argv)
+
+def main(argv=None):
 
     parser = OptionParser('usage: %prog [options]',
             description='Permanently deletes log files from Beaker and/or '
@@ -42,7 +68,7 @@ def main():
     parser.add_option('--limit', default=None, type='int',
         help='Set a limit on the number of jobs whose logs will be deleted')
     parser.set_defaults(verbose=False, debug=False, dry_run=False)
-    options, args = parser.parse_args()
+    options, args = parser.parse_args(argv)
     load_config(options.config)
     # urllib3 installs a NullHandler, we can just remove it and let the messages propagate
     logging.getLogger('requests.packages.urllib3').handlers[:] = []
@@ -57,8 +83,25 @@ def log_delete(print_logs=False, dry=False, limit=None):
     failed = False
     if not dry:
         requests_session = requests.Session()
-        requests_session.auth = requests_kerberos.HTTPKerberosAuth(
-                             mutual_authentication=requests_kerberos.OPTIONAL)
+        log_delete_user = config.get('beaker.log_delete_user')
+        log_delete_password = config.get('beaker.log_delete_password')
+
+        available_auths = []
+        available_auth_names = []
+
+        if _kerberos_available:
+            available_auths.append(requests_kerberos.HTTPKerberosAuth(
+                mutual_authentication=requests_kerberos.DISABLED))
+            available_auth_names.append('Kerberos')
+
+        if log_delete_user and log_delete_password:
+            available_auths.append(requests.auth.HTTPDigestAuth(log_delete_user,
+                log_delete_password))
+            available_auth_names.append('HTTPDigestAuth')
+        requests_session.auth = MultipleAuth(available_auths)
+        logger.debug('Available authentication methods: %s' %
+            ', '.join(available_auth_names))
+
     for job, logs in Job.expired_logs(limit):
         logger.info('Deleting logs for %s', job.t_id)
         try:

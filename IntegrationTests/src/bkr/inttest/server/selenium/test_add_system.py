@@ -16,6 +16,33 @@ class AddSystem(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
+    # the default values are the same as that presented by the Web UI
+    def add_system(self, fqdn='', lender='', serial='', status='Automated',
+                   lab_controller='None', type='Laptop', private=False,
+                   vendor='', model='', location='', mac=''):
+        b = self.browser
+        b.find_element_by_name('fqdn').send_keys(fqdn)
+        b.find_element_by_name('lender').send_keys(lender)
+        Select(b.find_element_by_name('status')).select_by_visible_text(status)
+        if private:
+            b.find_element_by_name('private').click()
+        if status == 'Broken':
+            b.find_element_by_name('status_reason').send_keys(self.condition_report)
+        Select(b.find_element_by_name('lab_controller_id'))\
+            .select_by_visible_text(lab_controller)
+        Select(b.find_element_by_name('type')).select_by_visible_text(type)
+        b.find_element_by_name('serial').send_keys(serial)
+        b.find_element_by_name('vendor').send_keys(vendor)
+        b.find_element_by_name('model').send_keys(model)
+        b.find_element_by_name('location').send_keys(location)
+        b.find_element_by_name('mac_address').send_keys(mac)
+        b.find_element_by_name('form').submit()
+
+    def assert_system_view_text(self, field, val):
+        text = self.browser.find_element_by_xpath('//div[@class="controls" and '
+                'preceding-sibling::label/@for="form_%s"]/span' % field).text
+        self.assertEqual(text.strip(), val)
+
     def test_case_1(self):
         system_details = dict(fqdn = 'test-system-1',
                               lender = 'lender',
@@ -34,7 +61,7 @@ class AddSystem(WebDriverTestCase):
         b.find_element_by_link_text('Add').click()
         self.add_system(**system_details)
         self.assertEquals(b.find_element_by_xpath('//h1').text,
-                system_details['fqdn'])
+                          system_details['fqdn'])
         self.assert_system_view_text('lender', system_details['lender'])
         self.assert_system_view_text('model', system_details['model'])
         self.assert_system_view_text('location', system_details['location'])
@@ -141,28 +168,13 @@ class AddSystem(WebDriverTestCase):
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 'preexisting-system already exists!')
 
-    def add_system(self,fqdn=None,lender=None,serial=None,status=None,
-                   lab_controller=None,type=None,private=False,
-                   vendor=None,model=None,location=None,mac=None): 
-        b = self.browser
-        b.find_element_by_name('fqdn').send_keys(fqdn)
-        b.find_element_by_name('lender').send_keys(lender)
-        Select(b.find_element_by_name('status')).select_by_visible_text(status)
-        if private:
-            b.find_element_by_name('private').click()
-        if status == 'Broken':
-            b.find_element_by_name('status_reason').send_keys(self.condition_report)
-        Select(b.find_element_by_name('lab_controller_id'))\
-            .select_by_visible_text(lab_controller)
-        Select(b.find_element_by_name('type')).select_by_visible_text(type)
-        b.find_element_by_name('serial').send_keys(serial)
-        b.find_element_by_name('vendor').send_keys(vendor)
-        b.find_element_by_name('model').send_keys(model)
-        b.find_element_by_name('location').send_keys(location)
-        b.find_element_by_name('mac_address').send_keys(mac)
-        b.find_element_by_name('form').submit()
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1021737
+    def test_empty_fqdn(self):
 
-    def assert_system_view_text(self, field, val):
-        text = self.browser.find_element_by_xpath('//div[@class="controls" and '
-                'preceding-sibling::label/@for="form_%s"]/span' % field).text
-        self.assertEqual(text.strip(), val)
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Add').click()
+        self.add_system()
+        error_msg = b.find_element_by_css_selector(
+            '.control-group.error .help-inline').text
+        self.assertEquals(error_msg, 'Please enter a value')

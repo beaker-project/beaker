@@ -34,6 +34,8 @@ own man page. This man page is reserved for common options and features.
 * :manpage:`bkr-job-watch(1)` -- Watch the progress of a Beaker job
 * :manpage:`bkr-list-labcontrollers(1)` -- List Beaker lab controllers
 * :manpage:`bkr-list-systems(1)` -- List Beaker systems
+* :manpage:`bkr-loan-grant(1)` -- Grant a loan for a Beaker system
+* :manpage:`bkr-loan-return(1)` -- Return a current Beaker system loan
 * :manpage:`bkr-machine-test(1)` -- Generate Beaker job to test a system
 * :manpage:`bkr-policy-grant(1)` -- Grant permissions through an access policy
 * :manpage:`bkr-policy-revoke(1)` -- Remove grant permissions from an access policy

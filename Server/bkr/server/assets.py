@@ -29,7 +29,8 @@ def _create_env():
     env.register('css',
             'style.less',
             filters=['less', 'cssrewrite', YCSSMin()],
-            output='generated/beaker-%(version)s.css')
+            output='generated/beaker-%(version)s.css',
+            depends=['*.less', 'bootstrap/less/*.less'])
     env.register('js',
             # third-party
             'bootstrap/js/bootstrap-transition.js',

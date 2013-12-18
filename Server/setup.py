@@ -169,7 +169,7 @@ data_files = \
 setup(
     name="bkr.server",
     namespace_packages = ['bkr'],
-    version='0.15.1',
+    version='0.15.2',
     # uncomment the following lines if you fill them out in release.py
     description=description,
     author=author,
@@ -214,7 +214,8 @@ setup(
             'product-update = bkr.server.tools.product_update:main',
             'beakerd = bkr.server.tools.beakerd:main',
             'nag-mail = bkr.server.tools.nag_email:main',
-            'log-delete = bkr.server.tools.log_delete:main',
+            'log-delete = bkr.server.tools.log_delete:legacy_main',
+            'beaker-log-delete = bkr.server.tools.log_delete:main',
             'beaker-check = bkr.server.tools.check_beaker:main',
             'beaker-refresh-ldap = bkr.server.tools.refresh_ldap:main',
             'beaker-repo-update = bkr.server.tools.repo_update:main',

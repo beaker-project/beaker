@@ -2,7 +2,6 @@
 @import "bootstrap/less/responsive.less";
 @import "font-awesome/less/font-awesome.less";
 @import "typeahead.js-bootstrap.less";
-@import "job-matrix.less";
 @import "datatables-bootstrap.less";
 
 // overrides for Bootstrap variables
@@ -100,91 +99,6 @@ td form, td input, td select {
 .statusRunning { color: @blueDark; }
 .statusDirty { font-style: italic; }
 
-// jobs, recipe sets, and recipes on job page and recipe page
-table.job, table.recipe {
-    & > tbody > tr {
-        & > th {
-            text-align: right;
-        }
-        & > th, & > td {
-            border: none;
-        }
-    }
-}
-div.recipeset {
-    border: 2px solid @tableBorder;
-    padding: 1em;
-    margin: 1em 0;
-}
-div.recipe {
-    margin-top: 1em;
-    border-top: 2px solid @tableBorder;
-    padding-top: 1em;
-}
-div.recipe .tab-content {
-    // if the results table overflows we want the viewport to scroll, not the tab pane
-    // https://bugzilla.redhat.com/show_bug.cgi?id=1014962
-    overflow: visible !important;
-}
-table.recipe {
-    margin-bottom: 0;
-}
-
-// recipe tasks on job and recipe pages (and elsewhere)
-table.tasks {
-    & > tbody {
-        border-top: 2px solid @tableBorder;
-    }
-    & > tbody:nth-child(odd) > tr {
-        & > td, & > th {
-            background-color: @tableBackgroundAccent;
-        }
-    }
-    // need to set even tbodies to white instead of leaving them transparent so
-    // that they occlude the recipe set border underneath them, in case the
-    // results table overflows
-    // https://bugzilla.redhat.com/show_bug.cgi?id=1014962
-    & > tbody:nth-child(even) > tr {
-        & > td, & > th {
-            background-color: #ffffff;
-        }
-    }
-    // need to repeat hover style here to override the striping
-    & > tbody > tr:hover {
-        & > td, & > th {
-            background-color: @tableBackgroundHover;
-        }
-    }
-    td.logs ul {
-        margin: 0;
-    }
-    td.logs li {
-        max-width: 18em;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-    }
-}
-
-// elements from master.kid
-.motd, .flash {
-    margin-top: 20px;
-}
-footer {
-    .muted;
-    text-align: right;
-}
-@media (max-width: 1200px) {
-    .navbar .navbar-wide-viewport-only {
-        display: none;
-    }
-}
-@media (max-width: 1024px) {
-    .navbar .brand {
-        display: none;
-    }
-}
-
 // typeaheads
 .tt-dropdown-menu {
     min-width: 240px;
@@ -194,12 +108,8 @@ footer {
     margin-left: 0.5em;
 }
 
-// reserve workflow
-.reserveworkflow {
-    input, select {
-        .input-xlarge;
-    }
-    select#form_distro_tree_id {
-        .input-xxlarge;
-    }
-}
+@import "master.less";
+@import "job.less";
+@import "recipe-tasks.less";
+@import "reserve-workflow.less";
+@import "job-matrix.less";

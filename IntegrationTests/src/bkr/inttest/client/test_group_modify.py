@@ -180,8 +180,7 @@ class GroupModifyTest(unittest.TestCase):
         session.expire(self.group)
         with session.begin():
             group = self.group
-            self.assertEquals(group.root_password, crypt.crypt(good_password,
-                group.root_password))
+            self.assertEquals(group.root_password, good_password)
             self.assertEquals(group.activity[-1].action, u'Changed')
             self.assertEquals(group.activity[-1].field_name, u'Root Password')
             self.assertEquals(group.activity[-1].user.user_id,
@@ -199,8 +198,7 @@ class GroupModifyTest(unittest.TestCase):
             session.expire(self.group)
             with session.begin():
                 group = self.group
-                self.assertEquals(group.root_password, crypt. \
-                    crypt(good_password, group.root_password))
+                self.assertEquals(group.root_password, good_password)
 
     def test_group_modify_group_and_display_names(self):
         display_name = 'Shiny New Display Name'
