@@ -12,7 +12,7 @@ from optparse import OptionParser
 import pkg_resources
 import subprocess
 import gevent, gevent.hub, gevent.socket, gevent.event, gevent.monkey
-from kobo.exceptions import ShutdownException
+from bkr.labcontroller.exceptions import ShutdownException
 from bkr.log import log_to_stream, log_to_syslog
 from bkr.common.helpers import SensitiveUnicode
 from bkr.labcontroller.config import load_conf, get_conf
@@ -239,7 +239,7 @@ def main():
     if pid_file is None:
         pid_file = conf.get("PROVISION_PID_FILE", "/var/run/beaker-lab-controller/beaker-provision.pid")
 
-    # kobo.client.HubProxy will try to log some stuff, even though we 
+    # HubProxy will try to log some stuff, even though we 
     # haven't configured our logging handlers yet. So we send logs to stderr 
     # temporarily here, and configure it again below.
     log_to_stream(sys.stderr, level=logging.WARNING)

@@ -178,7 +178,7 @@ def main():
     if pid_file is None:
         pid_file = conf.get("PROXY_PID_FILE", "/var/run/beaker-lab-controller/beaker-proxy.pid")
 
-    # kobo.client.HubProxy will try to log some stuff, even though we 
+    # HubProxy will try to log some stuff, even though we 
     # haven't configured our logging handlers yet. So we send logs to stderr 
     # temporarily here, and configure it again below.
     log_to_stream(sys.stderr, level=logging.WARNING)

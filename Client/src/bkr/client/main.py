@@ -8,8 +8,7 @@ from optparse import Option, IndentedHelpFormatter
 import xmlrpclib
 import cgi
 
-from kobo.cli import CommandOptionParser
-from kobo.client import ClientCommandContainer
+from bkr.client.command import CommandOptionParser, ClientCommandContainer, Command
 from bkr.common import __version__
 
 

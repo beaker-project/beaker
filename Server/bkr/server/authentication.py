@@ -43,7 +43,8 @@ class Auth(RPCRoot):
     @cherrypy.expose
     def renew_session(self, *args, **kw):
         """
-        Renew session, here to support kobo.
+        Renew session, here to support the login method
+        that was migrated from kobo.
         """
         if identity.current.anonymous:
             return True

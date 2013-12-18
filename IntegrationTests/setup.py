@@ -31,6 +31,5 @@ setup(
         'bkr.server',
         'bkr.client',
         'selenium',
-        'kobo',
     ],
 )

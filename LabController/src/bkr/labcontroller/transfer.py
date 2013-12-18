@@ -10,8 +10,8 @@ from daemon import pidfile
 from optparse import OptionParser
 from bkr.labcontroller.proxy import Watchdog
 from bkr.labcontroller.config import get_conf, load_conf
-from kobo.exceptions import ShutdownException
-from kobo.tback import Traceback, set_except_hook
+from bkr.labcontroller.exceptions import ShutdownException
+from bkr.labcontroller.tback import Traceback, set_except_hook
 from bkr.log import log_to_stream, log_to_syslog
 
 set_except_hook()
@@ -80,7 +80,7 @@ def main():
     if not conf.get('ARCHIVE_SERVER'):
         sys.stderr.write('Archive server settings are missing from config file\n')
         sys.exit(1)
-    # kobo.client.HubProxy will try to log some stuff, even though we 
+    # HubProxy will try to log some stuff, even though we 
     # haven't configured our logging handlers yet. So we send logs to stderr 
     # temporarily here, and configure it again below.
     log_to_stream(sys.stderr, level=logging.WARNING)

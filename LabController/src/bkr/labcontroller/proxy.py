@@ -23,13 +23,10 @@ from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound, LengthRequi
 from werkzeug.utils import redirect
 from werkzeug.http import parse_content_range_header
 from werkzeug.wsgi import wrap_file
-import kobo.conf
-from kobo.client import HubProxy
-from kobo.exceptions import ShutdownException
-from kobo.xmlrpc import CookieTransport, SafeCookieTransport
+from bkr.common.hub import HubProxy
+from bkr.common.xmlrpc import CookieTransport, SafeCookieTransport
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
-from kobo.process import kill_process_group
 import utils
 try:
     from subprocess import check_output
@@ -41,7 +38,9 @@ logger = logging.getLogger(__name__)
 def replace_with_blanks(match):
     return ' ' * (match.end() - match.start() - 1) + '\n'
 
-# Based on kobo.xmlrpc.retry_request_decorator
+# Originally based on kobo.xmlrpc.retry_request_decorator
+# Now that relevant pieces of kobo have been added directly
+# to the Beaker code, should be merged into bkr.common.xmlrpc
 def retry_transport(transport_class, retry_count=5, retry_delay=30,
                     exceptions=(socket.error, socket.herror,
                                 socket.gaierror, socket.timeout)):
@@ -72,6 +71,7 @@ def retry_transport(transport_class, retry_count=5, retry_delay=30,
     RetryTransportClass.__doc__ = transport_class.__name__
     return RetryTransportClass
 
+
 class ProxyHelper(object):
 
 
@@ -94,7 +94,7 @@ class ProxyHelper(object):
             TransportClass = retry_transport(SafeCookieTransport)
         else:
             TransportClass = retry_transport(CookieTransport)
-        self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
+        self.hub = HubProxy(logger=logging.getLogger('bkr.common.hub.HubProxy'), conf=self.conf,
                 transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
         self.log_storage = LogStorage(self.conf.get("CACHEPATH"),
                 "%s://%s/beaker/logs" % (self.conf.get('URL_SCHEME',

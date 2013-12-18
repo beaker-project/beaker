@@ -99,7 +99,6 @@ BuildRequires:  systemd
 %endif
 
 # As above, these client dependencies are needed in build because of sphinx
-BuildRequires:  kobo-client >= 0.3
 BuildRequires:  python-krbV
 BuildRequires:  python-lxml
 BuildRequires:  libxslt-python
@@ -109,7 +108,6 @@ BuildRequires:  libxslt-python
 Summary:        Client component for talking to Beaker server
 Group:          Applications/Internet
 Requires:       python
-Requires:       kobo-client >= 0.3
 Requires:	python-setuptools
 Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
@@ -161,7 +159,6 @@ Requires:       python-netaddr
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
 Requires:       ovirt-engine-sdk
-Requires:  	kobo-client >= 0.3
 Requires:       python-itsdangerous
 Requires:       python-decorator
 Requires:       python-flask
@@ -187,7 +184,6 @@ Requires:       %{name}-client = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       python-nose >= 0.10
 Requires:       selenium-python >= 2.12
-Requires:       kobo
 Requires:       java-openjdk >= 1:1.6.0
 Requires:       Xvfb
 Requires:       firefox
@@ -217,8 +213,6 @@ Requires:       telnet
 Requires:       sudo
 Requires:       python-cpio
 Requires:	%{name} = %{version}-%{release}
-Requires:       kobo >= 0.3.2
-Requires:	kobo-client
 Requires:	python-setuptools
 Requires:	python-xmltramp
 Requires:       python-krbV
