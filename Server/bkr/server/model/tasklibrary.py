@@ -132,9 +132,14 @@ class TaskLibrary(object):
     def get_rpm_path(self, rpm_name):
         return os.path.join(self.rpmspath, rpm_name)
 
+    def _unlink_locked_rpms(self, rpm_names):
+        # Internal call that assumes the flock is already held
+        for rpm_name in rpm_names:
+            unlink_ignore(self.get_rpm_path(rpm_name))
+
     def _unlink_locked_rpm(self, rpm_name):
         # Internal call that assumes the flock is already held
-        unlink_ignore(self.get_rpm_path(rpm_name))
+        self._unlink_locked_rpms([rpm_name])
 
     def unlink_rpm(self, rpm_name):
         """
@@ -199,7 +204,17 @@ class TaskLibrary(object):
                 shutil.copytree(src_meta, dst_meta)
 
     def update_task(self, rpm_name, write_rpm):
-        """Updates the specified task
+        tasks = self.update_tasks([(rpm_name, write_rpm)])
+        return tasks[0]
+
+    def update_tasks(self, rpm_names_write_rpm):
+        """Updates the the task rpm library
+
+           rpm_names_write_rpm is a list of two element tuples,
+           where the first element is the name of the rpm to be written, and
+           the second element is callable that takes a file object as its
+           only arg and writes to that file object.
+
 
            write_rpm must be a callable that takes a file object as its
            sole argument and populates it with the raw task RPM contents
@@ -210,18 +225,39 @@ class TaskLibrary(object):
         # XXX (ncoghlan): How do we get rid of that assumption about the
         # transaction handling? Assuming we're *not* already in a transaction
         # won't work either.
-        rpm_path = self.get_rpm_path(rpm_name)
-        upgrade = AtomicFileReplacement(rpm_path)
-        f = upgrade.create_temp()
+
+        to_sync = []
         try:
-            write_rpm(f)
-            f.flush()
-            f.seek(0)
-            task = Task.create_from_taskinfo(self.read_taskinfo(f))
-            old_rpm_name = task.rpm
-            task.rpm = rpm_name
+            for rpm_name, write_rpm in rpm_names_write_rpm:
+                rpm_path = self.get_rpm_path(rpm_name)
+                upgrade = AtomicFileReplacement(rpm_path)
+                to_sync.append((rpm_name, upgrade,))
+                f = upgrade.create_temp()
+                write_rpm(f)
+                f.flush()
+        except Exception, e:
+            log.error('Error: Failed to copy task %s, aborting.' % rpm_name)
+            for __, atomic_file in to_sync:
+                atomic_file.destroy_temp()
+            raise
+
+        old_rpms = []
+        new_tasks = []
+
+
+        try:
             with Flock(self.rpmspath):
-                upgrade.replace_dest()
+                for rpm_name, atomic_file in to_sync:
+                    f = atomic_file.temp_file
+                    f.seek(0)
+                    task = Task.create_from_taskinfo(self.read_taskinfo(f))
+                    old_rpm_name = task.rpm
+                    task.rpm = rpm_name
+                    if old_rpm_name:
+                        old_rpms.append(old_rpm_name)
+                    atomic_file.replace_dest()
+                    new_tasks.append(task)
+
                 try:
                     self._update_locked_repo()
                 except:
@@ -229,24 +265,24 @@ class TaskLibrary(object):
                     # so the Task possibly defined above, or changes to an existing
                     # task, will never by written to the database (even if it was
                     # the _update_locked_repo() call that failed).
-                    # Accordingly, we also throw away the newly created RPM.
-                    self._unlink_locked_rpm(rpm_name)
+                    # Accordingly, we also throw away the newly created RPMs.
+                    log.error('Failed to update task library repo, aborting')
+                    self._unlink_locked_rpms([task.rpm for task in new_tasks])
                     raise
-                # New task has been added, throw away the old one
-                if old_rpm_name:
-                    self._unlink_locked_rpm(old_rpm_name)
-                    # Since it existed when we called _update_locked_repo()
-                    # above, this RPM will still be referenced from the
-                    # metadata, albeit not as the latest version.
-                    # However, it's too expensive (several seconds of IO
-                    # with the task repo locked) to do it twice for every
-                    # task update, so we rely on the fact that tasks are
-                    # referenced by name rather than requesting specific
-                    # versions, and thus will always grab the latest.
+                # Since it existed when we called _update_locked_repo()
+                # metadata, albeit not as the latest version.
+                # However, it's too expensive (several seconds of IO
+                # with the task repo locked) to do it twice for every
+                # task update, so we rely on the fact that tasks are
+                # referenced by name rather than requesting specific
+                # versions, and thus will always grab the latest.
+                self._unlink_locked_rpms(old_rpms)
+
         finally:
-            # This is a no-op if we successfully replaced the destination
-            upgrade.destroy_temp()
-        return task
+            # Some or all of these may have already been destroyed
+            for __, atomic_file in to_sync:
+                atomic_file.destroy_temp()
+        return new_tasks
 
     def get_rpm_info(self, fd):
         """Returns rpm information by querying a rpm"""

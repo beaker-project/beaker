@@ -16,18 +16,18 @@ You can upgrade to a new maintenance release within the same *x.y* series with
 no interruption to Beaker.
 
 Use Yum to upgrade the relevant packages. The packages will automatically 
-restart any running Beaker daemons, but you should explicitly reload the Apache 
-server.
+restart any running Beaker daemons, but you should signal the Apache server to 
+reload its configuration.
 
 On the Beaker server::
 
     yum upgrade beaker-server
-    service httpd reload
+    service httpd graceful
 
 Then, on the lab controllers::
 
     yum upgrade beaker-lab-controller
-    service httpd reload
+    service httpd graceful
 
 Feature releases
 ----------------

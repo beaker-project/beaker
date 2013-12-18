@@ -195,6 +195,9 @@ Turn on Apache::
     $ chkconfig httpd on
     $ service httpd start
 
+
+.. _archive-server:
+
 By default, Beaker stores log files for jobs locally on the lab controller
 and publishes them through Apache. The ``beaker-transfer`` daemon can be
 configured to move log files for completed recipes to a separate archive
@@ -249,9 +252,6 @@ Apache, 8000 for test system access to beaker-proxy and 69 for TFTP) must
 also be open in the lab controller firewall.
 
 .. todo::
-
-   Properly document archive server feature and configuration, see
-   https://bugzilla.redhat.com/show_bug.cgi?id=968844
 
    Document console server integration, see
    https://bugzilla.redhat.com/show_bug.cgi?id=1029737

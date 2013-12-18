@@ -9,6 +9,7 @@ from bkr.inttest import data_setup, get_server_base
 
 # Provision messages
 
+MSG_ANONYMOUS = "You are not logged in."
 MSG_NO_ACCESS = "You do not have access to provision this system."
 MSG_LOST_ACCESS = "After returning this system, you will no longer be able to provision it."
 MSG_MANUAL = "Reserve this system to provision it."
@@ -29,6 +30,14 @@ class SystemAvailabilityTest(WebDriverTestCase):
 
     def tearDown(self):
         self.browser.quit()
+
+    def test_anonymous(self):
+        with session.begin():
+            owner = data_setup.create_user(password=u'testing')
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    owner=owner, lab_controller=self.lc)
+        b = self.browser
+        self.check_cannot_provision(system, MSG_ANONYMOUS)
 
     def test_own_system(self):
         with session.begin():

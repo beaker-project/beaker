@@ -289,9 +289,12 @@ Beaker 0.14.4
 
    As an important step in improving Beaker's support for IPv6-only testing,
    the ``beaker-proxy`` daemon now listens on both IPv4 and IPv6 network
-   interfaces on the lab controller. The way this is implemented in Beaker
-   0.14.4 means that the lab controller *must* have an IPv6 interface
-   defined or the ``beaker-proxy`` daemon won't start.
+   interfaces on the lab controller. The way this is implemented means that
+   the lab controller *must* have IPv6 support enabled or the ``beaker-proxy``
+   daemon won't start. (If not actually conducting IPv6-only testing, the lab
+   controller doesn't need to be externally accessible over IPv6 - it just
+   needs to accept ``::`` as designating the "unspecified address", so the
+   daemon can listen on all IPv4 and IPv6 interfaces on the server)
 
 Provisioning updates:
 

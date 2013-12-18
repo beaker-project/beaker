@@ -184,6 +184,21 @@ class SystemPermissionsTest(unittest.TestCase):
     def tearDown(self):
         session.rollback()
 
+    # This ensures we "fail secure" if any code erroneously checks
+    # permissions without ensure the user is authenticated first
+    # For example, https://bugzilla.redhat.com/show_bug.cgi?id=1039514
+    def test_no_anonymous_access(self):
+        self.assertRaises(RuntimeError, self.system.can_change_owner, None)
+        self.assertRaises(RuntimeError, self.system.can_edit_policy, None)
+        self.assertRaises(RuntimeError, self.system.can_edit, None)
+        self.assertRaises(RuntimeError, self.system.can_lend, None)
+        self.assertRaises(RuntimeError, self.system.can_borrow, None)
+        self.assertRaises(RuntimeError, self.system.can_return_loan, None)
+        self.assertRaises(RuntimeError, self.system.can_reserve, None)
+        self.assertRaises(RuntimeError, self.system.can_reserve_manually, None)
+        self.assertRaises(RuntimeError, self.system.can_unreserve, None)
+        self.assertRaises(RuntimeError, self.system.can_power, None)
+
     def test_can_change_owner(self):
         self.assertTrue(self.system.can_change_owner(self.owner))
         self.assertTrue(self.system.can_change_owner(self.admin))

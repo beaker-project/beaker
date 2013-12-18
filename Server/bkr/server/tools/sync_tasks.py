@@ -72,11 +72,13 @@ import lxml.etree as ET
 import logging
 import urllib2
 from optparse import OptionParser
+from shutil import rmtree
 
 import turbogears.config
 from turbogears.database import session
 
-from bkr.common.helpers import atomically_replaced_file, unlink_ignore, siphon
+from bkr.common.helpers import atomically_replaced_file, unlink_ignore, siphon, \
+    Flock
 from bkr.server.model import TaskLibrary, Task
 from bkr.server.util import load_config
 
@@ -100,6 +102,9 @@ def find_task_version_url(task_xml):
         xml.find('./rpms/rpm').attrib['url']
 
 class TaskLibrarySync:
+
+
+    batch_size = 100
 
     def __init__(self, remote=None):
 
@@ -176,82 +181,56 @@ class TaskLibrarySync:
             self.logger.error('Error message: %s' % e)
             return None
 
-    def update_db(self):
+    def sync_tasks(self, urls_to_sync):
+        """Syncs remote tasks to the local task library.
 
-        self.logger.info('Updating local Beaker database..')
+        sync_local_tasks() downloads tasks in batches and syncs
+        them to the local task library. If the operation fails at some point
+        any batches that have already been processed will be preserved.
+        """
+        def write_data_from_url(task_url):
 
-        for task_rpm in self.tasks_added:
+            def _write_data_from_url(f):
+                siphon(urllib2.urlopen(task_url), f)
+                f.flush()
 
-            self.logger.debug('Adding %s'% task_rpm)
-
-            with open(os.path.join(self.task_dir,task_rpm)) as task_data:
-                try:
-                    def write_data(f):
-                        siphon(task_data, f)
-                    session.begin()
-                    task = self.tasklib.update_task(task_rpm, write_data)
-                    session.commit()
-                except Exception, e:
-                    session.rollback()
-                    session.close()
-                    self.logger.exception('Error adding task %s: %s' % (task_rpm, e))
-                    unlink_ignore(os.path.join(self.task_dir, task_rpm))
-
-                else:
-                    session.close()
-                    self.logger.debug('Successfully added %s' % task.rpm)
-
-        # Update task repo
-        self.logger.info('Creating repodata..')
-        self.tasklib.update_repo()
-
-        return
-
-    def _download(self, task_url):
-
-        task_rpm_name = os.path.split(task_url)[1]
-        rpm_file = os.path.join(self.task_dir, task_rpm_name)
-
-        if not os.path.exists(rpm_file):
-
+            return _write_data_from_url
+        urls_to_sync.sort()
+        tasks_and_writes = []
+        for task_url in urls_to_sync:
+            task_rpm_name = os.path.split(task_url)[1]
+            tasks_and_writes.append((task_rpm_name, write_data_from_url(task_url),))
+        # We section the batch processing up to allow other processes
+        # that may be queueing for the flock to have access, and to limit
+        # wastage of time if an error occurs
+        total_number_of_rpms = len(tasks_and_writes)
+        rpms_synced = 0
+        while rpms_synced < total_number_of_rpms:
+            session.begin()
             try:
-                with atomically_replaced_file(rpm_file) as f:
-                    siphon(urllib2.urlopen(task_url), f)
-                    f.flush()
-
-            except urllib2.HTTPError as err:
-                self.logger.exception('Error downloading %s: %s' % (task_rpm_name, err))
-                unlink_ignore(rpm_file)
-
-            except Exception as err:
-                self.logger.exception('Error downloading %s: %s' % (task_rpm_name, err))
-                unlink_ignore(rpm_file)
-            else:
-                self.logger.debug('Downloaded %s' % task_rpm_name)
-                self.tasks_added.append(task_rpm_name)
-                self.t_downloaded = self.t_downloaded + 1
-
-        else:
-            self.logger.debug('Already downloaded %s' % task_rpm_name)
-            self.tasks_added.append(task_rpm_name)
-            self.t_downloaded = self.t_downloaded + 1
-
-        return
+                tasks_and_writes_current_batch = \
+                    tasks_and_writes[rpms_synced:rpms_synced+self.batch_size]
+                self.tasklib.update_tasks(tasks_and_writes_current_batch)
+            except Exception, e:
+                session.rollback()
+                session.close()
+                self.logger.exception('Error syncing tasks. Got error %s' % (unicode(e)))
+                break
+            session.commit()
+            self.logger.debug('Synced %s tasks' % len(tasks_and_writes_current_batch))
+            rpms_synced += self.batch_size
+        session.close()
 
     def tasks_add(self, new_tasks, old_tasks):
 
-        self.logger.info('Downloading %s new tasks' % len(new_tasks))
-
+        tasks_to_sync = []
         # Get the task XMLs
         task_xml = []
         for task in new_tasks:
             task_xml = self._get_task_xml('remote', task)
             if task_xml is not None:
                 task_url = find_task_version_url(task_xml)[1]
-                self._download(task_url)
-
-        # common tasks
-        self.logger.info('Downloading %s common tasks' % len(old_tasks))
+                tasks_to_sync.append(task_url)
 
         # tasks which exist in both remote and local
         # will be uploaded only if remote_version != local_version
@@ -263,16 +242,19 @@ class TaskLibrarySync:
                 remote_task_version, remote_task_url = find_task_version_url(remote_task_xml)
                 local_task_version = find_task_version_url(local_task_xml)[0]
 
-                if remote_task_version != local_task_version:
-                    self._download(remote_task_url)
+            if remote_task_version != local_task_version:
+                tasks_to_sync.append(remote_task_url)
 
-        # Finished downloading tasks
-        self.logger.info('Downloaded %d Tasks' % self.t_downloaded)
-
-        # update Beaker's database
-        self.update_db()
-
-        return
+        number_of_tasks_to_sync = len(tasks_to_sync)
+        rpms_synced = 0
+        self.logger.info('Syncing %s tasks in total' % number_of_tasks_to_sync)
+        try:
+            self.sync_tasks(tasks_to_sync)
+        except Exception, e:
+            log.exception(unicode(e))
+            self.logger.info('Failed to sync all tasks')
+        else:
+            self.logger.info('Synced all tasks')
 
     # Get list of tasks from remote and local
     # return the common tasks and the new tasks

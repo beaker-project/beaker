@@ -322,6 +322,14 @@ test data or edit the file with you favourite editor.
 All options in the config file are self-explanatory. For confirm level choose
 one of: nothing, common or everything.
 
+Library tasks
+-------------
+
+The "library" skeleton can be used to create a "library task". It allows you to bundle
+together common functionality which may be required across multiple
+tasks. To learn more, see `the BeakerLib documentation for library
+tasks <https://fedorahosted.org/beakerlib/wiki/libraries>`__.
+
 Bugs
 ----
 
@@ -1687,7 +1695,7 @@ class Type(SingleChoice):
             Customeracceptance Releasecriterium Crasher Tier1 Tier2
             Alpha KernelTier1 KernelTier2 Multihost MultihostDriver
             Install FedoraTier1 FedoraTier2 KernelRTTier1
-            KernelReporting Sanity""".split()
+            KernelReporting Sanity Library""".split()
         if self.options: self.default(self.options.type())
 
     def match(self):
@@ -1695,9 +1703,11 @@ class Type(SingleChoice):
         return "(" + "|".join(self.list) + ")"
 
     def suggestSkeleton(self):
-        """ For multihost tests suggest proper skeleton """
+        """ For multihost tests and library suggest proper skeleton """
         if self.data == "Multihost":
             return "multihost"
+        elif self.data == "Library":
+            return "library"
         else:
             return None
 
@@ -2192,6 +2202,52 @@ class Skeleton(SingleChoice):
         </skeleton>
         <skeleton name="empty">
         </skeleton>
+
+        <skeleton name="library">
+            # Include Beaker environment
+            . /usr/bin/rhts-environment.sh || exit 1
+            . /usr/share/beakerlib/beakerlib.sh || exit 1
+
+            PACKAGE="<package/>"
+            PHASE=${PHASE:-Test}
+
+            rlJournalStart
+                rlPhaseStartSetup
+                    rlRun "rlImport <package/>/<testname/>"
+                    rlRun "TmpDir=\$(mktemp -d)" 0 "Creating tmp directory"
+                    rlRun "pushd $TmpDir"
+                rlPhaseEnd
+
+                # Create file
+                if [[ "$PHASE" =~ "Create" ]]; then
+                    rlPhaseStartTest "Create"
+                        fileCreate
+                    rlPhaseEnd
+                fi
+
+                # Self test
+                if [[ "$PHASE" =~ "Test" ]]; then
+                    rlPhaseStartTest "Test default name"
+                        fileCreate
+                        rlAssertExists "$fileFILENAME"
+                    rlPhaseEnd
+                    rlPhaseStartTest "Test filename in parameter"
+                        fileCreate "parameter-file"
+                        rlAssertExists "parameter-file"
+                    rlPhaseEnd
+                    rlPhaseStartTest "Test filename in variable"
+                        FILENAME="variable-file" fileCreate
+                        rlAssertExists "variable-file"
+                    rlPhaseEnd
+                fi
+
+                rlPhaseStartCleanup
+                    rlRun "popd"
+                    rlRun "rm -r $TmpDir" 0 "Removing tmp directory"
+                rlPhaseEnd
+            rlJournalPrintText
+            rlJournalEnd
+        </skeleton>
     </skeletons>
             """)
 
@@ -2223,6 +2279,161 @@ class Skeleton(SingleChoice):
             	@echo "Path:            $(TEST_DIR)" >> $(METADATA)%s
 
             	rhts-lint $(METADATA)
+            """
+
+        # skeleton for lib.sh file when creating library
+        self.library = """
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            #   library-prefix = %s
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+            true <<'=cut'
+            =pod
+
+            =head1 NAME
+
+            %s/%s - %s
+
+            =head1 DESCRIPTION
+
+            This is a trivial example of a BeakerLib library. It's main goal
+            is to provide a minimal template which can be used as a skeleton
+            when creating a new library. It implements function fileCreate().
+            Please note, that all library functions must begin with the same
+            prefix which is defined at the beginning of the library.
+
+            =cut
+
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            #   Variables
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+            true <<'=cut'
+            =pod
+
+            =head1 VARIABLES
+
+            Below is the list of global variables. When writing a new library,
+            please make sure that all global variables start with the library
+            prefix to prevent collisions with other libraries.
+
+            =over
+
+            =item fileFILENAME
+
+            Default file name to be used when no provided ('foo').
+
+            =back
+
+            =cut
+
+            fileFILENAME="foo"
+
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            #   Functions
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+            true <<'=cut'
+            =pod
+
+            =head1 FUNCTIONS
+
+            =head2 fileCreate
+
+            Create a new file, name it accordingly and make sure (assert) that
+            the file is successfully created.
+
+                fileCreate [filename]
+
+            =over
+
+            =item filename
+
+            Name for the newly created file. Optionally the filename can be
+            provided in the FILENAME environment variable. When no file name
+            is given 'foo' is used by default.
+
+            =back
+
+            Returns 0 when the file is successfully created, non-zero otherwise.
+
+            =cut
+
+            fileCreate() {
+                local filename
+                filename=${1:-$FILENAME}
+                filename=${filename:-$fileFILENAME}
+                rlRun "touch '$filename'" 0 "Creating file '$filename'"
+                rlAssertExists "$filename"
+                return $?
+            }
+
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            #   Execution
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+            true <<'=cut'
+            =pod
+
+            =head1 EXECUTION
+
+            This library supports direct execution. When run as a task, phases
+            provided in the PHASE environment variable will be executed.
+            Supported phases are:
+
+            =over
+
+            =item Create
+
+            Create a new empty file. Use FILENAME to provide the desired file
+            name. By default 'foo' is created in the current directory.
+
+            =item Test
+
+            Run the self test suite.
+
+            =back
+
+            =cut
+
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            #   Verification
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            #
+            #   This is a verification callback which will be called by
+            #   rlImport after sourcing the library to make sure everything is
+            #   all right. It makes sense to perform a basic sanity test and
+            #   check that all required packages are installed. The function
+            #   should return 0 only when the library is ready to serve.
+
+            fileLibraryLoaded() {
+                if rpm=$(rpm -q coreutils); then
+                    rlLogDebug "Library coreutils/file running with $rpm"
+                    return 0
+                else
+                    rlLogError "Package coreutils not installed"
+                    return 1
+                fi
+            }
+
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            #   Authors
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+            true <<'=cut'
+            =pod
+
+            =head1 AUTHORS
+
+            =over
+
+            =item *
+
+            %s
+
+            =back
+
+            =cut
             """
 
         self.list = []
@@ -2277,9 +2488,12 @@ class Skeleton(SingleChoice):
         skeleton = re.sub("\n\s+$", "\n", skeleton)
         return dedentText(skeleton)
 
-    def getMakefile(self, testname, version, author, reproducers, meta):
+    def getMakefile(self, type, testname, version, author, reproducers, meta):
         """ Return Makefile skeleton """
-        files = ["runtest.sh", "Makefile", "PURPOSE"]
+
+        # if test type is Library, include lib.sh to the Makefile instead of PURPOSE
+        files = ["runtest.sh", "Makefile"]
+        files.append("lib.sh" if type == "Library" else "PURPOSE")
         build = ["runtest.sh"]
         # add "test" file when creating simple test
         if self.data == "simple":
@@ -2304,6 +2518,10 @@ class Skeleton(SingleChoice):
         else:
             return ""
 
+    def getLibrary(self, testname, description, package, author):
+        """ Return lib.sh skeleton """
+        return dedentText(self.library.lstrip() %
+                (testname, package, testname, description, author))
 
 class Author(Inquisitor):
     """ Author's name """
@@ -2381,7 +2599,8 @@ class Test(SingleChoice):
         # gather all test data
         self.testname = Name(self.options)
         self.path = Path(self.options)
-        self.type = Type(self.options, suggest = self.testname.bugs.suggestType())
+        self.type = Type(self.options, suggest = self.testname.bugs.suggestType() or
+                ('Library' if 'library' in self.options.skeleton() else None))
         self.package = Package(self.options,
                 suggest = self.testname.bugs.getComponent())
         self.namespace = Namespace(self.options)
@@ -2531,10 +2750,19 @@ class Test(SingleChoice):
             self.formatAuthor())
 
     def formatMakefile(self):
+        # add 'Provides' to the Makefile when test type is 'Library'
+        if self.type.value() == "Library":
+            provides = self.formatMakefileLine(
+                    name="Provides",
+                    value="library({0}/{1})".format(
+                            self.package.value(), self.testname.value()))
+        else:
+            provides = ""
         return (
             comment(self.formatHeader("Makefile")) + "\n" +
             comment(self.license.get(), top = False) + "\n" +
             self.skeleton.getMakefile(
+                self.type.value(),
                 self.fullPath(),
                 self.version.value(),
                 self.formatAuthor(),
@@ -2544,6 +2772,7 @@ class Test(SingleChoice):
                 self.time.formatMakefileLine(name = "TestTime") +
                 self.runfor.formatMakefileLine(name = "RunFor") +
                 self.requires.formatMakefileLine(name = "Requires") +
+                provides +
                 self.priority.formatMakefileLine() +
                 self.license.formatMakefileLine() +
                 self.confidential.formatMakefileLine() +
@@ -2618,6 +2847,9 @@ class Test(SingleChoice):
 
         # set file vars
         test = self.testname.value()
+        package = self.package.value()
+        author = self.formatAuthor().encode('utf-8')
+        description = self.desc.value()
         path = self.relativePath()
         fullpath = self.fullPath()
         addedToGit = ""
@@ -2639,10 +2871,21 @@ class Test(SingleChoice):
         else:
             print "Directory %s created%s" % (path, addedToGit)
 
-        # PURPOSE
-        self.createFile("PURPOSE", content =
-            self.formatHeader("PURPOSE") + "\n" +
-            self.testname.bugs.formatBugDetails())
+        # if test type is Library, create lib.sh and don't include PURPOSE
+        if self.type.value() == "Library":
+            self.createFile("lib.sh", content =
+                    "#!/bin/bash\n" +
+                    self.skeleton.getVimHeader() +
+                    comment(self.formatHeader("lib.sh")) + "\n" +
+                    comment(self.license.get(), top=False, bottom=False) +
+                    "\n" +
+                    self.skeleton.getLibrary(
+                            test, description, package, author))
+        # for regular tests create PURPOSE
+        else:
+            self.createFile("PURPOSE", content =
+                self.formatHeader("PURPOSE") + "\n" +
+                self.testname.bugs.formatBugDetails())
 
         # runtest.sh
         self.createFile("runtest.sh", content =
