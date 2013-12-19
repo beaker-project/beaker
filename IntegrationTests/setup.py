@@ -23,7 +23,7 @@ setup(
         'server/selenium/*.csv',
         'server/selenium/*.rpm',
         'server/selenium/invalid-task_file',
-        'server/tools/*.rpm',] +
+        'server/tools/task_rpms/*'] +
         get_compose_layout()
     },
     namespace_packages=['bkr'],
