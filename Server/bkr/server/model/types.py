@@ -131,6 +131,7 @@ class RecipeVirtStatus(DeclEnum):
 class SystemPermission(DeclEnum):
 
     symbols = [
+        ('view',           u'view',           dict(label=_(u'View'))),
         ('edit_policy',    u'edit_policy',    dict(label=_(u'Edit this policy'))),
         ('edit_system',    u'edit_system',    dict(label=_(u'Edit system details'))),
         ('loan_any',       u'loan_any',       dict(label=_(u'Loan to anyone'))),

@@ -15,7 +15,8 @@ from bkr.server.model import (TaskBase, Device, System, SystemGroup,
                               ExcludeOSVersion, OSVersion,
                               Provision, ProvisionFamily,
                               ProvisionFamilyUpdate, SystemStatus,
-                              Key_Value_Int, Key_Value_String)
+                              Key_Value_Int, Key_Value_String,
+                              SystemAccessPolicy, SystemPermission)
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
@@ -1271,6 +1272,10 @@ class Root(RPCRoot):
                 flash( _(u"%s already exists!" % kw['fqdn']) )
                 redirect("/")
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
+            # new systems are visible to everybody by default
+            system.custom_access_policy = SystemAccessPolicy()
+            system.custom_access_policy.add_rule(SystemPermission.view,
+                    everybody=True)
 
         if kw['lab_controller_id'] == 0:
             kw['lab_controller'] = None
@@ -1314,16 +1319,6 @@ class Root(RPCRoot):
                 activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val)
                 system.activity.append(activity)
                 
-        log_bool_fields = [ 'private' ]
-        for field in log_bool_fields:
-            try:
-                current_val = unicode(getattr(system,field) and True or False)
-            except KeyError:
-                current_val = u""
-            new_val = unicode(kw.get(field) or False)
-            if current_val != new_val:
-                activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val )
-                system.activity.append(activity)
         system.status = kw['status']
         system.location=kw['location']
         system.model=kw['model']
@@ -1336,10 +1331,6 @@ class Root(RPCRoot):
         system.status_reason = kw['status_reason']
         system.date_modified = datetime.utcnow()
         system.kernel_type = kw['kernel_type']
-        if kw.get('private'):
-            system.private=kw['private']
-        else:
-            system.private=False
 
         # Change Lab Controller
         system.lab_controller = kw['lab_controller']

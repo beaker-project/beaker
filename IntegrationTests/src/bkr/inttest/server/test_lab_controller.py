@@ -17,8 +17,7 @@ class TestLabController(unittest.TestCase):
 
     def test_lookup_secret_fqdn(self):
         with session.begin():
-            system = data_setup.create_system()
-            system.private = True
+            system = data_setup.create_system(private=True)
         lab_controller_user = LabController.by_name(self.lc_fqdn).user
         system2 = System.by_fqdn(str(system.fqdn), user=lab_controller_user)
         self.assertEquals(system, system2)

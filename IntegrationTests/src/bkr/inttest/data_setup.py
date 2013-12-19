@@ -210,7 +210,7 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
 def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
         owner=None, fqdn=None, shared=True, exclude_osmajor=[],
         exclude_osversion=[], hypervisor=None, kernel_type=None,
-        date_added=None,  **kw):
+        date_added=None, private=False, **kw):
     if owner is None:
         owner = create_user()
     if fqdn is None:
@@ -221,8 +221,9 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
                 status=status, **kw)
     if date_added is not None:
         system.date_added = date_added
-    # Always give it a custom policy, so that tests can fill in rules they need.
     system.custom_access_policy = SystemAccessPolicy()
+    if not private:
+        system.custom_access_policy.add_rule(SystemPermission.view, everybody=True)
     if shared:
         system.custom_access_policy.add_rule(
                 permission=SystemPermission.reserve, everybody=True)

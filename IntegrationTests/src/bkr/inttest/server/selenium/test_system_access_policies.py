@@ -176,12 +176,14 @@ class SystemAccessPolicyHTTPTest(unittest.TestCase):
         json = response.json()
         self.assertEquals(json['id'], self.policy.id)
         self.assertEquals([p['value'] for p in json['possible_permissions']],
-                ['edit_policy', 'edit_system', 'loan_any', 'loan_self',
+                ['view', 'edit_policy', 'edit_system', 'loan_any', 'loan_self',
                  'control_system', 'reserve'])
         self.assertItemsEqual(json['rules'], [
-            {'id': self.policy.rules[0].id, 'permission': 'reserve',
+            {'id': self.policy.rules[0].id, 'permission': 'view',
              'everybody': True, 'user': None, 'group': None},
-            {'id': self.policy.rules[1].id, 'permission': 'edit_system',
+            {'id': self.policy.rules[1].id, 'permission': 'reserve',
+             'everybody': True, 'user': None, 'group': None},
+            {'id': self.policy.rules[2].id, 'permission': 'edit_system',
              'everybody': False, 'user': None,
              'group': self.privileged_group.group_name},
         ])
@@ -214,8 +216,10 @@ class SystemAccessPolicyHTTPTest(unittest.TestCase):
         response = put_json(get_server_base() +
                 'systems/%s/access-policy' % self.system.fqdn, session=s,
                 data={'rules': [
-                    # keep one existing rule, drop the other
-                    {'id': self.policy.rules[1].id, 'permission': 'edit_system',
+                    # keep two existing rules, drop the other
+                    {'id': self.policy.rules[0].id, 'permission': 'view',
+                     'everybody': True, 'user': None, 'group': None},
+                    {'id': self.policy.rules[2].id, 'permission': 'edit_system',
                      'user': None, 'group': self.privileged_group.group_name},
                     # .. and add a new rule
                     {'permission': 'control_system', 'everybody': True,
@@ -224,9 +228,11 @@ class SystemAccessPolicyHTTPTest(unittest.TestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEquals(len(self.policy.rules), 2)
+            self.assertEquals(len(self.policy.rules), 3)
             self.assertEquals(self.policy.rules[0].permission,
-                    SystemPermission.edit_system)
+                    SystemPermission.view)
             self.assertEquals(self.policy.rules[1].permission,
+                    SystemPermission.edit_system)
+            self.assertEquals(self.policy.rules[2].permission,
                     SystemPermission.control_system)
-            self.assertEquals(self.policy.rules[1].everybody, True)
+            self.assertEquals(self.policy.rules[2].everybody, True)

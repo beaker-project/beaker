@@ -127,8 +127,7 @@ class CSVExportTest(WebDriverTestCase):
     def test_export_systems_obeys_secrecy(self):
         with session.begin():
             unprivileged_user = data_setup.create_user(password=u'asdf')
-            secret_system = data_setup.create_system()
-            secret_system.private = True
+            secret_system = data_setup.create_system(private=True)
         login(self.browser, user=unprivileged_user.user_name, password=u'asdf')
         csv_request = self.get_csv('system')
         self.assert_(not any(row['fqdn'] == secret_system.fqdn

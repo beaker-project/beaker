@@ -1372,9 +1372,6 @@ class SystemForm(Form):
                TextField(name='owner', label=_(u'Owner')),
                TextField(name='loaned', label=_(u'Loaned To')),
                TextField(name='contact', label=_(u'Contact')),
-               CheckBox(name='private', label=_(u'Secret (NDA)'),
-                        help_text=_(u'Should this system be invisible to '
-                            'all other users?')),
                AutoCompleteField(name='group',
                                       search_controller=url("/groups/by_name"),
                                       search_param="name",

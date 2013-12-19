@@ -39,14 +39,16 @@ class PolicyListTest(unittest.TestCase):
         expected_output = self.gen_expected_pretty_table(
             (['control_system', 'X', self.group.group_name, 'No'],
              ['control_system', self.user2.user_name, 'X', 'No'],
-             ['edit_system', self.user1.user_name, 'X', 'No'])) + '\n'
+             ['edit_system', self.user1.user_name, 'X', 'No'],
+             ['view', 'X', 'X', 'Yes'])) + '\n'
         self.assertEquals(out, expected_output)
 
         # For the second system
         out = run_client(['bkr', 'policy-list', self.system_public.fqdn,
                           '--format','tabular'])
         expected_output = self.gen_expected_pretty_table(
-            (['control_system', 'X', 'X', 'Yes'],)) + '\n'
+            (['control_system', 'X', 'X', 'Yes'],
+             ['view', 'X', 'X', 'Yes'])) + '\n'
 
         self.assertEquals(out, expected_output)
 
@@ -54,7 +56,7 @@ class PolicyListTest(unittest.TestCase):
         out = run_client(['bkr', 'policy-list', self.system.fqdn,
                           '--format','json'])
         out = json.loads(out)
-        self.assertEquals(len(out['rules']), 3)
+        self.assertEquals(len(out['rules']), 4)
 
     def test_list_policy_non_existent_system(self):
 

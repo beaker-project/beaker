@@ -13,7 +13,8 @@ from bkr.server.model import (System, SystemType, Activity, SystemActivity,
                               SystemStatus, Power, PowerType, Arch,
                               Provision, ProvisionFamily,
                               ProvisionFamilyUpdate,
-                              Key, Key_Value_Int, Key_Value_String)
+                              Key, Key_Value_Int, Key_Value_String,
+                              SystemAccessPolicy, SystemPermission)
 from bkr.server.widgets import HorizontalForm, RadioButtonList
 import csv
 import datetime
@@ -133,7 +134,10 @@ class CSV(RPCRoot):
                                 log.append('Error importing system on line %s: %s' %
                                            (reader.line_num, str(e)))
                                 continue
-
+                            # new systems are visible to everybody by default
+                            system.custom_access_policy = SystemAccessPolicy()
+                            system.custom_access_policy.add_rule(
+                                    SystemPermission.view, everybody=True)
                         if system.can_edit(identity.current.user):
                             # Remove fqdn, can't change that via csv.
                             data.pop('fqdn')
@@ -364,14 +368,32 @@ class CSV_System(CSV):
                 system.type = systemtype
         # import secret
         if 'secret' in data:
+            # 'private' used to be a field on system (called 'secret' in the UI 
+            # and CSV). The field is replaced by the 'view' permission in the 
+            # access policy so CSV export no longer produces 'secret' in its 
+            # output. However we still accept it on import for compatibility. 
+            # It is mapped to the 'view everybody' rule in the access policy.
             if not data['secret']:
                 log.append("%s: Invalid secret None" % system.fqdn)
                 return False
-            newdata = smart_bool(data['secret'])
-            if system.private != newdata:
-                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'secret', '%s' % system.private, '%s' % newdata)
-                system.activity.append(activity)
-                system.private = newdata
+            secret = smart_bool(data['secret'])
+            view_everybody = system.custom_access_policy.grants_everybody(
+                    SystemPermission.view)
+            if secret and view_everybody:
+                # remove 'view everybody' rule
+                for rule in system.custom_access_policy.rules:
+                    if rule.permission == SystemPermission.view and rule.everybody:
+                        system.record_activity(user=identity.current.user, service=u'HTTP',
+                                field=u'Access Policy Rule', action=u'Removed',
+                                old=repr(rule))
+                        session.delete(rule)
+            if not secret and not view_everybody:
+                # add rule granting 'view everybody'
+                new_rule = system.custom_access_policy.add_rule(everybody=True,
+                        permission=SystemPermission.view)
+                system.record_activity(user=identity.current.user, service=u'HTTP',
+                        field=u'Access Policy Rule', action=u'Added',
+                        new=repr(new_rule))
         return True
 
     def __init__(self, system):
@@ -386,7 +408,6 @@ class CSV_System(CSV):
         self.memory = system.memory
         self.model = system.model
         self.owner = system.owner
-        self.secret = system.private
         self.serial = system.serial
         self.status = system.status
         self.type = system.type

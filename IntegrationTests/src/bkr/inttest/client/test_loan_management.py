@@ -163,9 +163,8 @@ class SystemLoanTest(unittest.TestCase):
     def test_user_with_borrow_permissions_only(self):
         # Grant everyone borrow permissions on the system
         with session.begin():
-            policy = self.system.custom_access_policy = SystemAccessPolicy()
-            policy.add_rule(permission=SystemPermission.loan_self,
-                            everybody=True)
+            self.system.custom_access_policy.add_rule(
+                    permission=SystemPermission.loan_self, everybody=True)
 
         # user2 should now be able to borrow and return the system
         out = run_client(['bkr', 'loan-grant', self.system.fqdn],

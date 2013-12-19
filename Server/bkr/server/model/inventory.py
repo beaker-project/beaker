@@ -70,7 +70,6 @@ system_table = Table('system', metadata,
     Column('type', SystemType.db_type(), nullable=False),
     Column('status', SystemStatus.db_type(), nullable=False),
     Column('status_reason',Unicode(255)),
-    Column('private', Boolean, default=False),
     Column('deleted', Boolean, default=False),
     Column('memory', Integer),
     Column('checksum', String(32)),
@@ -453,13 +452,14 @@ class System(SystemObject, ActivityMixin):
         if user:
             if not user.is_admin() and \
                not user.has_permission(u'secret_visible'):
-                query = query.filter(
-                            or_(System.private==False,
+                query = query.outerjoin(System.custom_access_policy).filter(
+                            or_(SystemAccessPolicy.grants(user, SystemPermission.view),
                                 System.owner == user,
                                 System.loaned == user,
                                 System.user == user))
         else:
-            query = query.filter(System.private==False)
+            query = query.outerjoin(System.custom_access_policy).filter(
+                    SystemAccessPolicy.grants_everybody(SystemPermission.view))
 
         return query
 

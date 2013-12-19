@@ -475,8 +475,7 @@ class SystemVisibilityTest(WebDriverTestCase):
 
     def test_secret_system_not_visible(self):
         with session.begin():
-            secret_system = data_setup.create_system()
-            secret_system.private = True
+            secret_system = data_setup.create_system(private=True)
         b = self.browser
         login(b, user=self.user.user_name, password=u'password')
         b.get(get_server_base())
@@ -487,8 +486,7 @@ class SystemVisibilityTest(WebDriverTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=582008
     def test_secret_system_visible_when_loaned(self):
         with session.begin():
-            secret_system = data_setup.create_system()
-            secret_system.private = True
+            secret_system = data_setup.create_system(private=True)
             secret_system.loaned = self.user
         b = self.browser
         login(b, user=self.user.user_name, password=u'password')
