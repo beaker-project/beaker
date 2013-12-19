@@ -814,6 +814,21 @@ class JobAttributeChangeTest(WebDriverTestCase):
         login(self.browser, user=other_user.user_name, password=u'other_user')
         self.check_cannot_change_retention_tag(job)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1022333
+    def test_change_retention_tag_clearing_product(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner,
+                    retention_tag=u'active',
+                    product=data_setup.create_product())
+        login(self.browser, user=job_owner.user_name, password=u'owner')
+        b = self.browser
+        b.get(get_server_base() + 'jobs/%s' % job.id)
+        Select(b.find_element_by_id('job_retentiontag'))\
+            .select_by_visible_text('scratch')
+        b.find_element_by_xpath('//button[text()="Clear product"]').click()
+        b.find_element_by_xpath('//div[text()="Tag has been updated"]')
+
 class CloneJobTest(SeleniumTestCase):
 
     def setUp(self):

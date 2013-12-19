@@ -479,7 +479,7 @@ class Jobs(RPCRoot):
                 product = Product.by_name(product)
 
                 return (tag, product)
-            except NoResultFound:
+            except ValueError:
                 raise BX(_("You entered an invalid product name: %s" % product))
         else:
             return tag, None
@@ -651,44 +651,38 @@ class Jobs(RPCRoot):
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def set_retention_product(self, job_t_id, retention_tag_name, product_name):
+        """
+        XML-RPC method to update a job's retention tag, product, or both.
+
+        There is an important distinction between product_name of None, which 
+        means do not change the existing value, vs. empty string, which means 
+        clear the existing product.
+        """
         job = TaskBase.get_by_t_id(job_t_id)
         if job.can_change_product(identity.current.user) and \
             job.can_change_retention_tag(identity.current.user):
-            if retention_tag_name:
-                try:
-                    retention_tag = RetentionTag.by_name(retention_tag_name)
-                except NoResultFound:
-                    raise ValueError('%s is not a valid tag' % retention_tag_name)
+            if retention_tag_name and product_name:
+                retention_tag = RetentionTag.by_name(retention_tag_name)
+                product = Product.by_name(product_name)
+                result = Utility.update_retention_tag_and_product(job,
+                        retention_tag, product)
+            elif retention_tag_name and product_name == '':
+                retention_tag = RetentionTag.by_name(retention_tag_name)
+                result = Utility.update_retention_tag_and_product(job,
+                        retention_tag, None)
+            elif retention_tag_name:
+                retention_tag = RetentionTag.by_name(retention_tag_name)
+                result = Utility.update_retention_tag(job, retention_tag)
+            elif product_name:
+                product = Product.by_name(product_name)
+                result = Utility.update_product(job, product)
+            elif product_name == '':
+                result = Utility.update_product(job, None)
             else:
-                retention_tag = None
-            if product_name:
-                try:
-                    product = Product.by_name(product_name)
-                    product_id = product.id
-                except NoResultFound:
-                    raise ValueError('%s is not a valid product' % product_name)
-            elif product_name == "":
-                product = ProductWidget.product_deselected
-                product_id = product
-            else:
-                product = None
-                product_id = product
+                result = {'success': False, 'msg': 'Nothing to do'}
 
-            retentiontag_id = getattr(retention_tag, 'id', None)
-            result = Utility.update_task_product(job,
-                retentiontag_id=retentiontag_id, product_id=product_id)
             if not result['success'] is True:
                 raise BeakerException('Job %s not updated: %s' % (job.id, result.get('msg', 'Unknown reason')))
-
-            if product == ProductWidget.product_deselected and \
-                job.product != None:
-                job.product = None
-            elif product is not None and product != job.product:
-                job.product = product
-
-            if retention_tag is not None and retention_tag != job.retention_tag:
-                job.retention_tag = retention_tag
-
         else:
             raise BeakerException('No permission to modify %s' % job)
 
@@ -898,28 +892,25 @@ class Jobs(RPCRoot):
             raise cherrypy.HTTPError(status=403,
                     message="You don't have permission to update job id %s" % id)
         returns = {'success' : True, 'vars':{}}
-        if 'retentiontag' in kw or 'product' in kw:
-            #convert them to int and  correct Job attribute name
-            if 'retentiontag' in kw:
-                kw['retention_tag_id'] = int(kw['retentiontag'])
-                del kw['retentiontag']
-            if 'product' in kw:
-                kw['product_id'] = int(kw['product'])
-                del kw['product']
-            retention_tag_id = kw.get('retention_tag_id')
-            product_id = kw.get('product_id')
-            #update_task_product should also ensure that our id's are valid
-            returns.update(Utility.update_task_product(job,retention_tag_id,product_id))
-            if returns['success'] is False:
-                return returns
-        #kw should be santised and correct by the time it gets here
-        for attr in kw:
-            try:
-                setattr(job, attr, kw[attr])
-            except AttributeError:
-                return {'success' : False }
-                # FIXME I think job_whiteboard will need a status non 200
-                # raised to catch an error 
+        if 'retentiontag' in kw and 'product' in kw:
+            retention_tag = RetentionTag.by_id(kw['retentiontag'])
+            if int(kw['product']) == ProductWidget.product_deselected:
+                product = None
+            else:
+                product = Product.by_id(kw['product'])
+            returns.update(Utility.update_retention_tag_and_product(job,
+                    retention_tag, product))
+        elif 'retentiontag' in kw:
+            retention_tag = RetentionTag.by_id(kw['retentiontag'])
+            returns.update(Utility.update_retention_tag(job, retention_tag))
+        elif 'product' in kw:
+            if int(kw['product']) == ProductWidget.product_deselected:
+                product = None
+            else:
+                product = Product.by_id(kw['product'])
+            returns.update(Utility.update_product(job, product))
+        if 'whiteboard' in kw:
+            job.whiteboard = kw['whiteboard']
         return returns
 
     @expose(template="bkr.server.templates.job") 

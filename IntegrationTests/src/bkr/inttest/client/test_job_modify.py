@@ -1,4 +1,4 @@
-import unittest
+import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import with_transaction, data_setup
 from bkr.inttest.client import run_client, create_client_config, ClientError
@@ -36,6 +36,14 @@ class JobModifyTest(unittest.TestCase):
         j = TaskBase.get_by_t_id(self.job.t_id)
         self.assert_(j.retention_tag.tag == rt1.tag)
         self.assert_(j.product is None)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=877344
+    def test_empty_product_name_is_always_accepted(self):
+        with session.begin():
+            job = data_setup.create_job(retention_tag=u'scratch')
+        out = run_client(['bkr', 'job-modify', job.t_id,
+                '--retention-tag', '60days', '--product', ''])
+        self.assertIn('Successfully modified', out)
 
     def test_ack_already_acked_job(self):
         # Is this lazy?

@@ -52,11 +52,7 @@ def update_products(xml_file):
                 to_add[cpe_text] = 1
 
         for cpe_to_add in to_add:
-            try:
-                prod = Product.by_name(u'%s' % cpe_to_add)
-            except NoResultFound:
-                session.add(Product(u'%s' % cpe_to_add))
-                continue
+            prod = Product.lazy_create(name=unicode(cpe_to_add))
         session.commit()
     finally:
         session.rollback()
