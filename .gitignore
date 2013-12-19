@@ -7,6 +7,8 @@ rpm-build
 *.bz2
 Harness/build
 Server/assets/.webassets-cache/
+Server/assets/.webassets-manifest
+Server/assets/generated/
 Server/build
 Server/build.out
 Server/devdata.sqlite

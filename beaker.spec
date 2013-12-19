@@ -36,7 +36,17 @@ Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
 License:        GPLv2+
 URL:            http://beaker-project.org/
+
 Source0:        http://beaker-project.org/releases/%{name}-%{upstream_version}.tar.gz
+# Third-party JS/CSS libraries which are built into Beaker's generated JS/CSS
+# (these are submodules in Beaker's git tree, the commit hashes here should
+# correspond to the submodule commits)
+Source1:        https://github.com/twbs/bootstrap/archive/d9b502dfb876c40b0735008bac18049c7ee7b6d2/bootstrap-d9b502dfb876c40b0735008bac18049c7ee7b6d2.tar.gz
+Source2:        https://github.com/FortAwesome/Font-Awesome/archive/b1a8ad47303509e70e56079396fad2afadfd96d5/font-awesome-b1a8ad47303509e70e56079396fad2afadfd96d5.tar.gz
+Source3:        https://github.com/twitter/typeahead.js/archive/2bd1119ecdd5ed4bb6b78c83b904d70adc49e023/typeahead.js-2bd1119ecdd5ed4bb6b78c83b904d70adc49e023.tar.gz
+Source4:        https://github.com/jashkenas/underscore/archive/edbf2952c2b71f81c6449aef384bdf233a0d63bc/underscore-edbf2952c2b71f81c6449aef384bdf233a0d63bc.tar.gz
+Source5:        https://github.com/jashkenas/backbone/archive/699fe3271262043bb137bae97bd0003d6d193f27/backbone-699fe3271262043bb137bae97bd0003d6d193f27.tar.gz
+
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  make
@@ -55,6 +65,10 @@ BuildRequires:  python-prettytable
 
 %if %{with server}
 BuildRequires:  python-kid
+BuildRequires:  python-webassets
+BuildRequires:  /usr/bin/lessc
+BuildRequires:  /usr/bin/cssmin
+BuildRequires:  /usr/bin/uglifyjs
 # These server dependencies are needed in the build, because
 # sphinx imports bkr.server modules to generate API docs
 BuildRequires:  TurboGears >= 1.1.3
@@ -77,7 +91,6 @@ BuildRequires:  python-itsdangerous
 BuildRequires:  python-decorator
 BuildRequires:  python-flask
 BuildRequires:  python-markdown
-BuildRequires:  python-webassets
 BuildRequires:  python-passlib
 %if %{with_systemd}
 BuildRequires:  systemd
@@ -263,6 +276,11 @@ Automatically launch jobs against newly imported distros.
 
 %prep
 %setup -q -n %{name}-%{upstream_version}
+tar -C Server/assets/bootstrap --strip-components=1 -xzf %{SOURCE1}
+tar -C Server/assets/font-awesome --strip-components=1 -xzf %{SOURCE2}
+tar -C Server/assets/typeahead.js --strip-components=1 -xzf %{SOURCE3}
+tar -C Server/assets/underscore --strip-components=1 -xzf %{SOURCE4}
+tar -C Server/assets/backbone --strip-components=1 -xzf %{SOURCE5}
 
 %build
 [ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT;

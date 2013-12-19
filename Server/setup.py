@@ -1,17 +1,20 @@
+__requires__ = ['CherryPy < 3.0']
+
 from setuptools import setup, find_packages
 import glob
 import re
 import os
-from distutils.dep_util import newer
 from distutils import log
-
+from distutils.core import Command
+from distutils.util import change_root
 from distutils.command.build_py import build_py
-from distutils.command.build_scripts import build_scripts as _build_scripts
 from distutils.command.build import build as _build
-from distutils.command.install_data import install_data as _install_data
-from distutils.dep_util import newer
 from setuptools.command.install import install as _install
-from setuptools.command.install_lib import install_lib as _install_lib
+
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'Common'))
+sys.path.insert(1, os.path.dirname(__file__))
+from bkr.server.assets import build_assets
 
 description = (
   "Beaker is a system for full stack software integration testing "
@@ -37,6 +40,9 @@ class Build(_build, object):
     # These are set in finalize_options()
     substitutions = {'@DATADIR@': None, '@LOCALEDIR@': None}
     subRE = re.compile('(' + '|'.join(substitutions.keys()) + ')+')
+    sub_commands = _build.sub_commands + [
+        ('build_assets', None),
+    ]
 
     def initialize_options(self):
         self.install_data = None
@@ -117,28 +123,53 @@ class build_py_and_kid(build_py):
             else:
                 log.debug("skipping byte-compilation of %s", kid_file)
 
-class InstallData(_install_data, object):
+class BuildAssets(Command):
+    description = 'build web assets'
+    user_options = []
+
+    def initialize_options(self):
+        self.build_base = None
 
     def finalize_options(self):
-        '''Override to emulate setuptools in the default case.
-        install_data => install_dir
-        '''
-        self.temp_lib = None
-        self.temp_data = None
-        self.temp_prefix = None
-        haveInstallDir = self.install_dir
+        self.set_undefined_options('build', ('build_base', 'build_base'))
+        self.source_dir = 'assets'
+        self.build_dir = os.path.join(self.build_base, 'assets')
+
+    def run(self):
+        self.copy_tree(self.source_dir, self.build_dir)
+        log.info('building assets in %s', self.build_dir)
+        build_assets(self.build_dir)
+
+class Install(_install):
+    sub_commands = _install.sub_commands + [
+        ('install_assets', None),
+    ]
+
+class InstallAssets(Command):
+    description = 'install web assets'
+    user_options = []
+
+    def initialize_options(self):
+        self.build_base = None
+        self.install_data = None
+
+    def finalize_options(self):
         self.set_undefined_options('install',
-                ('install_data', 'temp_data'),
-                ('install_lib', 'temp_lib'),
-                ('prefix', 'temp_prefix'),
-                ('root', 'root'),
-                ('force', 'force'),
-                )
-        if not self.install_dir:
-            if self.temp_data == self.root + self.temp_prefix:
-                self.install_dir = os.path.join(self.temp_lib, 'beaker')
-            else:
-                self.install_dir = self.temp_data
+                ('build_base', 'build_base'),
+                ('install_data', 'install_data'))
+        self.build_dir = os.path.join(self.build_base, 'assets')
+        self.install_dir = os.path.join(self.install_data, 'bkr/server/assets')
+
+    def run(self):
+        manifest_name = '.webassets-manifest'
+        self.mkpath(self.install_dir, mode=0755)
+        self.copy_file(
+                os.path.join(self.build_dir, manifest_name),
+                os.path.join(self.install_dir, manifest_name))
+        self.copy_tree(
+                os.path.join(self.build_dir, 'generated'),
+                os.path.join(self.install_dir, 'generated'))
+
 
 def find_data_recursive(dest_dir, src_dir, exclude=frozenset()):
     if src_dir[-1] != '/':
@@ -150,8 +181,7 @@ def find_data_recursive(dest_dir, src_dir, exclude=frozenset()):
                 if filename not in exclude])
 
 data_files = \
-    list(find_data_recursive('bkr/server/static', 'bkr/server/static/')) + \
-    list(find_data_recursive('bkr/server/assets', 'assets')) + [
+    list(find_data_recursive('bkr/server/static', 'bkr/server/static/')) + [
     ("/etc/beaker", ["server.cfg"]),
     ("/etc/httpd/conf.d", ["apache/beaker-server.conf"]),
     ("/etc/init.d", ["init.d/beakerd"]),
@@ -180,7 +210,9 @@ setup(
     cmdclass = {
         'build': Build,
         'build_py': build_py_and_kid,
-        'install_data': InstallData,
+        'build_assets': BuildAssets,
+        'install': Install,
+        'install_assets': InstallAssets,
     },
     install_requires=[
         'TurboGears >= 1.1',

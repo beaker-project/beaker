@@ -18,14 +18,8 @@ class YCSSMin(ExternalTool):
 _env = None
 _env_lock = threading.Lock()
 
-def _create_env():
-    directory = config.get('basepath.assets',
-            # default location is at the base of our source tree
-            os.path.join(os.path.dirname(__file__), '..', '..', 'assets'))
-    debug = config.get('assets.debug')
-    auto_build = config.get('assets.auto_build')
-    env = webassets.Environment(directory=directory, url='/assets',
-            manifest='file', debug=debug, auto_build=auto_build)
+def _create_env(**kwargs):
+    env = webassets.Environment(url='/assets', manifest='file', **kwargs)
     env.register('css',
             'style.less',
             filters=['less', 'cssrewrite', YCSSMin()],
@@ -59,10 +53,23 @@ def _create_env():
             output='generated/beaker-%(version)s.js')
     return env
 
+def _create_runtime_env():
+    directory = config.get('basepath.assets',
+            # default location is at the base of our source tree
+            os.path.join(os.path.dirname(__file__), '..', '..', 'assets'))
+    debug = config.get('assets.debug')
+    auto_build = config.get('assets.auto_build')
+    return _create_env(directory=directory, debug=debug, auto_build=auto_build)
+
 def get_assets_env():
     global _env
     if _env is None:
         with _env_lock:
             if _env is None:
-                _env = _create_env()
+                _env = _create_runtime_env()
     return _env
+
+def build_assets(directory):
+    env = _create_env(directory=directory, debug=False, auto_build=False)
+    for bundle in env:
+        bundle.build()
