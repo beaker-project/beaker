@@ -34,6 +34,10 @@ mechanism for customizing the generated kickstarts with template
 "snippets". Administrators are recommended to use custom snippets where
 necessary, rather than customizing the base templates.
 
+Administrators can test the generated kickstart for a particular system or an
+already completed recipe using the :program:`beaker-create-kickstart` 
+server-side command.
+
 Kickstart snippets
 ------------------
 
@@ -155,6 +159,8 @@ unless customized by the administrator:
 ``system_post``; ``<distro_major_version>_post``
     Can be used to insert extra shell commands into the %post section of
     the kickstart.
+
+.. _override-kickstarts:
 
 Overridding kickstart snippets
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

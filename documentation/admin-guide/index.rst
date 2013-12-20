@@ -39,3 +39,4 @@ Contents
    graphite
    reporting-queries
    how-do-i
+   man/index

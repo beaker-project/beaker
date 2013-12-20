@@ -1,0 +1,78 @@
+#!/usr/bin/python
+import sys
+import optparse
+from turbogears.database import session
+from bkr.common import __version__
+from bkr.server.model import DistroTree, System, User, Recipe
+from bkr.server.util import load_config
+from bkr.server.installopts import InstallOptions
+from bkr.server.kickstart import generate_kickstart, template_env, add_to_template_searchpath
+
+__description__ = 'Creates an Anaconda kickstart file'
+
+def main(*args):
+    parser = optparse.OptionParser('usage: %prog [options]',
+        description=__description__,
+        version=__version__)
+    parser.add_option('-u', '--user', metavar='USERNAME',
+        help='The user we are creating a kickstart for', default='admin')
+    parser.add_option('-r', '--recipe-id', metavar='ID',
+        help='Recreate kickstart based on recipe ID')
+    parser.add_option('-d', '--distro-tree-id', metavar='ID',
+        help='Recreate kickstart based on distro ID')
+    parser.add_option('-t', '--template-dir', metavar='DIR',
+        help='Retrieve templates from DIR')
+    parser.add_option('-f', '--system', metavar='FQDN',
+        help='Generate kickstart for system identified by FQDN')
+    parser.add_option('-m', '--ks-meta', metavar='OPTIONS',
+        help='Kickstart meta data')
+    parser.add_option('-p', '--kernel-options-post', metavar='OPTIONS',
+        help='Kernel options post')
+    options, args = parser.parse_args(*args)
+    ks_meta = options.ks_meta
+    koptions_post = options.kernel_options_post
+    template_dir = options.template_dir
+    if template_dir:
+        add_to_template_searchpath(template_dir)
+
+    if options.system:
+        if not options.distro_tree_id:
+            parser.error('Must specify a distro tree id when passing in a system')
+
+    load_config()
+    with session.begin():
+        user = User.by_user_name(options.user)
+        if options.system:
+            fqdn = options.system
+            system = System.by_fqdn(fqdn, user)
+            distro_tree = DistroTree.by_id(options.distro_tree_id)
+            install_options = system.install_options(distro_tree).combined_with(
+                InstallOptions.from_strings(ks_meta, None, koptions_post))
+            rendered_kickstart = generate_kickstart(install_options,
+                distro_tree=distro_tree, system=system, user=user)
+            # Does not support passing in a predefined kickstart
+            kickstart = rendered_kickstart.kickstart
+        elif options.recipe_id:
+            # Generate kickstart from Recipe
+            recipe = Recipe.by_id(options.recipe_id)
+            if not recipe.resource:
+                raise RuntimeError('Recipe must have (or had) a resource'
+                    ' assigned to it')
+            install_options = recipe.resource.install_options(recipe.distro_tree)\
+                .combined_with(recipe.generated_install_options())\
+                .combined_with(InstallOptions.from_strings(recipe.ks_meta,
+                    recipe.kernel_options, recipe.kernel_options_post))\
+                .combined_with(InstallOptions.from_strings(ks_meta, None,
+                    koptions_post))
+            ks_appends = [ks_append.ks_append for ks_append in recipe.ks_appends]
+            rendered_kickstart = generate_kickstart(install_options,
+                    distro_tree=recipe.distro_tree,
+                    system=getattr(recipe.resource, 'system', None),
+                    user=recipe.recipeset.job.owner,
+                    recipe=recipe, ks_appends=ks_appends)
+            kickstart = rendered_kickstart.kickstart
+    print kickstart
+
+
+if __name__ in ('main', '__main__'):
+    sys.exit(main())

@@ -396,6 +396,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-repo-update
 %{_bindir}/beaker-sync-tasks
 %{_bindir}/beaker-refresh-ldap
+%{_bindir}/beaker-create-kickstart
+%{_mandir}/man1/beaker-create-kickstart.1.gz
 
 %if %{with_systemd}
 %{_unitdir}/beakerd.service
@@ -441,7 +443,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{python_sitelib}/bkr.client-*.egg-info/
 %{_bindir}/beaker-wizard
 %{_bindir}/bkr
-%{_mandir}/man1/*.1.gz
+%{_mandir}/man1/beaker-wizard.1.gz
+%{_mandir}/man1/bkr.1.gz
+%{_mandir}/man1/bkr-*.1.gz
 %if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
 %{_datadir}/bash-completion
 %else

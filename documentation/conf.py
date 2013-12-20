@@ -29,6 +29,8 @@ man_pages = [
         [u'David Sommerseth <davids@redhat.com>'], 1),
     ('man/beaker-wizard', 'beaker-wizard', 'Tool to ease the creation of a new Beaker task',
         [u'Petr Splichal <psplicha@redhat.com>'], 1),
+    ('admin-guide/man/beaker-create-kickstart', 'beaker-create-kickstart', 'Generate Anaconda kickstarts',
+        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1),
 ]
 man_show_urls = True
 

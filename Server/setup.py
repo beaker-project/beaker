@@ -219,7 +219,8 @@ setup(
             'beaker-check = bkr.server.tools.check_beaker:main',
             'beaker-refresh-ldap = bkr.server.tools.refresh_ldap:main',
             'beaker-repo-update = bkr.server.tools.repo_update:main',
-            'beaker-sync-tasks = bkr.server.tools.sync_tasks:main'
+            'beaker-sync-tasks = bkr.server.tools.sync_tasks:main',
+            'beaker-create-kickstart = bkr.server.tools.create_kickstart:main'
         ),
     }
     )
