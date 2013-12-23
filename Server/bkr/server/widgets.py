@@ -1273,38 +1273,6 @@ class SystemDetails(Widget):
     template = "bkr.server.templates.system_details"
     params = ['system']
 
-class SystemHistory(CompoundWidget): 
-    template = "bkr.server.templates.system_activity"
-    member_widgets = ['grid', 'search_bar']
-    params = ['searchvalue', 'all_history']
-    
-    def __init__(self):
-        #filter_column_options = model.Activity.distinct_field_names() 
-        self.grid  = myPaginateDataGrid(fields = [PaginateDataGrid.Column(name='user',title='User',getter=lambda x: x.user,options=dict(sortable=True)),
-                                                  PaginateDataGrid.Column(name='service', title='Service', getter=lambda x: x.service, options=dict(sortable=True)),
-                                                  PaginateDataGrid.Column(name='created', title='Created',
-                                                    getter=lambda x: x.created,
-                                                    options=dict(sortable=True, datetime=True)),
-                                                  PaginateDataGrid.Column(name='field_name', title='Field Name', getter=lambda x: x.field_name, options=dict(sortable=True)),
-                                                  PaginateDataGrid.Column(name='action', title='Action', getter=lambda x: x.action, options=dict(sortable=True)),
-                                                  PaginateDataGrid.Column(name='old_value',title='Old Value', getter=lambda x: x.old_value,options=dict(sortable=True)), 
-                                                  PaginateDataGrid.Column(name='new_value',title='New Value',getter=lambda x: x.new_value, options=dict(sortable=True))]) 
-
-        self.search_bar = SearchBar(name='historysearch',
-                           label=_(u'History Search'),    
-                           table = search_utility.History.search.create_search_table(),
-                           complete_data = search_utility.History.search.create_complete_search_table(),
-                           search_controller=url("/get_search_options_history"), 
-                           )
-
-    def display(self,value=None,**params):
-        if 'options' in params:
-            if 'searchvalue' in params['options']:
-                params['searchvalue'] = params['options']['searchvalue']
-        if 'action' in params:
-            params['all_history'] = params['action']
-        return super(SystemHistory, self).display(value,**params)
-
 class TasksWidget(CompoundWidget):
     template = "bkr.server.templates.tasks_widget"
     params = ['tasks', 'hidden','action']

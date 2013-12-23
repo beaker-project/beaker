@@ -3,6 +3,7 @@ import logging
 import xmlrpclib
 import datetime
 from sqlalchemy import and_
+from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 from flask import request, jsonify, redirect as flask_redirect
 from turbogears import expose, controllers, flash, redirect, url
@@ -17,7 +18,8 @@ from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
 from bkr.server.flask_util import BadRequest400, Unauthorised401, \
         Conflict409, Forbidden403, NotFound404, MethodNotAllowed405, \
-        convert_internal_errors, auth_required, read_json_request
+        convert_internal_errors, auth_required, read_json_request, \
+        json_collection
 from turbogears.database import session
 import cherrypy
 
@@ -797,6 +799,24 @@ def delete_system_access_policy_rules(fqdn):
                 old=repr(rule))
         session.delete(rule)
     return '', 204
+
+@app.route('/systems/<fqdn>/activity/', methods=['GET'])
+@json_collection(sort_columns={
+    'user': User.user_name,
+    'service': SystemActivity.service,
+    'created': SystemActivity.created,
+    'field_name': SystemActivity.field_name,
+    'action': SystemActivity.action,
+    'old_value': SystemActivity.old_value,
+    'new_value': SystemActivity.new_value,
+})
+def get_system_activity(fqdn):
+    system = _get_system_by_FQDN(fqdn)
+    query = system.dyn_activity
+    # outerjoin user for sorting/filtering and also for eager loading
+    query = query.outerjoin(SystemActivity.user)\
+            .options(contains_eager(SystemActivity.user))
+    return query
 
 # for sphinx
 systems = SystemsController

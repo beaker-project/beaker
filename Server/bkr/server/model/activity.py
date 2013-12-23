@@ -54,6 +54,18 @@ class Activity(DeclarativeMappedObject):
         self.old_value = old_value
         self.new_value = new_value
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            'created': self.created,
+            'user': self.user,
+            'service': self.service,
+            'action': self.action,
+            'field_name': self.field_name,
+            'old_value': self.old_value,
+            'new_value': self.new_value,
+        }
+
     @classmethod
     def all(cls):
         return cls.query

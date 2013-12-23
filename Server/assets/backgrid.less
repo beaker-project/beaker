@@ -1,0 +1,40 @@
+/* Based on backgrid.css from Backgrid, but with most stuff removed since we 
+ * are using Bootstrap's table styles instead and we aren't using any of the 
+ * editor functionality. */
+
+.backgrid {
+    th.sortable a {
+        cursor: pointer;
+    }
+
+    th.sortable:after {
+        margin-left: 0.3em;
+        text-decoration: none;
+        .icon(@sort);
+        .icon-muted;
+    }
+    th.sortable.ascending:after {
+        .icon(@sort-up);
+        .icon-dark;
+    }
+    th.sortable.descending:after {
+        .icon(@sort-down);
+        .icon-dark;
+    }
+
+    .number-cell, .integer-cell {
+        text-align: right;
+    }
+    .boolean-cell, .select-cell {
+        text-align: center;
+    }
+    // Usernames are usually short except lab controller user accounts are 
+    // typically very long, which can blow out the table width. So we constraint 
+    // them a bit with an ellipsis for overflow.
+    .user-cell {
+        max-width: 6em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}

@@ -48,6 +48,8 @@ Source4:        https://github.com/jashkenas/underscore/archive/edbf2952c2b71f81
 Source5:        https://github.com/jashkenas/backbone/archive/699fe3271262043bb137bae97bd0003d6d193f27/backbone-699fe3271262043bb137bae97bd0003d6d193f27.tar.gz
 Source6:        https://github.com/moment/moment/archive/604c7942de38749e768ff8e327301ea6917c7c73/moment-604c7942de38749e768ff8e327301ea6917c7c73.tar.gz
 Source7:        https://github.com/silviomoreto/bootstrap-select/archive/c0c90090e5abeb5c10291430ae2a1778371f5630/bootstrap-select-c0c90090e5abeb5c10291430ae2a1778371f5630.tar.gz
+Source8:        https://github.com/wyuenho/backgrid/archive/ff4b033d6f33b3af543e735869b225f4ac984acf/backgrid-ff4b033d6f33b3af543e735869b225f4ac984acf.tar.gz
+Source9:        https://github.com/wyuenho/backbone-pageable/archive/61912d577bb5289a80654e89deeb8dc505f283bd/backbone-pageable-61912d577bb5289a80654e89deeb8dc505f283bd.tar.gz
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
@@ -279,6 +281,8 @@ tar -C Server/assets/underscore --strip-components=1 -xzf %{SOURCE4}
 tar -C Server/assets/backbone --strip-components=1 -xzf %{SOURCE5}
 tar -C Server/assets/moment --strip-components=1 -xzf %{SOURCE6}
 tar -C Server/assets/bootstrap-select --strip-components=1 -xzf %{SOURCE7}
+tar -C Server/assets/backgrid --strip-components=1 -xzf %{SOURCE8}
+tar -C Server/assets/backbone-pageable --strip-components=1 -xzf %{SOURCE9}
 
 %build
 [ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT;

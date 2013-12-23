@@ -14,6 +14,10 @@
         new SystemHardwareEssentialsView({model: system, el: $('#essentials')});
         new SystemLoanView({model: system, el: $('#loan')});
         new SystemSchedulerConfigView({model: system, el: $('#scheduler')});
+        // defer history grid until tab is shown
+        $('.system-nav a[href="#history"]').one('show', function () {
+            new SystemActivityView({model: system, el: $('#history')});
+        });
     });
   </script>
  </head>
@@ -139,9 +143,9 @@
    <div class="tab-pane" id="labinfo" py:if="widgets['labinfo']">
     ${widgets['labinfo'].display(method='get', action=widgets_action['labinfo'], value=value, options=widgets_options['labinfo'])}
    </div>
-   <div class="tab-pane" id="history">
-    ${history_widget.display(list=history_data,options=widgets_options['history'],action=widgets_action['history'])} 
-   </div>
+      <div class="tab-pane" id="history">
+        <i class="icon-spinner icon-spin"/> Loading&hellip;
+      </div>
    <div class="tab-pane" id="tasks">
     ${task_widget.display(
     value=widgets_options['tasks'],

@@ -4,10 +4,67 @@ Utilities to help with Flask based web interfaces
 import contextlib
 import functools
 from werkzeug.exceptions import HTTPException
+from flask import request, jsonify, redirect
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
 from bkr.server.bexceptions import InsufficientSystemPermissions
 
+def json_collection(**options):
+    """
+    Decorator factory for Flask request handlers which want to return 
+    a collection of resources as JSON. The decorated function should return 
+    a SQLAlchemy Query object. Adds support for the following query parameters:
+
+        page_size
+            Return at most this many entities in the response.
+        page
+            Return this page number within the collection. Pages are numbered 
+            starting from 1.
+        sort_by
+            Sort entities by this key, prior to pagination.
+        order
+            'asc' or 'desc' for ascending or descending sort respectively.
+    """
+    sort_columns = options.get('sort_columns', {})
+    def decorator(func):
+        @functools.wraps(func)
+        def _json_collection_decorated(*args, **kwargs):
+            result = {}
+            query = func(*args, **kwargs)
+            total_count = query.count()
+            result['count'] = total_count
+            if request.args.get('sort_by') in sort_columns:
+                result['sort_by'] = request.args['sort_by']
+                sort_column = sort_columns[request.args['sort_by']]
+                if request.args.get('order') == 'desc':
+                    result['order'] = 'desc'
+                    sort_criterion = sort_column.desc()
+                else:
+                    result['order'] = 'asc'
+                    sort_criterion = sort_column
+                query = query.order_by(None).order_by(sort_criterion)
+            with convert_internal_errors():
+                if 'page_size' in request.args:
+                    page_size = int(request.args['page_size'])
+                    page_size = max(page_size, 20)
+                    query = query.limit(page_size)
+                    page = int(request.args.get('page', 1))
+                    if page > 1:
+                        query = query.offset((page - 1) * page_size)
+                    result['page'] = page
+                    result['page_size'] = page_size
+                elif total_count > 500:
+                    # too big, force pagination with a redirect
+                    url = request.base_url
+                    if '?' not in url:
+                        url += '?page_size=20'
+                    else:
+                        url += '&page_size=20'
+                    return redirect(url)
+                result['entries'] = query.all()
+            return jsonify(result)
+        return _json_collection_decorated
+    return decorator
 
 # Error handling helpers that play nice with the Beaker CLI.
 # These report HTTP errors as plain text responses containing just the

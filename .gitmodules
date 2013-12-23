@@ -19,3 +19,9 @@
 [submodule "bootstrap-select"]
 	path = Server/assets/bootstrap-select
 	url = https://github.com/silviomoreto/bootstrap-select
+[submodule "backgrid"]
+	path = Server/assets/backgrid
+	url = https://github.com/wyuenho/backgrid.git
+[submodule "backbone-pageable"]
+	path = Server/assets/backbone-pageable
+	url = https://github.com/wyuenho/backbone-pageable.git

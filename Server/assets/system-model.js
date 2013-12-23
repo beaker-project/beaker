@@ -21,7 +21,43 @@ window.Reservation = Backbone.Model.extend({
     },
 });
 
+window.SystemActivityEntry = Backbone.Model.extend({
+    parse: function (data) {
+        data['user'] = !_.isEmpty(data['user']) ? new User(data['user']) : null;
+        return data;
+    },
+});
+
+window.SystemActivity = Backbone.PageableCollection.extend({
+    model: SystemActivityEntry,
+    state: {
+        pageSize: 20,
+    },
+    queryParams: {
+        currentPage: 'page',
+        pageSize: 'page_size',
+        totalPages: null,
+        totalRecords: null,
+        sortKey: 'sort_by',
+        order: 'order',
+    },
+    parseState: function (response) {
+        return {totalRecords: response.count};
+    },
+    parseRecords: function (response) {
+        return response.entries;
+    },
+});
+
 window.System = Backbone.Model.extend({
+    initialize: function () {
+        this.activity = new SystemActivity([], {
+            url: this.url + 'activity/',
+        });
+        // if the system object changes, chances are there are new activity 
+        // records describing the change so we refresh activity
+        this.on('change', function () { this.activity.fetch(); });
+    },
     parse: function (data) {
         data['owner'] = !_.isEmpty(data['owner']) ? new User(data['owner']) : null;
         data['user'] = !_.isEmpty(data['user']) ? new User(data['user']) : null;

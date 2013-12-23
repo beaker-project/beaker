@@ -39,7 +39,7 @@ from bkr.server.systems import SystemsController
 from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import TaskSearchForm, SearchBar, \
     SystemProvision, SystemInstallOptions, SystemGroups, \
-    SystemNotes, SystemKeys, SystemExclude, SystemHistory, SystemDetails, \
+    SystemNotes, SystemKeys, SystemExclude, SystemDetails, \
     SystemCommandsForm, LabInfoForm, PowerActionHistory, \
     myPaginateDataGrid, PowerForm, SystemActions
 from bkr.server.preferences import Preferences
@@ -172,7 +172,6 @@ class Root(RPCRoot):
     commands_form = SystemCommandsForm(name='commands')
     power_history = PowerActionHistory()
     system_details = SystemDetails()
-    system_activity = SystemHistory()
     system_exclude = SystemExclude(name='excluded_families')
     system_keys = SystemKeys(name='keys')
     system_notes = SystemNotes(name='notes')
@@ -204,11 +203,6 @@ class Root(RPCRoot):
     @expose(format='json')
     def get_search_options_task(self,table_field, *args, **kw):
         return su.Task.search.get_search_options(table_field, *args, **kw)
-
-
-    @expose(format='json')
-    def get_search_options_history(self,table_field, *args, **kw):
-        return su.History.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
     def get_operators_keyvalue(self,keyvalue_field,*args,**kw):
@@ -705,7 +699,6 @@ class Root(RPCRoot):
 
 
     @expose(template="bkr.server.templates.system")
-    @paginate('history_data',limit=30,default_order='-created')
     def _view_system_as_html(self, fqdn=None, **kw):
         if fqdn: 
             try:
@@ -713,14 +706,6 @@ class Root(RPCRoot):
             except InvalidRequestError:
                 flash( _(u"Unable to find %s" % fqdn) )
                 redirect("/")
-
-            #Let's deal with a history search here
-            histories_return = self.histories(SystemActivity.query.with_parent(system,"activity"), **kw)
-            history_options = {}
-            if 'searchvalue' in histories_return:
-                history_options['searchvalue'] = histories_return['searchvalue']
-            if 'simplesearch' in histories_return:
-                history_options['simplesearch'] = histories_return['simplesearch'] 
         elif kw.get('id'):
             try:
                 system = System.by_id(kw['id'],identity.current.user)
@@ -747,11 +732,6 @@ class Root(RPCRoot):
         options = self._get_system_options(system)
         provision_action, provision_options = (
             self._get_provisioning_details(system, our_user))
-
-        if 'activities_found' in histories_return:
-            historical_data = histories_return['activities_found']
-        else:
-            historical_data = system.activity[:150]
 
         if readonly:
             attrs = dict(readonly = 'True')
@@ -786,15 +766,12 @@ class Root(RPCRoot):
             readonly        = readonly,
             value           = system,
             options         = options,
-            history_data    = historical_data,
             task_widget     = self.task_form,
-            history_widget  = self.system_activity,
             groups_widget   = self.system_groups,
             install_widget  = self.system_installoptions,
             provision_widget = self.system_provision,
             widgets         = widgets,
             widgets_action  = dict( power     = url('/save_power'),
-                                    history   = url('/view/%s' % fqdn),
                                     labinfo   = url('/save_labinfo'),
                                     exclude   = url('/save_exclude'),
                                     keys      = url('/save_keys'),
@@ -807,7 +784,6 @@ class Root(RPCRoot):
                                   ),
             widgets_options = dict(power  = options,
                                    power_history = system.command_queue[:10], # XXX filter to power commands
-                                   history   = history_options or {},
                                    labinfo   = options,
                                    exclude   = options,
                                    keys      = dict(readonly = readonly,
@@ -1357,10 +1333,6 @@ class Root(RPCRoot):
             del system.provisions[arch]
         system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    def search_history(self):
-        pass
 
     @expose()
     @identity.require(identity.not_anonymous())

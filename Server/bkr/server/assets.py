@@ -40,6 +40,8 @@ def _create_env(**kwargs):
             'moment/moment.js',
             'underscore/underscore.js',
             'backbone/backbone.js',
+            'backbone-pageable/lib/backbone-pageable.js',
+            'backgrid/lib/backgrid.js',
             # ours
             webassets.Bundle(
                 'jst/*/*.html',
@@ -48,9 +50,12 @@ def _create_env(**kwargs):
                 output='generated/beaker-jst-%(version)s.js'),
             'local-datetime.js',
             'link-tabs-to-anchor.js',
+            'backgrid-paginator.js',
+            'beaker-backgrid.js',
             'beaker-typeaheads.js',
             'bootstrap-select-defaults.js',
             'recipe-tasks.js',
+            'system-activity.js',
             'system-add.js',
             'system-hardware.js',
             'system-loan.js',
