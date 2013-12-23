@@ -1,7 +1,6 @@
 import unittest2 as unittest
 import os
-import shutil
-import tempfile
+import subprocess
 from bkr.inttest import Process
 from turbogears.database import session
 from bkr.server.tools.sync_tasks import TaskLibrarySync
@@ -9,10 +8,10 @@ from bkr.server.model import Task
 from bkr.inttest import get_server_base
 import pkg_resources
 
+_beaker_sync_tasks = pkg_resources.resource_filename('bkr.server.tools', 'sync_tasks.py')
 _sync_tasks_dir = pkg_resources.resource_filename('bkr.inttest.server.tools', 'task_rpms')
 _http_server = pkg_resources.resource_filename('bkr.inttest', 'http_server.py')
 _current_dir = os.path.dirname(__file__)
-
 class TestTaskLibrarySync(unittest.TestCase):
 
     @classmethod
@@ -26,6 +25,36 @@ class TestTaskLibrarySync(unittest.TestCase):
     @classmethod
     def teardownClass(cls):
         cls.task_server.stop()
+
+    def run_as_script(self, remote=None, debug=True, force=True):
+        if not remote:
+            remote = get_server_base()
+        script_invocation = [_beaker_sync_tasks, '--remote', remote]
+        if debug:
+            script_invocation.append('--debug')
+        if force:
+            script_invocation.append('--force')
+        p = subprocess.Popen(script_invocation,
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        # sending 'y' is not required with --force, but
+        # saves a new if..else block
+        out, err = p.communicate('y')
+        self.assertEquals('', err)
+
+        return out
+
+    def assertRegexpMatchesIn(self, text, items):
+        for item in items:
+            try:
+                self.assertRegexpMatches(item, text)
+            except AssertionError:
+                continue
+            else:
+                return True
+
+        return False
 
     def test_sync_two_tasks(self):
         task_sync = TaskLibrarySync()
@@ -101,3 +130,28 @@ class TestTaskLibrarySync(unittest.TestCase):
 
 
         self.assertTrue(os.path.exists(task_rpm_disk))
+
+    def test_script_run_log(self):
+
+        remote = get_server_base()
+        out = self.run_as_script(remote).splitlines()
+
+        # Rough, but at least allows us to exercise the code path
+        # we get the tasks from the local DB only which is not exactly how
+        # it should be done - ideally we would be retrieving this task
+        # list from both local DB and the remote server
+        # However, here the remote server does not have a task which
+        # is not present locally (vice-versa is not true), so it works for
+        # us here
+        with session.begin():
+            tasks = Task.query.filter(Task.valid == True).all()
+        for task in tasks:
+            self.assertRegexpMatchesIn('Getting task XML for %s from %s' %
+                               (task.name, remote.rstrip('/')), out)
+            self.assertRegexpMatchesIn('Getting task XML for %s from local database' %
+                                       task.name, out)
+
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1040226#c8
+        out = self.run_as_script(remote, force=False).splitlines()
+        self.assertRegexpMatchesIn('tasks already present may be overwritten' 
+                                   'with the version from %s' % remote, out)
