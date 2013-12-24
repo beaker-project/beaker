@@ -1,8 +1,8 @@
 
-import unittest
+import unittest2 as unittest
 from bkr.server.model import session, SystemPermission
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client
+from bkr.inttest.client import run_client, ClientError
 
 class PolicyGrantTest(unittest.TestCase):
 
@@ -22,6 +22,14 @@ class PolicyGrantTest(unittest.TestCase):
             self.assertTrue(self.system.custom_access_policy.grants(
                     user, SystemPermission.edit_system))
 
+        # non-existent user
+        try:
+            run_client(['bkr', 'policy-grant', '--system', self.system.fqdn,
+                        '--permission', 'edit_system', '--user', 'idontexist'])
+            self.fail('Must fail or die')
+        except ClientError as e:
+            self.assertIn("User 'idontexist' does not exist", e.stderr_output)
+
     def test_grant_group(self):
         with session.begin():
             user = data_setup.create_user()
@@ -35,6 +43,14 @@ class PolicyGrantTest(unittest.TestCase):
             session.expire_all()
             self.assertTrue(self.system.custom_access_policy.grants(
                     user, SystemPermission.edit_system))
+
+        # non-existent group
+        try:
+            run_client(['bkr', 'policy-grant', '--system', self.system.fqdn,
+                        '--permission', 'edit_system', '--group', 'idontexist'])
+            self.fail('Must fail or die')
+        except ClientError as e:
+            self.assertIn("Group 'idontexist' does not exist", e.stderr_output)
 
     def test_grant_everybody(self):
         with session.begin():

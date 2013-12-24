@@ -124,10 +124,16 @@ class CSV(RPCRoot):
                             # Create new system with some defaults
                             # Assume the system is broken until proven otherwise.
                             # Also assumes its a machine.  we have to pick something
-                            system = System(fqdn=data['fqdn'],
-                                            owner=identity.current.user,
-                                            type=SystemType.machine,
-                                            status=SystemStatus.broken)
+                            try:
+                                system = System(fqdn=data['fqdn'],
+                                                owner=identity.current.user,
+                                                type=SystemType.machine,
+                                                status=SystemStatus.broken)
+                            except ValueError as e:
+                                log.append('Error importing system on line %s: %s' %
+                                           (reader.line_num, str(e)))
+                                continue
+
                         if system.can_edit(identity.current.user):
                             # Remove fqdn, can't change that via csv.
                             data.pop('fqdn')

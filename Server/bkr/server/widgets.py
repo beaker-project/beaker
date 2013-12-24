@@ -26,6 +26,7 @@ from bkr.server.assets import get_assets_env
 from bkr.server.bexceptions import BeakerException
 from bkr.server.helpers import make_link
 from bkr.server.validators import UniqueLabControllerEmail
+from bkr.server.util import VALID_FQDN_REGEX
 import logging
 log = logging.getLogger(__name__)
 
@@ -75,11 +76,8 @@ class Hostname(validators.Regex):
     messages = {'invalid': 'The supplied value is not a valid hostname'}
     def __init__(self, **kwargs):
         super(Hostname, self).__init__(
-                # http://stackoverflow.com/questions/1418423/_/1420225#1420225
-                r'^(?=.{1,255}$)[0-9A-Za-z]'
-                r'(?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?'
-                r'(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*\.?$',
-                strip=True, **kwargs)
+            VALID_FQDN_REGEX, strip=True, **kwargs)
+
     def _to_python(self, value, state):
         # Hostnames are case-insensitive, so let's force it to lowercase here 
         # for consistency

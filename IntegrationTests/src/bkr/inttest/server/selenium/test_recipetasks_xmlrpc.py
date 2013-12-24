@@ -19,9 +19,9 @@ class RecipeTasksXmlRpcTest(XmlRpcTestCase):
             dt = data_setup.create_distro_tree()
             lc = data_setup.create_labcontroller()
             systems = [
-                data_setup.create_system(fqdn=u'server.peer_roles', lab_controller=lc),
-                data_setup.create_system(fqdn=u'clientone.peer_roles', lab_controller=lc),
-                data_setup.create_system(fqdn=u'clienttwo.peer_roles', lab_controller=lc),
+                data_setup.create_system(fqdn=u'server.peer-roles.invalid', lab_controller=lc),
+                data_setup.create_system(fqdn=u'clientone.peer-roles.invalid', lab_controller=lc),
+                data_setup.create_system(fqdn=u'clienttwo.peer-roles.invalid', lab_controller=lc),
             ]
             job = data_setup.create_job_for_recipes([
                 data_setup.create_recipe(distro_tree=dt, role=u'SERVERS'),
@@ -38,10 +38,10 @@ class RecipeTasksXmlRpcTest(XmlRpcTestCase):
                 data_setup.mark_recipe_running(job.recipesets[0].recipes[i], system=systems[i])
         self.server.auth.login_password(self.lc.user.user_name, u'logmein')
         expected = {
-            'SERVERS': ['server.peer_roles', 'clientone.peer_roles'],
-            'CLIENTS': ['clientone.peer_roles', 'clienttwo.peer_roles'],
-            'None': ['server.peer_roles'],
-            'CLIENTTWO': ['clienttwo.peer_roles'],
+            'SERVERS': ['server.peer-roles.invalid', 'clientone.peer-roles.invalid'],
+            'CLIENTS': ['clientone.peer-roles.invalid', 'clienttwo.peer-roles.invalid'],
+            'None': ['server.peer-roles.invalid'],
+            'CLIENTTWO': ['clienttwo.peer-roles.invalid'],
         }
         for i in range(3):
             self.assertEquals(self.server.recipes.tasks.peer_roles(

@@ -466,8 +466,22 @@ def add_system_access_policy_rule(fqdn):
     else:
         policy = system.custom_access_policy = SystemAccessPolicy()
     rule = read_json_request(request)
-    user = User.by_user_name(rule['user']) if rule['user'] else None
-    group = Group.by_name(rule['group']) if rule['group'] else None
+
+    if rule['user']:
+        user = User.by_user_name(rule['user'])
+        if not user:
+            raise BadRequest400("User '%s' does not exist" % rule['user'])
+    else:
+        user = None
+
+    if rule['group']:
+        try:
+            group = Group.by_name(rule['group'])
+        except NoResultFound:
+            raise BadRequest400("Group '%s' does not exist" % rule['group'])
+    else:
+        group = None
+
     try:
         permission = SystemPermission.from_string(rule['permission'])
     except ValueError:

@@ -1469,7 +1469,10 @@ class Product(MappedObject):
 
     @classmethod
     def by_name(cls, name):
-        return cls.query.filter(cls.name == name).one()
+        try:
+            return cls.query.filter(cls.name == name).one()
+        except NoResultFound:
+            raise ValueError('No such product %r' % name)
 
 class BeakerTag(MappedObject):
 
@@ -1505,7 +1508,10 @@ class RetentionTag(BeakerTag):
 
     @classmethod
     def by_name(cls,tag):
-        return cls.query.filter_by(tag=tag).one()
+        try:
+            return cls.query.filter_by(tag=tag).one()
+        except NoResultFound:
+            raise ValueError('No such retention tag %r' % tag)
 
     def can_delete(self):
         if self.is_default:

@@ -34,7 +34,7 @@ class AdminPage(RPCRoot):
             self.widget_action = '.'
  
         self.search_auto = AutoCompleteField(name=self.search_name,
-                                                search_controller = url(self.search_url),
+                                                search_controller = self.search_url,
                                                 search_param = self.search_param,
                                                 result_name = self.result_name)
         self.search_widget_form = InlineForm('Search', fields=[self.search_auto],

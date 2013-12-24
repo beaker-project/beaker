@@ -69,13 +69,13 @@ class TestSystem(unittest.TestCase):
 
     def test_create_system_params(self):
         owner = data_setup.create_user()
-        new_system = System(fqdn=u'test_fqdn', contact=u'test@email.com',
+        new_system = System(fqdn=u'test-fqdn', contact=u'test@email.com',
                             location=u'Brisbane', model=u'Proliant', serial=u'4534534',
                             vendor=u'Dell', type=SystemType.machine,
                             status=SystemStatus.automated,
                             owner=owner)
         session.flush()
-        self.assertEqual(new_system.fqdn, 'test_fqdn')
+        self.assertEqual(new_system.fqdn, 'test-fqdn')
         self.assertEqual(new_system.contact, 'test@email.com')
         self.assertEqual(new_system.location, 'Brisbane')
         self.assertEqual(new_system.model, 'Proliant')
@@ -142,6 +142,19 @@ class TestSystem(unittest.TestCase):
             model.inventory.markdown = orig_markdown
         self.assertEqual(actual, note_text)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1037878
+    def test_invalid_fqdn(self):
+        system = data_setup.create_system()
+        try:
+            system.fqdn = ''
+            self.fail('Must fail or die')
+        except ValueError as e:
+            self.assertIn('System must have an associated FQDN', str(e))
+        try:
+            system.fqdn = 'invalid_system_fqdn'
+            self.fail('Must fail or die')
+        except ValueError as e:
+            self.assertIn('System has an invalid FQDN', str(e))
 
 class TestSystemKeyValue(unittest.TestCase):
 
@@ -2207,9 +2220,9 @@ class RecipeTest(unittest.TestCase):
         dt = data_setup.create_distro_tree()
         lc = data_setup.create_labcontroller()
         systems = [
-            data_setup.create_system(fqdn=u'server.roles_to_xml', lab_controller=lc),
-            data_setup.create_system(fqdn=u'clientone.roles_to_xml', lab_controller=lc),
-            data_setup.create_system(fqdn=u'clienttwo.roles_to_xml', lab_controller=lc),
+            data_setup.create_system(fqdn=u'server.roles-to-xml', lab_controller=lc),
+            data_setup.create_system(fqdn=u'clientone.roles-to-xml', lab_controller=lc),
+            data_setup.create_system(fqdn=u'clienttwo.roles-to-xml', lab_controller=lc),
         ]
         job = data_setup.create_job_for_recipes([
             data_setup.create_recipe(distro_tree=dt, role=u'SERVER'),
@@ -2220,9 +2233,9 @@ class RecipeTest(unittest.TestCase):
             data_setup.mark_recipe_running(job.recipesets[0].recipes[i], system=systems[i])
         xml = job.recipesets[0].recipes[0].to_xml(clone=False).toxml()
         self.assert_('<roles>'
-                '<role value="CLIENTONE"><system value="clientone.roles_to_xml"/></role>'
-                '<role value="CLIENTTWO"><system value="clienttwo.roles_to_xml"/></role>'
-                '<role value="SERVER"><system value="server.roles_to_xml"/></role>'
+                '<role value="CLIENTONE"><system value="clientone.roles-to-xml"/></role>'
+                '<role value="CLIENTTWO"><system value="clienttwo.roles-to-xml"/></role>'
+                '<role value="SERVER"><system value="server.roles-to-xml"/></role>'
                 '</roles>' in xml, xml)
 
 

@@ -1104,21 +1104,21 @@ class TestBeakerd(unittest.TestCase):
             group = data_setup.create_group()
             job_owner = data_setup.create_user()
             job_owner.groups.append(group)
-            system1 = data_setup.create_system(fqdn='no_longer_has_access1',
+            system1 = data_setup.create_system(fqdn='no-longer-has-access1.invalid',
                     lab_controller=self.lab_controller)
             system1.custom_access_policy.add_rule(
                     permission=SystemPermission.reserve, group=group)
             system1.groups.append(group)
             system2 = data_setup.create_system(shared=True,
-                    fqdn='no_longer_has_access2',
+                    fqdn='no-longer-has-access2.invalid',
                     lab_controller=self.lab_controller)
             distro_tree = data_setup.create_distro_tree()
             job = data_setup.create_job(owner=job_owner, distro_tree=distro_tree)
             job.recipesets[0].recipes[0]._host_requires = u"""
                 <hostRequires>
                     <or>
-                        <hostname op="=" value="no_longer_has_access1" />
-                        <hostname op="=" value="no_longer_has_access2" />
+                        <hostname op="=" value="no_longer-has-access1.invalid" />
+                        <hostname op="=" value="no_longer-has-access2.invalid" />
                     </or>
                 </hostRequires>
                 """

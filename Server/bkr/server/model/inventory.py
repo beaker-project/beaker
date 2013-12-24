@@ -13,7 +13,8 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         BigInteger, VARCHAR, TEXT)
 from sqlalchemy.sql import select, and_, or_, not_, case, func
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import mapper, relation, relationship, backref, column_property, dynamic_loader, contains_eager
+from sqlalchemy.orm import (mapper, relation, relationship, backref,
+        column_property, dynamic_loader, contains_eager, validates)
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.orm.collections import attribute_mapped_collection
@@ -28,6 +29,7 @@ from bkr.server.bexceptions import (BX, InsufficientSystemPermissions,
 from bkr.server.helpers import make_link
 from bkr.server.hybrid import hybrid_property, hybrid_method
 from bkr.server.installopts import InstallOptions, global_install_options
+from bkr.server.util import is_valid_fqdn
 from .base import MappedObject, DeclBase, SystemObject
 from .types import (SystemType, SystemStatus, ReleaseAction, CommandStatus,
         SystemPermission, TaskStatus)
@@ -381,8 +383,11 @@ class System(SystemObject, ActivityMixin):
                        owner=None, lab_controller=None, lender=None,
                        hypervisor=None, loaned=None, memory=None,
                        kernel_type=None, cpu=None):
-        super(System, self).__init__()
+
+        # Ensure the fqdn is valid
         self.fqdn = fqdn
+
+        super(System, self).__init__()
         self.status = status
         self.contact = contact
         self.location = location
@@ -398,6 +403,15 @@ class System(SystemObject, ActivityMixin):
         self.memory = memory
         self.kernel_type = kernel_type
         self.cpu = cpu
+
+    @validates('fqdn')
+    def validate_fqdn(self, key, fqdn):
+        if not fqdn:
+            raise ValueError('System must have an associated FQDN')
+        if not is_valid_fqdn(fqdn):
+            raise ValueError('System has an invalid FQDN: %s' % fqdn)
+
+        return fqdn
 
     def to_xml(self, clone=False):
         """ Return xml describing this system """
