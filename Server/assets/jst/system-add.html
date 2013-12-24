@@ -1,0 +1,17 @@
+<form action="<%- window.beaker_url_prefix %>systems/" method="POST">
+  <div class="modal-header">
+    <a href="#" class="close" data-dismiss="modal" aria-hidden="true">&times;</a>
+    <h3>Add system</h3>
+  </div>
+  <div class="modal-body">
+    <!-- pattern is the same one used by is_valid_fqdn on the server -->
+    <input type="text" name="fqdn" class="input-block-level"
+        placeholder="FQDN" required maxlength="255"
+        pattern="[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*\.?"
+        title="Fully-qualified domain name of up to 255 characters" />
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+    <button type="submit" class="btn btn-primary">Add</button>
+  </div>
+</form>

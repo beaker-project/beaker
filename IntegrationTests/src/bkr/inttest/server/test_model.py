@@ -154,7 +154,7 @@ class TestSystem(unittest.TestCase):
             system.fqdn = 'invalid_system_fqdn'
             self.fail('Must fail or die')
         except ValueError as e:
-            self.assertIn('System has an invalid FQDN', str(e))
+            self.assertIn('Invalid FQDN for system', str(e))
 
 class TestSystemKeyValue(unittest.TestCase):
 

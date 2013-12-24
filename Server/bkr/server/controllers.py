@@ -38,7 +38,7 @@ from bkr.server.watchdog import Watchdogs
 from bkr.server.systems import SystemsController
 from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import TaskSearchForm, SearchBar, \
-    SystemForm, SystemProvision, SystemInstallOptions, SystemGroups, \
+    SystemProvision, SystemInstallOptions, SystemGroups, \
     SystemNotes, SystemKeys, SystemExclude, SystemHistory, SystemDetails, \
     SystemCommandsForm, LabInfoForm, PowerActionHistory, \
     myPaginateDataGrid, PowerForm, SystemActions
@@ -52,7 +52,7 @@ from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
 from bkr.server.kickstart import KickstartController
 from bkr.server.controller_utilities import Utility, \
-    SystemSaveForm, restrict_http_method
+    restrict_http_method
 from bkr.server.bexceptions import BeakerException, BX
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
@@ -167,7 +167,6 @@ class Root(RPCRoot):
                 controller, entry_point.name)
         locals()[entry_point.name] = controller
 
-    system_form = SystemForm()
     power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')
     commands_form = SystemCommandsForm(name='commands')
@@ -511,8 +510,11 @@ class Root(RPCRoot):
         if 'direct_columns' in kw: #Let's add our direct columns here
             for index,col in kw['direct_columns']:
                 my_fields.insert(index - 1, col)
+        add_script = None
+        if not identity.current.anonymous:
+            add_script = 'new SystemAddModal();'
         display_grid = myPaginateDataGrid(fields=my_fields,
-                add_action='/new' if not identity.current.anonymous else None)
+                add_script=add_script)
         col_data = Utility.result_columns(columns)
         return dict(title=title,
                     grid = display_grid,
@@ -604,36 +606,8 @@ class Root(RPCRoot):
             flash(_(u"Group ID not found"))
         redirect("./view/%s" % system.fqdn)
 
-    @expose(template="bkr.server.templates.form-post")
-    @identity.require(identity.not_anonymous())
-    def new(self, **kwargs):
-        options = {}
-        options['edit'] = True
-        return dict(
-            title    = 'New System',
-            form     = self.system_form,
-            widgets  = {},
-            action   = url('/save'),
-            value    = None,
-            options  = options)
-
     def _get_system_options(self, system):
         options = {}
-        our_user = identity.current.user
-
-        if our_user:
-            if (system.open_reservation and
-                  system.open_reservation.type != 'recipe' and
-                  system.can_unreserve(our_user)):
-                options['user_change_text'] = 'Return'
-            elif system.is_free() and system.can_reserve_manually(our_user):
-                options['user_change_text'] = 'Take'
-
-        if system.open_reservation is not None and \
-            system.open_reservation.recipe:
-                job_id = system.open_reservation.recipe.recipeset.job.id
-                options['running_job'] = '/jobs/%s' % job_id
-
         options['system_actions'] = self.system_actions
         options['loan'] = {'system' : system.fqdn, 'name' : 'request_loan',
             'action' : '../system_action/loan_request'}
@@ -872,28 +846,6 @@ class Root(RPCRoot):
             cherrypy.response.headers['Content-Type'] = 'application/rdf+xml'
             return graph.serialize(format='pretty-xml')
 
-    @identity.require(identity.not_anonymous())
-    @expose('bkr.server.templates.form-post')
-    def edit(self, fqdn=None, **kw):
-        our_user = identity.current.user
-        id = kw.get('id')
-        if id:
-            system = System.by_id(id, our_user)
-        elif fqdn:
-            system = System.by_fqdn(fqdn, our_user)
-        if system and not system.can_edit(user=our_user):
-            flash(_(u"You do not have permission to edit %s" % fqdn))
-            redirect('/')
-        title = system.fqdn
-        options = self._get_system_options(system)
-        options['edit'] = True
-        form = SystemForm()
-        return dict(form=form, 
-                    options=options, 
-                    title=title, 
-                    value=system, 
-                    action=url('/save'))
-
     @cherrypy.expose
     def view(self, fqdn=None, **kwargs):
         if isinstance(fqdn, str):
@@ -1092,104 +1044,6 @@ class Root(RPCRoot):
             system.power = power
             flash( _(u"Saved Power") )
         system.date_modified = datetime.utcnow()
-        redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    @validate(form=system_form)
-    @error_handler(new)
-    @identity.require(identity.not_anonymous())
-    def save(self, **kw):
-        if kw.get('id'):
-            try:
-                query = System.query.filter(System.fqdn ==kw['fqdn'])
-                for sys_object in query:
-                    if str(sys_object.id) != str(kw['id']):
-                        flash( _(u"%s already exists!" % kw['fqdn']))
-                        redirect("/") 
-                system = System.by_id(kw['id'],identity.current.user)
-            except InvalidRequestError:
-                flash( _(u"Unable to save %s" % kw['id']) )
-                redirect("/")
-           
-        else:
-            if System.query.filter(System.fqdn == kw['fqdn']).count() != 0:
-                flash( _(u"%s already exists!" % kw['fqdn']) )
-                redirect("/")
-            system = System(fqdn=kw['fqdn'],owner=identity.current.user)
-            session.add(system)
-            # new systems are visible to everybody by default
-            system.custom_access_policy = SystemAccessPolicy()
-            system.custom_access_policy.add_rule(SystemPermission.view,
-                    everybody=True)
-
-        if kw['lab_controller_id'] == 0:
-            kw['lab_controller'] = None
-        else:
-            kw['lab_controller'] = LabController.by_id(kw['lab_controller_id'])
-        if kw['hypervisor_id'] == 0:
-            kw['hypervisor'] = None
-        else:
-            kw['hypervisor'] = Hypervisor.by_id(kw['hypervisor_id'])
-        kw['kernel_type'] = KernelType.by_id(kw['kernel_type_id'])
-
-        # Don't change lab controller while the system is in use
-        if system.lab_controller != kw['lab_controller'] and \
-                system.open_reservation is not None:
-            flash(_(u'Unable to change lab controller while system is in use '
-                    '(return the system first)'))
-            redirect('/view/%s' % system.fqdn)
-
-        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 
-                       'mac_address', 'status', 'status_reason', 
-                       'lab_controller', 'type', 'hypervisor', 'kernel_type']
-
-        for field in log_fields:
-            try:
-                current_val = getattr(system,field)
-            except AttributeError:
-                flash(_(u'Field %s is not a valid system property' % field)) 
-                continue
-
-            new_val = kw.get(field)
-             
-            if unicode(current_val) != unicode(new_val): 
-                function_name = '%s_change_handler' % field
-                field_change_handler = getattr(SystemSaveForm.handler,function_name,None)
-                if field_change_handler is not None:
-                    kw = field_change_handler(current_val,new_val,**kw)
-                if current_val:
-                    current_val = unicode(current_val)
-                if new_val:
-                    new_val = unicode(new_val)
-                activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val)
-                system.activity.append(activity)
-                
-        system.status = kw['status']
-        system.location=kw['location']
-        system.model=kw['model']
-        system.type = kw['type']
-        system.serial=kw['serial']
-        system.vendor=kw['vendor']
-        system.lender=kw['lender']
-        system.hypervisor=kw['hypervisor']
-        system.fqdn=kw['fqdn']
-        system.status_reason = kw['status_reason']
-        system.date_modified = datetime.utcnow()
-        system.kernel_type = kw['kernel_type']
-
-        # Change Lab Controller
-        system.lab_controller = kw['lab_controller']
-        system.mac_address=kw['mac_address']
-
-        # We can't compute a new checksum, so let's just clear it so that it 
-        # always compares false
-        if system.checksum is not None:
-            system.activity.append(SystemActivity(user=identity.current.user,
-                    service=u'WEBUI', action=u'Changed', field_name=u'checksum',
-                    old_value=system.checksum, new_value=None))
-            system.checksum = None
-
-        session.add(system)
         redirect("/view/%s" % system.fqdn)
 
     @expose()

@@ -4,8 +4,8 @@ import xmlrpclib
 import datetime
 from sqlalchemy import and_
 from sqlalchemy.orm.exc import NoResultFound
-from flask import request, jsonify
-from turbogears import expose, controllers, flash, redirect
+from flask import request, jsonify, redirect as flask_redirect
+from turbogears import expose, controllers, flash, redirect, url
 from bkr.server import identity
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
@@ -308,6 +308,35 @@ def _get_system_by_FQDN(fqdn):
         return System.by_fqdn(fqdn, identity.current.user)
     except NoResultFound:
         raise NotFound404('System not found')
+
+@app.route('/systems/', methods=['POST'])
+@auth_required
+def add_system():
+    # We accept JSON or form-encoded for convenience
+    if request.json:
+        if 'fqdn' not in request.json:
+            raise BadRequest400('Missing fqdn key')
+        new_fqdn = request.json['fqdn']
+    elif request.form:
+        if 'fqdn' not in request.form:
+            raise BadRequest400('Missing fqdn parameter')
+        new_fqdn = request.form['fqdn']
+    else:
+        raise UnsupportedMediaType415
+    with convert_internal_errors():
+        if System.query.filter(System.fqdn == new_fqdn).count() != 0:
+            raise Conflict409('System with fqdn %r already exists' % new_fqdn)
+        system = System(fqdn=new_fqdn, owner=identity.current.user)
+        session.add(system)
+        # new systems are visible to everybody by default
+        system.custom_access_policy = SystemAccessPolicy()
+        system.custom_access_policy.add_rule(SystemPermission.view,
+                everybody=True)
+    # XXX this should be 201 with Location: /systems/FQDN/ but 302 is more 
+    # convenient because it lets us use a traditional browser form without AJAX 
+    # handling, and for now we're redirecting to /view/FQDN until that is moved 
+    # to /systems/FQDN/
+    return flask_redirect(url(u'/view/%s#essentials' % system.fqdn))
 
 # XXX this is a hack to trigger fallback to TurboGears for /systems/clear_netboot_form
 # Once that is ported to Flask, delete this hack

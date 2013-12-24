@@ -51,6 +51,7 @@ def _create_env(**kwargs):
             'beaker-typeaheads.js',
             'bootstrap-select-defaults.js',
             'recipe-tasks.js',
+            'system-add.js',
             'system-hardware.js',
             'system-loan.js',
             'system-model.js',

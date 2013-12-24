@@ -325,7 +325,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if not fqdn:
             raise ValueError('System must have an associated FQDN')
         if not is_valid_fqdn(fqdn):
-            raise ValueError('System has an invalid FQDN: %s' % fqdn)
+            raise ValueError('Invalid FQDN for system: %s' % fqdn)
 
         return fqdn
 

@@ -58,7 +58,7 @@ class CSVImportTest(WebDriverTestCase):
         self.assertEquals(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           "Error importing system on line 2: "
-                          "System has an invalid FQDN: invalid--fqdn")
+                          "Invalid FQDN for system: invalid--fqdn")
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=987157
     def test_system_rename(self):
@@ -78,7 +78,7 @@ class CSVImportTest(WebDriverTestCase):
         self.assertEquals(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           "Error importing system on line 2: "
-                          "System has an invalid FQDN: new--fqdn.name")
+                          "Invalid FQDN for system: new--fqdn.name")
 
         # attempt to rename a non-existent system should fail
         orig_date_modified = self.system.date_modified

@@ -41,6 +41,13 @@ class MethodNotAllowed405(PlainTextHTTPException):
 class Conflict409(PlainTextHTTPException):
     code = 409
 
+class UnsupportedMediaType415(PlainTextHTTPException):
+    """
+    HTTP error response for when the *request* content type is not supported. 
+    Not the same as 406 Not Acceptable.
+    """
+    code = 415
+
 @contextlib.contextmanager
 def convert_internal_errors():
     """Context manager to convert Python exceptions to HTTP errors"""
@@ -64,5 +71,5 @@ def read_json_request(request):
     """Helper that throws a 400 error if the request has no JSON data"""
     data = request.json
     if not data:
-        raise BadRequest400("No JSON payload in request")
+        raise UnsupportedMediaType415("No JSON payload in request")
     return data
