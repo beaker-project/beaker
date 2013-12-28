@@ -6,6 +6,11 @@ import subprocess
 import signal
 from time import sleep
 import gevent
+try:
+    from gevent import wait as gevent_wait
+except ImportError:
+    # gevent.wait was gevent.run in 1.0 beta
+    from gevent import run as gevent_wait
 from bkr.labcontroller.async import MonitoredSubprocess
 
 class SubprocessTest(unittest.TestCase):
@@ -34,7 +39,7 @@ class SubprocessTest(unittest.TestCase):
             self.assert_(len(out) <= 4096013, len(out))
             self.assert_(out.endswith('+++ DISCARDED'), out[:-10240])
         gevent.spawn(_test)
-        gevent.run()
+        gevent_wait()
 
     def test_timeout_is_enforced(self):
         def _test():
@@ -42,7 +47,7 @@ class SubprocessTest(unittest.TestCase):
             p.dead.wait()
             self.assertEquals(p.returncode, -signal.SIGTERM)
         gevent.spawn(_test)
-        gevent.run()
+        gevent_wait()
 
     def test_child_is_process_group_leader(self):
         def _test():
@@ -50,7 +55,7 @@ class SubprocessTest(unittest.TestCase):
             self._assert_child_is_process_group_leader(p)
             p.dead.wait()
         gevent.spawn(_test)
-        gevent.run()
+        gevent_wait()
 
     def test_process_group_is_killed_on_leader_timeout(self):
         # This test makes the following process tree:
@@ -77,7 +82,7 @@ class SubprocessTest(unittest.TestCase):
             self.assertIn(p.returncode, [-signal.SIGTERM, -signal.SIGKILL])
             self._assert_process_group_is_removed(p.pid)
         gevent.spawn(_test)
-        gevent.run()
+        gevent_wait()
 
     def test_orphan_child_is_killed_when_parent_exits(self):
         # This test makes the following process tree:
@@ -104,7 +109,7 @@ class SubprocessTest(unittest.TestCase):
             self.assertEquals(p.returncode, 0)
             self._assert_process_group_is_removed(p.pid)
         gevent.spawn(_test)
-        gevent.run()
+        gevent_wait()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=832250
     def test_reaper_race(self):
@@ -114,4 +119,4 @@ class SubprocessTest(unittest.TestCase):
             for p in procs:
                 p.dead.wait()
         gevent.spawn(_test)
-        gevent.run()
+        gevent_wait()
