@@ -1120,8 +1120,8 @@ class TestBeakerd(unittest.TestCase):
             job.recipesets[0].recipes[0]._host_requires = u"""
                 <hostRequires>
                     <or>
-                        <hostname op="=" value="no_longer-has-access1.invalid" />
-                        <hostname op="=" value="no_longer-has-access2.invalid" />
+                        <hostname op="=" value="no-longer-has-access1.invalid" />
+                        <hostname op="=" value="no-longer-has-access2.invalid" />
                     </or>
                 </hostRequires>
                 """
