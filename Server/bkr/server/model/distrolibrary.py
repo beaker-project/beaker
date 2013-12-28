@@ -14,7 +14,7 @@ from bkr.server import identity
 from bkr.server.helpers import make_link
 from bkr.server.installopts import InstallOptions
 from .sql import ConditionalInsert
-from .base import MappedObject, SystemObject
+from .base import MappedObject
 from .types import ImageType
 from .activity import Activity, activity_table
 from .lab import LabController
@@ -160,7 +160,7 @@ distro_tree_activity_table = Table('distro_tree_activity', metadata,
     mysql_engine='InnoDB',
 )
 
-class KernelType(SystemObject):
+class KernelType(MappedObject):
 
     def __repr__(self):
         return self.kernel_type

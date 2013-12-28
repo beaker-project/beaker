@@ -10,7 +10,7 @@ from bkr.server.bexceptions import BeakerException, BX, \
         StaleCommandStatusException, NoChangeException
 from bkr.server.installopts import InstallOptions
 
-from .base import DeclarativeMappedObject, MappedObject, SystemObject
+from .base import DeclarativeMappedObject, MappedObject
 from .types import (TaskStatus, CommandStatus, TaskResult, TaskPriority,
         SystemStatus, SystemType, ReleaseAction, ImageType, ResourceType,
         RecipeVirtStatus, SystemPermission, UUID, MACAddress)

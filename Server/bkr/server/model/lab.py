@@ -3,7 +3,7 @@ from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode, Boolean,
         DateTime)
 from sqlalchemy.orm import mapper, relation, relationship, backref
 from turbogears.database import session, metadata
-from .base import DeclarativeMappedObject, MappedObject, SystemObject
+from .base import DeclarativeMappedObject, MappedObject
 from .activity import Activity, ActivityMixin, activity_table
 from .identity import User
 
@@ -29,7 +29,7 @@ class LabControllerActivity(Activity):
     def object_name(self):
         return 'LabController: %s' % self.object.fqdn
 
-class LabController(SystemObject, ActivityMixin):
+class LabController(MappedObject, ActivityMixin):
 
     activity_type = LabControllerActivity
 

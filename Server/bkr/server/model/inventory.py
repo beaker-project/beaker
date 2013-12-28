@@ -30,7 +30,7 @@ from bkr.server.helpers import make_link
 from bkr.server.hybrid import hybrid_property, hybrid_method
 from bkr.server.installopts import InstallOptions, global_install_options
 from bkr.server.util import is_valid_fqdn
-from .base import MappedObject, DeclarativeMappedObject, SystemObject
+from .base import MappedObject, DeclarativeMappedObject
 from .types import (SystemType, SystemStatus, ReleaseAction, CommandStatus,
         SystemPermission, TaskStatus)
 from .activity import Activity, ActivityMixin, activity_table
@@ -371,7 +371,7 @@ system_status_duration_table = Table('system_status_duration', metadata,
         mysql_engine='InnoDB',
 )
 
-class System(SystemObject, ActivityMixin):
+class System(MappedObject, ActivityMixin):
 
     @property
     def activity_type(self):
@@ -1431,14 +1431,14 @@ class SystemStatusAttributeExtension(AttributeExtension):
         obj.status_durations.insert(0, SystemStatusDuration(status=child))
         return child
 
-class SystemCc(SystemObject):
+class SystemCc(MappedObject):
 
     def __init__(self, email_address):
         super(SystemCc, self).__init__()
         self.email_address = email_address
 
 
-class Hypervisor(SystemObject):
+class Hypervisor(MappedObject):
 
     def __repr__(self):
         return self.hypervisor
@@ -1559,31 +1559,31 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
         return (self.user == None) & (self.group == None)
 
 
-class Provision(SystemObject):
+class Provision(MappedObject):
     pass
 
 
-class ProvisionFamily(SystemObject):
+class ProvisionFamily(MappedObject):
     pass
 
 
-class ProvisionFamilyUpdate(SystemObject):
+class ProvisionFamilyUpdate(MappedObject):
     pass
 
 
-class ExcludeOSMajor(SystemObject):
+class ExcludeOSMajor(MappedObject):
     pass
 
 
-class ExcludeOSVersion(SystemObject):
+class ExcludeOSVersion(MappedObject):
     pass
 
 
-class LabInfo(SystemObject):
+class LabInfo(MappedObject):
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
 
 
-class Cpu(SystemObject):
+class Cpu(MappedObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
         super(Cpu, self).__init__()
         self.vendor = vendor
@@ -1607,7 +1607,7 @@ class Cpu(SystemObject):
                 new_flag = CpuFlag(flag=cpuflag)
                 self.flags.append(new_flag)
 
-class CpuFlag(SystemObject):
+class CpuFlag(MappedObject):
     def __init__(self, flag=None):
         super(CpuFlag, self).__init__()
         self.flag = flag
@@ -1621,7 +1621,7 @@ class CpuFlag(SystemObject):
     by_flag = classmethod(by_flag)
 
 
-class Numa(SystemObject):
+class Numa(MappedObject):
     def __init__(self, nodes=None):
         super(Numa, self).__init__()
         self.nodes = nodes
@@ -1630,7 +1630,7 @@ class Numa(SystemObject):
         return str(self.nodes)
 
 
-class DeviceClass(SystemObject):
+class DeviceClass(MappedObject):
 
     @classmethod
     def lazy_create(cls, device_class=None, **kwargs):
@@ -1654,10 +1654,10 @@ class DeviceClass(SystemObject):
         return self.device_class
 
 
-class Device(SystemObject):
+class Device(MappedObject):
     pass
 
-class Disk(SystemObject):
+class Disk(MappedObject):
     def __init__(self, size=None, sector_size=None, phys_sector_size=None, model=None):
         super(Disk, self).__init__()
         self.size = int(size)
@@ -1695,7 +1695,7 @@ class PowerType(MappedObject):
             q = cls.query.filter(PowerType.name.like('%s%%' % name))
         return q
 
-class Power(SystemObject):
+class Power(MappedObject):
     pass
 
 
@@ -1761,7 +1761,7 @@ class Note(MappedObject):
         return XML(rendered)
 
 
-class Key(SystemObject):
+class Key(MappedObject):
 
     # Obsoleted keys are ones which have been replaced by real, structured 
     # columns on the system table (and its related tables). We disallow users 
