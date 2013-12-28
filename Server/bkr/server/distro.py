@@ -302,16 +302,10 @@ class Distros(RPCRoot):
             os_minor = '0'
 
         # Try and find OSMajor
-        try:
-            osmajor = OSMajor.by_name(os_major)
-        except InvalidRequestError: 
-            osmajor = OSMajor(os_major)
+        osmajor = OSMajor.lazy_create(osmajor=os_major)
 
         # Try and find OSVersion
-        try:
-            osversion = OSVersion.by_name(osmajor,os_minor)
-        except InvalidRequestError: 
-            osversion = OSVersion(osmajor,os_minor)
+        osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=os_minor)
 
         # Check each Distro
         for distro in distros:

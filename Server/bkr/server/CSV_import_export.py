@@ -149,6 +149,7 @@ class CSV(RPCRoot):
                                                 owner=identity.current.user,
                                                 type=SystemType.machine,
                                                 status=SystemStatus.broken)
+                                    session.add(system)
                                 except ValueError as e:
                                     log.append('Error importing system on line %s: %s' %
                                                (reader.line_num, str(e)))
@@ -862,18 +863,20 @@ class CSV_GroupUser(CSV):
                 group = Group(group_name=data['group'],
                               display_name=data['group'])
                 session.add(group)
-                session.flush([group])
+                session.flush()
             deleted = False
             if 'deleted' in data:
                 deleted = smart_bool(data['deleted'])
             if deleted:
                 if group in user.groups:
-                    activity = Activity(identity.current.user, 'CSV', 'Removed', 'group', '%s' % group, '')
+                    group.record_activity(user=identity.current.user, service=u'CSV',
+                            field=u'User', action=u'Removed', old=user)
                     user.groups.remove(group)
             else:
                 if group not in user.groups:
+                    group.record_activity(user=identity.current.user, service=u'CSV',
+                            field=u'User', action=u'Added', new=user)
                     user.groups.append(group)
-                    activity = Activity(identity.current.user, 'CSV', 'Added', 'group', '', '%s' % group)
         else:
             log.append("%s: group can't be empty!" % user)
             return False
@@ -906,7 +909,7 @@ class CSV_GroupSystem(CSV):
                 group = Group(group_name=data['group'],
                               display_name=data['group'])
                 session.add(group)
-                session.flush([group])
+                session.flush()
             deleted = False
             if 'deleted' in data:
                 deleted = smart_bool(data['deleted'])

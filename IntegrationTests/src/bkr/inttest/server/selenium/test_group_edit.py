@@ -237,9 +237,6 @@ class TestGroupsWD(WebDriverTestCase):
         b.find_element_by_xpath('//title[text()="My Groups"]')
         b.find_element_by_link_text('FBZ').click()
         with session.begin():
-            self.assertEquals(Activity.query.filter_by(service=u'WEBUI',
-                    field_name=u'Group', action=u'Added',
-                    new_value=u'Group FBZ').count(), 1)
             group = Group.by_name(u'FBZ')
             self.assertEquals(group.display_name, u'Group FBZ')
             self.assert_(group.has_owner(self.user))
@@ -251,6 +248,8 @@ class TestGroupsWD(WebDriverTestCase):
             self.assertEquals(group.activity[-2].field_name, u'User')
             self.assertEquals(group.activity[-2].new_value, self.user.user_name)
             self.assertEquals(group.activity[-2].service, u'WEBUI')
+            self.assertEquals(group.activity[-3].action, u'Created')
+            self.assertEquals(group.activity[-3].service, u'WEBUI')
             self.assertEquals('blapppy7', group.root_password)
 
     def test_create_new_group_sans_password(self):

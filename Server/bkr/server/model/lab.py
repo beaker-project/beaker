@@ -3,8 +3,8 @@ from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode, Boolean,
         DateTime)
 from sqlalchemy.orm import mapper, relation, relationship, backref
 from turbogears.database import session, metadata
-from .base import DeclBase, MappedObject, SystemObject
-from .activity import Activity, activity_table
+from .base import DeclarativeMappedObject, MappedObject, SystemObject
+from .activity import Activity, ActivityMixin, activity_table
 from .identity import User
 
 lab_controller_table = Table('lab_controller', metadata,
@@ -25,7 +25,14 @@ lab_controller_activity_table = Table('lab_controller_activity', metadata,
     mysql_engine='InnoDB',
 )
 
-class LabController(SystemObject):
+class LabControllerActivity(Activity):
+    def object_name(self):
+        return 'LabController: %s' % self.object.fqdn
+
+class LabController(SystemObject, ActivityMixin):
+
+    activity_type = LabControllerActivity
+
     def __repr__(self):
         return "%s" % (self.fqdn)
 
@@ -47,7 +54,7 @@ class LabController(SystemObject):
             all = cls.query.filter_by(removed=None)
         return [(lc.id, lc.fqdn) for lc in all]
 
-class LabControllerDataCenter(DeclBase, MappedObject):
+class LabControllerDataCenter(DeclarativeMappedObject):
     """
     A mapping from a lab controller to an oVirt data center.
     """
@@ -62,10 +69,6 @@ class LabControllerDataCenter(DeclBase, MappedObject):
     lab_controller = relationship(LabController, backref='data_centers')
     data_center = Column(Unicode(255), nullable=False)
     storage_domain = Column(Unicode(255))
-
-class LabControllerActivity(Activity):
-    def object_name(self):
-        return 'LabController: %s' % self.object.fqdn
 
 mapper(LabController, lab_controller_table,
         properties = {'user'        : relation(User, backref=backref('lab_controller', uselist=False)),

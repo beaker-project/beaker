@@ -65,6 +65,7 @@ class KeyTypes(AdminPage):
             key.key_name = kw['key_name']
         else:
             key = Key(key_name=kw['key_name'])
+            session.add(key)
         if 'numeric' in kw:
             key.numeric = kw['numeric']
         flash( _(u"OK") )

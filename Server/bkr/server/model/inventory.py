@@ -30,7 +30,7 @@ from bkr.server.helpers import make_link
 from bkr.server.hybrid import hybrid_property, hybrid_method
 from bkr.server.installopts import InstallOptions, global_install_options
 from bkr.server.util import is_valid_fqdn
-from .base import MappedObject, DeclBase, SystemObject
+from .base import MappedObject, DeclarativeMappedObject, SystemObject
 from .types import (SystemType, SystemStatus, ReleaseAction, CommandStatus,
         SystemPermission, TaskStatus)
 from .activity import Activity, ActivityMixin, activity_table
@@ -1009,10 +1009,7 @@ class System(SystemObject, ActivityMixin):
 
     def updateArch(self, archinfo):
         for arch in archinfo:
-            try:
-                new_arch = Arch.by_name(arch)
-            except NoResultFound:
-                new_arch = Arch(arch=arch)
+            new_arch = Arch.lazy_create(arch=arch)
             if new_arch not in self.arch:
                 self.arch.append(new_arch)
                 self.activity.append(SystemActivity(
@@ -1462,7 +1459,7 @@ class Hypervisor(SystemObject):
         return cls.query.filter_by(hypervisor=hvisor).one()
 
 
-class SystemAccessPolicy(DeclBase, MappedObject):
+class SystemAccessPolicy(DeclarativeMappedObject):
 
     """
     A list of rules controlling who is allowed to do what to a system.
@@ -1522,7 +1519,7 @@ class SystemAccessPolicy(DeclBase, MappedObject):
                 group_id=group.group_id if group else None))
         return self.rules[-1]
 
-class SystemAccessPolicyRule(DeclBase, MappedObject):
+class SystemAccessPolicyRule(DeclarativeMappedObject):
 
     """
     A single rule in a system access policy. Policies can have one or more of these.
@@ -1588,7 +1585,7 @@ class LabInfo(SystemObject):
 
 class Cpu(SystemObject):
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(Cpu, self).__init__()
         self.vendor = vendor
         self.model = model
         self.model_name = model_name
@@ -1662,6 +1659,7 @@ class Device(SystemObject):
 
 class Disk(SystemObject):
     def __init__(self, size=None, sector_size=None, phys_sector_size=None, model=None):
+        super(Disk, self).__init__()
         self.size = int(size)
         self.sector_size = int(sector_size)
         self.phys_sector_size = int(phys_sector_size)

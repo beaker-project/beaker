@@ -17,7 +17,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears.config import get
 from turbogears.database import session, metadata
 from bkr.server.bexceptions import BX, NoChangeException
-from .base import DeclBase, MappedObject
+from .base import DeclarativeMappedObject, MappedObject
 from .activity import Activity, ActivityMixin
 from .config import ConfigItem, ConfigValueInt, ConfigValueString
 
@@ -94,7 +94,7 @@ user_activity_table = Table('user_activity', metadata,
     mysql_engine='InnoDB'
 )
 
-class SubmissionDelegate(DeclBase, MappedObject):
+class SubmissionDelegate(DeclarativeMappedObject):
 
     """
     A simple N:N mapping between users and their submission delegates
@@ -399,7 +399,7 @@ class Permission(MappedObject):
         super(Permission, self).__init__()
         self.permission_name = permission_name
 
-class Group(DeclBase, MappedObject, ActivityMixin):
+class Group(DeclarativeMappedObject, ActivityMixin):
     """
     A group definition that records changes to the group
     """
@@ -605,6 +605,7 @@ class UserActivity(Activity):
 
 class SSHPubKey(MappedObject):
     def __init__(self, keytype, pubkey, ident):
+        super(SSHPubKey, self).__init__()
         self.keytype = keytype
         self.pubkey = pubkey
         self.ident = ident

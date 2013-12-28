@@ -41,6 +41,12 @@ config_value_int_table = Table('config_value_int', metadata,
 )
 
 class ConfigItem(MappedObject):
+
+    @classmethod
+    def lazy_create(cls, name, description, numeric):
+        return super(ConfigItem, cls).lazy_create(name=name,
+                _extra_attrs=dict(description=description, numeric=numeric))
+
     @classmethod
     def by_name(cls, name):
         return cls.query.filter_by(name=name).one()

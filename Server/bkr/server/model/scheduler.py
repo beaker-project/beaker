@@ -547,7 +547,7 @@ class Log(MappedObject):
 
     def __init__(self, path=None, filename=None,
                  server=None, basepath=None, parent=None):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(Log, self).__init__()
         self.parent = parent
         self.path = self._normalized_path(path)
         self.filename = filename
@@ -802,7 +802,7 @@ class Job(TaskBase):
 
     def __init__(self, ttasks=0, owner=None, whiteboard=None,
             retention_tag=None, product=None, group=None, submitter=None):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(Job, self).__init__()
         self.ttasks = ttasks
         self.owner = owner
         if submitter is None:
@@ -1613,7 +1613,7 @@ class RecipeSet(TaskBase):
     stop_types = ['abort','cancel']
 
     def __init__(self, ttasks=0, priority=None):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(RecipeSet, self).__init__()
         self.ttasks = ttasks
         self.priority = priority
 
@@ -1848,7 +1848,7 @@ class Recipe(TaskBase):
     stop_types = ['abort','cancel']
 
     def __init__(self, ttasks=0):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(Recipe, self).__init__()
         self.ttasks = ttasks
 
     def crypt_root_password(self):
@@ -2663,7 +2663,7 @@ class RecipeTask(TaskBase):
     stop_types = ['stop','abort','cancel']
 
     def __init__(self, task):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(RecipeTask, self).__init__()
         self.task = task
 
     def delete(self):
@@ -2969,7 +2969,7 @@ class RecipeTaskParam(MappedObject):
     """
 
     def __init__(self, name, value):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(RecipeTaskParam, self).__init__()
         self.name = name
         self.value = value
 
@@ -2986,7 +2986,7 @@ class RecipeRepo(MappedObject):
     """
 
     def __init__(self, name, url):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(RecipeRepo, self).__init__()
         self.name = name
         self.url = url
 
@@ -3003,7 +3003,7 @@ class RecipeKSAppend(MappedObject):
     """
 
     def __init__(self, ks_append):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(RecipeKSAppend, self).__init__()
         self.ks_append = ks_append
 
     def to_xml(self):
@@ -3050,7 +3050,7 @@ class RecipeTaskResult(TaskBase):
 
     def __init__(self, recipetask=None, path=None, result=None,
             score=None, log=None):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(RecipeTaskResult, self).__init__()
         self.recipetask = recipetask
         self.path = path
         self.result = result

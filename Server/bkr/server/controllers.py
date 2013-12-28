@@ -1272,6 +1272,7 @@ class Root(RPCRoot):
                 flash( _(u"%s already exists!" % kw['fqdn']) )
                 redirect("/")
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
+            session.add(system)
             # new systems are visible to everybody by default
             system.custom_access_policy = SystemAccessPolicy()
             system.custom_access_policy.add_rule(SystemPermission.view,

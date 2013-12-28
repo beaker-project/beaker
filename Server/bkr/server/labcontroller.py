@@ -70,6 +70,7 @@ class LabControllers(RPCRoot):
             labcontroller = LabController.by_id(kw['id'])
         else:
             labcontroller =  LabController()
+            session.add(labcontroller)
         if labcontroller.fqdn != kw['fqdn']:
             activity = LabControllerActivity(identity.current.user,
                 'WEBUI', 'Changed', 'FQDN', labcontroller.fqdn, kw['fqdn'])
@@ -490,12 +491,10 @@ class LabControllers(RPCRoot):
         labcontroller.removed = None
         labcontroller.disabled = False
 
-        LabControllerActivity(identity.current.user, 'WEBUI', 
-            'Changed', 'Disabled', unicode(True), unicode(False),
-            lab_controller_id = id)
-        LabControllerActivity(identity.current.user, 'WEBUI', 
-            'Changed', 'Removed', unicode(True), unicode(False), 
-            lab_controller_id=id)
+        labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
+                field=u'Disabled', action=u'Changed', old=unicode(True), new=unicode(False))
+        labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
+                field=u'Removed', action=u'Changed', old=unicode(True), new=unicode(False))
         flash('Successfully re-added %s' % labcontroller.fqdn)
         redirect(url('.'))
 
@@ -518,6 +517,7 @@ class LabControllers(RPCRoot):
             sys_activity = SystemActivity(identity.current.user, 'WEBUI', \
                 'Changed', 'lab_controller', labcontroller.fqdn,
                 None, system_id=system_id[0])
+            session.add(sys_activity)
         system_table.update().where(system_table.c.lab_controller_id == id).\
             values(lab_controller_id=None).execute()
         watchdogs = Watchdog.by_status(labcontroller=labcontroller, 
@@ -532,12 +532,10 @@ class LabControllers(RPCRoot):
                     new_value=None))
             session.delete(lca)
         labcontroller.disabled = True
-        LabControllerActivity(identity.current.user, 'WEBUI', 
-            'Changed', 'Disabled', unicode(False), unicode(True), 
-            lab_controller_id=id)
-        LabControllerActivity(identity.current.user, 'WEBUI', 
-            'Changed', 'Removed', unicode(False), unicode(True), 
-            lab_controller_id=id)
+        labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
+                field=u'Disabled', action=u'Changed', old=unicode(False), new=unicode(True))
+        labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
+                field=u'Removed', action=u'Changed', old=unicode(False), new=unicode(True))
 
         flash( _(u"%s removed") % labcontroller.fqdn )
         raise redirect(".")

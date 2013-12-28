@@ -236,6 +236,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
             result = template.render(context)
 
     rendered_kickstart = RenderedKickstart(kickstart=result)
+    session.add(rendered_kickstart)
     session.flush() # so that it has an id
     return rendered_kickstart
 

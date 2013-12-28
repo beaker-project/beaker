@@ -11,29 +11,6 @@ from .sql import ConditionalInsert
 
 log = logging.getLogger(__name__)
 
-def decl_base_constructor(self, **kwargs):
-    """
-    This is a cut and paste from sqlalchemy.ext.declarative._declarative_constructor
-    however we are copying it here to ensure behaviour does not
-    change and chain up the MRO.
-    DeclBase should be used in the following manner
-    DecalrativeClass(DeclBase, MappedObject) and in this
-    way we avoid adding to the session in MappedObject.__init__.
-
-    Once MappedObject.__init__ no longer calls session.add(), this
-    can be removed.
-    """
-    cls_ = type(self)
-    for k in kwargs:
-        if not hasattr(cls_, k):
-            raise TypeError(
-                "%r is an invalid keyword argument for %s" %
-                (k, cls_.__name__))
-        setattr(self, k, kwargs[k])
-
-DeclBase = declarative_base(constructor=decl_base_constructor,
-                            metadata=metadata)
-
 class MappedObject(object):
 
     query = session.query_property()
@@ -97,15 +74,6 @@ class MappedObject(object):
     def __init__(self, **kwargs):
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
-        # XXX Calling session.add(self) here is a bad idea! We only do it 
-        # because it was inherited from TurboGears 1.0 a long time ago. If 
-        # something causes the session to be flushed (for example lazy_create) 
-        # we could end up trying to persist an object which has not been fully 
-        # populated yet. See bug 869455 for an example of this.
-        # Beware that some classes are already opting out of this behaviour by 
-        # not chaining up to this __init__ method. We should work towards 
-        # eliminating it completely.
-        session.add(self)
 
     def __repr__(self):
         # pretty-print the attributes, so we can see what's getting autoloaded for us:
@@ -122,6 +90,8 @@ class MappedObject(object):
     @classmethod
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
+
+DeclarativeMappedObject = declarative_base(cls=MappedObject, metadata=metadata)
 
 class SystemObject(MappedObject):
     @classmethod

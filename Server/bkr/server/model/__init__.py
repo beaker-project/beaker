@@ -10,7 +10,7 @@ from bkr.server.bexceptions import BeakerException, BX, \
         StaleCommandStatusException, NoChangeException
 from bkr.server.installopts import InstallOptions
 
-from .base import DeclBase, MappedObject, SystemObject
+from .base import DeclarativeMappedObject, MappedObject, SystemObject
 from .types import (TaskStatus, CommandStatus, TaskResult, TaskPriority,
         SystemStatus, SystemType, ReleaseAction, ImageType, ResourceType,
         RecipeVirtStatus, SystemPermission, UUID, MACAddress)
@@ -45,7 +45,7 @@ from .scheduler import (Watchdog, TaskBase, Job, RecipeSet, Recipe,
         system_resource_table, machine_guest_map, guest_recipe_table,
         recipe_task_table)
 
-class ExternalReport(DeclBase, MappedObject):
+class ExternalReport(DeclarativeMappedObject):
 
     __tablename__ = 'external_reports'
     __table_args__ = {'mysql_engine':'InnoDB'}

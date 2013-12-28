@@ -91,6 +91,7 @@ def create_labcontroller(fqdn=None, user=None):
             user = User(user_name='host/%s' % fqdn)
         lc = LabController(fqdn=fqdn)
         lc.user = user
+        session.add(lc)
         user.groups.append(Group.by_name(u'lab_controller'))
         return lc
     log.debug('labcontroller %s already exists' % fqdn)
@@ -145,7 +146,9 @@ def create_group(permissions=None, group_name=None, owner=None, ldap=False,
 def create_permission(name=None):
     if not name:
         name = unique_name('permission%s')
-    return Permission(name)
+    permission = Permission(name)
+    session.add(permission)
+    return permission
 
 def add_user_to_group(user,group):
     user.groups.append(group)
@@ -191,6 +194,7 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
                 distro = create_distro(name=distro_name)
     distro_tree = DistroTree.lazy_create(distro=distro,
             arch=Arch.by_name(arch), variant=variant)
+    session.add(distro_tree)
     if distro_tree.arch not in distro.osversion.arches:
         distro.osversion.arches.append(distro_tree.arch)
     distro_tree.repos.append(DistroTreeRepo(repo_id=variant,
@@ -230,6 +234,7 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
     else:
         system = System(fqdn=fqdn,type=type, owner=owner,
             status=status, **kw)
+        session.add(system)
 
     if date_added is not None:
         system.date_added = date_added
@@ -272,6 +277,7 @@ def create_system_activity(user=None, **kw):
         user = create_user()
     activity = SystemActivity(user, u'WEBUI', u'Changed', u'Loaned To',
             unique_name(u'random_%s'), user.user_name)
+    session.add(activity)
     return activity
 
 def create_system_status_history(system, statuses):
@@ -374,6 +380,7 @@ def create_retention_tag(name=None, default=False, needs_product=False):
     if name is None:
         name = unique_name(u'tag%s')
     new_tag = RetentionTag(name,is_default=default,needs_product=needs_product)
+    session.add(new_tag)
     return new_tag
 
 def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,

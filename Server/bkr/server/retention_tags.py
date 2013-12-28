@@ -59,6 +59,7 @@ class RetentionTag(AdminPage):
     def save(self, id=None, **kw):
         retention_tag = Tag(kw['tag'], kw['default'], kw['needs_product'])
         retention_tag.expire_in_days = kw['expire_in_days']
+        session.add(retention_tag)
         flash(_(u"OK"))
         redirect("./admin")
 
