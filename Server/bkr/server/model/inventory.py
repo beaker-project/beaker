@@ -13,7 +13,7 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         BigInteger, VARCHAR, TEXT)
 from sqlalchemy.sql import select, and_, or_, not_, case, func
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import (mapper, relation, relationship, backref,
+from sqlalchemy.orm import (mapper, relationship, backref,
         column_property, dynamic_loader, contains_eager, validates)
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
@@ -22,7 +22,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears import url
 from turbogears.config import get
-from turbogears.database import session, metadata
+from turbogears.database import session
 from bkr.server import identity, metrics, mail
 from bkr.server.bexceptions import (BX, InsufficientSystemPermissions,
         StaleCommandStatusException, StaleSystemUserException)
@@ -30,74 +30,59 @@ from bkr.server.helpers import make_link
 from bkr.server.hybrid import hybrid_property, hybrid_method
 from bkr.server.installopts import InstallOptions, global_install_options
 from bkr.server.util import is_valid_fqdn
-from .base import MappedObject, DeclarativeMappedObject
+from .base import DeclarativeMappedObject
 from .types import (SystemType, SystemStatus, ReleaseAction, CommandStatus,
         SystemPermission, TaskStatus)
-from .activity import Activity, ActivityMixin, activity_table
-from .identity import User, Group, SystemGroup, users_table
+from .activity import Activity, ActivityMixin
+from .identity import User, Group, SystemGroup
 from .lab import LabController
 from .distrolibrary import (Arch, KernelType, OSMajor, OSVersion, Distro, DistroTree,
-        LabControllerDistroTree, arch_table, kernel_type_table, distro_tree_table)
+        LabControllerDistroTree)
 
 log = logging.getLogger(__name__)
 
 xmldoc = xml.dom.minidom.Document()
 
-hypervisor_table = Table('hypervisor', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('hypervisor', Unicode(100), nullable=False),
-    mysql_engine='InnoDB',
-)
+class SystemActivity(Activity):
 
-system_table = Table('system', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('fqdn', Unicode(255), nullable=False),
-    Column('serial', Unicode(1024)),
-    Column('date_added', DateTime,
-           default=datetime.utcnow, nullable=False),
-    Column('date_modified', DateTime),
-    Column('date_lastcheckin', DateTime),
-    Column('location', String(255)),
-    Column('vendor', Unicode(255)),
-    Column('model', Unicode(255)),
-    Column('lender', Unicode(255)),
-    Column('owner_id', Integer,
-           ForeignKey('tg_user.user_id'), nullable=False),
-    Column('user_id', Integer,
-           ForeignKey('tg_user.user_id')),
-    Column('type', SystemType.db_type(), nullable=False),
-    Column('status', SystemStatus.db_type(), nullable=False),
-    Column('status_reason',Unicode(255)),
-    Column('deleted', Boolean, default=False),
-    Column('memory', Integer),
-    Column('checksum', String(32)),
-    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id')),
-    Column('mac_address',String(18)),
-    Column('loan_id', Integer,
-           ForeignKey('tg_user.user_id')),
-    Column('loan_comment', Unicode(1000),),
-    Column('release_action', ReleaseAction.db_type()),
-    Column('reprovision_distro_tree_id', Integer,
-           ForeignKey('distro_tree.id')),
-    Column('hypervisor_id', Integer,
-           ForeignKey('hypervisor.id')),
-    Column('kernel_type_id', Integer,
-           ForeignKey('kernel_type.id'),
-           default=select([kernel_type_table.c.id], limit=1).where(kernel_type_table.c.kernel_type==u'default').correlate(None),
-           nullable=False),
-    mysql_engine='InnoDB',
-)
+    __tablename__ = 'system_activity'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id'))
+    __mapper_args__ = {'polymorphic_identity': u'system_activity'}
 
-system_cc_table = Table('system_cc', metadata,
-        Column('system_id', Integer, ForeignKey('system.id', ondelete='CASCADE',
-            onupdate='CASCADE'), primary_key=True),
-        Column('email_address', Unicode(255), primary_key=True, index=True),
-        mysql_engine='InnoDB',
-)
+    def object_name(self):
+        return "System: %s" % self.object.fqdn
 
-system_device_map = Table('system_device_map', metadata,
+class Reservation(DeclarativeMappedObject):
+
+    __tablename__ = 'reservation'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id'), nullable=False)
+    start_time = Column(DateTime, index=True, nullable=False,
+            default=datetime.utcnow)
+    finish_time = Column(DateTime, index=True)
+    # type = 'manual' or 'recipe'
+    # XXX Use Enum types
+    type = Column(Unicode(30), index=True, nullable=False)
+    user = relationship(User, backref=backref('reservations',
+            order_by=[start_time.desc()]))
+
+# this only really exists to make reporting efficient
+class SystemStatusDuration(DeclarativeMappedObject):
+
+    __tablename__ = 'system_status_duration'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id'), nullable=False)
+    status = Column(SystemStatus.db_type(), nullable=False)
+    start_time = Column(DateTime, index=True, nullable=False,
+            default=datetime.utcnow)
+    finish_time = Column(DateTime, index=True)
+
+system_device_map = Table('system_device_map', DeclarativeMappedObject.metadata,
     Column('system_id', Integer,
            ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE'),
            primary_key=True),
@@ -107,7 +92,7 @@ system_device_map = Table('system_device_map', metadata,
     mysql_engine='InnoDB',
 )
 
-system_arch_map = Table('system_arch_map', metadata,
+system_arch_map = Table('system_arch_map', DeclarativeMappedObject.metadata,
     Column('system_id', Integer,
            ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE'),
            primary_key=True),
@@ -117,265 +102,131 @@ system_arch_map = Table('system_arch_map', metadata,
     mysql_engine='InnoDB',
 )
 
-provision_table = Table('provision', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id',
-           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('ks_meta', String(1024)),
-    Column('kernel_options', String(1024)),
-    Column('kernel_options_post', String(1024)),
-    Column('arch_id', Integer, ForeignKey('arch.id'), nullable=False),
-    mysql_engine='InnoDB',
-)
+class SystemStatusAttributeExtension(AttributeExtension):
 
-provision_family_table = Table('provision_family', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('provision_id', Integer, ForeignKey('provision.id',
-           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('osmajor_id', Integer, ForeignKey('osmajor.id'), nullable=False),
-    Column('ks_meta', String(1024)),
-    Column('kernel_options', String(1024)),
-    Column('kernel_options_post', String(1024)),
-    mysql_engine='InnoDB',
-)
+    def set(self, state, child, oldchild, initiator):
+        obj = state.obj()
+        log.debug('%r status changed from %r to %r', obj, oldchild, child)
+        if child == oldchild:
+            return child
+        if oldchild in (None, NEVER_SET):
+            # First time system.status has been set, there will be no duration 
+            # rows yet.
+            assert not obj.status_durations
+            obj.status_durations.insert(0, SystemStatusDuration(status=child))
+            return child
+        # Otherwise, there should be exactly one "open" duration row, 
+        # with NULL finish_time.
+        open_sd = obj.status_durations[0]
+        assert open_sd.finish_time is None
+        assert open_sd.status == oldchild
+        if open_sd in session.new:
+            # The current open row is not actually persisted yet. This 
+            # happens when system.status is set more than once in 
+            # a session. In this case we can just update the same row and 
+            # return, no reason to insert another.
+            open_sd.status = child
+            return child
+        # Need to close the open row using a conditional UPDATE to ensure 
+        # we don't race with another transaction
+        now = datetime.utcnow()
+        if session.query(SystemStatusDuration)\
+                .filter_by(finish_time=None, id=open_sd.id)\
+                .update({'finish_time': now}, synchronize_session=False) \
+                != 1:
+            raise RuntimeError('System status updated in another transaction')
+        # Make the ORM aware of it as well
+        open_sd.finish_time = now
+        obj.status_durations.insert(0, SystemStatusDuration(status=child))
+        return child
 
-provision_family_update_table = Table('provision_update_family', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('provision_family_id', Integer, ForeignKey('provision_family.id',
-           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('osversion_id', Integer, ForeignKey('osversion.id'), nullable=False),
-    Column('ks_meta', String(1024)),
-    Column('kernel_options', String(1024)),
-    Column('kernel_options_post', String(1024)),
-    mysql_engine='InnoDB',
-)
+class System(DeclarativeMappedObject, ActivityMixin):
 
-exclude_osmajor_table = Table('exclude_osmajor', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id',
-           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('arch_id', Integer, ForeignKey('arch.id'), nullable=False),
-    Column('osmajor_id', Integer, ForeignKey('osmajor.id'), nullable=False),
-    mysql_engine='InnoDB',
-)
+    __tablename__ = 'system'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    fqdn = Column(Unicode(255), nullable=False)
+    serial = Column(Unicode(1024))
+    date_added = Column(DateTime, default=datetime.utcnow, nullable=False)
+    date_modified = Column(DateTime)
+    date_lastcheckin = Column(DateTime)
+    location = Column(String(255))
+    vendor = Column(Unicode(255))
+    model = Column(Unicode(255))
+    lender = Column(Unicode(255))
+    owner_id = Column(Integer, ForeignKey('tg_user.user_id'), nullable=False)
+    owner = relationship(User, primaryjoin=owner_id == User.user_id)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id'))
+    user = relationship(User, primaryjoin=user_id == User.user_id)
+    type = Column(SystemType.db_type(), nullable=False)
+    status = column_property(Column(SystemStatus.db_type(), nullable=False),
+            extension=SystemStatusAttributeExtension())
+    status_reason = Column(Unicode(255))
+    deleted = Column(Boolean, default=False)
+    memory = Column(Integer)
+    checksum = Column(String(32))
+    lab_controller_id = Column(Integer, ForeignKey('lab_controller.id'))
+    lab_controller = relationship(LabController, backref='systems')
+    mac_address = Column(String(18))
+    loan_id = Column(Integer, ForeignKey('tg_user.user_id'))
+    loaned = relationship(User, primaryjoin=loan_id == User.user_id)
+    loan_comment = Column(Unicode(1000))
+    release_action = Column(ReleaseAction.db_type())
+    reprovision_distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
+    reprovision_distro_tree = relationship(DistroTree)
+    hypervisor_id = Column(Integer, ForeignKey('hypervisor.id'))
+    hypervisor = relationship('Hypervisor')
+    kernel_type_id = Column(Integer, ForeignKey('kernel_type.id'),
+           default=select([KernelType.id], limit=1).where(KernelType.kernel_type==u'default').correlate(None),
+           nullable=False)
+    kernel_type = relationship('KernelType')
+    devices = relationship('Device', secondary=system_device_map, backref='systems')
+    disks = relationship('Disk', backref='system', cascade='all, delete, delete-orphan')
+    arch = relationship(Arch, order_by=[Arch.arch], secondary=system_arch_map,
+            backref='systems')
+    labinfo = relationship('LabInfo', uselist=False, backref='system',
+            cascade='all, delete, delete-orphan')
+    cpu = relationship('Cpu', uselist=False, backref='system',
+            cascade='all, delete, delete-orphan')
+    numa = relationship('Numa', uselist=False, backref='system',
+            cascade='all, delete, delete-orphan')
+    power = relationship('Power', uselist=False, backref='system',
+            cascade='all, delete, delete-orphan')
+    excluded_osmajor = relationship('ExcludeOSMajor', backref='system',
+            cascade='all, delete, delete-orphan')
+    excluded_osversion = relationship('ExcludeOSVersion', backref='system',
+            cascade='all, delete, delete-orphan')
+    provisions = relationship('Provision', backref='system',
+            cascade='all, delete, delete-orphan',
+            collection_class=attribute_mapped_collection('arch'))
+    group_assocs = relationship(SystemGroup, backref='system',
+            cascade='all, delete-orphan')
+    key_values_int = relationship('Key_Value_Int', backref='system',
+            cascade='all, delete, delete-orphan')
+    key_values_string = relationship('Key_Value_String', backref='system',
+            cascade='all, delete, delete-orphan')
+    activity = relationship(SystemActivity, backref='object', cascade='all, delete',
+            order_by=[SystemActivity.created.desc(), SystemActivity.id.desc()])
+    dyn_activity = dynamic_loader(SystemActivity,
+            order_by=[SystemActivity.created.desc(), SystemActivity.id.desc()])
+    command_queue = relationship('CommandActivity', backref='object',
+            cascade='all, delete, delete-orphan',
+            order_by=[SystemActivity.created.desc(), SystemActivity.id.desc()])
+    dyn_command_queue = dynamic_loader('CommandActivity')
+    _system_ccs = relationship('SystemCc', backref='system',
+            cascade='all, delete, delete-orphan')
+    reservations = relationship(Reservation, backref='system',
+            order_by=[Reservation.start_time.desc()])
+    dyn_reservations = dynamic_loader(Reservation)
+    open_reservation = relationship(Reservation, uselist=False, viewonly=True,
+            primaryjoin=and_(id == Reservation.system_id, Reservation.finish_time == None))
+    status_durations = relationship(SystemStatusDuration, backref='system',
+            cascade='all, delete, delete-orphan',
+            order_by=[SystemStatusDuration.start_time.desc(),
+                      SystemStatusDuration.id.desc()])
+    dyn_status_durations = dynamic_loader(SystemStatusDuration)
 
-exclude_osversion_table = Table('exclude_osversion', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id',
-           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('arch_id', Integer, ForeignKey('arch.id'), nullable=False),
-    Column('osversion_id', Integer, ForeignKey('osversion.id'), nullable=False),
-    mysql_engine='InnoDB',
-)
-
-labinfo_table = Table('labinfo', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id',
-           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('orig_cost', Numeric(precision=16, scale=2, asdecimal=True)),
-    Column('curr_cost', Numeric(precision=16, scale=2, asdecimal=True)),
-    Column('dimensions', String(255)),
-    Column('weight', Numeric(asdecimal=False)),
-    Column('wattage', Numeric(asdecimal=False)),
-    Column('cooling', Numeric(asdecimal=False)),
-    mysql_engine='InnoDB',
-)
-
-cpu_table = Table('cpu', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id',
-           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('vendor',String(255)),
-    Column('model',Integer),
-    Column('model_name',String(255)),
-    Column('family',Integer),
-    Column('stepping',Integer),
-    Column('speed',Float),
-    Column('processors',Integer),
-    Column('cores',Integer),
-    Column('sockets',Integer),
-    Column('hyper',Boolean),
-    mysql_engine='InnoDB',
-)
-
-cpu_flag_table = Table('cpu_flag', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('cpu_id', Integer, ForeignKey('cpu.id',
-           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('flag', String(255)),
-    mysql_engine='InnoDB',
-)
-
-numa_table = Table('numa', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id',
-           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('nodes',Integer),
-    mysql_engine='InnoDB',
-)
-
-device_class_table = Table('device_class', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column("device_class", VARCHAR(24), nullable=False, unique=True),
-    Column("description", TEXT),
-    mysql_engine='InnoDB',
-)
-
-device_table = Table('device', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('vendor_id',String(4)),
-    Column('device_id',String(4)),
-    Column('subsys_device_id',String(4)),
-    Column('subsys_vendor_id',String(4)),
-    Column('bus',String(255)),
-    Column('driver', String(255), index=True),
-    Column('description',String(255)),
-    Column('device_class_id', Integer,
-           ForeignKey('device_class.id'), nullable=False),
-    Column('date_added', DateTime,
-           default=datetime.utcnow, nullable=False),
-    UniqueConstraint('vendor_id', 'device_id', 'subsys_device_id',
-           'subsys_vendor_id', 'bus', 'driver', 'description', name='device_uix_1'),
-    mysql_engine='InnoDB',
-)
-Index('ix_device_pciid', device_table.c.vendor_id, device_table.c.device_id)
-
-disk_table = Table('disk', metadata,
-    Column('id', Integer, autoincrement=True,
-        nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
-    Column('model', String(255)),
-    # sizes are in bytes
-    Column('size', BigInteger),
-    Column('sector_size', Integer),
-    Column('phys_sector_size', Integer),
-    mysql_engine='InnoDB',
-)
-
-power_type_table = Table('power_type', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('name', String(255), nullable=False),
-    mysql_engine='InnoDB',
-)
-
-power_table = Table('power', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('power_type_id', Integer, ForeignKey('power_type.id'),
-           nullable=False),
-    Column('system_id', Integer, ForeignKey('system.id',
-           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('power_address', String(255), nullable=False),
-    Column('power_user', String(255)),
-    Column('power_passwd', String(255)),
-    Column('power_id', String(255)),
-    mysql_engine='InnoDB',
-)
-
-system_activity_table = Table('system_activity', metadata,
-    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id'), nullable=True),
-    mysql_engine='InnoDB',
-)
-
-command_queue_table = Table('command_queue', metadata,
-    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id',
-           onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('status', CommandStatus.db_type(), nullable=False),
-    Column('task_id', String(255)),
-    Column('delay_until', DateTime, default=None),
-    Column('updated', DateTime, default=datetime.utcnow),
-    Column('callback', String(255)),
-    Column('distro_tree_id', Integer, ForeignKey('distro_tree.id')),
-    Column('kernel_options', UnicodeText),
-    mysql_engine='InnoDB',
-)
-
-note_table = Table('note', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id', onupdate='CASCADE',
-           ondelete='CASCADE'), nullable=False, index=True),
-    Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
-    Column('created', DateTime, nullable=False, default=datetime.utcnow),
-    Column('text',TEXT, nullable=False),
-    Column('deleted', DateTime, nullable=True, default=None),
-    mysql_engine='InnoDB',
-)
-
-key_table = Table('key_', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('key_name', String(50), nullable=False, unique=True),
-    Column('numeric', Boolean, default=False),
-    mysql_engine='InnoDB',
-)
-
-key_value_string_table = Table('key_value_string', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id',
-            onupdate='CASCADE', ondelete='CASCADE'), nullable=False, index=True),
-    Column('key_id', Integer, ForeignKey('key_.id',
-            onupdate='CASCADE', ondelete='CASCADE'), nullable=False, index=True),
-    Column('key_value',TEXT, nullable=False),
-    mysql_engine='InnoDB',
-)
-
-key_value_int_table = Table('key_value_int', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id',
-            onupdate='CASCADE', ondelete='CASCADE'), nullable=False, index=True),
-    Column('key_id', Integer, ForeignKey('key_.id',
-            onupdate='CASCADE', ondelete='CASCADE'), nullable=False, index=True),
-    Column('key_value',Integer, nullable=False),
-    mysql_engine='InnoDB',
-)
-
-reservation_table = Table('reservation', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
-        Column('user_id', Integer, ForeignKey('tg_user.user_id'),
-            nullable=False),
-        Column('start_time', DateTime, index=True, nullable=False,
-            default=datetime.utcnow),
-        Column('finish_time', DateTime, index=True),
-        # type = 'manual' or 'recipe'
-        # XXX Use Enum types
-        Column('type', Unicode(30), index=True, nullable=False),
-        mysql_engine='InnoDB',
-)
-
-# this only really exists to make reporting efficient
-system_status_duration_table = Table('system_status_duration', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('system_id', Integer, ForeignKey('system.id'), nullable=False),
-        Column('status', SystemStatus.db_type(), nullable=False),
-        Column('start_time', DateTime, index=True, nullable=False,
-            default=datetime.utcnow),
-        Column('finish_time', DateTime, index=True),
-        mysql_engine='InnoDB',
-)
-
-class System(MappedObject, ActivityMixin):
-
-    @property
-    def activity_type(self):
-        return SystemActivity
+    activity_type = SystemActivity
 
     def __init__(self, fqdn=None, status=SystemStatus.broken, contact=None, location=None,
                        model=None, type=SystemType.machine, serial=None, vendor=None,
@@ -1143,11 +994,11 @@ class System(MappedObject, ActivityMixin):
                 .filter(not_(OSMajor.excluded_osmajors.any(and_(
                     ExcludeOSMajor.system == self,
                     ExcludeOSMajor.arch_id == DistroTree.arch_id))
-                    .correlate(distro_tree_table)))\
+                    .correlate(DistroTree.__table__)))\
                 .filter(not_(OSVersion.excluded_osversions.any(and_(
                     ExcludeOSVersion.system == self,
                     ExcludeOSVersion.arch_id == DistroTree.arch_id))
-                    .correlate(distro_tree_table)))
+                    .correlate(DistroTree.__table__)))
         return query
 
     def action_release(self, service=u'Scheduler'):
@@ -1336,9 +1187,9 @@ class System(MappedObject, ActivityMixin):
     def _reserve(self, service, user, reservation_type):
         # Atomic operation to reserve the system
         session.flush()
-        if session.connection(System).execute(system_table.update(
-                and_(system_table.c.id == self.id,
-                     system_table.c.user_id == None)),
+        if session.connection(System).execute(System.__table__.update(
+                and_(System.id == self.id,
+                     System.user_id == None)),
                 user_id=user.user_id).rowcount != 1:
             raise StaleSystemUserException(_(u'System %r is already '
                 'reserved') % self)
@@ -1366,9 +1217,9 @@ class System(MappedObject, ActivityMixin):
         # Update reservation atomically first, to avoid races
         session.flush()
         my_reservation_id = reservation.id
-        if session.connection(System).execute(reservation_table.update(
-                and_(reservation_table.c.id == my_reservation_id,
-                     reservation_table.c.finish_time == None)),
+        if session.connection(System).execute(Reservation.__table__.update(
+                and_(Reservation.id == my_reservation_id,
+                     Reservation.finish_time == None)),
                 finish_time=datetime.utcnow()).rowcount != 1:
             raise BX(_(u'System does not have an open reservation'))
         session.expire(reservation, ['finish_time'])
@@ -1393,52 +1244,25 @@ class System(MappedObject, ActivityMixin):
     groups = association_proxy('group_assocs', 'group',
             creator=lambda group: SystemGroup(group=group))
 
-class SystemStatusAttributeExtension(AttributeExtension):
+class SystemCc(DeclarativeMappedObject):
 
-    def set(self, state, child, oldchild, initiator):
-        obj = state.obj()
-        log.debug('%r status changed from %r to %r', obj, oldchild, child)
-        if child == oldchild:
-            return child
-        if oldchild in (None, NEVER_SET):
-            # First time system.status has been set, there will be no duration 
-            # rows yet.
-            assert not obj.status_durations
-            obj.status_durations.insert(0, SystemStatusDuration(status=child))
-            return child
-        # Otherwise, there should be exactly one "open" duration row, 
-        # with NULL finish_time.
-        open_sd = obj.status_durations[0]
-        assert open_sd.finish_time is None
-        assert open_sd.status == oldchild
-        if open_sd in session.new:
-            # The current open row is not actually persisted yet. This 
-            # happens when system.status is set more than once in 
-            # a session. In this case we can just update the same row and 
-            # return, no reason to insert another.
-            open_sd.status = child
-            return child
-        # Need to close the open row using a conditional UPDATE to ensure 
-        # we don't race with another transaction
-        now = datetime.utcnow()
-        if session.query(SystemStatusDuration)\
-                .filter_by(finish_time=None, id=open_sd.id)\
-                .update({'finish_time': now}, synchronize_session=False) \
-                != 1:
-            raise RuntimeError('System status updated in another transaction')
-        # Make the ORM aware of it as well
-        open_sd.finish_time = now
-        obj.status_durations.insert(0, SystemStatusDuration(status=child))
-        return child
-
-class SystemCc(MappedObject):
+    __tablename__ = 'system_cc'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    system_id = Column(Integer, ForeignKey('system.id', ondelete='CASCADE',
+            onupdate='CASCADE'), primary_key=True)
+    email_address = Column(Unicode(255), primary_key=True, index=True)
 
     def __init__(self, email_address):
         super(SystemCc, self).__init__()
         self.email_address = email_address
 
 
-class Hypervisor(MappedObject):
+class Hypervisor(DeclarativeMappedObject):
+
+    __tablename__ = 'hypervisor'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    hypervisor = Column(Unicode(100), nullable=False)
 
     def __repr__(self):
         return self.hypervisor
@@ -1559,31 +1383,116 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
         return (self.user == None) & (self.group == None)
 
 
-class Provision(MappedObject):
-    pass
+class Provision(DeclarativeMappedObject):
+
+    __tablename__ = 'provision'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    ks_meta = Column(String(1024))
+    kernel_options = Column(String(1024))
+    kernel_options_post = Column(String(1024))
+    arch_id = Column(Integer, ForeignKey('arch.id'), nullable=False)
+    arch = relationship(Arch)
+    provision_families = relationship('ProvisionFamily',
+            collection_class=attribute_mapped_collection('osmajor'),
+            cascade='all, delete, delete-orphan')
 
 
-class ProvisionFamily(MappedObject):
-    pass
+class ProvisionFamily(DeclarativeMappedObject):
+
+    __tablename__ = 'provision_family'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    provision_id = Column(Integer, ForeignKey('provision.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    osmajor_id = Column(Integer, ForeignKey('osmajor.id'), nullable=False)
+    osmajor = relationship(OSMajor)
+    ks_meta = Column(String(1024))
+    kernel_options = Column(String(1024))
+    kernel_options_post = Column(String(1024))
+    provision_family_updates = relationship('ProvisionFamilyUpdate',
+            collection_class=attribute_mapped_collection('osversion'),
+            cascade='all, delete, delete-orphan')
 
 
-class ProvisionFamilyUpdate(MappedObject):
-    pass
+class ProvisionFamilyUpdate(DeclarativeMappedObject):
+
+    __tablename__ = 'provision_update_family'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    provision_family_id = Column(Integer, ForeignKey('provision_family.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    osversion_id = Column(Integer, ForeignKey('osversion.id'), nullable=False)
+    osversion = relationship(OSVersion)
+    ks_meta = Column(String(1024))
+    kernel_options = Column(String(1024))
+    kernel_options_post = Column(String(1024))
 
 
-class ExcludeOSMajor(MappedObject):
-    pass
+class ExcludeOSMajor(DeclarativeMappedObject):
+
+    __tablename__ = 'exclude_osmajor'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    arch_id = Column(Integer, ForeignKey('arch.id'), nullable=False)
+    arch = relationship(Arch)
+    osmajor_id = Column(Integer, ForeignKey('osmajor.id'), nullable=False)
+    osmajor = relationship(OSMajor, backref='excluded_osmajors')
 
 
-class ExcludeOSVersion(MappedObject):
-    pass
+class ExcludeOSVersion(DeclarativeMappedObject):
+
+    __tablename__ = 'exclude_osversion'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    arch_id = Column(Integer, ForeignKey('arch.id'), nullable=False)
+    arch = relationship(Arch)
+    osversion_id = Column(Integer, ForeignKey('osversion.id'), nullable=False)
+    osversion = relationship(OSVersion, backref='excluded_osversions')
 
 
-class LabInfo(MappedObject):
+class LabInfo(DeclarativeMappedObject):
+
+    __tablename__ = 'labinfo'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    orig_cost = Column(Numeric(precision=16, scale=2, asdecimal=True))
+    curr_cost = Column(Numeric(precision=16, scale=2, asdecimal=True))
+    dimensions = Column(String(255))
+    weight = Column(Numeric(asdecimal=False))
+    wattage = Column(Numeric(asdecimal=False))
+    cooling = Column(Numeric(asdecimal=False))
+
     fields = ['orig_cost', 'curr_cost', 'dimensions', 'weight', 'wattage', 'cooling']
 
 
-class Cpu(MappedObject):
+class Cpu(DeclarativeMappedObject):
+
+    __tablename__ = 'cpu'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    vendor = Column(String(255))
+    model = Column(Integer)
+    model_name = Column(String(255))
+    family = Column(Integer)
+    stepping = Column(Integer)
+    speed = Column(Float)
+    processors = Column(Integer)
+    cores = Column(Integer)
+    sockets = Column(Integer)
+    hyper = Column(Boolean)
+    flags = relationship('CpuFlag', cascade='all, delete, delete-orphan')
+
     def __init__(self, vendor=None, model=None, model_name=None, family=None, stepping=None,speed=None,processors=None,cores=None,sockets=None,flags=None):
         super(Cpu, self).__init__()
         self.vendor = vendor
@@ -1607,7 +1516,15 @@ class Cpu(MappedObject):
                 new_flag = CpuFlag(flag=cpuflag)
                 self.flags.append(new_flag)
 
-class CpuFlag(MappedObject):
+class CpuFlag(DeclarativeMappedObject):
+
+    __tablename__ = 'cpu_flag'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    cpu_id = Column(Integer, ForeignKey('cpu.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    flag = Column(String(255))
+
     def __init__(self, flag=None):
         super(CpuFlag, self).__init__()
         self.flag = flag
@@ -1621,7 +1538,15 @@ class CpuFlag(MappedObject):
     by_flag = classmethod(by_flag)
 
 
-class Numa(MappedObject):
+class Numa(DeclarativeMappedObject):
+
+    __tablename__ = 'numa'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    nodes = Column(Integer)
+
     def __init__(self, nodes=None):
         super(Numa, self).__init__()
         self.nodes = nodes
@@ -1630,7 +1555,13 @@ class Numa(MappedObject):
         return str(self.nodes)
 
 
-class DeviceClass(MappedObject):
+class DeviceClass(DeclarativeMappedObject):
+
+    __tablename__ = 'device_class'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    device_class = Column(VARCHAR(24), nullable=False, unique=True)
+    description = Column(TEXT)
 
     @classmethod
     def lazy_create(cls, device_class=None, **kwargs):
@@ -1654,10 +1585,41 @@ class DeviceClass(MappedObject):
         return self.device_class
 
 
-class Device(MappedObject):
-    pass
+class Device(DeclarativeMappedObject):
 
-class Disk(MappedObject):
+    __tablename__ = 'device'
+    __table_args__ = (
+        UniqueConstraint('vendor_id', 'device_id', 'subsys_device_id',
+               'subsys_vendor_id', 'bus', 'driver', 'description',
+               name='device_uix_1'),
+        {'mysql_engine': 'InnoDB'}
+    )
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    vendor_id = Column(String(4))
+    device_id = Column(String(4))
+    subsys_device_id = Column(String(4))
+    subsys_vendor_id = Column(String(4))
+    bus = Column(String(255))
+    driver = Column(String(255), index=True)
+    description = Column(String(255))
+    device_class_id = Column(Integer, ForeignKey('device_class.id'), nullable=False)
+    device_class = relationship(DeviceClass)
+    date_added = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+Index('ix_device_pciid', Device.vendor_id, Device.device_id)
+
+class Disk(DeclarativeMappedObject):
+
+    __tablename__ = 'disk'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id'), nullable=False)
+    model = Column(String(255))
+    # sizes are in bytes
+    size = Column(BigInteger)
+    sector_size = Column(Integer)
+    phys_sector_size = Column(Integer)
+
     def __init__(self, size=None, sector_size=None, phys_sector_size=None, model=None):
         super(Disk, self).__init__()
         self.size = int(size)
@@ -1665,7 +1627,12 @@ class Disk(MappedObject):
         self.phys_sector_size = int(phys_sector_size)
         self.model = model
 
-class PowerType(MappedObject):
+class PowerType(DeclarativeMappedObject):
+
+    __tablename__ = 'power_type'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    name = Column(String(255), nullable=False)
 
     def __init__(self, name=None):
         super(PowerType, self).__init__()
@@ -1695,15 +1662,54 @@ class PowerType(MappedObject):
             q = cls.query.filter(PowerType.name.like('%s%%' % name))
         return q
 
-class Power(MappedObject):
-    pass
+class Power(DeclarativeMappedObject):
+
+    __tablename__ = 'power'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    power_type_id = Column(Integer, ForeignKey('power_type.id'), nullable=False)
+    power_type = relationship(PowerType, backref='power_control')
+    system_id = Column(Integer, ForeignKey('system.id',
+           onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    power_address = Column(String(255), nullable=False)
+    power_user = Column(String(255))
+    power_passwd = Column(String(255))
+    power_id = Column(String(255))
 
 
-class SystemActivity(Activity):
-    def object_name(self):
-        return "System: %s" % self.object.fqdn
+class CallbackAttributeExtension(AttributeExtension):
+    def set(self, state, value, oldvalue, initiator):
+        instance = state.obj()
+        if instance.callback:
+            try:
+                modname, _dot, funcname = instance.callback.rpartition(".")
+                module = import_module(modname)
+                cb = getattr(module, funcname)
+                cb(instance, value)
+            except Exception, e:
+                log.error("command callback failed: %s" % e)
+        return value
 
 class CommandActivity(Activity):
+
+    __tablename__ = 'command_queue'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id',
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    system = relationship(System)
+    status = column_property(
+            Column('status', CommandStatus.db_type(), nullable=False),
+            extension=CallbackAttributeExtension())
+    task_id = Column(String(255))
+    delay_until = Column(DateTime, default=None)
+    updated = Column(DateTime, default=datetime.utcnow)
+    callback = Column(String(255))
+    distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
+    distro_tree = relationship(DistroTree)
+    kernel_options = Column(UnicodeText)
+    __mapper_args__ = {'polymorphic_identity': u'command_activity'}
+
     def __init__(self, user, service, action, status, callback=None):
         Activity.__init__(self, user, service, action, u'Command', u'', u'')
         self.status = status
@@ -1714,9 +1720,9 @@ class CommandActivity(Activity):
 
     def change_status(self, new_status):
         current_status = self.status
-        if session.connection(CommandActivity).execute(command_queue_table.update(
-                and_(command_queue_table.c.id == self.id,
-                     command_queue_table.c.status == current_status)),
+        if session.connection(CommandActivity).execute(CommandActivity.__table__.update(
+                and_(CommandActivity.__table__.c.id == self.id,
+                     CommandActivity.status == current_status)),
                 status=new_status).rowcount != 1:
             raise StaleCommandStatusException(
                     'Status for command %s updated in another transaction'
@@ -1736,7 +1742,21 @@ class CommandActivity(Activity):
         self.log_to_system_history()
 
 # note model
-class Note(MappedObject):
+class Note(DeclarativeMappedObject):
+
+    __tablename__ = 'note'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id', onupdate='CASCADE',
+            ondelete='CASCADE'), nullable=False)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id'), index=True)
+    user = relationship(User, backref='notes')
+    created = Column(DateTime, nullable=False, default=datetime.utcnow)
+    text = Column(TEXT, nullable=False)
+    deleted = Column(DateTime, nullable=True, default=None)
+    system = relationship(System, backref=backref('notes',
+            cascade='all, delete, delete-orphan', order_by=[created.desc()]))
+
     def __init__(self, user=None, text=None):
         super(Note, self).__init__()
         self.user = user
@@ -1761,7 +1781,13 @@ class Note(MappedObject):
         return XML(rendered)
 
 
-class Key(MappedObject):
+class Key(DeclarativeMappedObject):
+
+    __tablename__ = 'key_'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    key_name = Column(String(50), nullable=False, unique=True)
+    numeric = Column(Boolean, default=False)
 
     # Obsoleted keys are ones which have been replaced by real, structured 
     # columns on the system table (and its related tables). We disallow users 
@@ -1810,7 +1836,18 @@ class Key(MappedObject):
 
 
 # key_value model
-class Key_Value_String(MappedObject):
+class Key_Value_String(DeclarativeMappedObject):
+
+    __tablename__ = 'key_value_string'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id', onupdate='CASCADE',
+            ondelete='CASCADE'), nullable=False, index=True)
+    key_id = Column(Integer, ForeignKey('key_.id', onupdate='CASCADE',
+            ondelete='CASCADE'), nullable=False, index=True)
+    key = relationship(Key, backref=backref('key_value_string',
+            cascade='all, delete-orphan'))
+    key_value = Column(TEXT, nullable=False)
 
     key_type = 'string'
 
@@ -1830,7 +1867,18 @@ class Key_Value_String(MappedObject):
                                   Key_Value_String.system==system)).one()
 
 
-class Key_Value_Int(MappedObject):
+class Key_Value_Int(DeclarativeMappedObject):
+
+    __tablename__ = 'key_value_int'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id', onupdate='CASCADE',
+            ondelete='CASCADE'), nullable=False, index=True)
+    key_id = Column(Integer, ForeignKey('key_.id', onupdate='CASCADE',
+            ondelete='CASCADE'), nullable=False, index=True)
+    key = relationship(Key, backref=backref('key_value_int',
+            cascade='all, delete-orphan'))
+    key_value = Column(Integer, nullable=False)
 
     key_type = 'int'
 
@@ -1848,164 +1896,6 @@ class Key_Value_Int(MappedObject):
         return cls.query.filter(and_(Key_Value_Int.key==key,
                                   Key_Value_Int.key_value==value,
                                   Key_Value_Int.system==system)).one()
-
-class Reservation(MappedObject): pass
-
-class SystemStatusDuration(MappedObject): pass
-
-class CallbackAttributeExtension(AttributeExtension):
-    def set(self, state, value, oldvalue, initiator):
-        instance = state.obj()
-        if instance.callback:
-            try:
-                modname, _dot, funcname = instance.callback.rpartition(".")
-                module = import_module(modname)
-                cb = getattr(module, funcname)
-                cb(instance, value)
-            except Exception, e:
-                log.error("command callback failed: %s" % e)
-        return value
-
-Hypervisor.mapper = mapper(Hypervisor, hypervisor_table)
-System.mapper = mapper(System, system_table,
-                   properties = {
-                     'status': column_property(system_table.c.status,
-                        extension=SystemStatusAttributeExtension()),
-                     'devices':relation(Device,
-                                        secondary=system_device_map,backref='systems'),
-                     'disks':relation(Disk, backref='system',
-                        cascade='all, delete, delete-orphan'),
-                     'arch':relation(Arch,
-                                     order_by=[arch_table.c.arch],
-                                        secondary=system_arch_map,
-                                        backref='systems'),
-                     'labinfo':relation(LabInfo, uselist=False, backref='system',
-                        cascade='all, delete, delete-orphan'),
-                     'cpu':relation(Cpu, uselist=False,backref='systems',
-                        cascade='all, delete, delete-orphan'),
-                     'numa':relation(Numa, uselist=False, backref='system',
-                        cascade='all, delete, delete-orphan'),
-                     'power':relation(Power, uselist=False, backref='system',
-                        cascade='all, delete, delete-orphan'),
-                     'excluded_osmajor':relation(ExcludeOSMajor, backref='system',
-                        cascade='all, delete, delete-orphan'),
-                     'excluded_osversion':relation(ExcludeOSVersion, backref='system',
-                        cascade='all, delete, delete-orphan'),
-                     'provisions':relation(Provision, collection_class=attribute_mapped_collection('arch'),
-                                                 backref='system', cascade='all, delete, delete-orphan'),
-                     'loaned':relation(User, uselist=False,
-                          primaryjoin=system_table.c.loan_id==users_table.c.user_id,foreign_keys=system_table.c.loan_id),
-                     'user':relation(User, uselist=False,
-                          primaryjoin=system_table.c.user_id==users_table.c.user_id,foreign_keys=system_table.c.user_id),
-                     'owner':relation(User, uselist=False,
-                          primaryjoin=system_table.c.owner_id==users_table.c.user_id,foreign_keys=system_table.c.owner_id),
-                     'group_assocs': relation(SystemGroup, cascade='all, delete-orphan', backref='system'),
-                     'lab_controller':relation(LabController, uselist=False,
-                                               backref='systems'),
-                     'notes':relation(Note,
-                                      order_by=[note_table.c.created.desc()],
-                                      cascade="all, delete, delete-orphan"),
-                     'key_values_int':relation(Key_Value_Int,
-                                      cascade="all, delete, delete-orphan",
-                                                backref='system'),
-                     'key_values_string':relation(Key_Value_String,
-                                      cascade="all, delete, delete-orphan",
-                                                backref='system'),
-                     'activity':relation(SystemActivity,
-                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
-                        backref='object', cascade='all, delete'),
-                     'dyn_activity': dynamic_loader(SystemActivity,
-                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()]),
-                     'command_queue':relation(CommandActivity,
-                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
-                        backref='object', cascade='all, delete, delete-orphan'),
-                     'dyn_command_queue': dynamic_loader(CommandActivity),
-                     'reprovision_distro_tree':relation(DistroTree, uselist=False),
-                      '_system_ccs': relation(SystemCc, backref='system',
-                                      cascade="all, delete, delete-orphan"),
-                     'reservations': relation(Reservation, backref='system',
-                        order_by=[reservation_table.c.start_time.desc()]),
-                     'dyn_reservations': dynamic_loader(Reservation),
-                     'open_reservation': relation(Reservation, uselist=False, viewonly=True,
-                        primaryjoin=and_(system_table.c.id == reservation_table.c.system_id,
-                            reservation_table.c.finish_time == None)),
-                     'status_durations': relation(SystemStatusDuration, backref='system',
-                        cascade='all, delete, delete-orphan',
-                        order_by=[system_status_duration_table.c.start_time.desc(),
-                                  system_status_duration_table.c.id.desc()]),
-                     'dyn_status_durations': dynamic_loader(SystemStatusDuration),
-                     'hypervisor':relation(Hypervisor, uselist=False),
-                     'kernel_type':relation(KernelType, uselist=False),
-                     })
-
-mapper(SystemCc, system_cc_table)
-mapper(SystemStatusDuration, system_status_duration_table)
-
-Cpu.mapper = mapper(Cpu, cpu_table, properties={
-    'flags': relation(CpuFlag, cascade='all, delete, delete-orphan'),
-    'system': relation(System),
-})
-mapper(Provision, provision_table,
-       properties = {'provision_families':relation(ProvisionFamily,
-            collection_class=attribute_mapped_collection('osmajor'),
-            cascade='all, delete, delete-orphan'),
-                     'arch':relation(Arch)})
-mapper(ProvisionFamily, provision_family_table,
-       properties = {'provision_family_updates':relation(ProvisionFamilyUpdate,
-            collection_class=attribute_mapped_collection('osversion'),
-            cascade='all, delete, delete-orphan'),
-                     'osmajor':relation(OSMajor)})
-mapper(ProvisionFamilyUpdate, provision_family_update_table,
-       properties = {'osversion':relation(OSVersion)})
-mapper(ExcludeOSMajor, exclude_osmajor_table,
-       properties = {'osmajor':relation(OSMajor, backref='excluded_osmajors'),
-                     'arch':relation(Arch)})
-mapper(ExcludeOSVersion, exclude_osversion_table,
-       properties = {'osversion':relation(OSVersion, backref='excluded_osversions'),
-                     'arch':relation(Arch)})
-mapper(LabInfo, labinfo_table)
-CpuFlag.mapper = mapper(CpuFlag, cpu_flag_table)
-Numa.mapper = mapper(Numa, numa_table)
-Device.mapper = mapper(Device, device_table,
-       properties = {'device_class': relation(DeviceClass)})
-mapper(DeviceClass, device_class_table)
-mapper(Disk, disk_table)
-mapper(PowerType, power_type_table)
-mapper(Power, power_table,
-        properties = {'power_type':relation(PowerType,
-                                           backref='power_control')
-    })
-
-mapper(SystemActivity, system_activity_table, inherits=Activity,
-        polymorphic_identity=u'system_activity')
-
-mapper(CommandActivity, command_queue_table, inherits=Activity,
-       polymorphic_identity=u'command_activity',
-       properties={'status': column_property(command_queue_table.c.status,
-                        extension=CallbackAttributeExtension()),
-                   'system':relation(System),
-                   'distro_tree': relation(DistroTree),
-                  })
-
-mapper(Note, note_table,
-        properties=dict(user=relation(User, uselist=False,
-                        backref='notes')))
-
-Key.mapper = mapper(Key, key_table)
-
-mapper(Key_Value_Int, key_value_int_table, properties={
-        'key': relation(Key, uselist=False,
-            backref=backref('key_value_int', cascade='all, delete-orphan'))
-        })
-mapper(Key_Value_String, key_value_string_table, properties={
-        'key': relation(Key, uselist=False,
-            backref=backref('key_value_string', cascade='all, delete-orphan'))
-        })
-
-mapper(Reservation, reservation_table, properties={
-        'user': relation(User, backref=backref('reservations',
-            order_by=[reservation_table.c.start_time.desc()])),
-})
 
 # available in python 2.7+ importlib
 def import_module(modname):

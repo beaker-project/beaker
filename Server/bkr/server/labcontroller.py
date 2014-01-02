@@ -20,8 +20,8 @@ from bkr.server.model import \
     LabController, LabControllerActivity, User, Group, OSMajor, OSVersion, \
     Arch, Distro, DistroTree, DistroTreeRepo, DistroTreeImage, \
     DistroTreeActivity, LabControllerDistroTree, ImageType, KernelType, \
-    System, SystemStatus, SystemActivity, system_table, \
-    Watchdog, CommandActivity, CommandStatus, command_queue_table
+    System, SystemStatus, SystemActivity, \
+    Watchdog, CommandActivity, CommandStatus
 
 import logging
 log = logging.getLogger(__name__)
@@ -417,9 +417,9 @@ class LabControllers(RPCRoot):
         # details.
         lab_controller = identity.current.user.lab_controller
         purged = (
-            command_queue_table.update()
-            .where(command_queue_table.c.status == CommandStatus.running)
-            .where(command_queue_table.c.updated <
+            CommandActivity.__table__.update()
+            .where(CommandActivity.status == CommandStatus.running)
+            .where(CommandActivity.updated <
                        datetime.utcnow() - timedelta(days=1))
             .values(status=CommandStatus.aborted)
             .execute()
@@ -518,7 +518,7 @@ class LabControllers(RPCRoot):
                 'Changed', 'lab_controller', labcontroller.fqdn,
                 None, system_id=system_id[0])
             session.add(sys_activity)
-        system_table.update().where(system_table.c.lab_controller_id == id).\
+        System.__table__.update().where(System.lab_controller_id == id).\
             values(lab_controller_id=None).execute()
         watchdogs = Watchdog.by_status(labcontroller=labcontroller, 
             status='active')

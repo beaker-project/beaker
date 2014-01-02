@@ -2,7 +2,7 @@
 from datetime import datetime
 from sqlalchemy import Column, Integer, Unicode
 from sqlalchemy.sql import and_
-from sqlalchemy.orm import class_mapper, relation, dynamic_loader
+from sqlalchemy.orm import class_mapper, relationship, dynamic_loader
 from turbogears.database import session
 from bkr.server.bexceptions import BeakerException, BX, \
         VMCreationFailedException, StaleTaskStatusException, \
@@ -14,36 +14,29 @@ from .base import DeclarativeMappedObject, MappedObject
 from .types import (TaskStatus, CommandStatus, TaskResult, TaskPriority,
         SystemStatus, SystemType, ReleaseAction, ImageType, ResourceType,
         RecipeVirtStatus, SystemPermission, UUID, MACAddress)
-from .activity import Activity, ActivityMixin, activity_table
+from .activity import Activity, ActivityMixin
 from .config import ConfigItem
 from .identity import (User, Group, Permission, SSHPubKey, SystemGroup,
-        UserGroup, UserActivity, GroupActivity, users_table)
-from .lab import LabController, LabControllerActivity, lab_controller_table
+        UserGroup, UserActivity, GroupActivity)
+from .lab import LabController, LabControllerActivity
 from .distrolibrary import (Arch, KernelType, OSMajor, OSVersion,
         OSMajorInstallOptions, Distro, DistroTree, DistroTreeImage,
         DistroTreeRepo, DistroTag, DistroActivity, DistroTreeActivity,
-        LabControllerDistroTree, kernel_type_table, arch_table,
-        osmajor_table, distro_table, distro_tree_table,
-        distro_tree_lab_controller_map)
+        LabControllerDistroTree)
 from .tasklibrary import (Task, TaskExcludeArch, TaskExcludeOSMajor,
-        TaskLibrary, TaskPackage, TaskType, TaskBugzilla, TaskPropertyNeeded,
-        task_table, task_exclude_osmajor_table, task_exclude_arch_table)
+        TaskLibrary, TaskPackage, TaskType, TaskBugzilla, TaskPropertyNeeded)
 from .inventory import (System, SystemStatusDuration, SystemCc, Hypervisor,
         Cpu, CpuFlag, Disk, Device, DeviceClass, Numa, Power, PowerType, Note,
         Key, Key_Value_String, Key_Value_Int, Provision, ProvisionFamily,
         ProvisionFamilyUpdate, ExcludeOSMajor, ExcludeOSVersion, LabInfo,
         SystemAccessPolicy, SystemAccessPolicyRule, Reservation,
-        SystemActivity, CommandActivity, system_table, command_queue_table,
-        cpu_table)
+        SystemActivity, CommandActivity)
 from .scheduler import (Watchdog, TaskBase, Job, RecipeSet, Recipe,
         RecipeTaskResult, MachineRecipe, GuestRecipe, RecipeTask, Log,
         LogRecipe, LogRecipeTask, LogRecipeTaskResult, JobCc, RecipeResource,
         SystemResource, GuestResource, VirtResource, Response, RetentionTag,
         Product, RenderedKickstart, RecipeSetActivity, RecipeRepo,
-        RecipeKSAppend, RecipeTaskParam, RecipeSetResponse,
-        job_cc_table, recipe_table, recipe_set_table, recipe_resource_table,
-        system_resource_table, machine_guest_map, guest_recipe_table,
-        recipe_task_table)
+        RecipeKSAppend, RecipeTaskParam, RecipeSetResponse)
 
 class ExternalReport(DeclarativeMappedObject):
 
@@ -63,22 +56,22 @@ class_mapper(LabController).add_property('dyn_systems', dynamic_loader(System))
 class_mapper(System).add_properties({
     # The relationship to 'recipe' is complicated
     # by the polymorphism of SystemResource :-(
-    'recipes': relation(Recipe, viewonly=True,
-        secondary=recipe_resource_table.join(system_resource_table),
-        secondaryjoin=and_(system_resource_table.c.id == recipe_resource_table.c.id,
-            recipe_resource_table.c.recipe_id == recipe_table.c.id)),
+    'recipes': relationship(Recipe, viewonly=True,
+        secondary=RecipeResource.__table__.join(SystemResource.__table__),
+        secondaryjoin=and_(SystemResource.__table__.c.id == RecipeResource.id,
+            RecipeResource.recipe_id == Recipe.id)),
     'dyn_recipes': dynamic_loader(Recipe,
-        secondary=recipe_resource_table.join(system_resource_table),
-        secondaryjoin=and_(system_resource_table.c.id == recipe_resource_table.c.id,
-            recipe_resource_table.c.recipe_id == recipe_table.c.id)),
+        secondary=RecipeResource.__table__.join(SystemResource.__table__),
+        secondaryjoin=and_(SystemResource.__table__.c.id == RecipeResource.id,
+            RecipeResource.recipe_id == Recipe.id)),
 })
 class_mapper(Reservation).add_properties({
     # The relationship to 'recipe' is complicated
     # by the polymorphism of SystemResource :-(
-    'recipe': relation(Recipe, uselist=False, viewonly=True,
-        secondary=recipe_resource_table.join(system_resource_table),
-        secondaryjoin=and_(system_resource_table.c.id == recipe_resource_table.c.id,
-            recipe_resource_table.c.recipe_id == recipe_table.c.id)),
+    'recipe': relationship(Recipe, uselist=False, viewonly=True,
+        secondary=RecipeResource.__table__.join(SystemResource.__table__),
+        secondaryjoin=and_(SystemResource.__table__.c.id == RecipeResource.id,
+            RecipeResource.recipe_id == Recipe.id)),
 })
 
 ## Static list of device_classes -- used by master.kid

@@ -1,31 +1,30 @@
 
 import logging
 from datetime import datetime
-from sqlalchemy import Table, Column, Integer, ForeignKey, DateTime, Unicode
-from sqlalchemy.orm import mapper, relation, object_mapper
-from turbogears.database import session, metadata
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, Unicode
+from sqlalchemy.orm import object_mapper
+from turbogears.database import session
 from bkr.server import identity
 from bkr.server.util import unicode_truncate
-from .base import MappedObject
+from .base import DeclarativeMappedObject
 
 log = logging.getLogger(__name__)
 
-activity_table = Table('activity', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('user_id', Integer, ForeignKey('tg_user.user_id'), index=True),
-    Column('created', DateTime, nullable=False, default=datetime.utcnow,
-           index=True),
-    Column('type', Unicode(40), nullable=False),
-    Column('field_name', Unicode(40), nullable=False),
-    Column('service', Unicode(100), nullable=False),
-    Column('action', Unicode(40), nullable=False),
-    Column('old_value', Unicode(60)),
-    Column('new_value', Unicode(60)),
-    mysql_engine='InnoDB',
-)
+class Activity(DeclarativeMappedObject):
 
-class Activity(MappedObject):
+    __tablename__ = 'activity'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id'), index=True)
+    created = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    type = Column(Unicode(40), nullable=False)
+    field_name = Column(Unicode(40), nullable=False)
+    service = Column(Unicode(100), nullable=False)
+    action = Column(Unicode(40), nullable=False)
+    old_value = Column(Unicode(60))
+    new_value = Column(Unicode(60))
+    __mapper_args__ = {'polymorphic_on': type, 'polymorphic_identity': u'activity'}
+
     def __init__(self, user=None, service=None, action=None,
                  field_name=None, old_value=None, new_value=None, **kw):
         """
@@ -103,6 +102,3 @@ class ActivityMixin(object):
                            service=service, action=action,
                            field=field, old=old, new=new)
         log.debug(self._log_fmt, log_details)
-
-mapper(Activity, activity_table,
-        polymorphic_on=activity_table.c.type, polymorphic_identity=u'activity')

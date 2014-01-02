@@ -14,7 +14,7 @@ from bkr.server import search_utility, identity
 from bkr.common.bexceptions import BX
 
 from bkr.server.model import (OSMajor, OSVersion, Distro, DistroTree,
-                             DistroTag, DistroActivity, distro_table)
+                             DistroTag, DistroActivity)
 
 __all__ = ['Distros']
 
@@ -290,7 +290,7 @@ class Distros(RPCRoot):
             'RedHatEnterpriseLinuxServer5.6' or 'Fedora14'
         :type version: string
         """
-        distros = session.query(Distro).filter(distro_table.c.name.like('%s' % name))
+        distros = Distro.query.filter(Distro.name.like(unicode(name)))
         edited = []
 
         os_major = version.split('.')[0]

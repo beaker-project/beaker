@@ -11,88 +11,39 @@ from kid import Element
 import passlib.context
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode,
         UnicodeText, String, DateTime, Boolean, UniqueConstraint)
-from sqlalchemy.orm import mapper, relation, backref
+from sqlalchemy.orm import mapper, relationship, backref
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears.config import get
-from turbogears.database import session, metadata
+from turbogears.database import session
 from bkr.server.bexceptions import BX, NoChangeException
-from .base import DeclarativeMappedObject, MappedObject
+from .base import DeclarativeMappedObject
 from .activity import Activity, ActivityMixin
 from .config import ConfigItem, ConfigValueInt, ConfigValueString
 
 log = logging.getLogger(__name__)
 
-users_table = Table('tg_user', metadata,
-    Column('user_id', Integer, primary_key=True),
-    Column('user_name', Unicode(255), unique=True),
-    Column('email_address', Unicode(255), unique=True),
-    Column('display_name', Unicode(255)),
-    Column('password', UnicodeText, nullable=True, default=None),
-    Column('root_password', String(255), nullable=True, default=None),
-    Column('rootpw_changed', DateTime, nullable=True, default=None),
-    Column('created', DateTime, default=datetime.utcnow),
-    Column('disabled', Boolean, nullable=False, default=False),
-    Column('removed', DateTime, nullable=True, default=None),
-    mysql_engine='InnoDB',
-)
+class GroupActivity(Activity):
 
-permissions_table = Table('permission', metadata,
-    Column('permission_id', Integer, primary_key=True),
-    Column('permission_name', Unicode(16), unique=True),
-    Column('description', Unicode(255)),
-    mysql_engine='InnoDB',
-)
+    __tablename__ = 'group_activity'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
+    group_id = Column(Integer, ForeignKey('tg_group.group_id'), nullable=False)
+    __mapper_args__ = {'polymorphic_identity': u'group_activity'}
 
-user_group_table = Table('user_group', metadata,
-    Column('user_id', Integer, ForeignKey('tg_user.user_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    Column('is_owner', Boolean, nullable=False, default=False),
-    mysql_engine='InnoDB',
-)
+    def object_name(self):
+        return "Group: %s" % self.object.display_name
 
-sshpubkey_table = Table('sshpubkey', metadata,
-    Column('id', Integer, autoincrement=True, nullable=False,
-        primary_key=True),
-    Column('user_id', Integer, ForeignKey('tg_user.user_id',
-        onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('keytype', Unicode(16), nullable=False),
-    Column('pubkey', UnicodeText(), nullable=False),
-    Column('ident', Unicode(63), nullable=False),
-    mysql_engine='InnoDB',
-)
+class UserActivity(Activity):
 
-system_group_table = Table('system_group', metadata,
-    Column('system_id', Integer, ForeignKey('system.id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    mysql_engine='InnoDB',
-)
+    __tablename__ = 'user_activity'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id'), nullable=False)
+    __mapper_args__ = {'polymorphic_identity': u'user_activity'}
 
-group_permission_table = Table('group_permission', metadata,
-    Column('group_id', Integer, ForeignKey('tg_group.group_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    Column('permission_id', Integer, ForeignKey('permission.permission_id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    mysql_engine='InnoDB',
-)
-
-group_activity_table = Table('group_activity', metadata,
-    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
-    Column('group_id', Integer, ForeignKey('tg_group.group_id'),
-        nullable=False),
-    mysql_engine='InnoDB',
-)
-
-user_activity_table = Table('user_activity', metadata,
-    Column('id', Integer, ForeignKey('activity.id'), primary_key=True),
-    Column('user_id', Integer, ForeignKey('tg_user.user_id'),
-        nullable=False),
-    mysql_engine='InnoDB'
-)
+    def object_name(self):
+        return "User: %s" % self.object.display_name
 
 class SubmissionDelegate(DeclarativeMappedObject):
 
@@ -110,18 +61,37 @@ class SubmissionDelegate(DeclarativeMappedObject):
         name='tg_user_id_fk2'), nullable=False)
 
 
-class User(MappedObject, ActivityMixin):
+class User(DeclarativeMappedObject, ActivityMixin):
     """
     Reasonably basic User definition.
     Probably would want additional attributes.
     """
 
+    __tablename__ = 'tg_user'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    user_id = Column(Integer, primary_key=True)
+    user_name = Column(Unicode(255), unique=True)
+    email_address = Column(Unicode(255), unique=True)
+    display_name = Column(Unicode(255))
+    _password = Column('password', UnicodeText, nullable=True, default=None)
+    _root_password = Column('root_password', String(255), nullable=True, default=None)
+    rootpw_changed = Column(DateTime, nullable=True, default=None)
+    created = Column(DateTime, default=datetime.utcnow)
+    disabled = Column(Boolean, nullable=False, default=False)
+    removed = Column(DateTime, nullable=True, default=None)
+    submission_delegates = relationship('User', secondary=SubmissionDelegate.__table__,
+            primaryjoin=user_id == SubmissionDelegate.user_id,
+            secondaryjoin=user_id == SubmissionDelegate.delegate_id)
+    activity = relationship(Activity, backref='user')
+    config_values_int = relationship(ConfigValueInt, backref='user')
+    config_values_string = relationship(ConfigValueString, backref='user')
+    user_activity = relationship(UserActivity, backref='object',
+            primaryjoin=user_id == UserActivity.user_id)
+
     # XXX we probably shouldn't be doing this!
     ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 
-    @property
-    def activity_type(self):
-        return UserActivity
+    activity_type = UserActivity
 
     def permissions(self):
         perms = set()
@@ -376,29 +346,6 @@ class User(MappedObject, ActivityMixin):
     groups = association_proxy('group_user_assocs','group',
             creator=lambda group: UserGroup(group=group))
 
-
-class UserGroup(MappedObject):
-    pass
-
-
-class Permission(MappedObject):
-    """
-    A relationship that determines what each Group can do
-    """
-    @classmethod
-    def by_id(cls, id):
-        return cls.query.filter_by(permission_id=id).one()
-
-    @classmethod
-    def by_name(cls, permission_name, anywhere=False):
-        if anywhere:
-            return cls.query.filter(cls.permission_name.like('%%%s%%' % permission_name)).all()
-        return cls.query.filter(cls.permission_name == permission_name).one()
-
-    def __init__(self, permission_name):
-        super(Permission, self).__init__()
-        self.permission_name = permission_name
-
 class Group(DeclarativeMappedObject, ActivityMixin):
     """
     A group definition that records changes to the group
@@ -414,10 +361,10 @@ class Group(DeclarativeMappedObject, ActivityMixin):
         default=None)
     ldap = Column(Boolean, default=False, nullable=False, index=True)
     created = Column(DateTime, default=datetime.utcnow)
+    activity = relationship(GroupActivity, backref='object',
+            cascade='all, delete-orphan')
 
-    @property
-    def activity_type(self):
-        return GroupActivity
+    activity_type = GroupActivity
 
     @classmethod
     def by_name(cls, name):
@@ -591,19 +538,76 @@ class Group(DeclarativeMappedObject, ActivityMixin):
     users = association_proxy('user_group_assocs','user',
             creator=lambda user: UserGroup(user=user))
 
-class SystemGroup(MappedObject):
+class UserGroup(DeclarativeMappedObject):
 
-    pass
+    __tablename__ = 'user_group'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    user_id = Column(Integer, ForeignKey('tg_user.user_id',
+            onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+    user = relationship(User, backref=backref('group_user_assocs', cascade='all, delete-orphan'))
+    group_id = Column(Integer, ForeignKey('tg_group.group_id',
+            onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+    group = relationship(Group, backref=backref('user_group_assocs', cascade='all, delete-orphan'))
+    is_owner = Column(Boolean, nullable=False, default=False)
 
-class GroupActivity(Activity):
-    def object_name(self):
-        return "Group: %s" % self.object.display_name
 
-class UserActivity(Activity):
-    def object_name(self):
-        return "User: %s" % self.object.display_name
+group_permission_table = Table('group_permission', DeclarativeMappedObject.metadata,
+    Column('group_id', Integer, ForeignKey('tg_group.group_id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    Column('permission_id', Integer, ForeignKey('permission.permission_id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    mysql_engine='InnoDB',
+)
 
-class SSHPubKey(MappedObject):
+class Permission(DeclarativeMappedObject):
+    """
+    A relationship that determines what each Group can do
+    """
+
+    __tablename__ = 'permission'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    permission_id = Column(Integer, primary_key=True)
+    permission_name = Column(Unicode(16), unique=True)
+    description = Column(Unicode(255))
+    groups = relationship(Group, backref='permissions',
+            secondary=group_permission_table)
+
+    @classmethod
+    def by_id(cls, id):
+        return cls.query.filter_by(permission_id=id).one()
+
+    @classmethod
+    def by_name(cls, permission_name, anywhere=False):
+        if anywhere:
+            return cls.query.filter(cls.permission_name.like('%%%s%%' % permission_name)).all()
+        return cls.query.filter(cls.permission_name == permission_name).one()
+
+    def __init__(self, permission_name):
+        super(Permission, self).__init__()
+        self.permission_name = permission_name
+
+class SystemGroup(DeclarativeMappedObject):
+
+    __tablename__ = 'system_group'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    system_id = Column(Integer, ForeignKey('system.id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+    group_id = Column(Integer, ForeignKey('tg_group.group_id',
+        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+    group = relationship(Group, backref=backref('system_assocs', cascade='all, delete-orphan'))
+
+class SSHPubKey(DeclarativeMappedObject):
+
+    __tablename__ = 'sshpubkey'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id',
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    user = relationship(User, backref='sshpubkeys')
+    keytype = Column(Unicode(16), nullable=False)
+    pubkey = Column(UnicodeText, nullable=False)
+    ident = Column(Unicode(63), nullable=False)
+
     def __init__(self, keytype, pubkey, ident):
         super(SSHPubKey, self).__init__()
         self.keytype = keytype
@@ -616,40 +620,3 @@ class SSHPubKey(MappedObject):
     @classmethod
     def by_id(cls, id):
         return cls.query.filter_by(id=id).one()
-
-mapper(User, users_table,
-        properties={
-      '_password' : users_table.c.password,
-      '_root_password' : users_table.c.root_password,
-      'submission_delegates': relation(User, secondary=SubmissionDelegate.__table__,
-          primaryjoin=users_table.c.user_id == SubmissionDelegate.user_id,
-          secondaryjoin=users_table.c.user_id == SubmissionDelegate.delegate_id),
-      'activity': relation(Activity, backref='user'),
-      'config_values_int': relation(ConfigValueInt, backref='user'),
-      'config_values_string': relation(ConfigValueString, backref='user'),
-})
-
-mapper(UserGroup, user_group_table, properties={
-        'group': relation(Group, backref=backref('user_group_assocs', cascade='all, delete-orphan')),
-        'user': relation(User, backref=backref('group_user_assocs', cascade='all, delete-orphan'))
-        })
-
-mapper(SystemGroup, system_group_table, properties={
-    'group': relation(Group, backref=backref('system_assocs', cascade='all, delete-orphan')),
-})
-
-mapper(Permission, permissions_table,
-        properties=dict(groups=relation(Group,
-                secondary=group_permission_table, backref='permissions')))
-
-mapper(GroupActivity, group_activity_table, inherits=Activity,
-        polymorphic_identity=u'group_activity',
-        properties=dict(object=relation(Group, uselist=False,
-                        backref=backref('activity', cascade='all, delete-orphan'))))
-
-mapper(UserActivity, user_activity_table, inherits=Activity,
-        polymorphic_identity=u'user_activity',
-        properties=dict(object=relation(User, uselist=False, backref='user_activity')))
-
-mapper(SSHPubKey, sshpubkey_table,
-        properties=dict(user=relation(User, uselist=False, backref='sshpubkeys')))

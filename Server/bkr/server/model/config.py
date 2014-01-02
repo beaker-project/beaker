@@ -1,46 +1,23 @@
 
 from datetime import datetime
-from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode, Boolean,
+from sqlalchemy import (Column, ForeignKey, Integer, Unicode, Boolean,
         DateTime, TEXT)
 from sqlalchemy.sql import and_
-from sqlalchemy.orm import mapper, relation
-from turbogears.database import session, metadata
+from sqlalchemy.orm import relationship
+from turbogears.database import session
 from bkr.server import identity
 from bkr.server.bexceptions import BX
-from .base import MappedObject
+from .base import DeclarativeMappedObject
 
-config_item_table = Table('config_item', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('name', Unicode(255), unique=True),
-    Column('description', Unicode(255)),
-    Column('numeric', Boolean, default=False),
-    Column('readonly', Boolean, default=False),
-    mysql_engine='InnoDB',
-)
+class ConfigItem(DeclarativeMappedObject):
 
-config_value_string_table = Table('config_value_string', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('config_item_id', Integer, ForeignKey('config_item.id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    Column('modified', DateTime, default=datetime.utcnow),
-    Column('user_id', Integer, ForeignKey('tg_user.user_id'), nullable=False),
-    Column('valid_from', DateTime, default=datetime.utcnow),
-    Column('value', TEXT, nullable=True),
-    mysql_engine='InnoDB',
-)
-
-config_value_int_table = Table('config_value_int', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('config_item_id', Integer, ForeignKey('config_item.id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
-    Column('modified', DateTime, default=datetime.utcnow),
-    Column('user_id', Integer, ForeignKey('tg_user.user_id'), nullable=False),
-    Column('valid_from', DateTime, default=datetime.utcnow),
-    Column('value', Integer, nullable=True),
-    mysql_engine='InnoDB',
-)
-
-class ConfigItem(MappedObject):
+    __tablename__ = 'config_item'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    name = Column(Unicode(255), unique=True)
+    description = Column(Unicode(255))
+    numeric = Column(Boolean, default=False)
+    readonly = Column(Boolean, default=False)
 
     @classmethod
     def lazy_create(cls, name, description, numeric):
@@ -93,7 +70,19 @@ class ConfigItem(MappedObject):
                 raise BX(_('%s is in the past') % valid_from)
         self.value_class(self, value, user, valid_from)
 
-class ConfigValueString(MappedObject):
+class ConfigValueString(DeclarativeMappedObject):
+
+    __tablename__ = 'config_value_string'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    config_item_id = Column(Integer, ForeignKey('config_item.id',
+            onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+    config_item = relationship(ConfigItem)
+    modified = Column(DateTime, default=datetime.utcnow)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id'), nullable=False)
+    valid_from = Column(DateTime, default=datetime.utcnow)
+    value = Column(TEXT, nullable=True)
+
     def __init__(self, config_item, value, user, valid_from=None):
         super(ConfigValueString, self).__init__()
         self.config_item = config_item
@@ -102,7 +91,19 @@ class ConfigValueString(MappedObject):
         if valid_from:
             self.valid_from = valid_from
 
-class ConfigValueInt(MappedObject):
+class ConfigValueInt(DeclarativeMappedObject):
+
+    __tablename__ = 'config_value_int'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    config_item_id = Column(Integer, ForeignKey('config_item.id',
+            onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+    config_item = relationship(ConfigItem)
+    modified = Column(DateTime, default=datetime.utcnow)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id'), nullable=False)
+    valid_from = Column(DateTime, default=datetime.utcnow)
+    value = Column(Integer, nullable=True)
+
     def __init__(self, config_item, value, user, valid_from=None):
         super(ConfigValueInt, self).__init__()
         self.config_item = config_item
@@ -110,9 +111,3 @@ class ConfigValueInt(MappedObject):
         self.user = user
         if valid_from:
             self.valid_from = valid_from
-
-mapper(ConfigItem, config_item_table)
-mapper(ConfigValueInt, config_value_int_table,
-       properties = {'config_item': relation(ConfigItem, uselist=False)})
-mapper(ConfigValueString, config_value_string_table,
-       properties = {'config_item': relation(ConfigItem, uselist=False)})

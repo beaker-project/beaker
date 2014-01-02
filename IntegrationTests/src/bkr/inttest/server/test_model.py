@@ -12,13 +12,13 @@ from bkr.server.installopts import InstallOptions
 from bkr.server import model, dynamic_virt
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
-        Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
+        Cpu, Numa, Provision, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
-        RecipeTask, RecipeTaskResult
+        RecipeTask, RecipeTaskResult, DeclarativeMappedObject
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
@@ -29,7 +29,7 @@ from nose.plugins.skip import SkipTest
 class SchemaSanityTest(unittest.TestCase):
 
     def test_all_tables_use_innodb(self):
-        engine = session.get_bind(System.mapper)
+        engine = DeclarativeMappedObject.metadata.bind
         if engine.url.drivername != 'mysql':
             raise SkipTest('not using MySQL')
         for table in engine.table_names():
@@ -565,7 +565,7 @@ class TestJob(unittest.TestCase):
     def test_cc_property(self):
         job = data_setup.create_job()
         session.flush()
-        session.execute(job_cc_table.insert(values={'job_id': job.id,
+        session.execute(JobCc.__table__.insert(values={'job_id': job.id,
                 'email_address': u'person@nowhere.example.com'}))
         session.refresh(job)
         self.assertEquals(job.cc, ['person@nowhere.example.com'])

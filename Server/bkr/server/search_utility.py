@@ -1023,7 +1023,7 @@ class System(SystemObject):
             query = model.System.query.filter(model.System.arch.any(model.Arch.arch == val))
           
         ids = [r.id for r in query]  
-        return not_(model.system_table.c.id.in_(ids)) 
+        return not_(model.System.id.in_(ids))
 
 class Recipe(SystemObject):
     search = RecipeSearch
@@ -1533,7 +1533,7 @@ class Cpu(SystemObject):
         else:
             query = model.Cpu.query.filter(model.Cpu.flags.any(model.CpuFlag.flag == val))
             ids = [r.id for r in query]
-            return or_(not_(model.cpu_table.c.id.in_(ids)), col == None) 
+            return or_(not_(model.Cpu.id.in_(ids)), col == None)
          
 class Device(SystemObject):
     display_name = 'Devices'
@@ -1552,7 +1552,7 @@ class Device(SystemObject):
             query = model.System.query.filter(model.System.devices.any(model.Device.driver == val))
     
         ids = [r.id for r in query]  
-        return not_(model.system_table.c.id.in_(ids))   
+        return not_(model.System.id.in_(ids))
 
 class Disk(SystemObject):
     display_name = 'Disk'
