@@ -20,6 +20,7 @@ _env_lock = threading.Lock()
 
 def _create_env(**kwargs):
     env = webassets.Environment(url='/assets', manifest='file', **kwargs)
+    env.config['UGLIFYJS_EXTRA_ARGS'] = ['--mangle', '--compress']
     env.register('css',
             'style.less',
             filters=['less', 'cssrewrite', YCSSMin()],
