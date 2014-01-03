@@ -69,8 +69,9 @@ def load_config(configfile=None):
     # In general, we want all messages from application code.
     logging.getLogger().setLevel(logging.DEBUG)
     # Well-behaved libraries will set their own log levels to something 
-    # suitable (sqlalchemy sets it to WARNING, for example) but the TurboGears 
-    # stuff leaves its unset.
+    # suitable (sqlalchemy sets it to WARNING, for example) but a number of 
+    # libraries leave their level unset.
+    logging.getLogger('passlib').setLevel(logging.INFO)
     logging.getLogger('turbomail').setLevel(logging.INFO)
     logging.getLogger('turbogears').setLevel(logging.INFO)
     logging.getLogger('turbokid').setLevel(logging.INFO)
