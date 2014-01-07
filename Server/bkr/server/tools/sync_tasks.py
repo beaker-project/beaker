@@ -109,7 +109,7 @@ class TaskLibrarySync:
         # Initialize core attributes
         if remote:
             self.remote = remote.rstrip("/")
-            self.proxy = xmlrpclib.ServerProxy(self.remote)
+            self.proxy = xmlrpclib.ServerProxy(self.remote + '/RPC2')
 
         self.tasks_added = []
         self.t_downloaded = 0
