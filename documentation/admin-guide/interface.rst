@@ -104,3 +104,95 @@ Some Beaker configuration is stored in the database rather than in the server
 configuration file, and can be changed without restarting Beaker services. 
 Select :menuselection:`Admin --> Configuration` from the menu to view and 
 change settings.
+
+
+.. _admin-export:
+
+Export
+------
+
+The :menuselection:`Admin --> Export` menu item allows an
+administrator to export data about the systems and user
+groups as CSV files. Currently, the following data can be exported:
+
+Systems
+    For every system, its FQDN, its deletion and secret status, lender,
+    location, MAC address, memory, model, serial, vendor, supported
+    architectures, lab controller, owner, status, type and cc fields
+    are exported.
+
+Systems (for modification)
+    In addition to the above fields, this also exports the database
+    identifier for each system. This is useful when you want to rename
+    existing systems (see :ref:`admin-import`).
+
+System LabInfo
+    For every system, the original cost, current cost, dimensions,
+    weight, wattage and cooling data about its lab is exported. If
+    there is no such data available for this system, the corresponding
+    system entry is not exported.
+
+System Power
+    For every system, the power address, username and password, power
+    id and power type are exported.
+
+System Excluded Families
+    The data for systems which are excluded from running jobs requiring certain
+    families of operating systems are exported. The fields exported
+    are the FQDN of the system and the details about the operating system
+    (architecture, family and the update) which is excluded.
+
+System Install Options
+    The data for the systems with custom install options are
+    exported. The fields exported are the FQDN of the system,
+    architecture, the operating system family (and update) and the
+    corresponding install options: ks-meta, kernel options and post
+    kernel options.
+
+System Key/Values
+    For every system, its key value pairs are exported.
+
+System Groups
+    Systems which belong to a group are exported along with the
+    corresponding group names.
+
+User Groups
+    The users and the groups which they are a member of are exported.
+
+
+.. _admin-import:
+
+Import
+------
+
+The :menuselection:`Admin --> Import` option is useful for two
+workflows:
+
+1. Administrator exports the data from a Beaker instance (see
+   :ref:`admin-export`), makes some changes and uploads the modified
+   file to the same Beaker instance.
+2. Administrator exports the data from a Beaker instance (see
+   :ref:`admin-export`) and uses it to setup a new Beaker instance
+   (with or without making any changes to the exported data).
+
+The first workflow updates the data about one or more existing systems
+or users. For the data related to the systems, the system FQDN is used
+to look up the system in Beaker's database. If however, a system is to
+be renamed, then the "Systems (for modification)" data should be used
+since it also exports the database identifier for the system (the
+corresponding field name is "id") which is then used to look up the
+system in Beaker's database.
+
+The second workflow is useful when the same set of systems or user
+groups should be present in a different Beaker instance. In this case,
+the data exported by "Systems (for modification)" should *not* be used
+since data about the existing systems may be accidentally overwritten.
+
+.. note::
+
+   The CSV file that can be successfully imported by Beaker must
+   conform to the following guidelines:
+  
+   - The fields are delimited by commas.
+   - The values should be quoted with double quotes (for example, ``"Rack 1, Lab 2"``).
+   - Quotes are escaped by doubling them (for example, ``"Rack ""A"", Lab 2"``).
