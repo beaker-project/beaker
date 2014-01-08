@@ -190,6 +190,19 @@ class OSMajor(DeclarativeMappedObject):
                 .correlate(OSMajor.__table__))
 
     @classmethod
+    def in_lab(cls, lab, query=None):
+        if query is None:
+            query = cls.query
+        return query.filter(exists([1], from_obj=
+                LabControllerDistroTree.__table__
+                    .join(DistroTree.__table__)
+                    .join(Distro.__table__)
+                    .join(OSVersion.__table__))
+                .where(OSVersion.osmajor_id == OSMajor.id)
+                .where(LabControllerDistroTree.lab_controller == lab)
+                .correlate(OSMajor.__table__))
+
+    @classmethod
     def used_by_any_recipe(cls, query=None):
         # Delayed import to avoid circular dependency
         from . import Recipe

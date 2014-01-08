@@ -12,7 +12,9 @@ window.DistroPicker = Backbone.View.extend({
         'change select.distro_tree_filter_criterion': 'get_distro_trees',
     },
     initialize: function (options) {
-        _.defaults(options, {options: {}, selection: {}});
+        _.defaults(options, {multiple: true, options: {}, selection: {}});
+        this.multiple = options.multiple;
+        this.system = options.system; // only show distros compatible with this system
         this.osmajors = options.options['osmajor'];
         this.tags = options.options['tag'];
         this.distros = options.options['distro'];

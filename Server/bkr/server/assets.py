@@ -64,6 +64,7 @@ def _create_env(**kwargs):
             'system-loan.js',
             'system-model.js',
             'system-owner.js',
+            'system-provision.js',
             'system-quick-info.js',
             'system-scheduler-config.js',
             'access-policy.js',

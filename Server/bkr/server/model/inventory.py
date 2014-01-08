@@ -429,6 +429,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_status'] = self.can_edit(u)
             data['can_change_type'] = self.can_edit(u)
             data['can_change_hardware'] = self.can_edit(u)
+            data['can_power'] = self.can_power(u)
             data['can_take'] = self.is_free() and self.can_reserve_manually(u)
             data['can_return'] = (self.open_reservation is not None
                     and self.open_reservation.type != 'recipe'
@@ -444,6 +445,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_status'] = False
             data['can_change_type'] = False
             data['can_change_hardware'] = False
+            data['can_power'] = False
             data['can_take'] = False
             data['can_return'] = False
             data['can_borrow'] = False
@@ -1144,12 +1146,28 @@ class System(DeclarativeMappedObject, ActivityMixin):
                                              Arch.id==arch.id))
         return excluded
 
-    def distro_trees(self, only_in_lab=True):
+    def distros(self, query=None):
+        """
+        List of distros that support this system
+        """
+        if not query:
+            query = Distro.query
+        # Tempting to use exists() here but it will not work due to the inner 
+        # query also joining to distro, so we cannot correlate... instead we 
+        # must join against the distro_tree subquery
+        trees_subquery = self.distro_trees().statement\
+                .with_only_columns([Distro.id.distinct().label('inner_distro_id')])\
+                .alias('inner_distro_trees')
+        query = query.join((trees_subquery, trees_subquery.c.inner_distro_id == Distro.id))
+        return query
+
+    def distro_trees(self, only_in_lab=True, query=None):
         """
         List of distro trees that support this system
         """
-        query = DistroTree.query\
-                .join(DistroTree.distro, Distro.osversion, OSVersion.osmajor)\
+        if not query:
+            query = DistroTree.query
+        query = query.join(DistroTree.distro, Distro.osversion, OSVersion.osmajor)\
                 .options(contains_eager(DistroTree.distro, Distro.osversion, OSVersion.osmajor))
         if only_in_lab:
             query = query.filter(DistroTree.lab_controller_assocs.any(

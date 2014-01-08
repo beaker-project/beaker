@@ -156,6 +156,26 @@ class TestSystem(unittest.TestCase):
         except ValueError as e:
             self.assertIn('Invalid FQDN for system', str(e))
 
+    def test_distros(self):
+        lc = data_setup.create_labcontroller()
+        excluded_osmajor = OSMajor.lazy_create(
+                osmajor=data_setup.unique_name('osmajor_test_distros%s'))
+        tree_excluded = data_setup.create_distro_tree(arch=u'i386',
+                osmajor=excluded_osmajor.osmajor)
+        included_osmajor = OSMajor.lazy_create(
+                osmajor=data_setup.unique_name('osmajor_test_distros%s'))
+        tree_not_in_lab = data_setup.create_distro_tree(arch=u'i386',
+                osmajor=included_osmajor.osmajor, lab_controllers=[])
+        tree_in_lab = data_setup.create_distro_tree(arch=u'i386',
+                osmajor=included_osmajor.osmajor, lab_controllers=[lc])
+        system = data_setup.create_system(arch=u'i386', lab_controller=lc,
+                exclude_osmajor=[excluded_osmajor])
+        session.flush()
+        distros = system.distros()
+        self.assertNotIn(tree_excluded.distro, distros)
+        self.assertNotIn(tree_not_in_lab.distro, distros)
+        self.assertIn(tree_in_lab.distro, distros)
+
 class TestSystemKeyValue(unittest.TestCase):
 
     def setUp(self):

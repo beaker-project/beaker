@@ -49,76 +49,10 @@ class SystemViewTestWD(WebDriverTestCase):
                     owner=self.system_owner, status=u'Automated', arch=u'i386')
             self.distro_tree = data_setup.create_distro_tree(
                     lab_controllers=[self.lab_controller])
-            self.system.provisions[self.distro_tree.arch] = Provision(
-                    arch=self.distro_tree.arch, ks_meta=u'some_ks_meta_var=1',
-                    kernel_options=u'some_kernel_option=1',
-                    kernel_options_post=u'some_kernel_option=2')
-            self.system.provisions[self.distro_tree.arch]\
-                .provision_families[self.distro_tree.distro.osversion.osmajor] = \
-                    ProvisionFamily(osmajor=self.distro_tree.distro.osversion.osmajor,
-                        ks_meta=u'some_ks_meta_var=2', kernel_options=u'some_kernel_option=3',
-                        kernel_options_post=u'some_kernel_option=4')
-            self.system.provisions[self.distro_tree.arch]\
-                .provision_families[self.distro_tree.distro.osversion.osmajor]\
-                .provision_family_updates[self.distro_tree.distro.osversion] = \
-                    ProvisionFamilyUpdate(osversion=self.distro_tree.distro.osversion,
-                        ks_meta=u'some_ks_meta_var=3', kernel_options=u'some_kernel_option=5',
-                        kernel_options_post=u'some_kernel_option=6')
-
         self.browser = self.get_browser()
 
     def tearDown(self):
         self.browser.quit()
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=706150
-    #https://bugzilla.redhat.com/show_bug.cgi?id=886875
-    def test_kernel_install_options_propagated_view(self):
-
-        with session.begin():
-            self.system.provisions[self.distro_tree.arch] = \
-                Provision(arch=self.distro_tree.arch,
-                          ks_meta = u'key1=value1 key1=value2 key2=value key3',
-                          kernel_options=u'key1=value1 key1=value2 key2=value key3',
-                          kernel_options_post=u'key1=value1 key1=value2 key2=value key3')
-
-        b = self.browser
-        login(b)
-        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-
-        # provision tab
-        b.find_element_by_link_text('Provision').click()
-
-        # select the distro
-        Select(b.find_element_by_name('prov_install'))\
-            .select_by_visible_text(unicode(self.distro_tree))
-
-        # check the kernel install options field
-        def provision_ks_meta_populated():
-            if b.find_element_by_xpath("//input[@id='provision_ks_meta']")\
-                    .get_attribute('value') == \
-                    u'key1=value1 key1=value2 key2=value key3':
-                return True
-
-
-
-        # check the kernel install options field
-        def provision_koptions_populated():
-            if b.find_element_by_xpath("//input[@id='provision_koptions']")\
-                    .get_attribute('value') == \
-                    u'key1=value1 key1=value2 key2=value key3 noverifyssl':
-                return True
-
-        # check the kernel post install options field
-        def provision_koptions_post_populated():
-            if b.find_element_by_xpath("//input[@id='provision_koptions_post']")\
-                    .get_attribute('value') == \
-                    'key1=value1 key1=value2 key2=value key3':
-                return True
-
-
-        wait_for_condition(provision_ks_meta_populated)
-        wait_for_condition(provision_koptions_populated)
-        wait_for_condition(provision_koptions_post_populated)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=987313
     def test_labinfo_not_visible_for_new_systems(self):
@@ -501,6 +435,11 @@ class SystemViewTestWD(WebDriverTestCase):
             self.assert_(self.system.date_modified > orig_date_modified)
 
     def test_delete_install_options(self):
+        with session.begin():
+            self.system.provisions[self.distro_tree.arch] = Provision(
+                    arch=self.distro_tree.arch, ks_meta=u'some_ks_meta_var=1',
+                    kernel_options=u'some_kernel_option=1',
+                    kernel_options_post=u'some_kernel_option=2')
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)

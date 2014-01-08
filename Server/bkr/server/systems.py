@@ -800,6 +800,39 @@ def delete_system_access_policy_rules(fqdn):
         session.delete(rule)
     return '', 204
 
+@app.route('/systems/<fqdn>/installations/', methods=['POST'])
+def provision_system(fqdn):
+    system = _get_system_by_FQDN(fqdn)
+    if not system.can_power(identity.current.user):
+        raise Forbidden403('Cannot provision system')
+    data = read_json_request(request)
+    with convert_internal_errors():
+        if not data['distro_tree'] or 'id' not in data['distro_tree']:
+            raise ValueError('No distro tree specified')
+        distro_tree = DistroTree.by_id(data['distro_tree']['id'])
+        user = identity.current.user
+        if user.rootpw_expired:
+            raise ValueError('Your root password has expired, you must '
+                    'change or clear it in order to provision.')
+            redirect(u"/view/%s" % system.fqdn)
+        install_options = system.install_options(distro_tree).combined_with(
+                InstallOptions.from_strings(data.get('ks_meta'),
+                    data.get('koptions'), data.get('koptions_post')))
+        if 'ks' not in install_options.kernel_options:
+            kickstart = generate_kickstart(install_options,
+                    distro_tree=distro_tree, system=system, user=user)
+            install_options.kernel_options['ks'] = kickstart.link
+        system.configure_netboot(distro_tree,
+                install_options.kernel_options_str, service=u'HTTP')
+        system.record_activity(user=identity.current.user, service=u'HTTP',
+                action=u'Provision', field=u'Distro Tree',
+                new=unicode(distro_tree))
+        if data.get('reboot'):
+            system.action_power(action=u'reboot', service=u'HTTP')
+    # in future "installations" will be a real thing in our model,
+    # but for now we have nothing to return
+    return 'Provisioned', 201
+
 @app.route('/systems/<fqdn>/activity/', methods=['GET'])
 @json_collection(sort_columns={
     'user': User.user_name,

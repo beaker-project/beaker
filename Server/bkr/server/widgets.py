@@ -1089,51 +1089,6 @@ class SystemGroups(Form):
             d['system_id'] = d['options']['system_id']
 
 
-class SystemProvision(Form):
-    javascript = [LocalJSLink('bkr', '/static/javascript/provision_v2.js')]
-    template = "bkr.server.templates.system_provision"
-    member_widgets = ["id", "prov_install", "ks_meta", "power",
-                      "koptions", "koptions_post", "reboot","schedule_reserve_days"]
-    params = ['options', 'lab_controller', 'power_enabled', 'reserved',
-              'provisioning_notes', 'provisioning_panel_id',
-              'provisioning_button_label']
-
-    MAX_DAYS_PROVISION = 7
-    DEFAULT_RESERVE_DAYS = 0.5
-
-    def __init__(self, *args, **kw):
-        super(SystemProvision, self).__init__(*args, **kw)
-        self.id           = HiddenField(name="id")
-        self.power        = HiddenField(name="power")
-        self.schedule_reserve_days = SingleSelectField(name='reserve_days',
-                                                       label=_('Days to reserve for'),
-                                                       options = range(1, self.MAX_DAYS_PROVISION + 1),
-                                                       validator=validators.NotEmpty())
-        self.prov_install = SingleSelectField(name='prov_install',
-                                             label=_(u'Distro'),
-                                             options=[],
-                                             attrs={'size': 12, 'class': 'input-block-level'},
-                                             validator=validators.NotEmpty())
-        self.ks_meta       = TextField(name='ks_meta', attrs=dict(size=50),
-                                       label=_(u'KickStart MetaData'))
-        self.koptions      = TextField(name='koptions', attrs=dict(size=50),
-                                       label=_(u'Kernel Options (Install)'))
-        self.koptions_post = TextField(name='koptions_post', 
-                                       attrs=dict(size=50),
-                                       label=_(u'Kernel Options (Post)'))
-        self.reboot        = CheckBox(name='reboot',
-                                       label=_(u'Reboot System?'),
-                                       default=True)
-
-    def update_params(self, d): 
-        super(SystemProvision, self).update_params(d)
-        for param in ['reserved', 'lab_controller', 'provisioning_notes',
-                      'provisioning_panel_id', 'provisioning_button_label']:
-            d[param] = d['options'].get(param)
-        if 'power' in d['value']:
-            if d['value']['power']:
-                d['power_enabled'] = True
-
 class SystemInstallOptions(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/install_options.js')]
     template = "bkr.server.templates.system_installoptions"

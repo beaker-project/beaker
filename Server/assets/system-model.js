@@ -155,6 +155,34 @@ window.System = Backbone.Model.extend({
             },
         });
     },
+    provision: function (options) {
+        var model = this;
+        options = options || {};
+        $.ajax({
+            url: this.url + 'installations/',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                distro_tree: {id: options.distro_tree_id},
+                ks_meta: options.ks_meta,
+                koptions: options.koptions,
+                koptions_post: options.koptions_post,
+                reboot: options.reboot,
+            }),
+            // This should be dataType: 'json' in future when we return actual 
+            // installation data from this call... for now all we get is the 
+            // word 'Provisioned'
+            dataType: 'text',
+            success: function (data, status, jqxhr) {
+                if (options.success)
+                    options.success(model, data, options);
+            },
+            error: function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            },
+        });
+    },
 });
 
 })();

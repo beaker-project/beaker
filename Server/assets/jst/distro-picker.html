@@ -1,4 +1,8 @@
 <legend>Distro</legend>
+<% if (system) { %>
+  <input type="hidden" class="distro_filter_criterion distro_tree_filter_criterion"
+      name="system" value="<%- system %>" />
+<% } %>
 <div class="control-group">
   <label class="control-label" for="osmajor">Family</label>
   <div class="controls">
@@ -40,7 +44,9 @@
 <div class="control-group">
   <label class="control-label" for="distro_tree_id">Distro Tree</label>
   <div class="controls">
-    <select size="7" multiple id="distro_tree_id" name="distro_tree_id" class="input-xxlarge">
+    <select id="distro_tree_id" name="distro_tree_id" class="input-xxlarge"
+        <% if (this.multiple) { %>multiple size="7"<% } %>
+        >
       <% _.each(distro_trees, function (distro_tree) { %>
         <option value="<%- distro_tree[0] %>"
             <% if (_.contains(selection.get('distro_tree_id'), distro_tree[0])) { %>selected<% } %>

@@ -12,6 +12,11 @@
         new SystemOwnerView({model: system, el: $('#owner')});
         new SystemHardwareDetailsView({model: system, el: $('.system-hardware-details')});
         new SystemHardwareEssentialsView({model: system, el: $('#essentials')});
+        new SystemProvisionView({
+            model: system,
+            el: $('#provision'),
+            distro_picker_options: ${tg.to_json(widgets_options['distro_picker'])},
+        });
         new SystemLoanView({model: system, el: $('#loan')});
         new SystemSchedulerConfigView({model: system, el: $('#scheduler')});
         // defer history grid until tab is shown
@@ -132,14 +137,7 @@
      System must be associated to a lab controller and have at least one architecture specified to edit install options.
     </span>
    </div>
-   <div class="tab-pane" id="provision">
-    <span py:if="value.lab_controller and value.arch">
-     ${provision_widget.display(method='get', action=widgets_action['provision'], value=value, options=widgets_options['provision'])}
-    </span>
-    <span py:if="not value.lab_controller or not value.arch">
-     System must be associated to a lab controller and have at least one architecture specified in order to provision.
-    </span>
-   </div>
+      <div class="tab-pane" id="provision"/>
    <div class="tab-pane" id="labinfo" py:if="widgets['labinfo']">
     ${widgets['labinfo'].display(method='get', action=widgets_action['labinfo'], value=value, options=widgets_options['labinfo'])}
    </div>

@@ -16,7 +16,7 @@ from bkr.server.model import (TaskBase, Device, System, SystemGroup,
                               Provision, ProvisionFamily,
                               ProvisionFamilyUpdate, SystemStatus,
                               Key_Value_Int, Key_Value_String,
-                              SystemAccessPolicy, SystemPermission)
+                              SystemAccessPolicy, SystemPermission, DistroTag)
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
@@ -38,7 +38,7 @@ from bkr.server.watchdog import Watchdogs
 from bkr.server.systems import SystemsController
 from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import TaskSearchForm, SearchBar, \
-    SystemProvision, SystemInstallOptions, SystemGroups, \
+    SystemInstallOptions, SystemGroups, \
     SystemNotes, SystemKeys, SystemExclude, SystemDetails, \
     SystemCommandsForm, LabInfoForm, PowerActionHistory, \
     myPaginateDataGrid, PowerForm, SystemActions
@@ -177,7 +177,6 @@ class Root(RPCRoot):
     system_notes = SystemNotes(name='notes')
     system_groups = SystemGroups(name='groups')
     system_installoptions = SystemInstallOptions(name='installoptions')
-    system_provision = SystemProvision(name='provision')
     task_form = TaskSearchForm(name='tasks')
     system_actions = SystemActions()
 
@@ -609,95 +608,6 @@ class Root(RPCRoot):
             'name' : 'report_problem', 'action' : '../system_action/report_system_problem'}
         return options
 
-    # Automated systems may still be provisioned directly if loaned to
-    # a user who then takes out a manual reservation
-    # See https://bugzilla.redhat.com/show_bug.cgi?id=1015131
-    def _get_provisioning_details(self, system, user):
-        # Automated provisioning may be direct or through the scheduler
-        # We avoid the word "immediate", as it is misleading when the system
-        # has no automatic power control configured (the netboot files are
-        # written immediately, but you have to reboot the system to trigger
-        # reprovisioning).
-        # We avoid "on next reboot", as it is misleading when automatic power
-        # control *is* configured (since Beaker will reboot the system
-        # automatically).
-        # We avoid the word "manually" as it suggests there may be more to do
-        # after clicking the "Provision" button (which is only the case if
-        # power control is not configured).
-        _scheduled_panel = "scheduled"
-        _direct_panel = "direct"
-        # Figure out exactly what the user is allowed to do
-        # This is annoyingly complicated, but hard to simplify at all without
-        # breaking existing use cases :P
-        automated = (system.status == SystemStatus.automated)
-        reserved = system.has_manual_reservation(user)
-        borrowed = (system.loaned == user)
-        can_reserve = user and system.can_reserve(user)
-        notes = []
-        show_panel = None
-        if user is None:
-            notes.append(_("You are not logged in."))
-        else:
-            if reserved:
-                show_panel = _direct_panel
-                if automated and can_reserve:
-                    # Automated mode, but currently have a manual reservation
-                    notes.append(_("System will be provisioned directly. "
-                                   "Return this system to use a scheduled job instead."))
-                else:
-                    # Either in manual mode and currently have a manual reservation
-                    # or else in automated mode and don't have access to reserve it again
-                    notes.append(_("System will be provisioned directly."))
-                if not can_reserve:
-                    # We don't have permission to reserve it again (e.g. loan returned, access policy changed)
-                    notes.append(_("After returning this system, you will "
-                                   "no longer be able to provision it."))
-            elif not can_reserve:
-                # No access at all, cannot provision
-                notes.append(_("You do not have access to provision this system."))
-            elif not automated:
-                # Manual mode, just need to reserve it first
-                notes.append(_("Reserve this system to provision it."))
-            else:
-                # Automated mode, can schedule a job, but also want to give
-                # instructions on how to manually provision it instead.
-                show_panel = _scheduled_panel
-                if not borrowed:
-                    # Automated mode, need a loan *and* a reservation first
-                    notes.append(_("Provisioning will use a scheduled job. "
-                                   "Borrow and reserve this system to provision it directly instead."))
-                else:
-                    # Automated mode, have a loan, just need to reserve it
-                    notes.append(_("Provisioning will use a scheduled job. "
-                                   "Reserve this system to provision it directly instead."))
-        # Determine provisioning panel details
-        if show_panel == _scheduled_panel:
-            panel_id = "scheduled-provisioning"
-            button_label = "Schedule provision"
-        elif show_panel == _direct_panel:
-            panel_id = "direct-provisioning"
-            button_label = "Provision"
-        else:
-            panel_id = button_label = None
-        # Provisioning command action
-        if reserved:
-            provision_action = '/action_provision'
-        else:
-            provision_action = '/schedule_provision'
-        # Additional provisioning details
-        distro_trees = [(dt.id, unicode(dt)) for dt in
-                          system.distro_trees().order_by(Distro.name,
-                                                         DistroTree.variant,
-                                                         DistroTree.arch_id)]
-        provision_options = dict(reserved = reserved,
-                                 lab_controller = system.lab_controller,
-                                 prov_install = distro_trees,
-                                 provisioning_notes = notes,
-                                 provisioning_panel_id = panel_id,
-                                 provisioning_button_label = button_label)
-        return provision_action, provision_options
-
-
     @expose(template="bkr.server.templates.system")
     def _view_system_as_html(self, fqdn=None, **kw):
         if fqdn: 
@@ -730,8 +640,11 @@ class Root(RPCRoot):
             can_power = False
         title = system.fqdn
         options = self._get_system_options(system)
-        provision_action, provision_options = (
-            self._get_provisioning_details(system, our_user))
+        distro_picker_options = {
+            'tag': [tag.tag for tag in DistroTag.used()],
+            'osmajor': [osmajor.osmajor for osmajor in
+                OSMajor.ordered_by_osmajor(OSMajor.in_lab(system.lab_controller))],
+        }
 
         if readonly:
             attrs = dict(readonly = 'True')
@@ -769,7 +682,6 @@ class Root(RPCRoot):
             task_widget     = self.task_form,
             groups_widget   = self.system_groups,
             install_widget  = self.system_installoptions,
-            provision_widget = self.system_provision,
             widgets         = widgets,
             widgets_action  = dict( power     = url('/save_power'),
                                     labinfo   = url('/save_labinfo'),
@@ -778,7 +690,6 @@ class Root(RPCRoot):
                                     notes     = url('/save_note'),
                                     groups    = url('/save_group'),
                                     install   = url('/save_install'),
-                                    provision = url(provision_action),
                                     commands_form = url('/action_power'),
                                     tasks     = '/tasks/do_search',
                                   ),
@@ -797,12 +708,12 @@ class Root(RPCRoot):
                                    install   = dict(readonly = readonly,
                                                 provisions = system.provisions,
                                                 prov_arch = [(arch.id, arch.arch) for arch in system.arch]),
-                                   provision = provision_options,
                                    commands_form = dict(is_user=is_user,
                                                         can_power=can_power),
                                    tasks      = dict(system_id = system.id,
                                                      arch = [(0, 'All')] + [(arch.id, arch.arch) for arch in system.arch],
                                                      hidden = dict(system = 1)),
+                                   distro_picker=distro_picker_options,
                                   ),
         )
     _view_system_as_html.exposed = False # exposed indirectly by view()
@@ -1093,111 +1004,6 @@ class Root(RPCRoot):
 
         system.action_power(service='WEBUI', action=action)
         flash(_(u"%s power %s command enqueued" % (system.fqdn, action)))
-        redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def schedule_provision(self,id, prov_install=None, ks_meta=None, koptions=None, koptions_post=None, reserve_days=None, **kw):
-        distro_tree_id = prov_install
-        try:
-            user = identity.current.user
-            system = System.by_id(id,user)
-        except InvalidRequestError:
-            flash( _(u"Unable to save scheduled provision for %s" % id) )
-            redirect("/")
-        try:
-            distro_tree = DistroTree.by_id(distro_tree_id)
-        except InvalidRequestError:
-            flash( _(u"Unable to lookup distro tree for %s") % distro_tree_id)
-            redirect(u"/view/%s" % system.fqdn)
-
-        if user.rootpw_expired:
-            flash( _(u"Your root password has expired, please change or clear it in order to submit jobs.") )
-            redirect(u"/view/%s" % system.fqdn)
-
-        reserve_days = int(reserve_days)
-        if reserve_days is None:#This should not happen
-            log.debug('reserve_days has not been set in provision page, using default')
-            reserve_days = SystemProvision.DEFAULT_RESERVE_DAYS
-        else: 
-            if reserve_days > SystemProvision.MAX_DAYS_PROVISION: #Someone is trying to cheat
-                log.debug('User has tried to set provision to %s days, which is more than the allowable %s days' % (reserve_days,SystemProvision.DEFAULT_RESERVE_DAYS))
-                reserve_days = SystemProvision.DEFAULT_RESERVE_DAYS
-
-        reserve_time =  ((reserve_days * 24) * 60) * 60    
-        job_details = dict(whiteboard = u'Provision %s' % distro_tree,
-                            distro_trees = [distro_tree],
-                            pick = 'fqdn',
-                            system = system,
-                            ks_meta = ks_meta,
-                            koptions = koptions,
-                            koptions_post = koptions_post,
-                            reservetime = reserve_time)
-
-        try:                               
-            provision_system_job = Job.provision_system_job(**job_details)
-        except BX, msg:
-            flash(_(u"%s" % msg))
-            redirect(u"/view/%s" % system.fqdn)
-
-        self.jobs.success_redirect(provision_system_job.id)
-    
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def action_provision(self, id, prov_install=None, ks_meta=None, 
-                             koptions=None, koptions_post=None, reboot=None):
-
-        """
-        Immediately provision a Manual system. The system must already be reserved.
-        """
-        distro_tree_id = prov_install
-        try:
-            user = identity.current.user
-            system = System.by_id(id,user)
-        except InvalidRequestError:
-            flash( _(u"Unable to save scheduled provision for %s" % id) )
-            redirect("/")
-        try:
-            distro_tree = DistroTree.by_id(distro_tree_id)
-        except InvalidRequestError:
-            flash(_(u"Unable to lookup distro tree for %s") % distro_tree_id)
-            redirect(u"/view/%s" % system.fqdn)
-
-        if user.rootpw_expired:
-            flash( _(u"Your root password has expired, please change or clear it in order to submit jobs.") )
-            redirect(u"/view/%s" % system.fqdn)
-        if system.user != user:
-            flash(_(u'Reserve a system before provisioning'))
-            redirect(u'view/%s' % system.fqdn)
-
-        try:
-            from bkr.server.kickstart import generate_kickstart
-            install_options = system.install_options(distro_tree).combined_with(
-                    InstallOptions.from_strings(ks_meta, koptions, koptions_post))
-            if 'ks' not in install_options.kernel_options:
-                kickstart = generate_kickstart(install_options,
-                        distro_tree=distro_tree, system=system, user=user)
-                install_options.kernel_options['ks'] = kickstart.link
-            system.configure_netboot(distro_tree,
-                    install_options.kernel_options_str, service=u'WEBUI')
-        except Exception, msg:
-            log.exception('Failed to provision system %s', id)
-            activity = SystemActivity(user=identity.current.user, service=u'WEBUI',
-                    action=u'Provision', field_name=u'Distro Tree',
-                    old_value=u'', new_value=u'%s: %s' % (msg, distro_tree))
-            system.activity.append(activity)
-            flash(_(u"%s" % msg))
-            redirect("/view/%s" % system.fqdn)
-
-        activity = SystemActivity(user=identity.current.user, service=u'WEBUI',
-                action=u'Provision', field_name=u'Distro Tree',
-                old_value=u'', new_value=u'Success: %s' % distro_tree)
-        system.activity.append(activity)
-
-        if reboot:
-            system.action_power(action='reboot', service='WEBUI')
-
-        flash(_(u"Successfully Provisioned %s with %s") % (system.fqdn, distro_tree))
         redirect("/view/%s" % system.fqdn)
 
     @expose()

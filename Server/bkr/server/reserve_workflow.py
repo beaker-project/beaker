@@ -87,7 +87,7 @@ class ReserveWorkflow:
     def get_distro_options(self, **kwargs):
         return {'options': self._get_distro_options(**kwargs)}
 
-    def _get_distro_options(self, osmajor=None, tag=None, **kwargs):
+    def _get_distro_options(self, osmajor=None, tag=None, system=None, **kwargs):
         """
         Returns a list of distro names for the given osmajor and tag.
         """
@@ -99,13 +99,19 @@ class ReserveWorkflow:
                 .order_by(Distro.date_created.desc())
         if tag:
             distros = distros.filter(Distro._tags.any(DistroTag.tag == tag))
+        if system:
+            try:
+                system = System.by_fqdn(system, identity.current.user)
+            except NoResultFound:
+                return []
+            distros = system.distros(query=distros)
         return [name for name, in distros.values(Distro.name)]
 
     @expose(allow_json=True)
     def get_distro_tree_options(self, **kwargs):
         return {'options': self._get_distro_tree_options(**kwargs)}
 
-    def _get_distro_tree_options(self, distro=None, **kwargs):
+    def _get_distro_tree_options(self, distro=None, system=None, **kwargs):
         """
         Returns a list of distro trees for the given distro.
         """
@@ -117,4 +123,10 @@ class ReserveWorkflow:
         trees = distro.dyn_trees.join(DistroTree.arch)\
                 .filter(DistroTree.lab_controller_assocs.any())\
                 .order_by(DistroTree.variant, Arch.arch)
+        if system:
+            try:
+                system = System.by_fqdn(system, identity.current.user)
+            except NoResultFound:
+                return []
+            trees = system.distro_trees(query=trees)
         return [(tree.id, unicode(tree)) for tree in trees]

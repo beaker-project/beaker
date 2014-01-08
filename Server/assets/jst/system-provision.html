@@ -1,0 +1,68 @@
+<% if (!window.beaker_current_user) { %>
+  <p>You are not logged in.</p>
+<% } else if (!lab_controller_id) { %>
+  <p>System must be associated to a lab controller in order to provision.</p>
+<% } else if (_.isEmpty(arches)) { %>
+  <p>System must have at least one supported architecture defined in order to provision.</p>
+<% } else if (!can_power) { %>
+  <p>You do not have access to control this system.
+  <% if (status == "Automated" && can_reserve) { %>
+    To reserve this system through the scheduler, use the
+    <a href="<%- beaker_url_prefix %>reserveworkflow/?system=<%- fqdn %>">Reserve Workflow</a>.
+  <% } %>
+  <% if (status == "Manual" && can_reserve) { %>
+    Reserve this system to provision it.
+  <% } %>
+  </p>
+<% } else { %>
+  <div class="alert alert-warning">
+    <h4><i class="icon-warning-sign"></i> Caution</h4>
+    Provisioning this system will install a new operating system as soon as the 
+    system is rebooted, and <em>all data stored on the system will be lost</em>.
+    <% if (status == "Automated") { %>
+      The currently running job will be interrupted.
+      To reserve this system through the scheduler, use the
+      <a href="<%- beaker_url_prefix %>reserveworkflow/?system=<%- fqdn %>">Reserve Workflow</a>.
+    <% } %>
+  </div>
+  <form class="form-horizontal system-provision">
+    <fieldset class="distro-picker"/>
+    <fieldset class="install-options">
+      <legend>Install Options</legend>
+      <p>These options will augment the defaults configured for this system and 
+      the selected distro tree.</p>
+      <div class="control-group">
+        <label class="control-label" for="ks_meta">Kickstart Metadata</label>
+        <div class="controls">
+          <input type="text" id="ks_meta" name="ks_meta"/>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="koptions">Kernel Options</label>
+        <div class="controls">
+          <input type="text" id="koptions" name="koptions"/>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="koptions_post">Kernel Options Post</label>
+        <div class="controls">
+          <input type="text" id="koptions_post" name="koptions_post"/>
+        </div>
+      </div>
+    </fieldset>
+    <% if (has_power) { %>
+      <div class="control-group">
+        <div class="controls">
+          <label class="checkbox">
+            <input type="checkbox" name="reboot" value="true" checked />
+            Reboot system
+          </label>
+        </div>
+      </div>
+    <% } %>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Provision</button>
+      <span class="submit-status"></span>
+    </div>
+  </form>
+<% } %>
