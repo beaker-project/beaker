@@ -22,6 +22,7 @@ window.ReserveWorkflow = Backbone.View.extend({
             lab: options.selection['lab'] || this.labs[0],
             system: options.selection['system'],
             pick: options.selection['pick'] || default_pick,
+            reserve_days: options.selection['reserve_days'] || 1,
         });
         // sync our selection from distro picker's selection
         this.listenTo(this.distro_picker.selection, 'change', function (model) {

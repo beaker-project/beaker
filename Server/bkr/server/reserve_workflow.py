@@ -11,6 +11,9 @@ from bkr.server.model import (Distro, Job, System, Arch, OSMajor, DistroTag,
 import logging
 log = logging.getLogger(__name__)
 
+MAX_DAYS_PROVISION = 7
+DEFAULT_RESERVE_DAYS = 1
+
 @app.route('/reserveworkflow/doit', methods=['POST'])
 @auth_required
 def doit():
@@ -33,6 +36,9 @@ def doit():
             job_details['lab'] = LabController.by_name(request.form.get('lab'))
         except NoResultFound:
             raise BadRequest400('Lab controller %s not found' % request.form.get('lab'))
+    days = int(request.form.get('reserve_days') or DEFAULT_RESERVE_DAYS)
+    days = min(days, MAX_DAYS_PROVISION)
+    job_details['reservetime'] = days * 24 * 60 * 60
     job_details['whiteboard'] = request.form.get('whiteboard')
     job_details['ks_meta'] = request.form.get('ks_meta')
     job_details['koptions'] = request.form.get('koptions')

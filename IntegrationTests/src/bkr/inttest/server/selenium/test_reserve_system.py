@@ -4,7 +4,7 @@ from bkr.inttest.server.webdriver_utils import login, logout, \
         search_for_system, check_system_search_results
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import Arch, ExcludeOSMajor, SystemType, \
-        LabControllerDistroTree, SystemPermission
+        LabControllerDistroTree, SystemPermission, TaskBase
 from selenium.webdriver.support.ui import Select
 import unittest, time, re, os
 from turbogears.database import session
@@ -129,6 +129,27 @@ class ReserveWorkflow(WebDriverTestCase):
         self.assertEquals(len(b.find_elements_by_class_name('recipeset')), 1)
         b.find_element_by_xpath('//td[normalize-space(string(.))="%s Server i386"]'
                 % self.distro.name)
+
+    def test_reserve_time(self):
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow/')
+        Select(b.find_element_by_name('osmajor'))\
+            .select_by_visible_text(self.distro.osversion.osmajor.osmajor)
+        Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
+        Select(b.find_element_by_name('distro_tree_id'))\
+            .select_by_visible_text('%s Server i386' % self.distro.name)
+        b.find_element_by_name('reserve_days').clear()
+        b.find_element_by_name('reserve_days').send_keys('4')
+        b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
+        # should end up on the job page
+        jid = b.find_element_by_xpath('//td[preceding-sibling::th/text()="Job ID"]/a').text
+        with session.begin():
+            job = TaskBase.get_by_t_id(jid)
+            reserve_task = job.recipesets[0].recipes[0].tasks[1]
+            self.assertEquals(reserve_task.task.name, '/distribution/reservesys')
+            self.assertEquals(reserve_task.params[0].name, 'RESERVETIME')
+            self.assertEquals(reserve_task.params[0].value, '345600') # 4 days in seconds
 
 def go_to_reserve_systems(browser, distro_tree=None):
     b = browser

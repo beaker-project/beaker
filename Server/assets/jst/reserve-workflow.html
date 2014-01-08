@@ -47,6 +47,18 @@
   <fieldset class="job-options">
     <legend>Job</legend>
     <div class="control-group">
+      <label class="control-label" for="reserve_days">Reserve time</label>
+      <div class="controls">
+        <div class="input-append">
+          <input type="number" id="reserve_days" name="reserve_days" class="input-small"
+              value="<%- selection.get('reserve_days') %>"
+              min="1" max="7" step="1" pattern="[1-7]" title="Number between 1 and 7"
+              />
+          <span class="add-on">days</span>
+        </div>
+      </div>
+    </div>
+    <div class="control-group">
       <label class="control-label" for="whiteboard">Whiteboard</label>
       <div class="controls">
         <input type="text" id="whiteboard" name="whiteboard" class="input-xlarge" />
