@@ -16,46 +16,8 @@ Provides a scriptable command-line interface to the Beaker server.
 The following subcommands are supported. Each subcommand is documented in its 
 own man page. This man page is reserved for common options and features.
 
-* :manpage:`bkr-distro-trees-list(1)` -- List Beaker distro trees
-* :manpage:`bkr-distro-trees-verify(1)` -- Check Beaker distro trees for problems
-* :manpage:`bkr-distros-edit-version(1)` -- Edit the version of Beaker distros
-* :manpage:`bkr-distros-list(1)` -- List Beaker distros
-* :manpage:`bkr-distros-tag(1)` -- Tag Beaker distros
-* :manpage:`bkr-distros-untag(1)` -- Untag Beaker distros
-* :manpage:`bkr-harness-test(1)` -- Generate Beaker job to test harness installation
-* :manpage:`bkr-job-cancel(1)` -- Cancel running Beaker jobs
-* :manpage:`bkr-job-clone(1)` -- Clone existing Beaker jobs
-* :manpage:`bkr-job-delete(1)` -- Delete Beaker jobs
-* :manpage:`bkr-job-list(1)` -- List Beaker jobs
-* :manpage:`bkr-job-logs(1)` -- Print URLs of Beaker recipe log files
-* :manpage:`bkr-job-modify(1)` -- Modify Beaker jobs
-* :manpage:`bkr-job-results(1)` -- Export Beaker job results as XML
-* :manpage:`bkr-job-submit(1)` -- Submit job XML to Beaker
-* :manpage:`bkr-job-watch(1)` -- Watch the progress of a Beaker job
-* :manpage:`bkr-list-labcontrollers(1)` -- List Beaker lab controllers
-* :manpage:`bkr-list-systems(1)` -- List Beaker systems
-* :manpage:`bkr-loan-grant(1)` -- Grant a loan for a Beaker system
-* :manpage:`bkr-loan-return(1)` -- Return a current Beaker system loan
-* :manpage:`bkr-machine-test(1)` -- Generate Beaker job to test a system
-* :manpage:`bkr-policy-grant(1)` -- Grant permissions through an access policy
-* :manpage:`bkr-policy-revoke(1)` -- Remove grant permissions from an access policy
-* :manpage:`bkr-policy-list(1)` -- List access policy rules for a system
-* :manpage:`bkr-remove-account(1)` -- Remove Beaker user account
-* :manpage:`bkr-system-details(1)` -- Export RDF/XML description of a Beaker system
-* :manpage:`bkr-system-power(1)` -- Control power for a Beaker system
-* :manpage:`bkr-system-provision(1)` -- Provision a Beaker system
-* :manpage:`bkr-system-release(1)` -- Release a reserved Beaker system
-* :manpage:`bkr-system-reserve(1)` -- Manually reserve a Beaker system
-* :manpage:`bkr-system-delete(1)` -- Delete a Beaker system permanently
-* :manpage:`bkr-task-add(1)` -- Upload tasks to Beaker's task library
-* :manpage:`bkr-task-details(1)` -- Export details of a Beaker task
-* :manpage:`bkr-task-list(1)` -- List tasks in Beaker's task library
-* :manpage:`bkr-watchdog-extend(1)` -- Extend Beaker watchdog time
-* :manpage:`bkr-watchdog-show(1)` -- Show time remaining on Beaker watchdogs
-* :manpage:`bkr-watchdogs-extend(1)` -- Extend Beaker watchdogs time
-* :manpage:`bkr-whoami(1)` -- Show your Beaker username
-* :manpage:`bkr-workflow-simple(1)` -- Simple workflow to generate Beaker jobs
-* :manpage:`bkr-workflow-xslt(1)` -- XSLT-based Beaker job generator
+
+.. include:: subcommands.rst
 
 .. _taskspec:
 
