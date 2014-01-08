@@ -8,15 +8,15 @@ from bkr.inttest.assertions import assert_has_key_with_value
 from bkr.server.model import Arch, System, OSMajor, SystemPermission
 from turbogears.database import session
 import pkg_resources
-import unittest
+import unittest2 as unittest
 from tempfile import NamedTemporaryFile
 
 class CSVImportTest(WebDriverTestCase):
 
-    @with_transaction
     def setUp(self):
-        self.system = data_setup.create_system()
-        self.browser = self.get_browser()
+        with session.begin():
+            self.system = data_setup.create_system()
+            self.browser = self.get_browser()
 
     def tearDown(self):
         self.browser.quit()
@@ -46,15 +46,62 @@ class CSVImportTest(WebDriverTestCase):
         # attempting to import a system with no FQDN should fail
         self.import_csv((u'csv_type,fqdn,location,arch\n'
                          u'system,'',Under my desk,ia64').encode('utf8'))
-        self.assertTrue(is_text_present(self.browser,
-                                        "Error importing system on line 2: "
-                                        "System must have an associated FQDN"))
+        self.assertEquals(self.browser.find_element_by_xpath(
+            '//table[@id="csv-import-log"]//td').text,
+                          "Error importing system on line 2: "
+                          "System must have an associated FQDN")
+
         # attempting to import a system with an invalid FQDN should fail
         self.import_csv((u'csv_type,fqdn,location,arch\n'
                          u'system,invalid--fqdn,Under my desk,ia64').encode('utf8'))
-        self.assertTrue(is_text_present(self.browser,
-                                        "Error importing system on line 2: "
-                                        "System has an invalid FQDN: invalid--fqdn"))
+        self.assertEquals(self.browser.find_element_by_xpath(
+            '//table[@id="csv-import-log"]//td').text,
+                          "Error importing system on line 2: "
+                          "System has an invalid FQDN: invalid--fqdn")
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=987157
+    def test_system_rename(self):
+        login(self.browser)
+        # attempt to rename existing system to an invalid FQDN should keep 
+        # the system unmodified
+
+        with session.begin():
+            session.refresh(self.system)
+        orig_date_modified = self.system.date_modified
+        self.import_csv((u'csv_type,id,fqdn,location,arch\n'
+                    u'system,%s,new--fqdn.name,%s,%s' % (self.system.id,
+                                                         self.system.location, self.system.arch[0])).encode('utf8'))
+        with session.begin():
+            session.refresh(self.system)
+        self.assertEquals(self.system.date_modified, orig_date_modified)
+        self.assertEquals(self.browser.find_element_by_xpath(
+            '//table[@id="csv-import-log"]//td').text,
+                          "Error importing system on line 2: "
+                          "System has an invalid FQDN: new--fqdn.name")
+
+        # attempt to rename a non-existent system should fail
+        orig_date_modified = self.system.date_modified
+        non_existent_system_id = -1
+        self.import_csv((u'csv_type,id,fqdn,location,arch\n'
+                    u'system,%s,new--fqdn.name,%s,%s' % (non_existent_system_id,
+                                                         self.system.location, self.system.arch[0])).encode('utf8'))
+        with session.begin():
+            session.refresh(self.system)
+        self.assertEquals(self.system.date_modified, orig_date_modified)
+        self.assertEquals(self.browser.find_element_by_xpath(
+            '//table[@id="csv-import-log"]//td').text,
+                          "Error importing system on line 2: "
+                          "Non-existent system id")
+
+        # successfully rename existing system
+        orig_date_modified = self.system.date_modified
+        self.import_csv((u'csv_type,id,fqdn,location,arch\n'
+                    u'system,%s,new.fqdn.name,Under my desk,ia64' % self.system.id).encode('utf8'))
+        with session.begin():
+            session.refresh(self.system)
+
+        self.assertGreater(self.system.date_modified, orig_date_modified)
+        self.assertEquals(self.system.fqdn, 'new.fqdn.name')
 
     def test_grants_view_permission_to_everybody_by_default(self):
         fqdn = data_setup.unique_name(u'test-csv-import%s.example.invalid')

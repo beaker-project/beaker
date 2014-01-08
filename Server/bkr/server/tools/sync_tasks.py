@@ -72,16 +72,13 @@ import lxml.etree as ET
 import logging
 import urllib2
 from optparse import OptionParser
-from shutil import rmtree
 
 import turbogears.config
 from turbogears.database import session
 
-from bkr.common.helpers import atomically_replaced_file, unlink_ignore, siphon, \
-    Flock
+from bkr.common.helpers import siphon
 from bkr.server.model import TaskLibrary, Task
 from bkr.server.util import load_config
-import xmlrpclib
 
 __description__ = 'Script to sync local task RPMs from a remote Beaker instance'
 __version__ = '0.1'
@@ -101,19 +98,22 @@ class TaskLibrarySync:
 
     def __init__(self, remote=None):
 
+        # load configuration data
+        load_config()
+
         # setup, sanity checks
         self.task_dir = turbogears.config.get("basepath.rpms", "/var/www/beaker/rpms")
+
         self._setup_logging()
 
         # Initialize core attributes
         if remote:
-            self.proxy = xmlrpclib.ServerProxy(remote.rstrip("/"))
+            self.remote = remote.rstrip("/")
+            self.proxy = xmlrpclib.ServerProxy(self.remote)
 
         self.tasks_added = []
         self.t_downloaded = 0
         self.tasklib = TaskLibrary()
-        # load configuration data
-        load_config()
 
     def _setup_logging(self):
         formatter = logging.Formatter('%(asctime)s - %(message)s')
@@ -233,7 +233,7 @@ class TaskLibrarySync:
         try:
             self.sync_tasks(tasks_to_sync)
         except Exception, e:
-            log.exception(unicode(e))
+            self.logger.exception(unicode(e))
             self.logger.info('Failed to sync all tasks')
         else:
             self.logger.info('Synced all tasks')
@@ -292,7 +292,8 @@ def main():
     if not options.force:
         if len(old_tasks)>0:
             task_sync.logger.warning('Warning: %d tasks already present may be overwritten '
-                            'with the version from %s if the two versions are different' % (len(old_tasks), task_sync.remote))
+                                     'with the version from %s if the two versions are different' %
+                                     (len(old_tasks), task_sync.remote))
 
         proceed = raw_input('Proceed with task addition? (y/n) ')
         if proceed.lower() == 'y':

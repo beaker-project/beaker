@@ -37,7 +37,8 @@ class CSV(RPCRoot):
 
     upload     = widgets.FileField(name='csv_file', label='Import CSV')
     download   = RadioButtonList(name='csv_type', label='CSV Type',
-                               options=[('system', 'Systems'), 
+                               options=[('system', 'Systems'),
+                                        ('system_id', 'Systems (for modification)'), 
                                         ('labinfo', 'System LabInfo'), 
                                         ('power', 'System Power'),
                                         ('exclude', 'System Excluded Families'), 
@@ -117,43 +118,54 @@ class CSV(RPCRoot):
                             ', '.join(missing_fields)))
                     continue
                 if 'csv_type' in data:
-                    if data['csv_type'] in system_types and \
-                      'fqdn' in data:
-                        try:
-                            system = System.query.filter(System.fqdn == data['fqdn']).one()
-                        except InvalidRequestError:
-                            # Create new system with some defaults
-                            # Assume the system is broken until proven otherwise.
-                            # Also assumes its a machine.  we have to pick something
+                    if data['csv_type'] in system_types and ('fqdn' in data or 'id' in data):
+                        if data.get('id', None):
                             try:
-                                system = System(fqdn=data['fqdn'],
+                                system = System.query.filter(System.id == data['id']).one()
+                            except InvalidRequestError as e:
+                                log.append('Error importing system on line %s: Non-existent system id' %
+                                           reader.line_num)
+                                continue
+                        else:
+                            try:
+                                system = System.query.filter(System.fqdn == data['fqdn']).one()
+                            except InvalidRequestError:
+                                # Create new system with some defaults
+                                # Assume the system is broken until proven otherwise.
+                                # Also assumes its a machine.  we have to pick something
+                                try:
+                                    system = System(fqdn=data['fqdn'],
                                                 owner=identity.current.user,
                                                 type=SystemType.machine,
                                                 status=SystemStatus.broken)
+                                except ValueError as e:
+                                    log.append('Error importing system on line %s: %s' %
+                                               (reader.line_num, str(e)))
+                                    continue
+                                # new systems are visible to everybody by default
+                                system.custom_access_policy = SystemAccessPolicy()
+                                system.custom_access_policy.add_rule(
+                                        SystemPermission.view, everybody=True)
+
+                        if system.can_edit(identity.current.user):
+                            # we change the FQDN only when a valid system id is supplied
+                            if not data.get('id', None):
+                                data.pop('fqdn')
+                            try:
+                                self.from_csv(system, data, log)
                             except ValueError as e:
                                 log.append('Error importing system on line %s: %s' %
                                            (reader.line_num, str(e)))
-                                continue
-                            # new systems are visible to everybody by default
-                            system.custom_access_policy = SystemAccessPolicy()
-                            system.custom_access_policy.add_rule(
-                                    SystemPermission.view, everybody=True)
-                        if system.can_edit(identity.current.user):
-                            # Remove fqdn, can't change that via csv.
-                            data.pop('fqdn')
-                            if not self.from_csv(system, data, log):
                                 if system.id:
                                     # System already existed but some or all of the
                                     #  import data was invalid.
                                     session.expire(system)
                                 else:
                                     # System didn't exist before import but some
-                                    #  or all of the import data was invalid.
+                                    # or all of the import data was invalid.
                                     session.expunge(system)
                                     del(system)
                             else:
-                                # Save out our system.  If we created it above we
-                                # want to make sure its found on subsequent lookups
                                 session.add(system)
                                 session.flush([system])
                         else:
@@ -209,12 +221,10 @@ class CSV(RPCRoot):
             csv_type = data['csv_type']
             # Remove csv_type now that we know what we want to do.
             data.pop('csv_type')
-            retval = csv_types[csv_type]._from_csv(system,data,csv_type,log)
+            csv_types[csv_type]._from_csv(system, data, csv_type, log)
             system.date_modified = datetime.datetime.utcnow()
-            return retval
         else:
-            log.append("Invalid csv_type %s" % data['csv_type'])
-        return False
+            raise ValueError("Invalid csv_type %s" % data['csv_type'])
 
     @classmethod
     def _from_csv(cls,system,data,csv_type,log):
@@ -233,8 +243,6 @@ class CSV(RPCRoot):
                     activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '%s' % current_data, '%s' % newdata)
                     system.activity.append(activity)
                     setattr(csv_object,key,newdata)
-
-        return True
 
     def to_datastruct(self):
         datastruct = dict()
@@ -264,20 +272,21 @@ class CSV_System(CSV):
     @classmethod
     def _from_csv(cls,system,data,csv_type,log):
         """
-        Import data from CSV file into LabInfo Objects
+        Import data from CSV file into System Objects
         """
         for key in data.keys():
-            if key in cls.reg_keys:
+            if key in cls.reg_keys and key != 'id':
                 if data[key]:
                     newdata = smart_bool(data[key])
                 else:
                     newdata = None
                 current_data = getattr(system, key, None)
                 if str(newdata) != str(current_data):
-                    activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '%s' % current_data, '%s' % newdata)
-                    system.activity.append(activity)
                     setattr(system,key,newdata)
-
+                    activity = SystemActivity(identity.current.user,
+                                              'CSV', 'Changed', key, '%s' %
+                                              current_data, '%s' % newdata)
+                    system.activity.append(activity)
         # import arch
         if 'arch' in data:
             arch_objs = []
@@ -287,12 +296,13 @@ class CSV_System(CSV):
                     try:
                         arch_obj = Arch.by_name(arch)
                     except InvalidRequestError:
-                        log.append("%s: Invalid arch %s" % (system.fqdn,
-                                                                   arch))
-                        return False
+                        raise ValueError("%s: Invalid arch %s" %
+                                         (system.fqdn, arch))
                     arch_objs.append(arch_obj)
             if system.arch != arch_objs:
-                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'arch', '%s' % system.arch, '%s' % arch_objs)
+                activity = SystemActivity(identity.current.user,
+                                          'CSV', 'Changed', 'arch', '%s' %
+                                          system.arch, '%s' % arch_objs)
                 system.activity.append(activity)
                 system.arch = arch_objs
 
@@ -302,7 +312,9 @@ class CSV_System(CSV):
             if data['cc']:
                 cc_objs = data['cc'].split(',')
             if system.cc != cc_objs:
-                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'cc', '%s' % system.cc, '%s' % cc_objs)
+                activity = SystemActivity(identity.current.user,
+                                          'CSV', 'Changed', 'cc', '%s' % 
+                                          system.cc, '%s' % cc_objs)
                 system.activity.append(activity)
                 system.cc = cc_objs
 
@@ -312,58 +324,59 @@ class CSV_System(CSV):
                 try:
                     lab_controller = LabController.by_name(data['lab_controller'])
                 except InvalidRequestError:
-                    log.append("%s: Invalid lab controller %s" % (system.fqdn,
-                                                        data['lab_controller']))
-                    return False
+                    raise ValueError("%s: Invalid lab controller %s" %
+                                     (system.fqdn, data['lab_controller']))
             else:
                 lab_controller = None
             if system.lab_controller != lab_controller:
-                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'lab_controller', '%s' % system.lab_controller, '%s' % lab_controller)
+                activity = SystemActivity(identity.current.user,
+                                          'CSV', 'Changed', 'lab_controller', '%s' %
+                                          system.lab_controller, '%s' % lab_controller)
                 system.activity.append(activity)
                 system.lab_controller = lab_controller
-            
+
         # import owner
         if 'owner' in data:
             if data['owner']:
                 owner = User.by_user_name(data['owner'])
                 if not owner:
-                    log.append("%s: Invalid User %s" % (system.fqdn,
-                                                        data['owner']))
-                    return False
+                    raise ValueError("%s: Invalid User %s" %
+                                              (system.fqdn, data['owner']))
             else:
                 owner = None
             if system.owner != owner:
-                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'owner', '%s' % system.owner, '%s' % owner)
+                activity = SystemActivity(identity.current.user,
+                                          'CSV', 'Changed', 'owner', '%s' %
+                                          system.owner, '%s' % owner)
                 system.activity.append(activity)
                 system.owner = owner
         # import status
-        if 'status' in data:
-            if not data['status']:
-                log.append("%s: Invalid Status None" % system.fqdn)
-                return False
+        if 'status' in data and data['status']:
             try:
                 systemstatus = SystemStatus.from_string(data['status'])
             except ValueError:
-                log.append("%s: Invalid Status %s" % (system.fqdn,
-                                                      data['status']))
-                return False
+                raise ValueError("%s: Invalid Status %s" %
+                                 (system.fqdn, data['status']))
             if system.status != systemstatus:
-                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'status', '%s' % system.status, '%s' % systemstatus)
+                activity = SystemActivity(identity.current.user, 
+                                          'CSV', 'Changed', 'status', '%s' %
+                                          system.status, '%s' % systemstatus)
                 system.activity.append(activity)
                 system.status = systemstatus
+
         # import type
         if 'type' in data:
             if not data['type']:
-                log.append("%s: Invalid Type None" % system.fqdn)
-                return False
+                raise ValueError("%s: Invalid Type None" % system.fqdn)
             try:
                 systemtype = SystemType.from_string(data['type'])
             except ValueError:
-                log.append("%s: Invalid Type %s" % (system.fqdn,
-                                                     data['type']))
-                return False
+                raise ValueError("%s: Invalid Type %s" %
+                                 (system.fqdn, data['type']))
             if system.type != systemtype:
-                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'type', '%s' % system.type, '%s' % systemtype)
+                activity = SystemActivity(identity.current.user,
+                                          'CSV', 'Changed', 'type', '%s' %
+                                          system.type, '%s' % systemtype)
                 system.activity.append(activity)
                 system.type = systemtype
         # import secret
@@ -374,8 +387,7 @@ class CSV_System(CSV):
             # output. However we still accept it on import for compatibility. 
             # It is mapped to the 'view everybody' rule in the access policy.
             if not data['secret']:
-                log.append("%s: Invalid secret None" % system.fqdn)
-                return False
+                raise ValueError("%s: Invalid secret None" % system.fqdn)
             secret = smart_bool(data['secret'])
             view_everybody = system.custom_access_policy.grants_everybody(
                     SystemPermission.view)
@@ -394,7 +406,6 @@ class CSV_System(CSV):
                 system.record_activity(user=identity.current.user, service=u'HTTP',
                         field=u'Access Policy Rule', action=u'Added',
                         new=repr(new_rule))
-        return True
 
     def __init__(self, system):
         self.system = system
@@ -413,6 +424,22 @@ class CSV_System(CSV):
         self.type = system.type
         self.vendor = system.vendor
         self.cc = ','.join([cc for cc in system.cc])
+
+class CSV_System_id(CSV_System):
+
+    reg_keys = ['id'] + CSV_System.reg_keys
+    csv_keys = reg_keys + CSV_System.spec_keys
+
+    def __init__(self, system):
+        self.id = system.id
+        super(CSV_System_id, self).__init__(system)
+
+    @classmethod
+    def query(cls):
+        for system in System.permissable_systems \
+            (System.query.outerjoin('user')):
+            yield CSV_System_id(system)
+
 
 class CSV_Power(CSV):
     csv_type = 'power'
@@ -525,7 +552,6 @@ class CSV_Exclude(CSV):
         """
         Import data from CSV file into System Objects
         """
-        
         try:
             arch = Arch.by_name(data['arch'])
         except InvalidRequestError:
@@ -897,6 +923,7 @@ system_types = ['system', 'labinfo', 'exclude','install','keyvalue',
                 'system_group', 'power']
 user_types   = ['user_group']
 csv_types = dict( system = CSV_System,
+                  system_id = CSV_System_id,
                   labinfo = CSV_LabInfo,
                   exclude = CSV_Exclude,
                   install = CSV_Install,
