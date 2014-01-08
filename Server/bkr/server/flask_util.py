@@ -7,7 +7,7 @@ from werkzeug.exceptions import HTTPException
 from flask import request, jsonify, redirect
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
-from bkr.server.bexceptions import InsufficientSystemPermissions
+from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 
 def json_collection(**options):
     """
@@ -110,10 +110,10 @@ def convert_internal_errors():
     """Context manager to convert Python exceptions to HTTP errors"""
     try:
         yield
-    except (NoResultFound, ValueError) as exc:
-        raise BadRequest400(str(exc))
     except InsufficientSystemPermissions as exc:
         raise Forbidden403(str(exc))
+    except (BX, NoResultFound, ValueError) as exc:
+        raise BadRequest400(str(exc))
 
 def auth_required(f):
     """Decorator that reports a 401 error if the user is not logged in"""

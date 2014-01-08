@@ -327,38 +327,38 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn', limit=20)
     def reserve_system(self, *args,**kw):
-        
-        def reserve_link(x, distro_tree):
-            if x.is_free():
-                return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
-                        % (x.id, distro_tree.id), 'Reserve Now', elem_class='btn')
-            else:
-                return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
-                        % (x.id, distro_tree.id), 'Queue Reservation', elem_class='btn')
-        try:
-            distro_tree = DistroTree.by_id(kw['distro_tree_id'])
-        except KeyError:
-            flash(_(u'Need a  valid distro to search on'))
-            redirect(url('/reserveworkflow',**kw))
-        except NoResultFound:
-            flash(_(u'Invalid distro tree id %s') % kw['distro_tree_id'])
-            redirect(url('/reserveworkflow',**kw))
-        avail_systems_distro_query = System.by_type(type=SystemType.machine,
-                systems=distro_tree.systems(user=identity.current.user))\
-                .order_by(None)
+        if kw.get('distro_tree_id'):
+            try:
+                distro_tree = DistroTree.by_id(kw['distro_tree_id'])
+            except NoResultFound:
+                flash(_(u'Invalid distro tree id %s') % kw['distro_tree_id'])
+                redirect(url('/reserveworkflow/', **kw))
+        else:
+            distro_tree = None
+        query = System.available_for_schedule(user=identity.current.user)\
+                .filter(System.type == SystemType.machine)
+        if distro_tree:
+            query = distro_tree.systems(systems=query)
         warn = None
-        if avail_systems_distro_query.count() < 1:
+        if query.count() < 1:
             warn = u'No Systems compatible with %s' % distro_tree
-
-        getter = lambda x: reserve_link(x, distro_tree)
-        direct_column = Utility.direct_column(title='Action',getter=getter)
-        return_dict = self._systems(systems=avail_systems_distro_query,
+        def reserve_link(x):
+            href = url('/reserveworkflow/', system=x.fqdn, **kw)
+            if x.is_free():
+                label = 'Reserve Now'
+            else:
+                label = 'Queue Reservation'
+            a = kid.Element('a', href=href)
+            a.attrib['class'] = 'btn'
+            a.text = label
+            return a
+        direct_column = Utility.direct_column(title='Action', getter=reserve_link)
+        return_dict = self._systems(systems=query,
                 title=u'Reserve Systems', direct_columns=[(8, direct_column)],
                 *args, **kw)
         return_dict['warn_msg'] = warn
         return_dict['tg_template'] = "bkr.server.templates.reserve_grid"
         return_dict['action'] = '/reserve_system'
-        return_dict['options']['extra_hiddens'] = {'distro_tree_id': distro_tree.id}
         return return_dict
 
     def _history_search(self,activity,**kw):
@@ -1126,8 +1126,9 @@ class Root(RPCRoot):
 
         reserve_time =  ((reserve_days * 24) * 60) * 60    
         job_details = dict(whiteboard = u'Provision %s' % distro_tree,
-                            distro_tree_id = distro_tree.id,
-                            system_id = id,
+                            distro_trees = [distro_tree],
+                            pick = 'fqdn',
+                            system = system,
                             ks_meta = ks_meta,
                             koptions = koptions,
                             koptions_post = koptions_post,

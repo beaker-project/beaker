@@ -1,0 +1,51 @@
+<legend>Distro</legend>
+<div class="control-group">
+  <label class="control-label" for="osmajor">Family</label>
+  <div class="controls">
+    <select id="osmajor" name="osmajor" class="distro_filter_criterion input-xlarge">
+      <option value="">None selected</option>
+      <% _.each(osmajors, function (osmajor) { %>
+        <option value="<%- osmajor %>"
+            <% if (selection.get('osmajor') == osmajor) { %>selected<% } %>
+            ><%- osmajor %></option>
+      <% }) %>
+    </select>
+  </div>
+</div>
+<div class="control-group">
+  <label class="control-label" for="tag">Tag</label>
+  <div class="controls">
+    <select id="tag" name="tag" class="distro_filter_criterion input-xlarge">
+      <option value="">None selected</option>
+      <% _.each(tags, function (tag) { %>
+        <option value="<%- tag %>"
+            <% if (selection.get('tag') == tag) { %>selected<% } %>
+            ><%- tag %></option>
+      <% }) %>
+    </select>
+  </div>
+</div>
+<div class="control-group">
+  <label class="control-label" for="distro">Distro</label>
+  <div class="controls">
+    <select id="distro" name="distro" class="distro_tree_filter_criterion input-xlarge">
+      <% _.each(distros, function (distro) { %>
+        <option value="<%- distro %>"
+            <% if (selection.get('distro') == distro) { %>selected<% } %>
+            ><%- distro %></option>
+      <% }) %>
+    </select>
+  </div>
+</div>
+<div class="control-group">
+  <label class="control-label" for="distro_tree_id">Distro Tree</label>
+  <div class="controls">
+    <select size="7" multiple id="distro_tree_id" name="distro_tree_id" class="input-xxlarge">
+      <% _.each(distro_trees, function (distro_tree) { %>
+        <option value="<%- distro_tree[0] %>"
+            <% if (_.contains(selection.get('distro_tree_id'), distro_tree[0])) { %>selected<% } %>
+            ><%- distro_tree[1] %></option>
+      <% }) %>
+    </select>
+  </div>
+</div>

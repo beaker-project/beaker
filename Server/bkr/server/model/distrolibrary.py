@@ -488,7 +488,7 @@ class DistroTree(DeclarativeMappedObject):
                 .filter(not_(Task.excluded_osmajor.any(
                     TaskExcludeOSMajor.osmajor == self.distro.osversion.osmajor)))
 
-    def systems(self, user=None):
+    def systems(self, user=None, systems=None):
         """
         List of systems that support this distro
         Limit to only lab controllers which have the distro.
@@ -496,7 +496,8 @@ class DistroTree(DeclarativeMappedObject):
         """
         # Delayed import to avoid circular dependency
         from . import System
-        return self.all_systems(user).join(System.lab_controller)\
+        return self.all_systems(user=user, systems=systems)\
+                .join(System.lab_controller)\
                 .filter(LabController._distro_trees.any(
                     LabControllerDistroTree.distro_tree == self))
 

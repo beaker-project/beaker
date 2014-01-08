@@ -323,59 +323,6 @@ class GroupPermissions(Widget):
         </div>
         """
 
-class ReserveSystem(HorizontalForm):
-    fields = [ 
-          HiddenField(name='system_id'),
-              Label(name='system', label=_(u'System to Provision')),
-              Label(name='distro', label=_(u'Distro Tree to Provision')),
-              TextField(name='whiteboard', attrs=dict(size=50),
-                        label=_(u'Job Whiteboard')),
-              TextField(name='ks_meta', attrs=dict(size=50),
-                        label=_(u'KickStart MetaData')),
-              TextField(name='koptions', attrs=dict(size=50),
-                        label=_(u'Kernel Options (Install)')),
-              TextField(name='koptions_post', 
-                        attrs=dict(size=50),
-                        label=_(u'Kernel Options (Post)')),
-             ]
-    submit_text = 'Queue Job'
-
-    def update_params(self,d): 
-        log.debug(d)
-        if 'value' in d:
-            if 'distro_tree_ids' in d['value']:
-                if(isinstance(d['value']['distro_tree_ids'],list)):
-                    for distro_tree_id in d['value']['distro_tree_ids']:
-                        d['hidden_fields'] = [HiddenField(name='distro_tree_id', attrs={'value' : distro_tree_id})] + d['hidden_fields'][0:]
-                
-
-        super(ReserveSystem,self).update_params(d)
-
-
-class ReserveWorkflow(Form): 
-    javascript = [LocalJSLink('bkr', '/static/javascript/loader_v2.js'),
-                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v8.js'),
-                 ] 
-    template="bkr.server.templates.reserve_workflow"
-    fields = [
-        SingleSelectField(name='osmajor', label=_(u'Family'),
-            validator=validators.UnicodeString(),
-            css_classes=['distro_filter_criterion']),
-        SingleSelectField(name='tag', label=_(u'Tag'),
-            validator=validators.UnicodeString(),
-            css_classes=['distro_filter_criterion']),
-        SingleSelectField(name='distro', label=_(u'Distro'),
-            validator=validators.UnicodeString(),
-            css_classes=['distro_tree_filter_criterion']),
-        SingleSelectField(name='lab_controller_id', label=_(u'Lab'),
-            validator=validators.Int(),
-            css_classes=['distro_tree_filter_criterion']),
-        MultipleSelectField(name='distro_tree_id', label=_(u'Distro Tree'),
-                size=7, validator=validators.Int()),
-    ]
-    params = ['get_distros_rpc', 'get_distro_trees_rpc']
-
-
 class MyButton(Button):
     template="bkr.server.templates.my_button"
     params = ['type', 'button_label', 'name']

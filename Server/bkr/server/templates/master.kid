@@ -69,7 +69,7 @@ from bkr.server.reports import Reports
                     <li><a href="${tg.url('/tasks/new')}">New Task</a></li>
                     <li><a href="${tg.url('/tasks')}">Task Library</a></li>
                     <li><a href="${tg.url('/watchdogs')}">Watchdog</a></li>
-                    <li><a href="${tg.url('/reserveworkflow')}">Reserve</a></li>
+                    <li><a href="${tg.url('/reserveworkflow/')}">Reserve</a></li>
                 </ul>
             </li>
             <li class="dropdown">

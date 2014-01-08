@@ -25,3 +25,6 @@
 [submodule "backbone-pageable"]
 	path = Server/assets/backbone-pageable
 	url = https://github.com/wyuenho/backbone-pageable.git
+[submodule "URI.js"]
+	path = Server/assets/URI.js
+	url = https://github.com/medialize/URI.js.git

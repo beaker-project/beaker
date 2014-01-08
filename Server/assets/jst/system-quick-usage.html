@@ -36,7 +36,7 @@
   <% } else if (can_borrow) { %>
     <button type="button" class="btn btn-block borrow">Borrow</button>
   <% } else if (can_reserve) { %>
-    <a href="#IMPLEMENTME" class="btn btn-block">Reserve</a>
+    <a href="<%- beaker_url_prefix %>reserveworkflow/?system=<%- fqdn %>" class="btn btn-block">Reserve</a>
   <% } else if (_.isEmpty(window.beaker_current_user)) { %>
     <button type="button" class="btn btn-block" disabled="disabled">Not logged in</button>
   <% } else { %>
