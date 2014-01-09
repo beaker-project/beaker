@@ -2,15 +2,13 @@ import SimpleHTTPServer
 import SocketServer
 
 
-class HTTPServer(object):
+class HTTPServer(SocketServer.TCPServer):
 
     def __init__(self, port):
+        self.allow_reuse_address = True
         self.handler = SimpleHTTPServer.SimpleHTTPRequestHandler
-        self.httpd = SocketServer.TCPServer(("", port), self.handler)
-
-    def start(self):
-        self.httpd.serve_forever()
+        SocketServer.TCPServer.__init__(self, ('', port), self.handler)
 
 if __name__ in ('main', '__main__'):
     server = HTTPServer(19998)
-    server.start()
+    server.serve_forever()
