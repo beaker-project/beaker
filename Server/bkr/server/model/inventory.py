@@ -136,6 +136,15 @@ class Reservation(DeclarativeMappedObject):
     user = relationship(User, backref=backref('reservations',
             order_by=[start_time.desc()]))
 
+    def __json__(self):
+        return {
+            'type': self.type,
+            'user': self.user,
+            'start_time': self.start_time,
+            'finish_time': self.finish_time,
+            'recipe_id': self.recipe.id if self.recipe else None,
+        }
+
 # this only really exists to make reporting efficient
 class SystemStatusDuration(DeclarativeMappedObject):
 
@@ -613,6 +622,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             recipe_id = open_reservation.recipe.id
             raise BX(_(u'Currently running R:%s' % recipe_id))
         self.unreserve(reservation=open_reservation, *args, **kw)
+        return open_reservation
 
     def excluded_families(self):
         """

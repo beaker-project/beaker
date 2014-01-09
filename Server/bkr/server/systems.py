@@ -581,6 +581,38 @@ def remove_cc(fqdn, email):
         system.date_modified = datetime.datetime.utcnow()
     return jsonify({'notify_cc': list(system.cc)})
 
+@app.route('/systems/<fqdn>/reservations/', methods=['POST'])
+@auth_required
+def reserve(fqdn):
+    """
+    Reserves the system "manually".
+    """
+    system = _get_system_by_FQDN(fqdn)
+    with convert_internal_errors():
+        reservation = system.reserve_manually(service=u'HTTP',
+                user=identity.current.user)
+    return jsonify(reservation.__json__())
+
+@app.route('/systems/<fqdn>/reservations/+current', methods=['PATCH', 'PUT'])
+@auth_required
+def update_reservation(fqdn):
+    """
+    Updates the system's current reservation. The only permitted update is to 
+    end the reservation (returning the system), and this is only permitted when 
+    the reservation was "manual" (not made by the scheduler).
+    """
+    system = _get_system_by_FQDN(fqdn)
+    data = read_json_request(request)
+    # This interprets both PATCH and PUT as PATCH
+    finish_time = data.get('finish_time')
+    with convert_internal_errors():
+        if finish_time == "now":
+            reservation = system.unreserve_manually_reserved(service=u'HTTP',
+                    user=identity.current.user)
+        else:
+            raise ValueError('Reservation durations are not configurable')
+    return jsonify(reservation.__json__())
+
 @app.route('/systems/<fqdn>/loans/', methods=['POST'])
 @auth_required
 def grant_loan(fqdn):

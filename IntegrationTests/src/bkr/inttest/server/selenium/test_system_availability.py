@@ -88,7 +88,7 @@ class SystemAvailabilityTest(WebDriverTestCase):
         login(b, user=user.user_name, password='testing')
         self.check_system_is_available(system)
         self.check_system_is_free(system)
-        self.check_cannot_take_automated(system)
+        self.check_cannot_take(system)
 
     def test_shared_manual_system(self):
         with session.begin():
@@ -158,7 +158,7 @@ class SystemAvailabilityTest(WebDriverTestCase):
         b = self.browser
         login(b, user=user.user_name, password='testing')
         self.check_system_is_available(system)
-        self.check_cannot_take_automated(system)
+        self.check_cannot_take(system)
 
     def test_manual_system_restricted_to_users_group(self):
         with session.begin():
@@ -180,7 +180,7 @@ class SystemAvailabilityTest(WebDriverTestCase):
             user = data_setup.create_user(password=u'testing')
         b = self.browser
         login(b, user=user.user_name, password='testing')
-        self.check_cannot_take_automated(system)
+        self.check_cannot_take(system)
         with session.begin():
             system.loaned = user
         self.check_take(system)
@@ -259,29 +259,12 @@ class SystemAvailabilityTest(WebDriverTestCase):
     def check_take(self, system):
         self.go_to_system_view(system)
         b = self.browser
-        b.find_element_by_link_text('Take').click()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
-                'Reserved %s' % system.fqdn)
+        b.find_element_by_xpath('//button[text()="Take"]').click()
+        b.find_element_by_xpath('//span[@class="label" and text()="Reserved"]')
 
     def check_cannot_take(self, system):
         self.go_to_system_view(system)
         b = self.browser
         # "Take" link should be absent
-        b.find_element_by_xpath('//form[@name="form" and not(.//a[normalize-space(string(.))="Take"])]')
-        # Try taking it directly as well:
-        # https://bugzilla.redhat.com/show_bug.cgi?id=747328
-        b.get(get_server_base() + 'user_change?id=%s' % system.id)
-        self.assertIn('cannot reserve system',
-                b.find_element_by_class_name('flash').text)
-
-    def check_cannot_take_automated(self, system):
-        self.go_to_system_view(system)
-        b = self.browser
-        # "Take" link should be absent
-        b.find_element_by_xpath('//form[@name="form" and not(.//a[normalize-space(string(.))="Take"])]')
-        # Try taking it directly as well:
-        # https://bugzilla.redhat.com/show_bug.cgi?id=747328
-        b.get(get_server_base() + 'user_change?id=%s' % system.id)
-        self.assertIn(
-                'Cannot manually reserve automated system',
-                b.find_element_by_class_name('flash').text)
+        b.find_element_by_xpath('//div[contains(@class, "system-quick-info")'
+                ' and not(.//button/text()="Take")]')

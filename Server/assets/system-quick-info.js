@@ -46,6 +46,8 @@ window.SystemQuickUsage = Backbone.View.extend({
     className: 'system-quick-usage',
     template: JST['system-quick-usage'],
     events: {
+        'click .take': 'take',
+        'click .return': 'return',
         'click .borrow': 'borrow',
     },
     initialize: function () {
@@ -60,6 +62,16 @@ window.SystemQuickUsage = Backbone.View.extend({
         this.$el.append(
             $('<div class="alert alert-error"/>')
             .text(xhr.statusText + ': ' + xhr.responseText));
+    },
+    take: function (evt) {
+        $(evt.currentTarget).prop('disabled', true)
+            .html('<i class="icon-spinner icon-spin"></i> Taking&hellip;');
+        this.model.take({error: _.bind(this.error, this)});
+    },
+    'return': function (evt) {
+        $(evt.currentTarget).prop('disabled', true)
+            .html('<i class="icon-spinner icon-spin"></i> Returning&hellip;');
+        this.model.return({error: _.bind(this.error, this)});
     },
     borrow: function (evt) {
         $(evt.currentTarget).prop('disabled', true)

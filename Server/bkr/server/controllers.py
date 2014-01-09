@@ -760,32 +760,6 @@ class Root(RPCRoot):
         session.flush()
         return ('1',)
 
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def user_change(self, id):
-        try:
-            system = System.by_id(id, identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to find system with id of %s" % id) )
-            redirect("/")
-        if system.user:
-            try:
-                system.unreserve_manually_reserved(service=u'WEBUI',
-                                                   user=identity.current.user)
-                flash(_(u'Returned %s') % system.fqdn)
-            except BeakerException, e:
-                log.exception('Failed to return')
-                flash(_(u'Failed to return %s: %s') % (system.fqdn, e))
-        else:
-            try:
-                system.reserve_manually(service=u'WEBUI',
-                                        user=identity.current.user)
-                flash(_(u'Reserved %s') % system.fqdn)
-            except BeakerException, e:
-                log.exception('Failed to reserve')
-                flash(_(u'Failed to reserve %s: %s') % (system.fqdn, e))
-        redirect("/view/%s" % system.fqdn)
-
     @error_handler(view)
     @expose()
     @identity.require(identity.not_anonymous())

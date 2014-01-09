@@ -107,6 +107,52 @@ window.System = Backbone.Model.extend({
             },
         });
     },
+    take: function (options) {
+        var model = this;
+        options = options || {};
+        $.ajax({
+            url: this.url + 'reservations/',
+            type: 'POST',
+            //contentType: 'application/json',
+            //data: '{}',
+            dataType: 'json',
+            success: function (data, status, jqxhr) {
+                // We refresh the entire system since the user has changed. 
+                // Don't invoke the success/error callbacks until the refresh 
+                // is complete.
+                // This would not be necessary if the system included 
+                // reservation data instead of just a 'user' attribute...
+                model.fetch({success: options.success, error: options.error});
+            },
+            error: function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            },
+        });
+    },
+    'return': function (options) {
+        var model = this;
+        options = options || {};
+        $.ajax({
+            url: this.url + 'reservations/+current',
+            type: 'PATCH',
+            contentType: 'application/json',
+            data: JSON.stringify({finish_time: 'now'}),
+            dataType: 'json',
+            success: function (data, status, jqxhr) {
+                // We refresh the entire system since the user has changed. 
+                // Don't invoke the success/error callbacks until the refresh 
+                // is complete.
+                // This would not be necessary if the system included 
+                // reservation data instead of just a 'user' attribute...
+                model.fetch({success: options.success, error: options.error});
+            },
+            error: function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            },
+        });
+    },
     borrow: function (options) {
         this.lend(window.beaker_current_user.get('user_name'), null, options);
     },
