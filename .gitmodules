@@ -28,3 +28,7 @@
 [submodule "URI.js"]
 	path = Server/assets/URI.js
 	url = https://github.com/medialize/URI.js.git
+[submodule "bootbox"]
+	path = Server/assets/bootbox
+	url = https://github.com/makeusabrew/bootbox.git
+	branch = v3.x

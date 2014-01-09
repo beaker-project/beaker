@@ -34,7 +34,16 @@ window.SystemProvisionView = Backbone.View.extend({
         this.$('.submit-status').html('<i class="icon-spinner icon-spin"></i> ' +
                 'Provisioning&hellip;');
         this.update_button_state();
-        // XXX do confirmation
+        bootbox.confirm_as_promise('Are you sure you want to provision the system?')
+            .fail(_.bind(this.submit_cancelled, this))
+            .done(_.bind(this.submit_confirmed, this));
+    },
+    submit_cancelled: function () {
+        this.$('.submit-status').empty();
+        this.request_in_progress = false;
+        this.update_button_state();
+    },
+    submit_confirmed: function () {
         this.model.provision({
             distro_tree_id: this.distro_picker.selection.get('distro_tree_id'),
             ks_meta: this.$('[name=ks_meta]').val(),

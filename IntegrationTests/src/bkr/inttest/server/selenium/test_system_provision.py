@@ -79,6 +79,8 @@ class SystemProvisionTest(WebDriverTestCase):
         provision = self.go_to_provision_tab(system)
         self.select_distro_tree(self.distro_tree)
         provision.find_element_by_xpath('.//button[text()="Provision"]').click()
+        self.browser.find_element_by_xpath(
+                './/div[contains(@class, "modal")]//a[text()="OK"]').click()
         provision.find_element_by_xpath(
                 './/span[text()="Provisioning commands enqueued!"]')
         with session.begin():
