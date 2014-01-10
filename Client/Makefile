@@ -4,12 +4,7 @@
 .PHONY: build
 build:
 	env PYTHONPATH=../Common:src:$${PYTHONPATH:+:$$PYTHONPATH} \
-	    python setup.py build \
-	    | tee build.out
-	@if grep -q ImportError build.out ; then \
-	    echo "ImportErrors in build output, did Sphinx autodoc fail?" ; \
-	    exit 1 ; \
-	fi
+	    python setup.py build
 
 .PHONY: install
 install:
