@@ -36,12 +36,12 @@ class CSV(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = False
 
-    export_help_text = XML(u'Refer to the <a href="http://beaker-project.org/docs/'
+    export_help_text = XML(u'<span>Refer to the <a href="http://beaker-project.org/docs/'
                            'admin-guide/interface.html#export" target="_blank">'
-                           'documentation</a> to learn more about the exported data.')
-    import_help_text = XML(u'Refer to the <a href="http://beaker-project.org/docs/'
+                           'documentation</a> to learn more about the exported data.</span>').expand()
+    import_help_text = XML(u'<span>Refer to the <a href="http://beaker-project.org/docs/'
                            'admin-guide/interface.html#import" target="_blank">'
-                           'documentation</a> for details about the supported CSV format.')
+                           'documentation</a> for details about the supported CSV format.</span>').expand()
 
     upload     = widgets.FileField(name='csv_file', label='Import CSV', \
                                    help_text = import_help_text)
