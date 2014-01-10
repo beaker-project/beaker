@@ -6,6 +6,7 @@ window.SystemLoanView = Backbone.View.extend({
         'click .borrow': 'borrow',
         'click .lend': 'lend',
         'click .return': 'return',
+        'click .request-loan': 'request_loan',
     },
     initialize: function () {
         this.listenTo(this.model, 'change:current_loan', this.render);
@@ -28,6 +29,9 @@ window.SystemLoanView = Backbone.View.extend({
         this.$('.sync-status').html(
                 '<i class="icon-spinner icon-spin"></i> Returning&hellip;');
         this.model.return_loan({error: _.bind(this.error, this)});
+    },
+    request_loan: function () {
+        new SystemLoanRequestModal({model: this.model});
     },
     error: function (model, xhr) {
         this.$el.append(
@@ -65,6 +69,45 @@ var SystemLendModal = Backbone.View.extend({
     },
     save_success: function () {
         this.$el.modal('hide');
+    },
+    save_error: function (model, xhr) {
+        this.$('.modal-footer').prepend(
+            $('<div class="alert alert-error"/>')
+            .text(xhr.statusText + ': ' + xhr.responseText));
+    },
+});
+
+window.SystemLoanRequestModal = Backbone.View.extend({
+    tagName: 'div',
+    className: 'modal',
+    template: JST['system-loan-request'],
+    events: {
+        'submit form': 'submit',
+        'hidden': 'remove',
+    },
+    initialize: function () {
+        this.render();
+        this.$el.modal();
+        this.$('[name=message]').focus();
+    },
+    render: function () {
+        this.$el.html(this.template(this.model.attributes));
+    },
+    submit: function (evt) {
+        evt.preventDefault();
+        this.$('button').prop('disabled', true);
+        this.$('button[type=submit]').html(
+                '<i class="icon-spinner icon-spin"></i> Sending&hellip;');
+        this.model.request_loan(
+            this.$('[name=message]').val(),
+            {success: _.bind(this.save_success, this),
+             error: _.bind(this.save_error, this)});
+    },
+    save_success: function () {
+        this.$el.modal('hide');
+        $.bootstrapGrowl('<h4>Request sent</h4> Your loan request has been ' +
+                'forwarded to the system owner.',
+                {type: 'success'});
     },
     save_error: function (model, xhr) {
         this.$('.modal-footer').prepend(

@@ -32,12 +32,18 @@ window.SystemQuickHealth = Backbone.View.extend({
     tagName: 'div',
     className: 'system-quick-health',
     template: JST['system-quick-health'],
+    events: {
+        'click .report-problem': 'report_problem',
+    },
     initialize: function () {
         this.listenTo(this.model, 'change', this.render);
         this.render();
     },
     render: function () {
         this.$el.html(this.template(this.model.attributes));
+    },
+    report_problem: function (evt) {
+        new SystemReportProblemModal({model: this.model});
     },
 });
 
@@ -49,6 +55,7 @@ window.SystemQuickUsage = Backbone.View.extend({
         'click .take': 'take',
         'click .return': 'return',
         'click .borrow': 'borrow',
+        'click .request-loan': 'request_loan',
     },
     initialize: function () {
         this.listenTo(this.model, 'change', this.render);
@@ -77,6 +84,9 @@ window.SystemQuickUsage = Backbone.View.extend({
         $(evt.currentTarget).prop('disabled', true)
             .html('<i class="icon-spinner icon-spin"></i> Borrowing&hellip;');
         this.model.borrow({error: _.bind(this.error, this)});
+    },
+    request_loan: function (evt) {
+        new SystemLoanRequestModal({model: this.model});
     },
 });
 

@@ -41,7 +41,7 @@ from bkr.server.widgets import TaskSearchForm, SearchBar, \
     SystemInstallOptions, SystemGroups, \
     SystemNotes, SystemKeys, SystemExclude, SystemDetails, \
     SystemCommandsForm, LabInfoForm, PowerActionHistory, \
-    myPaginateDataGrid, PowerForm, SystemActions
+    myPaginateDataGrid, PowerForm
 from bkr.server.preferences import Preferences
 from bkr.server.authentication import Auth
 from bkr.server.xmlrpccontroller import RPCRoot
@@ -178,7 +178,6 @@ class Root(RPCRoot):
     system_groups = SystemGroups(name='groups')
     system_installoptions = SystemInstallOptions(name='installoptions')
     task_form = TaskSearchForm(name='tasks')
-    system_actions = SystemActions()
 
 
     @expose(format='json')
@@ -599,15 +598,6 @@ class Root(RPCRoot):
             flash(_(u"Group ID not found"))
         redirect("./view/%s" % system.fqdn)
 
-    def _get_system_options(self, system):
-        options = {}
-        options['system_actions'] = self.system_actions
-        options['loan'] = {'system' : system.fqdn, 'name' : 'request_loan',
-            'action' : '../system_action/loan_request'}
-        options['report_problem'] = {'system' : system,
-            'name' : 'report_problem', 'action' : '../system_action/report_system_problem'}
-        return options
-
     @expose(template="bkr.server.templates.system")
     def _view_system_as_html(self, fqdn=None, **kw):
         if fqdn: 
@@ -639,7 +629,6 @@ class Root(RPCRoot):
             can_reserve = False
             can_power = False
         title = system.fqdn
-        options = self._get_system_options(system)
         distro_picker_options = {
             'tag': [tag.tag for tag in DistroTag.used()],
             'osmajor': [osmajor.osmajor for osmajor in
@@ -650,6 +639,7 @@ class Root(RPCRoot):
             attrs = dict(readonly = 'True')
         else:
             attrs = dict()
+        options = {}
         options['readonly'] = readonly
         options['reprovision_distro_tree_id'] = [(dt.id, unicode(dt)) for dt in
                 system.distro_trees().order_by(Distro.name,

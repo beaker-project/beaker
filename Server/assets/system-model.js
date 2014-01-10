@@ -201,6 +201,48 @@ window.System = Backbone.Model.extend({
             },
         });
     },
+    request_loan: function (message, options) {
+        var model = this;
+        options = options || {};
+        $.ajax({
+            url: this.url + 'loan-requests/',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                message: message || null,
+            }),
+            dataType: 'text',
+            success: function (data, status, jqxhr) {
+                if (options.success)
+                    options.success(model, data, options);
+            },
+            error: function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            },
+        });
+    },
+    report_problem: function (message, options) {
+        var model = this;
+        options = options || {};
+        $.ajax({
+            url: this.url + 'problem-reports/',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                message: message || null,
+            }),
+            dataType: 'text',
+            success: function (data, status, jqxhr) {
+                if (options.success)
+                    options.success(model, data, options);
+            },
+            error: function (jqxhr, status, error) {
+                if (options.error)
+                    options.error(model, jqxhr, options);
+            },
+        });
+    },
     provision: function (options) {
         var model = this;
         options = options || {};

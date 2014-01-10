@@ -36,6 +36,6 @@
 <% } else if (_.isEmpty(window.beaker_current_user)) { %>
   <button type="button" class="btn btn-block" disabled="disabled">Not logged in</button>
 <% } else if (status != 'Broken' && status != 'Removed') { %>
-  <a href="#IMPLEMENTME" class="btn btn-block">Report problem</a>
+  <button type="button" class="btn btn-block report-problem">Report problem</button>
 <% } %>
 </p>

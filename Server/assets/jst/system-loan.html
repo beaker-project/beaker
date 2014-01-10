@@ -9,17 +9,18 @@
 <% } else { %>
   <p>The system is not currently loaned.</p>
 <% } %>
-<% if (can_borrow || can_lend || can_return_loan) { %>
-  <div class="btn-group">
-    <% if (can_borrow) { %>
-      <button type="button" class="btn borrow" title="Lend this system to yourself">Borrow</button>
-    <% } %>
-    <% if (can_lend) { %>
-      <button type="button" class="btn lend">Lend</button>
-    <% } %>
-    <% if (can_return_loan) { %>
-      <button type="button" class="btn return">Return Loan</button>
-    <% } %>
-  </div>
-  <span class="sync-status"></span>
-<% } %>
+<div class="btn-group">
+  <% if (can_borrow) { %>
+    <button type="button" class="btn borrow" title="Lend this system to yourself">Borrow</button>
+  <% } %>
+  <% if (can_lend) { %>
+    <button type="button" class="btn lend">Lend</button>
+  <% } %>
+  <% if (can_return_loan) { %>
+    <button type="button" class="btn return">Return Loan</button>
+  <% } %>
+  <% if (!can_borrow && !can_lend && !can_return_loan && window.beaker_current_user) { %>
+    <button type="button" class="btn request-loan">Request Loan</button>
+  <% } %>
+</div>
+<span class="sync-status"></span>

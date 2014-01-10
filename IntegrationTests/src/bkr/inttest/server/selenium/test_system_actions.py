@@ -1,6 +1,7 @@
 import email
 from turbogears.database import session
 from selenium.common.exceptions import NoSuchElementException
+from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.server.selenium import WebDriverTestCase, SeleniumTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, login, logout
 from bkr.inttest.mail_capture import MailCaptureThread
@@ -79,7 +80,8 @@ class SystemAction(WebDriverTestCase):
         logout(b)
         # Test can't access when not logged in
         b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        self.assertRaises(NoSuchElementException,lambda: b.find_element_by_link_text('(Contact Owner)'))
+        b.find_element_by_link_text('Loan').click()
+        b.find_element_by_xpath('//div[@id="loan" and not(.//button[text()="Request Loan"])]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=652334
     def test_system_activity_entry_is_correctly_truncated(self):
@@ -87,12 +89,12 @@ class SystemAction(WebDriverTestCase):
             system = data_setup.create_system()
         b = self.browser
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_link_text('Contact Owner').click()
-        b.find_element_by_xpath('//button[.//text()=\'Report Problem\']').click()
-        b.find_element_by_name('problem.description').send_keys(u'a' + u'\u044f' * 100)
-        b.find_element_by_xpath('//input[@value=\'Report\']').click()
+        b.find_element_by_xpath('//button[text()="Report problem"]').click()
+        b.find_element_by_name('message').send_keys(u'a' + u'\u044f' * 100)
+        b.find_element_by_xpath('//button[text()="Report"]').click()
         # Wait for our success box
-        SeleniumTestCase.wait_and_try(lambda: b.find_element_by_xpath('//div/span[text()=\'Success\']'))
+        b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
+                '/h4[text()="Report sent"]')
 
     def test_reporter_and_system_cc_list_are_cced(self):
         with session.begin():
@@ -101,11 +103,11 @@ class SystemAction(WebDriverTestCase):
             system.cc = [interested_party_email]
         b = self.browser
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_link_text('Contact Owner').click()
-        b.find_element_by_xpath('//button[.//text()=\'Report Problem\']').click()
-        b.find_element_by_name('problem.description').send_keys('I broke it')
-        b.find_element_by_xpath('//input[@value=\'Report\']').click()
-        SeleniumTestCase.wait_and_try(lambda: b.find_element_by_xpath('//div/span[text()=\'Success\']'))
+        b.find_element_by_xpath('//button[text()="Report problem"]').click()
+        b.find_element_by_name('message').send_keys('I broke it')
+        b.find_element_by_xpath('//button[text()="Report"]').click()
+        b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
+                '/h4[text()="Report sent"]')
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
         self.assertEqual(rcpts, [system.owner.email_address,
@@ -141,14 +143,14 @@ class SystemAction(WebDriverTestCase):
 
         # Test can send problem report succesfully
         b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('Contact Owner').click()
-        b.find_element_by_xpath('//button[.//text()=\'Report Problem\']').click()
-        b.find_element_by_name('problem.description').send_keys('testing problem')
-        b.find_element_by_xpath('//input[@value=\'Report\']').click()
+        b.find_element_by_xpath('//button[text()="Report problem"]').click()
+        b.find_element_by_name('message').send_keys('testing problem')
+        b.find_element_by_xpath('//button[text()="Report"]').click()
         # Wait for our success box
-        SeleniumTestCase.wait_and_try(lambda: b.find_element_by_xpath('//div/span[text()=\'Success\']'))
+        b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
+                '/h4[text()="Report sent"]')
         # Check the email was sent
-        SeleniumTestCase.wait_and_try(lambda: self.assertEqual(len(self.mail_capture.captured_mails), 1))
+        wait_for_condition(lambda: len(self.mail_capture.captured_mails) == 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
         payload = 'A Beaker user has reported a problem with system \n' \
             '%s <%sview/%s>.\n\n' \
@@ -165,14 +167,15 @@ class SystemAction(WebDriverTestCase):
 
         # Test can send loan request succesfully
         b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('Contact Owner').click()
-        b.find_element_by_xpath('//button[.//text()=\'Request Loan\']').click()
-        b.find_element_by_name('loan.message').send_keys('request loan')
-        b.find_element_by_xpath('//input[@value=\'Request\']').click()
+        b.find_element_by_link_text('Loan').click()
+        b.find_element_by_xpath('//button[text()="Request Loan"]').click()
+        b.find_element_by_name('message').send_keys('request loan')
+        b.find_element_by_xpath('//button[text()="Request"]').click()
         # Wait for our success box
-        SeleniumTestCase.wait_and_try(lambda: b.find_element_by_xpath('//div/span[text()=\'Success\']'))
+        b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
+                '/h4[text()="Request sent"]')
         # Check the email was sent
-        SeleniumTestCase.wait_and_try(lambda: self.assertEqual(len(self.mail_capture.captured_mails), 1))
+        wait_for_condition(lambda: len(self.mail_capture.captured_mails) == 1)
         sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
         payload = 'A Beaker user has requested you loan them the system\n' \
             '%s <%sview/%s>.\n' \

@@ -1374,25 +1374,6 @@ class AlphaNavBar(Widget):
         self.keyword = keyword
 
 
-class RequestLoan(RemoteForm):
-    template = 'bkr.server.templates.request_loan'
-    fields = [TextArea(name='message', label='Loan Request',
-        validator=validators.NotEmpty()),]
-    member_widgets=['submit']
-    desc = 'Request Loan'
-    submit = Button(name='submit')
-    submit_text = 'Request'
-    on_success = 'success(\'Your loan request has been sent succesfully\')'
-    on_failure = 'failure(\'We were unable to send you loan request at this time\')';
-
-    def update_params(self, d):
-        super(RequestLoan, self).update_params(d)
-        d['system'] = d['options']['system']
-        d['hidden_fields'] = [HiddenField(name='system', attrs = {'value' : d['system']})]
-        d['submit'].attrs.update({'onClick' : "return ! system_action_remote_form_request('%s', %s, '%s');" % (
-            d['options']['name'], jsonify.encode(self.get_options(d)), d['action'])})
-
-
 class JobWhiteboard(RPC, CompoundWidget):
     """
     Widget for displaying/updating a job's whiteboard. Saves asynchronously using js.
@@ -1421,15 +1402,6 @@ class JobWhiteboard(RPC, CompoundWidget):
         super(JobWhiteboard, self).update_params(d)
         d['form_attrs']['onsubmit'] = "return !remoteFormRequest(this, null, %s);" % (
             jsonify.encode(self.get_options(d)))
-
-
-class SystemActions(CompoundWidget):
-    template = 'bkr.server.templates.system_actions'
-    problem  = ReportProblemForm(name='problem')
-    loan = RequestLoan(name='loan')
-    member_widgets = ['problem', 'loan']
-    params = ['report_problem_options', 'loan_options']
-    name = 'system_actions'
 
 
 class TaskActionWidget(RPC):

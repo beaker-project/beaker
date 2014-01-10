@@ -7,7 +7,7 @@ from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
 from flask import request, jsonify, redirect as flask_redirect
 from turbogears import expose, controllers, flash, redirect, url
-from bkr.server import identity
+from bkr.server import identity, mail
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
@@ -581,6 +581,19 @@ def remove_cc(fqdn, email):
         system.date_modified = datetime.datetime.utcnow()
     return jsonify({'notify_cc': list(system.cc)})
 
+@app.route('/systems/<fqdn>/problem-reports/', methods=['POST'])
+@auth_required
+def report_problem(fqdn):
+    system = _get_system_by_FQDN(fqdn)
+    data = read_json_request(request)
+    message = (data.get('message') or u'').strip()
+    requester = identity.current.user
+    mail.system_problem_report(system, message, reporter=requester)
+    system.record_activity(user=requester, service=u'HTTP',
+            action=u'Reported problem', field=u'Status', new=message)
+    # if we tracked problem reports we could return the details here
+    return 'Reported', 201
+
 @app.route('/systems/<fqdn>/reservations/', methods=['POST'])
 @auth_required
 def reserve(fqdn):
@@ -612,6 +625,18 @@ def update_reservation(fqdn):
         else:
             raise ValueError('Reservation durations are not configurable')
     return jsonify(reservation.__json__())
+
+@app.route('/systems/<fqdn>/loan-requests/', methods=['POST'])
+@auth_required
+def request_loan(fqdn):
+    system = _get_system_by_FQDN(fqdn)
+    data = read_json_request(request)
+    message = (data.get('message') or u'').strip()
+    requester = identity.current.user
+    to = system.owner.email_address
+    mail.system_loan_request(system, message, requester, to)
+    # if we tracked loan requests we could return the details here
+    return 'Requested', 201
 
 @app.route('/systems/<fqdn>/loans/', methods=['POST'])
 @auth_required
