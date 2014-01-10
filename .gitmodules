@@ -32,3 +32,6 @@
 	path = Server/assets/bootbox
 	url = https://github.com/makeusabrew/bootbox.git
 	branch = v3.x
+[submodule "bootstrap-growl"]
+	path = Server/assets/bootstrap-growl
+	url = https://github.com/ifightcrime/bootstrap-growl.git

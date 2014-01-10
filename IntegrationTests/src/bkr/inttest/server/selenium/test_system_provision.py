@@ -75,14 +75,15 @@ class SystemProvisionTest(WebDriverTestCase):
             system = data_setup.create_system(status=SystemStatus.manual,
                     lab_controller=self.lc)
             system.reserve_manually(service=u'testdata', user=user)
-        login(self.browser, user=user.user_name, password='testing')
+        b = self.browser
+        login(b, user=user.user_name, password='testing')
         provision = self.go_to_provision_tab(system)
         self.select_distro_tree(self.distro_tree)
         provision.find_element_by_xpath('.//button[text()="Provision"]').click()
-        self.browser.find_element_by_xpath(
+        b.find_element_by_xpath(
                 './/div[contains(@class, "modal")]//a[text()="OK"]').click()
-        provision.find_element_by_xpath(
-                './/span[text()="Provisioning commands enqueued!"]')
+        b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
+                '/h4[text()="Provisioning successful"]')
         with session.begin():
             self.assertEquals(system.command_queue[0].action, 'reboot')
             self.assertEquals(system.command_queue[1].action, 'configure_netboot')

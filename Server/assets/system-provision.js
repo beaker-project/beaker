@@ -55,9 +55,12 @@ window.SystemProvisionView = Backbone.View.extend({
         });
     },
     submit_success: function () {
-        this.$('.submit-status').text('Provisioning commands enqueued!');
+        this.$('.submit-status').empty();
         this.request_in_progress = false;
         this.update_button_state();
+        $.bootstrapGrowl('<h4>Provisioning successful</h4> Provisioning commands ' +
+                'have been enqueued and will be executed by the lab controller shortly.',
+                {type: 'success'});
     },
     submit_error: function (model, xhr) {
         this.$('.submit-status').empty();

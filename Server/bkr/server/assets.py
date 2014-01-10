@@ -37,6 +37,7 @@ def _create_env(**kwargs):
             'bootstrap/js/bootstrap-collapse.js',
             'typeahead.js/dist/typeahead.js',
             'bootstrap-select/bootstrap-select.js',
+            'bootstrap-growl/jquery.bootstrap-growl.js',
             'bootbox/bootbox.js',
             'moment/moment.js',
             'URI.js/src/URI.js',
