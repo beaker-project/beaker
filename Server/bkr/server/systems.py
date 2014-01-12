@@ -507,7 +507,7 @@ def get_system_status(fqdn):
             open_reservation.type == 'recipe':
             system_recipe = open_reservation.recipe
             current_reservation['recipe_id'] = '%s' % system_recipe.id
-            current_reservation['start_time'] = '%s' % system_recipe.start_time
+            current_reservation['start_time'] = '%s UTC' % system_recipe.start_time
         system_status['current_reservation'] = current_reservation
     return jsonify(system_status)
 

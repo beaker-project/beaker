@@ -47,7 +47,7 @@ class SystemStatusTest(unittest.TestCase):
             Current reservation:
                 User: %s
                 Recipe ID: %s
-                Start time: %s
+                Start time: %s UTC
             Current loan:
                 User: %s
                 Comment: Amy, must I jujitsu my ma?''' % \
