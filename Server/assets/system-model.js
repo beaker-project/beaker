@@ -21,6 +21,28 @@ window.Reservation = Backbone.Model.extend({
     },
 });
 
+var AccessPolicyRule = Backbone.Model.extend({
+    // ensure the 'everybody' attribute is filled in
+    initialize: function (attributes, options) {
+        if (!_.has(attributes, 'everybody')) {
+            this.set('everybody', (attributes['user'] == null && 
+                    attributes['group'] == null));
+        }
+    },
+});
+
+var AccessPolicyRules = Backbone.Collection.extend({
+    model: AccessPolicyRule,
+});
+
+window.AccessPolicy = Backbone.Model.extend({
+    parse: function (data) {
+        data['rules'] = (!_.isEmpty(data['rules']) ?
+                new AccessPolicyRules(data['rules'], {parse: true}) : null);
+        return data;
+    },
+});
+
 window.SystemActivityEntry = Backbone.Model.extend({
     parse: function (data) {
         data['user'] = !_.isEmpty(data['user']) ? new User(data['user']) : null;
@@ -67,6 +89,8 @@ window.System = Backbone.Model.extend({
                 new Reservation(data['current_reservation'], {parse: true}) : null);
         data['previous_reservation'] = (!_.isEmpty(data['previous_reservation']) ?
                 new Reservation(data['previous_reservation'], {parse: true}) : null);
+        data['access_policy'] = new AccessPolicy(data['access_policy'],
+                {url: this.url + 'access-policy', parse: true});
         return data;
     },
     add_cc: function (cc, options) {
@@ -269,6 +293,21 @@ window.System = Backbone.Model.extend({
                 if (options.error)
                     options.error(model, jqxhr, options);
             },
+        });
+    },
+    // call this instead of calling .get('access_policy').save() directly, so 
+    // that the system attributes can be refreshed
+    save_access_policy: function (options) {
+        var model = this;
+        options = options || {};
+        this.get('access_policy').save({}, {
+            success: function (data, status, jqxhr) {
+                // We refresh the entire system since permissions are likely to 
+                // have changed. Don't invoke the success/error callbacks until 
+                // the refresh is complete.
+                model.fetch({success: options.success, error: options.error});
+            },
+            error: options.error,
         });
     },
 });

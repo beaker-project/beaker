@@ -430,10 +430,15 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['current_loan'] = self.get_loan_details()
         else:
             data['current_loan'] = None
+        if self.custom_access_policy:
+            data['access_policy'] = self.custom_access_policy
+        else:
+            data['access_policy'] = SystemAccessPolicy.empty_json()
         # XXX replace with actual access policy data?
         if identity.current.user:
             u = identity.current.user
             data['can_change_owner'] = self.can_change_owner(u)
+            data['can_edit_policy'] = self.can_edit_policy(u)
             data['can_change_notify_cc'] = self.can_edit(u)
             data['can_change_status'] = self.can_edit(u)
             data['can_change_type'] = self.can_edit(u)
@@ -450,6 +455,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_reserve'] = self.can_reserve(u)
         else:
             data['can_change_owner'] = False
+            data['can_edit_policy'] = False
             data['can_change_notify_cc'] = False
             data['can_change_status'] = False
             data['can_change_type'] = False
@@ -1503,6 +1509,31 @@ class SystemAccessPolicy(DeclarativeMappedObject):
     system = relationship(System,
             backref=backref('custom_access_policy', uselist=False))
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            'rules': self.rules,
+            'possible_permissions': [
+                {'value': unicode(permission),
+                 'label': unicode(permission.label)}
+                for permission in SystemPermission],
+        }
+
+    @classmethod
+    def empty_json(cls):
+        """
+        Returns the JSON representation of a default empty policy, to be used 
+        in the cases where a system's policy has not been initialized yet.
+        """
+        return {
+            'id': None,
+            'rules': [],
+            'possible_permissions': [
+                {'value': unicode(permission),
+                 'label': unicode(permission.label)}
+                for permission in SystemPermission],
+        }
+
     @hybrid_method
     def grants(self, user, permission):
         """
@@ -1584,6 +1615,15 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
     def __repr__(self):
         return '<grant %s to %s>' % (self.permission,
                 self.group or self.user or 'everybody')
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'user': self.user.user_name if self.user else None,
+            'group': self.group.group_name if self.group else None,
+            'everybody': self.everybody,
+            'permission': unicode(self.permission),
+        }
 
     @hybrid_property
     def everybody(self):

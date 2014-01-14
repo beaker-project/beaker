@@ -19,6 +19,7 @@
         });
         new SystemLoanView({model: system, el: $('#loan')});
         new SystemSchedulerConfigView({model: system, el: $('#scheduler')});
+        new SystemAccessPolicyView({model: system, el: $('#access-policy')});
         // defer history grid until tab is shown
         $('.system-nav a[href="#history"]').one('show', function () {
             new SystemActivityView({model: system, el: $('#history')});
@@ -75,30 +76,7 @@
     ${groups_widget.display(method='get', action=widgets_action['groups'], value=value, options=widgets_options['groups'])}
    </div>
       <div class="tab-pane" id="loan"></div>
-   <div class="tab-pane" id="access-policy">
-    <div id="access-policy-${value.id}">
-      <i class="icon-spinner icon-spin"/> Loading&hellip;
-    </div>
-    <script>
-      $(function () {
-        // defer until tab is shown
-        $('.system-nav a[href="#access-policy"]').one('show', function () {
-          var policy = new AccessPolicy({}, {url:
-              ${tg.to_json(tg.url('/systems/%s/access-policy' % value.fqdn))}});
-          policy.fetch({
-            success: function () {
-              new AccessPolicyView({model: policy, el: '#access-policy-${value.id}',
-                    readonly: ${tg.to_json(not tg.identity.user or not value.can_edit_policy(tg.identity.user))}});
-            },
-            error: function (model, xhr) {
-              $('#access-policy-${value.id}').addClass('alert alert-error')
-                .html('Failed to fetch access policy: ' + xhr.statusText);
-            },
-          });
-        });
-      });
-    </script>
-   </div>
+      <div class="tab-pane" id="access-policy"></div>
    <div class="tab-pane" id="exclude">
     <span py:if="value.lab_controller and value.arch">
      ${widgets['exclude'].display(method='get', action=widgets_action['exclude'], value=value, options=widgets_options['exclude'])} 

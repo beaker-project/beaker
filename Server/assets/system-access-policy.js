@@ -1,31 +1,5 @@
 ;(function () {
 
-var AccessPolicyRule = Backbone.Model.extend({
-    // ensure the 'everybody' attribute is filled in
-    initialize: function (attributes, options) {
-        if (!_.has(attributes, 'everybody')) {
-            this.set('everybody', (attributes['user'] == null && 
-                    attributes['group'] == null));
-        }
-    },
-});
-
-window.AccessPolicy = Backbone.Model.extend({
-    initialize: function () {
-        this.rules = new Backbone.Collection([], {model: AccessPolicyRule});
-    },
-    parse: function (response) {
-        // response will be undefined if the server gives back 204 for a save
-        if (_.isUndefined(response)) return;
-        this.rules.reset(response.rules);
-        return {id: response.id,
-                possible_permissions: response.possible_permissions};
-    },
-    toJSON: function () {
-        return {rules: this.rules.toJSON()};
-    },
-});
-
 var blur_on_enter = function (evt) {
     if (evt.which == 13) {
         $(evt.target).trigger('blur');
@@ -33,8 +7,8 @@ var blur_on_enter = function (evt) {
     }
 };
 
-window.AccessPolicyView = Backbone.View.extend({
-    template: JST['access-policy'],
+window.SystemAccessPolicyView = Backbone.View.extend({
+    template: JST['system-access-policy'],
     events: {
         'change   input[type=checkbox]': 'changed_checkbox',
         'keypress .group-rows input[type=text]': blur_on_enter,
@@ -51,10 +25,8 @@ window.AccessPolicyView = Backbone.View.extend({
     initialize: function () {
         this.dirty = false;
         this.request_in_progress = false;
-        this.listenTo(this.model, 'request', this.sync_started);
-        this.listenTo(this.model, 'sync', this.sync_complete);
-        this.listenTo(this.model, 'error', this.sync_error);
-        this.listenTo(this.model, 'change:possible_permissions', this.render);
+        this.listenTo(this.model, 'change:access_policy change:can_edit_policy', this.render);
+        /*
         this.listenTo(this.model.rules, 'reset', this.render);
         this.listenTo(this.model.rules, 'add', function (rule) {
             this.find_checkbox_for_rule(rule).checked = true;
@@ -62,21 +34,27 @@ window.AccessPolicyView = Backbone.View.extend({
         this.listenTo(this.model.rules, 'remove', function (rule) {
             this.find_checkbox_for_rule(rule).checked = false;
         });
+        */
         this.render();
     },
     render: function () {
-        this.$el.html(this.template(
-                _.extend({readonly: this.options.readonly}, this.model.attributes)));
+        var readonly = !this.model.get('can_edit_policy');
+        var rules = this.model.get('access_policy').get('rules');
+        this.$el.html(this.template({
+            readonly: readonly,
+            rules: rules,
+            possible_permissions: this.model.get('access_policy').get('possible_permissions'),
+        }));
         // add initial rows
-        _.chain(this.model.rules.pluck('group')).compact().uniq()
+        _.chain(rules.pluck('group')).compact().uniq()
             .each(this.add_group_row, this);
-        _.chain(this.model.rules.pluck('user')).compact().uniq()
+        _.chain(rules.pluck('user')).compact().uniq()
             .each(this.add_user_row, this);
         this.add_everybody_row();
-        this.model.rules.each(function (rule) {
+        rules.each(function (rule) {
             this.find_checkbox_for_rule(rule).checked = true;
         }, this);
-        if (this.options.readonly) {
+        if (readonly) {
             this.$('input[type=checkbox]').prop('disabled', true);
         }
         // set up typeaheads
@@ -105,17 +83,22 @@ window.AccessPolicyView = Backbone.View.extend({
             $('<span class="alert alert-error"/>')
             .text('Server request failed: ' + xhr.statusText));
     },
-    submit: function () {
+    submit: function (evt) {
+        evt.preventDefault();
         if (this.request_in_progress) return false;
         this.$('.sync-status').html('<i class="icon-spinner icon-spin"></i> Saving&hellip;');
-        this.model.save();
-        return false;
+        this.sync_started();
+        this.model.save_access_policy({
+                success: _.bind(this.sync_complete, this),
+                error: _.bind(this.sync_error, this)});
     },
-    reset: function () {
+    reset: function (evt) {
+        evt.preventDefault();
         if (this.request_in_progress) return false;
         this.$('.sync-status').html('<i class="icon-spinner icon-spin"></i> Loading&hellip;');
-        this.model.fetch();
-        return false;
+        this.model.get('access_policy').fetch({
+                success: _.bind(this.render, this),
+                error: _.bind(this.sync_error, this)});
     },
     typed_group: function (evt) {
         var $input = $(evt.target);
@@ -149,7 +132,7 @@ window.AccessPolicyView = Backbone.View.extend({
         var row = $('<tr/>');
         row.data('group', group);
         $('<td/>').text(group).appendTo(row);
-        _.each(this.model.get('possible_permissions'),
+        _.each(this.model.get('access_policy').get('possible_permissions'),
             function (permission) {
                 var checkbox = $('<input type="checkbox"/>')
                     .data('user', null)
@@ -157,7 +140,7 @@ window.AccessPolicyView = Backbone.View.extend({
                     .data('permission', permission.value);
                 $('<td/>').append(checkbox).appendTo(row);
             }, this);
-        if (this.options.readonly)
+        if (!this.model.get('can_edit_policy'))
             this.$('.group-rows').append(row);
         else
             this.$('.group-rows tr:last').before(row);
@@ -171,7 +154,7 @@ window.AccessPolicyView = Backbone.View.extend({
         var row = $('<tr/>');
         row.data('user', user);
         $('<td/>').text(user).appendTo(row);
-        _.each(this.model.get('possible_permissions'),
+        _.each(this.model.get('access_policy').get('possible_permissions'),
             function (permission) {
                 var checkbox = $('<input type="checkbox"/>')
                     .data('user', user)
@@ -179,7 +162,7 @@ window.AccessPolicyView = Backbone.View.extend({
                     .data('permission', permission.value);
                 $('<td/>').append(checkbox).appendTo(row);
             }, this);
-        if (this.options.readonly)
+        if (!this.model.get('can_edit_policy'))
             this.$('.user-rows').append(row);
         else
             this.$('.user-rows tr:last').before(row);
@@ -188,7 +171,7 @@ window.AccessPolicyView = Backbone.View.extend({
     add_everybody_row: function () {
         var row = $('<tr/>');
         $('<th/>').text('Everybody').appendTo(row);
-        _.each(this.model.get('possible_permissions'),
+        _.each(this.model.get('access_policy').get('possible_permissions'),
             function (permission) {
                 var checkbox = $('<input type="checkbox"/>')
                     .data('user', null)
@@ -213,11 +196,12 @@ window.AccessPolicyView = Backbone.View.extend({
         // add or remove the matching rule
         var rule_attrs = {permission: $elem.data('permission'),
                 group: group, user: user};
+        var rules = this.model.get('access_policy').get('rules');
         if (evt.target.checked) {
-            this.model.rules.add(rule_attrs);
+            rules.add(rule_attrs);
         } else {
-            var rule = this.model.rules.findWhere(rule_attrs);
-            this.model.rules.remove(rule);
+            var rule = rules.findWhere(rule_attrs);
+            rules.remove(rule);
         }
         // show a dirtiness indicator in the row
         if (user) {

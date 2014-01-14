@@ -682,19 +682,14 @@ def update_loan(fqdn):
 
 @app.route('/systems/<fqdn>/access-policy', methods=['GET'])
 def get_system_access_policy(fqdn):
+    # XXX need to consolidate this with SystemAccessPolicy.__json__
+    # (maybe get rid of filtering here and implement it client side instead)
     system = _get_system_by_FQDN(fqdn)
 
     policy = system.custom_access_policy
     # For now, we don't distinguish between an empty policy and an absent one.
     if not policy:
-        return jsonify({
-            'id': None,
-            'rules': [],
-            'possible_permissions': [
-                {'value': unicode(permission),
-                 'label': unicode(permission.label)}
-                for permission in SystemPermission],
-        })
+        return jsonify(SystemAccessPolicy.empty_json())
 
     # filtering, if any
     if len(request.args.keys()) > 1:
@@ -764,7 +759,7 @@ def save_system_access_policy(fqdn):
             system.record_activity(user=identity.current.user, service=u'HTTP',
                     field=u'Access Policy Rule', action=u'Added',
                     new=repr(new_rule))
-    return '', 204
+    return jsonify(policy.__json__())
 
 @app.route('/systems/<fqdn>/access-policy/rules/', methods=['POST'])
 @auth_required

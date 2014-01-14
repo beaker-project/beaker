@@ -61,6 +61,7 @@ def _create_env(**kwargs):
             'distro-picker.js',
             'recipe-tasks.js',
             'reserve-workflow.js',
+            'system-access-policy.js',
             'system-activity.js',
             'system-add.js',
             'system-hardware.js',
@@ -71,7 +72,6 @@ def _create_env(**kwargs):
             'system-quick-info.js',
             'system-report-problem.js',
             'system-scheduler-config.js',
-            'access-policy.js',
             filters=['uglifyjs'],
             output='generated/beaker-%(version)s.js')
     return env
