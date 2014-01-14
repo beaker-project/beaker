@@ -251,6 +251,17 @@ class SystemAvailabilityTest(WebDriverTestCase):
         self.check_cannot_take(system)
         self.check_cannot_provision(system, MSG_MANUAL)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=920018
+    def test_lc_disabled(self):
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    shared=True, lab_controller=self.lc)
+            self.lc.disabled = True
+        b = self.browser
+        login(b)
+        self.check_system_is_available(system)
+        self.check_system_is_not_free(system)
+
     def check_system_is_available(self, system):
         """
         Checks that the system can be found by searching on the Available page, 

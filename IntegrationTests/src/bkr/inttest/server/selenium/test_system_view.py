@@ -128,31 +128,6 @@ class SystemViewTestWD(WebDriverTestCase):
         b.find_element_by_xpath('//ul[@class="nav nav-tabs" and '
                 'not(.//a/text()="Lab Info")]')
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=920018
-    def test_system_not_visible_available_free_when_lc_disabled(self):
-        with session.begin():
-            lc1 = data_setup.create_labcontroller()
-            lc2 = data_setup.create_labcontroller()
-            system1 = data_setup.create_system(fqdn=data_setup.unique_name(u'aaaa%s.testdata'))
-            system1.lab_controller = lc1
-            system2 = data_setup.create_system(fqdn=data_setup.unique_name(u'aaaa%s.testdata'))
-            system2.lab_controller = lc2
-
-            # set lc2 to disabled
-            lc2.disabled = True
-
-        b = self.browser
-        login(b)
-
-        b.get(get_server_base())
-        check_system_search_results(b, present=[system1,system2], absent=[])
-
-        b.get(get_server_base()+'available')
-        check_system_search_results(b, present=[system1, system2], absent=[])
-
-        b.get(get_server_base()+'free')
-        check_system_search_results(b, present=[system1], absent=[system2])
-
     def go_to_system_edit(self, system=None):
         if system is None:
             system = self.system
