@@ -102,18 +102,46 @@ class SystemViewTestWD(WebDriverTestCase):
         self.browser.find_element_by_xpath('//title[text()="%s"]' % self.system.fqdn)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=747086
-    def test_update_system_no_lc(self):
+    def test_rename_system_no_lc(self):
         with session.begin():
-            system = data_setup.create_system()
-            system.labcontroller = None
+            self.system.labcontroller = None
         b = self.browser
         login(b)
-        self.go_to_system_edit(system=system)
+        self.go_to_system_view()
         new_fqdn = 'zx81.example.com'
-        b.find_element_by_name('fqdn').clear()
-        b.find_element_by_name('fqdn').send_keys(new_fqdn)
-        b.find_element_by_link_text('Save Changes').click()
-        self.assert_system_view_text('fqdn', new_fqdn)
+        b.find_element_by_xpath('//h1/button[contains(text(), "Rename")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('fqdn').clear()
+        modal.find_element_by_name('fqdn').send_keys(new_fqdn)
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//h1[contains(text(), "%s")]' % new_fqdn)
+
+    def test_rename_system(self):
+        b = self.browser
+        login(b)
+        self.go_to_system_view()
+        new_fqdn = 'zx80.example.com'
+        b.find_element_by_xpath('//h1/button[contains(text(), "Rename")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('fqdn').clear()
+        modal.find_element_by_name('fqdn').send_keys(new_fqdn)
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//h1[contains(text(), "%s")]' % new_fqdn)
+
+    def test_rename_system_duplicate(self):
+        existing_fqdn = u'existingsystem.test-system-view'
+        with session.begin():
+            data_setup.create_system(fqdn=existing_fqdn)
+        b = self.browser
+        login(b)
+        self.go_to_system_view()
+        b.find_element_by_xpath('//h1/button[contains(text(), "Rename")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('fqdn').clear()
+        modal.find_element_by_name('fqdn').send_keys(existing_fqdn)
+        modal.find_element_by_tag_name('form').submit()
+        self.assertIn('already exists',
+                modal.find_element_by_class_name('alert-error').text)
 
     def test_update_system(self):
         orig_date_modified = self.system.date_modified
@@ -186,49 +214,59 @@ class SystemViewTestWD(WebDriverTestCase):
         b.find_element_by_xpath('//span[@class="label label-warning"'
                 ' and text()="Out of service"]')
 
-    def test_strips_surrounding_whitespace_from_fqdn(self):
+    def test_rejects_fqdn_with_whitespace(self):
         b = self.browser
         login(b)
-        self.go_to_system_edit()
-        b.find_element_by_name('fqdn').clear()
-        b.find_element_by_name('fqdn').send_keys('   lol   ')
-        b.find_element_by_link_text('Save Changes').click()
-        b.find_element_by_xpath('//h1[text()="lol"]')
-        with session.begin():
-            session.refresh(self.system)
-            self.assertEquals(self.system.fqdn, u'lol')
+        self.go_to_system_view()
+        b.find_element_by_xpath('//h1/button[contains(text(), "Rename")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('fqdn').clear()
+        modal.find_element_by_name('fqdn').send_keys('   lol   ')
+        modal.find_element_by_tag_name('form').submit()
+        # we can't actually check the HTML5 validation error,
+        # but we should still be at the system rename modal
+        modal.find_element_by_css_selector('input[name=fqdn]:invalid')
 
     def test_rejects_malformed_fqdn(self):
         b = self.browser
         login(b)
-        self.go_to_system_edit()
-        b.find_element_by_name('fqdn').clear()
-        b.find_element_by_name('fqdn').send_keys('lol...?')
-        b.find_element_by_link_text('Save Changes').click()
-        self.assertEquals(b.find_element_by_css_selector(
-                '.control-group.error .help-inline').text,
-                'The supplied value is not a valid hostname')
+        self.go_to_system_view()
+        b.find_element_by_xpath('//h1/button[contains(text(), "Rename")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('fqdn').clear()
+        modal.find_element_by_name('fqdn').send_keys('lol...?')
+        modal.find_element_by_tag_name('form').submit()
+        # we can't actually check the HTML5 validation error,
+        # but we should still be at the system rename modal
+        modal.find_element_by_css_selector('input[name=fqdn]:invalid')
 
     def test_rejects_non_ascii_chars_in_fqdn(self):
         b = self.browser
         login(b)
-        self.go_to_system_edit()
-        b.find_element_by_name('fqdn').clear()
-        b.find_element_by_name('fqdn').send_keys(u'lööööl')
-        b.find_element_by_link_text('Save Changes').click()
-        self.assertEquals(b.find_element_by_css_selector(
-                '.control-group.error .help-inline').text,
-                'The supplied value is not a valid hostname')
+        self.go_to_system_view()
+        b.find_element_by_xpath('//h1/button[contains(text(), "Rename")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('fqdn').clear()
+        modal.find_element_by_name('fqdn').send_keys(u'lööööl')
+        modal.find_element_by_tag_name('form').submit()
+        # we can't actually check the HTML5 validation error,
+        # but we should still be at the system rename modal
+        modal.find_element_by_css_selector('input[name=fqdn]:invalid')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=683003
     def test_forces_fqdn_to_lowercase(self):
         b = self.browser
         login(b)
-        self.go_to_system_edit()
-        b.find_element_by_name('fqdn').clear()
-        b.find_element_by_name('fqdn').send_keys('LooOOooL')
-        b.find_element_by_link_text('Save Changes').click()
-        b.find_element_by_xpath('//h1[text()="looooool"]')
+        self.go_to_system_view()
+        b.find_element_by_xpath('//h1/button[contains(text(), "Rename")]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('fqdn').clear()
+        modal.find_element_by_name('fqdn').send_keys('LooOOool')
+        modal.find_element_by_tag_name('form').submit()
+        b.find_element_by_xpath('//h1[contains(text(), "looooool")]')
+        with session.begin():
+            session.refresh(self.system)
+            self.assertEquals(self.system.fqdn, u'looooool')
 
     def test_add_arch(self):
         orig_date_modified = self.system.date_modified

@@ -361,6 +361,20 @@ def update_system(fqdn):
         # XXX what a nightmare... need to use a validation/conversion library, 
         # and maybe simplify/relocate the activity recording stuff somehow
         changed = False
+        renamed = False
+        if 'fqdn' in data:
+            new_fqdn = data['fqdn'].lower()
+            if new_fqdn != system.fqdn:
+                if not system.can_edit(identity.current.user):
+                    raise Forbidden403('Cannot change fqdn')
+                if System.query.filter(System.fqdn == new_fqdn).count():
+                    raise Conflict409('System %s already exists' % new_fqdn)
+                system.record_activity(user=identity.current.user,
+                        service=u'HTTP', action=u'Changed', field=u'FQDN',
+                        old=system.fqdn, new=new_fqdn)
+                system.fqdn = new_fqdn
+                changed = True
+                renamed = True
         if 'owner' in data and data['owner'].get('user_name') != system.owner.user_name:
             if not system.can_change_owner(identity.current.user):
                 raise Forbidden403('Cannot change owner')
@@ -552,7 +566,10 @@ def update_system(fqdn):
         if changed:
             # XXX clear checksum!?
             system.date_modified = datetime.datetime.utcnow()
-    return jsonify(system.__json__())
+    response = jsonify(system.__json__())
+    if renamed:
+        response.headers.add('Location', url('/view/%s' % system.fqdn))
+    return response
 
 # Not sure if this is a sane API...
 @app.route('/systems/<fqdn>/cc/<email>', methods=['PUT'])

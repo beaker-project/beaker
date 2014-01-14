@@ -8,6 +8,11 @@
   <script type="text/javascript">
     var system = new System(${tg.to_json(value)}, {parse: true, url: ${tg.to_json(tg.url('/systems/%s/' % value.fqdn))}});
     $(function () {
+        if (system.get('can_change_fqdn')) {
+            // XXX renaming is an extremely uncommon operation, it probably 
+            // doesn't make sense to place the UI for it so prominently...
+            $('.page-header h1').append(' ').append(new SystemRenameButton({model: system}).el);
+        }
         new SystemQuickInfo({model: system, el: $('.system-quick-info')});
         new SystemOwnerView({model: system, el: $('#owner')});
         new SystemHardwareDetailsView({model: system, el: $('.system-hardware-details')});

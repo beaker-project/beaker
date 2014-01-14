@@ -437,6 +437,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         # XXX replace with actual access policy data?
         if identity.current.user:
             u = identity.current.user
+            data['can_change_fqdn'] = self.can_edit(u)
             data['can_change_owner'] = self.can_change_owner(u)
             data['can_edit_policy'] = self.can_edit_policy(u)
             data['can_change_notify_cc'] = self.can_edit(u)
@@ -454,6 +455,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     and self.can_return_loan(u))
             data['can_reserve'] = self.can_reserve(u)
         else:
+            data['can_change_fqdn'] = False
             data['can_change_owner'] = False
             data['can_edit_policy'] = False
             data['can_change_notify_cc'] = False
