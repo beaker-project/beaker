@@ -220,7 +220,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
     __tablename__ = 'system'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, autoincrement=True, primary_key=True)
-    fqdn = Column(Unicode(255), nullable=False)
+    fqdn = Column(Unicode(255), nullable=False, unique=True)
     serial = Column(Unicode(1024))
     date_added = Column(DateTime, default=datetime.utcnow, nullable=False)
     date_modified = Column(DateTime)
