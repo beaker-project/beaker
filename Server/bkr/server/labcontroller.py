@@ -496,7 +496,7 @@ class LabControllers(RPCRoot):
         LabControllerActivity(identity.current.user, 'WEBUI', 
             'Changed', 'Removed', unicode(True), unicode(False), 
             lab_controller_id=id)
-        flash('Succesfully re-added %s' % labcontroller.fqdn)
+        flash('Successfully re-added %s' % labcontroller.fqdn)
         redirect(url('.'))
 
     @expose('json')

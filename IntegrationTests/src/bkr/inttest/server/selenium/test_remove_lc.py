@@ -1,8 +1,11 @@
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup, with_transaction
-from turbogears.database import session
 
-class RemoveLabController(SeleniumTestCase):
+from selenium.webdriver.support.ui import Select
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest import data_setup, with_transaction, get_server_base
+from turbogears.database import session
+from bkr.inttest.server.webdriver_utils import login
+
+class RemoveLabController(WebDriverTestCase):
 
     @with_transaction
     def setUp(self):
@@ -11,26 +14,24 @@ class RemoveLabController(SeleniumTestCase):
             fqdn=data_setup.unique_name(u'%d1111'))
         self.system.lab_controller = self.lc
         self.distro_tree = data_setup.create_distro_tree(lab_controllers=[self.lc])
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-        self.login()
+        self.browser = self.get_browser()
+        login(self.browser)
 
-    def teardown(self):
-        self.selenium.stop()
+    def tearDown(self):
+        self.browser.quit()
 
     def test_remove_and_add(self):
-        sel = self.selenium
+        b = self.browser
 
         self.assert_(any(lca.lab_controller == self.lc
                 for lca in self.distro_tree.lab_controller_assocs))
 
         #Remove
-        sel.open("labcontrollers/")
-        sel.wait_for_page_to_load('30000')
-        sel.click("//a[@onclick=\"has_watchdog('%s')\"]" % self.lc.id)
-        sel.wait_for_page_to_load("30000")
-
-        self.failUnless(sel.is_text_present("exact:%s removed" % self.lc))
+        b.get(get_server_base() + 'labcontrollers/')
+        b.find_element_by_xpath('//tr[normalize-space(string(td[1]))="%s"]'
+                '//a[contains(text(), "Remove")]' % self.lc.fqdn).click()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                '%s removed' % self.lc)
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.lab_controller is None)
@@ -39,43 +40,52 @@ class RemoveLabController(SeleniumTestCase):
                     for lca in self.distro_tree.lab_controller_assocs))
 
         #Re add
-        sel.open("labcontrollers/")
-        sel.wait_for_page_to_load('30000')
-        sel.click("//a[@href='unremove?id=%s']" % self.lc.id)
-        sel.wait_for_page_to_load('30000')
-        self.failUnless(sel.is_text_present("Succesfully re-added %s" % self.lc.fqdn))
+        b.get(get_server_base() + 'labcontrollers/')
+        b.find_element_by_xpath('//tr[normalize-space(string(td[1]))="%s"]'
+                '//a[contains(text(), "Re-Add")]' % self.lc.fqdn).click()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'Successfully re-added %s' % self.lc)
 
 
     def test_system_page(self):
-        sel = self.selenium
-        sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load('30000')
-        self.assert_system_view_text('lab_controller_id', self.lc.fqdn)
+        b = self.browser
+        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
+        b.find_element_by_xpath(
+                '//div[@class="control-group" and '
+                    'normalize-space(string(label))="Lab Controller"]'
+                '//span[normalize-space(text())="%s"]' % self.lc.fqdn)
         self.failUnless(self.system.lab_controller is self.lc)
 
         # Remove it
-        sel.open("labcontrollers/")
-        sel.wait_for_page_to_load('30000')
-        sel.click("//a[@onclick=\"has_watchdog('%s')\"]" % self.lc.id)
-        sel.wait_for_page_to_load("30000")
+        b.get(get_server_base() + 'labcontrollers/')
+        b.find_element_by_xpath('//tr[normalize-space(string(td[1]))="%s"]'
+                '//a[contains(text(), "Remove")]' % self.lc.fqdn).click()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                '%s removed' % self.lc)
 
-        sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load('30000')
-        self.assert_system_view_text('lab_controller_id', '')
+        b.get(get_server_base() + 'view/%s' % self.system.fqdn)
+        b.find_element_by_xpath(
+                '//div[@class="control-group" and '
+                    'normalize-space(string(label))="Lab Controller"]'
+                '//span[not(text())]')
         with session.begin():
             session.refresh(self.system)
             self.failUnless(not self.system.lab_controller)
 
         # Re add it
-        sel.open("labcontrollers/")
-        sel.wait_for_page_to_load('30000')
-        sel.click("//a[@href='unremove?id=%s']" % self.lc.id)
-        sel.wait_for_page_to_load('30000')
-        sel.open('edit/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load('30000')
-        sel.select("form_lab_controller_id", "label=%s" % self.lc.fqdn)
-        sel.submit('name=form')
-        sel.wait_for_page_to_load('30000')
+        b.get(get_server_base() + 'labcontrollers/')
+        b.find_element_by_xpath('//tr[normalize-space(string(td[1]))="%s"]'
+                '//a[contains(text(), "Re-Add")]' % self.lc.fqdn).click()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'Successfully re-added %s' % self.lc)
+        b.get(get_server_base() + 'edit/%s' % self.system.fqdn)
+        Select(b.find_element_by_name('lab_controller_id'))\
+            .select_by_visible_text(self.lc.fqdn)
+        b.find_element_by_name('form').submit()
+        b.find_element_by_xpath(
+                '//div[@class="control-group" and '
+                    'normalize-space(string(label))="Lab Controller"]'
+                '//span[normalize-space(text())="%s"]' % self.lc.fqdn)
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.lab_controller is self.lc)
