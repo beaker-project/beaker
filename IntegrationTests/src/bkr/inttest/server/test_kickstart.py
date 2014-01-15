@@ -722,6 +722,29 @@ EOF
             'instance ttyS1\nrespawn\npre-start exec /sbin/securetty ttyS1\n'
             'exec /sbin/agetty /dev/ttyS1 115200 vt100-nav\nEOF\n' in ks, ks)
 
+    def test_rhel6_autopart_type_ignored(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="autopart_type='xfs'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertNotIn('\nautopart --type xfs\n',
+                         recipe.rendered_kickstart.kickstart)
+        self.assertIn('\nautopart\n',
+                      recipe.rendered_kickstart.kickstart)
+
     def test_rhel7_defaults(self):
         recipe = self.provision_recipe('''
             <job>
@@ -870,6 +893,27 @@ EOF
         self.assert_(r'''vmcp ipl''' not in recipe.rendered_kickstart.kickstart,
                      recipe.rendered_kickstart.kickstart)
 
+    def test_rhel7_autopart_type(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="autopart_type='xfs'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('\nautopart --type xfs\n',
+                      recipe.rendered_kickstart.kickstart)
+
     def test_fedora18_defaults(self):
         recipe = self.provision_recipe('''
             <job>
@@ -955,6 +999,26 @@ EOF
             ''', self.system)
         compare_expected('Fedorarawhide-scheduler-defaults', recipe.id,
                          recipe.rendered_kickstart.kickstart)
+
+    def test_fedora_rawhide_autopart_type(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="autopart_type='xfs'">
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/reservesys" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertIn('\nautopart --type xfs\n',
+                      recipe.rendered_kickstart.kickstart)
 
     def test_job_group_clear_text_password(self):
         # set clear text password
