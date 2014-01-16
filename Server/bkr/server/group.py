@@ -368,7 +368,7 @@ class Groups(AdminPage):
             group.set_name(user, u'WEBUI', group_name)
             group.set_display_name(user, u'WEBUI', display_name)
             group.ldap = ldap
-            group.root_password = root_password
+            group.set_root_password(user, u'WEBUI', root_password)
         except BeakerException, err:
             session.rollback()
             flash(_(u'Failed to update group %s: %s' %
