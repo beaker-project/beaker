@@ -1,0 +1,278 @@
+Freeing unused kernel memory: 224k freed 
+Write protecting the kernel read-only data: 533k 
+ [9;0] [8] 
+Greetings. 
+anaconda installer init version 11.1.2.263 starting 
+mounting /proc filesystem... done 
+creating /dev filesystem... done 
+mounting /dev/pts (unix98 pty) filesystem... done 
+mounting /sys filesystem... done 
+anaconda installer init version 11.1.2.263 using a serial console 
+trying to remount root filesystem read write... done 
+mounting /tmp as ramfs... done 
+running install... 
+running /sbin/loader 
+ %G      
+ (B )0      
+  
+  
+     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                    
+Welcome to Red Hat Enterprise Linux Server       
++--------+ Loading SCSI driver +---------+       
+|                                        |        
+| Loading usb-storage driver...          |        
+|                                        |        
++----------------------------------------+        
+                                                
+<Tab>/<Alt-Tab> between elements  | <Space> selects | <F12> next screen       
+       
+                                                 
+                                                  
+                                                  
+                                                  
+                                                  
+                                                 
+       
++--------+ Loading SCSI driver +---------+       
+|                                        |        
+| Loading megaraid_sas driver...         |        
+|                                        |        
++----------------------------------------+        
+                                                 
+       
+                                                 
+                                                  
+                                                  
+                                                  
+                                                  
+                                                 
+       
++--------+ Loading SCSI driver +---------+       
+|                                        |        
+| Loading ata_piix driver...             |        
+|                                        |        
++----------------------------------------+        
+                                                 
+       
+                                                 
+                                                  
+                                                  
+                                                  
+                                                  
+                                                 
+       
++--------+ Loading SCSI driver +---------+       
+|                                        |        
+| Loading usb-storage driver...          |        
+|                                        |        
++----------------------------------------+        
+                                                 
+       
+                                                 
+                                                  
+                                                  
+                                                  
+                                                  
+                                                 
+       
++-------------------------------------------------------+       
+|                                                       |        
+| Sending request for IP information for eth0...        |        
+|                                                       |        
++-------------------------------------------------------+        
+                                                                
+[-- MARK -- Wed Jan 15 07:20:00 2014] 
+       
+                                                                
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                
+       
++--------------------------------------------------+       
+|                                                  |        
+| Determining host name and domain...              |        
+|                                                  |        
++--------------------------------------------------+        
+                                                           
+       
+                                                           
+                                                            
+                                                            
+                                                            
+                                                            
+                                                           
+      
++----------------------------+ Retrieving +----------------------------+      
+|                                                                      |       
+| Retrieving kickstart/3135...                                         |       
+|                                                                      |       
++----------------------------------------------------------------------+       
+                                                                               
+      
+                                                                              
+                                                                               
+                                                                               
+                                                                               
+                                                                               
+                                                                              
+      
+                                             
++-------------------------------------------------------+       
+|                                                       |        
+| Sending request for IP information for eth0...        |        
+|                                                       |        
++-------------------------------------------------------+        
+                                                                
+       
+                                                                
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                
+       
++--------------------------------------------------+       
+|                                                  |        
+| Determining host name and domain...              |        
+|                                                  |        
++--------------------------------------------------+        
+                                                           
+       
+                                                           
+                                                            
+                                                            
+                                                            
+                                                            
+                                                           
+      
+  
+   
+  
+                                                                                 Running anaconda, the Red Hat Enterprise Linux Server system installer - please wait... 
+Probing for video card:   Advanced Micro Devi���� �� � �   �  � ��� � �   ����� ��� �  ��� � � ����  �����  �� �� ���        ��  � � � �����                                  
+ (B )0      
+  
+  
+     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                    
+       
++--------+ Running... +--------+       
+|                              |        
+| Running pre-install scripts  |        
+|                              |        
++------------------------------+        
+                                      
+<Tab>/<Alt-Tab> between elements   |  <Space> selects   |  <F12> next screen       
+      
+  
+   
+  
+                                                                                 + wget -O - http://lab-devel-02.beaker.example.com:8000/install_start/4734 
+True+ wget -O /tmp/anamon http://lab-devel-02.beaker.example.com/beaker/anamon 
+Connecting to lab-devel-02.beaker.example.com[10.16.64.10]:80 
+ anamon                 0% |                             |     0    --:--:-- ETA anamon               100% |*****************************|  8771    --:--:-- ETA 
++ python /tmp/anamon --recipe-id 4734 --xmlrpc-url http://lab-devel-02.beaker.example.com:8000/RPC2 
+      
+ (B )0      
+  
+  
+     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                      
+                        +--------+ Running... +--------+                              
+                        |                              |                              
+                        | Running pre-install scripts  |                              
+                        |                              |                              
+                        +------------------------------+                              
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+  <Tab>/<Alt-Tab> between elements   |  <Space> selects   |  <F12> next screen        
+       
+                                       
+                                        
+                                        
+                                        
+                                        
+                                       
+     
++----------------+ Error Parsing Kickstart Config +-----------------+     
+|                                                                   |      
+| The following error was found while parsing your kickstart        |      
+| configuration:                                                    |      
+|                                                                   |       
+| The following problem occurred on line 32 of the kickstart file:  |       
+|                                                                   |       
+| Specified nonexistent disk asdfasdf in clearpart command          |       
+|                                                                   |       
+|                            +--------+                             |       
+|                            | Reboot |                             |       
+|                            +--------+                             |       
+|                                                                   |       
+|                                                                   |       
++-------------------------------------------------------------------+       
+                                                                            
+[-- MARK -- Wed Jan 15 07:25:00 2014] 
+[-- MARK -- Wed Jan 15 07:30:00 2014] 

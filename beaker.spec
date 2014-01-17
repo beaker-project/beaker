@@ -453,6 +453,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
 %{_sysconfdir}/beaker/power-scripts/
+%{_sysconfdir}/beaker/install-failure-patterns/
 %{python_sitelib}/bkr/labcontroller/
 %{python_sitelib}/bkr.labcontroller-*-nspkg.pth
 %{python_sitelib}/bkr.labcontroller-*.egg-info/

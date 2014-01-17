@@ -1,0 +1,178 @@
+[    
+  OK     
+] Reached target Basic System.  
+         Starting firewalld - dynamic firewall daemon...  
+         Starting Dump dmesg to /var/log/dmesg...  
+         Starting Terminate Plymouth Boot Screen...  
+         Starting System Logging Service...  
+         Starting Wait for Plymouth Boot Screen to Quit...  
+[    
+  OK     
+] Started LVM2 metadata daemon.  
+[    
+  OK     
+] Started Dump dmesg to /var/log/dmesg.  
+ %G 
+  
+  [?1l >  
+  
+     
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+   
+[anaconda] 1:main* 2:shell  3:log  4:storage-log  5:program-log                   
+       
+      
+  
+      
+Starting installer, one moment...      
+  
+    
+ 
+      
+  
+ 
+anaconda 19.31.36-1 for Red Hat Enterprise Linux 7.0 (pre-release) started.      
+  
+      
+ 
+      
+  
+   
+07:20:17 Running pre-installation scripts      
+  
+   
++ wget -O - http://lab-devel-02.beaker.example.com:8000/install_start/4735
+--2014-01-15 07:20:17--  http://lab-devel-02.beaker.example.com:8000/install_start/4735
+Resolving lab-devel-02.beaker.example.com (lab-devel-02.beaker.example.com)... 2620:52:0:1040:5054:ff:fe12:78c3, 10.16.64.10
+Connecting to lab-devel-02.beaker.example.com (lab-devel-02.beaker.example.com)|2620:52:0:1040:5054:ff:fe12:78c3|:8000... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 4 [text/plain]
+Saving to: 'STDOUT'
+True
+     0K                                                       100%  469K=0s
+
+2014-01-15 07:20:17 (469 KB/s) - written to stdout [4/4]
+
++ wget -O /tmp/anamon http://lab-devel-02.beaker.example.com/beaker/anamon
+--2014-01-15 07:20:17--  http://lab-devel-02.beaker.example.com/beaker/anamon
+Resolving lab-devel-02.beaker.example.com (lab-devel-02.beaker.example.com)... 2620:52:0:1040:5054:ff:fe12:78c3, 10.16.64.10
+Connecting to lab-devel-02.beaker.example.com (lab-devel-02.beaker.example.com)|2620:52:0:1040:5054:ff:fe12:78c3|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 8771 (8.6K) [text/plain]
+Saving to: '/tmp/anamon'
+
+     0K ........                                              100% 9.72M=0.001s
+
+2014-01-15 07:20:17 (9.72 MB/s) - '/tmp/anamon' saved [8771/8771]
+
++ python /tmp/anamon --recipe-id 4735 --xmlrpc-url http://lab-devel-02.beaker.example.com:8000/RPC2
+      
+  
+   
+The following problem occurred on line 40 of the kickstart file:     
+Specified nonexistent disk asdfasdf in clearpart command      
+  
+   
+      
+  
+      
+   
+Pane is dead  
+  
+ anaconda 19.31.36-1 for Red Hat Enterprise Linux 7.0 (pre-release) started.  
+ 
+07:20:17 Running pre-installation scripts  
+ 
+The following problem occurred on line 40 of the kickstart file:  
+ 
+  
+ 
+Specified nonexistent disk asdfasdf in clearpart command  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+   
+Pane is dead  
+   
+      
+  
+       
+[-- MARK -- Wed Jan 15 07:25:00 2014] 
+[-- MARK -- Wed Jan 15 07:30:00 2014] 

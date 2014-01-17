@@ -1,0 +1,163 @@
+Freeing unused kernel memory: 1588k freed 
+ [9;0] [8] 
+Greetings. 
+anaconda installer init version 13.21.215 starting 
+mounting /proc filesystem... done 
+creating /dev filesystem... done 
+starting udev...done 
+mounting /dev/pts (unix98 pty) filesystem... done 
+mounting /sys filesystem... done 
+anaconda installer init version 13.21.215 using a serial console 
+trying to remount root filesystem read write... done 
+mounting /tmp as tmpfs... done 
+running install... 
+running /sbin/loader 
+ %Gdetecting hardware... 
+waiting for hardware to initialize... 
+detecting hardware... 
+waiting for hardware to initialize... 
+      
+ (B )0      
+  
+  
+     
+Welcome to Red Hat Enterprise Linux for x86_64       
+┌───────────────────────────────────────────────────────┐       
+│    
+│       
+│ Waiting for NetworkManager to configure eth0.   
+│       
+│    
+│       
+└───────────────────────────────────────────────────────┘      
+<Tab>/<Alt-Tab> between elements  | <Space> selects | <F12> next screen       
+       
+                                                                            
+                                                                            
+                                                                            
+                                                                            
+                                                                            
+     
+┌────────────────────────────┤ Retrieving ├────────────────────────────┐      
+│    
+│      
+│ Retrieving /3187...    
+│      
+│    
+│      
+│                                   0%                                 │      
+│    
+│      
+└──────────────────────────────────────────────────────────────────────┘       
+      
+                              100%                                        
+     
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+      
+  
+                                                                                 Running anaconda 13.21.215, the Red Hat Enterprise Linux system installer - please wait. 
++ wget -O - http://lab-devel-03.beaker.example.com:8000/install_start/4788 
+--2014-01-17 02:08:07--  http://lab-devel-03.beaker.example.com:8000/install_start/4788 
+Resolving lab-devel-03.beaker.example.com... 10.16.64.21, 2620:52:0:1040:5054:ff:fe3b:f68b 
+Connecting to lab-devel-03.beaker.example.com|10.16.64.21|:8000... connected. 
+HTTP request sent, awaiting response... 200 OK 
+Length: 4 [text/plain] 
+Saving to: `STDOUT' 
+ 
+     0K                                                       100%  520K=0s 
+ 
+2014-01-17 02:08:08 (520 KB/s) - written to stdout [4/4] 
+ 
++ wget -O /tmp/anamon http://lab-devel-03.beaker.example.com/beaker/anamon 
+--2014-01-17 02:08:08--  http://lab-devel-03.beaker.example.com/beaker/anamon 
+Resolving lab-devel-03.beaker.example.com... 10.16.64.21, 2620:52:0:1040:5054:ff:fe3b:f68b 
+Connecting to lab-devel-03.beaker.example.com|10.16.64.21|:80... connected. 
+HTTP request sent, awaiting response... 200 OK 
+Length: 8771 (8.6K) [text/plain] 
+Saving to: `/tmp/anamon' 
+ 
+     0K ........                                              100%  536M=0s 
+ 
+2014-01-17 02:08:08 (536 MB/s) - `/tmp/anamon' saved [8771/8771] 
+ 
++ python /tmp/anamon --recipe-id 4788 --xmlrpc-url http://lab-devel-03.beaker.example.com:8000/RPC2 
+TrueExamining storage devices 
+In progress 
+ 
+Creating device /dev/vda1 
+Creating ext4 filesystem on /dev/vda1 
+In progress 
+ 
+Creating device /dev/vda2 
+Creating physical volume (LVM) on /dev/vda2 
+In progress 
+ 
+Creating device /dev/mapper/vg_devkvmguest09 
+In progress 
+ 
+Creating device /dev/mapper/vg_devkvmguest09-lv_root 
+In progress 
+ 
+Creating ext4 filesystem on /dev/mapper/vg_devkvmguest09-lv_root 
+In progress 
+ 
+Creating device /dev/mapper/vg_devkvmguest09-lv_swap 
+In progress 
+ 
+Creating swap on /dev/mapper/vg_devkvmguest09-lv_swap 
+In progress 
+ 
+Retrieving installation information for Red Hat Enterprise Linux. 
+In progress 
+ 
+Retrieving installation information for beaker-HighAvailability. 
+In progress 
+ 
+Retrieving installation information for beaker-LoadBalancer. 
+In progress 
+ 
+Retrieving installation information for beaker-ResilientStorage. 
+In progress 
+ 
+Retrieving installation information for beaker-ScalableFileSystem. 
+In progress 
+ 
+Retrieving installation information for beaker-Server. 
+In progress 
+ 
+Retrieving installation information for beaker-debuginfo. 
+In progress 
+ 
+Retrieving installation information for beaker-optional. 
+In progress 
+ 
+Retrieving installation information for beaker-optional-debuginfo. 
+In progress 
+ 
+Retrieving installation information for unfetchable. 
+In progress 
+ 
+Retrieving installation information for Red Hat Enterprise Linux. 
+Retrieving installation information for beaker-HighAvailability. 
+Retrieving installation information for beaker-LoadBalancer. 
+Retrieving installation information for beaker-ResilientStorage. 
+Retrieving installation information for beaker-ScalableFileSystem. 
+Retrieving installation information for beaker-Server. 
+Retrieving installation information for beaker-debuginfo. 
+Retrieving installation information for beaker-optional. 
+Retrieving installation information for beaker-optional-debuginfo. 
+Retrieving installation information for unfetchable. 
+Command line mode requires all choices to be specified in a kickstart configuration file. 
+Error 
+Unable to read package metadata. This may be due to a missing repodata directory.  Please ensure that your install tree has been correctly generated. 
+ 
+Cannot retrieve repository metadata (repomd.xml) for repository: unfetchable. Please verify its path and try again 
+('custom', ['_Exit installer', 'Edit', '_Retry', '_Continue']) 
+[-- MARK -- Fri Jan 17 02:10:00 2014] 
+[-- MARK -- Fri Jan 17 02:15:00 2014] 

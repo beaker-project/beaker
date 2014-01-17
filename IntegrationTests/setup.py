@@ -18,6 +18,7 @@ setup(
     package_data={'': [
         '*.xml',
         '*.ldif',
+        'labcontroller/install-failure-logs/*',
         'server/kickstarts/*',
         'server/motd.xml',
         'server/selenium/*.csv',

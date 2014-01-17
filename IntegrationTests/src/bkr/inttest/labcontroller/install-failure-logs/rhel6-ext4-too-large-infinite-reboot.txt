@@ -1,0 +1,208 @@
+Freeing unused kernel memory: 1588k freed 
+ [9;0] [8] 
+Greetings. 
+anaconda installer init version 13.21.215 starting 
+mounting /proc filesystem... done 
+creating /dev filesystem... done 
+starting udev...done 
+mounting /dev/pts (unix98 pty) filesystem... done 
+mounting /sys filesystem... done 
+anaconda installer init version 13.21.215 using a serial console 
+trying to remount root filesystem read write... done 
+mounting /tmp as tmpfs... done 
+running install... 
+running /sbin/loader 
+ %Gdetecting hardware... 
+waiting for hardware to initialize... 
+detecting hardware... 
+waiting for hardware to initialize... 
+      
+ (B )0      
+  
+  
+     
+Welcome to Red Hat Enterprise Linux for x86_64       
+┌───────────────────────────────────────────────────────┐       
+│    
+│       
+│ Waiting for NetworkManager to configure eth0.   
+│       
+│    
+│       
+└───────────────────────────────────────────────────────┘      
+<Tab>/<Alt-Tab> between elements  | <Space> selects | <F12> next screen       
+       
+                                                                            
+                                                                            
+                                                                            
+                                                                            
+                                                                            
+     
+┌────────────────────────────┤ Retrieving ├────────────────────────────┐      
+│    
+│      
+│ Retrieving /3183...    
+│      
+│    
+│      
+│                                   0%                                 │      
+│    
+│      
+└──────────────────────────────────────────────────────────────────────┘       
+      
+                              100%                                        
+     
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+      
+  
+                                                                                 Running anaconda 13.21.215, the Red Hat Enterprise Linux system installer - please wait. 
++ wget -O - http://lab-devel-02.beaker.example.com:8000/install_start/4784 
+--2014-01-17 02:06:29--  http://lab-devel-02.beaker.example.com:8000/install_start/4784 
+Resolving lab-devel-02.beaker.example.com... 10.16.64.10, 2620:52:0:1040:5054:ff:fe12:78c3 
+Connecting to lab-devel-02.beaker.example.com|10.16.64.10|:8000... connected. 
+HTTP request sent, awaiting response... 200 OK 
+Length: 4 [text/plain] 
+Saving to: `STDOUT' 
+ 
+     0K                                                       100%  514K=0s 
+ 
+2014-01-17 02:06:29 (514 KB/s) - written to stdout [4/4] 
+ 
++ wget -O /tmp/anamon http://lab-devel-02.beaker.example.com/beaker/anamon 
+--2014-01-17 02:06:29--  http://lab-devel-02.beaker.example.com/beaker/anamon 
+Resolving lab-devel-02.beaker.example.com... 10.16.64.10, 2620:52:0:1040:5054:ff:fe12:78c3 
+Connecting to lab-devel-02.beaker.example.com|10.16.64.10|:80... connected. 
+HTTP request sent, awaiting response... 200 OK 
+Length: 8771 (8.6K) [text/plain] 
+Saving to: `/tmp/anamon' 
+ 
+     0K ........                                              100% 7.94M=0.001s 
+ 
+2014-01-17 02:06:29 (7.94 MB/s) - `/tmp/anamon' saved [8771/8771] 
+ 
++ python /tmp/anamon --recipe-id 4784 --xmlrpc-url http://lab-devel-02.beaker.example.com:8000/RPC2 
+TrueExamining storage devices 
+In progress 
+ 
+Examining storage devices 
+In progress 
+ 
+Could not allocate requested partitions:  
+ 
+partition is too large for ext4 formatting (allowable size is 0 MB to 16777216 MB). 
+ 
+Press 'OK' to exit the installer. 
+terminating anaconda...done 
+sending termination signals...done 
+sending kill signals...done 
+disabling swap... 
+unmounting filesystems... 
+	/mnt/runtime done 
+	disabling /dev/loop0 
+	/dev/pts done 
+	/mnt/stage2 done 
+	/selinux done 
+waiting for mdraid sets to become clean... 
+rebooting system 
+Restarting system. 
+       
+         
+   
+ 
+Google, Inc. 
+Serial Graphics Adapter 07/26/11 
+SGABIOS $Id: sgabios.S 8 2010-04-22 00:03:40Z nlaredo $ (mockbuild@hs20-bc2-3.build.redhat.com) Tue Jul 26 15:05:08 UTC 2011 
+Term: 80x24 
+4 0 
+   
+ SeaBIOS (version seabios-0.6.1.2-26.el6)  
+  
+ 
+  
+  gPXE (http://etherboot.org) - 00:04.0 C100 PCI2.10 PnP BBS PMM7FE0@10 C100
+  Press Ctrl-B to configure gPXE (PCI 00:04.0)...                                                                                   
+  
+  Booting from ROM...  
+ gPXE (PCI 00:04.0) starting execution
+  g gP PX XE E   i in ni it ti ia al li is si in ng g   d de ev vi ic ce es s. .. .. .  
+  
+  
+  
+         
+ g  
+ g         
+P  
+ P         
+X  
+ X         
+E  
+ E         
+   
+           
+0  
+ 0         
+.  
+ .         
+9  
+ 9         
+.  
+ .         
+7  
+ 7   - -- -   O Op pe en n   S So ou ur rc ce e   B Bo oo ot t   F Fi ir rm mw wa ar re e   - -- -             
+h  
+ h          
+t  
+ t          
+t  
+ t          
+p  
+ p          
+:  
+ :          
+/  
+ /          
+/  
+ /          
+e  
+ e          
+t  
+ t          
+h  
+ h          
+e  
+ e          
+r  
+ r          
+b  
+ b          
+o  
+ o          
+o  
+ o          
+t  
+ t          
+.  
+ .          
+o  
+ o          
+r  
+ r          
+g  
+ g  
+ F Fe ea at tu ur re es s: :   H HT TT TP P   D DN NS S   T TF FT TP P   A Ao oE E   i iS SC CS SI I   b bz zI Im ma ag ge e   C CO OM MB BO OO OT T   E EL LF F   M Mu ul lt ti ib bo oo ot t   P PX XE E   P PX XE EX XT T  
+  
+ P Pr re es ss s   C Ct tr rl l- -B B   f fo or r   t th he e   g gP PX XE E   c co om mm ma an nd d   l li in ne e. .. .. .                                                                                                                               n ne et t0 0: :   5 52 2: :5 54 4: :0 00 0: :9 99 9: :3 39 9: :d d3 3   o on n   P PC CI I0 00 0: :0 04 4. .0 0   ( (o op pe en n) )  
+       [ [L Li in nk k: :u up p, ,   T TX X: :0 0   T TX XE E: :0 0   R RX X: :0 0   R RX XE E: :0 0] ]  
+ W Wa ai it ti in ng g   f fo or r   l li in nk k- -u up p   o on n   n ne et t0 0. .. .. .   o ok k  
+ D DH HC CP P   ( (n ne et t0 0   5 52 2: :5 54 4: :0 00 0: :9 99 9: :3 39 9: :d d3 3) ). .. .. .. .   o ok k  
+ n ne et t0 0: :   1 10 0. .1 16 6. .6 69 9. .1 15 57 7/ /2 25 55 5. .2 25 55 5. .2 24 48 8. .0 0   g gw w   1 10 0. .1 16 6. .7 71 1. .2 25 54 4  
+ B Bo oo ot ti in ng g   f fr ro om m   f fi il le en na am me e   " "p px xe el li in nu ux x. .0 0" "  
+ t tf ft tp p: :/ // /1 10 0. .1 16 6. .6 64 4. .1 10 0/ /p px xe el li in nu ux x. .0 0. .. .   o ok k  
+ [1S PXELINUX 4.05 2011-12-09  Copyright (C) 1994-2011 H. Peter Anvin et al [1S !PXE entry point found (we hope) at 9C37:0379 via plan A [1S UNDI code segment at 9C37 len 07A6 [1S UNDI data segment at 9CB2 len 2CD8 [1S Getting cached packet  01 02 03 [1S My IP address seems to be 0A10459D 10.16.69.157 [1S ip=10.16.69.157:10.16.64.10:10.16.71.254:255.255.248.0 [1S BOOTIF=01-52-54-00-99-39-d3 [1S SYSUUID=02f00fde-40c9-4f99-8794-e05cc20eab59 [1S TFTP prefix:  [1S Trying to load: pxelinux.cfg/02f00fde-40c9-4f99-8794-e05cc20eab59    Trying to load: pxelinux.cfg/01-52-54-00-99-39-d3                    Trying to load: pxelinux.cfg/0A10459D                               ok [1S Loading /images/dev-kvm-guest-03.beaker.example.com/kernel...... [1S Loading /images/dev-kvm-guest-03.beaker.example.com/initrd................. [1S .................ready. [1S Probing EDD (edd=off to disable)... ok  
+   

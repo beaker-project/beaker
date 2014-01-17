@@ -13,6 +13,7 @@ setup(
 
     data_files = [('/etc/beaker/', ['labcontroller.conf']),
                   ('/etc/beaker/power-scripts/', []),
+                  ('/etc/beaker/install-failure-patterns/', []),
                   ('/etc/init.d', ['init.d/beaker-proxy',
                                    'init.d/beaker-transfer',
                                    'init.d/beaker-provision',
@@ -37,6 +38,7 @@ setup(
         'bkr.labcontroller': [
             'default.conf',
             'power-scripts/*',
+            'install-failure-patterns/*',
         ],
     },
 
