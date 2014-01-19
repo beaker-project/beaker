@@ -771,47 +771,6 @@ class SearchBar(RepeatingFormField):
 class ProvisionForm(RepeatingFormField):
     pass
 
-class SystemCommandsForm(Form):
-    template = "bkr.server.templates.system_commands_form"
-    member_widgets = ["id", "power", "lab_controller"]
-    params = ['options', 'action', 'can_power', 'is_user',
-              'power_enabled', 'netboot_enabled']
-
-    def __init__(self, *args, **kw):
-        super(SystemCommandsForm, self).__init__(*args, **kw)
-        self.id = HiddenField(name="id")
-        self.power = HiddenField(name="power")
-        self.lab_controller = HiddenField(name="lab_controller")
-
-    def display(self, value, *args, **kw):
-        if 'options' in kw:
-            kw.update(kw['options'])
-        system = value
-        kw['power_enabled'] = bool(system.power and system.lab_controller)
-        kw['netboot_enabled'] = bool(system.lab_controller)
-        kw['fqdn'] = system.fqdn
-        return super(SystemCommandsForm, self).display(value, *args, **kw)
-
-class PowerActionHistory(CompoundWidget):
-    template = "bkr.server.templates.power_history_grid"
-    member_widgets = ['grid']
-    def __init__(self):
-        self.grid  = BeakerDataGrid(fields = [DataGrid.Column(name='user',title='User',
-                                                                          getter=lambda x: x.user),
-                                                  DataGrid.Column(name='service', title='Service',
-                                                                          getter=lambda x: x.service),
-                                                  DataGrid.Column(name='created', title='Submitted',
-                                                                          getter=lambda x: x.created,
-                                                                          options=dict(datetime=True)),
-                                                  DataGrid.Column(name='action', title='Action',
-                                                                          getter=lambda x: x.action),
-                                                  DataGrid.Column(name='status',title='Status',
-                                                                          getter=lambda x: x.status),
-                                                  DataGrid.Column(name='new_value',title='Message',
-                                                                          getter=lambda x: x.new_value)])
-
-
-
 class TaskSearchForm(RemoteForm): 
     template = "bkr.server.templates.task_search_form"
     params = ['options','hidden']

@@ -40,8 +40,7 @@ from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import TaskSearchForm, SearchBar, \
     SystemInstallOptions, SystemGroups, \
     SystemNotes, SystemKeys, SystemExclude, SystemDetails, \
-    SystemCommandsForm, LabInfoForm, PowerActionHistory, \
-    myPaginateDataGrid, PowerForm
+    LabInfoForm, myPaginateDataGrid, PowerForm
 from bkr.server.preferences import Preferences
 from bkr.server.authentication import Auth
 from bkr.server.xmlrpccontroller import RPCRoot
@@ -169,8 +168,6 @@ class Root(RPCRoot):
 
     power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')
-    commands_form = SystemCommandsForm(name='commands')
-    power_history = PowerActionHistory()
     system_details = SystemDetails()
     system_exclude = SystemExclude(name='excluded_families')
     system_keys = SystemKeys(name='keys')
@@ -659,8 +656,6 @@ class Root(RPCRoot):
                         notes     = self.system_notes,
                       )
         widgets['power'] = self.power_form
-        widgets['commands_form'] = self.commands_form
-        widgets['power_history'] = self.power_history
         # Lab Info is deprecated, only show it if the system has existing data
         widgets['labinfo'] = self.labinfo_form if system.labinfo else None
 
@@ -680,11 +675,9 @@ class Root(RPCRoot):
                                     notes     = url('/save_note'),
                                     groups    = url('/save_group'),
                                     install   = url('/save_install'),
-                                    commands_form = url('/action_power'),
                                     tasks     = '/tasks/do_search',
                                   ),
             widgets_options = dict(power  = options,
-                                   power_history = system.command_queue[:10], # XXX filter to power commands
                                    labinfo   = options,
                                    exclude   = options,
                                    keys      = dict(readonly = readonly,
@@ -698,8 +691,6 @@ class Root(RPCRoot):
                                    install   = dict(readonly = readonly,
                                                 provisions = system.provisions,
                                                 prov_arch = [(arch.id, arch.arch) for arch in system.arch]),
-                                   commands_form = dict(is_user=is_user,
-                                                        can_power=can_power),
                                    tasks      = dict(system_id = system.id,
                                                      arch = [(0, 'All')] + [(arch.id, arch.arch) for arch in system.arch],
                                                      hidden = dict(system = 1)),
@@ -948,26 +939,6 @@ class Root(RPCRoot):
             group.activity.append(gactivity)
             system.activity.append(activity)
             system.date_modified = datetime.utcnow()
-        redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def action_power(self, id, action, **kw):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to look up system id:%s via your login" % id) )
-            redirect("/")
-
-        if not system.power or not system.lab_controller:
-            flash(_(u'System is not configured for power support'))
-            redirect('/view/%s' % system.fqdn)
-        if not system.can_power(identity.current.user):
-            flash(_(u'You do not have permission to control this system'))
-            redirect('/view/%s' % system.fqdn)
-
-        system.action_power(service='WEBUI', action=action)
-        flash(_(u"%s power %s command enqueued" % (system.fqdn, action)))
         redirect("/view/%s" % system.fqdn)
 
     @expose()

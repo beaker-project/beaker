@@ -64,6 +64,7 @@ def _create_env(**kwargs):
             'system-access-policy.js',
             'system-activity.js',
             'system-add.js',
+            'system-commands.js',
             'system-hardware.js',
             'system-loan.js',
             'system-model.js',

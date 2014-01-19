@@ -94,6 +94,17 @@ class CommandActivity(Activity):
         self.callback = callback
         self.quiescent_period = quiescent_period
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            'submitted': self.created,
+            'user': self.user,
+            'service': self.service,
+            'action': self.action,
+            'message': self.new_value,
+            'status': unicode(self.status),
+        }
+
     def object_name(self):
         return "Command: %s %s" % (self.object.fqdn, self.action)
 
@@ -287,7 +298,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
     command_queue = relationship(CommandActivity, backref='object',
             cascade='all, delete, delete-orphan',
             order_by=[CommandActivity.created.desc(), CommandActivity.id.desc()])
-    dyn_command_queue = dynamic_loader(CommandActivity)
+    dyn_command_queue = dynamic_loader(CommandActivity,
+            order_by=[CommandActivity.created.desc(), CommandActivity.id.desc()])
     _system_ccs = relationship('SystemCc', backref='system',
             cascade='all, delete, delete-orphan')
     reservations = relationship(Reservation, backref='system',
@@ -1281,9 +1293,11 @@ class System(DeclarativeMappedObject, ActivityMixin):
         except Exception:
             user = None
         if self.lab_controller:
-            self.command_queue.append(CommandActivity(user=user,
+            activity = CommandActivity(user=user,
                     service=service, action=u'clear_netboot',
-                    status=CommandStatus.queued))
+                    status=CommandStatus.queued)
+            self.command_queue.append(activity)
+            return activity
 
     def __repr__(self):
         return self.fqdn

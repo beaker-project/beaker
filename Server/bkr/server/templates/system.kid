@@ -29,6 +29,10 @@
         $('.system-nav a[href="#history"]').one('show', function () {
             new SystemActivityView({model: system, el: $('#history')});
         });
+        // defer until tab is shown
+        $('.system-nav a[href="#commands"]').one('show', function () {
+            new SystemCommandsView({model: system, el: $('#commands')});
+        });
     });
   </script>
  </head>
@@ -90,11 +94,7 @@
      System must be associated to a lab controller and have at least one architecture specified to edit exclude families.
     </span>
    </div>
-   <div class="tab-pane" id="commands">
-      ${widgets['commands_form'].display(method='get', action=widgets_action['commands_form'], value=value, options=widgets_options['commands_form'])}
-      <h3>Recent Commands</h3>
-     ${widgets['power_history'].display(list=widgets_options['power_history'], title='Recent Commands')}
-   </div>
+      <div class="tab-pane" id="commands"></div>
    <div class="tab-pane" id="power">
     <span py:if="not readonly" py:strip="True">
      <span py:if="value.lab_controller" py:strip="True">

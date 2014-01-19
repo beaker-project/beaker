@@ -12,7 +12,7 @@ from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
         SystemPermission, SystemAccessPolicyRule, Hypervisor, Numa, \
-        LabController, KernelType, SystemType
+        LabController, KernelType, SystemType, CommandActivity
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
@@ -131,22 +131,6 @@ class SystemsController(controllers.Controller):
             system.clear_netboot(service=u'XMLRPC')
         system.action_power(action, service=u'XMLRPC', delay=delay)
         return system.fqdn # because turbogears makes us return something
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def clear_netboot_form(self, fqdn):
-        """Queues the clear netboot commands
-
-        Enqueues the command to clear any netboot configuration for this
-        system, and on success redirects to the system page.
-        """
-        system = System.by_fqdn(fqdn, identity.current.user)
-        if not system.can_power(identity.current.user):
-            flash(_(u'You do not have permission to control this system'))
-            redirect(u'../view/%s' % fqdn)
-        system.clear_netboot(service=u'WEBUI')
-        flash(_(u'Clear netboot command enqueued'))
-        redirect(u'../view/%s' % fqdn)
 
     @expose()
     @identity.require(identity.not_anonymous())
@@ -339,12 +323,6 @@ def add_system():
     # handling, and for now we're redirecting to /view/FQDN until that is moved 
     # to /systems/FQDN/
     return flask_redirect(url(u'/view/%s#essentials' % system.fqdn))
-
-# XXX this is a hack to trigger fallback to TurboGears for /systems/clear_netboot_form
-# Once that is ported to Flask, delete this hack
-@app.route('/systems/clear_netboot_form', methods=['GET', 'POST'])
-def _clear_netboot_form_trigger_fallback():
-    raise NotFound404('This is a TurboGears controller method')
 
 # XXX need to move /view/FQDN to /systems/FQDN/
 @app.route('/systems/<fqdn>/', methods=['GET'])
@@ -901,6 +879,53 @@ def provision_system(fqdn):
     # in future "installations" will be a real thing in our model,
     # but for now we have nothing to return
     return 'Provisioned', 201
+
+@app.route('/systems/<fqdn>/commands/', methods=['GET'])
+@json_collection(sort_columns={
+    'user': User.user_name,
+    'service': CommandActivity.service,
+    'submitted': CommandActivity.created,
+    'action': CommandActivity.action,
+    'message': CommandActivity.new_value,
+    'status': CommandActivity.status,
+})
+def get_system_command_queue(fqdn):
+    system = _get_system_by_FQDN(fqdn)
+    query = system.dyn_command_queue
+    # outerjoin user for sorting/filtering and also for eager loading
+    query = query.outerjoin(CommandActivity.user)\
+            .options(contains_eager(CommandActivity.user))
+    return query
+
+@app.route('/systems/<fqdn>/commands/', methods=['POST'])
+@auth_required
+def system_command(fqdn):
+    system = _get_system_by_FQDN(fqdn)
+    if not system.lab_controller:
+        raise BadRequest400('System is not attached to a lab controller')
+    if not system.can_power(identity.current.user):
+        raise Forbidden403('You do not have permission to control this system')
+    # We accept JSON or form-encoded for convenience
+    if request.json:
+        if 'action' not in request.json:
+            raise BadRequest400('Missing action key')
+        action = request.json['action']
+    elif request.form:
+        if 'action' not in request.form:
+            raise BadRequest400('Missing action parameter')
+        action = request.form['action']
+    else:
+        raise UnsupportedMediaType415
+    if action in ['on', 'off', 'reboot', 'interrupt']:
+        if not system.power:
+            raise BadRequest400('System is not configured for power support')
+        command = system.action_power(service=u'HTTP', action=action)
+    elif action == 'clear_netboot':
+        command = system.clear_netboot(service=u'HTTP')
+    else:
+        raise BadRequest400('Unknown action %r' % action)
+    session.flush() # for created attribute
+    return jsonify(command.__json__())
 
 @app.route('/systems/<fqdn>/activity/', methods=['GET'])
 @json_collection(sort_columns={

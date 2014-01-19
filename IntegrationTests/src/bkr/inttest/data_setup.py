@@ -424,6 +424,11 @@ def create_job(num_recipes=1, num_guestrecipes=0, whiteboard=None,
     return create_job_for_recipes(recipes + guestrecipes,
             whiteboard=whiteboard, **kwargs)
 
+def create_running_job(**kwargs):
+    job = create_job(**kwargs)
+    mark_job_running(job, **kwargs)
+    return job
+
 def create_completed_job(**kwargs):
     job = create_job(**kwargs)
     mark_job_complete(job, **kwargs)
