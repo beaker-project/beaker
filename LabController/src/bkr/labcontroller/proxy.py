@@ -223,10 +223,11 @@ class WatchFile(object):
         # If filename is the hostname then rename it to console.log
         if self.filename == self.watchdog['system']:
             self.filename="console.log"
-            # Leave newline
-            self.control_chars = ''.join(map(unichr, range(0,9) + range(11,32) + range(127,160)))
             self.strip_ansi = re.compile("(\033\[[0-9;\?]*[ABCDHfsnuJKmhr])")
-            self.strip_cntrl = re.compile('[%s]' % re.escape(self.control_chars))
+            ascii_control_chars = map(chr, range(0, 32) + [127])
+            keep_chars = '\t\n'
+            strip_control_chars = [c for c in ascii_control_chars if c not in keep_chars]
+            self.strip_cntrl = re.compile('[%s]' % re.escape(''.join(strip_control_chars)))
             self.panic_detector = PanicDetector(panic)
         else:
             self.strip_ansi = None

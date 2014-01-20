@@ -1,4 +1,6 @@
 
+# vim: set fileencoding=utf-8 :
+
 import os, os.path
 import time
 from turbogears.database import session
@@ -146,3 +148,20 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
             self.assertEquals(LogRecipe.query.filter_by(parent=self.recipe,
                     filename=u'console.log').one().server,
                     u'http://elsewhere')
+
+    def test_control_characters_are_substituted(self):
+        raw_line = 'Here is some badness: \x00\x07\x08\x7f.\n'
+        substituted_line = 'Here is some badness:     .\n'
+        open(self.console_log, 'w').write(raw_line)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(substituted_line))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1054035
+    def test_utf8_not_mangled(self):
+        # The characters we really care about are the box drawing ones used by 
+        # Anaconda, but the bug actually affects a wide range of characters, so 
+        # we test an assortment of ones that might appear.
+        line = u'┌───┤ Uničode röcks! аяяй 幸せ\n'.encode('utf8')
+        open(self.console_log, 'w').write(line)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(line))
