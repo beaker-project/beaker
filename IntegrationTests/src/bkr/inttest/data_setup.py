@@ -411,6 +411,7 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
     finish_time = finish_time or datetime.datetime.utcnow()
     if not only:
         mark_recipe_running(recipe, **kwargs)
+        mark_recipe_installation_finished(recipe)
 
     # Need to make sure recipe.watchdog has been persisted, since we delete it 
     # below when the recipe completes and sqlalchemy will barf on deleting an 
@@ -511,6 +512,11 @@ def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
         recipe.resource.fqdn = fqdn
     recipe.recipeset.job.update_status()
     log.debug('Started %s', recipe.tasks[0].t_id)
+
+def mark_recipe_installation_finished(recipe):
+    recipe.resource.install_finished = datetime.datetime.utcnow()
+    recipe.resource.postinstall_finished = datetime.datetime.utcnow()
+    recipe.recipeset.job.update_status()
 
 def mark_job_running(job, **kw):
     for recipe in job.all_recipes:

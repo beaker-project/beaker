@@ -2238,6 +2238,19 @@ class RecipeTest(unittest.TestCase):
                 '<role value="SERVER"><system value="server.roles-to-xml"/></role>'
                 '</roles>' in xml, xml)
 
+    def test_installation_in_xml(self):
+        recipe = data_setup.create_recipe()
+        data_setup.create_job_for_recipes([recipe])
+        data_setup.mark_recipe_complete(recipe)
+        root = lxml.etree.fromstring(recipe.to_xml(clone=False).toxml())
+        installation = root.find('recipeSet/recipe/installation')
+        self.assertRegexpMatches(installation.get('install_started'),
+                r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
+        self.assertRegexpMatches(installation.get('install_finished'),
+                r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
+        self.assertRegexpMatches(installation.get('postinstall_finished'),
+                r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
+
 
 class CheckDynamicVirtTest(unittest.TestCase):
 
