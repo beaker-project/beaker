@@ -48,6 +48,25 @@ class PowerTest(LabControllerTestCase):
                     .filter_by(field_name=u'Power', new_value=u'Completed')
                     .count(), 3)
 
+    def test_blank_power_passwords(self):
+        if daemons_running_externally():
+            raise SkipTest('cannot examine logs of remote beaker-provision')
+        provision_process, = [p for p in processes if p.name == 'beaker-provision']
+        try:
+            provision_process.start_output_capture()
+            with session.begin():
+                system = data_setup.create_system(lab_controller=self.get_lc())
+                system.power.address = None
+                system.power.power_type = PowerType.lazy_create(name=u'dummy')
+                system.power.power_passwd = None
+                system.action_power(action=u'off', service=u'testdata')
+            wait_for_commands_completed(system, timeout=2 * get_conf().get('SLEEP_TIME'))
+        finally:
+            provision_output = provision_process.finish_output_capture()
+        # The None type is passed in from the db. Later in the code it is converted
+        # to the empty string, as it should be.
+        self.assertIn("'passwd': None", provision_output, provision_output)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=986108
     def test_power_passwords_are_not_logged(self):
         if daemons_running_externally():
