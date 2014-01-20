@@ -213,12 +213,12 @@ class WatchFile(object):
     """
     Helper class to watch log files and upload them to Scheduler
     """
+    blocksize = 65536
 
-    def __init__(self, log, watchdog, proxy, panic, blocksize=65536):
+    def __init__(self, log, watchdog, proxy, panic):
         self.log = log
         self.watchdog = watchdog
         self.proxy = proxy
-        self.blocksize = blocksize
         self.filename = os.path.basename(self.log)
         # If filename is the hostname then rename it to console.log
         if self.filename == self.watchdog['system']:
@@ -227,13 +227,13 @@ class WatchFile(object):
             self.control_chars = ''.join(map(unichr, range(0,9) + range(11,32) + range(127,160)))
             self.strip_ansi = re.compile("(\033\[[0-9;\?]*[ABCDHfsnuJKmhr])")
             self.strip_cntrl = re.compile('[%s]' % re.escape(self.control_chars))
-            self.panic = re.compile(r'%s' % panic)
+            self.panic_detector = PanicDetector(panic)
         else:
             self.strip_ansi = None
             self.strip_cntrl = None
-            self.panic = None
+            self.panic_detector = None
         self.where = 0
-        self.ignore_panic = False
+        self.incomplete_line = ''
 
     def __cmp__(self,other):
         """
@@ -248,82 +248,58 @@ class WatchFile(object):
         """
         If the log exists and the file has grown then upload the new piece
         """
-        if os.path.exists(self.log):
+        try:
             file = open(self.log, "r")
-            where = self.where
-            file.seek(where)
-            line = file.read(self.blocksize)
-            size = len(line)
-            # We can't just strip the ansi codes, that would change the size
-            # of the file, so whatever we end up stripping needs to be replaced
-            # with spaces and a terminating \n.
-            if self.strip_ansi:
-                line = self.strip_ansi.sub(replace_with_blanks, line)
-            if self.strip_cntrl:
-                line = self.strip_cntrl.sub(' ', line)
-            now = file.tell()
-            file.close()
-            if self.panic:
-                # Search the line for panics
-                # The regex is stored in /etc/beaker/proxy.conf
-                panic = self.panic.search(line)
-                if panic:
-                    logger.info("Panic detected for recipe %s, system %s",
-                            self.watchdog['recipe_id'], self.watchdog['system'])
-                    # If we have already decided we will ignore this panic
-                    # due to already seeing a panic
-                    if self.ignore_panic:
-                        logger.info("Not reporting panic")
-                    else:
-                        # Let's get our <recipe/> and <watchdog/>, see
-                        # if we can ignore the panic this way
-                        recipeset = xmltramp.parse(self.proxy.get_my_recipe(
-                            dict(recipe_id=self.watchdog['recipe_id']))).recipeSet
-                        try:
-                            recipe = recipeset.recipe
-                        except AttributeError:
-                            recipe = recipeset.guestrecipe
-                        watchdog = recipe.watchdog()
-                        if watchdog and 'panic' in watchdog and \
-                            watchdog['panic'] == 'ignore':
-                            # Don't Report the panic
-                            logger.info("Not reporting panic")
-                            self.ignore_panic = True
-
-                    if not self.ignore_panic:
-                        # Report the panic
-                        # Look for active task, worst case it records it on the last task
-                        for task in recipe['task':]:
-                            if task()['status'] == 'Running':
-                                break
-                        self.proxy.task_result(task()['id'], 'panic', '/', 0, panic.group())
-                        # set the watchdog timeout to 10 minutes, gives some time for all data to 
-                        # print out on the serial console
-                        # this may abort the recipe depending on what the recipeSets
-                        # watchdog behaviour is set to.
-                        self.proxy.extend_watchdog(task()['id'], 60 * 10)
-                        self.ignore_panic = True
-            if not line:
-                return False
-            # If we didn't read our full blocksize and we are still growing
-            #  then don't send anything yet.
-            elif size < self.blocksize and where == now:
-                return False
+        except (OSError, IOError), e:
+            if e.errno == errno.ENOENT:
+                return False # doesn't exist
             else:
-                self.where = now
-                try:
-                    log_file = self.proxy.log_storage.recipe(
-                            str(self.watchdog['recipe_id']),
-                            self.filename, create=where == 0)
-                    with log_file:
-                        log_file.update_chunk(line, where)
-                except (OSError, IOError), e:
-                    if e.errno == errno.ENOENT:
-                        pass # someone has removed our log, discard the update
-                    else:
-                        raise
-                return True
-        return False
+                raise
+        try:
+            file.seek(self.where)
+            block = file.read(self.blocksize)
+            now = file.tell()
+        finally:
+            file.close()
+        if not block:
+            return False # nothing new has been read
+        # Sanitize control characters
+        # We can't just strip the ansi codes, that would change the size
+        # of the file, so whatever we end up stripping needs to be replaced
+        # with spaces and a terminating \n.
+        if self.strip_ansi:
+            block = self.strip_ansi.sub(replace_with_blanks, block)
+        if self.strip_cntrl:
+            block = self.strip_cntrl.sub(' ', block)
+        # Check for panics
+        # Only feed the panic detector complete lines. If we have read a part 
+        # of a line, store it in self.incomplete_line and it will be prepended 
+        # to the subsequent block.
+        lines = (self.incomplete_line + block).split('\n')
+        self.incomplete_line = lines.pop()
+        if len(self.incomplete_line) > self.blocksize * 2:
+            # not a complete line yet but it's getting too big
+            lines.append(self.incomplete_line)
+            self.incomplete_line = ''
+        if self.panic_detector:
+            for line in lines:
+                panic_found = self.panic_detector.feed(line)
+                if panic_found:
+                    self.proxy.report_panic(self.watchdog, panic_found)
+        # Store block
+        try:
+            log_file = self.proxy.log_storage.recipe(
+                    str(self.watchdog['recipe_id']),
+                    self.filename, create=self.where == 0)
+            with log_file:
+                log_file.update_chunk(block, self.where)
+        except (OSError, IOError), e:
+            if e.errno == errno.ENOENT:
+                pass # someone has removed our log, discard the update
+            else:
+                raise
+        self.where = now
+        return True
 
     def truncate(self):
         try:
@@ -334,6 +310,22 @@ class WatchFile(object):
         else:
             f.truncate()
         self.where = 0
+
+class PanicDetector(object):
+
+    def __init__(self, pattern):
+        self.pattern = re.compile(pattern)
+        self.fired = False
+
+    def feed(self, line):
+        if self.fired:
+            return
+        # Search the line for panics
+        # The regex is stored in /etc/beaker/proxy.conf
+        match = self.pattern.search(line)
+        if match:
+            self.fired = True
+            return match.group()
 
 
 class Watchdog(ProxyHelper):
@@ -512,6 +504,34 @@ class Monitor(ProxyHelper):
         """ check the logs for new data to upload/or cp
         """
         return self.console_watch.update()
+
+    def report_panic(self, watchdog, panic_message):
+        logger.info('Panic detected for recipe %s on system %s: '
+                'console log contains string %r', watchdog['recipe_id'],
+                watchdog['system'], panic_message)
+        recipeset = xmltramp.parse(self.get_my_recipe(
+            dict(recipe_id=watchdog['recipe_id']))).recipeSet
+        try:
+            recipe = recipeset.recipe
+        except AttributeError:
+            recipe = recipeset.guestrecipe
+        watchdog = recipe.watchdog()
+        if watchdog and 'panic' in watchdog and \
+            watchdog['panic'] == 'ignore':
+            # Don't Report the panic
+            logger.info("Not reporting panic")
+        else:
+            # Report the panic
+            # Look for active task, worst case it records it on the last task
+            for task in recipe['task':]:
+                if task()['status'] == 'Running':
+                    break
+            self.task_result(task()['id'], 'panic', '/', 0, panic_message)
+            # set the watchdog timeout to 10 minutes, gives some time for all data to 
+            # print out on the serial console
+            # this may abort the recipe depending on what the recipeSets
+            # watchdog behaviour is set to.
+            self.extend_watchdog(task()['id'], 60 * 10)
 
 class Proxy(ProxyHelper):
     def task_upload_file(self, 
