@@ -417,19 +417,21 @@ class Watchdog(ProxyHelper):
                         logger.warn('file missing: %s', mysrc)
             # rsync the logs to their new home
             rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
-            logger.debug("rsync rc=%s", rc)
-            if rc == 0:
-                # if the logs have been transferred then tell the server the new location
-                self.hub.recipes.change_files(recipe_id, self.conf.get("ARCHIVE_SERVER"),
-                                                         self.conf.get("ARCHIVE_BASEPATH"))
-                for mylog in trlogs:
-                    mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                    self.rm(mysrc)
-                    try:
-                        self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
-                    except OSError:
-                        # It's ok if it fails, dir may not be empty yet
-                        pass
+            if rc:
+                logger.error('Failed to transfer recipe %s logs '
+                        'to archive server, rsync exit status %s', recipe_id, rc)
+                return
+            # if the logs have been transferred then tell the server the new location
+            self.hub.recipes.change_files(recipe_id, self.conf.get("ARCHIVE_SERVER"),
+                                                     self.conf.get("ARCHIVE_BASEPATH"))
+            for mylog in trlogs:
+                mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
+                self.rm(mysrc)
+                try:
+                    self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
+                except OSError:
+                    # It's ok if it fails, dir may not be empty yet
+                    pass
         finally:
             # get rid of our tmpdir.
             shutil.rmtree(tmpdir)
