@@ -157,13 +157,13 @@ class Search(WebDriverTestCase):
         check_task_search_results(b, present=[self.task_one, self.task_two],
                 absent=[self.task_three])
 
-    def test_distro_is(self):
+    def test_osmajor_is(self):
         b = self.browser
         b.get(get_server_base() + 'tasks')
         b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_id('tasksearch_0_table'))\
-            .select_by_visible_text('Distro')
+            .select_by_visible_text('OSMajor')
         Select(b.find_element_by_id('tasksearch_0_operation'))\
             .select_by_visible_text('is')
         b.find_element_by_id('tasksearch_0_value').send_keys(self.osmajor_one)
@@ -171,13 +171,13 @@ class Search(WebDriverTestCase):
         check_task_search_results(b, present=[self.task_one, self.task_two],
                 absent=[self.task_three])
 
-    def test_distro_is_not(self):
+    def test_osmajor_is_not(self):
         b = self.browser
         b.get(get_server_base() + 'tasks')
         b.find_element_by_link_text('Show Search Options').click()
         wait_for_animation(b, '#searchform')
         Select(b.find_element_by_id('tasksearch_0_table'))\
-            .select_by_visible_text('Distro')
+            .select_by_visible_text('OSMajor')
         Select(b.find_element_by_id('tasksearch_0_operation'))\
             .select_by_visible_text('is not')
         b.find_element_by_id('tasksearch_0_value').send_keys(self.osmajor_one)
