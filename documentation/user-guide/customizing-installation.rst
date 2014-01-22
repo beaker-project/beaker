@@ -48,6 +48,13 @@ correspond to the similarly-named kickstart option.
     ``auth='--enableshadow --enablemd5'``. See
     :manpage:`authconfig(8)` to learn more.
 
+``autopart_type=<fstype>``
+    Partioning scheme for automatic partitioning (must be one of ``lvm``,
+    ``btrfs``, ``plain`` and ``thinp``). On supported distros, it is
+    passed as ``--type <fstype>`` to the  ``autopart`` kickstart
+    command. On distros where ``autopart`` does not support the
+    ``--type`` option, this is ignored.
+
 ``ethdevices=<module>[,<module>...]``
     Comma-separated list of network modules to be loaded during installation.
 
