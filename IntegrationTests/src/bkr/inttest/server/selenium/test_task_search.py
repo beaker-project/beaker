@@ -1,7 +1,9 @@
-#!/usr/bin/python
-from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest import data_setup, with_transaction, get_server_base
-import unittest, time, re, os
+
+from selenium.webdriver.support.ui import Select
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import check_task_search_results, \
+        wait_for_animation
+from bkr.inttest import data_setup, get_server_base
 from turbogears.database import session
 from bkr.server.model import OSMajor
 
@@ -17,6 +19,10 @@ class ExecutedTasksTest(WebDriverTestCase):
     def check_recipetask_present_in_results(self, recipetask):
         return self.browser.find_element_by_xpath("//div[@id='task_items']//"
                 "a[normalize-space(text())='%s']" % recipetask.t_id)
+
+    def check_recipetask_absent_from_results(self, recipetask):
+        return self.browser.find_element_by_xpath("//div[@id='task_items' and "
+                "not(.//a[normalize-space(text())='%s'])]" % recipetask.t_id)
 
     def test_executed_tasks(self):
         with session.begin():
@@ -93,90 +99,88 @@ class ExecutedTasksTest(WebDriverTestCase):
         b.find_element_by_id('form').submit()
         self.check_recipetask_present_in_results(guestrecipe.tasks[0])
 
-class Search(SeleniumTestCase):
-
-    @with_transaction
-    def setUp(self):
-        self.selenium = self.get_selenium()
-        self.arch_one = u'i386'
-        self.osmajor_one = u'testosmajor'
-        self.task_one = data_setup.create_task(name=u'/a/a/a', exclude_arch=[self.arch_one])
-        self.task_two = data_setup.create_task(name=u'/a/a/b', exclude_arch=[self.arch_one])
-        self.task_three = data_setup.create_task(name=u'/a/a/c', exclude_osmajor=[self.osmajor_one])
-        self.selenium.start()
-
     def test_task_deleted(self):
         with session.begin():
-            user = data_setup.create_user(password=u'password')
-            r = data_setup.create_recipe(task_name=self.task_three.name)
-            j = data_setup.create_job_for_recipes((r,), owner=user)
-
-        sel = self.selenium
-        self.login(user=user.user_name, password=u'password')
-        sel.open(u'tasks%s' % self.task_three.name)
-        sel.wait_for_page_to_load('30000')
-        sel.click("//button[text()='Submit Query']")
-        self.wait_and_try(lambda: self.assert_(sel.is_text_present(u"T:%s" % r.tasks[0].id)), wait_time=10)
+            task = data_setup.create_task()
+            recipe = data_setup.create_recipe(task_name=task.name)
+            job = data_setup.create_job_for_recipes([recipe])
+        b = self.browser
+        b.get(get_server_base() + 'tasks%s' % task.name)
+        b.find_element_by_id('form').submit()
+        self.check_recipetask_present_in_results(recipe.tasks[0])
 
         with session.begin():
-            j.soft_delete()
-        sel.open(u'tasks%s' % self.task_three.name)
-        sel.wait_for_page_to_load('30000')
-        sel.click("//button[text()='Submit Query']")
-        try:
-            self.wait_and_try(lambda: self.assert_(sel.is_text_present(u"T:%s" % r.tasks[0].id)), wait_time=10)
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError(u'Found task %s where it was deleted and should not be viewable' % self.task_three.id)
+            job.soft_delete()
+        b.get(get_server_base() + 'tasks%s' % task.name)
+        b.find_element_by_id('form').submit()
+        self.check_recipetask_absent_from_results(recipe.tasks[0])
 
-    def assert_task_in_results(self, task):
-        self.assert_(self.selenium.is_element_present(
-                '//table[@id="widget"]//td[1][.//text()="%s"]' % task.name))
+class Search(WebDriverTestCase):
 
-    def assert_task_not_in_results(self, task):
-        self.assert_(not self.selenium.is_element_present(
-                '//table[@id="widget"]//td[1][.//text()="%s"]' % task.name))
-
-    def test_task_search(self):
-        sel = self.selenium
-        sel.open('tasks')
-        sel.wait_for_page_to_load("30000")
-        sel.select("tasksearch_0_table", "label=Arch")  
-        sel.select("tasksearch_0_operation", "label=is")
-        sel.type("tasksearch_0_value", "%s" % self.arch_one)
-        sel.submit('id=searchform')
-        sel.wait_for_page_to_load("30000") 
-        self.assert_task_in_results(self.task_three)
-        self.assert_task_not_in_results(self.task_two)
-        self.assert_task_not_in_results(self.task_one)
-
-        sel.select("tasksearch_0_table", "label=Arch")  
-        sel.select("tasksearch_0_operation", "label=is not")
-        sel.type("tasksearch_0_value", "%s" % self.arch_one)
-        sel.submit('id=searchform')
-        sel.wait_for_page_to_load("30000")
-        self.assert_task_not_in_results(self.task_three)
-        self.assert_task_in_results(self.task_two)
-        self.assert_task_in_results(self.task_one)
-
-        sel.select("tasksearch_0_table", "label=Distro")  
-        sel.select("tasksearch_0_operation", "label=is")
-        sel.type("tasksearch_0_value", "%s" % self.osmajor_one)
-        sel.submit('id=searchform')
-        sel.wait_for_page_to_load("30000")
-        self.assert_task_not_in_results(self.task_three)
-        self.assert_task_in_results(self.task_two)
-        self.assert_task_in_results(self.task_one)
-
-        sel.select("tasksearch_0_table", "label=Distro")  
-        sel.select("tasksearch_0_operation", "label=is not")
-        sel.type("tasksearch_0_value", "%s" % self.osmajor_one)
-        sel.submit('id=searchform')
-        sel.wait_for_page_to_load("30000")
-        self.assert_task_in_results(self.task_three)
-        self.assert_task_not_in_results(self.task_two)
-        self.assert_task_not_in_results(self.task_one)
+    def setUp(self):
+        with session.begin():
+            self.arch_one = u'i386'
+            self.osmajor_one = u'testosmajor'
+            self.task_one = data_setup.create_task(name=u'/a/a/a', exclude_arch=[self.arch_one])
+            self.task_two = data_setup.create_task(name=u'/a/a/b', exclude_arch=[self.arch_one])
+            self.task_three = data_setup.create_task(name=u'/a/a/c', exclude_osmajor=[self.osmajor_one])
+        self.browser = self.get_browser()
 
     def tearDown(self):
-        self.selenium.stop()
+        self.browser.quit()
+
+    def test_arch_is(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks')
+        b.find_element_by_link_text('Show Search Options').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_id('tasksearch_0_table'))\
+            .select_by_visible_text('Arch')
+        Select(b.find_element_by_id('tasksearch_0_operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_id('tasksearch_0_value').send_keys(self.arch_one)
+        b.find_element_by_id('searchform').submit()
+        check_task_search_results(b, present=[self.task_three],
+                absent=[self.task_one, self.task_two])
+
+    def test_arch_is_not(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks')
+        b.find_element_by_link_text('Show Search Options').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_id('tasksearch_0_table'))\
+            .select_by_visible_text('Arch')
+        Select(b.find_element_by_id('tasksearch_0_operation'))\
+            .select_by_visible_text('is not')
+        b.find_element_by_id('tasksearch_0_value').send_keys(self.arch_one)
+        b.find_element_by_id('searchform').submit()
+        check_task_search_results(b, present=[self.task_one, self.task_two],
+                absent=[self.task_three])
+
+    def test_distro_is(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks')
+        b.find_element_by_link_text('Show Search Options').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_id('tasksearch_0_table'))\
+            .select_by_visible_text('Distro')
+        Select(b.find_element_by_id('tasksearch_0_operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_id('tasksearch_0_value').send_keys(self.osmajor_one)
+        b.find_element_by_id('searchform').submit()
+        check_task_search_results(b, present=[self.task_one, self.task_two],
+                absent=[self.task_three])
+
+    def test_distro_is_not(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks')
+        b.find_element_by_link_text('Show Search Options').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_id('tasksearch_0_table'))\
+            .select_by_visible_text('Distro')
+        Select(b.find_element_by_id('tasksearch_0_operation'))\
+            .select_by_visible_text('is not')
+        b.find_element_by_id('tasksearch_0_value').send_keys(self.osmajor_one)
+        b.find_element_by_id('searchform').submit()
+        check_task_search_results(b, present=[self.task_three],
+                absent=[self.task_one, self.task_two])
