@@ -49,7 +49,7 @@ class CreateKickstartTest(unittest.TestCase):
             os.path.exists('/usr/bin/beaker-create-kickstart'):
             args.insert(0, '/usr/bin/beaker-create-kickstart')
             p = subprocess.Popen(args, stdout=subprocess.PIPE,
-                stederr=subprocess.STDOUT)
+                stderr=subprocess.STDOUT)
             output, __ = p.communicate()
         else:
             # Running the test locally
