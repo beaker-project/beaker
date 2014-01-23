@@ -15,7 +15,7 @@ Delete specific jobs:
 Delete by criteria:
 
 | :program:`bkr job-delete` [*options*] [--dryrun]
-|       [--family=<family>] [--tag=<tag>] [--product=<cpeid>] [--completeDays=<days>]
+|       [:option:`--family` <family>] [:option:`--tag` <tag>] [:option:`--product` <cpeid>] [:option:`--completeDays` <days>]
 
 Description
 -----------

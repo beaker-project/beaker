@@ -10,9 +10,9 @@ Synopsis
 --------
 
 | :program:`bkr distro-trees-list` [*options*]
-|       [--tag=<tag>] [--name=<name>] [--treepath=<url>] [--family=<family>]
-        [--arch=<arch>] [--distro-id=<distroid>] [--distro-tree-id=<distrotreeid>]
-|       [--limit=<number>] [--format=<format>]
+|       [:option:`--tag` <tag>] [:option:`--name` <name>] [:option:`--treepath` <url>] [:option:`--family` <family>]
+        [:option:`--arch` <arch>] [:option:`--distro-id` <distroid>] [:option:`--distro-tree-id` <distrotreeid>]
+|       [:option:`--limit` <number>] [:option:`--format` <format>]
 
 Description
 -----------

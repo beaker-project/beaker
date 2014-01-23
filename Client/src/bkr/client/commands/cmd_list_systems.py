@@ -9,12 +9,12 @@ Synopsis
 --------
 
 | :program:`bkr list-systems` [*options*]
-|       [--available | --free | --mine]
-|       [--type=<type>] [--status=<status>] [--group=<group>]
-|       [--arch=<arch>] [--dev-vendor-id=<vendorid>]
-|       [--dev-device-id=<deviceid>] [--dev-driver=<driver>]
-|       [--dev-description=<description>] [--dev-sub-vendor-id=<subvendorid>]
-        [--dev-sub-device-id=<subdeviceid>]
+|       [:option:`--available` | :option:`--free` | :option:`--mine`]
+|       [:option:`--type` <type>] [:option:`--status` <status>] [:option:`--group` <group>]
+|       [:option:`--arch` <arch>] [:option:`--dev-vendor-id` <vendorid>]
+|       [:option:`--dev-device-id` <deviceid>] [:option:`--dev-driver` <driver>]
+|       [:option:`--dev-description` <description>] [:option:`--dev-sub-vendor-id` <subvendorid>]
+        [:option:`--dev-sub-device-id` <subdeviceid>]
 
 Description
 -----------

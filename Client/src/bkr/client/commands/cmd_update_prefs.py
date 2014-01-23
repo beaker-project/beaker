@@ -10,7 +10,7 @@ Synopsis
 --------
 
 | :program:`bkr update-prefs` [*options*]
-|       [--email=<email_address> ...]
+|       [:option:`--email` <email_address> ...]
 
 Description
 -----------

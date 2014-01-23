@@ -9,7 +9,7 @@ bkr distros-tag: Tag Beaker distros
 Synopsis
 --------
 
-:program:`bkr distros-tag` [*options*] --name=<name> <tag>
+:program:`bkr distros-tag` [*options*] :option:`--name` <name> <tag>
 
 Description
 -----------

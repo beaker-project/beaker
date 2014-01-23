@@ -9,7 +9,7 @@ bkr distros-edit-version: Edit the version of Beaker distros
 Synopsis
 --------
 
-:program:`bkr distros-edit-version` [*options*] --name=<name> <version>
+:program:`bkr distros-edit-version` [*options*] :option:`--name` <name> <version>
 
 Description
 -----------

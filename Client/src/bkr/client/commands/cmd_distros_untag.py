@@ -9,7 +9,7 @@ bkr distros-untag: Untag Beaker distros
 Synopsis
 --------
 
-:program:`bkr distros-untag` [*options*] --name=<name> <tag>
+:program:`bkr distros-untag` [*options*] :option:`--name` <name> <tag>
 
 Description
 -----------

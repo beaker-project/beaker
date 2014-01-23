@@ -7,8 +7,8 @@ bkr user-modify: Modify Beaker users
 Synopsis
 --------
 
-| :program:`bkr user-modify` [*options*] [--add-submission-delegate=<user>]
-|       [--remove-submission-delegate=<user>]
+| :program:`bkr user-modify` [*options*] [:option:`--add-submission-delegate` <user>]
+|       [:option:`--remove-submission-delegate` <user>]
 
 Description
 -----------
