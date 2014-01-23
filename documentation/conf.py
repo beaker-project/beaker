@@ -19,7 +19,6 @@ html_title = 'Beaker %s' % version
 html_short_title = 'Beaker'
 html_use_index = False
 html_domain_indices = False
-html_use_smartypants = False
 
 # subcommands are automatically generated, see extension below
 man_pages = [
