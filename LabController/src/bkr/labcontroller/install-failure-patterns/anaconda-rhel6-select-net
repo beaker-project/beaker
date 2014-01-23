@@ -1,1 +1,1 @@
-│ You have multiple network devices on this system\. │
+(?<=│ )You have multiple network devices on this system\.(?= │)

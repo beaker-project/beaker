@@ -1,1 +1,1 @@
-\| You have multiple network devices on this system\. Which            \|
+(?<=\| )You have multiple network devices on this system\.(?= Which            \|)

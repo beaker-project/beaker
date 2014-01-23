@@ -1,1 +1,1 @@
-\+ Exception Occurred \+
+(?<=\+ )Exception Occurred(?= \+)
