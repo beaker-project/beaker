@@ -17,11 +17,9 @@ from bkr.server.model import Task, User, Recipe
 class CreateKickstartTest(unittest.TestCase):
 
     def setUp(self):
-        self.orig_template_loader = template_env.loader
-        template_env.loader = jinja_choice_loader(self.orig_template_loader)
+        pass
 
     def tearDown(self):
-        template_env.loader = self.orig_template_loader
         admin_user = User.by_user_name(data_setup.ADMIN_USER)
         if getattr(self,'recipe_id', None):
             with session.begin():
@@ -49,8 +47,10 @@ class CreateKickstartTest(unittest.TestCase):
             os.path.exists('/usr/bin/beaker-create-kickstart'):
             args.insert(0, '/usr/bin/beaker-create-kickstart')
             p = subprocess.Popen(args, stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT)
-            output, __ = p.communicate()
+                stderr=subprocess.PIPE)
+            output, error  = p.communicate()
+            if p.returncode != 0:
+                self.fail('Running: %s\nreturncode: %s\nstderr: %s' % (' '.join(args), p.returncode, error))
         else:
             # Running the test locally
             orig_stdout = sys.stdout
@@ -75,7 +75,7 @@ class CreateKickstartTest(unittest.TestCase):
             with open('%s/timezone' % snippet_dir, 'w') as file:
                 file.write("timezone Africa/Juba\n")
             output = self._run_create_kickstart(['--template-dir',
-                template_dir, '--recipe-id', recipe.id])
+                template_dir, '--recipe-id', str(recipe.id)])
         finally:
             shutil.rmtree(snippet_dir)
 
@@ -93,7 +93,7 @@ class CreateKickstartTest(unittest.TestCase):
         session.expire_all()
         output = self._run_create_kickstart(['--ks-meta', 'method=http',
             '--kernel-options-post', "console=ttyS0,9600n8 pci=nomsi",
-            '--recipe-id', recipe.id])
+            '--recipe-id', str(recipe.id)])
         session.expire_all()
         self.assertIn('url --url=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/',
             output.splitlines(),
@@ -105,9 +105,9 @@ class CreateKickstartTest(unittest.TestCase):
     def test_rhel6_defaults_recipe(self):
         recipe = self._create_recipe()
         session.expire_all()
-        generated_ks = self._run_create_kickstart(['--recipe-id', recipe.id])
-        compare_expected('RedHatEnterpriseLinux6-scheduler-defaults', recipe.id,
-               generated_ks)
+        generated_ks = self._run_create_kickstart(['--recipe-id', str(recipe.id)])
+        compare_expected('RedHatEnterpriseLinux6-scheduler-defaults-beaker-create-kickstart',
+            recipe.id, generated_ks)
 
     def test_rhel6_defaults_no_recipe(self):
         with session.begin():
@@ -119,6 +119,6 @@ class CreateKickstartTest(unittest.TestCase):
         session.expire_all()
         distro_tree_id = self.rhel62_server_x86_64.id
         generated_ks = self._run_create_kickstart(['--distro-tree-id',
-            distro_tree_id, '--system', system.fqdn, '--user', user.user_name])
-        compare_expected('RedHatEnterpriseLinux6-manual-defaults', None,
+            str(distro_tree_id), '--system', system.fqdn, '--user', user.user_name])
+        compare_expected('RedHatEnterpriseLinux6-manual-defaults-beaker-create-kickstart', None,
                generated_ks)
