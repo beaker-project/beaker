@@ -55,6 +55,7 @@ def retry_transport(transport_class, retry_count=5, retry_delay=30,
                     result = transport_class.request(self, *args, **kwargs)
                     return result
                 except exceptions, ex:
+                    self.close()
                     if i == retry_count:
                         raise
                     retries_left = retry_count - i
