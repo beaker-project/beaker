@@ -448,6 +448,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_mandir}/man1/bkr-*.1.gz
 %if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
 %{_datadir}/bash-completion
+# Server isn't packaged on RHEL7, so tell rpm to ignore this file
+%exclude %{_mandir}/man1/beaker-create-kickstart.1.gz
 %else
 %{_sysconfdir}/bash_completion.d
 %endif
