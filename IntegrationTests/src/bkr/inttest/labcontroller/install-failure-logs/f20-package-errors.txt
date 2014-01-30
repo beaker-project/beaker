@@ -1,0 +1,413 @@
+[    
+  OK     
+] Reached target Basic System.  
+         Starting System Logging Service...  
+         Starting Terminate Plymouth Boot Screen...  
+         Starting Wait for Plymouth Boot Screen to Quit...  
+         Starting Network Manager...  
+ %G 
+  
+  [?1l >  
+  
+     
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+   
+[anaconda] 1:main* 2:shell  3:log  4:storage-log  5:program-log                   
+       
+      
+  
+      
+Starting installer, one moment...      
+  
+    
+ 
+      
+  
+ 
+anaconda 20.25.15-1 for Fedora 20 started.      
+  
+      
+ 
+      
+  
+   
+07:35:52 Running pre-installation scripts      
+  
+   
++ wget -O - http://lab-devel-02.beaker.example.com:8000/install_start/4741
+--2014-01-15 07:35:52--  http://lab-devel-02.beaker.example.com:8000/install_start/4741
+Resolving lab-devel-02.beaker.example.com (lab-devel-02.beaker.example.com)... 2620:52:0:1040:5054:ff:fe12:78c3, 10.16.64.10
+Connecting to lab-devel-02.beaker.example.com (lab-devel-02.beaker.example.com)|2620:52:0:1040:5054:ff:fe12:78c3|:8000... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 4 [text/plain]
+Saving to: 'STDOUT'
+True
+     0K                                                       100%  563K=0s
+
+2014-01-15 07:35:52 (563 KB/s) - written to stdout [4/4]
+
++ wget -O /tmp/anamon http://lab-devel-02.beaker.example.com/beaker/anamon
+--2014-01-15 07:35:52--  http://lab-devel-02.beaker.example.com/beaker/anamon
+Resolving lab-devel-02.beaker.example.com (lab-devel-02.beaker.example.com)... 2620:52:0:1040:5054:ff:fe12:78c3, 10.16.64.10
+Connecting to lab-devel-02.beaker.example.com (lab-devel-02.beaker.example.com)|2620:52:0:1040:5054:ff:fe12:78c3|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 8771 (8.6K) [text/plain]
+Saving to: '/tmp/anamon'
+
+     0K ........                                              100% 6.53M=0.001s
+
+2014-01-15 07:35:52 (6.53 MB/s) - '/tmp/anamon' saved [8771/8771]
+
++ python /tmp/anamon --recipe-id 4741 --xmlrpc-url http://lab-devel-02.beaker.example.com:8000/RPC2
+      
+  
+   
+07:35:53 Not asking for VNC because of an automated install      
+  
+   
+      
+  
+   
+07:35:53 Not asking for VNC because text mode was explicitly asked for in kickstart      
+  
+   
+      
+  
+   
+Starting automated install      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+.      
+  
+      
+ 
+      
+  
+   
+Generating updated storage configuration      
+  
+      
+ 
+      
+  
+   
+Checking storage configuration...      
+  
+   
+      
+  
+   
+================================================================================      
+================================================================================      
+      
+  
+    
+      
+  
+    
+Installation      
+  
+      
+      
+  
+      
+ 1) [x] Timezone settings                 2) [x] Installation source 
+        (America/New_York timezone)              (NFS server bigpapi.bos.redhat.      
+ 3) [x] Software selection                       com) 
+        (Custom software selected)        4) [x] Installation Destination 
+ 5) [x] Network configuration                    (Automatic partitioning selecte      
+        (Wired (eth0) connected)                 d) 
+ 7) [x] User creation                     6) [x] Root password 
+        (No user will be created)                (Password is set.)      
+  
+      
+      
+  
+      
+================================================================================      
+      
+  
+       
+ 
+      
+  
+      
+================================================================================      
+      
+  
+       
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+Progress      
+  
+      
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+Setting up the installation environment 
+.      
+  
+      
+      
+  
+      
+
+Creating disklabel on /dev/vda 
+      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+
+Creating ext4 on /dev/vda1 
+      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+Creating lvmpv on /dev/vda2      
+  
+       
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+Creating swap on /dev/mapper/fedora_dev--kvm--guest--07-swap      
+  
+       
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+Creating ext4 on /dev/mapper/fedora_dev--kvm--guest--07-root      
+  
+       
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+
+Starting package installation process 
+      
+  
+      
+      
+  
+      
+================================================================================      
+
+================================================================================      
+
+Error 
+      
+  
+      
+      
+  
+      
+
+      
+  
+      
+      
+  
+      
+The following software marked for installation has errors.  This is likely cause      
+
+d by an error with 
+your installation source. 
+
+ntp-4.2.6p5-18.fc20.x86_64 requires libopts.so.25()(64bit) 
+redhat-lsb-core-4.1-21.fc20.x86_64 requires spax 
+redhat-lsb-desktop-4.1-21.fc20.x86_64 requires libpng12.so.0()(64bit) 
+redhat-lsb-desktop-4.1-21.fc20.x86_64 requires qt3(x86-64) 
+      
+  
+      
+      
+  
+      
+redhat-lsb-languages-4.1-21.fc20.x86_64 requires perl(Class::ISA) 
+redhat-lsb-languages-4.1-21.fc20.x86_64 requires perl(Pod::Plainer) 
+redhat-lsb-languages-4.1-21.fc20.x86_64 requires perl(XML::LibXML) 
+      
+  
+      
+      
+  
+      
+Press enter to exit.      
+  
+       
+[-- MARK -- Wed Jan 15 07:40:00 2014] 
+[-- MARK -- Wed Jan 15 07:45:00 2014] 

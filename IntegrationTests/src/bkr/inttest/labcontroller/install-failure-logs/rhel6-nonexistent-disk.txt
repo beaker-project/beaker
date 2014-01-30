@@ -1,0 +1,99 @@
+Freeing unused kernel memory: 1588k freed 
+ [9;0] [8] 
+Greetings. 
+anaconda installer init version 13.21.215 starting 
+mounting /proc filesystem... done 
+creating /dev filesystem... done 
+starting udev...done 
+mounting /dev/pts (unix98 pty) filesystem... done 
+mounting /sys filesystem... done 
+anaconda installer init version 13.21.215 using a serial console 
+trying to remount root filesystem read write... done 
+mounting /tmp as tmpfs... done 
+running install... 
+running /sbin/loader 
+ %Gdetecting hardware... 
+waiting for hardware to initialize... 
+detecting hardware... 
+waiting for hardware to initialize... 
+      
+ (B )0      
+  
+  
+     
+Welcome to Red Hat Enterprise Linux for x86_64       
+┌───────────────────────────────────────────────────────┐       
+│    
+│       
+│ Waiting for NetworkManager to configure eth0.   
+│       
+│    
+│       
+└───────────────────────────────────────────────────────┘      
+<Tab>/<Alt-Tab> between elements  | <Space> selects | <F12> next screen       
+       
+                                                                            
+                                                                            
+                                                                            
+                                                                            
+                                                                            
+     
+┌────────────────────────────┤ Retrieving ├────────────────────────────┐      
+│    
+│      
+│ Retrieving /3185...    
+│      
+│    
+│      
+│                                   0%                                 │      
+│    
+│      
+└──────────────────────────────────────────────────────────────────────┘       
+      
+                              100%                                        
+     
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+      
+  
+                                                                                 Running anaconda 13.21.215, the Red Hat Enterprise Linux system installer - please wait. 
++ wget -O - http://lab-devel-02.beaker.example.com:8000/install_start/4787 
+--2014-01-17 02:07:29--  http://lab-devel-02.beaker.example.com:8000/install_start/4787 
+Resolving lab-devel-02.beaker.example.com... 10.16.64.10, 2620:52:0:1040:5054:ff:fe12:78c3 
+Connecting to lab-devel-02.beaker.example.com|10.16.64.10|:8000... connected. 
+HTTP request sent, awaiting response... 200 OK 
+Length: 4 [text/plain] 
+Saving to: `STDOUT' 
+ 
+     0K                                                       100%  422K=0s 
+ 
+2014-01-17 02:07:29 (422 KB/s) - written to stdout [4/4] 
+ 
++ wget -O /tmp/anamon http://lab-devel-02.beaker.example.com/beaker/anamon 
+--2014-01-17 02:07:29--  http://lab-devel-02.beaker.example.com/beaker/anamon 
+Resolving lab-devel-02.beaker.example.com... 10.16.64.10, 2620:52:0:1040:5054:ff:fe12:78c3 
+Connecting to lab-devel-02.beaker.example.com|10.16.64.10|:80... connected. 
+HTTP request sent, awaiting response... 200 OK 
+Length: 8771 (8.6K) [text/plain] 
+Saving to: `/tmp/anamon' 
+ 
+     0K ........                                              100%  667M=0s 
+ 
+2014-01-17 02:07:29 (667 MB/s) - `/tmp/anamon' saved [8771/8771] 
+ 
++ python /tmp/anamon --recipe-id 4787 --xmlrpc-url http://lab-devel-02.beaker.example.com:8000/RPC2 
+TrueThe following error was found while parsing the kickstart configuration file: 
+ 
+The following problem occurred on line 40 of the kickstart file: 
+ 
+Specified nonexistent disk asdfasdf in clearpart command 
+ 
+install exited abnormally [1/1]  
+The system will be rebooted when you press Ctrl-C or Ctrl-Alt-Delete. 
+[-- MARK -- Fri Jan 17 02:10:00 2014] 
+[-- MARK -- Fri Jan 17 02:15:00 2014] 

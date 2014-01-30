@@ -1052,12 +1052,12 @@ class Task(SystemObject):
                           'Version' : MyColumn(col_type='string', column=model.Task.version),
                           'Types' : MyColumn(col_type='string',column=model.TaskType.type,relations=['types']),
                           'Arch' : MyColumn(col_type='string', column=model.Arch.arch,relations=['excluded_arch','arch']),
-                          'Distro' : MyColumn(col_type='string', column=model.OSMajor.osmajor,relations=['excluded_osmajor','osmajor']),
+                          'OSMajor' : MyColumn(col_type='string', column=model.OSMajor.osmajor,relations=['excluded_osmajor','osmajor']),
                          }
 
 
     @classmethod
-    def distro_is_filter(cls,x,y): 
+    def osmajor_is_filter(cls,x,y):
         queri = model.Task.query.outerjoin('excluded_osmajor','osmajor')
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard
@@ -1158,7 +1158,7 @@ class Task(SystemObject):
         return cls._opposites_is_not_filter(x,y,wildcard=wildcard)
 
     @classmethod
-    def distro_is_not_filter(cls,x,y):
+    def osmajor_is_not_filter(cls,x,y):
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard 
             osmajors = model.OSMajor.query.filter(model.OSMajor.osmajor.like(wildcard_y))

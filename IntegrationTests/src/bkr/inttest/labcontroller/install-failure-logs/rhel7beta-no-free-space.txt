@@ -1,0 +1,202 @@
+[    
+  OK     
+] Reached target Basic System.  
+         Starting firewalld - dynamic firewall daemon...  
+         Starting Dump dmesg to /var/log/dmesg...  
+         Starting Terminate Plymouth Boot Screen...  
+         Starting System Logging Service...  
+         Starting Wait for Plymouth Boot Screen to Quit...  
+ %G 
+  
+  [?1l >  
+  
+     
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+   
+[anaconda] 1:main* 2:shell  3:log  4:storage-log  5:program-log                   
+       
+      
+  
+      
+Starting installer, one moment...      
+  
+    
+ 
+      
+  
+ 
+anaconda 19.31.36-1 for Red Hat Enterprise Linux 7.0 (pre-release) started.      
+  
+      
+ 
+      
+  
+   
+07:03:48 Running pre-installation scripts      
+  
+   
++ wget -O - http://lab-devel-02.beaker.example.com:8000/install_start/4728
+--2014-01-15 07:03:48--  http://lab-devel-02.beaker.example.com:8000/install_start/4728
+Resolving lab-devel-02.beaker.example.com (lab-devel-02.beaker.example.com)... 2620:52:0:1040:5054:ff:fe12:78c3, 10.16.64.10
+Connecting to lab-devel-02.beaker.example.com (lab-devel-02.beaker.example.com)|2620:52:0:1040:5054:ff:fe12:78c3|:8000... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 4 [text/plain]
+Saving to: 'STDOUT'
+True
+     0K                                                       100%  538K=0s
+
+2014-01-15 07:03:48 (538 KB/s) - written to stdout [4/4]
+
++ wget -O /tmp/anamon http://lab-devel-02.beaker.example.com/beaker/anamon
+--2014-01-15 07:03:48--  http://lab-devel-02.beaker.example.com/beaker/anamon
+Resolving lab-devel-02.beaker.example.com (lab-devel-02.beaker.example.com)... 2620:52:0:1040:5054:ff:fe12:78c3, 10.16.64.10
+Connecting to lab-devel-02.beaker.example.com (lab-devel-02.beaker.example.com)|2620:52:0:1040:5054:ff:fe12:78c3|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 8771 (8.6K) [text/plain]
+Saving to: '/tmp/anamon'
+
+     0K ........                                              100% 7.86M=0.001s
+
+2014-01-15 07:03:48 (7.86 MB/s) - '/tmp/anamon' saved [8771/8771]
+
++ python /tmp/anamon --recipe-id 4728 --xmlrpc-url http://lab-devel-02.beaker.example.com:8000/RPC2
+      
+  
+   
+07:03:48 Not asking for VNC because of an automated install      
+  
+      
+ 
+      
+  
+   
+07:03:48 Not asking for VNC because text mode was explicitly asked for in kickstart      
+  
+     
+ 
+      
+  
+   
+Starting automated install      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+   
+Generating updated storage configuration      
+  
+   
+      
+  
+   
+storage configuration failed: not enough free space on disks      
+  
+      
+ 
+      
+  
+   
+================================================================================      
+================================================================================      
+      
+  
+    
+      
+  
+    
+Installation      
+  
+      
+      
+  
+      
+ 1) [x] Installation source               2) [x] Timezone settings 
+        (NFS server vtap-bos-eng01.bos.          (America/New_York timezone) 
+        redhat.com)                       4) [x] Set root password 
+ 3) [!] Install Destination                      (Password is set.) 
+        (No disks selected)               6) [x] Software selection 
+ 5) [x] Create user                              (Custom software selected) 
+        (No user will be created) 
+ 7) [x] Network settings 
+        (Wired (eth0) connected)      
+  
+       
+ 
+      
+  
+      
+  Please make your choice from above ['q' to quit | 'c' to continue |      
+  
+       
+      
+  
+      
+
+  'r' to refresh]:       
+  
+       
+[-- MARK -- Wed Jan 15 07:05:00 2014] 
+[-- MARK -- Wed Jan 15 07:10:00 2014] 

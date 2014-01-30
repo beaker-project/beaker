@@ -155,8 +155,8 @@ abort the entire recipe. Tasks are able to adjust the watchdogs dynamically
 if they need more time, allowing the use of more aggressive default timeouts.
 
 
-Log collection and archiving
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Log collection, monitoring, and archiving
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To help analyse failures, Beaker allows test harnesses to upload log files
 (either in one piece or as multiple fragments). Logs can be uploaded at
@@ -168,6 +168,9 @@ automatic capture of the console logs for the duration of provisioning
 and execution of a recipe. Console logs are also captured automatically
 when running guest recipes (as Beaker configures the hypervisor to collect
 the logs and pass them to the lab controller).
+
+Beaker can optionally scan console logs to detect kernel panics and failed 
+installations as soon as they happen (see :ref:`job-monitoring`).
 
 Since preserving logs indefinitely may take up an undesirable amount
 of space, Beaker also allows jobs to be tagged with a retention tag
@@ -189,7 +192,7 @@ Automatic system reservation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When using a test harness that supports the task library, the
-:ref`reservesys task<reservesys-task>` may be used to request that the
+:ref:`reservesys task <reservesys-task>` may be used to request that the
 system be automatically reserved after completion of the task (or only
 if the task fails).
 

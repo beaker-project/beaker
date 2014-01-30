@@ -466,8 +466,22 @@ def add_system_access_policy_rule(fqdn):
     else:
         policy = system.custom_access_policy = SystemAccessPolicy()
     rule = read_json_request(request)
-    user = User.by_user_name(rule['user']) if rule['user'] else None
-    group = Group.by_name(rule['group']) if rule['group'] else None
+
+    if rule['user']:
+        user = User.by_user_name(rule['user'])
+        if not user:
+            raise BadRequest400("User '%s' does not exist" % rule['user'])
+    else:
+        user = None
+
+    if rule['group']:
+        try:
+            group = Group.by_name(rule['group'])
+        except NoResultFound:
+            raise BadRequest400("Group '%s' does not exist" % rule['group'])
+    else:
+        group = None
+
     try:
         permission = SystemPermission.from_string(rule['permission'])
     except ValueError:
@@ -478,6 +492,24 @@ def add_system_access_policy_rule(fqdn):
             field=u'Access Policy Rule', action=u'Added',
             new=repr(new_rule))
     return '', 204
+
+@app.route('/systems/<fqdn>/status', methods=['GET'])
+def get_system_status(fqdn):
+    system = _get_system_by_FQDN(fqdn)
+    system_status = {'condition': '%s' % system.status, 'current_loan': None,
+        'current_reservation': None,}
+    if system.loaned:
+        system_status['current_loan'] = system.get_loan_details()
+    if system.user:
+        current_reservation = {'user_name': '%s' % system.user}
+        open_reservation = system.open_reservation
+        if open_reservation and \
+            open_reservation.type == 'recipe':
+            system_recipe = open_reservation.recipe
+            current_reservation['recipe_id'] = '%s' % system_recipe.id
+            current_reservation['start_time'] = '%s UTC' % system_recipe.start_time
+        system_status['current_reservation'] = current_reservation
+    return jsonify(system_status)
 
 @app.route('/systems/<fqdn>/access-policy/rules/', methods=['DELETE'])
 @auth_required

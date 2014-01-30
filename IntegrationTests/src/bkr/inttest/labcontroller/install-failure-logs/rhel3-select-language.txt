@@ -1,0 +1,84 @@
+ c
+Disconnect sensed. Reconnecting in 15 seconds
+ide-floppy driver 0.99.newide
+ ide-floppy driver 0.99.newide
+ md: md driver 0.90.0 MAX_MD_DEVS=256, MD_SB_DISKS=27
+ md: Autodetecting RAID arrays.
+ md: autorun ...
+ md: ... autorun DONE.
+ Initializing Cryptographic API
+ NET4: Linux TCP/IP 1.0 for NET4.0
+ IP: routing cache hash table of 4096 buckets, 64Kbytes
+ TCP: Hash tables configured (established 131072 bind 65536)
+ Linux IP multicast router 0.06 plus PIM-SM
+ Initializing IPsec netlink socket
+ NET4: Unix domain sockets 1.0/SMP for Linux NET4.0.
+ RAMDISK: Compressed image found at block 0
+ VFS: Mounted root (ext2 filesystem).
+  [9;0] [8]Greetings. 
+Red Hat install init version 9.1.6.20 starting 
+mounting /proc filesystem... done 
+mounting /dev/pts (unix98 pty) filesystem... done 
+Red Hat install init version 9.1.6.20 using a serial console 
+remember, cereal is an important part of a nutritionally balanced breakfast. 
+ 
+trying to remount root filesystem read write... done 
+mounting /tmp as ramfs... done 
+running install... 
+running /sbin/loader 
+ %G      
+ (B )0      
+  
+  
+     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                    
+Welcome to Red Hat Enterprise Linux      
++---------+ Choose a Language +---------+      
+|                                       |       
+| What language would you like to use   |       
+| during the installation process?      |       
+|                                       |       
+|       Chinese(Simplified)    #        |       
+|       Chinese(Traditional)   #        |        
+|       Czech                  #        |        
+|       Danish                 #        |        
+|       Dutch                  #        |        
+|       English                #        |        
+|       French                 #        |        
+|       German                 #        |        
+|                                       |        
+|                +----+                 |        
+|                | OK |                 |        
+|                +----+                 |        
+|                                       |        
+|                                       |        
++---------------------------------------+        
+                                               
+<Tab>/<Alt-Tab> between elements  | <Space> selects | <F12> next screen       
+[-- MARK -- Wed Jan 15 04:00:00 2014] 
+[-- MARK -- Wed Jan 15 04:05:00 2014] 
+[-- MARK -- Wed Jan 15 04:10:00 2014] 
+[-- MARK -- Wed Jan 15 04:15:00 2014] 

@@ -50,6 +50,26 @@ template_env = jinja2.sandbox.SandboxedEnvironment(
         trim_blocks=True,
         extensions=[SnippetExtension])
 
+def add_to_template_searchpath(dir):
+    """Adds a new searchpath to our template_env var
+
+    Finds the first FileSystemLoader of template_env and prepends dir to its
+    searchpath
+    """
+    global template_env
+    def _add_template(loaders, dir):
+        for loader in loaders:
+            # Let's squeeze a new FS path in
+            if isinstance(loader, jinja2.FileSystemLoader):
+                loader.searchpath.insert(0, dir)
+                break
+            elif getattr(loader, 'loaders', None):
+                _add_template(loader.loaders, dir)
+            else:
+                continue
+    _add_template([template_env.loader], dir)
+
+
 class TemplateRenderingEnvironment(object):
     """
     This is a context manager which sets up a few things to make evaluating

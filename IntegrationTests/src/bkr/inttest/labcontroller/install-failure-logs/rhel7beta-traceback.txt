@@ -1,0 +1,215 @@
+[    
+  OK     
+] Reached target Basic System.  
+         Starting firewalld - dynamic firewall daemon...  
+         Starting Dump dmesg to /var/log/dmesg...  
+         Starting Terminate Plymouth Boot Screen...  
+         Starting System Logging Service...  
+         Starting Wait for Plymouth Boot Screen to Quit...  
+[    
+  OK     
+] Started LVM2 metadata daemon.  
+ %G 
+  
+  [?1l >  
+  
+     
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+   
+[anaconda] 1:main* 2:shell  3:log  4:storage-log  5:program-log                   
+       
+      
+  
+      
+Starting installer, one moment...      
+  
+ 
+      
+  
+ 
+anaconda 19.31.36-1 for Red Hat Enterprise Linux 7.0 (pre-release) started.      
+  
+      
+ 
+      
+  
+   
+06:42:20 Running pre-installation scripts      
+  
+   
++ wget -O - http://lab-devel-03.beaker.example.com:8000/install_start/4718
+--2014-01-15 06:42:20--  http://lab-devel-03.beaker.example.com:8000/install_start/4718
+Resolving lab-devel-03.beaker.example.com (lab-devel-03.beaker.example.com)... 2620:52:0:1040:5054:ff:fe3b:f68b, 10.16.64.21
+Connecting to lab-devel-03.beaker.example.com (lab-devel-03.beaker.example.com)|2620:52:0:1040:5054:ff:fe3b:f68b|:8000... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 4 [text/plain]
+Saving to: 'STDOUT'
+True
+     0K                                                       100%  692K=0s
+
+2014-01-15 06:42:21 (692 KB/s) - written to stdout [4/4]
+
++ wget -O /tmp/anamon http://lab-devel-03.beaker.example.com/beaker/anamon
+--2014-01-15 06:42:21--  http://lab-devel-03.beaker.example.com/beaker/anamon
+Resolving lab-devel-03.beaker.example.com (lab-devel-03.beaker.example.com)... 2620:52:0:1040:5054:ff:fe3b:f68b, 10.16.64.21
+Connecting to lab-devel-03.beaker.example.com (lab-devel-03.beaker.example.com)|2620:52:0:1040:5054:ff:fe3b:f68b|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 8771 (8.6K) [text/plain]
+Saving to: '/tmp/anamon'
+
+     0K ........                                              100% 10.3M=0.001s
+
+2014-01-15 06:42:21 (10.3 MB/s) - '/tmp/anamon' saved [8771/8771]
+
++ python /tmp/anamon --recipe-id 4718 --xmlrpc-url http://lab-devel-03.beaker.example.com:8000/RPC2
+      
+  
+   
+06:42:21 Not asking for VNC because of an automated install      
+  
+   
+      
+  
+   
+06:42:21 Not asking for VNC because text mode was explicitly asked for in kickstart      
+  
+   
+      
+  
+   
+Starting automated install      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+      
+.      
+  
+      
+      
+  
+   
+Generating updated storage configuration      
+  
+   
+      
+  
+   
+** (anaconda:1130): WARNING **: Could not open X display      
+  
+    
+      
+  
+    
+An unknown error has occured, look at the /tmp/anaconda-tb* file(s) for more details      
+  
+      
+      
+  
+      
+=============================================================================== 
+An unknown error has occurred 
+=============================================================================== 
+anaconda 19.31.36-1 exception report 
+Traceback (most recent call first): 
+  File "/usr/lib/python2.7/site-packages/blivet/partitioning.py", line 820, in doPartitioning 
+    "maxSize": part.format.maxSize}) 
+  File "/usr/lib64/python2.7/site-packages/pyanaconda/kickstart.py", line 891, in execute 
+    doPartitioning(storage) 
+  File "/usr/lib64/python2.7/site-packages/pyanaconda/kickstart.py", line 1732, in doKickstartStorage 
+    ksdata.partition.execute(storage, ksdata, instClass) 
+  File "/usr/lib64/python2.7/site-packages/pyanaconda/ui/tui/spokes/storage.py", line 255, in execute 
+    doKickstartStorage(self.storage, self.data, self.instclass)      
+  
+       
+      
+  
+      
+
+  File "/usr/lib64/python2.7/site-packages/pyanaconda/ui/tui/hubs/summary.py", line 49, in setup 
+    spoke.execute() 
+  File "/usr/lib64/python2.7/site-packages/pyanaconda/ui/tui/__init__.py", line 169, in setup 
+    obj.setup(self.ENVIRONMENT) 
+  File "/sbin/anaconda", line 1084, in <module> 
+    anaconda._intf.setup(ksdata) 
+TypeError: %d format: a number is required, not NoneType 
+
+What do you want to do now? 
+1) Report Bug 
+2) Debug 
+3) Quit 
+
+      
+  
+      
+      
+  
+      
+Please make your choice from above:       
+  
+       
+[-- MARK -- Wed Jan 15 06:45:00 2014] 
+[-- MARK -- Wed Jan 15 06:50:00 2014] 

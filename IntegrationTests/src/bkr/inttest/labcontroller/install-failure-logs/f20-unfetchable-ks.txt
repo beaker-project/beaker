@@ -1,0 +1,65 @@
+[    
+  OK     
+] Reached target Basic System.  
+[   21.183015] bnx2 0000:05:00.0 em1: using MSI 
+[   21.191574] IPv6: ADDRCONF(NETDEV_UP): em1: link is not ready 
+[   24.385300] bnx2 0000:05:00.0 em1: NIC Copper Link is Up, 1000 Mbps full duplex 
+[   24.386084]  
+[   24.402004] IPv6: ADDRCONF(NETDEV_CHANGE): em1: link becomes ready 
+[   29.839258] dracut-initqueue[559]: dhclient(639) is already running - exiting.  
+[   29.839720] dracut-initqueue[559]: This version of ISC DHCP is based on the release available  
+[   29.840157] dracut-initqueue[559]: on ftp.isc.org.  Features have been added and other changes  
+[   29.840545] dracut-initqueue[559]: have been made to the base software release in order to make  
+[   29.840939] dracut-initqueue[559]: it work better with this distribution.  
+[   29.841339] dracut-initqueue[559]: Please report for this software via the Red Hat Bugzilla site:  
+[   29.841730] dracut-initqueue[559]: http://bugzilla.redhat.com  
+[   29.842121] dracut-initqueue[559]: exiting.  
+[   30.426919] dracut-initqueue[559]: % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current  
+[   30.427522] dracut-initqueue[559]: Dload  Upload   Total   Spent    Left  Speed  
+[   30.935966] dracut-initqueue[559]: 0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0Warning: Transient problem: timeout Will retry in 1 seconds. 3 retries left.  
+[   31.941222] dracut-initqueue[559]: 0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0Warning: Transient problem: timeout Will retry in 2 seconds. 2 retries left.  
+[   33.947480] dracut-initqueue[559]: 0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0Warning: Transient problem: timeout Will retry in 4 seconds. 1 retries left.  
+[   37.955795] dracut-initqueue[559]: 0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0curl: (6) Could not resolve host: example.invalid  
+[   37.956753] dracut-initqueue[559]: Warning: failed to fetch kickstart from http://example.invalid/notexist  
+[-- MARK -- Wed Jan 15 07:30:00 2014] 
+[  222.789821] dracut-initqueue[559]: Warning: Could not boot.  
+[    
+  OK     
+] Started Show Plymouth Boot Screen.  
+[    
+  OK     
+] Reached target Paths.  
+[    
+  OK     
+] Reached target Basic System.  
+[   29.839258] dracut-initqueue[559]: dhclient(639) is already running - exiting.  
+[   29.839720] dracut-initqueue[559]: This version of ISC DHCP is based on the release available  
+[   29.840157] dracut-initqueue[559]: on ftp.isc.org.  Features have been added and other changes  
+[   29.840545] dracut-initqueue[559]: have been made to the base software release in order to make  
+[   29.840939] dracut-initqueue[559]: it work better with this distribution.  
+[   29.841339] dracut-initqueue[559]: Please report for this software via the Red Hat Bugzilla site:  
+[   29.841730] dracut-initqueue[559]: http://bugzilla.redhat.com  
+[   29.842121] dracut-initqueue[559]: exiting.  
+[   30.426919] dracut-initqueue[559]: % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current  
+[   30.427522] dracut-initqueue[559]: Dload  Upload   Total   Spent    Left  Speed  
+[   30.935966] dracut-initqueue[559]: 0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0Warning: Transient problem: timeout Will retry in 1 seconds. 3 retries left.  
+[   31.941222] dracut-initqueue[559]: 0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0Warning: Transient problem: timeout Will retry in 2 seconds. 2 retries left.  
+[   33.947480] dracut-initqueue[559]: 0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0Warning: Transient problem: timeout Will retry in 4 seconds. 1 retries left.  
+[   37.955795] dracut-initqueue[559]: 0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0curl: (6) Could not resolve host: example.invalid  
+[   37.956753] dracut-initqueue[559]: Warning: failed to fetch kickstart from http://example.invalid/notexist  
+[  222.789821] dracut-initqueue[559]: Warning: Could not boot.  
+[  223.141566] dracut-initqueue[559]: Warning: /dev/root does not exist 
+         Starting Dracut Emergency Shell... 
+Warning: /dev/root does not exist 
+ 
+Generating "/run/initramfs/rdsosreport.txt" 
+ 
+ 
+Entering emergency mode. Exit the shell to continue. 
+Type "journalctl" to view system logs. 
+You might want to save "/run/initramfs/rdsosreport.txt" to a USB stick or /boot 
+after mounting them and attach it to a bug report. 
+ 
+ 
+dracut:/# [-- MARK -- Wed Jan 15 07:35:00 2014] 
+[-- MARK -- Wed Jan 15 07:40:00 2014] 

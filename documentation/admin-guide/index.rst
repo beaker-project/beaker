@@ -34,7 +34,9 @@ Contents
    interface
    kickstarts
    power-commands
+   panic-detection
    ovirt
    graphite
    reporting-queries
    how-do-i
+   man/index

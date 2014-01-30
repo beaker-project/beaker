@@ -101,7 +101,9 @@ wget -O /usr/local/sbin/anamon "http://lab.test-kickstart.invalid/beaker/anamon"
 wget -O /etc/rc.d/init.d/anamon "http://lab.test-kickstart.invalid/beaker/anamon.init"
 
 chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
-test -d /selinux && restorecon /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+if selinuxenabled &>/dev/null ; then
+    restorecon /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+fi
 
 chkconfig --add anamon
 

@@ -72,23 +72,13 @@ import lxml.etree as ET
 import logging
 import urllib2
 from optparse import OptionParser
-from shutil import rmtree
 
 import turbogears.config
 from turbogears.database import session
 
-from bkr.common.helpers import atomically_replaced_file, unlink_ignore, siphon, \
-    Flock
+from bkr.common.helpers import siphon
 from bkr.server.model import TaskLibrary, Task
 from bkr.server.util import load_config
-
-# We need kobo
-try:
-    import kobo.xmlrpc
-    from kobo.client import HubProxy
-except ImportError:
-    print 'Please install kobo client library'
-    sys.exit(1)
 
 __description__ = 'Script to sync local task RPMs from a remote Beaker instance'
 __version__ = '0.1'
@@ -108,22 +98,22 @@ class TaskLibrarySync:
 
     def __init__(self, remote=None):
 
+        # load configuration data
+        load_config()
+
         # setup, sanity checks
         self.task_dir = turbogears.config.get("basepath.rpms", "/var/www/beaker/rpms")
+
         self._setup_logging()
 
         # Initialize core attributes
         if remote:
             self.remote = remote.rstrip("/")
-            remote_proxy = self._get_server_proxy(self.remote)
-            self.proxy={'remote':remote_proxy,
-                        }
+            self.proxy = xmlrpclib.ServerProxy(self.remote + '/RPC2')
 
         self.tasks_added = []
         self.t_downloaded = 0
         self.tasklib = TaskLibrary()
-        # load configuration data
-        load_config()
 
     def _setup_logging(self):
         formatter = logging.Formatter('%(asctime)s - %(message)s')
@@ -140,14 +130,6 @@ class TaskLibrarySync:
             self.logger.critical('You should run this script as user: %s' % pwd.getpwuid(task_dir_uid).pw_name)
             sys.exit(-1)
 
-    def _get_server_proxy(self, server):
-
-        kobo_conf = {}
-        kobo_conf['HUB_URL'] = server
-        hub = HubProxy(kobo_conf)
-
-        return hub
-
     def get_tasks(self, server):
 
         # if local, directly read the database
@@ -155,7 +137,7 @@ class TaskLibrarySync:
             tasks = Task.query.filter(Task.valid == True).all()
             tasks = [task.to_dict() for task in tasks]
         else:
-            tasks = self.proxy[server].tasks.filter({'valid':1})
+            tasks = self.proxy.tasks.filter({'valid':1})
 
         return [task['name'] for task in tasks]
 
@@ -172,7 +154,7 @@ class TaskLibrarySync:
 
         try:
             self.logger.debug('Getting task XML for %s from %s' % (task, getattr(self, server)))
-            return self.proxy[server].tasks.to_xml(task, False)
+            return self.proxy.tasks.to_xml(task, False)
         except (xmlrpclib.Fault, xmlrpclib.ProtocolError) as e:
             # If something goes wrong with this task, for example:
             # https://bugzilla.redhat.com/show_bug.cgi?id=915549
@@ -251,7 +233,7 @@ class TaskLibrarySync:
         try:
             self.sync_tasks(tasks_to_sync)
         except Exception, e:
-            log.exception(unicode(e))
+            self.logger.exception(unicode(e))
             self.logger.info('Failed to sync all tasks')
         else:
             self.logger.info('Synced all tasks')
@@ -310,7 +292,8 @@ def main():
     if not options.force:
         if len(old_tasks)>0:
             task_sync.logger.warning('Warning: %d tasks already present may be overwritten '
-                            'with the version from %s if the two versions are different' % (len(old_tasks), task_sync.remote))
+                                     'with the version from %s if the two versions are different' %
+                                     (len(old_tasks), task_sync.remote))
 
         proceed = raw_input('Proceed with task addition? (y/n) ')
         if proceed.lower() == 'y':

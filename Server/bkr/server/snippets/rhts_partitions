@@ -88,6 +88,17 @@ logvol /{{ partname }} --name={{ lvmname }} --vgname=TestVolume00{{ is_lvm }} --
 {% else %}
 {#
 ## No special partitions requested. Let Anaconda do what it thinks is right.
+## If autopart_type is specified and a compatible distro is being used
+## use it.
 #}
+{% if distro.osversion.osmajor.osmajor.startswith('Fedora') %}
+{% set fedora_releasever = distro.osversion.osmajor.osmajor[6:] %}
+{% else %}
+{% set fedora_releasever = None %}
+{% endif %}
+{% if autopart_type and (fedora_releasever|int >= 18 or fedora_releasever == 'rawhide' or distro is osmajor('RedHatEnterpriseLinux7')) %}
+autopart --type {{ autopart_type }}
+{% else %}
 autopart
+{% endif %}
 {% endif %}

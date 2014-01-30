@@ -39,7 +39,7 @@ $(document).ready(function(){
   name="${name}"
   action="${action}"
   method="${method}"
-  class="form-horizontal">
+  class="form-horizontal system-form ${options.get('edit') and 'system-form-edit' or 'system-form-readonly'}">
 
      <span py:if="options.get('edit')" py:strip="1">
       ${display_system_property("id")}
@@ -61,14 +61,14 @@ $(document).ready(function(){
     <div class="span6">
       <div class="control-group">
         ${label_for('date_added')}
-        <div class="controls text-controls">
-        <span class="datetime">${value_for("date_added")}</span>
+        <div class="controls">
+          <span class="form-control-static datetime">${value_for("date_added")}</span>
         </div>
       </div>
       <div class="control-group">
         ${label_for('date_lastcheckin')}
-        <div class="controls text-controls">
-        <span class="datetime">${value_for("date_lastcheckin")}</span>
+        <div class="controls">
+          <span class="form-control-static datetime">${value_for("date_lastcheckin")}</span>
         </div>
       </div>
       <div class="control-group">
@@ -130,8 +130,8 @@ $(document).ready(function(){
     <div class="span6">
       <div class="control-group">
         ${label_for('date_modified')}
-        <div class="controls text-controls">
-        <span class="datetime">${value_for("date_modified")}</span>
+        <div class="controls">
+          <span class="form-control-static datetime">${value_for("date_modified")}</span>
         </div>
       </div>
       <div class="control-group">
@@ -155,8 +155,8 @@ $(document).ready(function(){
       <div class="control-group">
         ${label_for('owner')}
         <div class="controls">
-        ${owner_email_link}
-        <a py:if="owner_change_text" class="btn" href="${tg.url(owner_change)}?id=${id}">
+          <span class="form-control-static">${owner_email_link}</span>
+        <a py:if="owner_change_text" class="btn btn-mini" href="${tg.url(owner_change)}?id=${id}">
          <span py:content="owner_change_text"/>
         </a>
         <span py:if="not tg.identity.anonymous and system_actions is not None" py:strip="1">
@@ -167,8 +167,8 @@ $(document).ready(function(){
       <div class="control-group">
         ${label_for('user')}
         <div class="controls">
-        ${user_email_link}
-        <a py:if="user_change_text" class="btn" href="${tg.url(user_change)}?id=${id}">
+          <span class="form-control-static">${user_email_link}</span>
+        <a py:if="user_change_text" class="btn btn-mini" href="${tg.url(user_change)}?id=${id}">
          <span py:content="user_change_text"/>
         </a>
         <a py:if="running_job" href="${tg.url(running_job)}">
@@ -179,7 +179,7 @@ $(document).ready(function(){
       <div class="control-group">
         ${label_for('loaned')}
         <div class="controls" py:if="value">
-        <span id='loanee-name'>${value.get('loaned')}</span>
+        <span id='loanee-name' class="form-control-static">${value.get('loaned')}</span>
         <span py:strip="1" py:if="show_loan_options">
          ${loan_widget.display(value, comment=loan_comment)}
         </span>
@@ -195,7 +195,7 @@ $(document).ready(function(){
         ${label_for('cc')}
         <div class="controls">
         ${'; '.join(value_for("cc") or [])}
-        <a class="btn" href="${tg.url('/cc_change', system_id=id)}">Change</a>
+        <a class="btn btn-mini" href="${tg.url('/cc_change', system_id=id)}">Change</a>
         </div>
       </div>
     </div>

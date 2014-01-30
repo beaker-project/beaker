@@ -30,6 +30,7 @@ import turbogears
 from turbogears import config, url
 from turbogears.database import get_engine
 import socket
+import re
 
 log = logging.getLogger(__name__)
 
@@ -204,3 +205,14 @@ def run_createrepo(cwd=None):
         out, err = p.communicate()
     RepoCreate = namedtuple("RepoCreate", "command returncode out err")
     return RepoCreate(createrepo_command, p.returncode, out, err)
+
+
+# Validate FQDN for a system
+# http://stackoverflow.com/questions/1418423/_/1420225#1420225
+VALID_FQDN_REGEX = (r"^(?=.{1,255}$)[0-9A-Za-z]"
+     r"(?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z]"
+     r"(?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*\.?$")
+# do this at the global scope to avoid compiling it on every call
+regex_compiled = re.compile(VALID_FQDN_REGEX)
+def is_valid_fqdn(fqdn):
+    return regex_compiled.search(fqdn)

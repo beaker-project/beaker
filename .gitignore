@@ -19,6 +19,7 @@ LabController/build
 IntegrationTests/build
 documentation/_build
 documentation/man/bkr-*.rst
+documentation/man/subcommands.rst
 *.diff
 selenium.log
 /Tasks/distribution/beaker/dogfood/selenium-server-standalone-*.jar

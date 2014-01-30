@@ -147,3 +147,25 @@ class CSVExportTest(WebDriverTestCase):
         self.assertEquals(csv_rows[0]['update'], '')
         vals = csv_rows[0].values()
         self.assert_(vals.count('None') == 0)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=987157
+    # Export systems with id should export the system id
+    def test_export_systems_id(self):
+        with session.begin():
+            system = data_setup.create_system()
+        login(self.browser)
+        csv_request = self.get_csv('system_id')
+        csv_rows = [row for row in csv.DictReader(csv_request)
+                    if row['fqdn'] == system.fqdn]
+        self.assertEquals(csv_rows[0]['id'], str(system.id))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=987157
+    # Export systems with no id should not export the system id
+    def test_export_systems_noid(self):
+        with session.begin():
+            system = data_setup.create_system()
+        login(self.browser)
+        csv_request = self.get_csv('system')
+        csv_rows = [row for row in csv.DictReader(csv_request)
+                    if row['fqdn'] == system.fqdn]
+        self.assertNotIn('id', csv_rows[0].keys())

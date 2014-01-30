@@ -31,7 +31,10 @@ class CommandQueuePoller(ProxyHelper):
     def get_queued_commands(self):
         commands = self.hub.labcontrollers.get_queued_command_details()
         for command in commands:
-            if 'power' in command and 'passwd' in command['power']:
+            # The 'is not None' check is important as we do not want to
+            # stringify the None type
+            if 'power' in command and 'passwd' in command['power'] and \
+                    command['power']['passwd'] is not None:
                 command['power']['passwd'] = SensitiveUnicode(command['power']['passwd'])
         return commands
 

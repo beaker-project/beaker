@@ -1,0 +1,143 @@
+[    
+  OK     
+] Reached target Basic System.  
+         Starting firewalld - dynamic firewall daemon...  
+         Starting Dump dmesg to /var/log/dmesg...  
+         Starting Terminate Plymouth Boot Screen...  
+         Starting System Logging Service...  
+         Starting Wait for Plymouth Boot Screen to Quit...  
+[    
+  OK     
+] Started LVM2 metadata daemon.  
+ %G 
+  
+  [?1l >  
+  
+     
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+   
+[anaconda] 1:main* 2:shell  3:log  4:storage-log  5:program-log                   
+       
+      
+  
+      
+Starting installer, one moment...      
+  
+    
+ 
+      
+  
+ 
+anaconda 19.31.36-1 for Red Hat Enterprise Linux 7.0 (pre-release) started.      
+  
+      
+ 
+      
+  
+   
+The following problem occurred on line 356 of the kickstart file:     
+Unknown kickstart section: %psotasdf      
+  
+   
+      
+  
+      
+   
+Pane is dead  
+  
+ anaconda 19.31.36-1 for Red Hat Enterprise Linux 7.0 (pre-release) started.  
+ 
+The following problem occurred on line 356 of the kickstart file:  
+ 
+  
+ 
+Unknown kickstart section: %psotasdf  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+  
+ 
+   
+Pane is dead  
+   
+      
+  
+       
+[-- MARK -- Wed Jan 15 06:10:00 2014] 

@@ -16,7 +16,7 @@ lang en_US.UTF-8
 
 reboot
 #Root password
-rootpw --iscrypted 
+rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
 # SELinux configuration
 selinux --enforcing
 

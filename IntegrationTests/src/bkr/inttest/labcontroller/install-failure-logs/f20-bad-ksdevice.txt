@@ -1,0 +1,84 @@
+[    
+  OK     
+] Reached target Basic System.  
+[   15.921031] bnx2 0000:05:00.0 em1: using MSI 
+[   15.929604] IPv6: ADDRCONF(NETDEV_UP): em1: link is not ready 
+[   19.163379] bnx2 0000:05:00.0 em1: NIC Copper Link is Up, 1000 Mbps full duplex 
+[   19.164153]  
+[   19.180007] IPv6: ADDRCONF(NETDEV_CHANGE): em1: link becomes ready 
+[   21.784778] dracut-initqueue[544]: dhclient(626) is already running - exiting.  
+[   21.785548] dracut-initqueue[544]: This version of ISC DHCP is based on the release available  
+[   21.786349] dracut-initqueue[544]: on ftp.isc.org.  Features have been added and other changes  
+[   21.787403] dracut-initqueue[544]: have been made to the base software release in order to make  
+[   21.788494] dracut-initqueue[544]: it work better with this distribution.  
+[   21.789426] dracut-initqueue[544]: Please report for this software via the Red Hat Bugzilla site:  
+[   21.790417] dracut-initqueue[544]: http://bugzilla.redhat.com  
+[   21.791351] dracut-initqueue[544]: exiting.  
+[   22.416390] dracut-initqueue[544]: dhclient(626) is already running - exiting.  
+[   22.417126] dracut-initqueue[544]: This version of ISC DHCP is based on the release available  
+[   22.417773] dracut-initqueue[544]: on ftp.isc.org.  Features have been added and other changes  
+[   22.418410] dracut-initqueue[544]: have been made to the base software release in order to make  
+[   22.419039] dracut-initqueue[544]: it work better with this distribution.  
+[   22.419696] dracut-initqueue[544]: Please report for this software via the Red Hat Bugzilla site:  
+[   22.420386] dracut-initqueue[544]: http://bugzilla.redhat.com  
+[   22.420997] dracut-initqueue[544]: exiting.  
+[   22.459080] dracut-initqueue[544]: dhclient(626) is already running - exiting.  
+[   22.459754] dracut-initqueue[544]: This version of ISC DHCP is based on the release available  
+[   22.460416] dracut-initqueue[544]: on ftp.isc.org.  Features have been added and other changes  
+[   22.461049] dracut-initqueue[544]: have been made to the base software release in order to make  
+[   22.461666] dracut-initqueue[544]: it work better with this distribution.  
+[   22.462288] dracut-initqueue[544]: Please report for this software via the Red Hat Bugzilla site:  
+[   22.462902] dracut-initqueue[544]: http://bugzilla.redhat.com  
+[   22.463535] dracut-initqueue[544]: exiting.  
+[-- MARK -- Wed Jan 15 07:35:00 2014] 
+[  209.908433] dracut-initqueue[544]: Warning: Could not boot.  
+[    
+  OK     
+] Started Show Plymouth Boot Screen.  
+[    
+  OK     
+] Reached target Paths.  
+[    
+  OK     
+] Reached target Basic System.  
+[   21.784778] dracut-initqueue[544]: dhclient(626) is already running - exiting.  
+[   21.785548] dracut-initqueue[544]: This version of ISC DHCP is based on the release available  
+[   21.786349] dracut-initqueue[544]: on ftp.isc.org.  Features have been added and other changes  
+[   21.787403] dracut-initqueue[544]: have been made to the base software release in order to make  
+[   21.788494] dracut-initqueue[544]: it work better with this distribution.  
+[   21.789426] dracut-initqueue[544]: Please report for this software via the Red Hat Bugzilla site:  
+[   21.790417] dracut-initqueue[544]: http://bugzilla.redhat.com  
+[   21.791351] dracut-initqueue[544]: exiting.  
+[   22.416390] dracut-initqueue[544]: dhclient(626) is already running - exiting.  
+[   22.417126] dracut-initqueue[544]: This version of ISC DHCP is based on the release available  
+[   22.417773] dracut-initqueue[544]: on ftp.isc.org.  Features have been added and other changes  
+[   22.418410] dracut-initqueue[544]: have been made to the base software release in order to make  
+[   22.419039] dracut-initqueue[544]: it work better with this distribution.  
+[   22.419696] dracut-initqueue[544]: Please report for this software via the Red Hat Bugzilla site:  
+[   22.420386] dracut-initqueue[544]: http://bugzilla.redhat.com  
+[   22.420997] dracut-initqueue[544]: exiting.  
+[   22.459080] dracut-initqueue[544]: dhclient(626) is already running - exiting.  
+[   22.459754] dracut-initqueue[544]: This version of ISC DHCP is based on the release available  
+[   22.460416] dracut-initqueue[544]: on ftp.isc.org.  Features have been added and other changes  
+[   22.461049] dracut-initqueue[544]: have been made to the base software release in order to make  
+[   22.461666] dracut-initqueue[544]: it work better with this distribution.  
+[   22.462288] dracut-initqueue[544]: Please report for this software via the Red Hat Bugzilla site:  
+[   22.462902] dracut-initqueue[544]: http://bugzilla.redhat.com  
+[   22.463535] dracut-initqueue[544]: exiting.  
+[  209.908433] dracut-initqueue[544]: Warning: Could not boot.  
+[  210.314140] dracut-initqueue[544]: Warning: /dev/root does not exist 
+         Starting Dracut Emergency Shell... 
+Warning: /dev/root does not exist 
+ 
+Generating "/run/initramfs/rdsosreport.txt" 
+ 
+ 
+Entering emergency mode. Exit the shell to continue. 
+Type "journalctl" to view system logs. 
+You might want to save "/run/initramfs/rdsosreport.txt" to a USB stick or /boot 
+after mounting them and attach it to a bug report. 
+ 
+ 
+dracut:/# [-- MARK -- Wed Jan 15 07:40:00 2014] 
+[  599.080201] usb 1-1.2: reset high-speed USB device number 5 using ehci-pci 
+[-- MARK -- Wed Jan 15 07:45:00 2014] 

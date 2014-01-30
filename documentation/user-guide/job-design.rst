@@ -14,8 +14,11 @@ Access control for jobs
 When submitting a job, you can optionally submit it on behalf of a group, or on
 behalf of another user.
 
-By default the submitter is the only person who can modify the job (except for
-any member of any group the submitter belongs to; they can ack/nack the job).
+By default, members of any group the submitter belongs to can modify job
+attributes (retention tag, product, whiteboard, priority, ack/nak)
+and delete the job. This is configurable and in sites where this behaviour is
+disabled, only the submitter will have these permissions. The latter will
+likely be the default in future releases.
 However, when you submit a job on behalf of a group, members of that group have
 full control over the job.
 
