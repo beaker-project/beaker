@@ -552,17 +552,23 @@ Beaker 0.15.3
 
   * Version 0.7.0-1 of the Beah test harness has been released
 
-    * :issue:`810893`: in addition to supporting testing on IPv4 only
-      systems and dual IPv4/v6 systems with both stacks enabled, the beah
-      test harness now also supports testing on IPv6 only systems and dual
-      IPv4/v6 systems with the IPv4 support disabled.
+    * :issue:`810893`: In addition to supporting testing on IPv4 only
+      systems and dual IPv4/v6 systems with both stacks enabled, the ``beah``
+      test harness now also supports testing on dual IPv4/v6 systems
+      with the IPv4 support disabled. This feature currently has some
+      `known limitations
+      <http://beah.readthedocs.org/en/latest/admin.html#limitations>`__, but
+      any IPv6 testing issues not already listed in that section of the
+      ``beah`` documentation should now be reported as separate bugs against
+      the Beaker ``test harness`` component (previously, all such reports
+      would have been closed as duplicates of this RFE).
       (Contributed by Amit Saha)
 
     * :issue:`1054622`: beah no longer depends on python-simplejson when
       running on Fedora or Red Hat Enterprise Linux 6 or later.
       (Contributed by Amit Saha)
 
-    * the ``beah`` harness now has its own documentation on
+    * The ``beah`` harness now has its own documentation on
       `ReadTheDocs <http://beah.readthedocs.org>`__, in addition to the
       coverage of the task environment and development tools in the main
       Beaker documentation. (Contributed by Amit Saha)
@@ -577,22 +583,22 @@ Beaker 0.15.3
 
   * Version 3.4-2 of the ``/distribution/reservesys`` task has been released.
 
-    * :issue:`1055815`: /distribution/reservesys always sets a 0 return code
-      for improved interoperability with harnesses other than beah.
-      (Contributed by Nick Coghlan)
+    * :issue:`1055815`: ``/distribution/reservesys`` always sets a ``0``
+      return code for improved interoperability with harnesses other than
+      beah. (Contributed by Nick Coghlan)
 
   * Version 4.0-80 of the ``/distribution/virt/install`` task has been
     released.
 
     * :issue:`1048776`: Data in console logs on RHEL5 xen guests created by
-      /distribution/virt/install is no longer duplicated.
+      ``/distribution/virt/install`` is no longer duplicated.
       (Contributed by Jan Stancek)
 
   * Version 4.58-1 of the ``rhts`` test development and execution library has
     been released.
 
-    * :issue:`1026670`: rhts-db-submit-result now retrieves full traces for
-      dmesg failures delimited by lines containing ``[ cut here ]`` and
+    * :issue:`1026670`: ``rhts-db-submit-result`` now retrieves full traces
+      for dmesg failures delimited by lines containing ``[ cut here ]`` and
       ``end trace``. (Contributed by Amit Saha)
     * :issue:`1044913`: RPMs generated with ``make rpm`` or ``make bkradd``
       now include an additional "Provides:" entry that omits the git
@@ -618,9 +624,9 @@ Beaker 0.15.3
     failure monitoring (a future release of Beaker will allow these two
     settings to be configured independently). (Contributed by Dan Callaghan)
 
-  * :issue:`915272`: The new ``autopart`` ks_meta option allows the selection
-    of specific automatic partitioning schemes in recent versions of Anaconda.
-    (Contributed by Amit Saha)
+  * :issue:`915272`: The new ``autopart_type`` ks_meta option allows the
+    selection of specific automatic partitioning schemes in recent versions
+    of Anaconda. (Contributed by Amit Saha)
 
   * :issue:`1055753`: ``/etc/rc.d/init.d/anamon`` and
     ``/usr/local/sbin/anamon`` now have the correct SELinux context on
@@ -633,8 +639,8 @@ Beaker 0.15.3
 * System management updates
 
   * :issue:`986177`: The new ``beaker-create-kickstart`` command-line tool
-    allows Beaker administrators to debug new kickstart templates and
-    snippets without needing to reprovision systems.
+    allows Beaker administrators to create and debug new kickstart templates
+    and snippets without needing to reprovision systems.
     (Contributed by Raymond Mancy)
 
   * :issue:`987157`: System records exported from Beaker as CSV files now
@@ -651,14 +657,14 @@ Beaker 0.15.3
 
   * :issue:`1052043`: The CSS for the system page has been adjusted to
     improve readability. (Contributed by Dan Callaghan)
-  * :issue:`1040226`: beaker-sync-tasks no longer logs in when it doesn't
+  * :issue:`1040226`: ``beaker-sync-tasks`` no longer logs in when it doesn't
     need to. (Contributed by Amit Saha)
   * :issue:`1022776`: The 'Job Design' section of the docs now correctly
     describes the availability and impact of the legacy permissions setting.
     (Contributed by Raymond Mancy)
-  * :issue:`1043787`: the whiteboard select field on the Job Matrix Report
+  * :issue:`1043787`: The whiteboard select field on the Job Matrix Report
     page is now wider to improve readability. (Contributed by Dan Callaghan)
-  * :issue:`975486`: beaker-watchdog will now detect a panic even when it
+  * :issue:`975486`: ``beaker-watchdog`` will now detect a panic even when it
     crosses block boundaries. (Contributed by Dan Callaghan)
   * :issue:`1040299`: Changes to a group’s root password via the webUI are now
     visible in the activity page. (Contributed by Amit Saha)
@@ -666,7 +672,7 @@ Beaker 0.15.3
     now gives an appropriate error message. (Contributed by Amit Saha)
   * :issue:`978661`: 'Root Password Expiry' is now consistently displayed on
     the preferences page.
-  * :issue:`1043390`: user typeaheads now work on the user page.
+  * :issue:`1043390`: User typeaheads now work on the user page.
     (Contributed by Dan Callaghan)
   * :issue:`979277`: The formatting requirements for Beaker CSV imports are
     now documented and linked from the main web interface.
@@ -683,15 +689,15 @@ Beaker 0.15.3
     (Contributed by Dan Callaghan)
   * :issue:`1022333`: A previously specified product association may now be
     removed from a recipe set. (Contributed by Dan Callaghan)
-  * :issue:`877344`: bkr job-modify can now remove the product association
+  * :issue:`877344`: ``bkr job-modify`` can now remove the product association
     from a recipe set. (Contributed by Dan Callaghan)
   * :issue:`1037878`: Importing a system via CSV now fully validates the
     imported data. (Contributed by Amit Saha)
   * :issue:`1021738`: Server can no longer ever report None for a system FQDN.
     (Contributed by Amit Saha)
-  * :issue:`1034271`: beaker-client no longer depends on python-simplejson on
-    platforms with a sufficiently recent version of Python.
-    (Contributed by Dan Callaghan)
+  * :issue:`1034271`: ``beaker-client`` no longer depends on
+    ``python-simplejson`` on platforms with a sufficiently recent version
+    of Python. (Contributed by Dan Callaghan)
 
 .. Skip reporting:
 
