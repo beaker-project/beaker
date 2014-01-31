@@ -648,9 +648,10 @@ Beaker 0.15.3
     by changing the FQDN column and reimporting the file.
     (Contributed by Amit Saha)
 
-  * :issue:`1037592`: Details of the current machine user, loan owner and
-    running recipe (if any) are now included in the output of
-    ``bkr system-details``. (Contributed by Raymond Mancy)
+  * :issue:`1037592`: The new ``bkr system-status`` command provides command
+    line access to the details of the current machine user, loan recipient
+    and running recipe (if any), as well as its current condition (Automated,
+    Manual, Broken, Removed). (Contributed by Raymond Mancy)
 
 
 * Other updates
