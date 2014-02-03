@@ -1,3 +1,6 @@
+
+.. _customizing-power-commands:
+
 Customizing power commands
 ==========================
 

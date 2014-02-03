@@ -4,10 +4,6 @@ Upgrading to Beaker 0.11
 These notes describe the steps needed to upgrade your Beaker installation from 
 version 0.10 to version 0.11.
 
-For older upgrade instructions, refer to the obsolete `SchemaUpgrades directory 
-<http://git.beaker-project.org/cgit/beaker/tree/SchemaUpgrades/>`_ in Beaker's 
-source tree.
-
 
 Database changes
 ++++++++++++++++
