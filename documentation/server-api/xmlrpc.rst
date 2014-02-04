@@ -12,6 +12,7 @@ The XML-RPC endpoint URL is ``/RPC2`` (relative to the base URL of the Beaker se
 Beaker uses XML-RPC internally for communication between the lab 
 controller and the server. The internal API is not documented here.
 
+.. _Kobo: https://fedorahosted.org/kobo/
 
 
 Authentication
