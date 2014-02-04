@@ -1,0 +1,73 @@
+05:47:58,032 INFO    : Running anaconda script /usr/bin/anaconda 
+ [?25h [?0c [1;46H [0;10m [37m [44m [K [24;1H [40m [0;10m [39;49m  [K Running an 
+aconda 13.21.215, the Red Hat Enterprise Linux system installer - please wait. 
+05:47:58,631 DEBUG   : registered device format class DiskLabel as disklabel 
+05:47:58,632 DEBUG   : registered device format class DMRaidMember as dmraidmemb 
+er 
+05:47:58,769 DEBUG   : registered device format class Ext2FS as ext2 
+05:47:58,769 DEBUG   : registered device format class Ext3FS as ext3 
+05:47:58,769 DEBUG   : registered device format class Ext4FS as ext4 
+05:47:58,769 DEBUG   : registered device format class FATFS as vfat 
+05:47:58,770 DEBUG   : registered device format class EFIFS as efi 
+05:47:58,770 DEBUG   : registered device format class BTRFS as btrfs 
+05:47:58,770 DEBUG   : registered device format class GFS2 as gfs2 
+05:47:58,770 DEBUG   : registered device format class JFS as jfs 
+05:47:58,770 DEBUG   : registered device format class ReiserFS as reiserfs 
+05:47:58,770 DEBUG   : registered device format class XFS as xfs 
+05:47:58,770 DEBUG   : registered device format class HFS as hfs 
+05:47:58,770 DEBUG   : registered device format class AppleBootstrapFS as appleb 
+oot 
+05:47:58,770 DEBUG   : registered device format class HFSPlus as hfs+ 
+05:47:58,770 DEBUG   : registered device format class NTFS as ntfs 
+05:47:58,770 DEBUG   : registered device format class NFS as nfs 
+05:47:58,771 DEBUG   : registered device format class NFSv4 as nfs4 
+05:47:58,771 DEBUG   : registered device format class Iso9660FS as iso9660 
+05:47:58,771 DEBUG   : registered device format class NoDevFS as nodev 
+05:47:58,771 DEBUG   : registered device format class DevPtsFS as devpts 
+05:47:58,771 DEBUG   : registered device format class ProcFS as proc 
+05:47:58,771 DEBUG   : registered device format class SysFS as sysfs 
+05:47:58,771 DEBUG   : registered device format class TmpFS as tmpfs 
+05:47:58,771 DEBUG   : registered device format class BindFS as bind 
+05:47:58,787 DEBUG   : registered device format class LUKS as luks 
+05:47:58,788 DEBUG   : registered device format class LVMPhysicalVolume as lvmpv 
+ 
+05:47:58,789 DEBUG   : registered device format class MDRaidMember as mdmember 
+05:47:58,790 DEBUG   : registered device format class MultipathMember as multipa 
+th_member 
+05:47:58,790 DEBUG   : registered device format class PPCPRePBoot as prepboot 
+05:47:58,792 DEBUG   : registered device format class SwapSpace as swap 
+The following error was found while parsing the kickstart configuration file: 
+ 
+There was a problem reading from line 317 of the kickstart file 
+about to exec shutdown 
+terminating anaconda...done 
+sending termination signals...audit: *NO* daemon at audit_pid=1111 
+audit: auditd dissapeared 
+ 
+NOTICE nm-dispatcher.action: Caught signal 15, shutting down... 
+ERR kernel:audit: *NO* daemon at audit_pid=1111 
+WARNING kernel:audit: audit_lost=1 audit_rate_limit=0 audit_backlog_limit=64 
+ERR kernel:audit: auditd dissapeared 
+ERR kernel: 
+NOTICE kernel:type=2404 audit(1389764880.030:4): user pid=497 uid=0 auid=4294967 
+295 ses=4294967295 subj=system_u:system_r:kernel_t:s0 msg='op=destroy kind=serve 
+r fp=b1:65:81:f0:03:52:c2:d2:37:9f:6e:55:39:0a:d8:7a direction=? spid=497 suid=0 
+  exe="/sbin/sshd" hostname=? addr=? terminal=? res=success' 
+WARNING NetworkManager: <warn> disconnected by the system bus. 
+WARNING NetworkManager: no sender 
+done 
+sending kill signals... 
+done 
+disabling swap... 
+unmounting filesystems... 
+ /mnt/runtime umount failed (16) 
+ disabling /dev/loop0 LOOP_CLR_FD failed: 16 
+ /dev/pts done 
+waiting for mdraid sets to become clean... 
+halting system 
+01: HCPGSP2629I The virtual machine is placed in CP mode due to a SIGP stop from 
+ CPU 00. 
+00: HCPGSP2629I The virtual machine is placed in CP mode due to a SIGP stop from 
+ CPU 00. 
+[-- MARK -- Wed Jan 15 05:50:00 2014] 
+[-- MARK -- Wed Jan 15 05:55:00 2014] 

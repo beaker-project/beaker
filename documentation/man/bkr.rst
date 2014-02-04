@@ -233,7 +233,11 @@ Options for job configuration:
 
 .. option:: --ignore-panic 
 
-   Do not abort job if panic message appears on serial console.
+   Disable kernel panic detection and install failure detection for the recipe. 
+   By default if a kernel panic appears on the serial console, or a fatal 
+   installer error appears during installation, the recipe is aborted. When 
+   this option is given, the messages are ignored and the recipe is not 
+   aborted.
 
 .. option:: --cc <email>
 

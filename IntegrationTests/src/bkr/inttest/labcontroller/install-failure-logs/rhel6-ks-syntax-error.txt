@@ -1,0 +1,71 @@
+Freeing unused kernel memory: 1588k freed 
+ [9;0] [8] 
+Greetings. 
+anaconda installer init version 13.21.215 starting 
+mounting /proc filesystem... done 
+creating /dev filesystem... done 
+starting udev...done 
+mounting /dev/pts (unix98 pty) filesystem... done 
+mounting /sys filesystem... done 
+anaconda installer init version 13.21.215 using a serial console 
+trying to remount root filesystem read write... done 
+mounting /tmp as tmpfs... done 
+running install... 
+running /sbin/loader 
+ %Gdetecting hardware... 
+waiting for hardware to initialize... 
+detecting hardware... 
+waiting for hardware to initialize... 
+      
+ (B )0      
+  
+  
+     
+Welcome to Red Hat Enterprise Linux for x86_64       
+┌───────────────────────────────────────────────────────┐       
+│    
+│       
+│ Waiting for NetworkManager to configure eth0.   
+│       
+│    
+│       
+└───────────────────────────────────────────────────────┘      
+<Tab>/<Alt-Tab> between elements  | <Space> selects | <F12> next screen       
+       
+                                                                            
+                                                                            
+                                                                            
+                                                                            
+                                                                            
+     
+┌────────────────────────────┤ Retrieving ├────────────────────────────┐      
+│    
+│      
+│ Retrieving /3184...    
+│      
+│    
+│      
+│                                   0%                                 │      
+│    
+│      
+└──────────────────────────────────────────────────────────────────────┘       
+      
+                              100%                                        
+     
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+      
+  
+                                                                                 Running anaconda 13.21.215, the Red Hat Enterprise Linux system installer - please wait. 
+The following error was found while parsing the kickstart configuration file: 
+ 
+There was a problem reading from line 354 of the kickstart file 
+install exited abnormally [1/1]  
+The system will be rebooted when you press Ctrl-C or Ctrl-Alt-Delete. 
+[-- MARK -- Fri Jan 17 02:10:00 2014] 
+[-- MARK -- Fri Jan 17 02:15:00 2014] 

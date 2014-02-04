@@ -12,12 +12,13 @@ def get_compose_layout():
 
 setup(
     name='bkr.inttest',
-    version='0.15.2',
+    version='0.15.3',
     packages=find_packages('src'),
     package_dir={'': 'src'},
     package_data={'': [
         '*.xml',
         '*.ldif',
+        'labcontroller/install-failure-logs/*',
         'server/kickstarts/*',
         'server/motd.xml',
         'server/selenium/*.csv',

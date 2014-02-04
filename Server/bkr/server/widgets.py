@@ -1431,7 +1431,7 @@ class SystemForm(Form):
         else:
             property_value = getattr(value, item, None)
 
-        span = Element('span', {'class': 'uneditable-input'})
+        span = Element('span', {'class': 'form-control-static'})
         if property_value is not None:
             span.text = unicode(property_value)
         return span

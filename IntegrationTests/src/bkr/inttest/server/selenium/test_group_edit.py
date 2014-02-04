@@ -160,6 +160,28 @@ class TestGroupsWD(WebDriverTestCase):
         clear_pass = b.find_element_by_xpath('//input[@id="Group_root_password"]').get_attribute('value')
         self.assertEquals(clear_pass, self.clear_password)
 
+        # check if the change has been recorded in the acitivity table
+        with session.begin():
+            self.assertEquals(self.group.activity[-1].action, u'Changed')
+            self.assertEquals(self.group.activity[-1].field_name, u'Root Password')
+            self.assertEquals(self.group.activity[-1].old_value, '*****')
+            self.assertEquals(self.group.activity[-1].new_value, '*****')
+            self.assertEquals(self.group.activity[-1].service, u'WEBUI')
+
+        # no change should be recorded if the same password is supplied
+        group_activities = len([x for x in self.group.activity if
+                                x.field_name == 'Root Password'])
+        self._make_and_go_to_owner_page(self.user, self.group)
+        e = b.find_element_by_xpath('//input[@id="Group_root_password"]')
+        e.clear()
+        e.send_keys(clear_pass)
+        b.find_element_by_id('Group').submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                          u'OK')
+        session.refresh(self.group)
+        self.assertEquals(group_activities, len([x for x in self.group.activity if
+                                                 x.field_name == 'Root Password']))
+
     #https://bugzilla.redhat.com/show_bug.cgi?id=1020091
     def test_password_visibility_members(self):
         b = self.browser

@@ -1,0 +1,55 @@
+Freeing unused kernel memory: 464kB freed 
+ [9;0] [8] 
+Greetings. 
+anaconda installer init version 11.1.2.263 starting 
+mounting /proc filesystem... done 
+creating /dev filesystem... done 
+mounting /dev/pts (unix98 pty) filesystem... done 
+mounting /sys filesystem... done 
+anaconda installer init version 11.1.2.263 using a serial console 
+trying to remount root filesystem read write... done 
+mounting /tmp as ramfs... done 
+running install... 
+running /sbin/loader 
+ %G----------------------------------+        
+                                                 
+       
+                                                 
+                                                  
+                                                  
+                                                  
+                                                  
+                                                 
+       
++--------+ Loading SCSI driver +---------+       
+|                                        |        
+| Loading ata_piix driver...             |        
+|                                        |        
++----------------------------------------+        
+                                                 
+       
+                                                 
+                                                  
+                                                  
+                                                  
+                                                  
+                                                 
+     
++-----------------------+ Networking Device +------------------------+     
+|                                                                    |      
+| You have multiple network devices on this system. Which            |      
+| would you like to install through?                                 |      
+|                                                                    |       
+| eth0 - Intel Corporation 82557/8/9/0/1 Ethernet Pro 100            |       
+| eth1 - Intel Corporation 80003ES2LAN Gigabit Ethernet Controlle... |       
+| eth2 - Intel Corporation 80003ES2LAN Gigabit Ethernet Controlle... |       
+|                                                                    |       
+|       +----+              +----------+             +------+        |       
+|       | OK |              | Identify |             | Back |        |       
+|       +----+              +----------+             +------+        |       
+|                                                                    |       
+|                                                                    |       
++--------------------------------------------------------------------+       
+                                                                            
+[-- MARK -- Wed Jan 15 05:20:00 2014] 
+[-- MARK -- Wed Jan 15 05:25:00 2014] 

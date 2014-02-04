@@ -1,0 +1,246 @@
+nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-6.2/Server/x86_64/os/
+#url --url=nfs://lab.test-kickstart.invalid:/distros/RHEL-6.2/Server/x86_64/os/
+
+key --skip
+
+# System bootloader configuration
+bootloader --location=mbr
+cmdline
+
+# no specific network configuration
+firewall --disabled
+# System keyboard
+keyboard us
+# System language
+lang en_US.UTF-8
+
+reboot
+#Root password
+rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
+# SELinux configuration
+selinux --enforcing
+
+# Configure the X Window System
+xconfig --startxonboot
+
+# System timezone
+timezone America/New_York
+# Install OS instead of upgrade
+install
+
+repo --name=beaker-HighAvailability --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/HighAvailability
+repo --name=beaker-LoadBalancer --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/LoadBalancer
+repo --name=beaker-optional-x86_64-os --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/os
+repo --name=beaker-ResilientStorage --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ResilientStorage
+repo --name=beaker-ScalableFileSystem --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ScalableFileSystem
+repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/debug
+repo --name=beaker-optional-x86_64-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/debug
+repo --name=beaker-Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/Server
+zerombr
+clearpart --all --initlabel
+
+autopart
+# no snippet data for RedHatEnterpriseLinux6
+# no snippet data for system
+
+
+%packages --ignoremissing --default
+# no snippet data for packages
+%end
+
+
+%pre --log=/dev/console
+set -x
+
+# no snippet data for RedHatEnterpriseLinux6_pre
+# no snippet data for system_pre
+%end
+
+%post --log=/dev/console
+set -x
+# Check in with Beaker Server, let it know our hostname, and
+# record our install time.
+REPORTED_FQDN=$(hostname -f)
+if [[ -z "$REPORTED_FQDN" || $REPORTED_FQDN == localhost || $REPORTED_FQDN == localhost.* ]] ; then
+    # hostname -f is the most future-proof approach, but it isn't always reliable
+    if [ -f /etc/hostname ] ; then
+        # Preferred fallback if the OS is recent enough to provide it
+        REPORTED_FQDN=$(cat /etc/hostname)
+    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
+        # Last resort fallback to try to report something sensible
+        REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
+    fi
+fi
+curl http://lab.test-kickstart.invalid:8000/install_done//$REPORTED_FQDN
+
+curl http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
+
+# If netboot_method= is found in /proc/cmdline record it to /root
+netboot_method=$(perl -n -e'/netboot_method=([^\s]+)/ && print $1' /proc/cmdline)
+if [ -n "$netboot_method" ]; then
+echo $netboot_method >/root/NETBOOT_METHOD.TXT
+fi
+
+# Enable post-install boot notification
+# readahead conflicts with auditd, see bug 561486 for detailed explanation.
+
+cat << EOF >>/etc/sysconfig/readahead
+
+# readahead conflicts with auditd, see bug 561486 for detailed explanation.
+#
+# Should a task need to change these settings, it must revert to this state
+# when test is done.
+
+READAHEAD_COLLECT="no"
+READAHEAD_COLLECT_ON_RPM="no"
+
+EOF
+
+if [ -e /etc/sysconfig/ntpdate ] ; then
+    /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
+fi
+if [ -e "/etc/sysconfig/ntpd" ]; then
+    /sbin/chkconfig ntpd on >/dev/null 2>&1 || :
+    GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
+
+    if [ -z "$GOT_G" ]; then
+        /bin/sed -i -r 's/(^OPTIONS\s*=\s*)(['\''|"])(.+)$/\1\2\-x \3 /' /etc/sysconfig/ntpd
+    fi
+fi
+if [ -e /etc/chrony.conf ] ; then
+    cp /etc/chrony.conf{,.orig}
+    # use only DHCP-provided time servers, no default pool servers
+    sed -i '/^server /d' /etc/chrony.conf
+    cp /etc/sysconfig/network{,.orig}
+    # setting iburst should speed up initial sync
+    # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
+    echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
+    /sbin/chkconfig ntpd off >/dev/null 2>&1 || :
+    /sbin/chkconfig ntpdate off >/dev/null 2>&1 || :
+fi
+
+
+if efibootmgr &>/dev/null ; then
+    # The installer should have added a new boot entry for the OS
+    # at the top of the boot order. We move it to the end of the order
+    # and set it as BootNext instead.
+    boot_order=$(efibootmgr | awk '/BootOrder/ { print $2 }')
+    os_boot_entry=$(cut -d, -f1 <<<"$boot_order")
+    new_boot_order=$(cut -d, -f2- <<<"$boot_order"),"$os_boot_entry"
+    efibootmgr -o "$new_boot_order"
+    efibootmgr -n "$os_boot_entry"
+    # save the boot entry for later, so that rhts-reboot can set BootNext as well
+    echo "$os_boot_entry" >/root/EFI_BOOT_ENTRY.TXT
+fi
+
+
+
+#Add Task Repo
+
+
+# Add Harness Repo
+
+# Add distro and custom Repos
+cat <<"EOF" >/etc/yum.repos.d/beaker-HighAvailability.repo
+[beaker-HighAvailability]
+name=beaker-HighAvailability
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/HighAvailability
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-LoadBalancer.repo
+[beaker-LoadBalancer]
+name=beaker-LoadBalancer
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/LoadBalancer
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-optional-x86_64-os.repo
+[beaker-optional-x86_64-os]
+name=beaker-optional-x86_64-os
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/os
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-ResilientStorage.repo
+[beaker-ResilientStorage]
+name=beaker-ResilientStorage
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ResilientStorage
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-ScalableFileSystem.repo
+[beaker-ScalableFileSystem]
+name=beaker-ScalableFileSystem
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ScalableFileSystem
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-debug.repo
+[beaker-debug]
+name=beaker-debug
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/debug
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-optional-x86_64-debug.repo
+[beaker-optional-x86_64-debug]
+name=beaker-optional-x86_64-debug
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/debug
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+cat <<"EOF" >/etc/yum.repos.d/beaker-Server.repo
+[beaker-Server]
+name=beaker-Server
+baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/Server
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+
+
+# fill the yum cache and redirect output to /dev/null
+# This speeds up yum because of a bug where it will update stdout too often.
+# http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
+yum check-update > /dev/null 2>&1 || true
+
+#Add test user account
+useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
+cat <<"EOF" >/etc/profile.d/beaker.sh
+export BEAKER="@BEAKER@"
+export BEAKER_JOB_WHITEBOARD=''
+export BEAKER_RECIPE_WHITEBOARD=''
+EOF
+cat <<"EOF" >/etc/profile.d/beaker.csh
+setenv BEAKER "@BEAKER@"
+setenv BEAKER_JOB_WHITEBOARD ''
+setenv BEAKER_RECIPE_WHITEBOARD ''
+EOF
+cat << EOF > /etc/profile.d/rh-env.sh
+export LAB_CONTROLLER=lab.test-kickstart.invalid
+export DUMPSERVER=
+#export NFSSERVERS="RHEL3,fqdn:path RHEL4,fqdn:path RHEL5,fqdn:path RHEL6,fqdn:path NETAPP,fqdn:path SOLARIS,fqdn:path"
+export LOOKASIDE=
+export BUILDURL=
+EOF
+cat << EOF > /etc/profile.d/rh-env.csh
+setenv LAB_CONTROLLER lab.test-kickstart.invalid
+setenv DUMPSERVER 
+#setenv NFSSERVERS "RHEL3,fqdn:path RHEL4,fqdn:path RHEL5,fqdn:path RHEL6,fqdn:path NETAPP,fqdn:path SOLARIS,fqdn:path"
+setenv LOOKASIDE 
+setenv BUILDURL 
+EOF
+# no snippet data for RedHatEnterpriseLinux6_post
+# no snippet data for system_post
+%end
+
+
+

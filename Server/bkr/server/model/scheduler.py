@@ -2001,6 +2001,19 @@ class Recipe(TaskBase):
         recipe.appendChild(watchdog)
         if self.resource and self.resource.fqdn and not clone:
             recipe.setAttribute("system", "%s" % self.resource.fqdn)
+        if not clone:
+            installation = xmldoc.createElement('installation')
+            if self.resource:
+                if self.resource.install_started:
+                    installation.setAttribute('install_started',
+                            self.resource.install_started.strftime('%Y-%m-%d %H:%M:%S'))
+                if self.resource.install_finished:
+                    installation.setAttribute('install_finished',
+                            self.resource.install_finished.strftime('%Y-%m-%d %H:%M:%S'))
+                if self.resource.postinstall_finished:
+                    installation.setAttribute('postinstall_finished',
+                            self.resource.postinstall_finished.strftime('%Y-%m-%d %H:%M:%S'))
+            recipe.appendChild(installation)
         packages = xmldoc.createElement("packages")
         if self.custom_packages:
             for package in self.custom_packages:

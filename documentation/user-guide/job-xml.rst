@@ -154,6 +154,13 @@ You can use any text you like for the name attribute.
         </recipeSet>
     </job>
 
+By default the Beaker watchdog will abort a recipe if it detects a kernel panic 
+message on the system's console. It will also abort the recipe if it detects 
+a fatal installer error during the installation. You can control this behaviour 
+using the ``<watchdog/>`` element. If you want to disable panic detection, for 
+example because your tests are expecting to trigger a kernel panic, add an 
+attribute ``panic="ignore"`` to the ``<watchdog/>`` element.
+
 To actually determine what distro will be installed, the
 ``<distroRequires/>`` needs to be populated. Within, we can specify such
 things as as ``<distro_arch/>``, ``<distro_name/>`` and

@@ -106,7 +106,9 @@ curl -R "http://lab.test-kickstart.invalid/beaker/anamon" -o /usr/local/sbin/ana
 curl -R "http://lab.test-kickstart.invalid/beaker/anamon.init" -o /etc/rc.d/init.d/anamon
 
 chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
-test -d /selinux && restorecon /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+if selinuxenabled &>/dev/null ; then
+    restorecon /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+fi
 
 chkconfig --add anamon
 

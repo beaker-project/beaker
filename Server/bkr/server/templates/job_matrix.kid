@@ -28,9 +28,9 @@ $(document).ready( function() {
 
 
 </script>
-<div style='padding-left:2em'>
+<div class="job-matrix">
 <form action='${tg.url(action)}' name="${name}">   
-     <div style='float:left'> 
+     <div class="whiteboard-selector">
     
          <h3 style="display:inline"> ${whiteboard.label}</h3><br />
          <div onclick="javascript:matrix.clicked_whiteboard()" py:content="whiteboard.display(options=whiteboard_options)" />

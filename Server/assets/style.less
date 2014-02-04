@@ -54,9 +54,11 @@ td form, td input, td select {
     }
 }
 
-// Use <div class="controls text-controls" /> if you have only 
-// regular text, not form controls.
-.text-controls {
+// Use <span class="form-control-static"> instead of an <input/>, if you just 
+// have a static value.
+// This is in Bootstrap 3.
+.form-control-static {
+    display: inline-block;
     padding-top: 5px; // corresponds to .control-label
 }
 
@@ -113,3 +115,4 @@ td form, td input, td select {
 @import "recipe-tasks.less";
 @import "reserve-workflow.less";
 @import "job-matrix.less";
+@import "system.less";

@@ -1,10 +1,14 @@
 
+# vim: set fileencoding=utf-8 :
+
 import os, os.path
 import time
+import pkg_resources
 from turbogears.database import session
 from bkr.common.helpers import makedirs_ignore
 from bkr.labcontroller.config import get_conf
-from bkr.server.model import LogRecipe, TaskResult
+from bkr.labcontroller.proxy import ConsoleWatchFile, InstallFailureDetector
+from bkr.server.model import LogRecipe, TaskResult, TaskStatus
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.labcontroller import LabControllerTestCase
@@ -25,9 +29,13 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
         self.cached_console_log = os.path.join(get_conf().get('CACHEPATH'), 'recipes',
                 str(self.recipe.id // 1000) + '+', str(self.recipe.id), 'console.log')
 
-    def check_recipe_task_result(self, task_result, result_type):
+    def assert_panic_detected(self, message):
         with session.begin():
-            return task_result.result == result_type
+            self.assertEquals(len(self.recipe.tasks[0].results), 1)
+            self.assertEquals(self.recipe.tasks[0].results[0].result,
+                    TaskResult.panic)
+            self.assertEquals(self.recipe.tasks[0].results[0].log,
+                    message)
 
     def check_console_log_registered(self):
         with session.begin():
@@ -53,11 +61,7 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
         open(self.console_log, 'w').write('Oops\n')
         wait_for_condition(self.check_console_log_registered)
         wait_for_condition(lambda: self.check_cached_log_contents('Oops\n'))
-        session.expire_all()
-        with session.begin():
-            self.assertEquals(len(self.recipe.tasks[0].results), 1)
-        self.check_recipe_task_result(self.recipe.tasks[0].results[0],
-            TaskResult.panic)
+        self.assert_panic_detected(u'Oops')
 
         # Now check our kill_time
         session.expire_all()
@@ -75,6 +79,70 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
             # Ensure that our kill time has not been extended again!
             kill_time2 = self.recipe.watchdog.kill_time
         self.assertEquals(kill_time1, kill_time2)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=975486
+    def test_panic_across_chunk_boundaries_is_detected(self):
+        # Write some junk followed by a panic string. The panic string will be 
+        # split across the chunk boundary.
+        junk = 'z' * (ConsoleWatchFile.blocksize - 10) + '\n'
+        panic = 'Kernel panic - not syncing: Fatal exception in interrupt\n'
+        with open(self.console_log, 'w') as f:
+            f.write(junk + panic)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(junk + panic))
+        self.assert_panic_detected(u'Kernel panic')
+
+    def test_incomplete_lines_not_buffered_forever(self):
+        # The panic detection is only applied to complete lines (terminated 
+        # with \n) but if for some reason we get a huge amount of output with 
+        # no newlines we need to give up at some point and check the incomplete 
+        # line. Otherwise in pathological cases we will end up consuming large 
+        # amounts of memory.
+        # The actual breakpoint used in the code (2*blocksize) is arbitrary, 
+        # not chosen for any particularly good reason.
+        long_panic_line = 'z' * (ConsoleWatchFile.blocksize - 10) + \
+                'Kernel panic - not syncing: Fatal exception in interrupt ' + \
+                'y' * (ConsoleWatchFile.blocksize + 100)
+        with open(self.console_log, 'w') as f:
+            f.write(long_panic_line)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(long_panic_line))
+        self.assert_panic_detected(u'Kernel panic')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=952661
+    def test_install_failure_is_detected(self):
+        anaconda_failure = "Press 'OK' to reboot your system.\n"
+        open(self.console_log, 'w').write(anaconda_failure)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(anaconda_failure))
+        with session.begin():
+            task = self.recipe.tasks[0]
+            session.refresh(task)
+            self.assertEquals(task.status, TaskStatus.aborted)
+            self.assertEquals(len(task.results), 2)
+            # first one is the install failure message
+            self.assertEquals(task.results[0].result, TaskResult.fail)
+            self.assertEquals(task.results[0].log, anaconda_failure.strip())
+            # second one is the abort message which is added to all tasks
+            self.assertEquals(task.results[1].result, TaskResult.warn)
+            self.assertEquals(task.results[1].log, 'Installation failed')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=952661
+    def test_install_failure_is_not_reported_after_installation_is_finished(self):
+        anaconda_success = 'blah blah installing... done\n'
+        open(self.console_log, 'w').write(anaconda_success)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(anaconda_success))
+        with session.begin():
+            data_setup.mark_recipe_installation_finished(self.recipe)
+        anaconda_failure = "Press 'OK' to reboot your system.\n"
+        open(self.console_log, 'a').write(anaconda_failure)
+        wait_for_condition(lambda: self.check_cached_log_contents(
+                anaconda_success + anaconda_failure))
+        with session.begin():
+            task = self.recipe.tasks[0]
+            session.refresh(task)
+            self.assertEquals(task.status, TaskStatus.running)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=962901
     def test_console_log_not_recreated_after_removed(self):
@@ -116,3 +184,39 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
             self.assertEquals(LogRecipe.query.filter_by(parent=self.recipe,
                     filename=u'console.log').one().server,
                     u'http://elsewhere')
+
+    def test_control_characters_are_substituted(self):
+        raw_line = 'Here is some badness: \x00\x07\x08\x7f.\n'
+        substituted_line = 'Here is some badness:     .\n'
+        open(self.console_log, 'w').write(raw_line)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(substituted_line))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1054035
+    def test_utf8_not_mangled(self):
+        # The characters we really care about are the box drawing ones used by 
+        # Anaconda, but the bug actually affects a wide range of characters, so 
+        # we test an assortment of ones that might appear.
+        line = u'┌───┤ Uničode röcks! аяяй 幸せ\n'.encode('utf8')
+        open(self.console_log, 'w').write(line)
+        wait_for_condition(self.check_console_log_registered)
+        wait_for_condition(lambda: self.check_cached_log_contents(line))
+
+
+# These cases are really unit tests but they are here because I don't want to 
+# ship all these failure logs in the beaker-lab-controller package.
+
+def test_anaconda_failure_samples():
+    for filename in pkg_resources.resource_listdir('bkr.inttest.labcontroller',
+            'install-failure-logs'):
+        yield check_anaconda_failure_sample, filename
+
+def check_anaconda_failure_sample(filename):
+    log = pkg_resources.resource_string('bkr.inttest.labcontroller',
+            'install-failure-logs/' + filename)
+    detector = InstallFailureDetector()
+    for line in log.splitlines():
+        failure_found = detector.feed(line)
+        if failure_found:
+            return
+    raise AssertionError('No failure found')

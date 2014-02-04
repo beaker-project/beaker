@@ -1,0 +1,65 @@
+[    
+  OK     
+] Started dracut pre-trigger hook. 
+         Starting udev Coldplug all Devices... 
+[    
+  OK     
+] Started udev Coldplug all Devices. 
+         Starting dracut initqueue hook... 
+         Starting Show Plymouth Boot Screen... 
+[    
+  OK     
+] Reached target System Initialization. 
+[    
+  OK     
+] Started Show Plymouth Boot Screen.  
+[    
+  OK     
+] Reached target Paths.  
+[    
+  OK     
+] Reached target Basic System.  
+[-- MARK -- Wed Jan 15 06:20:00 2014] 
+dracut-initqueue[527]: dhclient(596) is already running - exiting.  
+dracut-initqueue[527]: This version of ISC DHCP is based on the release available  
+dracut-initqueue[527]: on ftp.isc.org.  Features have been added and other changes  
+dracut-initqueue[527]: have been made to the base software release in order to make  
+dracut-initqueue[527]: it work better with this distribution.  
+dracut-initqueue[527]: Please report for this software via the Red Hat Bugzilla site:  
+dracut-initqueue[527]: http://bugzilla.redhat.com  
+dracut-initqueue[527]: exiting.  
+dracut-initqueue[527]: Warning: Could not boot.  
+[    
+  OK     
+] Started Show Plymouth Boot Screen.  
+[    
+  OK     
+] Reached target Paths.  
+[    
+  OK     
+] Reached target Basic System.  
+dracut-initqueue[527]: dhclient(596) is already running - exiting.  
+dracut-initqueue[527]: This version of ISC DHCP is based on the release available  
+dracut-initqueue[527]: on ftp.isc.org.  Features have been added and other changes  
+dracut-initqueue[527]: have been made to the base software release in order to make  
+dracut-initqueue[527]: it work better with this distribution.  
+dracut-initqueue[527]: Please report for this software via the Red Hat Bugzilla site:  
+dracut-initqueue[527]: http://bugzilla.redhat.com  
+dracut-initqueue[527]: exiting.  
+dracut-initqueue[527]: Warning: Could not boot.  
+dracut-initqueue[527]: Warning: /dev/root does not exist 
+         Starting Dracut Emergency Shell... 
+Warning: /dev/root does not exist 
+ 
+Generating "/run/initramfs/rdsosreport.txt" 
+ 
+ 
+Entering emergency mode. Exit the shell to continue. 
+Type "journalctl" to view system logs. 
+You might want to save "/run/initramfs/rdsosreport.txt" to a USB stick or /boot 
+after mounting them and attach it to a bug report. 
+ 
+ 
+dracut:/# [-- MARK -- Wed Jan 15 06:25:00 2014] 
+[-- MARK -- Wed Jan 15 06:30:00 2014] 
+[-- MARK -- Wed Jan 15 06:35:00 2014] 

@@ -1,0 +1,121 @@
+ VFS: Mounted root (ext2 filesystem).
+  [9;0] [8]Greetings. 
+Red Hat install init version 9.1.6.20 starting 
+mounting /proc filesystem... done 
+mounting /dev/pts (unix98 pty) filesystem... done 
+Red Hat install init version 9.1.6.20 using a serial console 
+remember, cereal is an important part of a nutritionally balanced breakfast. 
+ 
+trying to remount root filesystem read write... done 
+mounting /tmp as ramfs... done 
+running install... 
+running /sbin/loader 
+ %G      
+ (B )0      
+  
+  
+     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                    
+Welcome to Red Hat Enterprise Linux       
++--------------+ Loading +---------------+       
+|                                        |        
+| Loading ohci1394 driver...             |        
+|                                        |        
++----------------------------------------+        
+                                                
+<Tab>/<Alt-Tab> between elements  | <Space> selects | <F12> next screen       
+       
+                                                 
+                                                  
+                                                  
+                                                  
+                                                  
+                                                 
+       
++--------+ Loading SCSI driver +---------+       
+|                                        |        
+| Loading ata_piix driver...             |        
+|                                        |        
++----------------------------------------+        
+                                                 
+       
+                                                 
+                                                  
+                                                  
+                                                  
+                                                  
+                                                 
+       
++--------------------+ Dynamic IP +---------------------+       
+|                                                       |        
+| Sending request for IP information for eth0...        |        
+|                                                       |        
++-------------------------------------------------------+        
+                                                                
+       
+                                                                
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                
+       
++-------------------+ Hostname +-------------------+       
+|                                                  |        
+| Determining host name and domain...              |        
+|                                                  |        
++--------------------------------------------------+        
+                                                           
+       
+                                                           
+                                                            
+                                                            
+                                                            
+                                                            
+                                                           
+      
++---------+ Choose a Language +---------+      
+|                                       |       
+| What language would you like to use   |       
+| during the installation process?      |       
+|                                       |       
+|       Chinese(Simplified)    #        |       
+|       Chinese(Traditional)   #        |        
+|       Czech                  #        |        
+|       Danish                 #        |        
+|       Dutch                  #        |        
+|       English                #        |        
+|       French                 #        |        
+|       German                 #        |        
+|                                       |        
+|                +----+                 |        
+|                | OK |                 |        
+|                +----+                 |        
+|                                       |        
+|                                       |        
++---------------------------------------+        
+                                                
+[-- MARK -- Wed Jan 15 07:15:00 2014] 

@@ -37,4 +37,5 @@ Contents
 
    capabilities
    provisioning-process
+   job-monitoring
    log-storage

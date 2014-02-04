@@ -189,12 +189,13 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
             distro = Distro.by_name(distro_name)
             if not distro:
                 distro = create_distro(name=distro_name)
-    distro_tree = DistroTree(distro=distro,
+    distro_tree = DistroTree.lazy_create(distro=distro,
             arch=Arch.by_name(arch), variant=variant)
     if distro_tree.arch not in distro.osversion.arches:
         distro.osversion.arches.append(distro_tree.arch)
     distro_tree.repos.append(DistroTreeRepo(repo_id=variant,
             repo_type=u'variant', path=u''))
+    existing_urls = [lc_distro_tree.url for lc_distro_tree in distro_tree.lab_controller_assocs]
     # make it available in all lab controllers
     for lc in (lab_controllers or LabController.query):
         default_urls = [u'%s://%s%s/distros/%s/%s/%s/os/' % (scheme, lc.fqdn,
@@ -202,23 +203,34 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
                 distro_tree.distro.name, distro_tree.variant,
                 distro_tree.arch.arch) for scheme in ['nfs', 'http', 'ftp']]
         for url in (urls or default_urls):
-            distro_tree.lab_controller_assocs.append(LabControllerDistroTree(
-                    lab_controller=lc, url=url))
+            if url in existing_urls:
+                break
+            lab_controller_distro_tree = LabControllerDistroTree(
+                lab_controller=lc, url=url)
+            distro_tree.lab_controller_assocs.append(lab_controller_distro_tree)
     log.debug('Created distro tree %r', distro_tree)
     return distro_tree
 
 def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
         owner=None, fqdn=None, shared=True, exclude_osmajor=[],
         exclude_osversion=[], hypervisor=None, kernel_type=None,
-        date_added=None, private=False, **kw):
+        date_added=None, return_existing=False, private=False, **kw):
     if owner is None:
         owner = create_user()
     if fqdn is None:
         fqdn = unique_name(u'system%s.testdata')
+
     if System.query.filter(System.fqdn == fqdn).count():
-        raise ValueError('Attempted to create duplicate system %s' % fqdn)
-    system = System(fqdn=fqdn,type=type, owner=owner,
-                status=status, **kw)
+        if return_existing:
+            system = System.query.filter(System.fqdn == fqdn).first()
+            for property, value in kw.iteritems():
+               setattr(system, property, value)
+        else:
+            raise ValueError('Attempted to create duplicate system %s' % fqdn)
+    else:
+        system = System(fqdn=fqdn,type=type, owner=owner,
+            status=status, **kw)
+
     if date_added is not None:
         system.date_added = date_added
     system.custom_access_policy = SystemAccessPolicy()
@@ -412,6 +424,7 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
     finish_time = finish_time or datetime.datetime.utcnow()
     if not only:
         mark_recipe_running(recipe, **kwargs)
+        mark_recipe_installation_finished(recipe)
 
     # Need to make sure recipe.watchdog has been persisted, since we delete it 
     # below when the recipe completes and sqlalchemy will barf on deleting an 
@@ -512,6 +525,11 @@ def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
         recipe.resource.fqdn = fqdn
     recipe.recipeset.job.update_status()
     log.debug('Started %s', recipe.tasks[0].t_id)
+
+def mark_recipe_installation_finished(recipe):
+    recipe.resource.install_finished = datetime.datetime.utcnow()
+    recipe.resource.postinstall_finished = datetime.datetime.utcnow()
+    recipe.recipeset.job.update_status()
 
 def mark_job_running(job, **kw):
     for recipe in job.all_recipes:
