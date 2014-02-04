@@ -5,9 +5,9 @@ from kid import XML
 from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_edit_link
-from bkr.server.util import total_seconds
 from bkr.server.widgets import LabControllerDataGrid, LabControllerForm
 from bkr.server.distrotrees import DistroTrees
+from bkr.common.helpers import total_seconds
 from bkr.common.bexceptions import BX
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import contains_eager
@@ -242,6 +242,7 @@ class LabControllers(RPCRoot):
                 'fqdn': cmd.system.fqdn,
                 'arch': [arch.arch for arch in cmd.system.arch],
                 'delay': 0,
+                'quiescent_period': cmd.quiescent_period
             }
             if cmd.delay_until:
                 d['delay'] = max(0, total_seconds(cmd.delay_until - datetime.utcnow()))

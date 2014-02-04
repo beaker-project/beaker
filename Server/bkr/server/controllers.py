@@ -1149,16 +1149,18 @@ class Root(RPCRoot):
     @error_handler(view)
     @expose()
     @identity.require(identity.not_anonymous())
-    def save_power(self, 
-                   id,
+    @validate(form=power_form)
+    def save_power(self,
+                   fqdn,
                    power_address,
                    power_type_id,
                    release_action,
+                   power_quiescent_period,
                    **kw):
         try:
-            system = System.by_id(id,identity.current.user)
+            system = System.by_fqdn(fqdn, identity.current.user)
         except InvalidRequestError:
-            flash( _(u"Unable to save Power for %s" % id) )
+            flash( _(u"Unable to save Power for system %r" % fqdn) )
             redirect("/")
 
         if kw.get('reprovision_distro_tree_id'):
@@ -1183,6 +1185,15 @@ class Root(RPCRoot):
         system.release_action = release_action
 
         if system.power:
+            power_quiescent_period = int(power_quiescent_period)
+            if power_quiescent_period != system.power.power_quiescent_period:
+                # Quiescent period changed
+                activity = SystemActivity(identity.current.user, 'WEBUI',
+                    'Changed', 'power_quiescent_period',
+                    system.power.power_quiescent_period,
+                    power_quiescent_period)
+                system.power.power_quiescent_period = power_quiescent_period
+                system.activity.append(activity)
             if power_address != system.power.power_address:
                 #Power Address Changed
                 activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_address', system.power.power_address, power_address )

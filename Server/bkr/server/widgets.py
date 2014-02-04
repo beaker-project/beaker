@@ -931,7 +931,7 @@ class LabInfoForm(HorizontalForm):
 
 class PowerForm(HorizontalForm):
     fields = [
-        HiddenField(name="id"),
+        HiddenField(name="fqdn"),
         HiddenField(name="power"),
         SingleSelectField(name='power_type_id',
             label=_(u'Power Type'),
@@ -941,6 +941,8 @@ class PowerForm(HorizontalForm):
         TextField(name='power_user', label=_(u'Power Login')),
         TextField(name='power_passwd', label=_(u'Power Password')),
         TextField(name='power_id', label=_(u'Power Port/Plug/etc')),
+        TextField(name='power_quiescent_period', label=_(u'Quiescent Period'),
+            validator=validators.Int(not_empty=True)),
         RadioButtonList(name='release_action',
             label=_(u'Release Action'),
             options=[(ra, unicode(ra)) for ra in model.ReleaseAction],
@@ -949,7 +951,7 @@ class PowerForm(HorizontalForm):
         SingleSelectField(name='reprovision_distro_tree_id',
             label=_(u'Reprovision Distro'),
             options=[],
-            validator=validators.NotEmpty()),
+            validator=validators.Int(non_empty=True)),
     ]
     submit_text = _(u'Save Power Changes')
 
@@ -963,6 +965,7 @@ class PowerForm(HorizontalForm):
                 d['value']['power_user'] = power.power_user
                 d['value']['power_passwd'] = power.power_passwd
                 d['value']['power_id'] = power.power_id
+                d['value']['power_quiescent_period'] = power.power_quiescent_period
 
 
 class ExcludedFamilies(FormField):

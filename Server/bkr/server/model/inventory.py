@@ -102,8 +102,8 @@ system_arch_map = Table('system_arch_map', DeclarativeMappedObject.metadata,
     mysql_engine='InnoDB',
 )
 
-class SystemStatusAttributeExtension(AttributeExtension):
 
+class SystemStatusAttributeExtension(AttributeExtension):
     def set(self, state, child, oldchild, initiator):
         obj = state.obj()
         log.debug('%r status changed from %r to %r', obj, oldchild, child)
@@ -1064,7 +1064,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
 
         if self.lab_controller and self.power:
             status = CommandStatus.queued
-            activity = CommandActivity(user, service, action, status, callback)
+            activity = CommandActivity(user, service, action, status, callback,
+                 self.power.power_quiescent_period)
             if delay:
                 activity.delay_until = datetime.utcnow() + timedelta(seconds=delay)
             self.command_queue.append(activity)
@@ -1675,6 +1676,8 @@ class Power(DeclarativeMappedObject):
     power_user = Column(String(255))
     power_passwd = Column(String(255))
     power_id = Column(String(255))
+    # 5(seconds) was the default sleep time for commands in beaker-provision
+    power_quiescent_period = Column(Integer, default=5, nullable=False)
 
 
 class CallbackAttributeExtension(AttributeExtension):
@@ -1703,6 +1706,7 @@ class CommandActivity(Activity):
             extension=CallbackAttributeExtension())
     task_id = Column(String(255))
     delay_until = Column(DateTime, default=None)
+    quiescent_period = Column(Integer, default=None)
     updated = Column(DateTime, default=datetime.utcnow)
     callback = Column(String(255))
     distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
@@ -1710,10 +1714,11 @@ class CommandActivity(Activity):
     kernel_options = Column(UnicodeText)
     __mapper_args__ = {'polymorphic_identity': u'command_activity'}
 
-    def __init__(self, user, service, action, status, callback=None):
+    def __init__(self, user, service, action, status, callback=None, quiescent_period=0):
         Activity.__init__(self, user, service, action, u'Command', u'', u'')
         self.status = status
         self.callback = callback
+        self.quiescent_period = quiescent_period
 
     def object_name(self):
         return "Command: %s %s" % (self.object.fqdn, self.action)

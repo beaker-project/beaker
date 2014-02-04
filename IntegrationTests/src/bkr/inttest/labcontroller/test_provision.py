@@ -8,6 +8,7 @@ from bkr.inttest import data_setup
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.labcontroller import LabControllerTestCase, processes, \
         daemons_running_externally
+from bkr.server.model import System, User
 
 def wait_for_commands_completed(system, timeout):
     def _commands_completed():
@@ -17,6 +18,73 @@ def wait_for_commands_completed(system, timeout):
     wait_for_condition(_commands_completed, timeout=timeout)
 
 class PowerTest(LabControllerTestCase):
+
+    def test_power_quiescent_period(self):
+        # Test that we do in fact wait for the quiescent period to pass
+        # before running a command
+        if daemons_running_externally():
+            raise SkipTest('cannot examine logs of remote beaker-provision')
+        provision_process, = [p for p in processes if p.name ==  \
+            'beaker-provision']
+        # These times are needed to guarantee that we are actually waiting for
+        # the quiescent period and not waiting for another poll loop
+        quiescent_period = get_conf().get('SLEEP_TIME') * 3
+        timeout = get_conf().get('SLEEP_TIME') * 2
+        try:
+            provision_process.start_output_capture()
+            with session.begin():
+                system = data_setup.create_system(lab_controller=self.get_lc())
+                system.power.power_type = PowerType.lazy_create(name=u'dummy')
+                system.power.power_quiescent_period = quiescent_period
+                system.power.power_id = 4
+                system.power.delay_until = None
+                system.action_power(action=u'off', service=u'testdata')
+            wait_for_commands_completed(system, timeout=timeout)
+            self.fail('The quiescent period is not being respected')
+        except AssertionError:
+            # wait_for_commands() should timeout if the quiescent period is
+            #respected
+            pass
+        finally:
+            provision_output = provision_process.finish_output_capture()
+        # The initial command seen for a system will always wait for the full
+        # quiescent period
+        self.assertIn('Entering quiescent period, delaying %s seconds for '
+            'command %s'  % (quiescent_period, system.command_queue[0].id),
+                provision_output)
+
+    def test_power_quiescent_period_statefulness(self):
+        if daemons_running_externally():
+            raise SkipTest('cannot examine logs of remote beaker-provision')
+        provision_process, = [p for p in processes if p.name == \
+            'beaker-provision']
+        # Initial lookup of this system will reveal no state, so will delay
+        # for the whole quiescent period
+        try:
+            provision_process.start_output_capture()
+            with session.begin():
+                system = data_setup.create_system(lab_controller=self.get_lc())
+                system.power.power_type = PowerType.lazy_create(name=u'dummy')
+                system.power.power_quiescent_period = 1
+                system.power.power_id = 4
+                system.power.delay_until = None
+                system.action_power(action=u'off', service=u'testdata')
+            wait_for_commands_completed(system, timeout=10)
+        finally:
+            provision_output = provision_process.finish_output_capture()
+        self.assertIn('Entering quiescent period, delaying 1 seconds for '
+            'command %s'  % system.command_queue[0].id, provision_output)
+        # This guarantees our quiescent period has elapsed and be ignored
+        time.sleep(1)
+        try:
+            provision_process.start_output_capture()
+            with session.begin():
+                system = System.by_id(system.id, User.by_user_name('admin'))
+                system.action_power(action=u'off', service=u'testdata')
+            wait_for_commands_completed(system, timeout=10)
+        finally:
+            provision_output = provision_process.finish_output_capture()
+        self.assertNotIn('Entering queiscent period', provision_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=951309
     def test_power_commands_are_not_run_twice(self):
