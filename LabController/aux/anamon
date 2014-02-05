@@ -218,8 +218,16 @@ def anamon_loop():
         waitlist.extend(bootloader_cfgs)
 
     # Monitor loop
+    already_added_anaconda_tbs = []
+    anaconda_tb_pattern = 'anaconda-tb'
     while 1:
         time.sleep(5)
+        for f in os.listdir('/tmp'):
+            if f.startswith(anaconda_tb_pattern):
+                f = os.path.join('/tmp', f)
+                if f not in already_added_anaconda_tbs:
+                    watchlist.append(WatchedFile(f, os.path.basename(f)))
+                    already_added_anaconda_tbs.append(f)
 
         # Not all log files are available at the start, we'll loop through the
         # waitlist to determine when each file can be added to the watchlist
