@@ -2251,6 +2251,15 @@ class RecipeTest(unittest.TestCase):
         self.assertRegexpMatches(installation.get('postinstall_finished'),
                 r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=999056
+    def test_empty_params_element_is_not_added_to_xml(self):
+        recipe = data_setup.create_recipe()
+        data_setup.create_job_for_recipes([recipe])
+        recipe.tasks[0].params = []
+        root = lxml.etree.fromstring(recipe.to_xml(clone=True).toxml())
+        task = root.find('recipeSet/recipe/task')
+        self.assertEquals(len(task), 0, '<task/> should have no children')
+
 
 class CheckDynamicVirtTest(unittest.TestCase):
 

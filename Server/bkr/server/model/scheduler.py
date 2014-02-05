@@ -2609,10 +2609,11 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             for role in self.roles_to_xml():
                 roles.appendChild(role)
             task.appendChild(roles)
-        params = xmldoc.createElement("params")
-        for p in self.params:
-            params.appendChild(p.to_xml())
-        task.appendChild(params)
+        if self.params:
+            params = xmldoc.createElement("params")
+            for p in self.params:
+                params.appendChild(p.to_xml())
+            task.appendChild(params)
         if self.results and not clone:
             results = xmldoc.createElement("results")
             for result in self.results:
