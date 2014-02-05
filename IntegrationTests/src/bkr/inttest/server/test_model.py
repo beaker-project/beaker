@@ -1862,6 +1862,8 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
                 lab_controller=self.lc, hypervisor=None)
         kvm = data_setup.create_system(arch=u'i386', shared=True,
                 lab_controller=self.lc, hypervisor=u'KVM')
+        xen = data_setup.create_system(arch=u'i386', shared=True,
+                lab_controller=self.lc, hypervisor=u'Xen')
         session.flush()
         systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
@@ -1870,6 +1872,7 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(baremetal not in systems)
         self.assert_(kvm in systems)
+        self.assert_(xen not in systems)
         systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <and>
@@ -1879,6 +1882,7 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(baremetal not in systems)
         self.assert_(kvm in systems)
+        self.assert_(xen not in systems)
         systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                     <system><hypervisor op="=" value="" /></system>
@@ -1886,6 +1890,7 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(baremetal in systems)
         self.assert_(kvm not in systems)
+        self.assert_(xen not in systems)
         systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires>
                 <and>
@@ -1895,11 +1900,22 @@ class DistroTreeSystemsFilterTest(unittest.TestCase):
             """))
         self.assert_(baremetal in systems)
         self.assert_(kvm not in systems)
+        self.assert_(xen not in systems)
         systems = list(self.distro_tree.systems_filter(self.user, """
             <hostRequires/>
             """))
         self.assert_(baremetal in systems)
         self.assert_(kvm in systems)
+        self.assert_(xen in systems)
+        # https://bugzilla.redhat.com/show_bug.cgi?id=886816
+        systems = list(self.distro_tree.systems_filter(self.user, """
+            <hostRequires>
+                <hypervisor op="!=" value="KVM" />
+            </hostRequires>
+            """))
+        self.assert_(baremetal in systems)
+        self.assert_(kvm not in systems)
+        self.assert_(xen in systems)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=731615
     def test_filtering_by_device(self):

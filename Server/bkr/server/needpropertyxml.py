@@ -459,9 +459,12 @@ class XmlHypervisor(ElementWrapper):
     def filter(self, joins):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None) or None
-        query = None
-        if op:
-            joins = joins.outerjoin(System.hypervisor)
+        joins = joins.outerjoin(System.hypervisor)
+        if op == '__ne__' and value:
+            query = or_(
+                    Hypervisor.hypervisor == None,
+                    getattr(Hypervisor.hypervisor, op)(value))
+        else:
             query = getattr(Hypervisor.hypervisor, op)(value)
         return (joins, query)
 
