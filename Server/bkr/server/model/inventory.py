@@ -54,6 +54,72 @@ class SystemActivity(Activity):
     def object_name(self):
         return "System: %s" % self.object.fqdn
 
+class CallbackAttributeExtension(AttributeExtension):
+    def set(self, state, value, oldvalue, initiator):
+        instance = state.obj()
+        if instance.callback:
+            try:
+                modname, _dot, funcname = instance.callback.rpartition(".")
+                module = import_module(modname)
+                cb = getattr(module, funcname)
+                cb(instance, value)
+            except Exception, e:
+                log.error("command callback failed: %s" % e)
+        return value
+
+class CommandActivity(Activity):
+
+    __tablename__ = 'command_queue'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id',
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    system = relationship('System')
+    status = column_property(
+            Column('status', CommandStatus.db_type(), nullable=False),
+            extension=CallbackAttributeExtension())
+    task_id = Column(String(255))
+    delay_until = Column(DateTime, default=None)
+    quiescent_period = Column(Integer, default=None)
+    updated = Column(DateTime, default=datetime.utcnow)
+    callback = Column(String(255))
+    distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
+    distro_tree = relationship(DistroTree)
+    kernel_options = Column(UnicodeText)
+    __mapper_args__ = {'polymorphic_identity': u'command_activity'}
+
+    def __init__(self, user, service, action, status, callback=None, quiescent_period=0):
+        Activity.__init__(self, user, service, action, u'Command', u'', u'')
+        self.status = status
+        self.callback = callback
+        self.quiescent_period = quiescent_period
+
+    def object_name(self):
+        return "Command: %s %s" % (self.object.fqdn, self.action)
+
+    def change_status(self, new_status):
+        current_status = self.status
+        if session.connection(CommandActivity).execute(CommandActivity.__table__.update(
+                and_(CommandActivity.__table__.c.id == self.id,
+                     CommandActivity.status == current_status)),
+                status=new_status).rowcount != 1:
+            raise StaleCommandStatusException(
+                    'Status for command %s updated in another transaction'
+                    % self.id)
+        self.status = new_status
+
+    def log_to_system_history(self):
+        sa = SystemActivity(self.user, self.service, self.action, u'Power', u'',
+                            self.new_value and u'%s: %s' % (self.status, self.new_value) \
+                            or u'%s' % self.status)
+        self.system.activity.append(sa)
+
+    def abort(self, msg=None):
+        log.error('Command %s aborted: %s', self.id, msg)
+        self.status = CommandStatus.aborted
+        self.new_value = msg
+        self.log_to_system_history()
+
 class Reservation(DeclarativeMappedObject):
 
     __tablename__ = 'reservation'
@@ -209,10 +275,10 @@ class System(DeclarativeMappedObject, ActivityMixin):
             order_by=[SystemActivity.created.desc(), SystemActivity.id.desc()])
     dyn_activity = dynamic_loader(SystemActivity,
             order_by=[SystemActivity.created.desc(), SystemActivity.id.desc()])
-    command_queue = relationship('CommandActivity', backref='object',
+    command_queue = relationship(CommandActivity, backref='object',
             cascade='all, delete, delete-orphan',
-            order_by=[SystemActivity.created.desc(), SystemActivity.id.desc()])
-    dyn_command_queue = dynamic_loader('CommandActivity')
+            order_by=[CommandActivity.created.desc(), CommandActivity.id.desc()])
+    dyn_command_queue = dynamic_loader(CommandActivity)
     _system_ccs = relationship('SystemCc', backref='system',
             cascade='all, delete, delete-orphan')
     reservations = relationship(Reservation, backref='system',
@@ -1678,73 +1744,6 @@ class Power(DeclarativeMappedObject):
     power_id = Column(String(255))
     # 5(seconds) was the default sleep time for commands in beaker-provision
     power_quiescent_period = Column(Integer, default=5, nullable=False)
-
-
-class CallbackAttributeExtension(AttributeExtension):
-    def set(self, state, value, oldvalue, initiator):
-        instance = state.obj()
-        if instance.callback:
-            try:
-                modname, _dot, funcname = instance.callback.rpartition(".")
-                module = import_module(modname)
-                cb = getattr(module, funcname)
-                cb(instance, value)
-            except Exception, e:
-                log.error("command callback failed: %s" % e)
-        return value
-
-class CommandActivity(Activity):
-
-    __tablename__ = 'command_queue'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-    id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
-    system_id = Column(Integer, ForeignKey('system.id',
-            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
-    system = relationship(System)
-    status = column_property(
-            Column('status', CommandStatus.db_type(), nullable=False),
-            extension=CallbackAttributeExtension())
-    task_id = Column(String(255))
-    delay_until = Column(DateTime, default=None)
-    quiescent_period = Column(Integer, default=None)
-    updated = Column(DateTime, default=datetime.utcnow)
-    callback = Column(String(255))
-    distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
-    distro_tree = relationship(DistroTree)
-    kernel_options = Column(UnicodeText)
-    __mapper_args__ = {'polymorphic_identity': u'command_activity'}
-
-    def __init__(self, user, service, action, status, callback=None, quiescent_period=0):
-        Activity.__init__(self, user, service, action, u'Command', u'', u'')
-        self.status = status
-        self.callback = callback
-        self.quiescent_period = quiescent_period
-
-    def object_name(self):
-        return "Command: %s %s" % (self.object.fqdn, self.action)
-
-    def change_status(self, new_status):
-        current_status = self.status
-        if session.connection(CommandActivity).execute(CommandActivity.__table__.update(
-                and_(CommandActivity.__table__.c.id == self.id,
-                     CommandActivity.status == current_status)),
-                status=new_status).rowcount != 1:
-            raise StaleCommandStatusException(
-                    'Status for command %s updated in another transaction'
-                    % self.id)
-        self.status = new_status
-
-    def log_to_system_history(self):
-        sa = SystemActivity(self.user, self.service, self.action, u'Power', u'',
-                            self.new_value and u'%s: %s' % (self.status, self.new_value) \
-                            or u'%s' % self.status)
-        self.system.activity.append(sa)
-
-    def abort(self, msg=None):
-        log.error('Command %s aborted: %s', self.id, msg)
-        self.status = CommandStatus.aborted
-        self.new_value = msg
-        self.log_to_system_history()
 
 # note model
 class Note(DeclarativeMappedObject):
