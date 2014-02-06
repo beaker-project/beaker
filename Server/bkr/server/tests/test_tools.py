@@ -5,6 +5,7 @@ import unittest2 as unittest
 import pkg_resources
 import subprocess
 import os
+import time
 from shutil import copy, rmtree
 from tempfile import mkdtemp
 from turbogears.database import session
@@ -73,19 +74,35 @@ class RepoUpdate(unittest.TestCase):
 
         Does not check repo metadata.
         """
-        try:
-            base_path = mkdtemp()
-            faux_remote_harness1 = self._create_remote_harness(base_path, 'foobangmajor')
-            faux_remote_harness2 = self._create_remote_harness(base_path, 'foobazmajor')
-            faux_local_harness = mkdtemp('local_harness')
-            with session.begin():
-                OSMajor.lazy_create(osmajor=u'foobangmajor')
-                OSMajor.lazy_create(osmajor=u'foobazmajor')
-            # I'm not testing the config here, so just use createrepo
-            update_repos('file://%s/' % base_path,
-                faux_local_harness)
-            self.assertTrue(os.path.exists(os.path.join(faux_local_harness, 'foobangmajor')))
-            self.assertTrue(os.path.exists(os.path.join(faux_local_harness, 'foobazmajor')))
-        finally:
-            rmtree(base_path)
-            rmtree(faux_local_harness)
+        base_path = mkdtemp()
+        self.addCleanup(rmtree, base_path)
+        faux_remote_harness1 = self._create_remote_harness(base_path, 'foobangmajor')
+        faux_remote_harness2 = self._create_remote_harness(base_path, 'foobazmajor')
+        faux_local_harness = mkdtemp('local_harness')
+        self.addCleanup(rmtree, faux_local_harness)
+        with session.begin():
+            OSMajor.lazy_create(osmajor=u'foobangmajor')
+            OSMajor.lazy_create(osmajor=u'foobazmajor')
+        # I'm not testing the config here, so just use createrepo
+        update_repos('file://%s/' % base_path, faux_local_harness)
+        self.assertTrue(os.path.exists(os.path.join(faux_local_harness, 'foobangmajor')))
+        self.assertTrue(os.path.exists(os.path.join(faux_local_harness, 'foobazmajor')))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1027516
+    def test_does_not_run_createrepo_unnecessarily(self):
+        osmajor = u'GreenBeretLinux99'
+        with session.begin():
+            OSMajor.lazy_create(osmajor=osmajor)
+        remote_harness_dir = mkdtemp(suffix='remote')
+        self.addCleanup(rmtree, remote_harness_dir)
+        local_harness_dir = mkdtemp(suffix='local')
+        self.addCleanup(rmtree, local_harness_dir)
+        self._create_remote_harness(remote_harness_dir, osmajor)
+        # run it once, repo is built
+        update_repos('file://%s/' % remote_harness_dir, local_harness_dir)
+        repodata_dir = os.path.join(local_harness_dir, osmajor, 'repodata')
+        mtime = os.path.getmtime(repodata_dir)
+        # run it again, repo should not be rebuilt
+        time.sleep(0.001)
+        update_repos('file://%s/' % remote_harness_dir, local_harness_dir)
+        self.assertEquals(os.path.getmtime(repodata_dir), mtime)
