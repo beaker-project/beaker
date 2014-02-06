@@ -1,4 +1,6 @@
 import unittest, datetime, os, threading
+import shutil
+import pkg_resources
 import bkr
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
@@ -43,11 +45,9 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             task = data_setup.create_task()
             rpm_path = Task.get_rpm_path(task.rpm)
-            with open(rpm_path, 'wb'): pass
-            # TODO (ncoghlan): This results in a logged warning from
-            # createrepo, complaining about an invalid RPM file.
-            # It would be better (but trickier) to write a valid RPM file
-            # instead of a blank file
+            shutil.copyfile(
+                    pkg_resources.resource_filename('bkr.inttest.server', 'empty.rpm'),
+                    rpm_path)
             return task.id, task.rpm
 
     def disable_example_task(self, task_id):

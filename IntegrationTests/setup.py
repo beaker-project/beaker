@@ -19,6 +19,7 @@ setup(
         '*.xml',
         '*.ldif',
         'labcontroller/install-failure-logs/*',
+        'server/*.rpm',
         'server/kickstarts/*',
         'server/motd.xml',
         'server/selenium/*.csv',
