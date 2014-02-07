@@ -17,10 +17,10 @@ Description
 main purpose is for testing alternative templates, template variables, and
 kernel options.
 
-The generated kickstart must be based off of a recipe (that has an associated
-resource), or a system and distro tree combination. It can then be further
-modified with any of the available options. The resulting kickstart will be
-printed to stdout.
+The generated kickstart is based off of a combination of a running/completed
+recipe, system, and distro tree. It can then be further modified with any of
+the available options. The resulting kickstart will be printed to stdout.
+
 
 Options
 -------

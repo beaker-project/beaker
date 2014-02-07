@@ -12,7 +12,7 @@ from bkr.inttest.kickstart_helpers import create_rhel62, create_rhel62_server_x8
     jinja_choice_loader, create_user
 from bkr.server.tools import create_kickstart
 from bkr.server.kickstart import template_env
-from bkr.server.model import Task, User, Recipe
+from bkr.server.model import Task, User, Recipe, Provision, Arch, OSMajorInstallOptions
 
 class CreateKickstartTest(unittest.TestCase):
 
@@ -27,19 +27,30 @@ class CreateKickstartTest(unittest.TestCase):
                 if recipe.resource.system.open_reservation:
                     recipe.resource.release()
 
-    def _create_recipe(self):
+    def _create_recipe(self, system=None):
         with session.begin():
             install_task = Task.by_name('/distribution/install')
             reserve_task = Task.by_name('/distribution/reservesys')
             lc = create_lab_controller()
             rhel62 = create_rhel62()
             rhel62_server_x86_64 = create_rhel62_server_x86_64(lab_controller=lc, distro=rhel62)
-            system = create_x86_64_automated(lc)
+            if not system:
+                system = create_x86_64_automated(lc)
             recipe = data_setup.create_recipe(distro_tree=rhel62_server_x86_64, task_list=[install_task, reserve_task])
             data_setup.create_job_for_recipes([recipe], owner=create_user(), whiteboard='')
             data_setup.mark_recipe_complete(recipe, system=system)
         self.recipe_id = recipe.id
         return recipe
+
+    def _create_i386_distro(self, lc):
+        i386_distro = data_setup.create_distro(
+            osmajor=u'RedHatEnterpriseLinux6', arches=[Arch.by_name('i386')])
+        i386_distro_tree = data_setup.create_distro_tree(distro=i386_distro,
+            lab_controllers=[lc],
+            urls=[u'http://lab.test-kickstart.example.com/distros/RHEL-6.3/'
+                'Workstation/i386/os/'],
+            variant='Workstation')
+        return i386_distro
 
     def _run_create_kickstart(self, args):
         # This is code for when we are in a dogfood task
@@ -54,15 +65,12 @@ class CreateKickstartTest(unittest.TestCase):
         else:
             # Running the test locally
             orig_stdout = sys.stdout
-            orig_stderr = sys.stderr
             try:
                 sys.stdout = my_out = StringIO()
-                sys.stderr = None
                 create_kickstart.main(args)
                 output = my_out.getvalue()
             finally:
                 sys.stdout = orig_stdout
-                sys.stderr = orig_stderr
         return output
 
     def test_snippet_dir(self):
@@ -122,3 +130,75 @@ class CreateKickstartTest(unittest.TestCase):
             str(distro_tree_id), '--system', system.fqdn, '--user', user.user_name])
         compare_expected('RedHatEnterpriseLinux6-manual-defaults-beaker-create-kickstart', None,
                generated_ks)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1058156
+    def test_system_overrides_recipe(self):
+        with session.begin():
+            lc = create_lab_controller()
+            system1 = data_setup.create_system(lab_controller=lc,
+                arch='x86_64')
+            system2 = data_setup.create_system(lab_controller=lc,
+                arch='x86_64')
+            system1.provisions[system1.arch[0]] = Provision(arch=system1.arch[0],
+                kernel_options_post='adalovelace')
+            system2.provisions[system2.arch[0]] = Provision(arch=system2.arch[0],
+                kernel_options_post='phonykerneloption')
+
+        recipe = self._create_recipe(system1)
+        kickstart = self._run_create_kickstart(['--recipe-id', str(recipe.id),
+                                                '--system', system2.fqdn,])
+
+        self.assertIn('phonykerneloption', kickstart)
+        self.assertIn(system2.fqdn, kickstart)
+        self.assertNotIn('adalovelace', kickstart)
+        self.assertNotIn(system1.fqdn, kickstart)
+
+    def test_distro_overrides_recipe(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system1 = data_setup.create_system(lab_controller=lc,
+                arch=u'x86_64')
+            i386_distro = self._create_i386_distro(lc)
+            io = OSMajorInstallOptions.lazy_create(osmajor_id=
+                i386_distro.osversion.osmajor.id,
+                arch_id=Arch.by_name('i386').id)
+            io.ks_meta = 'lang=en_UK.UTF-8'
+        recipe = self._create_recipe(system1)
+        distro_tree_id = i386_distro.trees[0].id
+        kickstart = self._run_create_kickstart(['--recipe-id', str(recipe.id),
+            '--distro-tree-id', str(distro_tree_id),])
+
+        # Make sure we are using the tree from --distro-tree-id
+        self.assertIn('url=http://lab.test-kickstart.example.com/distros/'
+            'RHEL-6.3/Workstation/i386/os/', kickstart)
+        self.assertNotIn('url=http://lab.test-kickstart.invalid/distros/'
+            'RHEL-6.2/Server/x86_64/os/', kickstart)
+        self.assertIn('lang en_UK.UTF-8', kickstart)
+        self.assertNotIn('lang en_US.UTF-8', kickstart)
+
+
+    def test_distro_and_system_overrides_recipe(self):
+
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            i386_distro = self._create_i386_distro(lc)
+            system1 = data_setup.create_system(lab_controller=lc, arch=u'x86_64')
+            system2 = data_setup.create_system(lab_controller=lc, arch=u'i386')
+            system2.provisions[system2.arch[0]] = Provision(arch=system2.arch[0],
+                kernel_options_post='usshopper')
+        recipe = self._create_recipe(system1)
+
+        # recipe uses system1 + x86_64 distro. We pass in system2 and i386
+        # distro, so we should pick up the provision options of system2 + i386
+        distro_tree_id = i386_distro.trees[0].id
+        kickstart = self._run_create_kickstart(['--recipe-id', str(recipe.id),
+                                                '--system', system2.fqdn,
+                                                '--distro-tree-id', str(distro_tree_id),])
+
+        # Make sure we are using the tree from --distro-tree-id
+        self.assertIn('url=http://lab.test-kickstart.example.com/distros/'
+            'RHEL-6.3/Workstation/i386/os/', kickstart)
+        self.assertIn('usshopper', kickstart)
+        # Make sure we are using system2
+        self.assertIn(system2.fqdn, kickstart)
+        self.assertNotIn(system1.fqdn, kickstart)
