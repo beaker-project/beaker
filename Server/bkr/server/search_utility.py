@@ -15,6 +15,14 @@ from bkr.common.bexceptions import BeakerException
 import logging
 log = logging.getLogger(__name__)
 
+def get_alias_target(aliased_class):
+    # SQLAlchemy 0.8+ has a proper inspection API,
+    # on earlier versions we just hack it
+    try:
+        from sqlalchemy import inspect
+        return inspect(aliased_class).mapper.entity
+    except ImportError:
+        return aliased_class._AliasedClass__target
 
 class MyColumn(object):
     """
@@ -173,9 +181,9 @@ class KeyStringColumn(KeyColumn):
         """
         relations = self.relations
         for relation in relations:
-            if relation._AliasedClass__target == model.Key:
+            if get_alias_target(relation) == model.Key:
                 key_ = relation
-            if relation._AliasedClass__target == model.Key_Value_String:
+            if get_alias_target(relation) == model.Key_Value_String:
                 key_string = relation
         return query.outerjoin((key_string, key_string.system_id==model.System.id),
             (key_, key_.id==key_string.key_id))
@@ -196,9 +204,9 @@ class KeyIntColumn(KeyColumn):
         """
         relations = self.relations
         for relation in relations:
-            if relation._AliasedClass__target == model.Key:
+            if get_alias_target(relation) == model.Key:
                 key_ = relation
-            if relation._AliasedClass__target == model.Key_Value_Int:
+            if get_alias_target(relation) == model.Key_Value_Int:
                 key_int = relation
         return query.outerjoin((key_int, key_int.system_id==model.System.id),
             (key_, key_.id==key_int.key_id))
@@ -682,7 +690,7 @@ class SystemSearch(Search):
                 aliased_table = map(lambda x: aliased(x), tables_to_alias)
                 if len(aliased_table) > 1:
                     for at in aliased_table:
-                        if at._AliasedClass__target == mycolumn.target_table:
+                        if get_alias_target(at) == mycolumn.target_table:
                             aliased_table_target = at
                 else:
                     aliased_table_target = aliased_table[0]
