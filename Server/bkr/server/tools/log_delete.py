@@ -109,7 +109,16 @@ def log_delete(print_logs=False, dry=False, limit=None):
             for log in logs:
                 if not dry:
                     if urlparse.urlparse(log).scheme:
-                        response = requests_session.delete(log)
+                        # We need to handle redirects ourselves, since requests
+                        # turns DELETE into GET on 302 which we do not want.
+                        response = requests_session.delete(log, allow_redirects=False)
+                        redirect_limit = 10
+                        while redirect_limit > 0 and response.status_code in (
+                                301, 302, 303, 307):
+                            response = requests_session.delete(
+                                    response.headers['Location'],
+                                    allow_redirects=False)
+                            redirect_limit -= 1
                         if response.status_code not in (200, 204, 404):
                             response.raise_for_status()
                     else:
