@@ -179,7 +179,7 @@ class CSV(RPCRoot):
                                     del(system)
                             else:
                                 session.add(system)
-                                session.flush([system])
+                                session.flush()
                         else:
                             log.append("You are not the owner of %s" % system.fqdn)
                     elif data['csv_type'] == 'user_group' and \
@@ -543,8 +543,6 @@ class CSV_LabInfo(CSV):
        
         system.labinfo = LabInfo(**new_data)
         session.add(system)
-        session.flush([system])
-        
 
 class CSV_Exclude(CSV):
     csv_type = 'exclude'
@@ -831,8 +829,8 @@ class CSV_KeyValue(CSV):
                 activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Key/Value', '', '%s/%s' % (data['key'],data['key_value']))
                 system.activity.append(activity)
                 system_key_values.append(key_value)
+
         session.add(key_value)
-        session.flush([key_value])
         return True
 
     def __init__(self, key):
@@ -863,7 +861,6 @@ class CSV_GroupUser(CSV):
                 group = Group(group_name=data['group'],
                               display_name=data['group'])
                 session.add(group)
-                session.flush()
             deleted = False
             if 'deleted' in data:
                 deleted = smart_bool(data['deleted'])
@@ -909,7 +906,6 @@ class CSV_GroupSystem(CSV):
                 group = Group(group_name=data['group'],
                               display_name=data['group'])
                 session.add(group)
-                session.flush()
             deleted = False
             if 'deleted' in data:
                 deleted = smart_bool(data['deleted'])
