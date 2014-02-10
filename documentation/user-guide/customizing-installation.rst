@@ -55,6 +55,13 @@ correspond to the similarly-named kickstart option.
     command. On distros where ``autopart`` does not support the
     ``--type`` option, this is ignored.
 
+``beah_rpm=<pkgarg>``
+    Name of the Beah RPM to be installed. The value can be any package 
+    specification accepted by yum (for example it can include a version, such 
+    as ``beah-0.6.48``). The default is ``beah`` which installs the latest 
+    version from the harness repos. This variable has no effect when using 
+    alternative harnesses.
+
 ``ethdevices=<module>[,<module>...]``
     Comma-separated list of network modules to be loaded during installation.
 
