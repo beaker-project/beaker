@@ -183,7 +183,7 @@ def process_new_recipe(recipe_id):
 
 def queue_processed_recipesets(*args):
     recipesets = RecipeSet.query.join(RecipeSet.job)\
-            .filter(Job.dirty_version == Job.clean_version)\
+            .filter(and_(Job.dirty_version == Job.clean_version, Job.deleted == None))\
             .filter(not_(RecipeSet.recipes.any(
                 Recipe.status != TaskStatus.processed)))
     if not recipesets.count():
@@ -680,7 +680,7 @@ def provision_scheduled_recipesets(*args):
      Running.
     """
     recipesets = RecipeSet.query.join(RecipeSet.job)\
-            .filter(Job.dirty_version == Job.clean_version)\
+            .filter(and_(Job.dirty_version == Job.clean_version, Job.deleted == None))\
             .filter(not_(RecipeSet.recipes.any(
                 Recipe.status != TaskStatus.scheduled)))
     if not recipesets.count():
