@@ -154,6 +154,8 @@ You can use any text you like for the name attribute.
         </recipeSet>
     </job>
 
+.. _disable-install-failure-detection:
+
 By default the Beaker watchdog will abort a recipe if it detects a kernel panic 
 message on the system's console. It will also abort the recipe if it detects 
 a fatal installer error during the installation. You can control this behaviour 
