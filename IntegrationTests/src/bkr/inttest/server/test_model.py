@@ -216,6 +216,15 @@ class SystemPermissionsTest(unittest.TestCase):
         self.assertTrue(self.system.can_change_owner(self.owner))
         self.assertTrue(self.system.can_change_owner(self.admin))
         self.assertFalse(self.system.can_change_owner(self.unprivileged))
+        # Check policy editing permission implies ability to change owner
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1063893
+        editor = data_setup.create_user()
+        self.policy.add_rule(SystemPermission.edit_policy, user=editor)
+        self.assertTrue(self.system.can_change_owner(editor))
+        # Check other users are unaffected
+        self.assertTrue(self.system.can_change_owner(self.owner))
+        self.assertTrue(self.system.can_change_owner(self.admin))
+        self.assertFalse(self.system.can_change_owner(self.unprivileged))
 
     def test_can_edit_policy(self):
         # Default state
