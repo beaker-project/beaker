@@ -75,7 +75,6 @@ Migrating to Beaker 0.15
 This section highlights changes which may require adjustments to other tools
 and processes when migrating from Beaker 0.14 to Beaker 0.15.
 
-
 Implicit job sharing is disabled by default
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -87,6 +86,34 @@ shared group jobs to allow members of their groups access to jobs.
 If this change in behaviour causes problems for an existing installation,
 the legacy sharing behaviour can be re-enabled in the server configuration
 (see :ref:`enable-legacy-permissions-0.15`).
+
+
+Disable install failure detection to use the ``manual`` ks_meta variable
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Users can set the ``manual`` ks_meta variable in a recipe definition to
+request that most of the kickstart settings be omitted. This will result
+in Anaconda prompting for user input, which will be interpreted as an
+installation failure by default in Beaker 0.15.3 and later versions.
+
+When setting the ``manual`` ks_meta variable in Beaker 0.15.3 and later, it
+is also necessary to disable the
+:ref:`installation failure monitoring <disable-install-failure-detection>`.
+
+
+Manual reservations of Automated systems
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Manually reserving Automated systems now requires that a loan to the relevant
+user be put in place first. The data migration rules from earlier versions
+*do not* automatically grant the "loan_self" permission to users - they only
+grant the ability to reserve the system, either through the scheduler if the
+system is in Automated mode, or directly if it is in Manual mode.
+
+Users that were previously using this workflow may either switch to using
+the Reserve Workflow to reserve the system through the scheduler, or else
+request that the system owner (or another user with the ability to edit
+the relevant system access policy) to grant the "loan_self" permission.
 
 
 Updates to supported queries
