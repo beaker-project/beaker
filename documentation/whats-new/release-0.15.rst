@@ -532,7 +532,6 @@ changes from the Beaker 0.14.3 and 0.14.4 maintenance releases.
     creating Beakerlib libraries
     (Contributed by Iveta Senfeldova, Martin Kyral and Amit Saha)
 
-
 * Updates to server utilities
 
   * :issue:`968847`: ``beaker-log-delete`` now supports basic-auth in addition
@@ -552,7 +551,6 @@ changes from the Beaker 0.14.3 and 0.14.4 maintenance releases.
     :ref:`Administration Guide <archive-server>` now cover how to configure
     an archive server.
     (Contributed by Raymond Mancy)
-
 
 * Other updates
 
@@ -639,7 +637,6 @@ Beaker 0.15.3
       uploaded following the relocation.
       (Contributed by Raymond Mancy and Nick Coghlan)
 
-
 * System provisioning updates
 
   * :issue:`952661`: When a console log is available, the Beaker watchdog now
@@ -679,7 +676,6 @@ Beaker 0.15.3
     line access to the details of the current machine user, loan recipient
     and running recipe (if any), as well as its current condition (Automated,
     Manual, Broken, Removed). (Contributed by Raymond Mancy)
-
 
 * Other updates
 
@@ -727,6 +723,96 @@ Beaker 0.15.3
     ``python-simplejson`` on platforms with a sufficiently recent version
     of Python. (Contributed by Dan Callaghan)
 
-.. Skip reporting:
 
-  * :issue:`1046194` (relates to an RH specific plugin)
+Beaker 0.15.4
+~~~~~~~~~~~~~
+
+* Updates to related components
+
+  * Version 0.7.2-1 of the Beah test harness has been released
+
+    * :issue:`1062896`: the harness once again works when ipv6 is not
+      available. (Contributed by Amit Saha)
+
+    * :issue:`1059479`: the harness can now retrieve and execute additional
+      tasks after IPv6 has been disabled. (Contributed by Dan Callaghan)
+
+    * :issue:`1063815`: the RHTS_PORT parameter is now correctly converted
+      to an integer prior to use. (Contributed by Marian Csontos)
+
+  * Version 3.4-3 of the ``/distribution/reservesys`` task has been released.
+
+    * :issue:`746003`: ``/distribution/reservesys`` now correctly preserves
+      the  SELinux context of ``/etc/motd``. (Contributed by Dan Callaghan)
+
+  * Version 1.12-1 of the ``/distribution/install`` task has been released.
+
+    * :issue:`893078`: ``/distribution/install`` no longer creates an
+      irrelevant ``/etc/syslog.conf`` file on RHEL6 and later releases
+      (Contributed by Dan Callaghan)
+
+  * Version 4.59-1 of the ``rhts`` test development and execution library has
+    been released.
+
+    * :issue:`1060900`: The ``arm``, ``armhfp`` and ``aarch64`` ARM variants
+      are now accepted as valid architectures for tasks.
+      (Contributed by Amit Saha)
+
+* System provisioning updates
+
+  * :issue:`1063090`: The new ``beah_rpm`` ks_meta variable allows users to
+    select a particular available ``beah`` version for a recipe (for example,
+    ``beah_rpm=beah-0.6.48`` to select the last IPv4-only version of the
+    harness). (Contributed by Dan Callaghan)
+
+  * :issue:`1057148`: Beaker's Anaconda installation monitoring now captures
+    all files that match the pattern ``/tmp/anaconda-tb*``.
+    (Contributed by Amit Saha)
+
+* System management updates
+
+  * :issue:`1063893`: The ``edit_policy`` permission now includes the ability
+    to change the system owner, restoring functional parity with the system
+    ``admin`` group feature used in Beaker 0.14 and earlier releases.
+    (Contributed by Nick Coghlan)
+
+Other updates:
+
+  * :issue:`1063313`: The size of the combo box used to select a product for
+    log retention purposes has been adjusted to handle browsers that don't
+    automatically resize the dropdown to fit the values.
+    (Contributed by Dan Callaghan)
+
+  * :issue:`886816`: Queries for ``<hypervisor/>`` with  ``op="!="`` in
+    ``<hostRequires/>`` now correctly include bare metal systems.
+    (Contributed by Dan Callaghan)
+
+  * :issue:`1058549`: CSV key value import is now consistent with other
+    system CSV import operations and implicitly creates new systems as
+    needed. (Contributed by Amit Saha)
+
+  * :issue:`1062529`: The ``--update`` option is once again passed to the
+    repo metadata creation command when updating the task library.
+    (Contributed by Dan Callaghan)
+
+  * :issue:`1059079`: Lab controller daemons now ensure they always create a
+    new connection after an XML-RPC failure. (Contributed by Nick Coghlan)
+
+  * :issue:`1040794`: The  "Oops" entry in the default setting for PANIC_REGEX
+    has been adjusted to "Oops: " after a user encountered the "Oops" sequence
+    in a randomly generated temporary filename. (Contributed by Dan Callaghan)
+
+  * :issue:`1062480`: Queries in the main scheduler now use a more efficient
+    mechanism to exclude previously deleted recipes from consideration.
+    (Contributed by Raymond Mancy)
+
+  * :issue:`1022888`: ``bkr watchdog-show`` for a currently "waiting" task
+    now shows "N/A" for the remaining duration rather than failing.
+    (Contributed by Raymond Mancy)
+
+.. Skip reporting (appeases the draft release note generator):
+
+  * :issue:`1046194` (relates to an RH specific component)
+  * :issue:`1061977` (relates to an RH specific component)
+  * :issue:`1061976` (relates to an RH specific component)
+
