@@ -184,24 +184,18 @@ def log_traceback(logger):
         return decorated
     return decorator
 
-# This is a method on timedelta in Python 2.7+
-def total_seconds(td):
-    """
-    Returns the total number of seconds (float)
-    represented by the given timedelta.
-    """
-    return (float(td.microseconds) + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
-
 def run_createrepo(cwd=None):
     createrepo_command = config.get('beaker.createrepo_command', 'createrepo')
-    p = subprocess.Popen([createrepo_command, '-q', '--no-database',
-        '--checksum', 'sha', '.'], cwd=cwd, stderr=subprocess.PIPE,
+    args = [createrepo_command, '-q', '--no-database', '--checksum', 'sha', '.']
+    log.debug('Running createrepo as %r in %s', args, cwd)
+    p = subprocess.Popen(args, cwd=cwd, stderr=subprocess.PIPE,
         stdout=subprocess.PIPE)
     out, err = p.communicate()
     # Perhaps a bit fragile, but maybe better than checking version?
     if p.returncode != 0 and 'no such option: --no-database' in err:
-        p = subprocess.Popen([createrepo_command, '-q', '--checksum',
-            'sha', '.'], cwd=cwd, stderr=subprocess.PIPE,
+        args.remove('--no-database')
+        log.debug('Re-trying createrepo as %r in %s', args, cwd)
+        p = subprocess.Popen(args, cwd=cwd, stderr=subprocess.PIPE,
             stdout=subprocess.PIPE)
         out, err = p.communicate()
     RepoCreate = namedtuple("RepoCreate", "command returncode out err")

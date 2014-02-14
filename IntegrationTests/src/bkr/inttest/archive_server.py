@@ -40,7 +40,10 @@ class ArchiveServer(object):
             return []
         if environ['REQUEST_METHOD'] == 'GET':
             start_response('200 OK', [])
-            return wsgiref.util.FileWrapper(open(localpath, 'r'))
+            if os.path.isdir(localpath):
+                return '\n'.join(os.listdir(localpath))
+            else:
+                return wsgiref.util.FileWrapper(open(localpath, 'r'))
         elif environ['REQUEST_METHOD'] == 'DELETE':
             shutil.rmtree(localpath)
             start_response('204 No Content', [])

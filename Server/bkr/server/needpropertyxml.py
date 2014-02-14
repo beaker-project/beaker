@@ -28,8 +28,7 @@ from lxml import etree
 from bkr.server.model import (Arch, Distro, DistroTree, DistroTag,
                               OSMajor, OSVersion, Group, System, User,
                               Key, Key_Value_Int, Key_Value_String,
-                              LabController, distro_tree_lab_controller_map,
-                              lab_controller_table, LabControllerDistroTree,
+                              LabController, LabControllerDistroTree,
                               Hypervisor, Cpu, CpuFlag, Numa, Device,
                               DeviceClass, Disk, Power, PowerType)
 
@@ -442,12 +441,12 @@ class XmlDistroLabController(ElementWrapper):
             return (joins, None)
         if op == '__eq__':
             query = exists([1],
-                    from_obj=[distro_tree_lab_controller_map.join(lab_controller_table)])\
+                    from_obj=[LabControllerDistroTree.__table__.join(LabController.__table__)])\
                     .where(LabControllerDistroTree.distro_tree_id == DistroTree.id)\
                     .where(LabController.fqdn == value)
         else:
             query = not_(exists([1],
-                    from_obj=[distro_tree_lab_controller_map.join(lab_controller_table)])\
+                    from_obj=[LabControllerDistroTree.__table__.join(LabController.__table__)])\
                     .where(LabControllerDistroTree.distro_tree_id == DistroTree.id)\
                     .where(LabController.fqdn == value))
         return (joins, query)

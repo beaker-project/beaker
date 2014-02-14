@@ -1,37 +1,47 @@
-Before proceeding with this upgrade, ensure that you have a CSV file to re-create
-your Virtual system records in case you need to roll back. If you don't already
-have one, use Beaker’s CSV export feature. If you don't have any Virtual system
-records, ignore this step.
+Upgrading to Beaker 0.10
+========================
 
+These notes describe the steps needed to upgrade your Beaker installation from 
+version 0.9 to version 0.10.
 
-Bug 835367: running createrepo all the time is inefficient
-----------------------------------------------------------
+Before proceeding with this upgrade, ensure that you have a CSV file to 
+re-create your Virtual system records in case you need to roll back. If you 
+don't already have one, use Beaker's CSV export feature. If you don't have any 
+Virtual system records, ignore this step.
 
-There was a change in how we generate repodata so the existing repodata
+Database changes
+++++++++++++++++
+
+Bug :issue:`835367`: running createrepo all the time is inefficient
+-------------------------------------------------------------------
+
+There was a change in how we generate repodata so the existing repodata 
 directory must be deleted.
+
+::
 
     rm -rf /var/www/beaker/rpms/repodata
 
-We also need to drop the task.oldrpm column, but first get a list of old RPMs
-to be deleted:
+We also need to drop the ``task.oldrpm`` column, but first get a list of old 
+RPMs to be deleted::
 
     mysql $CREDENTIALS beaker -B -N \
         -e 'SELECT oldrpm FROM task WHERE oldrpm IS NOT NULL;' \
         >oldrpms.txt
 
-The RPMs in this list should not be deleted immediately since some existing
-recipes may refer to them and will try to install them. Delete them a few days
+The RPMs in this list should not be deleted immediately since some existing 
+recipes may refer to them and will try to install them. Delete them a few days 
 after upgrading.
 
-Now you can run the following SQL to drop the column:
+Now you can run the following SQL to drop the column::
 
     ALTER TABLE task DROP oldrpm;
 
-To roll back, delete the repodata directory again:
+To roll back, delete the repodata directory again::
 
     rm -rf /var/www/beaker/rpms/repodata
 
-and restore the dropped column (but we won't have the old data to restore):
+and restore the dropped column (but we won't have the old data to restore)::
 
     ALTER TABLE task
         ADD COLUMN oldrpm VARCHAR(2048) DEFAULT NULL;
@@ -40,13 +50,13 @@ and restore the dropped column (but we won't have the old data to restore):
 Remove system_id from watchdog table
 ------------------------------------
 
-Run the following SQL:
+Run the following SQL::
 
     ALTER TABLE watchdog
         DROP FOREIGN KEY watchdog_ibfk_4, -- system_id FK
         DROP COLUMN system_id;
 
-To roll back, run the following SQL:
+To roll back, run the following SQL::
 
     ALTER TABLE watchdog
         ADD COLUMN system_id INT AFTER id;
@@ -62,13 +72,13 @@ To roll back, run the following SQL:
 Remove recipe_role and recipe_task_role tables
 ----------------------------------------------
 
-Run the following SQL:
+Run the following SQL::
 
     DROP TABLE recipe_role;
     DROP TABLE recipe_task_role;
 
 To roll back, run beaker-init to recreate the recipe_role and recipe_task_role
-tables, then run the following SQL to populate them:
+tables, then run the following SQL to populate them::
 
     INSERT INTO recipe_role (id, recipe_id, role, system_id)
         SELECT NULL, id, role, system_id
@@ -79,15 +89,17 @@ tables, then run the following SQL to populate them:
         INNER JOIN recipe ON recipe_task.recipe_id = recipe.id;
 
 
-New tables recipe_resource, system_resource, guest_resource (bug 655009)
-------------------------------------------------------------------------
+New tables recipe_resource, system_resource, guest_resource (:issue:`655009`)
+-----------------------------------------------------------------------------
 
-First run beaker-init to create the new tables, and then run the following SQL
-to populate them. Note that an earlier version of this document (prior to
-Beaker 0.10.5) used a different query for populating the guest_resource table
-which was not correct, see
-[bug 882740](https://bugzilla.redhat.com/show_bug.cgi?id=882740) for details
-and corrective action.
+.. note:: An earlier version of this document (prior to Beaker 0.10.5) used 
+   a different query for populating the ``guest_resource`` table which was not 
+   correct, see :issue:`882740` for details and corrective action.
+
+First run :program:`beaker-init` to create the new tables, and then run the 
+following SQL to populate them.
+
+::
 
     INSERT INTO recipe_resource (id, recipe_id, type, fqdn)
         SELECT NULL, recipe.id, 'system', system.fqdn
@@ -154,7 +166,7 @@ and corrective action.
     ALTER TABLE system
         CHANGE type type ENUM('Machine', 'Resource', 'Laptop', 'Prototype') NOT NULL;
 
-To roll back, first restore the dropped columns:
+To roll back, first restore the dropped columns::
 
     ALTER TABLE recipe
         ADD COLUMN system_id INT DEFAULT NULL AFTER distro_tree_id,
@@ -166,8 +178,8 @@ To roll back, first restore the dropped columns:
     ALTER TABLE system
         CHANGE type type ENUM('Machine', 'Virtual', 'Resource', 'Laptop', 'Prototype') NOT NULL;
 
-Then use the CSV file you saved to re-create your Virtual system records (if
-you had any). Then run the following SQL to populate the restored columns:
+Then use the CSV file you saved to re-create your Virtual system records (if 
+you had any). Then run the following SQL to populate the restored columns::
 
     UPDATE recipe
         INNER JOIN recipe_resource ON recipe_resource.recipe_id = recipe.id
@@ -184,7 +196,7 @@ you had any). Then run the following SQL to populate the restored columns:
 Support virtualization managers
 -------------------------------
 
-Run the following SQL:
+Run the following SQL::
 
     ALTER TABLE recipe
         ADD COLUMN virt_status
@@ -192,7 +204,7 @@ Run the following SQL:
             NOT NULL DEFAULT 'Possible',
         ADD INDEX (virt_status);
 
-To roll back, run the following SQL:
+To roll back, run the following SQL::
 
     ALTER TABLE recipe
         DROP COLUMN virt_status;

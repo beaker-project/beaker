@@ -12,12 +12,12 @@ from setuptools import setup, find_packages
 
 setup(
     name = "bkr",
-    version='0.15.2',
+    version='0.15.3',
     license = "GPLv2+",
 
     packages=find_packages('.'),
     package_dir = {'':'.'},
-    package_data={'bkr.common': ['schema/*.rng', 'schema/*.ttl']},
+    package_data={'bkr.common': ['schema/*.rng', 'schema/*.ttl', 'default.conf']},
 
     classifiers = [
         'Development Status :: 5 - Production/Stable',

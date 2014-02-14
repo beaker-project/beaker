@@ -9,8 +9,8 @@ Synopsis
 --------
 
 | :program:`bkr system-provision` [*options*]
-|       [--ks-meta=<variables>] [--kernel-options=<opts>] [--kernel-option-post=<opts>] [--kickstart=<file>]
-|       [--no-reboot] --distro=<name> <fqdn>
+|       [:option:`--ks-meta` <variables>] [:option:`--kernel-options` <opts>] [:option:`--kernel-option-post` <opts>] [:option:`--kickstart` <file>]
+|       [--no-reboot] :option:`--distro` <name> <fqdn>
 
 Description
 -----------

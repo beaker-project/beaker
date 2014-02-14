@@ -14,6 +14,7 @@ import tempfile
 import xmlrpclib
 import socket
 import subprocess
+import pkg_resources
 from cStringIO import StringIO
 from socket import gethostname
 from threading import Thread, Event
@@ -23,13 +24,10 @@ from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound, LengthRequi
 from werkzeug.utils import redirect
 from werkzeug.http import parse_content_range_header
 from werkzeug.wsgi import wrap_file
-import kobo.conf
-from kobo.client import HubProxy
-from kobo.exceptions import ShutdownException
-from kobo.xmlrpc import CookieTransport, SafeCookieTransport
+from bkr.common.hub import HubProxy
+from bkr.common.xmlrpc import CookieTransport, SafeCookieTransport
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
-from kobo.process import kill_process_group
 import utils
 try:
     from subprocess import check_output
@@ -41,7 +39,9 @@ logger = logging.getLogger(__name__)
 def replace_with_blanks(match):
     return ' ' * (match.end() - match.start() - 1) + '\n'
 
-# Based on kobo.xmlrpc.retry_request_decorator
+# Originally based on kobo.xmlrpc.retry_request_decorator
+# Now that relevant pieces of kobo have been added directly
+# to the Beaker code, should be merged into bkr.common.xmlrpc
 def retry_transport(transport_class, retry_count=5, retry_delay=30,
                     exceptions=(socket.error, socket.herror,
                                 socket.gaierror, socket.timeout)):
@@ -54,6 +54,7 @@ def retry_transport(transport_class, retry_count=5, retry_delay=30,
                     result = transport_class.request(self, *args, **kwargs)
                     return result
                 except exceptions, ex:
+                    self.close()
                     if i == retry_count:
                         raise
                     retries_left = retry_count - i
@@ -71,6 +72,7 @@ def retry_transport(transport_class, retry_count=5, retry_delay=30,
     RetryTransportClass.__name__ = transport_class.__name__
     RetryTransportClass.__doc__ = transport_class.__name__
     return RetryTransportClass
+
 
 class ProxyHelper(object):
 
@@ -94,7 +96,7 @@ class ProxyHelper(object):
             TransportClass = retry_transport(SafeCookieTransport)
         else:
             TransportClass = retry_transport(CookieTransport)
-        self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
+        self.hub = HubProxy(logger=logging.getLogger('bkr.common.hub.HubProxy'), conf=self.conf,
                 transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
         self.log_storage = LogStorage(self.conf.get("CACHEPATH"),
                 "%s://%s/beaker/logs" % (self.conf.get('URL_SCHEME',
@@ -209,31 +211,25 @@ class ProxyHelper(object):
         return self.hub.tasks.to_dict(task_name)
 
 
-class WatchFile(object):
+class ConsoleWatchFile(object):
     """
-    Helper class to watch log files and upload them to Scheduler
+    Helper class to watch console log files and upload them to Scheduler
     """
+    blocksize = 65536
 
-    def __init__(self, log, watchdog, proxy, panic, blocksize=65536):
+    def __init__(self, log, watchdog, proxy, panic):
         self.log = log
         self.watchdog = watchdog
         self.proxy = proxy
-        self.blocksize = blocksize
-        self.filename = os.path.basename(self.log)
-        # If filename is the hostname then rename it to console.log
-        if self.filename == self.watchdog['system']:
-            self.filename="console.log"
-            # Leave newline
-            self.control_chars = ''.join(map(unichr, range(0,9) + range(11,32) + range(127,160)))
-            self.strip_ansi = re.compile("(\033\[[0-9;\?]*[ABCDHfsnuJKmhr])")
-            self.strip_cntrl = re.compile('[%s]' % re.escape(self.control_chars))
-            self.panic = re.compile(r'%s' % panic)
-        else:
-            self.strip_ansi = None
-            self.strip_cntrl = None
-            self.panic = None
+        self.strip_ansi = re.compile("(\033\[[0-9;\?]*[ABCDHfsnuJKmhr])")
+        ascii_control_chars = map(chr, range(0, 32) + [127])
+        keep_chars = '\t\n'
+        strip_control_chars = [c for c in ascii_control_chars if c not in keep_chars]
+        self.strip_cntrl = re.compile('[%s]' % re.escape(''.join(strip_control_chars)))
+        self.panic_detector = PanicDetector(panic)
+        self.install_failure_detector = InstallFailureDetector()
         self.where = 0
-        self.ignore_panic = False
+        self.incomplete_line = ''
 
     def __cmp__(self,other):
         """
@@ -248,82 +244,61 @@ class WatchFile(object):
         """
         If the log exists and the file has grown then upload the new piece
         """
-        if os.path.exists(self.log):
+        try:
             file = open(self.log, "r")
-            where = self.where
-            file.seek(where)
-            line = file.read(self.blocksize)
-            size = len(line)
-            # We can't just strip the ansi codes, that would change the size
-            # of the file, so whatever we end up stripping needs to be replaced
-            # with spaces and a terminating \n.
-            if self.strip_ansi:
-                line = self.strip_ansi.sub(replace_with_blanks, line)
-            if self.strip_cntrl:
-                line = self.strip_cntrl.sub(' ', line)
-            now = file.tell()
-            file.close()
-            if self.panic:
-                # Search the line for panics
-                # The regex is stored in /etc/beaker/proxy.conf
-                panic = self.panic.search(line)
-                if panic:
-                    logger.info("Panic detected for recipe %s, system %s",
-                            self.watchdog['recipe_id'], self.watchdog['system'])
-                    # If we have already decided we will ignore this panic
-                    # due to already seeing a panic
-                    if self.ignore_panic:
-                        logger.info("Not reporting panic")
-                    else:
-                        # Let's get our <recipe/> and <watchdog/>, see
-                        # if we can ignore the panic this way
-                        recipeset = xmltramp.parse(self.proxy.get_my_recipe(
-                            dict(recipe_id=self.watchdog['recipe_id']))).recipeSet
-                        try:
-                            recipe = recipeset.recipe
-                        except AttributeError:
-                            recipe = recipeset.guestrecipe
-                        watchdog = recipe.watchdog()
-                        if watchdog and 'panic' in watchdog and \
-                            watchdog['panic'] == 'ignore':
-                            # Don't Report the panic
-                            logger.info("Not reporting panic")
-                            self.ignore_panic = True
-
-                    if not self.ignore_panic:
-                        # Report the panic
-                        # Look for active task, worst case it records it on the last task
-                        for task in recipe['task':]:
-                            if task()['status'] == 'Running':
-                                break
-                        self.proxy.task_result(task()['id'], 'panic', '/', 0, panic.group())
-                        # set the watchdog timeout to 10 minutes, gives some time for all data to 
-                        # print out on the serial console
-                        # this may abort the recipe depending on what the recipeSets
-                        # watchdog behaviour is set to.
-                        self.proxy.extend_watchdog(task()['id'], 60 * 10)
-                        self.ignore_panic = True
-            if not line:
-                return False
-            # If we didn't read our full blocksize and we are still growing
-            #  then don't send anything yet.
-            elif size < self.blocksize and where == now:
-                return False
+        except (OSError, IOError), e:
+            if e.errno == errno.ENOENT:
+                return False # doesn't exist
             else:
-                self.where = now
-                try:
-                    log_file = self.proxy.log_storage.recipe(
-                            str(self.watchdog['recipe_id']),
-                            self.filename, create=where == 0)
-                    with log_file:
-                        log_file.update_chunk(line, where)
-                except (OSError, IOError), e:
-                    if e.errno == errno.ENOENT:
-                        pass # someone has removed our log, discard the update
-                    else:
-                        raise
-                return True
-        return False
+                raise
+        try:
+            file.seek(self.where)
+            block = file.read(self.blocksize)
+            now = file.tell()
+        finally:
+            file.close()
+        if not block:
+            return False # nothing new has been read
+        # Sanitize control characters
+        # We can't just strip the ansi codes, that would change the size
+        # of the file, so whatever we end up stripping needs to be replaced
+        # with spaces and a terminating \n.
+        if self.strip_ansi:
+            block = self.strip_ansi.sub(replace_with_blanks, block)
+        if self.strip_cntrl:
+            block = self.strip_cntrl.sub(' ', block)
+        # Check for panics
+        # Only feed the panic detector complete lines. If we have read a part 
+        # of a line, store it in self.incomplete_line and it will be prepended 
+        # to the subsequent block.
+        lines = (self.incomplete_line + block).split('\n')
+        self.incomplete_line = lines.pop()
+        if len(self.incomplete_line) > self.blocksize * 2:
+            # not a complete line yet but it's getting too big
+            lines.append(self.incomplete_line)
+            self.incomplete_line = ''
+        if self.panic_detector:
+            for line in lines:
+                panic_found = self.panic_detector.feed(line)
+                if panic_found:
+                    self.proxy.report_panic(self.watchdog, panic_found)
+                failure_found = self.install_failure_detector.feed(line)
+                if failure_found:
+                    self.proxy.report_install_failure(self.watchdog, failure_found)
+        # Store block
+        try:
+            log_file = self.proxy.log_storage.recipe(
+                    str(self.watchdog['recipe_id']),
+                    'console.log', create=self.where == 0)
+            with log_file:
+                log_file.update_chunk(block, self.where)
+        except (OSError, IOError), e:
+            if e.errno == errno.ENOENT:
+                pass # someone has removed our log, discard the update
+            else:
+                raise
+        self.where = now
+        return True
 
     def truncate(self):
         try:
@@ -334,6 +309,74 @@ class WatchFile(object):
         else:
             f.truncate()
         self.where = 0
+
+class PanicDetector(object):
+
+    def __init__(self, pattern):
+        self.pattern = re.compile(pattern)
+        self.fired = False
+
+    def feed(self, line):
+        if self.fired:
+            return
+        # Search the line for panics
+        # The regex is stored in /etc/beaker/proxy.conf
+        match = self.pattern.search(line)
+        if match:
+            self.fired = True
+            return match.group()
+
+class InstallFailureDetector(object):
+
+    def __init__(self):
+        self.patterns = []
+        for raw_pattern in self._load_patterns():
+            pattern = re.compile(raw_pattern)
+            # If the pattern is empty, it is either a mistake or the admin is 
+            # trying to override a package pattern to disable it. Either way, 
+            # exclude it from the list.
+            if pattern.search(''):
+                continue
+            self.patterns.append(pattern)
+        self.fired = False
+
+    def _load_patterns(self):
+        site_dir = '/etc/beaker/install-failure-patterns'
+        try:
+            site_patterns = os.listdir(site_dir)
+        except OSError, e:
+            if e.errno == errno.ENOENT:
+                site_patterns = []
+            else:
+                raise
+        package_patterns = pkg_resources.resource_listdir('bkr.labcontroller',
+                'install-failure-patterns')
+        # site patterns override package patterns of the same name
+        for p in site_patterns:
+            if p in package_patterns:
+                package_patterns.remove(p)
+        patterns = []
+        for p in site_patterns:
+            try:
+                patterns.append(open(os.path.join(site_dir, p), 'r').read().strip())
+            except OSError, e:
+                if e.errno == errno.ENOENT:
+                    pass # readdir race
+                else:
+                    raise
+        for p in package_patterns:
+            patterns.append(pkg_resources.resource_string('bkr.labcontroller',
+                    'install-failure-patterns/' + p))
+        return patterns
+
+    def feed(self, line):
+        if self.fired:
+            return
+        for pattern in self.patterns:
+            match = pattern.search(line)
+            if match:
+                self.fired = True
+                return match.group()
 
 
 class Watchdog(ProxyHelper):
@@ -375,19 +418,21 @@ class Watchdog(ProxyHelper):
                         logger.warn('file missing: %s', mysrc)
             # rsync the logs to their new home
             rc = self.rsync('%s/' % tmpdir, '%s' % self.conf.get("ARCHIVE_RSYNC"))
-            logger.debug("rsync rc=%s", rc)
-            if rc == 0:
-                # if the logs have been transferred then tell the server the new location
-                self.hub.recipes.change_files(recipe_id, self.conf.get("ARCHIVE_SERVER"),
-                                                         self.conf.get("ARCHIVE_BASEPATH"))
-                for mylog in trlogs:
-                    mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
-                    self.rm(mysrc)
-                    try:
-                        self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
-                    except OSError:
-                        # It's ok if it fails, dir may not be empty yet
-                        pass
+            if rc:
+                logger.error('Failed to transfer recipe %s logs '
+                        'to archive server, rsync exit status %s', recipe_id, rc)
+                return
+            # if the logs have been transferred then tell the server the new location
+            self.hub.recipes.change_files(recipe_id, self.conf.get("ARCHIVE_SERVER"),
+                                                     self.conf.get("ARCHIVE_BASEPATH"))
+            for mylog in trlogs:
+                mysrc = '%s/%s/%s' % (mylog['basepath'], mylog['path'], mylog['filename'])
+                self.rm(mysrc)
+                try:
+                    self.removedirs('%s/%s' % (mylog['basepath'], mylog['path']))
+                except OSError:
+                    # It's ok if it fails, dir may not be empty yet
+                    pass
         finally:
             # get rid of our tmpdir.
             shutil.rmtree(tmpdir)
@@ -504,7 +549,7 @@ class Monitor(ProxyHelper):
         self.hub = obj.hub
         self.log_storage = obj.log_storage
         logger.info("Initialize monitor for system: %s", self.watchdog['system'])
-        self.console_watch = WatchFile(
+        self.console_watch = ConsoleWatchFile(
                 "%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),
                 self.watchdog,self, self.conf["PANIC_REGEX"])
 
@@ -512,6 +557,62 @@ class Monitor(ProxyHelper):
         """ check the logs for new data to upload/or cp
         """
         return self.console_watch.update()
+
+    def report_panic(self, watchdog, panic_message):
+        logger.info('Panic detected for recipe %s on system %s: '
+                'console log contains string %r', watchdog['recipe_id'],
+                watchdog['system'], panic_message)
+        recipeset = xmltramp.parse(self.get_my_recipe(
+            dict(recipe_id=watchdog['recipe_id']))).recipeSet
+        try:
+            recipe = recipeset.recipe
+        except AttributeError:
+            recipe = recipeset.guestrecipe
+        watchdog = recipe.watchdog()
+        if watchdog.get('panic') == 'ignore':
+            # Don't Report the panic
+            logger.info('Not reporting panic due to panic=ignore')
+        else:
+            # Report the panic
+            # Look for active task, worst case it records it on the last task
+            for task in recipe['task':]:
+                if task()['status'] == 'Running':
+                    break
+            self.task_result(task()['id'], 'panic', '/', 0, panic_message)
+            # set the watchdog timeout to 10 minutes, gives some time for all data to 
+            # print out on the serial console
+            # this may abort the recipe depending on what the recipeSets
+            # watchdog behaviour is set to.
+            self.extend_watchdog(task()['id'], 60 * 10)
+
+    def report_install_failure(self, watchdog, failure_message):
+        logger.info('Install failure detected for recipe %s on system %s: '
+                'console log contains string %r', watchdog['recipe_id'],
+                watchdog['system'], failure_message)
+        recipeset = xmltramp.parse(self.get_my_recipe(
+            dict(recipe_id=watchdog['recipe_id']))).recipeSet
+        try:
+            recipe = recipeset.recipe
+        except AttributeError:
+            recipe = recipeset.guestrecipe
+        watchdog = recipe.watchdog()
+        try:
+            installation = recipe.installation()
+        except AttributeError:
+            installation = {}
+        # For now we are re-using the same panic="" attribute which is used to 
+        # control panic detection, bug 1055320 is an RFE to change this
+        if watchdog.get('panic') == 'ignore':
+            logger.info('Not reporting install failure due to panic=ignore')
+        elif installation.get('install_finished'):
+            logger.info('Not reporting install failure for finished installation')
+        else:
+            # Ideally we would record it against the Installation entity for 
+            # the recipe, but that's not a thing yet, so we just add a result 
+            # to the first task (which is typically /distribution/install)
+            first_task = recipe['task']
+            self.task_result(first_task()['id'], 'fail', '/', 0, failure_message)
+            self.recipe_stop(recipe()['id'], 'abort', 'Installation failed')
 
 class Proxy(ProxyHelper):
     def task_upload_file(self, 

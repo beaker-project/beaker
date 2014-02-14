@@ -9,7 +9,7 @@ Synopsis
 --------
 
 | :program:`bkr system-power` [*options*]
-|       [--action=<action>] [--clear-netboot] [--force] <fqdn>
+|       [:option:`--action` <action>] [--clear-netboot] [--force] <fqdn>
 
 Description
 -----------

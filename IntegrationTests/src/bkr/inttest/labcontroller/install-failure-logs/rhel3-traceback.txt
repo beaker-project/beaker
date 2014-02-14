@@ -1,0 +1,208 @@
+ VFS: Mounted root (ext2 filesystem).
+  [9;0] [8]Greetings. 
+Red Hat install init version 9.1.6.20 starting 
+mounting /proc filesystem... done 
+mounting /dev/pts (unix98 pty) filesystem... done 
+Red Hat install init version 9.1.6.20 using a serial console 
+remember, cereal is an important part of a nutritionally balanced breakfast. 
+ 
+trying to remount root filesystem read write... done 
+mounting /tmp as ramfs... done 
+running install... 
+running /sbin/loader 
+ %G      
+ (B )0      
+  
+  
+     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                    
+Welcome to Red Hat Enterprise Linux       
++--------------+ Loading +---------------+       
+|                                        |        
+| Loading ohci1394 driver...             |        
+|                                        |        
++----------------------------------------+        
+                                                
+<Tab>/<Alt-Tab> between elements  | <Space> selects | <F12> next screen       
+       
+                                                 
+                                                  
+                                                  
+                                                  
+                                                  
+                                                 
+       
++--------+ Loading SCSI driver +---------+       
+|                                        |        
+| Loading ata_piix driver...             |        
+|                                        |        
++----------------------------------------+        
+                                                 
+       
+                                                 
+                                                  
+                                                  
+                                                  
+                                                  
+                                                 
+       
++--------------------+ Dynamic IP +---------------------+       
+|                                                       |        
+| Sending request for IP information for eth0...        |        
+|                                                       |        
++-------------------------------------------------------+        
+                                                                
+       
+                                                                
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                
+       
++-------------------+ Hostname +-------------------+       
+|                                                  |        
+| Determining host name and domain...              |        
+|                                                  |        
++--------------------------------------------------+        
+                                                           
+       
+                                                           
+                                                            
+                                                            
+                                                            
+                                                            
+                                                           
+      
++----------------------------+ Retrieving +----------------------------+      
+|                                                                      |       
+| Retrieving kickstart/3139...                                         |       
+|                                                                      |       
++----------------------------------------------------------------------+       
+                                                                               
+      
+                                                                              
+                                                                               
+                                                                               
+                                                                               
+                                                                               
+                                                                              
+      
+                                                    
++--------------------+ Dynamic IP +---------------------+       
+|                                                       |        
+| Sending request for IP information for eth0...        |        
+|                                                       |        
++-------------------------------------------------------+        
+                                                                
+       
+                                                                
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                
+       
++-------------------+ Hostname +-------------------+       
+|                                                  |        
+| Determining host name and domain...              |        
+|                                                  |        
++--------------------------------------------------+        
+                                                           
+       
+                                                           
+                                                            
+                                                            
+                                                            
+                                                            
+                                                           
+      
+  
+   
+  
+   
+Running anaconda, the Red Hat Enterprise Linux system installer - please wait... 
+Probing for video card:   VESA driver (generic) 
+Probing for monitor type:   Unknown monitor 
+Probing for mouse type:   No - mouse 
++ wget -O - http://lab-devel-02.beaker.example.com:8000/install_start/4733 
+True+ wget -O /tmp/anamon http://lab-devel-02.beaker.example.com/beaker/anamon 
+ anamon                 0% |                             |     0       --:-- ETA anamon               100% |*****************************|  8771       --:-- ETA 
++ python /tmp/anamon --recipe-id 4733 --xmlrpc-url http://lab-devel-02.beaker.example.com:8000/RPC2 
+      
+ (B )0      
+  
+  
+     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                      
+                                                                                    
+Red Hat Enterprise Linux AS (C) 2003 Red Hat, Inc.                                    
++--------------+ Exception Occurred +---------------+      
+|                                                   |       
+| An unhandled exception has occurred.  This is   # |       
+| most likely a bug.  Please copy the full text   # |       
+| of this exception or save the crash dump to a   # |       
+| floppy then file a detailed bug report          # |       
+| against anaconda at                             # |       
+| http://bugzilla.redhat.com/bugzilla/            # |        
+|                                                 # |        
+| Traceback (most recent call last):              # |        
+|   File "/usr/bin/anaconda", line 1089, in ?     # |        
+|     intf.run(id, dispatch, configFileData)      # |        
+|   File "/usr/lib/anaconda/text.py", line 422,   # |        
+| in run                                          # |        
+|                                                   |        
+|     +----+         +------+        +-------+      |        
+|     | OK |         | Save |        | Debug |      |        
+|     +----+         +------+        +-------+      |        
+|                                                   |        
+|                                                   |        
++---------------------------------------------------+        
+                                                           
+<Tab>/<Alt-Tab> between elements   |  <Space> selects   |  <F12> next screen       
+[-- MARK -- Wed Jan 15 07:30:00 2014] 

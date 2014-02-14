@@ -10,16 +10,16 @@ import lxml.etree
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode, Boolean,
         DateTime)
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import mapper, relation
+from sqlalchemy.orm import mapper, relationship
 from turbogears.config import get
-from turbogears.database import session, metadata
+from turbogears.database import session
 from rhts import testinfo
 from bkr.common.helpers import (AtomicFileReplacement, Flock,
                                 makedirs_ignore, unlink_ignore)
 from bkr.server import identity
 from bkr.server.bexceptions import BX
 from bkr.server.util import absolute_url, run_createrepo
-from .base import MappedObject
+from .base import DeclarativeMappedObject
 from .identity import User
 from .distrolibrary import Arch, OSMajor
 
@@ -27,55 +27,29 @@ log = logging.getLogger(__name__)
 
 xmldoc = xml.dom.minidom.Document()
 
-task_exclude_arch_table = Table('task_exclude_arch', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('task_id', Integer, ForeignKey('task.id')),
-    Column('arch_id', Integer, ForeignKey('arch.id')),
-    mysql_engine='InnoDB',
-)
+class TaskPackage(DeclarativeMappedObject):
+    """
+    A list of packages that a tasks should be run for.
+    """
 
-task_exclude_osmajor_table = Table('task_exclude_osmajor', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('task_id', Integer, ForeignKey('task.id')),
-    Column('osmajor_id', Integer, ForeignKey('osmajor.id')),
-    mysql_engine='InnoDB',
-)
+    __tablename__ = 'task_package'
+    __table_args__ = {'mysql_engine': 'InnoDB', 'mysql_collate': 'utf8_bin'}
+    id = Column(Integer, primary_key=True)
+    package = Column(Unicode(255), nullable=False, unique=True)
 
-task_table = Table('task',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('name', Unicode(255), unique=True),
-        Column('rpm', Unicode(255), unique=True),
-        Column('path', Unicode(4096)),
-        Column('description', Unicode(2048)),
-        Column('repo', Unicode(256)),
-        Column('avg_time', Integer, default=0),
-        Column('destructive', Boolean),
-        Column('nda', Boolean),
-        # This should be a map table
-        #Column('notify', Unicode(2048)),
+    @classmethod
+    def by_name(cls, package):
+        return cls.query.filter_by(package=package).one()
 
-        Column('creation_date', DateTime, default=datetime.utcnow),
-        Column('update_date', DateTime, onupdate=datetime.utcnow),
-        Column('uploader_id', Integer, ForeignKey('tg_user.user_id')),
-        Column('owner', Unicode(255), index=True),
-        Column('version', Unicode(256)),
-        Column('license', Unicode(256)),
-        Column('priority', Unicode(256)),
-        Column('valid', Boolean, default=True),
-        mysql_engine='InnoDB',
-)
+    def __repr__(self):
+        return self.package
 
-task_bugzilla_table = Table('task_bugzilla',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('bugzilla_id', Integer),
-        Column('task_id', Integer,
-                ForeignKey('task.id')),
-        mysql_engine='InnoDB',
-)
+    def to_xml(self):
+        package = xmldoc.createElement("package")
+        package.setAttribute("name", "%s" % self.package)
+        return package
 
-task_packages_runfor_map = Table('task_packages_runfor_map', metadata,
+task_packages_runfor_map = Table('task_packages_runfor_map', DeclarativeMappedObject.metadata,
     Column('task_id', Integer, ForeignKey('task.id', onupdate='CASCADE',
         ondelete='CASCADE'), primary_key=True),
     Column('package_id', Integer, ForeignKey('task_package.id',
@@ -83,7 +57,7 @@ task_packages_runfor_map = Table('task_packages_runfor_map', metadata,
     mysql_engine='InnoDB',
 )
 
-task_packages_required_map = Table('task_packages_required_map', metadata,
+task_packages_required_map = Table('task_packages_required_map', DeclarativeMappedObject.metadata,
     Column('task_id', Integer, ForeignKey('task.id', onupdate='CASCADE',
         ondelete='CASCADE'), primary_key=True),
     Column('package_id', Integer, ForeignKey('task_package.id',
@@ -91,28 +65,7 @@ task_packages_required_map = Table('task_packages_required_map', metadata,
     mysql_engine='InnoDB',
 )
 
-task_property_needed_table = Table('task_property_needed', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('task_id', Integer,
-                ForeignKey('task.id')),
-        Column('property', Unicode(2048)),
-        mysql_engine='InnoDB',
-)
-
-task_package_table = Table('task_package',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('package', Unicode(255), nullable=False, unique=True),
-        mysql_engine='InnoDB',
-        mysql_collate='utf8_bin',
-)
-
-task_type_table = Table('task_type',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('type', Unicode(255), nullable=False, unique=True),
-        mysql_engine='InnoDB',
-)
-
-task_type_map = Table('task_type_map',metadata,
+task_type_map = Table('task_type_map', DeclarativeMappedObject.metadata,
     Column('task_id', Integer, ForeignKey('task.id', onupdate='CASCADE',
         ondelete='CASCADE'), primary_key=True),
     Column('task_type_id', Integer, ForeignKey('task_type.id',
@@ -324,10 +277,41 @@ class TaskLibrary(object):
         return taskinfo
 
 
-class Task(MappedObject):
+class Task(DeclarativeMappedObject):
     """
     Tasks that are available to schedule
     """
+
+    __tablename__ = 'task'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    name = Column('name', Unicode(255), unique=True)
+    rpm = Column('rpm', Unicode(255), unique=True)
+    path = Column('path', Unicode(4096))
+    description = Column('description', Unicode(2048))
+    repo = Column(Unicode(256))
+    avg_time = Column(Integer, default=0)
+    destructive = Column(Boolean)
+    nda = Column(Boolean)
+    creation_date = Column(DateTime, default=datetime.utcnow)
+    update_date = Column(DateTime, onupdate=datetime.utcnow)
+    uploader_id = Column(Integer, ForeignKey('tg_user.user_id'))
+    uploader = relationship(User, backref='tasks')
+    owner = Column(Unicode(255), index=True)
+    version = Column(Unicode(256))
+    license = Column(Unicode(256))
+    priority = Column(Unicode(256))
+    valid = Column(Boolean, default=True)
+    types = relationship('TaskType', secondary=task_type_map, backref='tasks')
+    excluded_osmajor = relationship('TaskExcludeOSMajor', backref='task')
+    excluded_arch = relationship('TaskExcludeArch', backref='task')
+    runfor = relationship(TaskPackage, secondary=task_packages_runfor_map,
+            backref='tasks')
+    required = relationship(TaskPackage, secondary=task_packages_required_map,
+            order_by=[TaskPackage.package])
+    needs = relationship('TaskPropertyNeeded')
+    bugzillas = relationship('TaskBugzilla', backref='task',
+            cascade='all, delete-orphan')
 
     library = TaskLibrary()
 
@@ -599,11 +583,19 @@ class Task(MappedObject):
         return
 
 
-class TaskExcludeOSMajor(MappedObject):
+class TaskExcludeOSMajor(DeclarativeMappedObject):
     """
     A task can be excluded by arch, osmajor, or osversion
                         RedHatEnterpriseLinux3, RedHatEnterpriseLinux4
     """
+
+    __tablename__ = 'task_exclude_osmajor'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    task_id = Column(Integer, ForeignKey('task.id'))
+    osmajor_id = Column(Integer, ForeignKey('osmajor.id'))
+    osmajor = relationship(OSMajor)
+
     def __cmp__(self, other):
         """ Used to compare excludes that are already stored.
         """
@@ -613,11 +605,19 @@ class TaskExcludeOSMajor(MappedObject):
         else:
             return 1
 
-class TaskExcludeArch(MappedObject):
+class TaskExcludeArch(DeclarativeMappedObject):
     """
     A task can be excluded by arch
                         i386, s390
     """
+
+    __tablename__ = 'task_exclude_arch'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    task_id = Column(Integer, ForeignKey('task.id'))
+    arch_id = Column(Integer, ForeignKey('arch.id'))
+    arch = relationship(Arch)
+
     def __cmp__(self, other):
         """ Used to compare excludes that are already stored.
         """
@@ -626,80 +626,42 @@ class TaskExcludeArch(MappedObject):
         else:
             return 1
 
-class TaskType(MappedObject):
+class TaskType(DeclarativeMappedObject):
     """
     A task can be classified into serveral task types which can be used to
     select tasks for batch runs
     """
+
+    __tablename__ = 'task_type'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    type = Column(Unicode(255), nullable=False, unique=True)
+
     @classmethod
     def by_name(cls, type):
         return cls.query.filter_by(type=type).one()
 
 
-class TaskPackage(MappedObject):
-    """
-    A list of packages that a tasks should be run for.
-    """
-    @classmethod
-    def by_name(cls, package):
-        return cls.query.filter_by(package=package).one()
-
-    def __repr__(self):
-        return self.package
-
-    def to_xml(self):
-        package = xmldoc.createElement("package")
-        package.setAttribute("name", "%s" % self.package)
-        return package
-
-class TaskPropertyNeeded(MappedObject):
+class TaskPropertyNeeded(DeclarativeMappedObject):
     """
     Tasks can have requirements on the systems that they run on.
          *not currently implemented*
     """
-    pass
+
+    __tablename__ = 'task_property_needed'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    task_id = Column(Integer, ForeignKey('task.id'))
+    property = Column(Unicode(2048))
 
 
-class TaskBugzilla(MappedObject):
+class TaskBugzilla(DeclarativeMappedObject):
     """
     Bugzillas that apply to this Task.
     """
-    pass
 
-mapper(Task, task_table,
-        properties = {'types':relation(TaskType,
-                                        secondary=task_type_map,
-                                        backref='tasks'),
-                      'excluded_osmajor':relation(TaskExcludeOSMajor,
-                                        backref='task'),
-                      'excluded_arch':relation(TaskExcludeArch,
-                                        backref='task'),
-                      'runfor':relation(TaskPackage,
-                                        secondary=task_packages_runfor_map,
-                                        backref='tasks'),
-                      'required':relation(TaskPackage,
-                                        secondary=task_packages_required_map,
-                                        order_by=[task_package_table.c.package]),
-                      'needs':relation(TaskPropertyNeeded),
-                      'bugzillas':relation(TaskBugzilla, backref='task',
-                                            cascade='all, delete-orphan'),
-                      'uploader':relation(User, uselist=False, backref='tasks'),
-                     }
-      )
-
-mapper(TaskExcludeOSMajor, task_exclude_osmajor_table,
-       properties = {
-                     'osmajor':relation(OSMajor),
-                    }
-      )
-
-mapper(TaskExcludeArch, task_exclude_arch_table,
-       properties = {
-                     'arch':relation(Arch),
-                    }
-      )
-
-mapper(TaskPackage, task_package_table)
-mapper(TaskPropertyNeeded, task_property_needed_table)
-mapper(TaskType, task_type_table)
-mapper(TaskBugzilla, task_bugzilla_table)
+    __tablename__ = 'task_bugzilla'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    bugzilla_id = Column(Integer)
+    task_id = Column(Integer, ForeignKey('task.id'))

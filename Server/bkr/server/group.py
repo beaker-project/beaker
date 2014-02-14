@@ -300,8 +300,8 @@ class Groups(AdminPage):
 
         group = Group()
         session.add(group)
-        # FIXME: Actually record the group creation in the activity log
-        activity = Activity(user, u'WEBUI', u'Added', u'Group', u"", display_name)
+        group.record_activity(user=user, service=u'WEBUI', field=u'Group',
+                action=u'Created')
         group.display_name = display_name
         group.group_name = group_name
         group.ldap = ldap
@@ -368,7 +368,7 @@ class Groups(AdminPage):
             group.set_name(user, u'WEBUI', group_name)
             group.set_display_name(user, u'WEBUI', display_name)
             group.ldap = ldap
-            group.root_password = root_password
+            group.set_root_password(user, u'WEBUI', root_password)
         except BeakerException, err:
             session.rollback()
             flash(_(u'Failed to update group %s: %s' %
@@ -696,7 +696,7 @@ class Groups(AdminPage):
         activity = Activity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
         session.add(activity)
         for system in group.systems:
-            SystemActivity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"", object=system)
+            session.add(SystemActivity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"", object=system))
         flash( _(u"%s deleted") % group.display_name )
         raise redirect(".")
 
@@ -761,8 +761,8 @@ class Groups(AdminPage):
 
             group = Group()
             session.add(group)
-            # FIXME: Actually record the group creation in the activity log
-            activity = Activity(identity.current.user, u'XMLRPC', u'Added', u'Group', u"", kw['display_name'] )
+            group.record_activity(user=identity.current.user, service=u'XMLRPC',
+                    field=u'Group', action=u'Created')
             group.display_name = display_name
             group.group_name = group_name
             group.ldap = ldap

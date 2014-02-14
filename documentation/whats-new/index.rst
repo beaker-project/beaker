@@ -113,10 +113,35 @@ a number of minor enhancements and bug fixes.
    release-0.11
    upgrade-0.11
 
+Beaker 0.10
+-----------
+
+Beaker 0.10 adds experimental support for running recipes on oVirt guests, plus 
+enhancements to scheduling of guest recipes and many other bug fixes.
+
+.. toctree::
+   :maxdepth: 2
+
+   release-0.10
+   upgrade-0.10
+
+Beaker 0.9
+-----------
+
+Beaker 0.9 introduces a new "native" provisioning mechanism, instead of using 
+Cobbler. The 0.9.x release series also includes a number of other enhancements 
+and bug fixes.
+
+.. toctree::
+   :maxdepth: 2
+
+   release-0.9
+   upgrade-0.9
+
 Older releases
 --------------
 
-Release notes for versions prior to 0.11 are not available.
+Release notes for versions prior to 0.9 are not available.
 
 For administrators upgrading from older versions, refer to the now-obsolete 
 `SchemaUpgrades directory 

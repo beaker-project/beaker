@@ -12,13 +12,13 @@ from bkr.server.installopts import InstallOptions
 from bkr.server import model, dynamic_virt
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
-        Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
+        Cpu, Numa, Provision, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
-        RecipeTask, RecipeTaskResult
+        RecipeTask, RecipeTaskResult, DeclarativeMappedObject
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
@@ -29,7 +29,7 @@ from nose.plugins.skip import SkipTest
 class SchemaSanityTest(unittest.TestCase):
 
     def test_all_tables_use_innodb(self):
-        engine = session.get_bind(System.mapper)
+        engine = DeclarativeMappedObject.metadata.bind
         if engine.url.drivername != 'mysql':
             raise SkipTest('not using MySQL')
         for table in engine.table_names():
@@ -565,7 +565,7 @@ class TestJob(unittest.TestCase):
     def test_cc_property(self):
         job = data_setup.create_job()
         session.flush()
-        session.execute(job_cc_table.insert(values={'job_id': job.id,
+        session.execute(JobCc.__table__.insert(values={'job_id': job.id,
                 'email_address': u'person@nowhere.example.com'}))
         session.refresh(job)
         self.assertEquals(job.cc, ['person@nowhere.example.com'])
@@ -2237,6 +2237,28 @@ class RecipeTest(unittest.TestCase):
                 '<role value="CLIENTTWO"><system value="clienttwo.roles-to-xml"/></role>'
                 '<role value="SERVER"><system value="server.roles-to-xml"/></role>'
                 '</roles>' in xml, xml)
+
+    def test_installation_in_xml(self):
+        recipe = data_setup.create_recipe()
+        data_setup.create_job_for_recipes([recipe])
+        data_setup.mark_recipe_complete(recipe)
+        root = lxml.etree.fromstring(recipe.to_xml(clone=False).toxml())
+        installation = root.find('recipeSet/recipe/installation')
+        self.assertRegexpMatches(installation.get('install_started'),
+                r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
+        self.assertRegexpMatches(installation.get('install_finished'),
+                r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
+        self.assertRegexpMatches(installation.get('postinstall_finished'),
+                r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=999056
+    def test_empty_params_element_is_not_added_to_xml(self):
+        recipe = data_setup.create_recipe()
+        data_setup.create_job_for_recipes([recipe])
+        recipe.tasks[0].params = []
+        root = lxml.etree.fromstring(recipe.to_xml(clone=True).toxml())
+        task = root.find('recipeSet/recipe/task')
+        self.assertEquals(len(task), 0, '<task/> should have no children')
 
 
 class CheckDynamicVirtTest(unittest.TestCase):

@@ -101,6 +101,7 @@ class Users(AdminPage):
             user = User.by_id(kw['user_id'])
         else:
             user =  User()
+            session.add(user)
         user.display_name = kw['display_name']
         user.user_name = kw['user_name']
         user.email_address = kw['email_address']

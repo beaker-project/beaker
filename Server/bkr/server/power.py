@@ -89,6 +89,7 @@ class PowerTypes(AdminPage):
             edit.name = kw['name']
         elif kw.get('name'):
             new = PowerType(name=kw['name'])
+            session.add(new)
         else:
             flash(_(u"Invalid Power Type entry"))
             redirect(".")

@@ -9,7 +9,7 @@ bkr watchdog-extend: Extend Beaker watchdog time
 Synopsis
 --------
 
-:program:`bkr watchdog-extend` [--by=<seconds>] [*options*] <task_id>...
+:program:`bkr watchdog-extend` [:option:`--by` <seconds>] [*options*] <task_id>...
 
 Description
 -----------

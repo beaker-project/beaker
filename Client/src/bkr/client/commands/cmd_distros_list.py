@@ -10,9 +10,9 @@ Synopsis
 --------
 
 | :program:`bkr distros-list` [*options*]
-|       [--tag=<tag>] [--name=<name>] [--treepath=<url>] [--family=<family>]
-        [--arch=<arch>] [--distro-id=<distroid>]
-|       [--limit=<number>] [--format=<format>]
+|       [:option:`--tag` <tag>] [:option:`--name` <name>] [:option:`--treepath` <url>] [:option:`--family` <family>]
+        [:option:`--arch` <arch>] [:option:`--distro-id` <distroid>]
+|       [:option:`--limit` <number>] [:option:`--format` <format>]
 
 Description
 -----------

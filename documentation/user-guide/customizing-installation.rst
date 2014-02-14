@@ -48,6 +48,13 @@ correspond to the similarly-named kickstart option.
     ``auth='--enableshadow --enablemd5'``. See
     :manpage:`authconfig(8)` to learn more.
 
+``autopart_type=<fstype>``
+    Partioning scheme for automatic partitioning (must be one of ``lvm``,
+    ``btrfs``, ``plain`` and ``thinp``). On supported distros, it is
+    passed as ``--type <fstype>`` to the  ``autopart`` kickstart
+    command. On distros where ``autopart`` does not support the
+    ``--type`` option, this is ignored.
+
 ``ethdevices=<module>[,<module>...]``
     Comma-separated list of network modules to be loaded during installation.
 
@@ -94,6 +101,11 @@ correspond to the similarly-named kickstart option.
     ``optional``, and ``debug``. You can find which repo types are available 
     for a particular distro tree under the :guilabel:`Repos` tab on the distro 
     tree page.
+
+``no_updates_repos``
+    Omits the fedora-updates repo for Fedora. Note that fedora-updates will 
+    still be enabled after installation, this configuration is supplied by the 
+    distro and Beaker does not control it.
 
 ``no_clock_sync``
     Omits additional packages and scripts which ensure the system clock is 

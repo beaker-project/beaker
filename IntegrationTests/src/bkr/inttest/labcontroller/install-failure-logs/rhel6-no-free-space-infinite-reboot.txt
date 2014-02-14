@@ -1,0 +1,113 @@
+Freeing unused kernel memory: 1588k freed 
+ [9;0] [8] 
+Greetings. 
+anaconda installer init version 13.21.215 starting 
+mounting /proc filesystem... done 
+creating /dev filesystem... done 
+starting udev...done 
+mounting /dev/pts (unix98 pty) filesystem... done 
+mounting /sys filesystem... done 
+anaconda installer init version 13.21.215 using a serial console 
+trying to remount root filesystem read write... done 
+mounting /tmp as tmpfs... done 
+running install... 
+running /sbin/loader 
+ %Gdetecting hardware... 
+waiting for hardware to initialize... 
+detecting hardware... 
+waiting for hardware to initialize... 
+      
+ (B )0      
+  
+  
+     
+Welcome to Red Hat Enterprise Linux for x86_64       
+┌───────────────────────────────────────────────────────┐       
+│    
+│       
+│ Waiting for NetworkManager to configure eth0.   
+│       
+│    
+│       
+└───────────────────────────────────────────────────────┘      
+<Tab>/<Alt-Tab> between elements  | <Space> selects | <F12> next screen       
+       
+                                                                            
+                                                                            
+                                                                            
+                                                                            
+                                                                            
+     
+┌────────────────────────────┤ Retrieving ├────────────────────────────┐      
+│    
+│      
+│ Retrieving /3186...    
+│      
+│    
+│      
+│                                   0%                                 │      
+│    
+│      
+└──────────────────────────────────────────────────────────────────────┘       
+      
+                              100%                                        
+     
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+      
+  
+                                                                                 Looking for installation images on CD device /dev/sr0Looking for installation images on CD device /dev/sr1Running anaconda 13.21.215, the Red Hat Enterprise Linux system installer - please wait. 
++ wget -O - http://lab-devel-02.beaker.example.com:8000/install_start/4786 
+--2014-01-17 02:09:05--  http://lab-devel-02.beaker.example.com:8000/install_start/4786 
+Resolving lab-devel-02.beaker.example.com... 10.16.64.10, 2620:52:0:1040:5054:ff:fe12:78c3 
+Connecting to lab-devel-02.beaker.example.com|10.16.64.10|:8000... connected. 
+HTTP request sent, awaiting response... 200 OK 
+Length: 4 [text/plain] 
+Saving to: `STDOUT' 
+ 
+     0K                                                       100%  306K=0s 
+ 
+2014-01-17 02:09:05 (306 KB/s) - written to stdout [4/4] 
+ 
++ wget -O /tmp/anamon http://lab-devel-02.beaker.example.com/beaker/anamon 
+--2014-01-17 02:09:05--  http://lab-devel-02.beaker.example.com/beaker/anamon 
+Resolving lab-devel-02.beaker.example.com... 10.16.64.10, 2620:52:0:1040:5054:ff:fe12:78c3 
+Connecting to lab-devel-02.beaker.example.com|10.16.64.10|:80... connected. 
+HTTP request sent, awaiting response... 200 OK 
+Length: 8771 (8.6K) [text/plain] 
+Saving to: `/tmp/anamon' 
+ 
+     0K ........                                              100%  159M=0s 
+ 
+2014-01-17 02:09:05 (159 MB/s) - `/tmp/anamon' saved [8771/8771] 
+ 
++ python /tmp/anamon --recipe-id 4786 --xmlrpc-url http://lab-devel-02.beaker.example.com:8000/RPC2 
+TrueExamining storage devices 
+In progress 
+ 
+Examining storage devices 
+In progress 
+ 
+Could not allocate requested partitions:  
+ 
+not enough free space on disks. 
+ 
+Press 'OK' to exit the installer. 
+terminating anaconda...done 
+sending termination signals...done 
+sending kill signals...done 
+disabling swap... 
+unmounting filesystems... 
+	/mnt/runtime done 
+	disabling /dev/loop0 
+	/dev/pts done 
+	/mnt/stage2 done 
+	/selinux done 
+waiting for mdraid sets to become clean... 
+rebooting system 
+Restarting system. 

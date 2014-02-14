@@ -10,8 +10,8 @@ Synopsis
 --------
 
 | :program:`bkr job-modify` [*options*] <taskspec>
-|       [--response=<response>] [--retention-tag=<retention_tag>]
-|       [--product=<product>]
+|       [:option:`--response` <response>] [:option:`--retention-tag` <retention_tag>]
+|       [:option:`--product` <product>]
 
 
 Description

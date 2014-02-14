@@ -140,11 +140,9 @@ class SystemViewTestWD(WebDriverTestCase):
         if system is None:
             system = self.system
         b = self.browser
-        b.get(get_server_base())
-        b.find_element_by_name('simplesearch').send_keys(system.fqdn)
-        b.find_element_by_id('simpleform').submit()
-        b.find_element_by_link_text(system.fqdn).click()
-        b.find_element_by_xpath('//h1[text()="%s"]' % system.fqdn)
+        b.get(get_server_base() + 'view/%s' % system.fqdn)
+        b.find_element_by_xpath('//title[normalize-space(text())="%s"]' % \
+            system.fqdn)
 
     def assert_system_view_text(self, field, val):
         if field == 'fqdn':
@@ -450,27 +448,82 @@ class SystemViewTestWD(WebDriverTestCase):
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
 
+    def test_update_power_quiescent_validator(self):
+        b = self.browser
+        login(b)
+        self.go_to_system_view()
+        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Power Config"]').click()
+        # Empty value
+        b.find_element_by_name('power_quiescent_period').clear()
+        b.find_element_by_xpath("//form[@id='power']").submit()
+        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Power Config"]').click()
+        error_text = b.find_element_by_xpath('//span[@class="help-block error"'
+            ' and preceding-sibling::'
+            'input[@id="power_power_quiescent_period"]]').text
+        self.assertEqual(error_text, u'Please enter a value')
+
+        # Non int value
+        b.find_element_by_name('power_quiescent_period').clear()
+        b.find_element_by_name('power_quiescent_period').send_keys('nonint')
+        b.find_element_by_xpath("//form[@id='power']").submit()
+        error_text = b.find_element_by_xpath('//span[@class="help-block error"'
+            ' and preceding-sibling::'
+            'input[@id="power_power_quiescent_period"]]').text
+        self.assertEqual(error_text, u'Please enter an integer value')
+
     def test_update_power(self):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
         self.go_to_system_view()
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Power Config"]').click()
-        Select(b.find_element_by_name('power_type_id')).select_by_visible_text('drac')
+        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//'
+            'a[text()="Power Config"]').click()
         b.find_element_by_name('power_address').clear()
         b.find_element_by_name('power_address').send_keys('nowhere.example.com')
+
         b.find_element_by_name('power_user').clear()
         b.find_element_by_name('power_user').send_keys('asdf')
+
         b.find_element_by_name('power_passwd').clear()
         b.find_element_by_name('power_passwd').send_keys('meh')
-        b.find_element_by_name('power_id').clear()
-        b.find_element_by_name('power_id').send_keys('1234')
-        b.find_element_by_xpath('//button[text()="Save Power Changes"]').click()
+
+        b.find_element_by_name('power_quiescent_period').clear()
+        b.find_element_by_name('power_quiescent_period').send_keys('66')
+
+        old_address = self.system.power.power_address
+        old_quiescent = self.system.power.power_quiescent_period
+        b.find_element_by_xpath("//form[@id='power']").submit()
         self.assertEquals(b.find_element_by_class_name('flash').text,
-                'Updated Power')
+            'Updated Power')
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
+            self.assertEqual(self.system.power.power_quiescent_period, 66)
+            self.assertEqual(self.system.power.power_address,
+                'nowhere.example.com')
+            self.assertEqual(self.system.power.power_user, 'asdf')
+            self.assertEqual(self.system.power.power_passwd, 'meh')
+
+            activities_to_find = ['power_address', 'power_quiescent_period',
+                'power_passwd', 'power_user']
+            for activity in self.system.activity:
+                if activity.field_name == 'power_passwd':
+                    # Can't actually test what the activity entry is
+                    activities_to_find.remove(activity.field_name)
+                if activity.field_name == 'power_user':
+                    # Can't actually test what the activity entry is
+                    activities_to_find.remove(activity.field_name)
+                if activity.field_name == 'power_address':
+                    activities_to_find.remove(activity.field_name)
+                    self.assertEqual(activity.old_value, old_address)
+                    self.assertEqual(activity.new_value, 'nowhere.example.com')
+                if activity.field_name == 'power_quiescent_period':
+                    activities_to_find.remove(activity.field_name)
+                    self.assertEqual(activity.old_value, str(5))
+                    self.assertEqual(activity.new_value, str(66))
+            if activities_to_find:
+                raise AssertionError('Could not find activity entries for %s' % ' '.join(activities_to_find))
+
 
     def test_add_install_options(self):
         orig_date_modified = self.system.date_modified

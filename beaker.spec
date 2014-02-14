@@ -25,12 +25,12 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1 
 # but that is not usable for the RPM Version because it sorts higher than 
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 0.15.2
+%global upstream_version 0.15.3
 
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.15.2
+Version:        0.15.3
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -100,7 +100,6 @@ BuildRequires:  systemd
 %endif
 
 # As above, these client dependencies are needed in build because of sphinx
-BuildRequires:  kobo-client >= 0.3
 BuildRequires:  python-krbV
 BuildRequires:  python-lxml
 BuildRequires:  libxslt-python
@@ -110,7 +109,6 @@ BuildRequires:  libxslt-python
 Summary:        Client component for talking to Beaker server
 Group:          Applications/Internet
 Requires:       python
-Requires:       kobo-client >= 0.3
 Requires:	python-setuptools
 Requires:	%{name} = %{version}-%{release}
 Requires:       python-krbV
@@ -162,7 +160,6 @@ Requires:       python-netaddr
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
 Requires:       ovirt-engine-sdk
-Requires:  	kobo-client >= 0.3
 Requires:       python-itsdangerous
 Requires:       python-decorator
 Requires:       python-flask
@@ -188,7 +185,6 @@ Requires:       %{name}-client = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       python-nose >= 0.10
 Requires:       selenium-python >= 2.12
-Requires:       kobo
 Requires:       java-openjdk >= 1:1.6.0
 Requires:       Xvfb
 Requires:       firefox
@@ -218,8 +214,6 @@ Requires:       telnet
 Requires:       sudo
 Requires:       python-cpio
 Requires:	%{name} = %{version}-%{release}
-Requires:       kobo >= 0.3.2
-Requires:	kobo-client
 Requires:	python-setuptools
 Requires:	python-xmltramp
 Requires:       python-krbV
@@ -418,6 +412,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-repo-update
 %{_bindir}/beaker-sync-tasks
 %{_bindir}/beaker-refresh-ldap
+%{_bindir}/beaker-create-kickstart
+%{_mandir}/man1/beaker-create-kickstart.1.gz
 
 %if %{with_systemd}
 %{_unitdir}/beakerd.service
@@ -463,9 +459,13 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{python_sitelib}/bkr.client-*.egg-info/
 %{_bindir}/beaker-wizard
 %{_bindir}/bkr
-%{_mandir}/man1/*.1.gz
+%{_mandir}/man1/beaker-wizard.1.gz
+%{_mandir}/man1/bkr.1.gz
+%{_mandir}/man1/bkr-*.1.gz
 %if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
 %{_datadir}/bash-completion
+# Server isn't packaged on RHEL7, so tell rpm to ignore this file
+%exclude %{_mandir}/man1/beaker-create-kickstart.1.gz
 %else
 %{_sysconfdir}/bash_completion.d
 %endif
@@ -475,6 +475,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
 %{_sysconfdir}/beaker/power-scripts/
+%{_sysconfdir}/beaker/install-failure-patterns/
 %{python_sitelib}/bkr/labcontroller/
 %{python_sitelib}/bkr.labcontroller-*-nspkg.pth
 %{python_sitelib}/bkr.labcontroller-*.egg-info/

@@ -27,12 +27,15 @@ class XMLRPCDispatcher(SimpleXMLRPCDispatcher, XMLRPCDocGenerator):
         XMLRPCDocGenerator.__init__(self)
 
     def _dispatch(self, method, params):
-        """ Custom _dispatch so we can log time used to execute method.
+        """
+        Custom _dispatch so we can log exceptions and the time taken to
+        execute each method.
         """
         start = datetime.utcnow()
         try:
             result = SimpleXMLRPCDispatcher._dispatch(self, method, params)
         except:
+            logger.exception('Error handling XML-RPC call %s', str(method))
             logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
             raise
         logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
@@ -178,7 +181,7 @@ def main():
     if pid_file is None:
         pid_file = conf.get("PROXY_PID_FILE", "/var/run/beaker-lab-controller/beaker-proxy.pid")
 
-    # kobo.client.HubProxy will try to log some stuff, even though we 
+    # HubProxy will try to log some stuff, even though we 
     # haven't configured our logging handlers yet. So we send logs to stderr 
     # temporarily here, and configure it again below.
     log_to_stream(sys.stderr, level=logging.WARNING)

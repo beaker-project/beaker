@@ -4,7 +4,7 @@ XML-RPC methods
 These XML-RPC methods form part of the public API exposed by Beaker. The 
 :command:`bkr` command-line client (distributed with Beaker) uses these methods 
 to interact with the Beaker server. Users may also invoke them directly. The 
-Python standard library includes an XML-RPC client library (:mod:`xmlrpclib`); 
+Python standard library includes an XML-RPC client library (:mod:`xmlrpclib`);
 the `Kobo`_ utility library may also be of interest.
 
 The XML-RPC endpoint URL is ``/RPC2`` (relative to the base URL of the Beaker server).

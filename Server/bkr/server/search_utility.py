@@ -15,6 +15,14 @@ from bkr.common.bexceptions import BeakerException
 import logging
 log = logging.getLogger(__name__)
 
+def get_alias_target(aliased_class):
+    # SQLAlchemy 0.8+ has a proper inspection API,
+    # on earlier versions we just hack it
+    try:
+        from sqlalchemy import inspect
+        return inspect(aliased_class).mapper.entity
+    except ImportError:
+        return aliased_class._AliasedClass__target
 
 class MyColumn(object):
     """
@@ -173,9 +181,9 @@ class KeyStringColumn(KeyColumn):
         """
         relations = self.relations
         for relation in relations:
-            if relation._AliasedClass__target == model.Key:
+            if get_alias_target(relation) == model.Key:
                 key_ = relation
-            if relation._AliasedClass__target == model.Key_Value_String:
+            if get_alias_target(relation) == model.Key_Value_String:
                 key_string = relation
         return query.outerjoin((key_string, key_string.system_id==model.System.id),
             (key_, key_.id==key_string.key_id))
@@ -196,9 +204,9 @@ class KeyIntColumn(KeyColumn):
         """
         relations = self.relations
         for relation in relations:
-            if relation._AliasedClass__target == model.Key:
+            if get_alias_target(relation) == model.Key:
                 key_ = relation
-            if relation._AliasedClass__target == model.Key_Value_Int:
+            if get_alias_target(relation) == model.Key_Value_Int:
                 key_int = relation
         return query.outerjoin((key_int, key_int.system_id==model.System.id),
             (key_, key_.id==key_int.key_id))
@@ -682,7 +690,7 @@ class SystemSearch(Search):
                 aliased_table = map(lambda x: aliased(x), tables_to_alias)
                 if len(aliased_table) > 1:
                     for at in aliased_table:
-                        if at._AliasedClass__target == mycolumn.target_table:
+                        if get_alias_target(at) == mycolumn.target_table:
                             aliased_table_target = at
                 else:
                     aliased_table_target = aliased_table[0]
@@ -1023,7 +1031,7 @@ class System(SystemObject):
             query = model.System.query.filter(model.System.arch.any(model.Arch.arch == val))
           
         ids = [r.id for r in query]  
-        return not_(model.system_table.c.id.in_(ids)) 
+        return not_(model.System.id.in_(ids))
 
 class Recipe(SystemObject):
     search = RecipeSearch
@@ -1052,12 +1060,12 @@ class Task(SystemObject):
                           'Version' : MyColumn(col_type='string', column=model.Task.version),
                           'Types' : MyColumn(col_type='string',column=model.TaskType.type,relations=['types']),
                           'Arch' : MyColumn(col_type='string', column=model.Arch.arch,relations=['excluded_arch','arch']),
-                          'Distro' : MyColumn(col_type='string', column=model.OSMajor.osmajor,relations=['excluded_osmajor','osmajor']),
+                          'OSMajor' : MyColumn(col_type='string', column=model.OSMajor.osmajor,relations=['excluded_osmajor','osmajor']),
                          }
 
 
     @classmethod
-    def distro_is_filter(cls,x,y): 
+    def osmajor_is_filter(cls,x,y):
         queri = model.Task.query.outerjoin('excluded_osmajor','osmajor')
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard
@@ -1158,7 +1166,7 @@ class Task(SystemObject):
         return cls._opposites_is_not_filter(x,y,wildcard=wildcard)
 
     @classmethod
-    def distro_is_not_filter(cls,x,y):
+    def osmajor_is_not_filter(cls,x,y):
         wildcard_y = re.sub('\*','%',y)
         if wildcard_y != y: #looks like we found a wildcard 
             osmajors = model.OSMajor.query.filter(model.OSMajor.osmajor.like(wildcard_y))
@@ -1533,7 +1541,7 @@ class Cpu(SystemObject):
         else:
             query = model.Cpu.query.filter(model.Cpu.flags.any(model.CpuFlag.flag == val))
             ids = [r.id for r in query]
-            return or_(not_(model.cpu_table.c.id.in_(ids)), col == None) 
+            return or_(not_(model.Cpu.id.in_(ids)), col == None)
          
 class Device(SystemObject):
     display_name = 'Devices'
@@ -1552,7 +1560,7 @@ class Device(SystemObject):
             query = model.System.query.filter(model.System.devices.any(model.Device.driver == val))
     
         ids = [r.id for r in query]  
-        return not_(model.system_table.c.id.in_(ids))   
+        return not_(model.System.id.in_(ids))
 
 class Disk(SystemObject):
     display_name = 'Disk'

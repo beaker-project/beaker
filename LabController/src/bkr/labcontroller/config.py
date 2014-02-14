@@ -1,12 +1,12 @@
 import copy
 import socket
 import os
-import kobo.conf
+from bkr.common.pyconfig import PyConfigParser
 
 __all__ = ['load_conf', 'get_conf']
 
 
-class Config(kobo.conf.PyConfigParser):
+class Config(PyConfigParser):
 
     def get_url_domain(self):
         # URL_DOMAIN used to be called SERVER

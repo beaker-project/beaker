@@ -7,14 +7,15 @@ import time
 import random
 import signal
 import daemon
-from daemon import pidfile
-from optparse import OptionParser
+import datetime
 import pkg_resources
 import subprocess
+from daemon import pidfile
+from optparse import OptionParser
 import gevent, gevent.hub, gevent.socket, gevent.event, gevent.monkey
-from kobo.exceptions import ShutdownException
+from bkr.labcontroller.exceptions import ShutdownException
 from bkr.log import log_to_stream, log_to_syslog
-from bkr.common.helpers import SensitiveUnicode
+from bkr.common.helpers import SensitiveUnicode, total_seconds
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.labcontroller.proxy import ProxyHelper
 from bkr.labcontroller import netboot
@@ -27,11 +28,15 @@ class CommandQueuePoller(ProxyHelper):
         super(CommandQueuePoller, self).__init__(*args, **kwargs)
         self.commands = {} #: dict of (id -> command info) for running commands
         self.greenlets = {} #: dict of (command id -> greenlet which is running it)
+        self.last_command_datetime = {} # Last time a command was run against a system.
 
     def get_queued_commands(self):
         commands = self.hub.labcontrollers.get_queued_command_details()
         for command in commands:
-            if 'power' in command and 'passwd' in command['power']:
+            # The 'is not None' check is important as we do not want to
+            # stringify the None type
+            if 'power' in command and 'passwd' in command['power'] and \
+                    command['power']['passwd'] is not None:
                 command['power']['passwd'] = SensitiveUnicode(command['power']['passwd'])
         return commands
 
@@ -87,6 +92,25 @@ class CommandQueuePoller(ProxyHelper):
                     command['delay'], command['id'])
             if shutting_down.wait(timeout=command['delay']):
                 return
+        quiescent_period = command.get('quiescent_period')
+        if quiescent_period:
+            system_fqdn = command.get('fqdn')
+            last_command_finished_at = self.last_command_datetime.get(system_fqdn)
+            if last_command_finished_at:
+                # Get the difference between the time now and the number of
+                # seconds until we can run another command
+                seconds_to_wait = total_seconds(datetime.datetime.utcnow() -
+                    (last_command_finished_at +
+                        datetime.timedelta(quiescent_period)))
+            else:
+                # Play it safe, wait for the whole period.
+                seconds_to_wait = quiescent_period
+            if seconds_to_wait > 0:
+                logger.debug('Entering quiescent period, delaying %s seconds for'
+                    ' command %s' % (seconds_to_wait, command['id']))
+                if shutting_down.wait(timeout=seconds_to_wait):
+                    return
+            self.last_command_datetime[system_fqdn] = datetime.datetime.utcnow()
         gevent.joinall(predecessors)
         if shutting_down.is_set():
             return
@@ -97,11 +121,6 @@ class CommandQueuePoller(ProxyHelper):
                 handle_power(command)
             elif command['action'] == u'reboot':
                 handle_power(dict(command.items() + [('action', u'off')]))
-                # This 5 second delay period is not very scientific, it's just 
-                # copied from Cobbler. The idea is to give the PSU a chance to 
-                # discharge, in case the power controller is returning from the 
-                # 'off' command too soon.
-                time.sleep(5)
                 handle_power(dict(command.items() + [('action', u'on')]))
             elif command['action'] == u'clear_logs':
                 handle_clear_logs(self.conf, command)
@@ -239,7 +258,7 @@ def main():
     if pid_file is None:
         pid_file = conf.get("PROVISION_PID_FILE", "/var/run/beaker-lab-controller/beaker-provision.pid")
 
-    # kobo.client.HubProxy will try to log some stuff, even though we 
+    # HubProxy will try to log some stuff, even though we 
     # haven't configured our logging handlers yet. So we send logs to stderr 
     # temporarily here, and configure it again below.
     log_to_stream(sys.stderr, level=logging.WARNING)

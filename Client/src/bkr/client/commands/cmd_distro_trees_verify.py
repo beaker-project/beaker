@@ -10,8 +10,8 @@ Synopsis
 --------
 
 | :program:`bkr distro-trees-verify` [*options*]
-|       [--tag=<tag>] [--name=<name>] [--treepath=<url>] [--family=<family>] [--arch=<arch>]
-|       [--broken] [--limit=<number>]
+|       [:option:`--tag` <tag>] [:option:`--name` <name>] [:option:`--treepath` <url>] [:option:`--family` <family>] [:option:`--arch` <arch>]
+|       [--broken] [:option:`--limit` <number>]
 
 Description
 -----------

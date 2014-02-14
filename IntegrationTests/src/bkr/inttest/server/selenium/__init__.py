@@ -25,7 +25,7 @@ from selenium import selenium, webdriver
 import unittest2 as unittest
 import xmlrpclib
 from urlparse import urljoin
-import kobo.xmlrpc
+from bkr.common.xmlrpc import CookieTransport, SafeCookieTransport
 from datetime import datetime
 from bkr.inttest import data_setup, get_server_base, Process
 from bkr.inttest.assertions import wait_for_condition
@@ -130,8 +130,8 @@ class XmlRpcTestCase(unittest.TestCase):
     def get_server(cls):
         endpoint = urljoin(get_server_base(), 'RPC2')
         transport = endpoint.startswith('https:') and \
-                kobo.xmlrpc.SafeCookieTransport(use_datetime=True) or \
-                kobo.xmlrpc.CookieTransport(use_datetime=True)
+                SafeCookieTransport(use_datetime=True) or \
+                CookieTransport(use_datetime=True)
         return xmlrpclib.ServerProxy(endpoint, transport=transport,
                 allow_none=True, use_datetime=True)
 

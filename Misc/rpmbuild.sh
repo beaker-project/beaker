@@ -35,12 +35,23 @@ done
 git show HEAD:beaker.spec >"$workdir/beaker.spec"
 
 if [ "$commitcount" -gt 0 ] ; then
-    # need to hack the spec
+    # need to hack the version in the spec
     sed --regexp-extended --in-place \
         -e "/%global upstream_version /c\%global upstream_version ${version}" \
         -e "/^Version:/cVersion: ${rpmver}" \
         -e "/^Release:/cRelease: ${rpmrel}%{?dist}" \
         "$workdir/beaker.spec"
+    # inject %prep commands to also hack the Python module versions
+    # (beware the precarious quoting here...)
+    commands=$(cat <<EOF
+sed -i -e "/version=/c\\\\    version='$version$prerelease'," */setup.py
+sed -i -e "/__version__/c\\\\__version__ = '$version$prerelease'" Common/bkr/common/__init__.py
+EOF
+)
+    awk --assign "commands=$commands" \
+        '{ print } ; /^%setup/ { print commands }' \
+        "$workdir/beaker.spec" >"$workdir/beaker.spec.injected"
+    mv "$workdir/beaker.spec.injected" "$workdir/beaker.spec"
 fi
 
 # We force the use of md5 hashes for RHEL5 compatibility

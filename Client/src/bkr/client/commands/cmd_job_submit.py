@@ -11,7 +11,7 @@ Synopsis
 
 | :program:`bkr job-submit` [*options*]
 |       [--debug] [--convert] [--combine] [--ignore-missing-tasks]
-|       [--dryrun | --wait] <jobxml>...
+|       [:option:`--dryrun` | :option:`--wait`] <jobxml>...
 
 Description
 -----------

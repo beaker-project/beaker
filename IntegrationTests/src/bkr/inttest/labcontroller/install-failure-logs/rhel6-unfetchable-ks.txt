@@ -1,0 +1,91 @@
+Freeing unused kernel memory: 1588k freed 
+ [9;0] [8] 
+Greetings. 
+anaconda installer init version 13.21.215 starting 
+mounting /proc filesystem... done 
+creating /dev filesystem... done 
+starting udev...done 
+mounting /dev/pts (unix98 pty) filesystem... done 
+mounting /sys filesystem... done 
+anaconda installer init version 13.21.215 using a serial console 
+trying to remount root filesystem read write... done 
+mounting /tmp as tmpfs... done 
+running install... 
+running /sbin/loader 
+ %Gdetecting hardware... 
+waiting for hardware to initialize... 
+detecting hardware... 
+waiting for hardware to initialize... 
+      
+ (B )0      
+  
+  
+     
+Welcome to Red Hat Enterprise Linux for x86_64       
+┌───────────────────────────────────────────────────────┐       
+│    
+│       
+│ Waiting for NetworkManager to configure eth0.   
+│       
+│    
+│       
+└───────────────────────────────────────────────────────┘      
+<Tab>/<Alt-Tab> between elements  | <Space> selects | <F12> next screen       
+       
+                                                                            
+                                                                            
+                                                                            
+                                                                            
+                                                                            
+     
+┌────────────────────────────┤ Retrieving ├────────────────────────────┐      
+│    
+│      
+│ Retrieving /notexist...    
+│      
+│    
+│      
+│                                   0%                                 │      
+│    
+│      
+└──────────────────────────────────────────────────────────────────────┘       
+     
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+                                                                                  
+     
+┌─────────────┤ Error downloading kickstart file ├─────────────┐     
+│    
+│     
+│ Unable to download the kickstart file.  Please modify the    │     
+│ kickstart parameter below or press Cancel to proceed as an   │      
+│ interactive installation.    
+│      
+│    
+│      
+│ http://example.invalid/notexist_____________________________ │      
+│    
+│      
+│    
+┌────┐    
+┌────────┐    
+│      
+│    
+│ OK │    
+│ Cancel │    
+│      
+│    
+└────┘    
+└────────┘    
+│      
+│    
+│      
+│    
+│      
+└──────────────────────────────────────────────────────────────┘       
+[-- MARK -- Fri Jan 17 02:10:00 2014] 
+[-- MARK -- Fri Jan 17 02:15:00 2014] 

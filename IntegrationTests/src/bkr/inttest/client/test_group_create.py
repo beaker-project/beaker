@@ -1,6 +1,6 @@
 import unittest2 as unittest
 from turbogears.database import session
-from bkr.server.model import Activity, Group, User
+from bkr.server.model import Group, User
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError, create_client_config
 
@@ -14,9 +14,6 @@ class GroupCreateTest(unittest.TestCase):
                           group_name])
         self.assert_('Group created' in out, out)
         with session.begin():
-            self.assertEquals(Activity.query.filter_by(service=u'XMLRPC',
-                    field_name=u'Group', action=u'Added',
-                    new_value=display_name).count(), 1)
             group = Group.by_name(group_name)
             self.assertEquals(group.display_name, display_name)
             self.assertEquals(group.activity[-1].action, u'Added')
@@ -27,6 +24,8 @@ class GroupCreateTest(unittest.TestCase):
             self.assertEquals(group.activity[-2].field_name, u'User')
             self.assertEquals(group.activity[-2].new_value, data_setup.ADMIN_USER)
             self.assertEquals(group.activity[-2].service, u'XMLRPC')
+            self.assertEquals(group.activity[-3].action, u'Created')
+            self.assertEquals(group.activity[-3].service, u'XMLRPC')
 
         group_name = data_setup.unique_name('group%s')
         out = run_client(['bkr', 'group-create',

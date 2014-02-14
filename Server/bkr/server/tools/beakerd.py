@@ -37,9 +37,8 @@ from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
         GuestRecipe, RecipeVirtStatus, TaskStatus, TaskPriority, LabController,
         Watchdog, System, DistroTree, LabControllerDistroTree, SystemStatus,
         VirtResource, SystemResource, GuestResource, Arch,
-        SystemAccessPolicy, SystemPermission, ConfigItem, recipe_table,
-        distro_tree_lab_controller_map, machine_guest_map, guest_recipe_table,
-        distro_tree_table)
+        SystemAccessPolicy, SystemPermission, ConfigItem)
+from bkr.server.model.scheduler import machine_guest_map
 from bkr.server.util import load_config, log_traceback
 from bkr.server.recipetasks import RecipeTasks
 from turbogears.database import session
@@ -362,9 +361,9 @@ def schedule_queued_recipes(*args):
         # the most recent distro tree. It is to be used as a derived table.
         latest_guest_distro = select([machine_guest_map.c.machine_recipe_id.label('host_id'),
             func.max(DistroTree.date_created).label('latest_distro_date')],
-            from_obj=[machine_guest_map.join(guest_recipe_table,
-                    machine_guest_map.c.guest_recipe_id==guest_recipe_table.c.id). \
-                join(recipe_table).join(distro_tree_table)],
+            from_obj=[machine_guest_map.join(GuestRecipe.__table__,
+                    machine_guest_map.c.guest_recipe_id==GuestRecipe.__table__.c.id). \
+                join(Recipe.__table__).join(DistroTree.__table__)],
             whereclause=Recipe.status=='Queued',
             group_by=machine_guest_map.c.machine_recipe_id).alias()
 
@@ -505,8 +504,8 @@ def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
         .join(Recipe.recipeset, RecipeSet.job) \
         .join(System.lab_controller, LabController._distro_trees)\
         .join((DistroTree,
-            and_(distro_tree_lab_controller_map.c.distro_tree_id ==
-                DistroTree.id, recipe_table.c.distro_tree_id == DistroTree.id)))\
+            and_(LabControllerDistroTree.distro_tree_id ==
+                DistroTree.id, Recipe.distro_tree_id == DistroTree.id)))\
         .outerjoin((machine_guest_map,
             Recipe.id == machine_guest_map.c.machine_recipe_id))\
         .outerjoin((guest_recipe,

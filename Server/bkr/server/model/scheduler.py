@@ -18,12 +18,12 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, DateTime, Boolean, UnicodeText, String, Numeric)
 from sqlalchemy.sql import select, union, and_, or_, not_, func, literal
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import mapper, relation, backref, object_mapper, dynamic_loader
+from sqlalchemy.orm import mapper, relationship, backref, object_mapper, dynamic_loader
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears import url
 from turbogears.config import get
-from turbogears.database import session, metadata
+from turbogears.database import session
 from bkr.common.helpers import makedirs_ignore
 from bkr.server import identity, metrics, mail, dynamic_virt
 from bkr.server.bexceptions import BX, BeakerException, StaleTaskStatusException
@@ -33,13 +33,13 @@ from bkr.server.installopts import InstallOptions, global_install_options
 from bkr.server.util import absolute_url
 from .types import (UUID, MACAddress, TaskResult, TaskStatus, TaskPriority,
         ResourceType, RecipeVirtStatus, mac_unix_padded_dialect)
-from .base import MappedObject
-from .activity import Activity, activity_table
-from .identity import User, Group, users_table
-from .lab import LabController, lab_controller_table
+from .base import DeclarativeMappedObject
+from .activity import Activity
+from .identity import User, Group
+from .lab import LabController
 from .distrolibrary import OSMajor, OSVersion, Distro, DistroTree
 from .tasklibrary import Task, TaskPackage
-from .inventory import System, SystemActivity, Reservation, system_table
+from .inventory import System, SystemActivity, Reservation
 
 log = logging.getLogger(__name__)
 
@@ -50,240 +50,18 @@ def node(element, value):
     node.appendChild(xmldoc.createTextNode(value))
     return node
 
-watchdog_table = Table('watchdog', metadata,
-    Column('id', Integer, autoincrement=True,
-           nullable=False, primary_key=True),
-    Column('recipe_id', Integer, ForeignKey('recipe.id'), nullable=False),
-    Column('recipetask_id', Integer, ForeignKey('recipe_task.id')),
-    Column('subtask', Unicode(255)),
-    Column('kill_time', DateTime),
-    mysql_engine='InnoDB',
-)
+class RecipeSetActivity(Activity):
 
-recipe_set_nacked_table = Table('recipe_set_nacked', metadata,
-    Column('recipe_set_id', Integer, ForeignKey('recipe_set.id',
-        onupdate='CASCADE', ondelete='CASCADE'), primary_key=True,nullable=False),
-    Column('response_id', Integer, ForeignKey('response.id',
-        onupdate='CASCADE', ondelete='CASCADE'), nullable=False),
-    Column('comment', Unicode(255),nullable=True),
-    Column('created',DateTime,nullable=False,default=datetime.utcnow),
-    mysql_engine='InnoDB',
-)
+    __tablename__ = 'recipeset_activity'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
+    recipeset_id = Column(Integer, ForeignKey('recipe_set.id'))
+    __mapper_args__ = {'polymorphic_identity': u'recipeset_activity'}
 
-beaker_tag_table = Table('beaker_tag', metadata,
-    Column('id', Integer, primary_key=True, nullable = False),
-    Column('tag', Unicode(20), nullable=False),
-    Column('type', Unicode(40), nullable=False),
-    UniqueConstraint('tag', 'type'),
-    mysql_engine='InnoDB',
-)
+    def object_name(self):
+        return "RecipeSet: %s" % self.object.id
 
-retention_tag_table = Table('retention_tag', metadata,
-    Column('id', Integer, ForeignKey('beaker_tag.id', onupdate='CASCADE', ondelete='CASCADE'),nullable=False, primary_key=True),
-    Column('default_', Boolean),
-    Column('expire_in_days', Integer, default=0),
-    Column('needs_product', Boolean),
-    mysql_engine='InnoDB',
-)
-
-product_table = Table('product', metadata,
-    Column('id', Integer, autoincrement=True, nullable=False,
-        primary_key=True),
-    Column('name', Unicode(100),unique=True, index=True, nullable=False),
-    Column('created', DateTime, nullable=False, default=datetime.utcnow),
-    mysql_engine='InnoDB',
-)
-
-response_table = Table('response', metadata,
-    Column('id', Integer, autoincrement=True, primary_key=True, nullable=False),
-    Column('response',Unicode(50), nullable=False),
-    mysql_engine='InnoDB',
-)
-
-recipeset_activity_table = Table('recipeset_activity', metadata,
-    Column('id', Integer,ForeignKey('activity.id'), primary_key=True),
-    Column('recipeset_id', Integer, ForeignKey('recipe_set.id')),
-    mysql_engine='InnoDB',
-)
-
-job_table = Table('job',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('dirty_version', UUID, nullable=False),
-        Column('clean_version', UUID, nullable=False),
-        Column('owner_id', Integer,
-                ForeignKey('tg_user.user_id'), index=True),
-        Column('submitter_id', Integer,
-                ForeignKey('tg_user.user_id', name='job_submitter_id_fk')),
-        Column('group_id', Integer, ForeignKey('tg_group.group_id', \
-            name='job_group_id_fk'), default=None),
-        Column('whiteboard',Unicode(2000)),
-        Column('retention_tag_id', Integer, ForeignKey('retention_tag.id'), nullable=False),
-        Column('product_id', Integer, ForeignKey('product.id'),nullable=True),
-        Column('result', TaskResult.db_type(), nullable=False,
-                default=TaskResult.new, index=True),
-        Column('status', TaskStatus.db_type(), nullable=False,
-                default=TaskStatus.new, index=True),
-        Column('deleted', DateTime, default=None, index=True),
-        Column('to_delete', DateTime, default=None, index=True),
-        # Total tasks
-	Column('ttasks', Integer, default=0),
-        # Total Passing tasks
-        Column('ptasks', Integer, default=0),
-        # Total Warning tasks
-        Column('wtasks', Integer, default=0),
-        # Total Failing tasks
-        Column('ftasks', Integer, default=0),
-        # Total Panic tasks
-        Column('ktasks', Integer, default=0),
-        mysql_engine='InnoDB',
-)
-# for fast dirty_version != clean_version comparisons:
-Index('ix_job_dirty_clean_version', job_table.c.dirty_version, job_table.c.clean_version)
-
-job_cc_table = Table('job_cc', metadata,
-        Column('job_id', Integer, ForeignKey('job.id', ondelete='CASCADE',
-            onupdate='CASCADE'), primary_key=True),
-        Column('email_address', Unicode(255), primary_key=True, index=True),
-        mysql_engine='InnoDB',
-)
-
-recipe_set_table = Table('recipe_set',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('job_id', Integer,
-                ForeignKey('job.id'), nullable=False),
-        Column('priority', TaskPriority.db_type(), nullable=False,
-                default=TaskPriority.default_priority(), index=True),
-        Column('queue_time',DateTime, nullable=False, default=datetime.utcnow),
-        Column('result', TaskResult.db_type(), nullable=False,
-                default=TaskResult.new, index=True),
-        Column('status', TaskStatus.db_type(), nullable=False,
-                default=TaskStatus.new, index=True),
-        Column('lab_controller_id', Integer,
-                ForeignKey('lab_controller.id')),
-        # Total tasks
-	Column('ttasks', Integer, default=0),
-        # Total Passing tasks
-        Column('ptasks', Integer, default=0),
-        # Total Warning tasks
-        Column('wtasks', Integer, default=0),
-        # Total Failing tasks
-        Column('ftasks', Integer, default=0),
-        # Total Panic tasks
-        Column('ktasks', Integer, default=0),
-        mysql_engine='InnoDB',
-)
-
-# Log tables all have the following fields:
-#   path
-#       Subdirectory of this log, relative to the root of the recipe/RT/RTR. 
-#       Probably won't have an initial or trailing slash, but I wouldn't bet on 
-#       it. ;-) Notably, the value '/' is used (rather than the empty string) 
-#       to represent no subdirectory.
-#   filename
-#       Filename of this log.
-#   server
-#       Absolute URL to the directory where the log is stored. Path and 
-#       filename are relative to this.
-#       Always NULL if log transferring is not enabled (CACHE=False).
-#   basepath
-#       Absolute filesystem path to the directory where the log is stored on 
-#       the remote system. XXX we shouldn't need to store this!
-#       Always NULL if log transferring is not enabled (CACHE=False).
-
-log_recipe_table = Table('log_recipe', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_id', Integer, ForeignKey('recipe.id'),
-            nullable=False),
-        Column('path', UnicodeText()),
-        Column('filename', UnicodeText(), nullable=False),
-        Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', UnicodeText()),
-	Column('basepath', UnicodeText()),
-        mysql_engine='InnoDB',
-)
-
-log_recipe_task_table = Table('log_recipe_task', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_task_id', Integer, ForeignKey('recipe_task.id'),
-            nullable=False),
-        Column('path', UnicodeText()),
-        Column('filename', UnicodeText(), nullable=False),
-        Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', UnicodeText()),
-	Column('basepath', UnicodeText()),
-        mysql_engine='InnoDB',
-)
-
-log_recipe_task_result_table = Table('log_recipe_task_result', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_task_result_id', Integer,
-                ForeignKey('recipe_task_result.id'), nullable=False),
-        Column('path', UnicodeText()),
-        Column('filename', UnicodeText(), nullable=False),
-        Column('start_time',DateTime, default=datetime.utcnow),
-	Column('server', UnicodeText()),
-	Column('basepath', UnicodeText()),
-        mysql_engine='InnoDB',
-)
-
-recipe_table = Table('recipe',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_set_id', Integer,
-                ForeignKey('recipe_set.id'), nullable=False),
-        Column('distro_tree_id', Integer,
-                ForeignKey('distro_tree.id')),
-        Column('rendered_kickstart_id', Integer, ForeignKey('rendered_kickstart.id',
-                name='recipe_rendered_kickstart_id_fk', ondelete='SET NULL')),
-        Column('result', TaskResult.db_type(), nullable=False,
-                default=TaskResult.new, index=True),
-        Column('status', TaskStatus.db_type(), nullable=False,
-                default=TaskStatus.new, index=True),
-        Column('start_time',DateTime),
-        Column('finish_time',DateTime),
-        Column('_host_requires',UnicodeText()),
-        Column('_distro_requires',UnicodeText()),
-        # This column is actually a custom user-supplied kickstart *template*
-        # (if not NULL), the generated kickstart for the recipe is defined above
-        Column('kickstart',UnicodeText()),
-        # type = recipe, machine_recipe or guest_recipe
-        Column('type', String(30), nullable=False),
-        # Total tasks
-	Column('ttasks', Integer, default=0),
-        # Total Passing tasks
-        Column('ptasks', Integer, default=0),
-        # Total Warning tasks
-        Column('wtasks', Integer, default=0),
-        # Total Failing tasks
-        Column('ftasks', Integer, default=0),
-        # Total Panic tasks
-        Column('ktasks', Integer, default=0),
-        Column('whiteboard',Unicode(2000)),
-        Column('ks_meta', String(1024)),
-        Column('kernel_options', String(1024)),
-        Column('kernel_options_post', String(1024)),
-        Column('role', Unicode(255)),
-        Column('panic', Unicode(20)),
-        Column('_partitions',UnicodeText()),
-        Column('autopick_random', Boolean, default=False),
-        Column('log_server', Unicode(255), index=True),
-        Column('virt_status', RecipeVirtStatus.db_type(), index=True,
-                nullable=False, default=RecipeVirtStatus.possible),
-        mysql_engine='InnoDB',
-)
-
-machine_recipe_table = Table('machine_recipe', metadata,
-        Column('id', Integer, ForeignKey('recipe.id'), primary_key=True),
-        mysql_engine='InnoDB',
-)
-
-guest_recipe_table = Table('guest_recipe', metadata,
-        Column('id', Integer, ForeignKey('recipe.id'), primary_key=True),
-        Column('guestname', UnicodeText()),
-        Column('guestargs', UnicodeText()),
-        mysql_engine='InnoDB',
-)
-
-machine_guest_map =Table('machine_guest_map',metadata,
+machine_guest_map =Table('machine_guest_map', DeclarativeMappedObject.metadata,
         Column('machine_recipe_id', Integer,
                 ForeignKey('machine_recipe.id', onupdate='CASCADE', ondelete='CASCADE'),
                 primary_key=True),
@@ -293,7 +71,7 @@ machine_guest_map =Table('machine_guest_map',metadata,
         mysql_engine='InnoDB',
 )
 
-system_recipe_map = Table('system_recipe_map', metadata,
+system_recipe_map = Table('system_recipe_map', DeclarativeMappedObject.metadata,
         Column('system_id', Integer,
                 ForeignKey('system.id', onupdate='CASCADE', ondelete='CASCADE'),
                 primary_key=True),
@@ -303,55 +81,7 @@ system_recipe_map = Table('system_recipe_map', metadata,
         mysql_engine='InnoDB',
 )
 
-recipe_resource_table = Table('recipe_resource', metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('recipe_id', Integer, ForeignKey('recipe.id',
-        name='recipe_resource_recipe_id_fk',
-        onupdate='CASCADE', ondelete='CASCADE'),
-        nullable=False, unique=True),
-    Column('type', ResourceType.db_type(), nullable=False),
-    Column('fqdn', Unicode(255), default=None),
-    Column('rebooted', DateTime, nullable=True, default=None),
-    Column('install_started', DateTime, nullable=True, default=None),
-    Column('install_finished', DateTime, nullable=True, default=None),
-    Column('postinstall_finished', DateTime, nullable=True, default=None),
-    mysql_engine='InnoDB',
-)
-
-system_resource_table = Table('system_resource', metadata,
-    Column('id', Integer, ForeignKey('recipe_resource.id',
-            name='system_resource_id_fk'), primary_key=True),
-    Column('system_id', Integer, ForeignKey('system.id',
-            name='system_resource_system_id_fk'), nullable=False),
-    Column('reservation_id', Integer, ForeignKey('reservation.id',
-            name='system_resource_reservation_id_fk')),
-    mysql_engine='InnoDB',
-)
-
-virt_resource_table = Table('virt_resource', metadata,
-    Column('id', Integer, ForeignKey('recipe_resource.id',
-            name='virt_resource_id_fk'), primary_key=True),
-    Column('system_name', Unicode(2048), nullable=False),
-    Column('lab_controller_id', Integer, ForeignKey('lab_controller.id',
-            name='virt_resource_lab_controller_id_fk')),
-    Column('mac_address', MACAddress(), index=True, default=None),
-    mysql_engine='InnoDB',
-)
-
-guest_resource_table = Table('guest_resource', metadata,
-    Column('id', Integer, ForeignKey('recipe_resource.id',
-            name='guest_resource_id_fk'), primary_key=True),
-    Column('mac_address', MACAddress(), index=True, default=None),
-    mysql_engine='InnoDB',
-)
-
-recipe_tag_table = Table('recipe_tag',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('tag', Unicode(255)),
-        mysql_engine='InnoDB',
-)
-
-recipe_tag_map = Table('recipe_tag_map', metadata,
+recipe_tag_map = Table('recipe_tag_map', DeclarativeMappedObject.metadata,
         Column('tag_id', Integer,
                ForeignKey('recipe_tag.id', onupdate='CASCADE', ondelete='CASCADE'),
                primary_key=True),
@@ -361,115 +91,7 @@ recipe_tag_map = Table('recipe_tag_map', metadata,
         mysql_engine='InnoDB',
 )
 
-recipe_rpm_table =Table('recipe_rpm',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_id', Integer,
-                ForeignKey('recipe.id'), nullable=False),
-        Column('package',Unicode(255)),
-        Column('version',Unicode(255)),
-        Column('release',Unicode(255)),
-        Column('epoch',Integer),
-        Column('arch',Unicode(255)),
-        Column('running_kernel', Boolean),
-        mysql_engine='InnoDB',
-)
-
-recipe_repo_table =Table('recipe_repo',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_id', Integer,
-                ForeignKey('recipe.id'), nullable=False),
-        Column('name',Unicode(255)),
-        Column('url',Unicode(1024)),
-        mysql_engine='InnoDB',
-)
-
-recipe_ksappend_table = Table('recipe_ksappend', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_id', Integer,
-                ForeignKey('recipe.id'), nullable=False),
-        Column('ks_append',UnicodeText()),
-        mysql_engine='InnoDB',
-)
-
-recipe_task_table =Table('recipe_task',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_id', Integer, ForeignKey('recipe.id'), nullable=False),
-        Column('task_id', Integer, ForeignKey('task.id'), nullable=False),
-        Column('start_time',DateTime),
-        Column('finish_time',DateTime),
-        Column('result', TaskResult.db_type(), nullable=False,
-                default=TaskResult.new),
-        Column('status', TaskStatus.db_type(), nullable=False,
-                default=TaskStatus.new),
-        Column('role', Unicode(255)),
-        mysql_engine='InnoDB',
-)
-
-recipe_task_param_table = Table('recipe_task_param', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_task_id', Integer,
-                ForeignKey('recipe_task.id')),
-        Column('name',Unicode(255)),
-        Column('value',UnicodeText()),
-        mysql_engine='InnoDB',
-)
-
-recipe_task_comment_table = Table('recipe_task_comment',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_task_id', Integer,
-                ForeignKey('recipe_task.id')),
-        Column('comment', UnicodeText()),
-        Column('created', DateTime),
-        Column('user_id', Integer,
-                ForeignKey('tg_user.user_id'), index=True),
-        mysql_engine='InnoDB',
-)
-
-recipe_task_bugzilla_table = Table('recipe_task_bugzilla',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_task_id', Integer,
-                ForeignKey('recipe_task.id')),
-        Column('bugzilla_id', Integer),
-        mysql_engine='InnoDB',
-)
-
-recipe_task_rpm_table =Table('recipe_task_rpm',metadata,
-        Column('recipe_task_id', Integer,
-                ForeignKey('recipe_task.id'), primary_key=True),
-        Column('package',Unicode(255)),
-        Column('version',Unicode(255)),
-        Column('release',Unicode(255)),
-        Column('epoch',Integer),
-        Column('arch',Unicode(255)),
-        Column('running_kernel', Boolean),
-        mysql_engine='InnoDB',
-)
-
-recipe_task_result_table = Table('recipe_task_result',metadata,
-        Column('id', Integer, primary_key=True),
-        Column('recipe_task_id', Integer,
-                ForeignKey('recipe_task.id')),
-        Column('path', Unicode(2048)),
-        Column('result', TaskResult.db_type(), nullable=False,
-                default=TaskResult.new),
-        Column('score', Numeric(10)),
-        Column('log', UnicodeText()),
-        Column('start_time',DateTime, default=datetime.utcnow),
-        mysql_engine='InnoDB',
-)
-
-# This is for storing final generated kickstarts to be provisioned,
-# not user-supplied kickstart templates or anything else like that.
-rendered_kickstart_table = Table('rendered_kickstart', metadata,
-    Column('id', Integer, primary_key=True),
-    # Either kickstart or url should be populated -- if url is present,
-    # it means fetch the kickstart from there instead
-    Column('kickstart', UnicodeText),
-    Column('url', UnicodeText),
-    mysql_engine='InnoDB',
-)
-
-task_packages_custom_map = Table('task_packages_custom_map', metadata,
+task_packages_custom_map = Table('task_packages_custom_map', DeclarativeMappedObject.metadata,
     Column('recipe_id', Integer, ForeignKey('recipe.id', onupdate='CASCADE',
         ondelete='CASCADE'), primary_key=True),
     Column('package_id', Integer, ForeignKey('task_package.id',
@@ -478,10 +100,20 @@ task_packages_custom_map = Table('task_packages_custom_map', metadata,
 )
 
 
-class Watchdog(MappedObject):
+class Watchdog(DeclarativeMappedObject):
     """ Every running task has a corresponding watchdog which will
         Return the system if it runs too long
     """
+
+    __tablename__ = 'watchdog'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
+    recipe = relationship('Recipe')
+    recipetask_id = Column(Integer, ForeignKey('recipe_task.id'))
+    recipetask = relationship('RecipeTask')
+    subtask = Column(Unicode(255))
+    kill_time = Column(DateTime)
 
     @classmethod
     def by_system(cls, system):
@@ -521,12 +153,32 @@ class Watchdog(MappedObject):
                 Watchdog.kill_time != None, recipe_set_in_watchdog)
         return cls.query.join(Watchdog.recipe, Recipe.recipeset).filter(my_filter)
 
-class RecipeSetActivity(Activity):
-    def object_name(self):
-        return "RecipeSet: %s" % self.object.id
 
+class Log(object):
 
-class Log(MappedObject):
+    # Log tables all have the following fields:
+    #   path
+    #       Subdirectory of this log, relative to the root of the recipe/RT/RTR. 
+    #       Probably won't have an initial or trailing slash, but I wouldn't bet on 
+    #       it. ;-) Notably, the value '/' is used (rather than the empty string) 
+    #       to represent no subdirectory.
+    #   filename
+    #       Filename of this log.
+    #   server
+    #       Absolute URL to the directory where the log is stored. Path and 
+    #       filename are relative to this.
+    #       Always NULL if log transferring is not enabled (CACHE=False).
+    #   basepath
+    #       Absolute filesystem path to the directory where the log is stored on 
+    #       the remote system. XXX we shouldn't need to store this!
+    #       Always NULL if log transferring is not enabled (CACHE=False).
+
+    id = Column(Integer, primary_key=True)
+    path = Column(UnicodeText())
+    filename = Column(UnicodeText(), nullable=False)
+    start_time = Column(DateTime, default=datetime.utcnow)
+    server = Column(UnicodeText)
+    basepath = Column(UnicodeText)
 
     MAX_ENTRIES_PER_DIRECTORY = 100
 
@@ -547,7 +199,7 @@ class Log(MappedObject):
 
     def __init__(self, path=None, filename=None,
                  server=None, basepath=None, parent=None):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(Log, self).__init__()
         self.parent = parent
         self.path = self._normalized_path(path)
         self.filename = filename
@@ -629,16 +281,34 @@ class Log(MappedObject):
         else:
             return 1
 
-class LogRecipe(Log):
+class LogRecipe(Log, DeclarativeMappedObject):
     type = 'R'
 
-class LogRecipeTask(Log):
+    __tablename__ = 'log_recipe'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    # common column definitions are inherited from Log
+    recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
+
+class LogRecipeTask(Log, DeclarativeMappedObject):
     type = 'T'
 
-class LogRecipeTaskResult(Log):
+    __tablename__ = 'log_recipe_task'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    # common column definitions are inherited from Log
+    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'),
+            nullable=False)
+
+class LogRecipeTaskResult(Log, DeclarativeMappedObject):
     type = 'E'
 
-class TaskBase(MappedObject):
+    __tablename__ = 'log_recipe_task_result'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    # common column definitions are inherited from Log
+    recipe_task_result_id = Column(Integer,
+                ForeignKey('recipe_task_result.id'), nullable=False)
+
+class TaskBase(object):
+
     t_id_types = dict(T = 'RecipeTask',
                       TR = 'RecipeTaskResult',
                       R = 'Recipe',
@@ -795,14 +465,55 @@ class TaskBase(MappedObject):
         return logs_to_return
 
 
-class Job(TaskBase):
+class Job(TaskBase, DeclarativeMappedObject):
     """
     Container to hold like recipe sets.
     """
 
+    __tablename__ = 'job'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    dirty_version = Column(UUID, nullable=False)
+    clean_version = Column(UUID, nullable=False)
+    owner_id = Column(Integer, ForeignKey('tg_user.user_id'), index=True)
+    owner = relationship(User, backref=backref('jobs', cascade_backrefs=False),
+            primaryjoin=owner_id == User.user_id)
+    submitter_id = Column(Integer,
+            ForeignKey('tg_user.user_id', name='job_submitter_id_fk'))
+    submitter = relationship(User, primaryjoin=submitter_id == User.user_id)
+    group_id = Column(Integer,
+            ForeignKey('tg_group.group_id', name='job_group_id_fk'))
+    group = relationship(Group, backref=backref('jobs', cascade_backrefs=False))
+    whiteboard = Column(Unicode(2000))
+    retention_tag_id = Column(Integer, ForeignKey('retention_tag.id'),
+            nullable=False)
+    retention_tag = relationship('RetentionTag',
+            backref=backref('jobs', cascade_backrefs=False))
+    product_id = Column(Integer, ForeignKey('product.id'), nullable=True)
+    product = relationship('Product', backref=backref('jobs',
+            cascade_backrefs=False))
+    result = Column(TaskResult.db_type(), nullable=False,
+            default=TaskResult.new, index=True)
+    status = Column(TaskStatus.db_type(), nullable=False,
+            default=TaskStatus.new, index=True)
+    deleted = Column(DateTime, default=None, index=True)
+    to_delete = Column(DateTime, default=None, index=True)
+    # Total tasks
+    ttasks = Column(Integer, default=0)
+    # Total Passing tasks
+    ptasks = Column(Integer, default=0)
+    # Total Warning tasks
+    wtasks = Column(Integer, default=0)
+    # Total Failing tasks
+    ftasks = Column(Integer, default=0)
+    # Total Panic tasks
+    ktasks = Column(Integer, default=0)
+    recipesets = relationship('RecipeSet', backref='job')
+    _job_ccs = relationship('JobCc', backref='job')
+
     def __init__(self, ttasks=0, owner=None, whiteboard=None,
             retention_tag=None, product=None, group=None, submitter=None):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(Job, self).__init__()
         self.ttasks = ttasks
         self.owner = owner
         if submitter is None:
@@ -840,7 +551,7 @@ class Job(TaskBase):
 
     @classmethod
     def get_nacks(self,jobs):
-        queri = select([recipe_set_table.c.id], from_obj=job_table.join(recipe_set_table), whereclause=job_table.c.id.in_(jobs),distinct=True)
+        queri = select([RecipeSet.id], from_obj=Job.__table__.join(RecipeSet.__table__), whereclause=Job.id.in_(jobs),distinct=True)
         results = queri.execute()
         current_nacks = []
         for r in results:
@@ -856,7 +567,7 @@ class Job(TaskBase):
         """
         update_nacks() takes a list of job_ids and updates the job's recipesets with the correct nacks
         """
-        queri = select([recipe_set_table.c.id], from_obj=job_table.join(recipe_set_table), whereclause=job_table.c.id.in_(job_ids),distinct=True)
+        queri = select([RecipeSet.id], from_obj=Job.__table__.join(RecipeSet.__table__), whereclause=Job.id.in_(job_ids),distinct=True)
         results = queri.execute()
         current_nacks = []
         if len(rs_nacks) > 0:
@@ -1450,14 +1161,29 @@ class Job(TaskBase):
 
     cc = association_proxy('_job_ccs', 'email_address')
 
-class JobCc(MappedObject):
+# for fast dirty_version != clean_version comparisons:
+Index('ix_job_dirty_clean_version', Job.dirty_version, Job.clean_version)
+
+class JobCc(DeclarativeMappedObject):
+
+    __tablename__ = 'job_cc'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE',
+            onupdate='CASCADE'), primary_key=True)
+    email_address = Column(Unicode(255), primary_key=True, index=True)
 
     def __init__(self, email_address):
         super(JobCc, self).__init__()
         self.email_address = email_address
 
 
-class Product(MappedObject):
+class Product(DeclarativeMappedObject):
+
+    __tablename__ = 'product'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    name = Column(Unicode(100), unique=True, index=True, nullable=False)
+    created = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     def __init__(self, name):
         super(Product, self).__init__()
@@ -1474,8 +1200,17 @@ class Product(MappedObject):
         except NoResultFound:
             raise ValueError('No such product %r' % name)
 
-class BeakerTag(MappedObject):
+class BeakerTag(DeclarativeMappedObject):
 
+    __tablename__ = 'beaker_tag'
+    __table_args__ = (
+        UniqueConstraint('tag', 'type'),
+        {'mysql_engine': 'InnoDB'}
+    )
+    id = Column(Integer, primary_key=True, nullable = False)
+    tag = Column(Unicode(20), nullable=False)
+    type = Column(Unicode(40), nullable=False)
+    __mapper_args__ = {'polymorphic_on': type, 'polymorphic_identity': u'tag'}
 
     def __init__(self, tag, *args, **kw):
         super(BeakerTag, self).__init__()
@@ -1498,6 +1233,15 @@ class BeakerTag(MappedObject):
 
 
 class RetentionTag(BeakerTag):
+
+    __tablename__ = 'retention_tag'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('beaker_tag.id', onupdate='CASCADE',
+            ondelete='CASCADE'), primary_key=True)
+    is_default = Column('default_', Boolean)
+    expire_in_days = Column(Integer, default=0)
+    needs_product = Column(Boolean)
+    __mapper_args__ = {'polymorphic_identity': u'retention_tag'}
 
     def __init__(self, tag, is_default=False, needs_product=False, expire_in_days=None, *args, **kw):
         self.needs_product = needs_product
@@ -1558,7 +1302,12 @@ class RetentionTag(BeakerTag):
     def __repr__(self, *args, **kw):
         return self.tag
 
-class Response(MappedObject):
+class Response(DeclarativeMappedObject):
+
+    __tablename__ = 'response'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    response = Column(Unicode(50), nullable=False)
 
     @classmethod
     def get_all(cls,*args,**kw):
@@ -1574,10 +1323,21 @@ class Response(MappedObject):
     def __str__(self):
         return self.response
 
-class RecipeSetResponse(MappedObject):
+class RecipeSetResponse(DeclarativeMappedObject):
     """
     An acknowledgment of a RecipeSet's results. Can be used for filtering reports
     """
+
+    __tablename__ = 'recipe_set_nacked'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    recipe_set_id = Column(Integer, ForeignKey('recipe_set.id',
+            onupdate='CASCADE', ondelete='CASCADE'), primary_key=True)
+    recipesets = relationship('RecipeSet') #: not a list in spite of its name
+    response_id = Column(Integer, ForeignKey('response.id',
+            onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    response = relationship(Response)
+    comment = Column(Unicode(255), nullable=True)
+    created = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     def __init__(self,type=None,response_id=None,comment=None):
         super(RecipeSetResponse, self).__init__()
@@ -1606,14 +1366,44 @@ class RecipeSetResponse(MappedObject):
             results[elem.recipe_set_id] = elem.comment
         return results
 
-class RecipeSet(TaskBase):
+class RecipeSet(TaskBase, DeclarativeMappedObject):
     """
     A Collection of Recipes that must be executed at the same time.
     """
+
+    __tablename__ = 'recipe_set'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    job_id = Column(Integer, ForeignKey('job.id'), nullable=False)
+    priority = Column(TaskPriority.db_type(), nullable=False,
+            default=TaskPriority.default_priority(), index=True)
+    queue_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    result = Column(TaskResult.db_type(), nullable=False,
+            default=TaskResult.new, index=True)
+    status = Column(TaskStatus.db_type(), nullable=False,
+            default=TaskStatus.new, index=True)
+    lab_controller_id = Column(Integer, ForeignKey('lab_controller.id'))
+    lab_controller = relationship(LabController)
+    # Total tasks
+    ttasks = Column(Integer, default=0)
+    # Total Passing tasks
+    ptasks = Column(Integer, default=0)
+    # Total Warning tasks
+    wtasks = Column(Integer, default=0)
+    # Total Failing tasks
+    ftasks = Column(Integer, default=0)
+    # Total Panic tasks
+    ktasks = Column(Integer, default=0)
+    recipes = relationship('Recipe', backref='recipeset')
+    activity = relationship(RecipeSetActivity, backref='object',
+            order_by=[RecipeSetActivity.created.desc(), RecipeSetActivity.id.desc()])
+    nacked = relationship(RecipeSetResponse, cascade='all, delete-orphan',
+            uselist=False)
+
     stop_types = ['abort','cancel']
 
     def __init__(self, ttasks=0, priority=None):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(RecipeSet, self).__init__()
         self.ttasks = ttasks
         self.priority = priority
 
@@ -1782,13 +1572,13 @@ class RecipeSet(TaskBase):
                 recipe.cleanup()
 
     def machine_recipes_orderby(self, labcontroller):
-        query = select([recipe_table.c.id,
+        query = select([Recipe.id,
                         func.count(System.id).label('count')],
-                        from_obj=[recipe_table,
+                        from_obj=[Recipe.__table__,
                                   system_recipe_map,
-                                  system_table,
-                                  recipe_set_table,
-                                  lab_controller_table],
+                                  System.__table__,
+                                  RecipeSet.__table__,
+                                  LabController.__table__],
                         whereclause="recipe.id = system_recipe_map.recipe_id \
                              AND  system.id = system_recipe_map.system_id \
                              AND  system.lab_controller_id = lab_controller.id \
@@ -1840,15 +1630,77 @@ class RecipeSet(TaskBase):
         return url("/jobs/clone?recipeset_id=%s" % self.id)
 
 
-class Recipe(TaskBase):
+class Recipe(TaskBase, DeclarativeMappedObject):
     """
     Contains requires for host selection and distro selection.
     Also contains what tasks will be executed.
     """
+
+    __tablename__ = 'recipe'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    recipe_set_id = Column(Integer, ForeignKey('recipe_set.id'), nullable=False)
+    distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
+    distro_tree = relationship(DistroTree, backref=backref('recipes',
+            cascade_backrefs=False))
+    rendered_kickstart_id = Column(Integer, ForeignKey('rendered_kickstart.id',
+            name='recipe_rendered_kickstart_id_fk', ondelete='SET NULL'))
+    rendered_kickstart = relationship('RenderedKickstart')
+    result = Column(TaskResult.db_type(), nullable=False,
+            default=TaskResult.new, index=True)
+    status = Column(TaskStatus.db_type(), nullable=False,
+            default=TaskStatus.new, index=True)
+    start_time = Column(DateTime)
+    finish_time = Column(DateTime)
+    _host_requires = Column(UnicodeText())
+    _distro_requires = Column(UnicodeText())
+    # This column is actually a custom user-supplied kickstart *template*
+    # (if not NULL), the generated kickstart for the recipe is defined above
+    kickstart = Column(UnicodeText())
+    # type = recipe, machine_recipe or guest_recipe
+    type = Column(String(30), nullable=False)
+    # Total tasks
+    ttasks = Column(Integer, default=0)
+    # Total Passing tasks
+    ptasks = Column(Integer, default=0)
+    # Total Warning tasks
+    wtasks = Column(Integer, default=0)
+    # Total Failing tasks
+    ftasks = Column(Integer, default=0)
+    # Total Panic tasks
+    ktasks = Column(Integer, default=0)
+    whiteboard = Column(Unicode(2000))
+    ks_meta = Column(String(1024))
+    kernel_options = Column(String(1024))
+    kernel_options_post = Column(String(1024))
+    role = Column(Unicode(255))
+    panic = Column(Unicode(20))
+    _partitions = Column(UnicodeText())
+    autopick_random = Column(Boolean, default=False)
+    log_server = Column(Unicode(255), index=True)
+    virt_status = Column(RecipeVirtStatus.db_type(), index=True,
+            nullable=False, default=RecipeVirtStatus.possible)
+    __mapper_args__ = {'polymorphic_on': type, 'polymorphic_identity': u'recipe'}
+    resource = relationship('RecipeResource', uselist=False, backref='recipe')
+    watchdog = relationship(Watchdog, uselist=False,
+            cascade='all, delete, delete-orphan')
+    systems = relationship(System, secondary=system_recipe_map,
+            backref='queued_recipes')
+    dyn_systems = dynamic_loader(System, secondary=system_recipe_map)
+    tasks = relationship('RecipeTask', backref='recipe')
+    dyn_tasks = relationship('RecipeTask', lazy='dynamic')
+    tags = relationship('RecipeTag', secondary=recipe_tag_map, backref='recipes')
+    repos = relationship('RecipeRepo')
+    rpms = relationship('RecipeRpm', backref='recipe')
+    logs = relationship(LogRecipe, backref='parent', cascade='all, delete-orphan')
+    custom_packages = relationship(TaskPackage,
+            secondary=task_packages_custom_map)
+    ks_appends = relationship('RecipeKSAppend')
+
     stop_types = ['abort','cancel']
 
     def __init__(self, ttasks=0):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(Recipe, self).__init__()
         self.ttasks = ttasks
 
     def crypt_root_password(self):
@@ -2001,6 +1853,19 @@ class Recipe(TaskBase):
         recipe.appendChild(watchdog)
         if self.resource and self.resource.fqdn and not clone:
             recipe.setAttribute("system", "%s" % self.resource.fqdn)
+        if not clone:
+            installation = xmldoc.createElement('installation')
+            if self.resource:
+                if self.resource.install_started:
+                    installation.setAttribute('install_started',
+                            self.resource.install_started.strftime('%Y-%m-%d %H:%M:%S'))
+                if self.resource.install_finished:
+                    installation.setAttribute('install_finished',
+                            self.resource.install_finished.strftime('%Y-%m-%d %H:%M:%S'))
+                if self.resource.postinstall_finished:
+                    installation.setAttribute('postinstall_finished',
+                            self.resource.postinstall_finished.strftime('%Y-%m-%d %H:%M:%S'))
+            recipe.appendChild(installation)
         packages = xmldoc.createElement("packages")
         if self.custom_packages:
             for package in self.custom_packages:
@@ -2508,6 +2373,14 @@ class Recipe(TaskBase):
 
 
 class GuestRecipe(Recipe):
+
+    __tablename__ = 'guest_recipe'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('recipe.id'), primary_key=True)
+    guestname = Column(UnicodeText)
+    guestargs = Column(UnicodeText)
+    __mapper_args__ = {'polymorphic_identity': u'guest_recipe'}
+
     systemtype = 'Virtual'
 
     def to_xml(self, clone=False, from_recipeset=False, from_machine=False):
@@ -2559,7 +2432,16 @@ class MachineRecipe(Recipe):
     Optionally can contain guest recipes which are just other recipes
       which will be executed on this system.
     """
+
+    __tablename__ = 'machine_recipe'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('recipe.id'), primary_key=True)
+    __mapper_args__ = {'polymorphic_identity': u'machine_recipe'}
+    guests = relationship(Recipe, secondary=machine_guest_map,
+            backref=backref('hostrecipe', uselist=False))
+
     systemtype = 'Machine'
+
     def to_xml(self, clone=False, from_recipeset=False):
         recipe = xmldoc.createElement("recipe")
         for guest in self.guests:
@@ -2634,23 +2516,48 @@ class MachineRecipe(Recipe):
     distro_requires = property(_get_distro_requires, _set_distro_requires)
 
 
-class RecipeTag(MappedObject):
+class RecipeTag(DeclarativeMappedObject):
     """
     Each recipe can be tagged with information that identifies what is being
     executed.  This is helpful when generating reports.
     """
-    pass
+
+    __tablename__ = 'recipe_tag'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    tag = Column(Unicode(255))
 
 
-class RecipeTask(TaskBase):
+class RecipeTask(TaskBase, DeclarativeMappedObject):
     """
     This holds the results/status of the task being executed.
     """
+
+    __tablename__ = 'recipe_task'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
+    task_id = Column(Integer, ForeignKey('task.id'), nullable=False)
+    task = relationship(Task, uselist=False)
+    start_time = Column(DateTime)
+    finish_time = Column(DateTime)
+    result = Column(TaskResult.db_type(), nullable=False, default=TaskResult.new)
+    status = Column(TaskStatus.db_type(), nullable=False, default=TaskStatus.new)
+    role = Column(Unicode(255))
+    results = relationship('RecipeTaskResult', backref='recipetask')
+    rpms = relationship('RecipeTaskRpm')
+    comments = relationship('RecipeTaskComment', backref='recipetask')
+    params = relationship('RecipeTaskParam')
+    bugzillas = relationship('RecipeTaskBugzilla', backref='recipetask')
+    logs = relationship(LogRecipeTask, backref='parent',
+            cascade='all, delete-orphan')
+    watchdog = relationship(Watchdog, uselist=False)
+
     result_types = ['pass_','warn','fail','panic', 'result_none']
     stop_types = ['stop','abort','cancel']
 
     def __init__(self, task):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(RecipeTask, self).__init__()
         self.task = task
 
     def delete(self):
@@ -2702,10 +2609,11 @@ class RecipeTask(TaskBase):
             for role in self.roles_to_xml():
                 roles.appendChild(role)
             task.appendChild(roles)
-        params = xmldoc.createElement("params")
-        for p in self.params:
-            params.appendChild(p.to_xml())
-        task.appendChild(params)
+        if self.params:
+            params = xmldoc.createElement("params")
+            for p in self.params:
+                params.appendChild(p.to_xml())
+            task.appendChild(params)
         if self.results and not clone:
             results = xmldoc.createElement("results")
             for result in self.results:
@@ -2950,13 +2858,20 @@ class RecipeTask(TaskBase):
         return self.recipe.recipeset.job.can_stop(user)
 
 
-class RecipeTaskParam(MappedObject):
+class RecipeTaskParam(DeclarativeMappedObject):
     """
     Parameters for task execution.
     """
 
+    __tablename__ = 'recipe_task_param'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'))
+    name = Column(Unicode(255))
+    value = Column(UnicodeText)
+
     def __init__(self, name, value):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(RecipeTaskParam, self).__init__()
         self.name = name
         self.value = value
 
@@ -2967,13 +2882,20 @@ class RecipeTaskParam(MappedObject):
         return param
 
 
-class RecipeRepo(MappedObject):
+class RecipeRepo(DeclarativeMappedObject):
     """
     Custom repos
     """
 
+    __tablename__ = 'recipe_repo'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
+    name = Column(Unicode(255))
+    url = Column(Unicode(1024))
+
     def __init__(self, name, url):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(RecipeRepo, self).__init__()
         self.name = name
         self.url = url
 
@@ -2984,13 +2906,19 @@ class RecipeRepo(MappedObject):
         return repo
 
 
-class RecipeKSAppend(MappedObject):
+class RecipeKSAppend(DeclarativeMappedObject):
     """
     Kickstart appends
     """
 
+    __tablename__ = 'recipe_ksappend'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
+    ks_append = Column(UnicodeText)
+
     def __init__(self, ks_append):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(RecipeKSAppend, self).__init__()
         self.ks_append = ks_append
 
     def to_xml(self):
@@ -3002,42 +2930,87 @@ class RecipeKSAppend(MappedObject):
     def __repr__(self):
         return self.ks_append
 
-class RecipeTaskComment(MappedObject):
+class RecipeTaskComment(DeclarativeMappedObject):
     """
     User comments about the task execution.
     """
-    pass
+
+    __tablename__ = 'recipe_task_comment'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'))
+    comment = Column(UnicodeText)
+    created = Column(DateTime)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id'), index=True)
+    user = relationship(User, backref='comments')
 
 
-class RecipeTaskBugzilla(MappedObject):
+class RecipeTaskBugzilla(DeclarativeMappedObject):
     """
     Any bugzillas filed/found due to this task execution.
     """
-    pass
+
+    __tablename__ = 'recipe_task_bugzilla'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'))
+    bugzilla_id = Column(Integer)
 
 
-class RecipeRpm(MappedObject):
+class RecipeRpm(DeclarativeMappedObject):
     """
     A list of rpms that were installed at the time.
     """
-    pass
+
+    __tablename__ = 'recipe_rpm'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
+    package = Column(Unicode(255))
+    version = Column(Unicode(255))
+    release = Column(Unicode(255))
+    epoch = Column(Integer)
+    arch = Column(Unicode(255))
+    running_kernel = Column(Boolean)
 
 
-class RecipeTaskRpm(MappedObject):
+class RecipeTaskRpm(DeclarativeMappedObject):
     """
     the versions of the RPMS listed in the tasks runfor list.
     """
-    pass
+
+    __tablename__ = 'recipe_task_rpm'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'),
+            primary_key=True)
+    package = Column(Unicode(255))
+    version = Column(Unicode(255))
+    release = Column(Unicode(255))
+    epoch = Column(Integer)
+    arch = Column(Unicode(255))
+    running_kernel = Column(Boolean)
 
 
-class RecipeTaskResult(TaskBase):
+class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
     """
     Each task can report multiple results
     """
 
+    __tablename__ = 'recipe_task_result'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    recipe_task_id = Column(Integer, ForeignKey('recipe_task.id'))
+    path = Column(Unicode(2048))
+    result = Column(TaskResult.db_type(), nullable=False, default=TaskResult.new)
+    score = Column(Numeric(10))
+    log = Column(UnicodeText)
+    start_time = Column(DateTime, default=datetime.utcnow)
+    logs = relationship(LogRecipeTaskResult, backref='parent',
+            cascade='all, delete-orphan')
+
     def __init__(self, recipetask=None, path=None, result=None,
             score=None, log=None):
-        # Intentionally not chaining to super(), to avoid session.add(self)
+        super(RecipeTaskResult, self).__init__()
         self.recipetask = recipetask
         self.path = path
         self.result = result
@@ -3114,10 +3087,25 @@ class RecipeTaskResult(TaskBase):
             short_path = self.path
         return short_path
 
-class RecipeResource(MappedObject):
+class RecipeResource(DeclarativeMappedObject):
     """
     Base class for things on which a recipe can be run.
     """
+
+    __tablename__ = 'recipe_resource'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    recipe_id = Column(Integer, ForeignKey('recipe.id',
+            name='recipe_resource_recipe_id_fk',
+            onupdate='CASCADE', ondelete='CASCADE'),
+            nullable=False, unique=True)
+    type = Column(ResourceType.db_type(), nullable=False)
+    fqdn = Column(Unicode(255), default=None)
+    rebooted = Column(DateTime, nullable=True, default=None)
+    install_started = Column(DateTime, nullable=True, default=None)
+    install_finished = Column(DateTime, nullable=True, default=None)
+    postinstall_finished = Column(DateTime, nullable=True, default=None)
+    __mapper_args__ = {'polymorphic_on': type, 'polymorphic_identity': None}
 
     def __str__(self):
         return unicode(self).encode('utf8')
@@ -3160,6 +3148,18 @@ class SystemResource(RecipeResource):
     """
     For a recipe which is running on a Beaker system.
     """
+
+    __tablename__ = 'system_resource'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('recipe_resource.id',
+            name='system_resource_id_fk'), primary_key=True)
+    system_id = Column(Integer, ForeignKey('system.id',
+            name='system_resource_system_id_fk'), nullable=False)
+    system = relationship(System)
+    reservation_id = Column(Integer, ForeignKey('reservation.id',
+            name='system_resource_reservation_id_fk'))
+    reservation = relationship(Reservation)
+    __mapper_args__ = {'polymorphic_identity': ResourceType.system}
 
     def __init__(self, system):
         super(SystemResource, self).__init__()
@@ -3208,6 +3208,17 @@ class VirtResource(RecipeResource):
     a hypervisor attached to Beaker.
     """
 
+    __tablename__ = 'virt_resource'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('recipe_resource.id',
+            name='virt_resource_id_fk'), primary_key=True)
+    system_name = Column(Unicode(2048), nullable=False)
+    lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
+            name='virt_resource_lab_controller_id_fk'))
+    lab_controller = relationship(LabController)
+    mac_address = Column(MACAddress(), index=True, default=None)
+    __mapper_args__ = {'polymorphic_identity': ResourceType.virt}
+
     def __init__(self, system_name):
         super(VirtResource, self).__init__()
         self.system_name = system_name
@@ -3253,6 +3264,13 @@ class GuestResource(RecipeResource):
     MachineRecipe.
     """
 
+    __tablename__ = 'guest_resource'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('recipe_resource.id',
+            name='guest_resource_id_fk'), primary_key=True)
+    mac_address = Column(MACAddress(), index=True, default=None)
+    __mapper_args__ = {'polymorphic_identity': ResourceType.guest}
+
     def __repr__(self):
         return '%s(fqdn=%r, mac_address=%r)' % (self.__class__.__name__,
                 self.fqdn, self.mac_address)
@@ -3272,7 +3290,18 @@ class GuestResource(RecipeResource):
     def release(self):
         pass
 
-class RenderedKickstart(MappedObject):
+class RenderedKickstart(DeclarativeMappedObject):
+
+    # This is for storing final generated kickstarts to be provisioned,
+    # not user-supplied kickstart templates or anything else like that.
+
+    __tablename__ = 'rendered_kickstart'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, primary_key=True)
+    # Either kickstart or url should be populated -- if url is present,
+    # it means fetch the kickstart from there instead
+    kickstart = Column(UnicodeText)
+    url = Column(UnicodeText)
 
     def __repr__(self):
         return '%s(id=%r, kickstart=%s, url=%r)' % (self.__class__.__name__,
@@ -3287,147 +3316,3 @@ class RenderedKickstart(MappedObject):
         url = absolute_url('/kickstart/%s' % self.id, scheme='http',
                            labdomain=True)
         return url
-
-mapper(Watchdog, watchdog_table,
-       properties = {'recipetask':relation(RecipeTask, uselist=False),
-                     'recipe':relation(Recipe, uselist=False,
-                                      )})
-
-mapper(BeakerTag, beaker_tag_table,
-        polymorphic_on=beaker_tag_table.c.type, polymorphic_identity=u'tag')
-
-mapper(RetentionTag, retention_tag_table, inherits=BeakerTag,
-        properties=dict(is_default=retention_tag_table.c.default_),
-        polymorphic_identity=u'retention_tag')
-
-mapper(RecipeSetActivity, recipeset_activity_table, inherits=Activity,
-       polymorphic_identity=u'recipeset_activity')
-
-mapper(Job, job_table,
-        properties = {'recipesets':relation(RecipeSet, backref='job'),
-                      'owner':relation(User, uselist=False,
-                          backref=backref('jobs', cascade_backrefs=False),
-                          primaryjoin=users_table.c.user_id ==  \
-                          job_table.c.owner_id, foreign_keys=job_table.c.owner_id),
-                      'submitter': relation(User, uselist=False,
-                          primaryjoin=users_table.c.user_id == \
-                          job_table.c.submitter_id),
-                      'group': relation(Group, uselist=False,
-                          backref=backref('jobs', cascade_backrefs=False)),
-                      'retention_tag':relation(RetentionTag, uselist=False,
-                          backref=backref('jobs', cascade_backrefs=False)),
-                      'product':relation(Product, uselist=False,
-                          backref=backref('jobs', cascade_backrefs=False)),
-                      '_job_ccs': relation(JobCc, backref='job')})
-
-mapper(JobCc, job_cc_table)
-
-mapper(Product, product_table)
-
-mapper(RecipeSetResponse,recipe_set_nacked_table,
-        properties = { 'recipesets':relation(RecipeSet),
-                        'response' : relation(Response,uselist=False)})
-
-mapper(Response,response_table)
-
-mapper(RecipeSet, recipe_set_table,
-        properties = {'recipes':relation(Recipe, backref='recipeset'),
-                      'activity':relation(RecipeSetActivity,
-                        order_by=[activity_table.c.created.desc(), activity_table.c.id.desc()],
-                        backref='object'),
-                      'lab_controller':relation(LabController, uselist=False),
-                      'nacked':relation(RecipeSetResponse,cascade="all, delete-orphan",uselist=False),
-                     })
-
-mapper(LogRecipe, log_recipe_table)
-
-mapper(LogRecipeTask, log_recipe_task_table)
-
-mapper(LogRecipeTaskResult, log_recipe_task_result_table)
-
-mapper(Recipe, recipe_table,
-        polymorphic_on=recipe_table.c.type, polymorphic_identity=u'recipe',
-        properties = {'distro_tree':relation(DistroTree, uselist=False,
-                        backref=backref('recipes', cascade_backrefs=False)),
-                      'resource': relation(RecipeResource, uselist=False,
-                                        backref='recipe'),
-                      'rendered_kickstart': relation(RenderedKickstart),
-                      'watchdog':relation(Watchdog, uselist=False,
-                                         cascade="all, delete, delete-orphan"),
-                      'systems':relation(System,
-                                         secondary=system_recipe_map,
-                                         backref='queued_recipes'),
-                      'dyn_systems':dynamic_loader(System,
-                                         secondary=system_recipe_map,
-                                         primaryjoin=recipe_table.c.id==system_recipe_map.c.recipe_id,
-                                         secondaryjoin=system_table.c.id==system_recipe_map.c.system_id,
-                      ),
-                      'tasks':relation(RecipeTask, backref='recipe'),
-                      'dyn_tasks': relation(RecipeTask, lazy='dynamic'),
-                      'tags':relation(RecipeTag,
-                                      secondary=recipe_tag_map,
-                                      backref='recipes'),
-                      'repos':relation(RecipeRepo),
-                      'rpms':relation(RecipeRpm, backref='recipe'),
-                      'logs':relation(LogRecipe, backref='parent',
-                            cascade='all, delete-orphan'),
-                      'custom_packages':relation(TaskPackage,
-                                        secondary=task_packages_custom_map),
-                      'ks_appends':relation(RecipeKSAppend),
-                     }
-      )
-mapper(GuestRecipe, guest_recipe_table, inherits=Recipe,
-        polymorphic_identity=u'guest_recipe')
-mapper(MachineRecipe, machine_recipe_table, inherits=Recipe,
-        polymorphic_identity=u'machine_recipe',
-        properties = {'guests':relation(Recipe, backref=backref('hostrecipe', uselist=False),
-                                        secondary=machine_guest_map)})
-
-mapper(RecipeResource, recipe_resource_table,
-        polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=None,)
-mapper(SystemResource, system_resource_table, inherits=RecipeResource,
-        polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=ResourceType.system,
-        properties={
-            'system': relation(System),
-            'reservation': relation(Reservation, uselist=False),
-        })
-mapper(VirtResource, virt_resource_table, inherits=RecipeResource,
-        polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=ResourceType.virt,
-        properties={
-            'lab_controller': relation(LabController),
-        })
-mapper(GuestResource, guest_resource_table, inherits=RecipeResource,
-        polymorphic_on=recipe_resource_table.c.type, polymorphic_identity=ResourceType.guest)
-
-mapper(RecipeTag, recipe_tag_table)
-mapper(RecipeRpm, recipe_rpm_table)
-mapper(RecipeRepo, recipe_repo_table)
-mapper(RecipeKSAppend, recipe_ksappend_table)
-
-mapper(RecipeTask, recipe_task_table,
-        properties = {'results':relation(RecipeTaskResult,
-                                         backref='recipetask'),
-                      'rpms':relation(RecipeTaskRpm),
-                      'comments':relation(RecipeTaskComment,
-                                          backref='recipetask'),
-                      'params':relation(RecipeTaskParam),
-                      'bugzillas':relation(RecipeTaskBugzilla,
-                                           backref='recipetask'),
-                      'task':relation(Task, uselist=False),
-                      'logs':relation(LogRecipeTask, backref='parent',
-                            cascade='all, delete-orphan'),
-                      'watchdog':relation(Watchdog, uselist=False),
-                     }
-      )
-
-mapper(RecipeTaskParam, recipe_task_param_table)
-mapper(RecipeTaskComment, recipe_task_comment_table,
-        properties = {'user':relation(User, uselist=False, backref='comments')})
-mapper(RecipeTaskBugzilla, recipe_task_bugzilla_table)
-mapper(RecipeTaskRpm, recipe_task_rpm_table)
-mapper(RecipeTaskResult, recipe_task_result_table,
-        properties = {'logs':relation(LogRecipeTaskResult, backref='parent',
-                           cascade='all, delete-orphan'),
-                     }
-      )
-mapper(RenderedKickstart, rendered_kickstart_table)

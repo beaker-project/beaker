@@ -7,12 +7,16 @@ class DummyTransport:
     """Helper to test retry_transport"""
     def __init__(self):
         self.request_count = 0
+        self.close_count = 0
 
     def request(self, hostname, failures=0):
        self.request_count += 1
        if self.request_count <= failures:
            raise socket.error
        return self.request_count
+
+    def close(self):
+       self.close_count += 1
 
 class DummyLogger:
     """Helper to test retry_transport"""
@@ -46,8 +50,11 @@ class RetryTransportTestCase(RetryTransportMixin, unittest.TestCase):
 
     def test_complete_failure(self):
         transport = self.make_transport()
+        failure_count = self.DEFAULT_RETRY_COUNT + 1
         self.assertRaises(socket.error, transport.request, "dummy",
-                          failures = self.DEFAULT_RETRY_COUNT + 1)
+                          failures = failure_count)
+        # BZ#1059079: Ensure the connection has been forcibly closed
+        self.assertEqual(transport.close_count, failure_count)
 
 
 class RetryTransportLoggingTestCase(RetryTransportMixin, unittest.TestCase):

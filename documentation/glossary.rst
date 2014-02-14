@@ -33,6 +33,10 @@ Glossary
        systems via the external watchdog, transfer of system logs,
        reporting of recipe task results, and importing distros.
 
+   Quiescent Period
+       The 'quiescent period' is the minimum amount of time (in seconds)
+       between power operations.
+
    Recipe Set
        A recipe set is contained within a job and can contain one or more
        recipes. Any recipes within the same recipe set are run in parallel

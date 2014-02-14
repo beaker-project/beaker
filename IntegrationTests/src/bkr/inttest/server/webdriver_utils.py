@@ -96,6 +96,14 @@ def check_distro_search_results(browser, present=[], absent=[]):
         browser.find_element_by_xpath('//table[@id="widget" and '
                     './/td[1]/a/text()="%s"]' % distro.id)
 
+def check_task_search_results(browser, present=[], absent=[]):
+    for task in absent:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                    'not(.//td[1]/a/text()="%s")]' % task.name)
+    for task in present:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                    './/td[1]/a/text()="%s"]' % task.name)
+
 def click_menu_item(browser, menu_item, submenu_item):
     browser.find_element_by_link_text(menu_item).click()
     browser.find_element_by_css_selector('.dropdown.open')\

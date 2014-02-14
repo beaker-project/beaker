@@ -5,9 +5,9 @@ from kid import XML
 from bkr.server import identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_edit_link
-from bkr.server.util import total_seconds
 from bkr.server.widgets import LabControllerDataGrid, LabControllerForm
 from bkr.server.distrotrees import DistroTrees
+from bkr.common.helpers import total_seconds
 from bkr.common.bexceptions import BX
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import contains_eager
@@ -20,8 +20,8 @@ from bkr.server.model import \
     LabController, LabControllerActivity, User, Group, OSMajor, OSVersion, \
     Arch, Distro, DistroTree, DistroTreeRepo, DistroTreeImage, \
     DistroTreeActivity, LabControllerDistroTree, ImageType, KernelType, \
-    System, SystemStatus, SystemActivity, system_table, \
-    Watchdog, CommandActivity, CommandStatus, command_queue_table
+    System, SystemStatus, SystemActivity, \
+    Watchdog, CommandActivity, CommandStatus
 
 import logging
 log = logging.getLogger(__name__)
@@ -70,6 +70,7 @@ class LabControllers(RPCRoot):
             labcontroller = LabController.by_id(kw['id'])
         else:
             labcontroller =  LabController()
+            session.add(labcontroller)
         if labcontroller.fqdn != kw['fqdn']:
             activity = LabControllerActivity(identity.current.user,
                 'WEBUI', 'Changed', 'FQDN', labcontroller.fqdn, kw['fqdn'])
@@ -241,6 +242,7 @@ class LabControllers(RPCRoot):
                 'fqdn': cmd.system.fqdn,
                 'arch': [arch.arch for arch in cmd.system.arch],
                 'delay': 0,
+                'quiescent_period': cmd.quiescent_period
             }
             if cmd.delay_until:
                 d['delay'] = max(0, total_seconds(cmd.delay_until - datetime.utcnow()))
@@ -416,9 +418,9 @@ class LabControllers(RPCRoot):
         # details.
         lab_controller = identity.current.user.lab_controller
         purged = (
-            command_queue_table.update()
-            .where(command_queue_table.c.status == CommandStatus.running)
-            .where(command_queue_table.c.updated <
+            CommandActivity.__table__.update()
+            .where(CommandActivity.status == CommandStatus.running)
+            .where(CommandActivity.updated <
                        datetime.utcnow() - timedelta(days=1))
             .values(status=CommandStatus.aborted)
             .execute()
@@ -490,12 +492,10 @@ class LabControllers(RPCRoot):
         labcontroller.removed = None
         labcontroller.disabled = False
 
-        LabControllerActivity(identity.current.user, 'WEBUI', 
-            'Changed', 'Disabled', unicode(True), unicode(False),
-            lab_controller_id = id)
-        LabControllerActivity(identity.current.user, 'WEBUI', 
-            'Changed', 'Removed', unicode(True), unicode(False), 
-            lab_controller_id=id)
+        labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
+                field=u'Disabled', action=u'Changed', old=unicode(True), new=unicode(False))
+        labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
+                field=u'Removed', action=u'Changed', old=unicode(True), new=unicode(False))
         flash('Successfully re-added %s' % labcontroller.fqdn)
         redirect(url('.'))
 
@@ -518,7 +518,8 @@ class LabControllers(RPCRoot):
             sys_activity = SystemActivity(identity.current.user, 'WEBUI', \
                 'Changed', 'lab_controller', labcontroller.fqdn,
                 None, system_id=system_id[0])
-        system_table.update().where(system_table.c.lab_controller_id == id).\
+            session.add(sys_activity)
+        System.__table__.update().where(System.lab_controller_id == id).\
             values(lab_controller_id=None).execute()
         watchdogs = Watchdog.by_status(labcontroller=labcontroller, 
             status='active')
@@ -532,12 +533,10 @@ class LabControllers(RPCRoot):
                     new_value=None))
             session.delete(lca)
         labcontroller.disabled = True
-        LabControllerActivity(identity.current.user, 'WEBUI', 
-            'Changed', 'Disabled', unicode(False), unicode(True), 
-            lab_controller_id=id)
-        LabControllerActivity(identity.current.user, 'WEBUI', 
-            'Changed', 'Removed', unicode(False), unicode(True), 
-            lab_controller_id=id)
+        labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
+                field=u'Disabled', action=u'Changed', old=unicode(False), new=unicode(True))
+        labcontroller.record_activity(user=identity.current.user, service=u'WEBUI',
+                field=u'Removed', action=u'Changed', old=unicode(False), new=unicode(True))
 
         flash( _(u"%s removed") % labcontroller.fqdn )
         raise redirect(".")

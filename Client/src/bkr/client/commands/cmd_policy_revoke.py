@@ -8,9 +8,9 @@ bkr policy-revoke: Revoke permissions in an access policy
 Synopsis
 --------
 
-| :program:`bkr policy-revoke` [*options*] --system=<fqdn>
-|       --permission=<permission> [--permission=<permission> ...]
-|       [--user=<username> | --group=<groupname> | --everybody]
+| :program:`bkr policy-revoke` [*options*] :option:`--system` <fqdn>
+|       :option:`--permission` <permission> [:option:`--permission` <permission> ...]
+|       [:option:`--user` <username> | :option:`--group` <groupname> | :option:`--everybody`]
 
 Description
 -----------

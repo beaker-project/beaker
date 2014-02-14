@@ -9,7 +9,7 @@ Synopsis
 --------
 
 | :program:`bkr job-list` [*options*]
-|       [--family=<family>] [--tag=<tag>] [--product=<cpeid>] [--completeDays=<days>]
+|       [:option:`--family` <family>] [:option:`--tag` <tag>] [:option:`--product` <cpeid>] [:option:`--completeDays` <days>]
 
 Description
 -----------

@@ -67,6 +67,7 @@ class RepoSyncer(yum.YumBase):
         yum.packages.base = None
 
     def sync(self):
+        has_new_packages = False
         log.info('Syncing packages from %s to %s', self.repo_url, self.output_dir)
         self.doRepoSetup()
         # have to list every possible arch here, ughhhh
@@ -84,11 +85,13 @@ class RepoSyncer(yum.YumBase):
             log.info('Fetching %s', dest)
             package.localpath = dest
             cached_package = repo.getPackage(package)
+            has_new_packages = True
             # Based on some confusing cache configuration, yum may or may not 
             # have fetched the package to the right place for us already
             if os.path.exists(dest) and os.path.samefile(cached_package, dest):
                 continue
             shutil.copy2(cached_package, dest)
+        return has_new_packages
 
 def update_repos(baseurl, basepath):
     for osmajor in OSMajor.query:
@@ -97,19 +100,20 @@ def update_repos(baseurl, basepath):
         dest = "%s/%s" % (basepath,osmajor)
         syncer = RepoSyncer(urlparse.urljoin(baseurl, '%s/' % urllib.quote(osmajor)), dest)
         try:
-            syncer.sync()
+            has_new_packages = syncer.sync()
         except KeyboardInterrupt:
             raise
         except Exception, e:
             log.warning('%s', e)
             continue
-        createrepo_results = run_createrepo(cwd=dest)
-        returncode = createrepo_results.returncode
-        if returncode != 0:
-            err = createrepo_results.err
-            command = createrepo_results.command
-            raise RuntimeError('Createrepo failed.\nreturncode:%s cmd:%s err:%s'
-                 % (returncode, command, err))
+        if has_new_packages:
+            createrepo_results = run_createrepo(cwd=dest)
+            returncode = createrepo_results.returncode
+            if returncode != 0:
+                err = createrepo_results.err
+                command = createrepo_results.command
+                raise RuntimeError('Createrepo failed.\nreturncode:%s cmd:%s err:%s'
+                     % (returncode, command, err))
 
 
 def main():

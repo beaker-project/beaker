@@ -10,8 +10,8 @@ Synopsis
 --------
 
 | :program:`bkr task-list` [*options*]
-|       [--type=<type> ...] [--package=<package> ...] [--distro=<name>]
-|       [--xml [--params=<name>=<value> ...]]
+|       [:option:`--type` <type> ...] [:option:`--package` <package> ...] [:option:`--distro` <name>]
+|       [--xml [:option:`--params` <name>=<value> ...]]
 
 Description
 -----------

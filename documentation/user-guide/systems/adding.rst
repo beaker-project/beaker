@@ -64,6 +64,28 @@ console logs and detect kernel panics.
 
 .. todo:: refer to docs about setting up conserver once they exist
 
+Install options
+---------------
+
+Use the :guilabel:`Install Options` tab to set default install options for your 
+system, if necessary. See :ref:`install-options` to learn about these settings. 
+Refer to the Anaconda documentation for the available kernel options.
+
+If you have connected the system's serial console to conserver, set the 
+``console`` kernel option appropriately. For example, assuming the system's 
+serial-over-LAN device appears as the second serial port, set 
+``console=ttyS1,115200n8``.
+
+By default Beaker will apply ``ksdevice=bootif`` to the kernel options (this is 
+defined in :file:`/etc/beaker/server.cfg`). This setting is suitable for 
+x86-based systems booting PXELINUX, but for other systems (including UEFI-based 
+systems) which have more than one network interface, you must set the 
+``ksdevice`` option explicitly, otherwise Anaconda will prompt for which 
+interface to use during installation. If only one network interface has a cable 
+connected, you can set ``ksdevice=link``. If more than one interface has 
+a cable connected, you must nominate a specific interface to be used for 
+installation: ``ksdevice=00:11:22:33:44:55``.
+
 Testing your system's configuration
 -----------------------------------
 

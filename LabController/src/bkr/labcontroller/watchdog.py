@@ -13,8 +13,8 @@ from bkr.common.helpers import RepeatTimer
 from bkr.labcontroller.proxy import Watchdog
 from bkr.labcontroller.config import load_conf, get_conf
 from bkr.log import log_to_stream, log_to_syslog
-from kobo.exceptions import ShutdownException
-from kobo.tback import Traceback, set_except_hook
+from bkr.labcontroller.exceptions import ShutdownException
+from bkr.labcontroller.tback import Traceback, set_except_hook
 
 set_except_hook()
 
@@ -100,7 +100,7 @@ def main():
     if pid_file is None:
         pid_file = conf.get("WATCHDOG_PID_FILE", "/var/run/beaker-lab-controller/beaker-watchdog.pid")
 
-    # kobo.client.HubProxy will try to log some stuff, even though we 
+    # HubProxy will try to log some stuff, even though we 
     # haven't configured our logging handlers yet. So we send logs to stderr 
     # temporarily here, and configure it again below.
     log_to_stream(sys.stderr, level=logging.WARNING)

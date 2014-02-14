@@ -16,6 +16,8 @@ from bkr.server.model import (System, SystemType, Activity, SystemActivity,
                               Key, Key_Value_Int, Key_Value_String,
                               SystemAccessPolicy, SystemPermission)
 from bkr.server.widgets import HorizontalForm, RadioButtonList
+from kid import XML
+
 import csv
 import datetime
 import logging
@@ -35,7 +37,15 @@ class CSV(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = False
 
-    upload     = widgets.FileField(name='csv_file', label='Import CSV')
+    export_help_text = XML(u'<span>Refer to the <a href="http://beaker-project.org/docs/'
+                           'admin-guide/interface.html#export" target="_blank">'
+                           'documentation</a> to learn more about the exported data.</span>').expand()
+    import_help_text = XML(u'<span>Refer to the <a href="http://beaker-project.org/docs/'
+                           'admin-guide/interface.html#import" target="_blank">'
+                           'documentation</a> for details about the supported CSV format.</span>').expand()
+
+    upload     = widgets.FileField(name='csv_file', label='Import CSV', \
+                                   help_text = import_help_text)
     download   = RadioButtonList(name='csv_type', label='CSV Type',
                                options=[('system', 'Systems'),
                                         ('system_id', 'Systems (for modification)'), 
@@ -46,7 +56,8 @@ class CSV(RPCRoot):
                                         ('keyvalue', 'System Key/Values'),
                                         ('system_group', 'System Groups'),
                                         ('user_group', 'User Groups')], 
-                                                          default='system')
+                                 default='system',
+                                 help_text = export_help_text)
 
     importform = HorizontalForm(
         'import',
@@ -138,6 +149,7 @@ class CSV(RPCRoot):
                                                 owner=identity.current.user,
                                                 type=SystemType.machine,
                                                 status=SystemStatus.broken)
+                                    session.add(system)
                                 except ValueError as e:
                                     log.append('Error importing system on line %s: %s' %
                                                (reader.line_num, str(e)))
@@ -167,7 +179,7 @@ class CSV(RPCRoot):
                                     del(system)
                             else:
                                 session.add(system)
-                                session.flush([system])
+                                session.flush()
                         else:
                             log.append("You are not the owner of %s" % system.fqdn)
                     elif data['csv_type'] == 'user_group' and \
@@ -531,8 +543,6 @@ class CSV_LabInfo(CSV):
        
         system.labinfo = LabInfo(**new_data)
         session.add(system)
-        session.flush([system])
-        
 
 class CSV_Exclude(CSV):
     csv_type = 'exclude'
@@ -819,8 +829,8 @@ class CSV_KeyValue(CSV):
                 activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Key/Value', '', '%s/%s' % (data['key'],data['key_value']))
                 system.activity.append(activity)
                 system_key_values.append(key_value)
+
         session.add(key_value)
-        session.flush([key_value])
         return True
 
     def __init__(self, key):
@@ -851,18 +861,19 @@ class CSV_GroupUser(CSV):
                 group = Group(group_name=data['group'],
                               display_name=data['group'])
                 session.add(group)
-                session.flush([group])
             deleted = False
             if 'deleted' in data:
                 deleted = smart_bool(data['deleted'])
             if deleted:
                 if group in user.groups:
-                    activity = Activity(identity.current.user, 'CSV', 'Removed', 'group', '%s' % group, '')
+                    group.record_activity(user=identity.current.user, service=u'CSV',
+                            field=u'User', action=u'Removed', old=user)
                     user.groups.remove(group)
             else:
                 if group not in user.groups:
+                    group.record_activity(user=identity.current.user, service=u'CSV',
+                            field=u'User', action=u'Added', new=user)
                     user.groups.append(group)
-                    activity = Activity(identity.current.user, 'CSV', 'Added', 'group', '', '%s' % group)
         else:
             log.append("%s: group can't be empty!" % user)
             return False
@@ -895,7 +906,6 @@ class CSV_GroupSystem(CSV):
                 group = Group(group_name=data['group'],
                               display_name=data['group'])
                 session.add(group)
-                session.flush([group])
             deleted = False
             if 'deleted' in data:
                 deleted = smart_bool(data['deleted'])
