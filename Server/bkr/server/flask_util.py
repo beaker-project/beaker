@@ -9,7 +9,8 @@ from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 
-def json_collection(**options):
+def json_collection(sort_columns=None, min_page_size=20, max_page_size=500,
+        default_page_size=20, force_paging_for_count=500):
     """
     Decorator factory for Flask request handlers which want to return 
     a collection of resources as JSON. The decorated function should return 
@@ -25,7 +26,7 @@ def json_collection(**options):
         order
             'asc' or 'desc' for ascending or descending sort respectively.
     """
-    sort_columns = options.get('sort_columns', {})
+    sort_columns = sort_columns or {}
     def decorator(func):
         @functools.wraps(func)
         def _json_collection_decorated(*args, **kwargs):
@@ -46,20 +47,19 @@ def json_collection(**options):
             with convert_internal_errors():
                 if 'page_size' in request.args:
                     page_size = int(request.args['page_size'])
-                    page_size = max(page_size, 20)
+                    page_size = min(max(page_size, min_page_size), max_page_size)
                     query = query.limit(page_size)
                     page = int(request.args.get('page', 1))
                     if page > 1:
                         query = query.offset((page - 1) * page_size)
                     result['page'] = page
                     result['page_size'] = page_size
-                elif total_count > 500:
-                    # too big, force pagination with a redirect
+                elif total_count > force_paging_for_count:
                     url = request.base_url
                     if '?' not in url:
-                        url += '?page_size=20'
+                        url += '?page_size=%d' % default_page_size
                     else:
-                        url += '&page_size=20'
+                        url += '&page_size=%s' % default_page_size
                     return redirect(url)
                 result['entries'] = query.all()
             return jsonify(result)
