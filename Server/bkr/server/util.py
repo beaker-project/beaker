@@ -191,16 +191,19 @@ def total_seconds(td):
     """
     return (float(td.microseconds) + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
 
-def run_createrepo(cwd=None):
+def run_createrepo(cwd=None, update=False):
     createrepo_command = config.get('beaker.createrepo_command', 'createrepo')
-    p = subprocess.Popen([createrepo_command, '-q', '--no-database',
-        '--checksum', 'sha', '.'], cwd=cwd, stderr=subprocess.PIPE,
+    args = [createrepo_command, '-q', '--no-database', '--checksum', 'sha']
+    if update:
+        args.append('--update')
+    args.append('.')
+    p = subprocess.Popen(args, cwd=cwd, stderr=subprocess.PIPE,
         stdout=subprocess.PIPE)
     out, err = p.communicate()
     # Perhaps a bit fragile, but maybe better than checking version?
     if p.returncode != 0 and 'no such option: --no-database' in err:
-        p = subprocess.Popen([createrepo_command, '-q', '--checksum',
-            'sha', '.'], cwd=cwd, stderr=subprocess.PIPE,
+        args.remove('--no-database')
+        p = subprocess.Popen(args, cwd=cwd, stderr=subprocess.PIPE,
             stdout=subprocess.PIPE)
         out, err = p.communicate()
     RepoCreate = namedtuple("RepoCreate", "command returncode out err")

@@ -2412,12 +2412,10 @@ class System(SystemObject, ActivityMixin):
         """
         Does the given user have permission to change the owner of this system?
         """
-        self._ensure_user_is_authenticated(user)
-        if self.owner == user:
-            return True
-        if user.is_admin():
-            return True
-        return False
+        # At least for now, any user that can edit the access policy can
+        # also change the system owner (this matches the powers previously
+        # granted to "admin" groups for a system)
+        return self.can_edit_policy(user)
 
     def can_edit_policy(self, user):
         """
@@ -6167,7 +6165,7 @@ class Recipe(TaskBase):
         """
         Return the number of seconds left on the current watchdog if it exists.
         """
-        if self.watchdog:
+        if self.watchdog and self.watchdog.kill_time:
             delta = self.watchdog.kill_time - datetime.utcnow()
             return delta.seconds + (86400 * delta.days)
         else:
@@ -7048,7 +7046,8 @@ class TaskLibrary(object):
         # Internal call that assumes the flock is already held
         # Removed --baseurl, if upgrading you will need to manually
         # delete repodata directory before this will work correctly.
-        command, returncode, out, err = run_createrepo(cwd=self.rpmspath)
+        command, returncode, out, err = run_createrepo(
+                cwd=self.rpmspath, update=True)
         if out:
             log.debug("stdout from %s: %s", command, out)
         if err:

@@ -120,7 +120,8 @@ def create_admin(**kwargs):
 def add_system_lab_controller(system,lc): 
     system.lab_controller = lc
 
-def create_group(permissions=None, group_name=None, owner=None, ldap=False,
+def create_group(permissions=None, group_name=None, display_name=None,
+        owner=None, ldap=False,
     root_password=None):
     # tg_group.group_name column is VARCHAR(16)
     if group_name is None:
@@ -128,7 +129,10 @@ def create_group(permissions=None, group_name=None, owner=None, ldap=False,
     assert len(group_name) <= 16
     group = Group.lazy_create(group_name=group_name)
     group.root_password = root_password
-    group.display_name = u'Group %s' % group_name
+    if display_name is None:
+        group.display_name = u'Group %s' % group_name
+    else:
+        group.display_name = display_name
     group.ldap = ldap
     if ldap:
         assert owner is None, 'LDAP groups cannot have owners'

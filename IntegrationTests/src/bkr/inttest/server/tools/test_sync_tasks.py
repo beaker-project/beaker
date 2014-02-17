@@ -1,3 +1,4 @@
+import sys
 import unittest2 as unittest
 import os
 import subprocess
@@ -17,7 +18,7 @@ class TestTaskLibrarySync(unittest.TestCase):
     @classmethod
     def setupClass(cls):
         cls.task_server = Process('http_server.py',
-                args=['python', _http_server,],
+                args=[sys.executable, _http_server,],
                 listen_port=19998, exec_dir=_sync_tasks_dir)
         cls.task_server.start()
         cls.task_url = 'http://localhost:19998/'
@@ -29,7 +30,7 @@ class TestTaskLibrarySync(unittest.TestCase):
     def run_as_script(self, remote=None, debug=True, force=True):
         if not remote:
             remote = get_server_base()
-        script_invocation = [_beaker_sync_tasks, '--remote', remote]
+        script_invocation = [sys.executable, _beaker_sync_tasks, '--remote', remote]
         if debug:
             script_invocation.append('--debug')
         if force:

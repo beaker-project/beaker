@@ -1,4 +1,4 @@
-yum -y install beah rhts-test-env beakerlib
+yum -y install {{ beah_rpm|default('beah') }} rhts-test-env beakerlib
 # This may fail if you are outside of Red Hat..
 yum -y install beakerlib-redhat
 
