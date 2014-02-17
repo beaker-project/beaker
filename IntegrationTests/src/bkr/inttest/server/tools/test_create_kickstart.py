@@ -73,6 +73,45 @@ class CreateKickstartTest(unittest.TestCase):
                 sys.stdout = orig_stdout
         return output
 
+    def test_nonexistent_recipe_id(self):
+        try:
+            self._run_create_kickstart(['--recipe-id', '0'])
+            self.fail('Should raise an exception when passed an invalid recipe'
+                ' id')
+        except RuntimeError, e:
+            self.assertIn("Recipe id '0' does not exist", str(e))
+        except AssertionError, e:
+            self.assertIn("RuntimeError: Recipe id '0' does not exist", str(e))
+
+    def test_nonexistent_system_fqdn(self):
+        recipe = self._create_recipe()
+        try:
+            self._run_create_kickstart(['--recipe-id', str(recipe.id),
+                '--system', 'dsaffds124143g'])
+            self.fail('Should raise an exception when passed an invalid system'
+                ' fqdn')
+        except RuntimeError, e:
+            self.assertIn("System 'dsaffds124143g' does not exist",
+                str(e))
+        except AssertionError, e:
+            self.assertIn("RuntimeError: System 'dsaffds124143g' does not "
+                "exist", str(e))
+
+    def test_nonexistent_distro_tree_id(self):
+        recipe = self._create_recipe()
+        with session.begin():
+            system = data_setup.create_system()
+        try:
+            self._run_create_kickstart(['--recipe-id', str(recipe.id),
+                '--system', system.fqdn, '--distro-tree-id', '0'])
+            self.fail('Should raise an exception when passed an invalid distro'
+                ' tree id')
+        except RuntimeError, e:
+            self.assertIn("Distro tree id '0' does not exist", str(e))
+        except AssertionError, e:
+            self.assertIn("RuntimeError: Distro tree id '0' does not exist",
+                str(e))
+
     def test_snippet_dir(self):
         recipe = self._create_recipe()
         session.expire_all()

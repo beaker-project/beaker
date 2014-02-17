@@ -2,6 +2,7 @@
 import sys
 import optparse
 from turbogears.database import session
+from sqlalchemy.orm.exc import NoResultFound
 from bkr.common import __version__
 from bkr.server.model import DistroTree, System, User, Recipe
 from bkr.server.util import load_config
@@ -53,18 +54,26 @@ def main(*args):
         install_options = None
 
         if options.distro_tree_id:
-            distro_tree = DistroTree.by_id(options.distro_tree_id)
-
+            try:
+                distro_tree = DistroTree.by_id(options.distro_tree_id)
+            except NoResultFound:
+                raise RuntimeError("Distro tree id '%s' does not exist" % options.distro_tree_id)
         if options.system:
             fqdn = options.system
-            system = System.by_fqdn(fqdn, user)
+            try:
+                system = System.by_fqdn(fqdn, user)
+            except NoResultFound:
+                raise RuntimeError("System '%s' does not exist" % fqdn)
 
             if distro_tree and not options.recipe_id:
                 install_options = system.install_options(distro_tree).combined_with(
                     InstallOptions.from_strings(ks_meta, None, koptions_post))
 
         if options.recipe_id:
-            recipe = Recipe.by_id(options.recipe_id)
+            try:
+                recipe = Recipe.by_id(options.recipe_id)
+            except NoResultFound:
+                raise RuntimeError("Recipe id '%s' does not exist" % options.recipe_id)
             if not recipe.resource and not options.system:
                 raise RuntimeError('Recipe must have (or had) a resource'
                                    ' assigned to it')
