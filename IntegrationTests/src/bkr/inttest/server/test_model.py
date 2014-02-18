@@ -2725,7 +2725,7 @@ class RecipeTaskResultTest(unittest.TestCase):
 
     def test_short_path(self):
         task = data_setup.create_task(name=u'/distribution/install')
-        rt = RecipeTask(task=task)
+        rt = RecipeTask.from_task(task)
         rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install/Sysinfo')
         self.assertEquals(rtr.short_path, u'Sysinfo')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/start')

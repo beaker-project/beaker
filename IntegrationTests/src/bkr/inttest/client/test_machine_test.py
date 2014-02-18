@@ -24,8 +24,8 @@ class MachineTestTest(unittest.TestCase):
             self.assertEqual(new_job.whiteboard, u'Test '+ self.system.fqdn)
             tasks = new_job.recipesets[0].recipes[0].tasks
             self.assertEqual(len(tasks), 2)
-            self.assertEqual(tasks[0].task.name, u'/distribution/install')
-            self.assertEqual(tasks[1].task.name, u'/distribution/inventory')
+            self.assertEqual(tasks[0].name, u'/distribution/install')
+            self.assertEqual(tasks[1].name, u'/distribution/inventory')
 
         #https://bugzilla.redhat.com/show_bug.cgi?id=893878
         try:

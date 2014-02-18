@@ -46,7 +46,7 @@
      ${task.link_id}
     </td>
     <td class="task" py:if="not hidden.has_key('task')">
-     ${task.link}
+     ${task.name_markup}
     </td>
     <td class="task" py:if="hidden.has_key('task')">&nbsp;</td>
     <td class="task" py:if="not hidden.has_key('distro_tree')">

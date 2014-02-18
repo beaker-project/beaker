@@ -53,7 +53,7 @@ def failed_recipes(job):
                     for task in recipe.tasks:
                         if task.is_failed():
                             msg = "%s\t\t\tTaskID: %s TaskName: %s StartTime: %s Duration: %s Status: %s Result: %s\n" \
-                               % (msg, task.id, task.task.name, task.start_time, task.duration,
+                               % (msg, task.id, task.name, task.start_time, task.duration,
                                   task.status, task.result)
     return msg
 

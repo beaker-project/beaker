@@ -18,7 +18,8 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, DateTime, Boolean, UnicodeText, String, Numeric)
 from sqlalchemy.sql import select, union, and_, or_, not_, func, literal
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import mapper, relationship, backref, object_mapper, dynamic_loader
+from sqlalchemy.orm import (mapper, relationship, backref, object_mapper,
+        dynamic_loader, validates)
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears import url
@@ -760,9 +761,11 @@ class Job(TaskBase, DeclarativeMappedObject):
                 recipe.kernel_options_post = kw.get('koptions_post')
             # Eventually we will want the option to add more tasks.
             # Add Install task
-            recipe.tasks.append(RecipeTask(task = Task.by_name(u'/distribution/install')))
+            recipe.tasks.append(RecipeTask.from_task(
+                    Task.by_name(u'/distribution/install')))
             # Add Reserve task
-            reserveTask = RecipeTask(task = Task.by_name(u'/distribution/reservesys'))
+            reserveTask = RecipeTask.from_task(
+                    Task.by_name(u'/distribution/reservesys'))
             if kw.get('reservetime'):
                 #FIXME add DateTimePicker to ReserveSystem Form
                 reserveTask.params.append(RecipeTaskParam( name = 'RESERVETIME',
@@ -2537,8 +2540,12 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, primary_key=True)
     recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
-    task_id = Column(Integer, ForeignKey('task.id'), nullable=False)
-    task = relationship(Task, uselist=False)
+    name = Column(Unicode(255), nullable=False, index=True)
+    # each RecipeTask must have either a fetch_url or a task reference
+    fetch_url = Column(Unicode(2048))
+    fetch_subdir = Column(Unicode(2048), nullable=False, default=u'')
+    task_id = Column(Integer, ForeignKey('task.id'))
+    task = relationship(Task)
     start_time = Column(DateTime)
     finish_time = Column(DateTime)
     result = Column(TaskResult.db_type(), nullable=False, default=TaskResult.new)
@@ -2556,9 +2563,37 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
     result_types = ['pass_','warn','fail','panic', 'result_none']
     stop_types = ['stop','abort','cancel']
 
-    def __init__(self, task):
-        super(RecipeTask, self).__init__()
-        self.task = task
+    @classmethod
+    def from_task(cls, task):
+        """
+        Constructs a RecipeTask for the given Task from the task library.
+        """
+        return cls(name=task.name, task=task)
+
+    @classmethod
+    def from_fetch_url(cls, url, subdir=None, name=None):
+        """
+        Constructs an external RecipeTask for the given fetch URL. If name is 
+        not given it defaults to the fetch URL combined with the subdir (if any).
+        """
+        if name is None:
+            if subdir:
+                name = u'%s %s' % (url, subdir)
+            else:
+                name = url
+        return cls(name=name, fetch_url=url, fetch_subdir=subdir)
+
+    @validates('task')
+    def validate_task(self, key, value):
+        if value is not None and self.fetch_url is not None:
+            raise ValueError('RecipeTask cannot have both task and fetch_url')
+        return value
+
+    @validates('fetch_url')
+    def validate_fetch_url(self, key, value):
+        if value is not None and self.task is not None:
+            raise ValueError('RecipeTask cannot have both fetch_url and task')
+        return value
 
     def delete(self):
         self.logs = []
@@ -2590,20 +2625,27 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
 
     def to_xml(self, clone=False, *args, **kw):
         task = xmldoc.createElement("task")
-        task.setAttribute("name", "%s" % self.task.name)
+        task.setAttribute("name", "%s" % self.name)
         task.setAttribute("role", "%s" % self.role and self.role or 'STANDALONE')
         if not clone:
             task.setAttribute("id", "%s" % self.id)
-            task.setAttribute("avg_time", "%s" % self.task.avg_time)
             task.setAttribute("result", "%s" % self.result)
             task.setAttribute("status", "%s" % self.status)
-            rpm = xmldoc.createElement("rpm")
-            name = self.task.rpm[:self.task.rpm.find('-%s' % self.task.version)]
-            rpm.setAttribute("name", name)
-            rpm.setAttribute("path", "%s" % self.task.path)
-            task.appendChild(rpm)
-        if self.duration and not clone:
-            task.setAttribute("duration", "%s" % self.duration)
+            if self.task:
+                task.setAttribute("avg_time", "%s" % self.task.avg_time)
+                rpm = xmldoc.createElement("rpm")
+                name = self.task.rpm[:self.task.rpm.find('-%s' % self.task.version)]
+                rpm.setAttribute("name", name)
+                rpm.setAttribute("path", "%s" % self.task.path)
+                task.appendChild(rpm)
+            if self.duration:
+                task.setAttribute("duration", "%s" % self.duration)
+        if self.fetch_url:
+            fetch = xmldoc.createElement('fetch')
+            fetch.setAttribute('url', self.fetch_url)
+            if self.fetch_subdir:
+                fetch.setAttribute('subdir', self.fetch_subdir)
+            task.appendChild(fetch)
         if not self.is_queued() and not clone:
             roles = xmldoc.createElement("roles")
             for role in self.roles_to_xml():
@@ -2630,10 +2672,6 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         return duration
     duration = property(_get_duration)
 
-    def path(self):
-        return self.task.name
-    path = property(path)
-
     def link_id(self):
         """ Return a link to this Executed Recipe->Task
         """
@@ -2642,13 +2680,19 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
 
     link_id = property(link_id)
 
-    def link(self):
-        """ Return a link to this Task
+    @property
+    def name_markup(self):
         """
-        return make_link(url = '/tasks/%s' % self.task.id,
-                         text = self.task.name)
-
-    link = property(link)
+        Returns HTML markup (in the form of a kid.Element) displaying the name. 
+        The name is linked to the task library when applicable.
+        """
+        if self.task:
+            return make_link(url = '/tasks/%s' % self.task.id,
+                             text = self.name)
+        else:
+            span = Element('span')
+            span.text = self.name
+            return span
 
     @property
     def all_logs(self):
@@ -2690,9 +2734,10 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         if watchdog_override:
             self.recipe.watchdog.kill_time = watchdog_override
         else:
+            task_time = self.task.avg_time if self.task else 0
             # add in 30 minutes at a minimum
-            self.recipe.watchdog.kill_time = datetime.utcnow() + timedelta(
-                                                    seconds=self.task.avg_time + 1800)
+            self.recipe.watchdog.kill_time = (datetime.utcnow() +
+                    timedelta(task_time + 1800))
         self.recipe.recipeset.job._mark_dirty()
         return True
 
@@ -2810,7 +2855,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
                     worker          = worker,
                     state_label     = "%s" % self.status,
                     state           = self.status.value,
-                    method          = "%s" % self.task.name,
+                    method          = "%s" % self.name,
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
@@ -3079,10 +3124,10 @@ class RecipeTaskResult(TaskBase, DeclarativeMappedObject):
         """
         if not self.path or self.path == '/':
             short_path = self.log or './'
-        elif self.path.rstrip('/') == self.recipetask.task.name:
+        elif self.path.rstrip('/') == self.recipetask.name:
             short_path = './'
-        elif self.path.startswith(self.recipetask.task.name + '/'):
-            short_path = self.path.replace(self.recipetask.task.name + '/', '', 1)
+        elif self.path.startswith(self.recipetask.name + '/'):
+            short_path = self.path.replace(self.recipetask.name + '/', '', 1)
         else:
             short_path = self.path
         return short_path

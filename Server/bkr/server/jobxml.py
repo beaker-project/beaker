@@ -222,7 +222,7 @@ class XmlTask(ElementWrapper):
         elif attrname == 'id': 
             return self.get_xml_attr('id', int, 0)
         elif attrname == 'name': 
-            return self.get_xml_attr('name', unicode, u'None')
+            return self.get_xml_attr('name', unicode, None)
         elif attrname == 'avg_time': 
             return self.get_xml_attr('avg_time', int, 0)
         elif attrname == 'status': 
@@ -231,6 +231,8 @@ class XmlTask(ElementWrapper):
             return self.get_xml_attr('result', unicode, u'None')
         elif attrname == 'rpm': 
             return XmlRpm(self.wrappedEl['rpm'])
+        elif attrname == 'fetch':
+            return XmlFetch(self.wrappedEl['fetch'])
         else: raise AttributeError, attrname
 
 
@@ -283,6 +285,14 @@ class XmlRpm(ElementWrapper):
     def __getattr__(self, attrname):
         if attrname == 'name':
             return self.get_xml_attr('name', unicode, u'None')
+        else: raise AttributeError, attrname
+
+class XmlFetch(ElementWrapper):
+    def __getattr__(self, attrname):
+        if attrname == 'url':
+            return self.get_xml_attr('url', unicode, None)
+        elif attrname == 'subdir':
+            return self.get_xml_attr('subdir', unicode, u'')
         else: raise AttributeError, attrname
 
 subclassDict = {

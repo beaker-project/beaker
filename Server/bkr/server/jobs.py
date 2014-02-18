@@ -618,17 +618,21 @@ class Jobs(RPCRoot):
         xmltasks = []
         invalid_tasks = []
         for xmltask in xmlrecipe.iter_tasks():
-            try:
-                Task.by_name(xmltask.name, valid=1)
-            except InvalidRequestError, e:
-                invalid_tasks.append(xmltask.name)
-            else:
+            if hasattr(xmltask, 'fetch'):
+                # If fetch URL is given, the task doesn't need to exist.
                 xmltasks.append(xmltask)
+            elif Task.exists_by_name(xmltask.name, valid=True):
+                xmltasks.append(xmltask)
+            else:
+                invalid_tasks.append(xmltask.name)
         if invalid_tasks and not ignore_missing_tasks:
             raise BX(_('Invalid task(s): %s') % ', '.join(invalid_tasks))
         for xmltask in xmltasks:
-            task = Task.by_name(xmltask.name)
-            recipetask = RecipeTask(task=task)
+            if hasattr(xmltask, 'fetch'):
+                recipetask = RecipeTask.from_fetch_url(xmltask.fetch.url,
+                        subdir=xmltask.fetch.subdir, name=xmltask.name)
+            else:
+                recipetask = RecipeTask.from_task(Task.by_name(xmltask.name))
             recipetask.role = xmltask.role
             for xmlparam in xmltask.iter_params():
                 param = RecipeTaskParam( name=xmlparam.name, 
