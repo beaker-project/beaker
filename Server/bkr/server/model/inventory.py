@@ -576,12 +576,10 @@ class System(DeclarativeMappedObject, ActivityMixin):
         """
         Does the given user have permission to change the owner of this system?
         """
-        self._ensure_user_is_authenticated(user)
-        if self.owner == user:
-            return True
-        if user.is_admin():
-            return True
-        return False
+        # At least for now, any user that can edit the access policy can
+        # also change the system owner (this matches the powers previously
+        # granted to "admin" groups for a system)
+        return self.can_edit_policy(user)
 
     def can_edit_policy(self, user):
         """

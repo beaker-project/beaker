@@ -1615,6 +1615,7 @@ class ProductWidget(SingleSelectField, RPC):
     def update_params(self, d):
         super(ProductWidget, self).update_params(d)
         d['attrs']['id'] = 'job_product'
+        d['attrs']['class'] = 'input-block-level'
         d['attrs']['onchange'] = "ProductChange('%s',%s, %s)" % (
             url(d.get('action')),
             jsonify.encode({'id': d.get('job_id')}),

@@ -19,6 +19,11 @@ def wait_for_commands_completed(system, timeout):
 
 class PowerTest(LabControllerTestCase):
 
+    # BEWARE IF USING 'dummy' POWER TYPE:
+    # The 'dummy' power script sleeps for $power_id seconds, therefore tests 
+    # must ensure they set power_id to a sensible value ('0' or '' unless the 
+    # test demands a longer delay).
+
     def test_power_quiescent_period(self):
         # Test that we do in fact wait for the quiescent period to pass
         # before running a command
@@ -36,7 +41,7 @@ class PowerTest(LabControllerTestCase):
                 system = data_setup.create_system(lab_controller=self.get_lc())
                 system.power.power_type = PowerType.lazy_create(name=u'dummy')
                 system.power.power_quiescent_period = quiescent_period
-                system.power.power_id = 4
+                system.power.power_id = u'' # make power script not sleep
                 system.power.delay_until = None
                 system.action_power(action=u'off', service=u'testdata')
             wait_for_commands_completed(system, timeout=timeout)
@@ -66,7 +71,7 @@ class PowerTest(LabControllerTestCase):
                 system = data_setup.create_system(lab_controller=self.get_lc())
                 system.power.power_type = PowerType.lazy_create(name=u'dummy')
                 system.power.power_quiescent_period = 1
-                system.power.power_id = 4
+                system.power.power_id = u'' # make power script not sleep
                 system.power.delay_until = None
                 system.action_power(action=u'off', service=u'testdata')
             wait_for_commands_completed(system, timeout=10)
@@ -100,7 +105,7 @@ class PowerTest(LabControllerTestCase):
         with session.begin():
             system = data_setup.create_system(lab_controller=self.get_lc())
             system.power.power_type = PowerType.lazy_create(name=u'dummy')
-            system.power.power_id = power_sleep
+            system.power.power_id = power_sleep # make power script sleep
             system.action_power(action=u'off', service=u'testdata')
             system.action_power(action=u'off', service=u'testdata')
             system.action_power(action=u'off', service=u'testdata')
@@ -126,6 +131,7 @@ class PowerTest(LabControllerTestCase):
                 system = data_setup.create_system(lab_controller=self.get_lc())
                 system.power.address = None
                 system.power.power_type = PowerType.lazy_create(name=u'dummy')
+                system.power.power_id = u'' # make power script not sleep
                 system.power.power_passwd = None
                 system.action_power(action=u'off', service=u'testdata')
             wait_for_commands_completed(system, timeout=2 * get_conf().get('SLEEP_TIME'))
@@ -145,7 +151,7 @@ class PowerTest(LabControllerTestCase):
             with session.begin():
                 system = data_setup.create_system(lab_controller=self.get_lc())
                 system.power.power_type = PowerType.lazy_create(name=u'dummy')
-                system.power.power_id = u'0'
+                system.power.power_id = u'' # make power script not sleep
                 system.power.power_passwd = u'dontleakmebro'
                 system.action_power(action=u'off', service=u'testdata')
             wait_for_commands_completed(system, timeout=2 * get_conf().get('SLEEP_TIME'))
