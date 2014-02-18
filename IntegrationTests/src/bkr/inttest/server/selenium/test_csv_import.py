@@ -181,7 +181,7 @@ class CSVImportTest(WebDriverTestCase):
         self.assertEquals(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
                           "Error importing system on line 3: "
-                          "System has an invalid FQDN: --%s"%fqdn)
+                          "Invalid FQDN for system: --%s" % fqdn)
 
         with session.begin():
             system = System.query.filter(System.fqdn == fqdn).one()
