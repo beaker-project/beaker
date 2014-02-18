@@ -802,7 +802,10 @@ def get_system_status(fqdn):
     if system.loaned:
         system_status['current_loan'] = system.get_loan_details()
     if system.user:
-        current_reservation = {'user_name': '%s' % system.user}
+        current_reservation = {
+            'user': system.user,
+            'user_name': system.user.user_name, # for compat only
+        }
         open_reservation = system.open_reservation
         if open_reservation and \
             open_reservation.type == 'recipe':
