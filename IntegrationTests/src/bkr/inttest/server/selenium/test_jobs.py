@@ -128,7 +128,7 @@ class TestViewJob(WebDriverTestCase):
         recipe_task_start, recipe_task_finish = \
                 b.find_elements_by_xpath(
                     '//div[@id="recipe-%d-results"]//table'
-                    '/tbody/tr[1]/td[3]/span' % recipe_id)
+                    '/tbody/tr[1]/td[3]/div' % recipe_id)
         self.check_datetime_localised(recipe_task_start.text.strip())
         self.check_datetime_localised(recipe_task_finish.text.strip())
         self.check_datetime_localised(b.find_element_by_xpath(
