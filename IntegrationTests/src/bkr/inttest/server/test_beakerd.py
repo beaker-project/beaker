@@ -1098,6 +1098,33 @@ class TestBeakerd(unittest.TestCase):
             self.assertEqual(system.command_queue[1].action, 'configure_netboot')
             self.assertEqual(system.command_queue[2].action, 'clear_logs')
 
+    def test_task_versions_are_recorded(self):
+        with session.begin():
+            system = data_setup.create_system(shared=True,
+                    lab_controller=self.lab_controller)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            task = Task.by_id(self.task_id)
+            recipe = data_setup.create_recipe(distro_tree=distro_tree,
+                    task_list=[task])
+            recipe._host_requires = (u"""
+                <hostRequires>
+                    <hostname op="=" value="%s" />
+                </hostRequires>
+                """ % system.fqdn)
+            job = data_setup.create_job_for_recipes([recipe])
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEquals(job.recipesets[0].recipes[0].tasks[0].version,
+                    task.version)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=880852
     def test_recipe_no_longer_has_access(self):
         with session.begin():

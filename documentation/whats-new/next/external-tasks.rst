@@ -14,10 +14,13 @@ Run the following SQL to upgrade.
 
     ALTER TABLE recipe_task
         ADD name VARCHAR(255) NOT NULL AFTER recipe_id,
+        ADD version VARCHAR(255) AFTER name,
         ADD fetch_url VARCHAR(2048) AFTER version,
         ADD fetch_subdir VARCHAR(2048) NOT NULL DEFAULT '' AFTER fetch_url,
         MODIFY task_id INT,
-        ADD INDEX (name);
+        ADD INDEX (name),
+        ADD INDEX (version),
+        ADD INDEX (name, version);
 
     UPDATE recipe_task
         SET name = (SELECT name FROM task WHERE id = recipe_task.task_id);
@@ -31,6 +34,7 @@ that case.
 
     ALTER TABLE recipe_task
         DROP name,
+        DROP version,
         DROP fetch_url,
         DROP fetch_subdir,
         MODIFY task_id INT NOT NULL;

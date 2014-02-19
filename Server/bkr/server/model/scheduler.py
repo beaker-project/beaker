@@ -2039,6 +2039,11 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         # falls back to being queued on a regular system
         makedirs_ignore(snapshot_repo, 0755)
         Task.make_snapshot_repo(snapshot_repo)
+        # Record task versions as they existed at this point in time, since we 
+        # just created the task library snapshot for this recipe.
+        for recipetask in self.tasks:
+            if recipetask.task:
+                recipetask.version = recipetask.task.version
         return True
 
     def destroyRepo(self):
@@ -2541,6 +2546,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
     id = Column(Integer, primary_key=True)
     recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
     name = Column(Unicode(255), nullable=False, index=True)
+    version = Column(Unicode(255), index=True)
     # each RecipeTask must have either a fetch_url or a task reference
     fetch_url = Column(Unicode(2048))
     fetch_subdir = Column(Unicode(2048), nullable=False, default=u'')
@@ -2628,6 +2634,8 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         task.setAttribute("name", "%s" % self.name)
         task.setAttribute("role", "%s" % self.role and self.role or 'STANDALONE')
         if not clone:
+            if self.version is not None:
+                task.setAttribute('version', self.version)
             task.setAttribute("id", "%s" % self.id)
             task.setAttribute("result", "%s" % self.result)
             task.setAttribute("status", "%s" % self.status)
@@ -2901,6 +2909,8 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
     def can_stop(self, user=None):
         """Returns True iff the given user can stop this recipe task"""
         return self.recipe.recipeset.job.can_stop(user)
+
+Index('ix_recipe_task_name_version', RecipeTask.name, RecipeTask.version)
 
 
 class RecipeTaskParam(DeclarativeMappedObject):

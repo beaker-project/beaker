@@ -2721,6 +2721,18 @@ class TaskTest(unittest.TestCase):
         tasks = Task.query.filter(Task.name == 'Task1').all()
         self.assertEquals(len(tasks), 1)
 
+class RecipeTaskTest(unittest.TestCase):
+
+    def test_version_in_xml(self):
+        task = data_setup.create_task(name=u'/distribution/install')
+        recipe = data_setup.create_recipe(task_list=[task])
+        data_setup.create_job_for_recipes([recipe])
+        data_setup.mark_recipe_running(recipe)
+        rt = recipe.tasks[0]
+        rt.version = '1.2-3'
+        root = lxml.etree.fromstring(rt.to_xml(clone=False).toxml())
+        self.assertEquals(root.get('version'), '1.2-3')
+
 class RecipeTaskResultTest(unittest.TestCase):
 
     def test_short_path(self):
