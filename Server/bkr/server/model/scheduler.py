@@ -2601,6 +2601,14 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             raise ValueError('RecipeTask cannot have both fetch_url and task')
         return value
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'version': self.version,
+            'status': unicode(self.status),
+        }
+
     def delete(self):
         self.logs = []
         for r in self.results:

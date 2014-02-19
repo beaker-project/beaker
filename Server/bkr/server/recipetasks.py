@@ -161,6 +161,23 @@ class RecipeTasks(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
+    def update(self, task_id, data):
+        """
+        XML-RPC method used by the lab controller harness API to update 
+        a recipe-task's attributes.
+        """
+        try:
+            task = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid task ID: %s' % task_id))
+        if 'name' in data:
+            task.name = data['name']
+        if 'version' in data:
+            task.version = data['version']
+        return task.__json__()
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
     def result(self, task_id, result_type, path=None, score=None, summary=None):
         """
         Record a Result

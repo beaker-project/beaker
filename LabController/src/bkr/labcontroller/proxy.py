@@ -9,6 +9,7 @@ import base64
 import xmltramp
 import glob
 import re
+import json
 import shutil
 import tempfile
 import xmlrpclib
@@ -20,7 +21,8 @@ from socket import gethostname
 from threading import Thread, Event
 from xml.sax.saxutils import escape as xml_escape, quoteattr as xml_quoteattr
 from werkzeug.wrappers import Response
-from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound, LengthRequired
+from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound, \
+        LengthRequired, UnsupportedMediaType, Conflict
 from werkzeug.utils import redirect
 from werkzeug.http import parse_content_range_header
 from werkzeug.wsgi import wrap_file
@@ -833,7 +835,11 @@ class ProxyHTTP(object):
     def post_task_status(self, req, recipe_id, task_id):
         if 'status' not in req.form:
             raise BadRequest('Missing "status" parameter')
-        status = req.form['status'].lower()
+        self._update_status(task_id, req.form['status'], req.form.get('message'))
+        return Response(status=204)
+
+    def _update_status(self, task_id, status, message):
+        status = status.lower()
         if status not in ['running', 'completed', 'aborted']:
             raise BadRequest('Unknown status %r' % req.form['status'])
         try:
@@ -842,16 +848,31 @@ class ProxyHTTP(object):
             elif status == 'completed':
                 self.hub.recipes.tasks.stop(task_id, 'stop')
             elif status == 'aborted':
-                self.hub.recipes.tasks.stop(task_id, 'abort',
-                        req.form.get('message'))
-            return Response(status=204)
+                self.hub.recipes.tasks.stop(task_id, 'abort', message)
         except xmlrpclib.Fault, fault:
             # XXX need to find a less fragile way to do this
             if 'Cannot restart finished task' in fault.faultString:
-                return Response(status=409, response=fault.faultString,
-                        content_type='text/plain')
+                raise Conflict(fault.faultString)
             else:
                 raise
+
+    def patch_task(self, request, recipe_id, task_id):
+        if request.json:
+            data = dict(request.json)
+        elif request.form:
+            data = request.form.to_dict()
+        else:
+            raise UnsupportedMediaType
+        if 'status' in data:
+            status = data.pop('status')
+            self._update_status(task_id, status, data.pop('message', None))
+            # If the caller only wanted to update the status and nothing else, 
+            # we will avoid making a second XML-RPC call.
+            updated = {'status': status}
+        if data:
+            updated = self.hub.recipes.tasks.update(task_id, data)
+        return Response(status=200, response=json.dumps(updated),
+                content_type='application/json')
 
     def post_watchdog(self, req, recipe_id):
         if 'seconds' not in req.form:
