@@ -58,7 +58,40 @@ class PowerTest(LabControllerTestCase):
             'command %s'  % (quiescent_period, system.command_queue[0].id),
                 provision_output)
 
-    def test_power_quiescent_period_statefulness(self):
+    def test_power_quiescent_period_statefulness_not_elapsed(self):
+        if daemons_running_externally():
+            raise SkipTest('cannot examine logs of remote beaker-provision')
+        provision_process, = [p for p in processes if p.name == \
+            'beaker-provision']
+        # Initial lookup of this system will reveal no state, so will delay
+        # for the whole quiescent period
+        try:
+            provision_process.start_output_capture()
+            with session.begin():
+                system = data_setup.create_system(lab_controller=self.get_lc())
+                system.power.power_type = PowerType.lazy_create(name=u'dummy')
+                system.power.power_quiescent_period = 1
+                system.power.power_id = u'' # make power script not sleep
+                system.power.delay_until = None
+                system.action_power(action=u'off', service=u'testdata')
+            wait_for_commands_completed(system, timeout=10)
+        finally:
+            provision_output = provision_process.finish_output_capture()
+        self.assertIn('Entering quiescent period, delaying 1 seconds for '
+            'command %s'  % system.command_queue[0].id, provision_output)
+        # Increase the quiescent period, to ensure we enter it
+        try:
+            provision_process.start_output_capture()
+            with session.begin():
+                system = System.by_id(system.id, User.by_user_name('admin'))
+                system.power.power_quiescent_period = 10
+                system.action_power(action=u'on', service=u'testdata')
+            wait_for_commands_completed(system, timeout=15)
+        finally:
+            provision_output = provision_process.finish_output_capture()
+        self.assertIn('Entering quiescent period', provision_output)
+
+    def test_power_quiescent_period_statefulness_elapsed(self):
         if daemons_running_externally():
             raise SkipTest('cannot examine logs of remote beaker-provision')
         provision_process, = [p for p in processes if p.name == \

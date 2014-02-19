@@ -99,9 +99,9 @@ class CommandQueuePoller(ProxyHelper):
             if last_command_finished_at:
                 # Get the difference between the time now and the number of
                 # seconds until we can run another command
-                seconds_to_wait = total_seconds(datetime.datetime.utcnow() -
-                    (last_command_finished_at +
-                        datetime.timedelta(quiescent_period)))
+                seconds_to_wait = total_seconds((last_command_finished_at +
+                        datetime.timedelta(seconds=quiescent_period)) - 
+                    datetime.datetime.utcnow())
             else:
                 # Play it safe, wait for the whole period.
                 seconds_to_wait = quiescent_period
