@@ -184,9 +184,12 @@ def log_traceback(logger):
         return decorated
     return decorator
 
-def run_createrepo(cwd=None):
+def run_createrepo(cwd=None, update=False):
     createrepo_command = config.get('beaker.createrepo_command', 'createrepo')
-    args = [createrepo_command, '-q', '--no-database', '--checksum', 'sha', '.']
+    args = [createrepo_command, '-q', '--no-database', '--checksum', 'sha']
+    if update:
+        args.append('--update')
+    args.append('.')
     log.debug('Running createrepo as %r in %s', args, cwd)
     p = subprocess.Popen(args, cwd=cwd, stderr=subprocess.PIPE,
         stdout=subprocess.PIPE)

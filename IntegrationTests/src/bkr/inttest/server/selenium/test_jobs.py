@@ -27,8 +27,9 @@ import tempfile
 import pkg_resources
 from turbogears.database import session
 from selenium.webdriver.support.ui import Select
-from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login, is_text_present, logout
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login, is_text_present, logout, \
+        click_menu_item
 from bkr.inttest import data_setup, with_transaction, get_server_base
 from bkr.server.model import RetentionTag, Product, Distro, Job, GuestRecipe, \
     User
@@ -354,25 +355,23 @@ class NewJobTestWD(WebDriverTestCase):
                 "Invalid job XML: 'utf8' codec can't decode byte 0x89 "
                 "in position 0: invalid start byte")
 
-class NewJobTest(SeleniumTestCase):
+class NewJobTest(WebDriverTestCase):
 
     @with_transaction
     def setUp(self):
         if not Distro.by_name(u'BlueShoeLinux5-5'):
             data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
         data_setup.create_product(product_name=u'the_product')
-        self.selenium = self.get_selenium()
-        self.selenium.start()
+        self.browser = self.get_browser()
 
     def tearDown(self):
-        self.selenium.stop()
+        self.browser.quit()
 
     def test_warns_about_xsd_validation_errors(self):
-        self.login()
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=New Job')
-        sel.wait_for_page_to_load('30000')
+        b = self.browser
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''
             <job>
@@ -392,25 +391,22 @@ class NewJobTest(SeleniumTestCase):
             </job>
             ''')
         xml_file.flush()
-        sel.type('jobs_filexml', xml_file.name)
-        sel.click('//button[text()="Submit Data"]')
-        sel.wait_for_page_to_load('30000')
-        sel.click('//button[text()="Queue"]')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_text('css=.alert-error h4'),
+        b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        self.assertEqual(b.find_element_by_css_selector('.alert-error h4').text,
                 'Job failed schema validation. Please confirm that you want to submit it.')
-        self.assert_(int(sel.get_xpath_count('//ul[@class="xsd-error-list"]/li')) > 0)
-        sel.click('//button[text()="Queue despite validation errors"]')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'My Jobs')
-        self.assert_(sel.get_text('css=.flash').startswith('Success!'))
+        b.find_element_by_xpath('//ul[@class="xsd-error-list"]/li')
+        b.find_element_by_xpath('//button[text()="Queue despite validation errors"]').click()
+        b.find_element_by_xpath('//title[text()="My Jobs"]')
+        flash_message = b.find_element_by_class_name('flash').text
+        self.assert_(flash_message.startswith('Success!'), flash_message)
 
     def test_refuses_to_accept_unparseable_xml(self):
-        self.login()
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=New Job')
-        sel.wait_for_page_to_load('30000')
+        b = self.browser
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''
             <job>
@@ -418,12 +414,11 @@ class NewJobTest(SeleniumTestCase):
             </job>
             ''')
         xml_file.flush()
-        sel.type('jobs_filexml', xml_file.name)
-        sel.click('//button[text()="Submit Data"]')
-        sel.wait_for_page_to_load('30000')
-        sel.click('//button[text()="Queue"]')
-        sel.wait_for_page_to_load('30000')
-        self.assert_('Failed to import job' in sel.get_text('css=.flash'))
+        b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        flash_message = b.find_element_by_class_name('flash').text
+        self.assertIn('Failed to import job', flash_message)
 
     def test_valid_job_xml_doesnt_trigger_xsd_warning(self):
         with session.begin():
@@ -431,30 +426,26 @@ class NewJobTest(SeleniumTestCase):
             user = data_setup.create_user(password=u'hornet')
             user.groups.append(group)
 
-        self.login(user=user.user_name, password='hornet')
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=New Job')
-        sel.wait_for_page_to_load('30000')
-        sel.type('jobs_filexml', pkg_resources.resource_filename(
-                'bkr.inttest', 'complete-job.xml'))
-        sel.click('//button[text()="Submit Data"]')
-        sel.wait_for_page_to_load('30000')
-        sel.click('//button[text()="Queue"]')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'My Jobs')
-        self.assert_(sel.get_text('css=.flash').startswith('Success!'))
+        b = self.browser
+        login(b, user=user.user_name, password='hornet')
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
+        b.find_element_by_id('jobs_filexml').send_keys(
+                pkg_resources.resource_filename('bkr.inttest', 'complete-job.xml'))
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        flash_message = b.find_element_by_class_name('flash').text
+        self.assert_(flash_message.startswith('Success!'), flash_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=661652
     def test_job_with_excluded_task(self):
         with session.begin():
             distro_tree = data_setup.create_distro_tree(arch=u'ia64')
             excluded_task = data_setup.create_task(exclude_arch=[u'ia64'])
-        self.login()
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=New Job')
-        sel.wait_for_page_to_load('30000')
+        b = self.browser
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''
             <job>
@@ -477,22 +468,18 @@ class NewJobTest(SeleniumTestCase):
             </job>
             ''' % (distro_tree.distro.name, excluded_task.name))
         xml_file.flush()
-        sel.type('jobs_filexml', xml_file.name)
-        sel.click('//button[text()="Submit Data"]')
-        sel.wait_for_page_to_load('30000')
-        sel.click('//button[text()="Queue"]')
-        sel.wait_for_page_to_load('30000')
-        flash = sel.get_text('css=.flash')
-        self.assert_(flash.startswith('Success!'), flash)
-        self.assertEqual(sel.get_title(), 'My Jobs')
+        b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        flash_message = b.find_element_by_class_name('flash').text
+        self.assert_(flash_message.startswith('Success!'), flash_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=689344
     def test_partition_without_fs_doesnt_trigger_validation_warning(self):
-        self.login()
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=New Job')
-        sel.wait_for_page_to_load('30000')
+        b = self.browser
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''
             <job>
@@ -512,24 +499,20 @@ class NewJobTest(SeleniumTestCase):
             </job>
             ''')
         xml_file.flush()
-        sel.type('jobs_filexml', xml_file.name)
-        sel.click('//button[text()="Submit Data"]')
-        sel.wait_for_page_to_load('30000')
-        sel.click('//button[text()="Queue"]')
-        sel.wait_for_page_to_load('30000')
-        flash = sel.get_text('css=.flash')
-        self.assert_(flash.startswith('Success!'), flash)
-        self.assertEqual(sel.get_title(), 'My Jobs')
+        b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        flash_message = b.find_element_by_class_name('flash').text
+        self.assert_(flash_message.startswith('Success!'), flash_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=730983
     def test_duplicate_notify_cc_addresses_are_merged(self):
         with session.begin():
             user = data_setup.create_user(password=u'hornet')
-        self.login(user.user_name, u'hornet')
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=New Job')
-        sel.wait_for_page_to_load('30000')
+        b = self.browser
+        login(b, user.user_name, u'hornet')
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''
             <job>
@@ -550,24 +533,21 @@ class NewJobTest(SeleniumTestCase):
             </job>
             ''')
         xml_file.flush()
-        sel.type('jobs_filexml', xml_file.name)
-        sel.click('//button[text()="Submit Data"]')
-        sel.wait_for_page_to_load('30000')
-        sel.click('//button[text()="Queue"]')
-        sel.wait_for_page_to_load('30000')
-        flash = sel.get_text('css=.flash')
-        self.assert_(flash.startswith('Success!'), flash)
-        self.assertEqual(sel.get_title(), 'My Jobs')
-        job = Job.query.filter(Job.owner == user).order_by(Job.id.desc()).first()
-        self.assertEqual(job.cc, ['person@example.invalid'])
+        b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        flash_message = b.find_element_by_class_name('flash').text
+        self.assert_(flash_message.startswith('Success!'), flash_message)
+        with session.begin():
+            job = Job.query.filter(Job.owner == user).order_by(Job.id.desc()).first()
+            self.assertEqual(job.cc, ['person@example.invalid'])
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=784237
     def test_invalid_email_addresses_are_not_accepted_in_notify_cc(self):
-        self.login()
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=New Job')
-        sel.wait_for_page_to_load('30000')
+        b = self.browser
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''
             <job>
@@ -587,22 +567,20 @@ class NewJobTest(SeleniumTestCase):
             </job>
             ''')
         xml_file.flush()
-        sel.type('jobs_filexml', xml_file.name)
-        sel.click('//button[text()="Submit Data"]')
-        sel.wait_for_page_to_load('30000')
-        sel.click('//button[text()="Queue"]')
-        sel.wait_for_page_to_load('30000')
-        self.assert_('Failed to import job' in sel.get_text('css=.flash'))
+        b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        flash_message = b.find_element_by_class_name('flash').text
+        self.assertIn('Failed to import job', flash_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=741170
     # You will need a patched python-xmltramp for this test to pass.
     # Look for python-xmltramp-2.17-8.eso.1 or higher.
     def test_doesnt_barf_on_xmlns(self):
-        self.login()
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=New Job')
-        sel.wait_for_page_to_load('30000')
+        b = self.browser
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''
             <job>
@@ -619,22 +597,18 @@ class NewJobTest(SeleniumTestCase):
             </job>
             ''')
         xml_file.flush()
-        sel.type('jobs_filexml', xml_file.name)
-        sel.click('//button[text()="Submit Data"]')
-        sel.wait_for_page_to_load('30000')
-        sel.click('//button[text()="Queue"]')
-        sel.wait_for_page_to_load('30000')
-        flash = sel.get_text('css=.flash')
-        self.assert_(flash.startswith('Success!'), flash)
-        self.assertEqual(sel.get_title(), 'My Jobs')
+        b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        flash_message = b.find_element_by_class_name('flash').text
+        self.assert_(flash_message.startswith('Success!'), flash_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=768167
     def test_doesnt_barf_on_xml_encoding_declaration(self):
-        self.login()
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=New Job')
-        sel.wait_for_page_to_load('30000')
+        b = self.browser
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
         xml_file = tempfile.NamedTemporaryFile()
         xml_file.write('''<?xml version="1.0" encoding="utf-8"?>
             <job>
@@ -651,23 +625,19 @@ class NewJobTest(SeleniumTestCase):
             </job>
             ''')
         xml_file.flush()
-        sel.type('jobs_filexml', xml_file.name)
-        sel.click('//button[text()="Submit Data"]')
-        sel.wait_for_page_to_load('30000')
-        sel.click('//button[text()="Queue"]')
-        sel.wait_for_page_to_load('30000')
-        flash = sel.get_text('css=.flash')
-        self.assert_(flash.startswith('Success!'), flash)
-        self.assertEqual(sel.get_title(), 'My Jobs')
+        b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        flash_message = b.find_element_by_class_name('flash').text
+        self.assert_(flash_message.startswith('Success!'), flash_message)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=869455
     # https://bugzilla.redhat.com/show_bug.cgi?id=896622
     def test_recipe_not_added_to_session_too_early(self):
-        self.login()
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=New Job')
-        sel.wait_for_page_to_load('30000')
+        b = self.browser
+        login(b)
+        b.get(get_server_base())
+        click_menu_item(b, 'Scheduler', 'New Job')
         xml_file = tempfile.NamedTemporaryFile()
         # These bugs are triggered by related entites of Recipe (ks_appends, 
         # repos, and packages) pulling the recipe into the session too early. 
@@ -713,14 +683,11 @@ class NewJobTest(SeleniumTestCase):
             </job>
             ''')
         xml_file.flush()
-        sel.type('jobs_filexml', xml_file.name)
-        sel.click('//button[text()="Submit Data"]')
-        sel.wait_for_page_to_load('30000')
-        sel.click('//button[text()="Queue"]')
-        sel.wait_for_page_to_load('30000')
-        flash = sel.get_text('css=.flash')
-        self.assert_(flash.startswith('Success!'), flash)
-        self.assertEqual(sel.get_title(), 'My Jobs')
+        b.find_element_by_id('jobs_filexml').send_keys(xml_file.name)
+        b.find_element_by_xpath('//button[text()="Submit Data"]').click()
+        b.find_element_by_xpath('//button[text()="Queue"]').click()
+        flash_message = b.find_element_by_class_name('flash').text
+        self.assert_(flash_message.startswith('Success!'), flash_message)
 
 
 class JobAttributeChangeTest(WebDriverTestCase):
@@ -829,41 +796,36 @@ class JobAttributeChangeTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Clear product"]').click()
         b.find_element_by_xpath('//div[text()="Tag has been updated"]')
 
-class CloneJobTest(SeleniumTestCase):
+class CloneJobTest(WebDriverTestCase):
 
     def setUp(self):
-        self.selenium = self.get_selenium()
-        self.selenium.start()
+        self.browser = self.get_browser()
 
     def tearDown(self):
-        self.selenium.stop()
+        self.browser.quit()
 
     def test_cloning_recipeset_from_job_with_product(self):
         with session.begin():
             job = data_setup.create_job()
             job.retention_tag = RetentionTag.list_by_requires_product()[0]
             job.product = Product(u'product_name')
-        self.login()
-        sel =  self.selenium
-        sel.open('jobs/clone?job_id=%s' % job.id)
-        sel.wait_for_page_to_load('30000')
-        cloned_from_job = sel.get_text('//textarea[@name="textxml"]')
-        sel.open('jobs/clone?recipeset_id=%s' % job.recipesets[0].id)
-        sel.wait_for_page_to_load('30000')
-        cloned_from_rs = sel.get_text('//textarea[@name="textxml"]')
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'jobs/clone?job_id=%s' % job.id)
+        cloned_from_job = b.find_element_by_xpath('//textarea[@name="textxml"]').text
+        b.get(get_server_base() + 'jobs/clone?recipeset_id=%s' % job.recipesets[0].id)
+        cloned_from_rs = b.find_element_by_xpath('//textarea[@name="textxml"]').text
         self.assertEqual(cloned_from_job,cloned_from_rs)
 
     def test_cloning_recipeset(self):
         with session.begin():
             job = data_setup.create_job()
-        self.login()
-        sel = self.selenium
-        sel.open('jobs/clone?job_id=%s' % job.id)
-        sel.wait_for_page_to_load('30000')
-        cloned_from_job = sel.get_text('//textarea[@name="textxml"]')
-        sel.open('jobs/clone?recipeset_id=%s' % job.recipesets[0].id)
-        sel.wait_for_page_to_load('30000')
-        cloned_from_rs = sel.get_text('//textarea[@name="textxml"]')
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'jobs/clone?job_id=%s' % job.id)
+        cloned_from_job = b.find_element_by_xpath('//textarea[@name="textxml"]').text
+        b.get(get_server_base() + 'jobs/clone?recipeset_id=%s' % job.recipesets[0].id)
+        cloned_from_rs = b.find_element_by_xpath('//textarea[@name="textxml"]').text
         self.assertEqual(cloned_from_job, cloned_from_rs)
 
 class TestJobsGrid(WebDriverTestCase):

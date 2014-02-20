@@ -7,7 +7,8 @@ import pkg_resources
 from turbogears.database import session
 from bkr.common.helpers import makedirs_ignore
 from bkr.labcontroller.config import get_conf
-from bkr.labcontroller.proxy import ConsoleWatchFile, InstallFailureDetector
+from bkr.labcontroller.proxy import ConsoleWatchFile, InstallFailureDetector, \
+        PanicDetector
 from bkr.server.model import LogRecipe, TaskResult, TaskStatus
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import wait_for_condition
@@ -58,10 +59,11 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
 
     def test_panic_not_doubly_detected(self):
         # Write a panic string to the console log and wait for panic.
-        open(self.console_log, 'w').write('Oops\n')
+        oops_line = 'Oops: 0002 [#1] PREEMPT SMP\n'
+        open(self.console_log, 'w').write(oops_line)
         wait_for_condition(self.check_console_log_registered)
-        wait_for_condition(lambda: self.check_cached_log_contents('Oops\n'))
-        self.assert_panic_detected(u'Oops')
+        wait_for_condition(lambda: self.check_cached_log_contents(oops_line))
+        self.assert_panic_detected(u'Oops: ')
 
         # Now check our kill_time
         session.expire_all()
@@ -69,8 +71,8 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
             kill_time1 = self.recipe.watchdog.kill_time
 
         # Add another panic entry
-        open(self.console_log, 'a+').write('Oops\n')
-        wait_for_condition(lambda: self.check_cached_log_contents('Oops\nOops\n'))
+        open(self.console_log, 'a+').write(oops_line)
+        wait_for_condition(lambda: self.check_cached_log_contents(oops_line * 2))
 
         session.expire_all()
         with session.begin():
@@ -220,3 +222,12 @@ def check_anaconda_failure_sample(filename):
         if failure_found:
             return
     raise AssertionError('No failure found')
+
+# https://bugzilla.redhat.com/show_bug.cgi?id=1040794
+def test_unrelated_Oops_string_is_not_detected_as_panic():
+    # Sounds implausible, but this really happened...
+    line = "2013-11-19 05:47:48,109 backend __init__: INFO RPMTest some-test-rpm-name - /mnt/testarea/tmpnOopsn.sh ['some-test-rpm-name']  \n"
+    detector = PanicDetector(get_conf().get('PANIC_REGEX'))
+    failure_found = detector.feed(line)
+    if failure_found:
+        raise AssertionError('False panic detection: %s' % failure_found)

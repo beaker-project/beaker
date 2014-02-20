@@ -58,7 +58,8 @@ edit_policy    Edit this policy    The user can edit the access policy to grant
                                    or revoke permissions, including adding new 
                                    users and groups to the policy. Users with
                                    permission to edit the policy can grant
-                                   themselves any of the other permissions.
+                                   themselves any of the other permissions
+                                   and also change the owner of the system.
 edit_system    Edit system details The user can edit system details and
                                    configuration, however they cannot take 
                                    ownership of it or grant new permissions to 

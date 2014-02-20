@@ -105,7 +105,8 @@ class TaskLibrary(object):
         # Internal call that assumes the flock is already held
         # Removed --baseurl, if upgrading you will need to manually
         # delete repodata directory before this will work correctly.
-        command, returncode, out, err = run_createrepo(cwd=self.rpmspath)
+        command, returncode, out, err = run_createrepo(
+                cwd=self.rpmspath, update=True)
         if out:
             log.debug("stdout from %s: %s", command, out)
         if err:

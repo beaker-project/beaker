@@ -20,6 +20,8 @@ format of each line of output is ``<task_id>: <seconds>``.
 Note that the <task_id> arguments are *not* in the same format as the 
 <taskspec> argument accepted by other Beaker commands.
 
+If the task does not have a watchdog, 'N/A' will be printed.
+
 Options
 -------
 
@@ -59,5 +61,6 @@ class Watchdog_Show(BeakerCommand):
     def run(self, *args, **kwargs):
         self.set_hub(**kwargs)
         for task_id in args:
-            print "%s: %s" % (task_id, self.hub.recipes.tasks.watchdog(task_id))
+            seconds_left = self.hub.recipes.tasks.watchdog(task_id)
+            print "%s: %s" % (task_id, seconds_left or 'N/A')
 

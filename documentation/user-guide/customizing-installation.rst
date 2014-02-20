@@ -55,6 +55,13 @@ correspond to the similarly-named kickstart option.
     command. On distros where ``autopart`` does not support the
     ``--type`` option, this is ignored.
 
+``beah_rpm=<pkgarg>``
+    Name of the Beah RPM to be installed. The value can be any package 
+    specification accepted by yum (for example it can include a version, such 
+    as ``beah-0.6.48``). The default is ``beah`` which installs the latest 
+    version from the harness repos. This variable has no effect when using 
+    alternative harnesses.
+
 ``ethdevices=<module>[,<module>...]``
     Comma-separated list of network modules to be loaded during installation.
 
@@ -80,7 +87,10 @@ correspond to the similarly-named kickstart option.
 ``manual``
     Omits most kickstart commands, causing Anaconda to prompt for details. The 
     effect is similar to booting from install media with no kickstart. 
-    Typically it is also necessary to set ``mode=vnc``.
+    Typically it is also necessary to set ``mode=vnc``. For systems with
+    console log monitoring enabled, it will also be necessary to switch off
+    :ref:`installation failure monitoring
+    <disable-install-failure-detection>`.
 
 ``method=<method>``
    Installation method to use. Default is ``nfs``, supported alternatives

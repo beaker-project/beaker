@@ -6,7 +6,6 @@ from bkr.server.widgets import myPaginateDataGrid, HorizontalForm
 from bkr.server.admin_page import AdminPage
 from bkr.server.model import RetentionTag as Tag
 from bkr.server.helpers import make_edit_link
-from bkr.server.validators import UniqueRetentionTag
 
 import logging
 log = logging.getLogger(__name__)
@@ -15,7 +14,7 @@ class RetentionTag(AdminPage):
     exposed = False
 
     tag = widgets.TextField(name='tag', label=_(u'Tag'),
-            validator=UniqueRetentionTag())
+            validator=validators.UnicodeString(not_empty=True, max=20, strip=True))
     default = widgets.SingleSelectField(name='default', label=(u'Default'),
             options=[(0,'False'),(1,'True')],
             validator=validators.StringBool(if_empty=False))
@@ -57,6 +56,9 @@ class RetentionTag(AdminPage):
     @validate(form=tag_form)
     @error_handler(new)
     def save(self, id=None, **kw):
+        if Tag.query.filter_by(tag=kw['tag']).count():
+            flash(_(u'Retention tag already exists'))
+            redirect('new')
         retention_tag = Tag(kw['tag'], kw['default'], kw['needs_product'])
         retention_tag.expire_in_days = kw['expire_in_days']
         session.add(retention_tag)
@@ -112,6 +114,10 @@ class RetentionTag(AdminPage):
     @error_handler(edit)
     def save_edit(self, id=None, **kw):
         retention_tag = Tag.by_id(id)
+        if kw['tag'] != retention_tag.tag:
+            if Tag.query.filter_by(tag=kw['tag']).count():
+                flash(_(u'Retention tag already exists'))
+                redirect('edit', id=id)
         retention_tag.tag = kw['tag']
         retention_tag.default = kw['default']
         retention_tag.expire_in_days = kw['expire_in_days']
