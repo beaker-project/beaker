@@ -21,8 +21,6 @@ class RetentionTagTest(WebDriverTestCase):
         login(b)
         b.get(get_server_base() + 'retentiontag/admin')
         b.find_element_by_link_text(tag.tag).click()
-        b.find_element_by_name('tag').clear()
-        b.find_element_by_name('tag').send_keys('pink-fluffy-unicorns')
         b.find_element_by_name('expire_in_days').clear()
         b.find_element_by_name('expire_in_days').send_keys('60')
         self.assertTrue(b.find_element_by_name('needs_product').is_selected())
@@ -31,9 +29,23 @@ class RetentionTagTest(WebDriverTestCase):
         self.assertEquals(b.find_element_by_class_name('flash').text, 'OK')
         with session.begin():
             session.refresh(tag)
-            self.assertEquals(tag.tag, u'pink-fluffy-unicorns')
             self.assertEquals(tag.expire_in_days, 60)
             self.assertEquals(tag.needs_product, False)
+
+    def test_rename(self):
+        with session.begin():
+            tag = data_setup.create_retention_tag()
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'retentiontag/admin')
+        b.find_element_by_link_text(tag.tag).click()
+        b.find_element_by_name('tag').clear()
+        b.find_element_by_name('tag').send_keys('pink-fluffy-unicorns')
+        b.find_element_by_id('Retention Tag').submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text, 'OK')
+        with session.begin():
+            session.refresh(tag)
+            self.assertEquals(tag.tag, u'pink-fluffy-unicorns')
 
     def test_cannot_change_tag_name_to_an_existing_tag(self):
         with session.begin():
@@ -46,8 +58,8 @@ class RetentionTagTest(WebDriverTestCase):
         b.find_element_by_name('tag').clear()
         b.find_element_by_name('tag').send_keys(existing_tag.tag)
         b.find_element_by_id('Retention Tag').submit()
-        b.find_element_by_xpath('//div[@class="control-group error" and .//input[@name="tag"]]'
-                '//span[string(.)="Retention tag already exists"]')
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'Retention tag already exists')
 
     def test_tag_delete(self):
         with session.begin():
@@ -104,5 +116,5 @@ class RetentionTagTest(WebDriverTestCase):
         b.find_element_by_name('tag').send_keys(existing_tag.tag)
         Select(b.find_element_by_name('default')).select_by_visible_text('False')
         b.find_element_by_id('Retention Tag').submit()
-        b.find_element_by_xpath('//div[@class="control-group error" and .//input[@name="tag"]]'
-                '//span[string(.)="Retention tag already exists"]')
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'Retention tag already exists')
