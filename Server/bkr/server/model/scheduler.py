@@ -2485,8 +2485,8 @@ class MachineRecipe(Recipe):
         if recipes is None:
             recipes = cls.query
         active_statuses = [s for s in TaskStatus if not s.finished]
-        query = (recipes.group_by(cls.status)
-                  .having(cls.status.in_(active_statuses))
+        query = (recipes.filter(cls.status.in_(active_statuses))
+                  .group_by(cls.status)
                   .values(cls.status, func.count(cls.id)))
         result = dict((status.name, 0) for status in active_statuses)
         result.update((status.name, count) for status, count in query)
@@ -2502,8 +2502,8 @@ class MachineRecipe(Recipe):
         query = (recipes.with_entities(grouping,
                                        cls.status,
                                        func.count(cls.id))
-                 .group_by(grouping, cls.status)
-                 .having(cls.status.in_(active_statuses)))
+                 .filter(cls.status.in_(active_statuses))
+                 .group_by(grouping, cls.status))
         def init_group_stats():
             return dict((status.name, 0) for status in active_statuses)
         result = defaultdict(init_group_stats)
