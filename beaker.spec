@@ -110,8 +110,8 @@ BuildRequires:  libxslt-python
 Summary:        Client component for talking to Beaker server
 Group:          Applications/Internet
 Requires:       python
-Requires:	python-setuptools
-Requires:	%{name} = %{version}-%{release}
+Requires:       python-setuptools
+Requires:       %{name} = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
 %if 0%{?rhel} >= 6 || 0%{?fedora}
@@ -150,10 +150,10 @@ Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
-Requires:	%{name} = %{version}-%{release}
+Requires:       %{name} = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
-Requires:	createrepo
-Requires:	yum-utils
+Requires:       createrepo
+Requires:       yum-utils
 Requires:       rhts-python
 Requires:       cracklib-python
 Requires:       python-jinja2
@@ -214,9 +214,9 @@ Requires:       wsmancli
 Requires:       telnet
 Requires:       sudo
 Requires:       python-cpio
-Requires:	%{name} = %{version}-%{release}
-Requires:	python-setuptools
-Requires:	python-xmltramp
+Requires:       %{name} = %{version}-%{release}
+Requires:       python-setuptools
+Requires:       python-xmltramp
 Requires:       python-krbV
 Requires:       python-gevent >= 1.0
 Requires:       python-daemon
@@ -235,8 +235,8 @@ Group:          Applications/Internet
 Requires:       %{name} = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
-Provides:	beaker-redhat-support-addDistro
-Obsoletes:	beaker-redhat-support-addDistro
+Provides:       beaker-redhat-support-addDistro <= 0.19
+Obsoletes:      beaker-redhat-support-addDistro <= 0.19
 %endif
 
 
@@ -280,8 +280,7 @@ tar -C Server/assets/underscore --strip-components=1 -xzf %{SOURCE4}
 tar -C Server/assets/backbone --strip-components=1 -xzf %{SOURCE5}
 
 %build
-[ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT;
-DESTDIR=$RPM_BUILD_ROOT make \
+make \
     %{?with_server:WITH_SERVER=1} \
     %{?with_labcontroller:WITH_LABCONTROLLER=1} \
     %{?with_inttests:WITH_INTTESTS=1}
@@ -421,7 +420,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %exclude %{_sysconfdir}/init.d
 %else
 %{_sysconfdir}/init.d/%{name}d
-%exclude /usr/lib/systemd
+%exclude %{_unitdir}
 %endif
 
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
@@ -507,7 +506,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
 %{_sysconfdir}/init.d/%{name}-provision
-%exclude /usr/lib/systemd
+%exclude %{_unitdir}
 %endif
 
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
