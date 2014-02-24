@@ -9,7 +9,7 @@ from optparse import OptionParser
 from datetime import datetime
 from SimpleXMLRPCServer import SimpleXMLRPCDispatcher
 from DocXMLRPCServer import XMLRPCDocGenerator
-from werkzeug.wrappers import Request, Response
+from flask.wrappers import Request, Response
 from werkzeug.routing import Map as RoutingMap, Rule
 from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed, BadRequest
 import gevent, gevent.pool, gevent.wsgi, gevent.event, gevent.monkey
@@ -65,6 +65,8 @@ class WSGIApplication(object):
                     endpoint=(self.proxy_http, 'post_watchdog')),
             Rule('/recipes/<recipe_id>/status', methods=['POST'],
                     endpoint=(self.proxy_http, 'post_recipe_status')),
+            Rule('/recipes/<recipe_id>/tasks/<task_id>/', methods=['PATCH'],
+                    endpoint=(self.proxy_http, 'patch_task')),
             Rule('/recipes/<recipe_id>/tasks/<task_id>/status', methods=['POST'],
                     endpoint=(self.proxy_http, 'post_task_status')),
             Rule('/recipes/<recipe_id>/tasks/<task_id>/results/', methods=['POST'],

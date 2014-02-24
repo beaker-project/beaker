@@ -121,6 +121,9 @@ def main():
     opts,args = parser.parse_args()
     configfile = opts.configfile
     baseurl = opts.baseurl
+    # The base URL is always a directory with a trailing slash
+    if not baseurl.endswith('/'):
+        baseurl += '/'
     load_config(configfile)
     log_to_stream(sys.stderr, level=logging.DEBUG if opts.debug else logging.WARNING)
     if opts.basepath:

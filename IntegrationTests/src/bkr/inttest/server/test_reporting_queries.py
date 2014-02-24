@@ -225,8 +225,7 @@ class ReportingQueryTest(unittest.TestCase):
     def test_task_durations(self):
         short_task = data_setup.create_task()
         long_task = data_setup.create_task()
-        r = data_setup.create_recipe()
-        r.tasks[:] = [RecipeTask(task=short_task), RecipeTask(task=long_task)]
+        r = data_setup.create_recipe(task_list=[short_task, long_task])
         data_setup.mark_job_complete(
                 data_setup.create_job_for_recipes([r]))
         r.tasks[0].start_time = datetime.datetime(2012, 10, 15, 10, 54, 0)

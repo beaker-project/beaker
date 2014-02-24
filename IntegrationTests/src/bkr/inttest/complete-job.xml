@@ -33,7 +33,9 @@
                     <partition fs="btrfs" name="/mnt/testarea" size="18" type="part"/>
                     <partition fs="btrfs" name="/usr/local" size="8" type="part"/>
                 </partitions>
-                <task name="/distribution/install" role="STANDALONE"/>
+                <task name="/distribution/install" role="STANDALONE">
+                    <fetch subdir="install" url="git://example.com/externaltasks#master"/>
+                </task>
             </guestrecipe>
             <autopick random="true"/>
             <watchdog panic="None"/>

@@ -226,6 +226,7 @@ Requires:       python-krbV
 Requires:       python-gevent >= 1.0
 Requires:       python-daemon
 Requires:       python-werkzeug
+Requires:       python-flask
 %if %{with_systemd}
 Requires:       systemd-units
 Requires(post): systemd

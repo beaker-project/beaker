@@ -194,7 +194,7 @@ class JobMatrix:
         # Let's get all the tasks that will be run, and the arch/whiteboard
         the_tasks = {}
         for recipe,arch in recipes:
-            the_tasks.update(dict([(rt.task.name,{}) for rt in recipe.tasks]))
+            the_tasks.update(dict([(rt.name,{}) for rt in recipe.tasks]))
             if arch in whiteboard_data:
                 if recipe.whiteboard not in whiteboard_data[arch]:
                     whiteboard_data[arch].append(recipe.whiteboard)
@@ -209,7 +209,7 @@ class JobMatrix:
     
         arch_alias = model.Arch.__table__.alias()
         recipe_table_alias = model.Recipe.__table__.alias()
-        my_select = [model.Task.id.label('task_id'),
+        my_select = [model.RecipeTask.name,
                      model.RecipeTask.result,
                      recipe_table_alias.c.whiteboard,
                      arch_alias.c.arch,
@@ -224,9 +224,8 @@ class JobMatrix:
         my_from = [model.RecipeSet.__table__.join(recipe_table_alias).
                               join(model.DistroTree.__table__, model.DistroTree.id == recipe_table_alias.c.distro_tree_id).
                               join(arch_alias, arch_alias.c.id == model.DistroTree.arch_id).
-                              join(model.RecipeTask.__table__, model.RecipeTask.recipe_id == recipe_table_alias.c.id).
-                              join(model.Task.__table__, model.Task.id == model.RecipeTask.task_id)]
-                   
+                              join(model.RecipeTask.__table__, model.RecipeTask.recipe_id == recipe_table_alias.c.id)]
+
         #If this query starts to bog down and slow up, we could create a view for the inner select (s2)
         #SQLAlchemy Select object does not really support this,I think you would have to use SQLAlchemy text for s2, and then
         #build a specific table for it
@@ -265,10 +264,8 @@ class JobMatrix:
                               s2.c.whiteboard,
                               s2.c.arch,
                               s2.c.arch_id,
-                              model.Task.name.label('task_name'),
-                              s2.c.task_id.label('task_id_pk')],
-                              s2.c.task_id == model.Task.id,
-                              from_obj=[model.Task.__table__, s2]).group_by(model.Task.name).order_by(model.Task.name).alias()
+                              s2.c.name.label('task_name')],
+                              from_obj=[s2]).group_by(s2.c.name).order_by(s2.c.name).alias()
                 results = session.connection(model.Recipe).execute(s1)
                 for task_details in results:
                     if task_details.arch in the_tasks[task_details.task_name]:

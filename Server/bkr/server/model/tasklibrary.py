@@ -317,6 +317,13 @@ class Task(DeclarativeMappedObject):
     library = TaskLibrary()
 
     @classmethod
+    def exists_by_name(cls, name, valid=None):
+        query = cls.query.filter(Task.name == name)
+        if valid is not None:
+            query = query.filter(Task.valid == bool(valid))
+        return query.count() > 0
+
+    @classmethod
     def by_name(cls, name, valid=None):
         query = cls.query.filter(Task.name==name)
         if valid is not None:

@@ -348,11 +348,50 @@
   </define>
   <define name="task">
     <element name="task">
-      <attribute name="name">
-            <a:documentation xml:lang="en">
-              Name of the task. Should be a valid name from the Task Library.
-            </a:documentation>
-      </attribute>
+      <choice>
+        <attribute name="name">
+          <a:documentation xml:lang="en">
+            Name of the task. When no fetch element is specified, the named
+            task must exist in Beaker's task library.
+          </a:documentation>
+        </attribute>
+        <group>
+          <element name="fetch">
+            <attribute name="url">
+              <a:documentation xml:lang="en">
+                URL from which the harness should fetch the task. Refer to the
+                harness documentation for supported URL schemes and task
+                formats.
+              </a:documentation>
+              <data type="anyURI"/>
+            </attribute>
+            <optional>
+              <attribute name="subdir">
+                <a:documentation xml:lang="en">
+                  If the fetch URL points at an archive or repository
+                  containing multiple tasks, this attribute identifies which
+                  subtree the harness should use to find the task.
+                  The default value is the empty string ("") which means that
+                  the task is at the root of the archive.
+                </a:documentation>
+              </attribute>
+            </optional>
+          </element>
+          <optional>
+            <attribute name="name">
+              <a:documentation xml:lang="en">
+                Name of the task. When the fetch element is specified, the task
+                name is only used to report results (the task need not exist in
+                Beaker's task library).
+
+                If the task name is not given, it defaults to the fetch URL
+                combined with the subdirectory (if any). The task name can also
+                be updated by the harness when the recipe executes.
+              </a:documentation>
+            </attribute>
+          </optional>
+        </group>
+      </choice>
       <optional>
         <attribute name="role">
             <a:documentation xml:lang="en">
