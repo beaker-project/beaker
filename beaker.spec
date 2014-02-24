@@ -399,6 +399,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with server}
 %files server
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/beaker
 %doc documentation/_build/text/whats-new/
 %{python2_sitelib}/bkr/server/
 %{python2_sitelib}/bkr.server-*-nspkg.pth
@@ -453,6 +454,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %files client
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/beaker
 %doc Client/client.conf.example
 %{python2_sitelib}/bkr/client/
 %{python2_sitelib}/bkr.client-*-nspkg.pth
@@ -473,6 +475,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with labcontroller}
 %files lab-controller
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/beaker
 %config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
 %{_sysconfdir}/beaker/power-scripts/
 %{_sysconfdir}/beaker/install-failure-patterns/
