@@ -76,7 +76,7 @@ class CommandActivity(Activity):
             onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     system = relationship('System')
     status = column_property(
-            Column('status', CommandStatus.db_type(), nullable=False),
+            Column('status', CommandStatus.db_type(), nullable=False, index=True),
             extension=CallbackAttributeExtension())
     task_id = Column(String(255))
     delay_until = Column(DateTime, default=None)
