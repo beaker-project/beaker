@@ -286,16 +286,16 @@ make \
     %{?with_inttests:WITH_INTTESTS=1}
 
 %install
-DESTDIR=$RPM_BUILD_ROOT make \
+DESTDIR=%{buildroot} make \
     %{?with_server:WITH_SERVER=1} \
     %{?with_labcontroller:WITH_LABCONTROLLER=1} \
     %{?with_inttests:WITH_INTTESTS=1} \
     install
 
 %if %{with_systemd}
-mkdir -p  $RPM_BUILD_ROOT%{_tmpfilesdir}
-cp -p Server/tmpfiles.d/beaker-server.conf $RPM_BUILD_ROOT%{_tmpfilesdir}/beaker-server.conf
-cp -p LabController/tmpfiles.d/beaker-lab-controller.conf $RPM_BUILD_ROOT%{_tmpfilesdir}/beaker-lab-controller.conf
+mkdir -p  %{buildroot}%{_tmpfilesdir}
+cp -p Server/tmpfiles.d/beaker-server.conf %{buildroot}%{_tmpfilesdir}/beaker-server.conf
+cp -p LabController/tmpfiles.d/beaker-lab-controller.conf %{buildroot}%{_tmpfilesdir}/beaker-lab-controller.conf
 %endif
 
 
