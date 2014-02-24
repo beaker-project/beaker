@@ -11,20 +11,24 @@ from bkr.server.validators import UniqueRetentionTag
 import logging
 log = logging.getLogger(__name__)
 
+class TagFormSchema(validators.Schema):
+    id = validators.Int()
+    tag = validators.UnicodeString(not_empty=True, max=20, strip=True)
+    default = validators.StringBool(if_empty=False)
+    expire_in_days = validators.Int()
+    needs_product = validators.StringBool(if_empty=False)
+    chained_validators = [UniqueRetentionTag('id', 'tag')]
+
 class RetentionTag(AdminPage):
     exposed = False
 
-    tag = widgets.TextField(name='tag', label=_(u'Tag'),
-            validator=UniqueRetentionTag())
+    tag = widgets.TextField(name='tag', label=_(u'Tag'))
     default = widgets.SingleSelectField(name='default', label=(u'Default'),
-            options=[(0,'False'),(1,'True')],
-            validator=validators.StringBool(if_empty=False))
+            options=[(0,'False'),(1,'True')])
     id = widgets.HiddenField(name='id') 
     expire_in_days = widgets.TextField(name='expire_in_days', label=_(u'Expire In Days'),
-            help_text=_(u'Number of days after which jobs will expire'),
-            validator=validators.Int())
-    needs_product = widgets.CheckBox('needs_product', label=u'Needs Product',
-            validator=validators.StringBool(if_empty=False))
+            help_text=_(u'Number of days after which jobs will expire'))
+    needs_product = widgets.CheckBox('needs_product', label=u'Needs Product')
 
     tag_form = HorizontalForm(
         'Retention Tag',
@@ -54,7 +58,7 @@ class RetentionTag(AdminPage):
 
     @identity.require(identity.in_group("admin"))
     @expose()
-    @validate(form=tag_form)
+    @validate(form=tag_form, validators=TagFormSchema())
     @error_handler(new)
     def save(self, id=None, **kw):
         retention_tag = Tag(kw['tag'], kw['default'], kw['needs_product'])
@@ -108,7 +112,7 @@ class RetentionTag(AdminPage):
 
     @identity.require(identity.in_group("admin"))
     @expose()
-    @validate(form=tag_form)
+    @validate(form=tag_form, validators=TagFormSchema())
     @error_handler(edit)
     def save_edit(self, id=None, **kw):
         retention_tag = Tag.by_id(id)
