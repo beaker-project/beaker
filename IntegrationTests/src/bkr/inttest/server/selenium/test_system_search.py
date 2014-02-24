@@ -1,6 +1,6 @@
 from selenium.webdriver.support.ui import Select
 from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
-    Device, DeviceClass, Disk, Cpu
+    Device, DeviceClass, Disk, Cpu, SystemPermission
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, login, \
         search_for_system, wait_for_animation, check_system_search_results
@@ -475,7 +475,7 @@ class SystemVisibilityTest(WebDriverTestCase):
 
     def test_secret_system_not_visible(self):
         with session.begin():
-            secret_system = data_setup.create_system(private=True)
+            secret_system = data_setup.create_system(shared=False, private=True)
         b = self.browser
         login(b, user=self.user.user_name, password=u'password')
         b.get(get_server_base())
@@ -486,8 +486,20 @@ class SystemVisibilityTest(WebDriverTestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=582008
     def test_secret_system_visible_when_loaned(self):
         with session.begin():
-            secret_system = data_setup.create_system(private=True)
+            secret_system = data_setup.create_system(shared=False, private=True)
             secret_system.loaned = self.user
+        b = self.browser
+        login(b, user=self.user.user_name, password=u'password')
+        b.get(get_server_base())
+        search_for_system(b, secret_system)
+        b.find_element_by_xpath('//table[@id="widget"]'
+                '//tr/td[1][./a/text()="%s"]' % secret_system.fqdn)
+
+    def test_secret_system_visible_to_users_with_view_permission(self):
+        with session.begin():
+            secret_system = data_setup.create_system(shared=False, private=True)
+            secret_system.custom_access_policy.add_rule(SystemPermission.view,
+                    user=self.user)
         b = self.browser
         login(b, user=self.user.user_name, password=u'password')
         b.get(get_server_base())
