@@ -776,7 +776,7 @@ Beaker 0.15.4
     ``admin`` group feature used in Beaker 0.14 and earlier releases.
     (Contributed by Nick Coghlan)
 
-Other updates:
+* Other updates:
 
   * :issue:`1063313`: The size of the combo box used to select a product for
     log retention purposes has been adjusted to handle browsers that don't
@@ -816,3 +816,12 @@ Other updates:
   * :issue:`1061977` (relates to an RH specific component)
   * :issue:`1061976` (relates to an RH specific component)
 
+Beaker 0.15.5
+~~~~~~~~~~~~~
+
+* :issue:`1066586`: Users who have reserve permission on a Secret/NDA system
+  are now allowed to see the system. This matches the behaviour of group 
+  systems in Beaker 0.14 and earlier. (Contributed by Dan Callaghan)
+
+* The :program:`beaker-repo-update` command appends a trailing slash to the
+  harness base URL if it is missing. (Contributed by Dan Callaghan)
