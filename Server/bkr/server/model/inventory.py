@@ -1731,6 +1731,8 @@ class Power(DeclarativeMappedObject):
 
     __tablename__ = 'power'
     __table_args__ = {'mysql_engine': 'InnoDB'}
+    # 5(seconds) was the default sleep time for commands in beaker-provision
+    default_quiescent_period = 5
     id = Column(Integer, autoincrement=True, primary_key=True)
     power_type_id = Column(Integer, ForeignKey('power_type.id'), nullable=False)
     power_type = relationship(PowerType, backref='power_control')
@@ -1740,8 +1742,8 @@ class Power(DeclarativeMappedObject):
     power_user = Column(String(255))
     power_passwd = Column(String(255))
     power_id = Column(String(255))
-    # 5(seconds) was the default sleep time for commands in beaker-provision
-    power_quiescent_period = Column(Integer, default=5, nullable=False)
+    power_quiescent_period = Column(Integer, default=default_quiescent_period,
+        nullable=False)
 
 # note model
 class Note(DeclarativeMappedObject):

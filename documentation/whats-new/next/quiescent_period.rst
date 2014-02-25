@@ -8,7 +8,7 @@ run for a given system. It is measured in seconds, and is set per system on the
 The following changes are needed to be made to the schema.
 
     ALTER TABLE command_queue ADD COLUMN (quiescent_period int default NULL);
-    ALTER TABLE power ADD COLUMN (power_quiescent_period int default 5 NOT NULL);
+    ALTER TABLE power ADD COLUMN (power_quiescent_period int NOT NULL);
 
 To rollback:
 

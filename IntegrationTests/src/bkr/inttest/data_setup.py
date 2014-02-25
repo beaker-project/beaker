@@ -222,7 +222,7 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
 def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
         owner=None, fqdn=None, shared=True, exclude_osmajor=[],
         exclude_osversion=[], hypervisor=None, kernel_type=None,
-        date_added=None, return_existing=False, private=False, **kw):
+        date_added=None, return_existing=False, private=False, with_power=True, **kw):
     if owner is None:
         owner = create_user()
     if fqdn is None:
@@ -249,7 +249,8 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
         system.custom_access_policy.add_rule(
                 permission=SystemPermission.reserve, everybody=True)
     system.arch.append(Arch.by_name(arch))
-    configure_system_power(system)
+    if with_power:
+        configure_system_power(system)
     system.excluded_osmajor.extend(ExcludeOSMajor(arch=Arch.by_name(arch),
             osmajor=osmajor) for osmajor in exclude_osmajor)
     system.excluded_osversion.extend(ExcludeOSVersion(arch=Arch.by_name(arch),
