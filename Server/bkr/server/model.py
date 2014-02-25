@@ -2206,8 +2206,9 @@ class System(SystemObject, ActivityMixin):
         if user:
             if not user.is_admin() and \
                not user.has_permission(u'secret_visible'):
-                query = query.filter(
+                query = query.outerjoin(System.custom_access_policy).filter(
                             or_(System.private==False,
+                                SystemAccessPolicy.grants(user, SystemPermission.reserve),
                                 System.owner == user,
                                 System.loaned == user,
                                 System.user == user))
