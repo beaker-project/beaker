@@ -19,13 +19,11 @@ setup(
         '*.xml',
         '*.ldif',
         'labcontroller/install-failure-logs/*',
-        'server/*.rpm',
         'server/kickstarts/*',
         'server/motd.xml',
         'server/selenium/*.csv',
-        'server/selenium/*.rpm',
         'server/selenium/invalid-task_file',
-        'server/tools/task_rpms/*'] +
+        'server/task-rpms/*'] +
         get_compose_layout()
     },
     namespace_packages=['bkr'],

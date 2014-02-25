@@ -46,7 +46,7 @@ class TestBeakerd(unittest.TestCase):
             task = data_setup.create_task()
             rpm_path = Task.get_rpm_path(task.rpm)
             shutil.copyfile(
-                    pkg_resources.resource_filename('bkr.inttest.server', 'empty.rpm'),
+                    pkg_resources.resource_filename('bkr.inttest.server', 'task-rpms/empty.rpm'),
                     rpm_path)
             return task.id, task.rpm
 
