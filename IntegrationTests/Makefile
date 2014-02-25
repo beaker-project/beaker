@@ -16,3 +16,7 @@ install: build
 clean:
 	python setup.py clean
 	rm -rf build
+
+# There are no suitable tests to be run here.
+.PHONY: check
+

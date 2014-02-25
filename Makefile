@@ -26,3 +26,7 @@ install:
 .PHONY: clean
 clean:
 	set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i clean; done
+
+.PHONY: check
+check:
+	set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i check; done

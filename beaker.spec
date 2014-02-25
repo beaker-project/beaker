@@ -53,6 +53,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  make
 BuildRequires:  python-setuptools
+BuildRequires:  python-unittest2
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
 BuildRequires:  python-docutils >= 0.6
@@ -77,8 +78,12 @@ BuildRequires:  python-webassets
 BuildRequires:  /usr/bin/lessc
 BuildRequires:  /usr/bin/cssmin
 BuildRequires:  /usr/bin/uglifyjs
-# These server dependencies are needed in the build, because
-# sphinx imports bkr.server modules to generate API docs
+# These runtime dependencies are needed at build time as well, because
+# the unit tests and Sphinx autodoc import the server code as part of the
+# build process.
+BuildRequires:  createrepo
+BuildRequires:  createrepo_c
+BuildRequires:  python-requests
 BuildRequires:  TurboGears >= 1.1.3
 %if 0%{?rhel} == 6
 BuildRequires:  python-turbojson13
@@ -299,6 +304,14 @@ DESTDIR=%{buildroot} make \
     %{?with_labcontroller:WITH_LABCONTROLLER=1} \
     %{?with_inttests:WITH_INTTESTS=1} \
     install
+
+
+%check
+make \
+    %{?with_server:WITH_SERVER=1} \
+    %{?with_labcontroller:WITH_LABCONTROLLER=1} \
+    %{?with_inttests:WITH_INTTESTS=1} \
+    check
 
 %clean
 %{__rm} -rf %{buildroot}
