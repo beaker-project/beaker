@@ -97,7 +97,6 @@ BuildRequires:  python-ldap
 BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  cracklib-python
 BuildRequires:  rpm-python
-BuildRequires:  rhts-python
 BuildRequires:  python-netaddr
 BuildRequires:  ovirt-engine-sdk
 BuildRequires:  python-itsdangerous
@@ -166,7 +165,6 @@ Requires:       %{name} = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
 Requires:       createrepo
 Requires:       yum-utils
-Requires:       rhts-python
 Requires:       cracklib-python
 Requires:       python-jinja2
 Requires:       python-netaddr
