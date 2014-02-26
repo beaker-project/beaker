@@ -7,12 +7,12 @@ import logging
 import rpm
 import xml.dom.minidom
 import lxml.etree
+import rpmUtils.miscutils
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode, Boolean,
-        DateTime)
+                        DateTime)
 from sqlalchemy.exc import InvalidRequestError
-from sqlalchemy.orm import mapper, relationship
+from sqlalchemy.orm import relationship
 from turbogears.config import get
-from turbogears.database import session
 from rhts import testinfo
 from bkr.common.helpers import (AtomicFileReplacement, Flock,
                                 makedirs_ignore, unlink_ignore)
@@ -204,7 +204,7 @@ class TaskLibrary(object):
                 for rpm_name, atomic_file in to_sync:
                     f = atomic_file.temp_file
                     f.seek(0)
-                    task = Task.create_from_taskinfo(self.read_taskinfo(f))
+                    task, downgrade = Task.create_from_taskinfo(self.read_taskinfo(f))
                     old_rpm_name = task.rpm
                     task.rpm = rpm_name
                     if old_rpm_name:
@@ -231,6 +231,11 @@ class TaskLibrary(object):
                 # referenced by name rather than requesting specific
                 # versions, and thus will always grab the latest.
                 self._unlink_locked_rpms(old_rpms)
+                # if this is a downgrade, we run createrepo once more
+                # so that the metadata doesn't contain the record for the
+                # now unlinked newer version of the task
+                if downgrade:
+                    self._update_locked_repo()
 
         finally:
             # Some or all of these may have already been destroyed
@@ -361,6 +366,16 @@ class Task(DeclarativeMappedObject):
     def make_snapshot_repo(cls, repo_dir):
         return cls.library.make_snapshot_repo(repo_dir)
 
+    @staticmethod
+    def check_downgrade(old_version, new_version):
+        old_version, old_release = old_version.rsplit('-', 1)
+        new_version, new_release = new_version.rsplit('-', 1)
+        # compareEVR returns 1 if tup1 > tup2
+        # It is ok to default epoch to 0, since rhts-devel doesn't generate
+        # task packages with epoch > 0
+        return rpmUtils.miscutils.compareEVR((0, old_version, old_release),
+                                             (0, new_version, new_release)) == 1
+
     @classmethod
     def create_from_taskinfo(cls, raw_taskinfo):
         """Create a new task object based on details retrieved from an RPM"""
@@ -379,6 +394,12 @@ class Task(DeclarativeMappedObject):
         # RPM is the same version we have. don't process
         if task.version == raw_taskinfo['hdr']['ver']:
             raise BX(_("Failed to import,  %s is the same version we already have" % task.version))
+
+        # if the task is already present, check if a downgrade has been requested
+        if task.version:
+            downgrade = cls.check_downgrade(task.version, raw_taskinfo['hdr']['ver'])
+        else:
+            downgrade = False
 
         task.version = raw_taskinfo['hdr']['ver']
         task.description = tinfo.test_description
@@ -445,7 +466,7 @@ class Task(DeclarativeMappedObject):
 
         task.valid = True
 
-        return task
+        return task, downgrade
 
     def to_dict(self):
         """ return a dict of this object """

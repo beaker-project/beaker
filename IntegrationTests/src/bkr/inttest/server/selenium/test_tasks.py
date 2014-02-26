@@ -72,7 +72,7 @@ class TestSubmitTask(WebDriverTestCase):
                 'Fake test for integration testing v1.1')
         self.assertEqual(self.get_task_info_field('Expected Time'), '5 minutes')
         self.assertEqual(self.get_task_info_field('Owner'), 'Nobody <nobody@example.com>')
-        self.assertEqual(self.get_task_info_field('Version'), '1.1-1')
+        self.assertEqual(self.get_task_info_field('Version'), '1.1-0')
         self.assertEqual(self.get_task_info_field('License'), 'GPLv2')
         self.assertEqual(self.get_task_info_field('Types'), 'Regression')
         self.assertEqual(self.get_task_info_field('RPM'), 'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm')
