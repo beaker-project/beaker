@@ -6,6 +6,10 @@ setup(
     version='0.15.5',
     license = "GPLv2+",
 
+    install_requires=[
+        'Flask',
+    ],
+
     packages=find_packages('src'),
     package_dir = {'':'src'},
 

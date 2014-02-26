@@ -217,6 +217,7 @@ setup(
     install_requires=[
         'TurboGears >= 1.1',
         'sqlalchemy >= 0.6',
+        'Flask',
     ],
     scripts=[],
     zip_safe=False,
