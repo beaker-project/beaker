@@ -100,6 +100,45 @@ def extract_initrd_arg(kernel_options):
     else:
         return (None, kernel_options)
 
+### Bootloader config: PXE Linux for aarch64
+
+def configure_aarch64(fqdn, kernel_options):
+    """
+    Creates PXE bootloader files for aarch64 Linux
+
+    <get_tftp_root()>/pxelinux/grub.cfg-<pxe_basename(fqdn)>
+
+    Also ensures <fqdn>.efi is symlinked to bootaa64.efi
+
+    Specify filename "pxelinux/<fqdn>.efi"; in your dhcpd.conf file
+    We remove this when the install is done.  This allows efi
+    to fall through to the next boot entry.
+    """
+    pxe_base = os.path.join(get_tftp_root(), 'pxelinux')
+    makedirs_ignore(pxe_base, mode=0755)
+    basename = "grub.cfg-%s" % pxe_basename(fqdn)
+    config = '''  linux  ../images/%s/kernel %s
+  initrd ../images/%s/initrd
+  devicetree /pxelinux/apm-mustang.dtb
+  boot
+''' % (fqdn, kernel_options, fqdn)
+    logger.debug('Writing aarch64 config for %s as %s', fqdn, basename)
+    with atomically_replaced_file(os.path.join(pxe_base, basename)) as f:
+        f.write(config)
+    atomic_symlink('bootaa64.efi', os.path.join(pxe_base, "%s.efi" % fqdn))
+
+def clear_aarch64(fqdn):
+    """
+    Removes PXE bootloader file created by configure_aarch64
+    """
+    pxe_base = os.path.join(get_tftp_root(), 'pxelinux')
+    basename = "grub.cfg-%s" % pxe_basename(fqdn)
+    logger.debug('Removing aarch64 config for %s as %s', fqdn, basename)
+    unlink_ignore(os.path.join(pxe_base, "%s.efi" % fqdn))
+    unlink_ignore(os.path.join(pxe_base, basename))
+    # XXX Should we save a default config, the way we do for non-aarch64 PXE?
+
+
 ### Bootloader config: PXE Linux for ARM
 
 def configure_armlinux(fqdn, kernel_options):
@@ -398,6 +437,7 @@ add_bootloader("efigrub", configure_efigrub, clear_efigrub)
 add_bootloader("yaboot", configure_yaboot, clear_yaboot)
 add_bootloader("elilo", configure_elilo, clear_elilo)
 add_bootloader("armlinux", configure_armlinux, clear_armlinux)
+add_bootloader("aarch64", configure_aarch64, clear_aarch64, set(["aarch64"]))
 add_bootloader("zpxe", configure_zpxe, clear_zpxe, set(["s390", "s390x"]))
 
 def configure_all(fqdn, arch, distro_tree_id,

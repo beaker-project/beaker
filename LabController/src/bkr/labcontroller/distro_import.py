@@ -1611,8 +1611,7 @@ kernel = images/pxeboot/vmlinuz
             return False
         if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
             return False
-        if not (parser.get('general', 'family').startswith("Red Hat Enterprise Linux")\
-	   or parser.get('general', 'family').startswith("CentOS")):
+        if not (parser.get('general', 'family').startswith(("Red Hat Enterprise Linux", "CentOS", "Red Hat Server"))):
             return False
         # Arm uses a different importer because of all the kernel types.
         if parser.get('general', 'arch') in ['arm', 'armhfp']:
