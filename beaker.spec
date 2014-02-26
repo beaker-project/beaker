@@ -1,5 +1,7 @@
-%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
-%{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
+%if 0%{?rhel} && 0%{?rhel} <= 6
+%{!?__python2: %global __python2 /usr/bin/python2}
+%{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%endif
 
 # The server, lab controller, and integration test subpackages can be conditionally built.
 # Enabled on RHEL 6 and F18+
@@ -388,20 +390,20 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %files
 %defattr(-,root,root,-)
-%{python_sitelib}/bkr/__init__.py*
-%{python_sitelib}/bkr/timeout_xmlrpclib.py*
-%{python_sitelib}/bkr/common/
-%{python_sitelib}/bkr/log.py*
-%{python_sitelib}/bkr-*.egg-info/
+%{python2_sitelib}/bkr/__init__.py*
+%{python2_sitelib}/bkr/timeout_xmlrpclib.py*
+%{python2_sitelib}/bkr/common/
+%{python2_sitelib}/bkr/log.py*
+%{python2_sitelib}/bkr-*.egg-info/
 %doc COPYING
 
 %if %{with server}
 %files server
 %defattr(-,root,root,-)
 %doc documentation/_build/text/whats-new/
-%{python_sitelib}/bkr/server/
-%{python_sitelib}/bkr.server-*-nspkg.pth
-%{python_sitelib}/bkr.server-*.egg-info/
+%{python2_sitelib}/bkr/server/
+%{python2_sitelib}/bkr.server-*-nspkg.pth
+%{python2_sitelib}/bkr.server-*.egg-info/
 %{_bindir}/%{name}-init
 %{_bindir}/nag-mail
 %{_bindir}/beaker-log-delete
@@ -445,17 +447,17 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with inttests}
 %files integration-tests
 %defattr(-,root,root,-)
-%{python_sitelib}/bkr/inttest/
-%{python_sitelib}/bkr.inttest-*-nspkg.pth
-%{python_sitelib}/bkr.inttest-*.egg-info/
+%{python2_sitelib}/bkr/inttest/
+%{python2_sitelib}/bkr.inttest-*-nspkg.pth
+%{python2_sitelib}/bkr.inttest-*.egg-info/
 %endif
 
 %files client
 %defattr(-,root,root,-)
 %doc Client/client.conf.example
-%{python_sitelib}/bkr/client/
-%{python_sitelib}/bkr.client-*-nspkg.pth
-%{python_sitelib}/bkr.client-*.egg-info/
+%{python2_sitelib}/bkr/client/
+%{python2_sitelib}/bkr.client-*-nspkg.pth
+%{python2_sitelib}/bkr.client-*.egg-info/
 %{_bindir}/beaker-wizard
 %{_bindir}/bkr
 %{_mandir}/man1/beaker-wizard.1.gz
@@ -475,9 +477,9 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
 %{_sysconfdir}/beaker/power-scripts/
 %{_sysconfdir}/beaker/install-failure-patterns/
-%{python_sitelib}/bkr/labcontroller/
-%{python_sitelib}/bkr.labcontroller-*-nspkg.pth
-%{python_sitelib}/bkr.labcontroller-*.egg-info/
+%{python2_sitelib}/bkr/labcontroller/
+%{python2_sitelib}/bkr.labcontroller-*-nspkg.pth
+%{python2_sitelib}/bkr.labcontroller-*.egg-info/
 %{_bindir}/%{name}-proxy
 %{_bindir}/%{name}-watchdog
 %{_bindir}/%{name}-transfer
