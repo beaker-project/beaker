@@ -421,7 +421,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %exclude %{_sysconfdir}/init.d
 %else
 %{_sysconfdir}/init.d/%{name}d
-%exclude %{_unitdir}
+%exclude /usr/lib/systemd
 %endif
 
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
@@ -509,7 +509,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
 %{_sysconfdir}/init.d/%{name}-provision
-%exclude %{_unitdir}
+%exclude /usr/lib/systemd
 %endif
 
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
