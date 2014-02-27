@@ -15,7 +15,8 @@ class AuthenticationError(Exception):
 class HubProxy(object):
     """A Hub client (thin ServerProxy wrapper)."""
 
-    def __init__(self, conf, client_type=None, logger=None, transport=None, auto_logout=True, **kwargs):
+    def __init__(self, conf, client_type=None, logger=None, transport=None,
+            auto_login=True, auto_logout=True, **kwargs):
         self._conf = PyConfigParser()
         self._hub = None
 
@@ -47,14 +48,12 @@ class HubProxy(object):
                 TransportClass = retry_request_decorator(CookieTransport)
             self._transport = TransportClass()
 
-        # self._hub is created here
-        try:
-            self._login(verbose=self._conf.get("DEBUG_XMLRPC"))
-        except KeyboardInterrupt:
-            raise
-        except Exception, ex:
-            self._logger and self._logger.warn("Authentication failed")
-            raise
+        self._hub = xmlrpclib.ServerProxy(
+                "%s/%s/" % (self._hub_url, self._client_type),
+                allow_none=True, transport=self._transport,
+                verbose=self._conf.get("DEBUG_XMLRPC"))
+        if auto_login:
+            self._login()
 
     def __del__(self):
         if hasattr(self._transport, "retry_count"):
@@ -71,7 +70,7 @@ class HubProxy(object):
         except:
             raise AttributeError("'%s' object has no attribute '%s'" % (self.__class__.__name__, name))
 
-    def _login(self, force=False, verbose=False):
+    def _login(self, force=False):
         """Login to the hub.
         - self._hub instance is created in this method
         - session information is stored in a cookie in self._transport
@@ -80,10 +79,6 @@ class HubProxy(object):
         login_method_name = "_login_%s" % self._auth_method
         if not hasattr(self, login_method_name):
             raise ImproperlyConfigured("Unknown authentication method: %s" % self._auth_method)
-
-        # create new self._hub instance (only once, when calling constructor)
-        if self._hub is None:
-            self._hub = xmlrpclib.ServerProxy("%s/%s/" % (self._hub_url, self._client_type), allow_none=True, transport=self._transport, verbose=verbose)
 
         if force or self._hub.auth.renew_session():
             self._logger and self._logger.info("Creating new session...")
@@ -102,7 +97,8 @@ class HubProxy(object):
             except KeyboardInterrupt:
                 raise
             except Exception, ex:
-                self._logger and self._logger.debug("Failed to create new session: %s" % ex)
+                self._logger and self._logger.error("Failed to create new session: %s" % ex)
+                raise
             else:
                 self._logger and self._logger.info("New session created.")
 

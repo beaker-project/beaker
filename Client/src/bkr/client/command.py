@@ -259,7 +259,7 @@ class ClientCommandContainer(CommandContainer):
         self.conf.load_from_conf(conf)
         self.conf.load_from_dict(kwargs)
 
-    def set_hub(self, username=None, password=None):
+    def set_hub(self, username=None, password=None, auto_login=True):
         if username:
             if password is None:
                 password = password_prompt(default_value=password)
@@ -267,7 +267,7 @@ class ClientCommandContainer(CommandContainer):
             self.conf["USERNAME"] = username
             self.conf["PASSWORD"] = password
 
-        self.hub = HubProxy(conf=self.conf)
+        self.hub = HubProxy(conf=self.conf, auto_login=auto_login)
 
 
 class CommandOptionParser(optparse.OptionParser):

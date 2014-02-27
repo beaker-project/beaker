@@ -105,7 +105,7 @@ from bkr.client import BeakerCommand
 class Distro_Trees_List(BeakerCommand):
     """List distro trees"""
     enabled = True
-
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s" % self.normalized_name

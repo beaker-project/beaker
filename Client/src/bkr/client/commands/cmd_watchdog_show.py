@@ -53,6 +53,7 @@ from optparse import OptionValueError
 class Watchdog_Show(BeakerCommand):
     """Display Task's Watchdog"""
     enabled = True
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <task_id>..." % self.normalized_name

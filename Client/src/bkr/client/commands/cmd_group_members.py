@@ -42,6 +42,7 @@ import bkr.client.json_compat as json
 class Group_Members(BeakerCommand):
     """List group members"""
     enabled = True
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s <group-name>" % self.normalized_name

@@ -132,7 +132,6 @@ class RecipeTasks(RPCRoot):
         return task.extend(kill_time)
 
     @cherrypy.expose
-    @identity.require(identity.not_anonymous())
     def watchdog(self, task_id):
         """
         Returns number of seconds left on task_id watchdog, or False if it doesn't exist.

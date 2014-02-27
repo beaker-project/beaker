@@ -65,6 +65,7 @@ from bkr.client.task_watcher import *
 class Job_Watch(BeakerCommand):
     """Watch Jobs/Recipes"""
     enabled = True
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name

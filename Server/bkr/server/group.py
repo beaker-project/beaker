@@ -906,7 +906,6 @@ class Groups(AdminPage):
         return ['1']
 
     # XML-RPC method for listing a group's members
-    @identity.require(identity.not_anonymous())
     @expose(format='json')
     def members(self, group_name):
         """

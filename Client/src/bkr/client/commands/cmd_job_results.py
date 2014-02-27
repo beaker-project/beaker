@@ -60,6 +60,7 @@ from xml.dom.minidom import Document, parseString
 class Job_Results(BeakerCommand):
     """Get Jobs/Recipes Results"""
     enabled = True
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
