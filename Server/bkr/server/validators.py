@@ -188,6 +188,7 @@ class SSHPubKey(TgFancyValidator):
             return ' '.join(value)
         return value
 
+
 class UniqueRetentionTag(FormValidator):
 
     __unpackargs__ = ('*', 'field_names')
