@@ -62,8 +62,14 @@ BuildRequires:  python-sphinx10
 BuildRequires:  python-sphinx >= 1.0
 %endif
 BuildRequires:  python-sphinxcontrib-httpdomain
-BuildRequires:  bash-completion
 BuildRequires:  python-prettytable
+# setup.py uses pkg-config to find the right installation paths
+%if 0%{?fedora} || 0%{?rhel} >= 7
+BuildRequires:  pkgconfig(bash-completion)
+%endif
+%if %{with_systemd}
+BuildRequires:  pkgconfig(systemd)
+%endif
 
 %if %{with server}
 BuildRequires:  python-kid
@@ -292,13 +298,6 @@ DESTDIR=%{buildroot} make \
     %{?with_inttests:WITH_INTTESTS=1} \
     install
 
-%if %{with_systemd}
-mkdir -p  %{buildroot}%{_tmpfilesdir}
-cp -p Server/tmpfiles.d/beaker-server.conf %{buildroot}%{_tmpfilesdir}/beaker-server.conf
-cp -p LabController/tmpfiles.d/beaker-lab-controller.conf %{buildroot}%{_tmpfilesdir}/beaker-lab-controller.conf
-%endif
-
-
 %clean
 %{__rm} -rf %{buildroot}
 
@@ -418,10 +417,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %if %{with_systemd}
 %{_unitdir}/beakerd.service
-%exclude %{_sysconfdir}/init.d
+%attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
 %else
 %{_sysconfdir}/init.d/%{name}d
-%exclude /usr/lib/systemd
+%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
 %endif
 
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
@@ -437,11 +436,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
-%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
 %attr(-,apache,root) %dir %{_localstatedir}/lib/%{name}
-%if %{with_systemd}
-%attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
-%endif
 %endif
 
 %if %{with inttests}
@@ -503,22 +498,18 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_unitdir}/beaker-provision.service
 %{_unitdir}/beaker-watchdog.service
 %{_unitdir}/beaker-transfer.service
-%exclude %{_sysconfdir}/init.d
+%{_tmpfilesdir}/beaker-lab-controller.conf
 %else
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
 %{_sysconfdir}/init.d/%{name}-provision
-%exclude /usr/lib/systemd
+%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %endif
 
-%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %attr(0440,root,root) %config(noreplace) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-lab-controller.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/beaker
-%if %{with_systemd}
-%attr(0644,apache,apache) %{_tmpfilesdir}/beaker-lab-controller.conf
-%endif
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)

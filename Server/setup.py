@@ -4,6 +4,7 @@ from setuptools import setup, find_packages
 import glob
 import re
 import os
+import commands
 from distutils import log
 from distutils.core import Command
 from distutils.util import change_root
@@ -29,6 +30,19 @@ license = "GPLv2+"
 poFiles = filter(os.path.isfile, glob.glob('po/*.po'))
 
 SUBSTFILES = ('bkr/server/config/app.cfg')
+
+def systemd_unit_dir():
+    status, output = commands.getstatusoutput('pkg-config --variable systemdsystemunitdir systemd')
+    if status or not output:
+        return None # systemd not found
+    return output.strip()
+
+def systemd_tmpfiles_dir():
+    # There doesn't seem to be a specific pkg-config variable for this
+    status, output = commands.getstatusoutput('pkg-config --variable prefix systemd')
+    if status or not output:
+        return None # systemd not found
+    return output.strip() + '/lib/tmpfiles.d'
 
 class Build(_build, object):
     '''
@@ -184,18 +198,26 @@ data_files = \
     list(find_data_recursive('bkr/server/static', 'bkr/server/static/')) + [
     ("/etc/beaker", ["server.cfg"]),
     ("/etc/httpd/conf.d", ["apache/beaker-server.conf"]),
-    ("/etc/init.d", ["init.d/beakerd"]),
     ("/etc/cron.d", ["cron.d/beaker"]),
     ("/etc/rsyslog.d", ["rsyslog.d/beaker-server.conf"]),
     ("/etc/logrotate.d", ["logrotate.d/beaker"]),
-    ('/usr/lib/systemd/system',['systemd/beakerd.service']),
     ("/usr/share/bkr", filter(os.path.isfile, glob.glob("apache/*.wsgi"))),
     ("/var/log/beaker", []),
     ("/var/www/beaker/logs", []),
-    ("/var/run/beaker", []),
     ("/var/www/beaker/rpms", []),
     ("/var/www/beaker/repos", []),
 ]
+if systemd_unit_dir():
+    data_files.extend([
+        (systemd_unit_dir(), ['systemd/beakerd.service']),
+        (systemd_tmpfiles_dir(), ['tmpfiles.d/beaker-server.conf']),
+    ])
+else:
+    data_files.extend([
+        ('/etc/init.d', ['init.d/beakerd']),
+        ('/var/run/beaker', []),
+    ])
+
 setup(
     name="bkr.server",
     namespace_packages = ['bkr'],
