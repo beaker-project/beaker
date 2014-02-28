@@ -297,6 +297,8 @@ class Tasks(RPCRoot):
             # Shouldn't have to do this.  This only happens on the LinkRemoteFunction calls
             kw['task'] = kw.get('task').replace('%2F','/')
             tasks = tasks.filter(RecipeTask.name.like('%s' % kw.get('task').replace('*','%%')))
+        if kw.get('version'):
+            tasks = tasks.filter(RecipeTask.version.like(kw.get('version').replace('*', '%')))
         if kw.get('distro'):
             tasks = tasks.join(RecipeTask.recipe, Recipe.distro_tree, DistroTree.distro)\
                     .filter(Distro.name.like('%%%s%%' % kw.get('distro')))

@@ -176,9 +176,12 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.find_element_by_xpath("//select/option[@value='%s']" % unique_whiteboard).click()
         b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         b.find_element_by_link_text('Pass: 1').click()
-        task_id = b.find_element_by_xpath('//table/tbody/tr[1]/td').text
-        self.assertEqual(task_id,
-            single_job.recipesets[0].recipes[0].tasks[0].t_id)
+        # Should take us to Executed Tasks filtered by whiteboard.
+        # There should only be one task in the results.
+        tasks_table = b.find_element_by_css_selector('table.tasks')
+        task_ids = [e.text for e in tasks_table.find_elements_by_xpath(
+                'tbody/tr/td[1][@class="task"]')]
+        self.assertEquals(task_ids, [single_job.recipesets[0].recipes[0].tasks[0].t_id])
 
         # Test by job id
         # See https://bugzilla.redhat.com/show_bug.cgi?id=803713
@@ -192,15 +195,12 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
         b.find_element_by_id('remote_form_job_ids').send_keys(str(single_job_2.id))
         b.find_element_by_xpath('//button[@type="submit" and text()="Generate"]').click()
         b.find_element_by_link_text('Pass: 1').click()
-
-        # This tests that we are indeed only looking at one recipe task.
-        task_spec_columns = b.find_elements_by_xpath('//table/tbody/tr/td[1]')
-        failed = True
-        for col in task_spec_columns:
-            if col and col.text.strip():
-                self.assertEqual(col.text, single_job_2.recipesets[0].recipes[0].tasks[0].t_id)
-                failed=False
-        self.assert_(not failed)
+        # Should take us to Executed Tasks filtered by whiteboard and job ID.
+        # There should only be one task in the results.
+        tasks_table = b.find_element_by_css_selector('table.tasks')
+        task_ids = [e.text for e in tasks_table.find_elements_by_xpath(
+                'tbody/tr/td[1][@class="task"]')]
+        self.assertEquals(task_ids, [single_job_2.recipesets[0].recipes[0].tasks[0].t_id])
 
     def tearDown(self):
         b = self.browser.quit()

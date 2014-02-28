@@ -183,6 +183,21 @@ class TestRecipeView(WebDriverTestCase):
         for t in the_job.recipesets[0].recipes[0].tasks:
             self.assertTrue(is_text_present(b, "T:%s" %t.id))
 
+    def test_task_versions_are_shown(self):
+        with session.begin():
+            recipe = self.job.recipesets[0].recipes[0]
+            recipetask = recipe.tasks[0]
+            recipetask.version = u'1.10-23'
+        b = self.browser
+        self.go_to_recipe_view(recipe)
+        b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]'
+                % recipe.id).click()
+        tasks_table = b.find_element_by_xpath('//div[@id="recipe%s"]'
+                '//table[contains(@class, "tasks")]' % recipe.id)
+        self.assertIn('1.10-23',
+                tasks_table.find_element_by_xpath('//tr[td/a/text()="%s"]/td[2]'
+                    % recipetask.t_id).text)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=751330
     def test_fetching_large_results_is_not_too_slow(self):
         raise SkipTest('"slowness" is too subjective')

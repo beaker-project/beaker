@@ -873,6 +873,7 @@ class TaskSearchForm(RemoteForm):
               HiddenField(name='distro_tree_id', validator=validators.Int()),
               HiddenField(name='task_id', validator=validators.Int()),
               TextField(name='task', label=_(u'Task')),
+              TextField(name='version', label=_(u'Version')),
               TextField(name='system', label=_(u'System')),
               SingleSelectField(name='arch_id', label=_(u'Arch'),validator=validators.Int(),
                                 options=model.Arch.get_all),
