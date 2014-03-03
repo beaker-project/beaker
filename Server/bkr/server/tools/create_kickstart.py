@@ -2,6 +2,7 @@
 import sys
 import optparse
 from turbogears.database import session
+from sqlalchemy.orm.exc import NoResultFound
 from bkr.common import __version__
 from bkr.server.model import DistroTree, System, User, Recipe
 from bkr.server.util import load_config
@@ -35,42 +36,73 @@ def main(*args):
     if template_dir:
         add_to_template_searchpath(template_dir)
 
-    if options.system:
-        if not options.distro_tree_id:
+    if not options.recipe_id:
+        if not options.distro_tree_id and not options.system:
+            parser.error('Must specify either a recipe or a distro tree and system')
+        elif not options.distro_tree_id:
             parser.error('Must specify a distro tree id when passing in a system')
+        elif not options.system:
+            parser.error('Must specify a system when not specifying a recipe')
 
     load_config()
     with session.begin():
         user = User.by_user_name(options.user)
+        ks_appends = None
+        recipe = None
+        distro_tree = None
+        system = None
+        install_options = None
+
+        if options.distro_tree_id:
+            try:
+                distro_tree = DistroTree.by_id(options.distro_tree_id)
+            except NoResultFound:
+                raise RuntimeError("Distro tree id '%s' does not exist" % options.distro_tree_id)
         if options.system:
             fqdn = options.system
-            system = System.by_fqdn(fqdn, user)
-            distro_tree = DistroTree.by_id(options.distro_tree_id)
-            install_options = system.install_options(distro_tree).combined_with(
-                InstallOptions.from_strings(ks_meta, None, koptions_post))
-            rendered_kickstart = generate_kickstart(install_options,
-                distro_tree=distro_tree, system=system, user=user)
-            # Does not support passing in a predefined kickstart
-            kickstart = rendered_kickstart.kickstart
-        elif options.recipe_id:
-            # Generate kickstart from Recipe
-            recipe = Recipe.by_id(options.recipe_id)
-            if not recipe.resource:
+            try:
+                system = System.by_fqdn(fqdn, user)
+            except NoResultFound:
+                raise RuntimeError("System '%s' does not exist" % fqdn)
+
+            if distro_tree and not options.recipe_id:
+                install_options = system.install_options(distro_tree).combined_with(
+                    InstallOptions.from_strings(ks_meta, None, koptions_post))
+
+        if options.recipe_id:
+            try:
+                recipe = Recipe.by_id(options.recipe_id)
+            except NoResultFound:
+                raise RuntimeError("Recipe id '%s' does not exist" % options.recipe_id)
+            if not recipe.resource and not options.system:
                 raise RuntimeError('Recipe must have (or had) a resource'
-                    ' assigned to it')
-            install_options = recipe.resource.install_options(recipe.distro_tree)\
-                .combined_with(recipe.generated_install_options())\
-                .combined_with(InstallOptions.from_strings(recipe.ks_meta,
-                    recipe.kernel_options, recipe.kernel_options_post))\
-                .combined_with(InstallOptions.from_strings(ks_meta, None,
-                    koptions_post))
-            ks_appends = [ks_append.ks_append for ks_append in recipe.ks_appends]
-            rendered_kickstart = generate_kickstart(install_options,
-                    distro_tree=recipe.distro_tree,
-                    system=getattr(recipe.resource, 'system', None),
-                    user=recipe.recipeset.job.owner,
-                    recipe=recipe, ks_appends=ks_appends)
-            kickstart = rendered_kickstart.kickstart
+                                   ' assigned to it')
+            if not system:
+                system = getattr(recipe.resource, 'system', None)
+            if not distro_tree:
+                distro_tree = recipe.distro_tree
+
+            install_options = system.install_options(distro_tree)\
+                                             .combined_with(recipe.generated_install_options())\
+                                             .combined_with(InstallOptions.from_strings(recipe.ks_meta,
+                                                                                        recipe.kernel_options, 
+                                                                                        recipe.kernel_options_post))\
+                                             .combined_with(InstallOptions.from_strings(ks_meta, None,
+                                                                                        koptions_post))
+
+            ks_appends = [ks_append.ks_append for ks_append \
+                          in recipe.ks_appends]
+            user = recipe.recipeset.job.owner
+
+        # Render the kickstart
+        rendered_kickstart = generate_kickstart(install_options,
+                                                distro_tree=distro_tree,
+                                                system=system,
+                                                user=user,
+                                                recipe=recipe,
+                                                ks_appends=ks_appends)
+        kickstart = rendered_kickstart.kickstart
+
     print kickstart
 
 

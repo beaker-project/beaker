@@ -28,11 +28,12 @@ if config_file:
 
 class BeakerCommand(Command):
     enabled = False
+    requires_login = True
 
     def set_hub(self, username=None, password=None, **kwargs):
         if kwargs.get('hub'):
             self.conf['HUB_URL'] = kwargs['hub']
-        self.container.set_hub(username, password)
+        self.container.set_hub(username, password, auto_login=self.requires_login)
 
     def requests_session(self):
         import bkr.client.json_compat as json

@@ -79,16 +79,6 @@ class PolicyListTest(unittest.TestCase):
             (['edit_system', 'admin', 'X', 'No'], )) + '\n'
         self.assertEquals(out, expected_output)
 
-        # --mine without authentication
-        try:
-            out = run_client(['bkr', 'policy-list',
-                              '--mine', self.system.fqdn],
-                             config = create_client_config(anonymous=True))
-            self.fail('Must fail or die')
-        except ClientError as e:
-            self.assertIn("The 'mine' access policy filter requires authentication",
-                          e.stderr_output)
-
     def test_list_policy_filter_user(self):
 
         out = run_client(['bkr', 'policy-list',

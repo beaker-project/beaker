@@ -1,7 +1,7 @@
 import sys
 sys.stdout = sys.stderr
 import __main__
-__main__.__requires__ = ['TurboGears']
+__main__.__requires__ = ['TurboGears', 'Flask']
 import pkg_resources
 
 import os

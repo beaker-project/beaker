@@ -1,5 +1,7 @@
-%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
-%{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
+%if 0%{?rhel} && 0%{?rhel} <= 6
+%{!?__python2: %global __python2 /usr/bin/python2}
+%{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%endif
 
 # The server, lab controller, and integration test subpackages can be conditionally built.
 # Enabled on RHEL 6 and F18+
@@ -25,12 +27,12 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1 
 # but that is not usable for the RPM Version because it sorts higher than 
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 0.15.4
+%global upstream_version 0.15.5
 
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.15.4
+Version:        0.15.5
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -67,8 +69,14 @@ BuildRequires:  python-sphinx10
 BuildRequires:  python-sphinx >= 1.0
 %endif
 BuildRequires:  python-sphinxcontrib-httpdomain
-BuildRequires:  bash-completion
 BuildRequires:  python-prettytable
+# setup.py uses pkg-config to find the right installation paths
+%if 0%{?fedora} || 0%{?rhel} >= 7
+BuildRequires:  pkgconfig(bash-completion)
+%endif
+%if %{with_systemd}
+BuildRequires:  pkgconfig(systemd)
+%endif
 
 %if %{with server}
 BuildRequires:  python-kid
@@ -115,8 +123,8 @@ BuildRequires:  libxslt-python
 Summary:        Client component for talking to Beaker server
 Group:          Applications/Internet
 Requires:       python
-Requires:	python-setuptools
-Requires:	%{name} = %{version}-%{release}
+Requires:       python-setuptools
+Requires:       %{name} = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
 %if 0%{?rhel} >= 6 || 0%{?fedora}
@@ -155,10 +163,10 @@ Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
-Requires:	%{name} = %{version}-%{release}
+Requires:       %{name} = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
-Requires:	createrepo
-Requires:	yum-utils
+Requires:       createrepo
+Requires:       yum-utils
 Requires:       rhts-python
 Requires:       cracklib-python
 Requires:       python-jinja2
@@ -219,9 +227,9 @@ Requires:       wsmancli
 Requires:       telnet
 Requires:       sudo
 Requires:       python-cpio
-Requires:	%{name} = %{version}-%{release}
-Requires:	python-setuptools
-Requires:	python-xmltramp
+Requires:       %{name} = %{version}-%{release}
+Requires:       python-setuptools
+Requires:       python-xmltramp
 Requires:       python-krbV
 Requires:       python-gevent >= 1.0
 Requires:       python-daemon
@@ -240,8 +248,8 @@ Group:          Applications/Internet
 Requires:       %{name} = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
-Provides:	beaker-redhat-support-addDistro
-Obsoletes:	beaker-redhat-support-addDistro
+Provides:       beaker-redhat-support-addDistro <= 0.19
+Obsoletes:      beaker-redhat-support-addDistro <= 0.19
 %endif
 
 
@@ -292,25 +300,17 @@ tar -C Server/assets/bootbox --strip-components=1 -xzf %{SOURCE11}
 tar -C Server/assets/bootstrap-growl --strip-components=1 -xzf %{SOURCE12}
 
 %build
-[ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT;
-DESTDIR=$RPM_BUILD_ROOT make \
+make \
     %{?with_server:WITH_SERVER=1} \
     %{?with_labcontroller:WITH_LABCONTROLLER=1} \
     %{?with_inttests:WITH_INTTESTS=1}
 
 %install
-DESTDIR=$RPM_BUILD_ROOT make \
+DESTDIR=%{buildroot} make \
     %{?with_server:WITH_SERVER=1} \
     %{?with_labcontroller:WITH_LABCONTROLLER=1} \
     %{?with_inttests:WITH_INTTESTS=1} \
     install
-
-%if %{with_systemd}
-mkdir -p  $RPM_BUILD_ROOT%{_tmpfilesdir}
-cp -p Server/tmpfiles.d/beaker-server.conf $RPM_BUILD_ROOT%{_tmpfilesdir}/beaker-server.conf
-cp -p LabController/tmpfiles.d/beaker-lab-controller.conf $RPM_BUILD_ROOT%{_tmpfilesdir}/beaker-lab-controller.conf
-%endif
-
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -402,20 +402,21 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %files
 %defattr(-,root,root,-)
-%{python_sitelib}/bkr/__init__.py*
-%{python_sitelib}/bkr/timeout_xmlrpclib.py*
-%{python_sitelib}/bkr/common/
-%{python_sitelib}/bkr/log.py*
-%{python_sitelib}/bkr-*.egg-info/
+%{python2_sitelib}/bkr/__init__.py*
+%{python2_sitelib}/bkr/timeout_xmlrpclib.py*
+%{python2_sitelib}/bkr/common/
+%{python2_sitelib}/bkr/log.py*
+%{python2_sitelib}/bkr-*.egg-info/
 %doc COPYING
 
 %if %{with server}
 %files server
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/beaker
 %doc documentation/_build/text/whats-new/
-%{python_sitelib}/bkr/server/
-%{python_sitelib}/bkr.server-*-nspkg.pth
-%{python_sitelib}/bkr.server-*.egg-info/
+%{python2_sitelib}/bkr/server/
+%{python2_sitelib}/bkr.server-*-nspkg.pth
+%{python2_sitelib}/bkr.server-*.egg-info/
 %{_bindir}/%{name}-init
 %{_bindir}/nag-mail
 %{_bindir}/beaker-log-delete
@@ -430,10 +431,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %if %{with_systemd}
 %{_unitdir}/beakerd.service
-%exclude %{_sysconfdir}/init.d
+%attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
 %else
 %{_sysconfdir}/init.d/%{name}d
-%exclude /usr/lib/systemd
+%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
 %endif
 
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
@@ -449,27 +450,24 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
-%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
 %attr(-,apache,root) %dir %{_localstatedir}/lib/%{name}
-%if %{with_systemd}
-%attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
-%endif
 %endif
 
 %if %{with inttests}
 %files integration-tests
 %defattr(-,root,root,-)
-%{python_sitelib}/bkr/inttest/
-%{python_sitelib}/bkr.inttest-*-nspkg.pth
-%{python_sitelib}/bkr.inttest-*.egg-info/
+%{python2_sitelib}/bkr/inttest/
+%{python2_sitelib}/bkr.inttest-*-nspkg.pth
+%{python2_sitelib}/bkr.inttest-*.egg-info/
 %endif
 
 %files client
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/beaker
 %doc Client/client.conf.example
-%{python_sitelib}/bkr/client/
-%{python_sitelib}/bkr.client-*-nspkg.pth
-%{python_sitelib}/bkr.client-*.egg-info/
+%{python2_sitelib}/bkr/client/
+%{python2_sitelib}/bkr.client-*-nspkg.pth
+%{python2_sitelib}/bkr.client-*.egg-info/
 %{_bindir}/beaker-wizard
 %{_bindir}/bkr
 %{_mandir}/man1/beaker-wizard.1.gz
@@ -486,12 +484,13 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with labcontroller}
 %files lab-controller
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/beaker
 %config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
 %{_sysconfdir}/beaker/power-scripts/
 %{_sysconfdir}/beaker/install-failure-patterns/
-%{python_sitelib}/bkr/labcontroller/
-%{python_sitelib}/bkr.labcontroller-*-nspkg.pth
-%{python_sitelib}/bkr.labcontroller-*.egg-info/
+%{python2_sitelib}/bkr/labcontroller/
+%{python2_sitelib}/bkr.labcontroller-*-nspkg.pth
+%{python2_sitelib}/bkr.labcontroller-*.egg-info/
 %{_bindir}/%{name}-proxy
 %{_bindir}/%{name}-watchdog
 %{_bindir}/%{name}-transfer
@@ -513,22 +512,18 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_unitdir}/beaker-provision.service
 %{_unitdir}/beaker-watchdog.service
 %{_unitdir}/beaker-transfer.service
-%exclude %{_sysconfdir}/init.d
+%{_tmpfilesdir}/beaker-lab-controller.conf
 %else
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
 %{_sysconfdir}/init.d/%{name}-provision
-%exclude /usr/lib/systemd
+%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %endif
 
-%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %attr(0440,root,root) %config(noreplace) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-lab-controller.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/beaker
-%if %{with_systemd}
-%attr(0644,apache,apache) %{_tmpfilesdir}/beaker-lab-controller.conf
-%endif
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)

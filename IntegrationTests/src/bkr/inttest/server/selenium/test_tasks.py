@@ -41,8 +41,8 @@ class TestSubmitTask(WebDriverTestCase):
         # upload v1.1 first...
         b.get(get_server_base() + 'tasks/new')
         b.find_element_by_id('task_task_rpm').send_keys(
-                pkg_resources.resource_filename(self.__module__,
-                'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
+                pkg_resources.resource_filename('bkr.inttest.server',
+                                                'task-rpms/tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assert_task_upload_flash_OK(test_package_name)
         # ...and make sure it worked...
@@ -57,8 +57,8 @@ class TestSubmitTask(WebDriverTestCase):
         # ...then upload v2.0...
         b.get(get_server_base() + 'tasks/new')
         b.find_element_by_id('task_task_rpm').send_keys(
-                pkg_resources.resource_filename(self.__module__,
-                'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
+                pkg_resources.resource_filename('bkr.inttest.server',
+                                                'task-rpms/tmp-distribution-beaker-task_test-2.0-5.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assert_task_upload_flash_OK(test_package_name)
         # ...and make sure everything was updated
@@ -72,7 +72,7 @@ class TestSubmitTask(WebDriverTestCase):
                 'Fake test for integration testing v1.1')
         self.assertEqual(self.get_task_info_field('Expected Time'), '5 minutes')
         self.assertEqual(self.get_task_info_field('Owner'), 'Nobody <nobody@example.com>')
-        self.assertEqual(self.get_task_info_field('Version'), '1.1-1')
+        self.assertEqual(self.get_task_info_field('Version'), '1.1-0')
         self.assertEqual(self.get_task_info_field('License'), 'GPLv2')
         self.assertEqual(self.get_task_info_field('Types'), 'Regression')
         self.assertEqual(self.get_task_info_field('RPM'), 'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm')
@@ -126,8 +126,8 @@ class TestSubmitTask(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'tasks/new')
         b.find_element_by_id('task_task_rpm').send_keys(
-                pkg_resources.resource_filename(self.__module__,
-                'tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
+            pkg_resources.resource_filename('bkr.inttest.server',
+                                            'task-rpms/tmp-distribution-beaker-dummy_for_bz681143-1.0-1.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assert_task_upload_flash_OK(test_package_name)
         b.find_element_by_name('simplesearch').send_keys(test_package_name)
@@ -141,8 +141,8 @@ class TestSubmitTask(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'tasks/new')
         b.find_element_by_id('task_task_rpm').send_keys(
-                pkg_resources.resource_filename(self.__module__,
-                invalidtask))
+            pkg_resources.resource_filename('bkr.inttest.server',
+                                                'task-rpms/' + invalidtask))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 'Failed to import task: error reading package header')
@@ -154,8 +154,8 @@ class TestSubmitTask(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'tasks/new')
         b.find_element_by_id('task_task_rpm').send_keys(
-                pkg_resources.resource_filename(self.__module__,
-                'tmp-distribution-beaker-dummy_for_bz617274-1.0-1.noarch.rpm'))
+            pkg_resources.resource_filename('bkr.inttest.server',
+                                            'task-rpms/tmp-distribution-beaker-dummy_for_bz617274-1.0-1.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 'Failed to import task: Owner field not defined')
@@ -165,8 +165,8 @@ class TestSubmitTask(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'tasks/new')
         b.find_element_by_id('task_task_rpm').send_keys(
-                pkg_resources.resource_filename(self.__module__,
-                'tmp-distribution-beaker-long-task-RPM-1.0-1.noarch.rpm'))
+            pkg_resources.resource_filename('bkr.inttest.server',
+                                            'task-rpms/tmp-distribution-beaker-long-task-RPM-1.0-1.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 'Failed to import task: Task name should be <= 255 characters')
@@ -176,8 +176,8 @@ class TestSubmitTask(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'tasks/new')
         b.find_element_by_id('task_task_rpm').send_keys(
-                pkg_resources.resource_filename(self.__module__,
-                'tmp-distribution-beaker----redundant_slashes-1.0-0.noarch.rpm'))
+            pkg_resources.resource_filename('bkr.inttest.server',
+                                                'task-rpms/tmp-distribution-beaker----redundant_slashes-1.0-0.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 "Failed to import task: Task name must not contain redundant slashes")
@@ -187,8 +187,8 @@ class TestSubmitTask(WebDriverTestCase):
         b = self.browser
         b.get(get_server_base() + 'tasks/new')
         b.find_element_by_id('task_task_rpm').send_keys(
-                pkg_resources.resource_filename(self.__module__,
-                'tmp-distribution-beaker-trailing_slash--1.0-0.noarch.rpm'))
+            pkg_resources.resource_filename('bkr.inttest.server',
+                                            'task-rpms/tmp-distribution-beaker-trailing_slash--1.0-0.noarch.rpm'))
         b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                 "Failed to import task: Task name must not end with slash")

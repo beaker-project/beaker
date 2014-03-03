@@ -205,6 +205,13 @@ class SystemAccessPolicyHTTPTest(unittest.TestCase):
         response = requests.get(get_server_base() + 'systems/notexist/access-policy')
         self.assertEquals(response.status_code, 404)
 
+    def test_mine_filter_needs_authentication(self):
+        response = requests.get(get_server_base() +
+                'systems/%s/access-policy?mine=1' % self.system.fqdn)
+        self.assertEquals(response.status_code, 401)
+        self.assertEquals(response.text,
+                "The 'mine' access policy filter requires authentication")
+
     def test_anonymous_cannot_save_policy(self):
         response = put_json(get_server_base() +
                 'systems/%s/access-policy' % self.system.fqdn,

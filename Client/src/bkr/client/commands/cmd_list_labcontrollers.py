@@ -40,7 +40,7 @@ from bkr.client import BeakerCommand
 class List_LabControllers(BeakerCommand):
     """list labcontrollers"""
     enabled = True
-
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s" % self.normalized_name

@@ -385,6 +385,17 @@ class SystemViewTestWD(WebDriverTestCase):
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
 
+    def test_power_quiescent_default_value(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(lab_controller=lc, with_power=False)
+        b = self.browser
+        login(b)
+        self.go_to_system_view(system)
+        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Power Config"]').click()
+        period = b.find_element_by_name('power_quiescent_period').get_attribute('value')
+        self.assertEqual(period, str(5))
+
     def test_update_power_quiescent_validator(self):
         b = self.browser
         login(b)
@@ -405,6 +416,22 @@ class SystemViewTestWD(WebDriverTestCase):
             ' and preceding-sibling::'
             'input[@id="power_power_quiescent_period"]]').text
         self.assertEqual(error_text, u'Please enter an integer value')
+
+    def test_add_power_with_blank_address(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(lab_controller=lc, with_power=False)
+        b = self.browser
+        login(b)
+        self.go_to_system_view(system)
+        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//'
+            'a[text()="Power Config"]').click()
+        Select(b.find_element_by_name('power_type_id'))\
+            .select_by_visible_text('ilo')
+        self.assertEqual(b.find_element_by_name('power_address').text, '')
+        b.find_element_by_xpath("//form[@id='power']").submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+            'Saved Power')
 
     def test_update_power(self):
         orig_date_modified = self.system.date_modified

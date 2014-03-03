@@ -87,7 +87,7 @@ from bkr.client import BeakerCommand
 class Distros_List(BeakerCommand):
     """list distros"""
     enabled = True
-
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s" % self.normalized_name

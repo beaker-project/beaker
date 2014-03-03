@@ -76,7 +76,7 @@ class CommandActivity(Activity):
             onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     system = relationship('System')
     status = column_property(
-            Column('status', CommandStatus.db_type(), nullable=False),
+            Column('status', CommandStatus.db_type(), nullable=False, index=True),
             extension=CallbackAttributeExtension())
     task_id = Column(String(255))
     delay_until = Column(DateTime, default=None)
@@ -1927,6 +1927,8 @@ class Power(DeclarativeMappedObject):
 
     __tablename__ = 'power'
     __table_args__ = {'mysql_engine': 'InnoDB'}
+    # 5(seconds) was the default sleep time for commands in beaker-provision
+    default_quiescent_period = 5
     id = Column(Integer, autoincrement=True, primary_key=True)
     power_type_id = Column(Integer, ForeignKey('power_type.id'), nullable=False)
     power_type = relationship(PowerType, backref='power_control')
@@ -1936,8 +1938,8 @@ class Power(DeclarativeMappedObject):
     power_user = Column(String(255))
     power_passwd = Column(String(255))
     power_id = Column(String(255))
-    # 5(seconds) was the default sleep time for commands in beaker-provision
-    power_quiescent_period = Column(Integer, default=5, nullable=False)
+    power_quiescent_period = Column(Integer, default=default_quiescent_period,
+        nullable=False)
 
 # note model
 class Note(DeclarativeMappedObject):

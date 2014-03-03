@@ -10,7 +10,7 @@ from bkr.inttest import get_server_base
 import pkg_resources
 
 _beaker_sync_tasks = pkg_resources.resource_filename('bkr.server.tools', 'sync_tasks.py')
-_sync_tasks_dir = pkg_resources.resource_filename('bkr.inttest.server.tools', 'task_rpms')
+_sync_tasks_dir = pkg_resources.resource_filename('bkr.inttest.server', 'task-rpms')
 _http_server = pkg_resources.resource_filename('bkr.inttest', 'http_server.py')
 _current_dir = os.path.dirname(__file__)
 class TestTaskLibrarySync(unittest.TestCase):

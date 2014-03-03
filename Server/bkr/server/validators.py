@@ -188,18 +188,18 @@ class SSHPubKey(TgFancyValidator):
             return ' '.join(value)
         return value
 
-class UniqueRetentionTag(UnicodeString):
 
-    not_empty = True
-    max = 20
-    strip = True
+class UniqueRetentionTag(FormValidator):
 
+    __unpackargs__ = ('*', 'field_names')
     messages = {
         'not_unique': 'Retention tag already exists',
     }
 
-    def _to_python(self, value, state):
-        value = super(UniqueRetentionTag, self)._to_python(value, state)
-        if RetentionTag.query.filter_by(tag=value).count():
-            raise Invalid(self.message('not_unique', state), value, state)
-        return value
+    def validate_python(self, form_fields, state):
+        id = form_fields.get('id')
+        tag = form_fields['tag']
+        existing = RetentionTag.query.filter_by(tag=tag).first()
+        if existing and (not id or existing.id != id):
+            error = self.message('not_unique', state)
+            raise Invalid(error, form_fields, state, error_dict={'tag': error})

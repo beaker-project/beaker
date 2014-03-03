@@ -25,6 +25,9 @@ from sqlalchemy.exc import OperationalError
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
 from nose.plugins.skip import SkipTest
+import turbogears
+import os
+import yum
 
 class SchemaSanityTest(unittest.TestCase):
 
@@ -2740,6 +2743,69 @@ class TaskTest(unittest.TestCase):
 
         tasks = Task.query.filter(Task.name == 'Task1').all()
         self.assertEquals(len(tasks), 1)
+
+class TaskLibraryTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+        self.task_rpm_name_new = 'tmp-distribution-beaker-task_test-2.1-0.noarch.rpm'
+        self.task_rpm_name_old = 'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'
+        self.task_rpm_new = pkg_resources.resource_filename('bkr.inttest.server',
+                                                            'task-rpms/' + self.task_rpm_name_new)
+        self.task_rpm_old = pkg_resources.resource_filename('bkr.inttest.server',
+                                                            'task-rpms/' + self.task_rpm_name_old)
+
+    def tearDown(self):
+        session.rollback()
+        session.close()
+
+    def query_task_repo(self, task_name):
+
+        task_dir = turbogears.config.get('basepath.rpms')
+        yb = yum.YumBase()
+        yb.preconf.init_plugins = False
+        if not yb.setCacheDir(os.path.join(task_dir, 'cache')):
+            sys.exit(1)
+        yb.repos.disableRepo('*')
+        yb.add_enable_repo('myrepo',
+                           ['file://' + task_dir])
+        return [''.join([pkg.version, '-', pkg.rel]) for pkg, _ in
+                yb.searchGenerator(['name'], [task_name])]
+
+    def write_data_file(self, rpm):
+        rpm_data = open(rpm)
+
+        def write_data(f):
+            f.write(rpm_data.read())
+        return write_data
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1044934
+    def test_downgrade_task(self):
+
+        # first add a "newer" task
+        Task.update_task(self.task_rpm_name_new,
+                         self.write_data_file(self.task_rpm_new))
+        # Downgrade now
+        Task.update_task(self.task_rpm_name_old,
+                         self.write_data_file(self.task_rpm_old))
+
+        # query the task repo and check the version and release
+        results = self.query_task_repo('tmp-distribution-beaker-task_test')
+        self.assertEquals(len(results), 1)
+        self.assertEquals(results[0], '1.1-0')
+
+    def test_upgrade_task(self):
+
+        Task.update_task(self.task_rpm_name_old,
+                         self.write_data_file(self.task_rpm_old))
+        Task.update_task(self.task_rpm_name_new,
+                         self.write_data_file(self.task_rpm_new))
+
+        # query the task repo and check the version and release
+        vr_list = self.query_task_repo('tmp-distribution-beaker-task_test')
+        self.assertEquals(len(vr_list), 2)
+        self.assertIn('1.1-0', vr_list)
+        self.assertIn('2.1-0', vr_list)
 
 class RecipeTaskTest(unittest.TestCase):
 

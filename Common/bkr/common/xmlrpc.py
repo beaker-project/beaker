@@ -439,7 +439,8 @@ class CookieTransport(xmlrpclib.Transport):
         except Exception:
             # All unexpected errors leave connection in
             # a strange state, so we clear it.
-            self.close()
+            if hasattr(self, 'close'):
+                self.close()
             raise
 
         # discard any response data and raise exception

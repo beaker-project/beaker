@@ -56,6 +56,7 @@ import libxml2
 class Job_Logs(BeakerCommand):
     """Print URLs of recipe log files"""
     enabled = True
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
