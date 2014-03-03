@@ -1917,6 +1917,8 @@ class Recipe(TaskBase, DeclarativeMappedObject):
             recipe.appendChild(dr)
         hostRequires = xmldoc.createElement("hostRequires")
         for hr in hrs.getElementsByTagName("hostRequires"):
+            if hr.getAttribute('force'):
+                hostRequires.setAttribute("force", "%s" % hr.getAttribute('force'))
             for child in hr.childNodes[:]:
                 hostRequires.appendChild(child)
         recipe.appendChild(hostRequires)
@@ -1972,21 +1974,27 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         # If no system_type is specified then add defaults
         try:
             hrs = xml.dom.minidom.parseString(self._host_requires)
-        except TypeError:
+        except (TypeError, xml.parsers.expat.ExpatError):
             hrs = xmldoc.createElement("hostRequires")
-        except xml.parsers.expat.ExpatError:
-            hrs = xmldoc.createElement("hostRequires")
-        if not hrs.getElementsByTagName("system_type"):
-            hostRequires = xmldoc.createElement("hostRequires")
-            for hr in hrs.getElementsByTagName("hostRequires"):
-                for child in hr.childNodes[:]:
-                    hostRequires.appendChild(child)
-            system_type = xmldoc.createElement("system_type")
-            system_type.setAttribute("value", "%s" % self.systemtype)
-            hostRequires.appendChild(system_type)
-            return hostRequires.toxml()
-        else:
             return hrs.toxml()
+
+        force_fqdn = False
+        for child in hrs.childNodes:
+            if child.getAttribute('force'):
+                force_fqdn = True
+
+        if hrs.getElementsByTagName("system_type") or force_fqdn:
+            return hrs.toxml()
+
+        # Create a new hostRequires element with a default system_type
+        hostRequires = xmldoc.createElement("hostRequires")
+        for hr in hrs.getElementsByTagName("hostRequires"):
+            for child in hr.childNodes[:]:
+                hostRequires.appendChild(child)
+        system_type = xmldoc.createElement("system_type")
+        system_type.setAttribute("value", "%s" % self.systemtype)
+        hostRequires.appendChild(system_type)
+        return hostRequires.toxml()
 
     def _set_host_requires(self, value):
         self._host_requires = value
@@ -2553,11 +2561,17 @@ class MachineRecipe(Recipe):
         """
         systems = System.all(self.recipeset.job.owner)
         # delayed import to avoid circular dependency
-        from bkr.server.needpropertyxml import apply_system_filter
-        systems = apply_system_filter(self.host_requires, systems)
+        from bkr.server.needpropertyxml import XmlHost
+        host_filter = XmlHost.from_string(self.host_requires)
+        force_fqdn = host_filter.get_xml_attr('force', unicode, None)
+        if not force_fqdn:
+            systems = host_filter.apply_filter(systems). \
+                      filter(System.status == SystemStatus.automated)
+        else:
+            systems = systems.filter(System.fqdn == force_fqdn). \
+                      filter(System.status != SystemStatus.removed)
+
         systems = systems.filter(System.can_reserve(self.recipeset.job.owner))
-        # XXX adjust this condition when we have force=""
-        systems = systems.filter(System.status == SystemStatus.automated)
         systems = systems.filter(System.compatible_with_distro_tree(self.distro_tree))
         if only_in_lab:
             systems = systems.filter(System.in_lab_with_distro_tree(self.distro_tree))
@@ -2572,10 +2586,9 @@ class MachineRecipe(Recipe):
         """
         systems = System.all(user)
         # delayed import to avoid circular dependency
-        from bkr.server.needpropertyxml import apply_system_filter
-        systems = apply_system_filter(
-                '<hostRequires><system_type value="%s"/></hostRequires>' % cls.systemtype,
-                systems)
+        from bkr.server.needpropertyxml import XmlHost
+        systems = XmlHost.from_string('<hostRequires><system_type value="%s"/></hostRequires>' %
+                                      cls.systemtype).apply_filter(systems)
         systems = systems.filter(System.can_reserve(user))
         # XXX adjust this condition when we have force=""
         systems = systems.filter(System.status == SystemStatus.automated)

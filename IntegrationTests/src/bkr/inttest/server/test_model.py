@@ -1226,6 +1226,16 @@ class RecipeTest(unittest.TestCase):
         task = root.find('recipeSet/recipe/task')
         self.assertEquals(len(task), 0, '<task/> should have no children')
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=851354
+    def test_hostrequires_force_clone_success(self):
+        system = data_setup.create_system()
+        system.status = SystemStatus.broken
+        job = data_setup.create_job()
+
+        host_requires = '<hostRequires force="{0}"/>'
+        job.recipesets[0].recipes[0]._host_requires = host_requires.format(system.fqdn)
+        xml = job.recipesets[0].recipes[0].to_xml(clone=True).toxml()
+        self.assertIn(host_requires.format(system.fqdn), xml)
 
 class CheckDynamicVirtTest(unittest.TestCase):
 

@@ -13,7 +13,7 @@ import pkg_resources
 import bkr
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
-        Provision, TaskPriority, RecipeSet, Task, SystemPermission, \
+        Provision, TaskPriority, RecipeSet, RecipeTaskResult, Task, SystemPermission, \
         MachineRecipe, GuestRecipe, LabControllerDistroTree, DistroTree
 import sqlalchemy.orm
 from sqlalchemy.orm import sessionmaker
@@ -1527,6 +1527,90 @@ class TestBeakerd(unittest.TestCase):
             for x in range(5,3):
                 self.assertEqual(job.recipesets[x].recipes[0].status,
                                  TaskStatus.queued)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=851354
+    def test_provision_broken_manual_systems(self):
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            system1 = data_setup.create_system(shared=True,
+                                               lab_controller=self.lab_controller)
+            system1.status = SystemStatus.broken
+            system2 = data_setup.create_system(shared=True,
+                                               lab_controller=self.lab_controller)
+            system2.status = SystemStatus.manual
+            lc = data_setup.create_labcontroller()
+            system3 = data_setup.create_system(shared=True, lab_controller=lc)
+            system3.status = SystemStatus.broken
+
+            job1 = data_setup.create_job(distro_tree=distro_tree)
+            job2 = data_setup.create_job(distro_tree=distro_tree)
+            job3 = data_setup.create_job(distro_tree=distro_tree)
+
+            host_requires = '<hostRequires force="{0}" />'
+            job1.recipesets[0].recipes[0]._host_requires = host_requires.format(system1.fqdn)
+            job2.recipesets[0].recipes[0]._host_requires = host_requires.format(system2.fqdn)
+            job3.recipesets[0].recipes[0]._host_requires = host_requires.format(system3.fqdn)
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job1.id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.queued)
+            job = Job.query.get(job2.id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.queued)
+            # this job should be aborted because the distro is not available
+            # on the LC to which the system is attached
+            job = Job.query.get(job3.id)
+            recipetask_id = job.recipesets[0].recipes[0].tasks[0].id
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.aborted)
+            result = RecipeTaskResult.query.filter(
+                RecipeTaskResult.recipe_task_id == recipetask_id).one()
+            self.assertEquals(result.log,
+                              'Recipe ID %s does not match any systems' % 
+                              job.recipesets[0].recipes[0].id)
+
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job1.id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.scheduled)
+            job = Job.query.get(job2.id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.scheduled)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=851354
+    def test_force_system_access_policy_obeyed(self):
+        with session.begin():
+            user1 = data_setup.create_user()
+            user2 = data_setup.create_user()
+            system = data_setup.create_system(status=u'Automated',
+                    shared=False, lab_controller=self.lab_controller)
+            system.custom_access_policy.add_rule(
+                permission=SystemPermission.reserve, user=user2)
+            job1 = data_setup.create_job(owner=user1)
+            job1.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires force="%s"/>'
+                % system.fqdn)
+            job2 = data_setup.create_job(owner=user2)
+            job2.recipesets[0].recipes[0]._host_requires = (
+                '<hostRequires force="%s"/>'
+                % system.fqdn)
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.query.get(job1.id)
+            self.assertEqual(job.status, TaskStatus.aborted)
+            job = Job.query.get(job2.id)
+            self.assertEqual(job.status, TaskStatus.processed)
 
 class FakeMetrics():
     def __init__(self):

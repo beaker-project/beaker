@@ -125,6 +125,12 @@ class ElementWrapper(object):
     # These are the default behaviours for each element.
     # Note that unrecognised elements become XmlAnd!
 
+    def apply_filter(self, query):
+        query, clause = self.filter(query)
+        if clause is not None:
+            query = query.filter(clause)
+        return query
+
     def filter(self, joins):
         return (joins, None)
 
@@ -1058,6 +1064,10 @@ class XmlHost(XmlAnd):
                     'hypervisor': XmlHypervisor, #deprecated
                    }
 
+    @classmethod
+    def from_string(cls, xml_string):
+        return cls(etree.fromstring(xml_string))
+
 class XmlDistro(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
@@ -1079,20 +1089,6 @@ class XmlDistro(XmlAnd):
                     'distrolabcontroller': XmlDistroLabController, #deprecated
                    }
 
-
-def apply_system_filter(filter, query):
-    if isinstance(filter, basestring):
-        filter = XmlHost(etree.fromstring(filter))
-    clauses = []
-    for child in filter:
-        if callable(getattr(child, 'filter', None)):
-            (query, clause) = child.filter(query)
-            if clause is not None:
-                clauses.append(clause)
-    if clauses:
-        query = query.filter(and_(*clauses))
-
-    return query
 
 def apply_lab_controller_filter(filter, query):
     if isinstance(filter, basestring):

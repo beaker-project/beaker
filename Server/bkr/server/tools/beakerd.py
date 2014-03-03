@@ -385,7 +385,6 @@ def schedule_queued_recipes(*args):
             .filter(
                 and_(Recipe.status == TaskStatus.queued,
                     System.user == None,
-                    System.status == SystemStatus.automated,
                     LabController.disabled == False,
                     or_(
                         RecipeSet.lab_controller == None,
@@ -505,7 +504,6 @@ def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
                         ),
                    ),
                 LabController.disabled == False,
-                System.status == SystemStatus.automated,
                 or_(System.loan_id == None,
                     System.loan_id == Job.owner_id,
                    ),
@@ -547,7 +545,7 @@ def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
     # Check to see if user still has proper permissions to use the system.
     # Remember the mapping of available systems could have happend hours or even
     # days ago and groups or loans could have been put in place since.
-    if not system.can_reserve(recipe.recipeset.job.owner):
+    if not recipe.candidate_systems().filter(System.id == system.id).first():
         log.debug("System : %s recipe: %s no longer has access. removing" % (system, 
                                                                              recipe.id))
         recipe.systems.remove(system)

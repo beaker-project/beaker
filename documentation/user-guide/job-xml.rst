@@ -205,6 +205,8 @@ machine or not.
         </recipeSet>
     </job>
 
+.. _host-requires:
+
 ``<hostRequires/>`` has similar attributes to ``<distroRequires/>``
 
 ::
@@ -319,6 +321,22 @@ Ethernet") and with a video device with the description as "VD 0190".
    system at all with the device you want to run your recipe on. (See:
    :ref:`system-searching`).
 
+.. _forced-system:
+
+If you want your recipe to run on a particular system and you know its
+FQDN, you can skip the host filtering described above and force the
+scheduler to pick a particular system for your recipe by using the
+``force=""`` attribute. For example, the following XML will force the
+recipe to be scheduled on ``my.host.example.com``::
+
+    <hostRequires force="my.host.example.com" />
+
+When the ``force=""`` attribute is present, the scheduler will use the
+named system even if its condition is set to Broken or Manual.
+
+The ``force=""`` attribute is mutually exclusive with other host
+filtering criteria. It is invalid to specify both in
+``<hostRequires/>``. 
 
 All that's left to populate our XML with, are the 'task' elements. The
 two attributes we need to specify are the ``name`` and the ``role``.

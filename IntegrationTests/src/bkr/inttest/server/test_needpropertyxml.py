@@ -8,7 +8,7 @@ import datetime
 import unittest2 as unittest
 from bkr.server.model import session, System, SystemType, SystemStatus, Cpu, \
         Arch, Numa, Key, Key_Value_String, Key_Value_Int, Disk
-from bkr.server.needpropertyxml import apply_system_filter
+from bkr.server.needpropertyxml import XmlHost
 from bkr.inttest import data_setup
 
 class SystemFilteringTest(unittest.TestCase):
@@ -21,7 +21,7 @@ class SystemFilteringTest(unittest.TestCase):
 
     def check_filter(self, filterxml, present=[], absent=[]):
         session.flush()
-        query = apply_system_filter(filterxml, System.query)
+        query = XmlHost.from_string(filterxml).apply_filter(System.query)
         if present:
             self.assertItemsEqual(present,
                     query.filter(System.id.in_([s.id for s in present])).all())
@@ -659,7 +659,7 @@ class SystemFilteringTest(unittest.TestCase):
                 </and>
             </hostRequires>
             """ % system.fqdn
-        query = apply_system_filter(filter, System.query)
+        query = XmlHost.from_string(filter).apply_filter(System.query)
         self.assertEquals(len(query.all()), 1)
         # with the bug this count comes out as 3 instead of 1,
         # which doesn't sound so bad...
@@ -676,7 +676,7 @@ class SystemFilteringTest(unittest.TestCase):
                 </and>
             </hostRequires>
             """
-        query = apply_system_filter(filter, System.query)
+        query = XmlHost.from_string(filter).apply_filter(System.query)
         query.all() # don't care about the results, just that it doesn't break
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=714974

@@ -59,7 +59,8 @@ from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from bkr.server.helpers import make_link
-from bkr.server import needpropertyxml, metrics, identity
+from bkr.server import metrics, identity
+from bkr.server.needpropertyxml import XmlHost
 from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
@@ -530,7 +531,7 @@ class Root(RPCRoot):
 
         if kw.get('xmlsearch'):
             try:
-                systems = needpropertyxml.apply_system_filter('<and>%s</and>' % kw['xmlsearch'], systems)
+                systems = XmlHost.from_string('<and>%s</and>' % kw['xmlsearch']).apply_filter(systems)
             except ValueError,e:
                 response.status = 400
                 return e.message

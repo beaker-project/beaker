@@ -18,7 +18,7 @@ from bkr.server.widgets import myPaginateDataGrid, \
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server import search_utility, identity, metrics
-from bkr.server.needpropertyxml import apply_system_filter
+from bkr.server.needpropertyxml import XmlHost
 from bkr.server.controller_utilities import _custom_status, _custom_result, \
     restrict_http_method
 import pkg_resources
@@ -582,7 +582,7 @@ class Jobs(RPCRoot):
             raise BX(_('No distro tree matches Recipe: %s') % recipe.distro_requires)
         try:
             # try evaluating the host_requires, to make sure it's valid
-            apply_system_filter(recipe.host_requires, System.query)
+            systems = XmlHost.from_string(recipe.host_requires).apply_filter(System.query)
         except StandardError, e:
             raise BX(_('Error in hostRequires: %s' % e))
         recipe.whiteboard = xmlrecipe.whiteboard or None #'' -> NULL for DB
