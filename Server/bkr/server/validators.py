@@ -187,3 +187,19 @@ class SSHPubKey(TgFancyValidator):
         if isinstance(value, tuple):
             return ' '.join(value)
         return value
+
+class UniqueRetentionTag(UnicodeString):
+
+    not_empty = True
+    max = 20
+    strip = True
+
+    messages = {
+        'not_unique': 'Retention tag already exists',
+    }
+
+    def _to_python(self, value, state):
+        value = super(UniqueRetentionTag, self)._to_python(value, state)
+        if RetentionTag.query.filter_by(tag=value).count():
+            raise Invalid(self.message('not_unique', state), value, state)
+        return value
