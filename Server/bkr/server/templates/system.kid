@@ -7,6 +7,7 @@
   <title>${title}</title>
   <script type="text/javascript">
     var system = new System(${tg.to_json(value)}, {parse: true, url: ${tg.to_json(tg.url('/systems/%s/' % value.fqdn))}});
+    var distro_picker_options = ${tg.to_json(widgets_options['distro_picker'])};
     $(function () {
         if (system.get('can_change_fqdn')) {
             // XXX renaming is an extremely uncommon operation, it probably 
@@ -20,16 +21,22 @@
         new SystemProvisionView({
             model: system,
             el: $('#provision'),
-            distro_picker_options: ${tg.to_json(widgets_options['distro_picker'])},
+            distro_picker_options: distro_picker_options,
         });
         new SystemLoanView({model: system, el: $('#loan')});
+        new SystemPowerConfigView({
+            model: system,
+            el: $('#power'),
+            distro_picker_options: distro_picker_options,
+        });
         new SystemSchedulerConfigView({model: system, el: $('#scheduler')});
         new SystemAccessPolicyView({model: system, el: $('#access-policy')});
-        // defer history grid until tab is shown
+        // Widgets which trigger additional HTTP requests are deferred until 
+        // their tab is shown. This way we avoid the extra requests if the user 
+        // doesn't care about them.
         $('.system-nav a[href="#history"]').one('show', function () {
             new SystemActivityView({model: system, el: $('#history')});
         });
-        // defer until tab is shown
         $('.system-nav a[href="#commands"]').one('show', function () {
             new SystemCommandsView({model: system, el: $('#commands')});
         });
@@ -95,19 +102,7 @@
     </span>
    </div>
       <div class="tab-pane" id="commands"></div>
-   <div class="tab-pane" id="power">
-    <span py:if="not readonly" py:strip="True">
-     <span py:if="value.lab_controller" py:strip="True">
-      ${widgets['power'].display(method='get', action=widgets_action['power'], value=value, options=widgets_options['power'])}
-     </span>
-     <span py:if="not value.lab_controller" py:strip="True">
-      System must be associated to a lab controller to edit power settings.
-     </span>
-    </span>
-    <span py:if="readonly" py:strip="True">
-      You do not have access to edit power settings for this system.
-    </span>
-   </div>
+      <div class="tab-pane" id="power"></div>
       <div class="tab-pane" id="scheduler"></div>
    <div class="tab-pane" id="notes">
     ${widgets['notes'].display(method='get', action=widgets_action['notes'], value=value, options=widgets_options['notes'])} 

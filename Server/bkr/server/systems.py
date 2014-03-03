@@ -12,7 +12,8 @@ from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
         SystemPermission, SystemAccessPolicyRule, Hypervisor, Numa, \
-        LabController, KernelType, SystemType, CommandActivity
+        LabController, KernelType, SystemType, CommandActivity, Power, \
+        PowerType, ReleaseAction
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
@@ -334,7 +335,13 @@ def get_system(fqdn):
 @auth_required
 def update_system(fqdn):
     system = _get_system_by_FQDN(fqdn)
+    if not system.can_edit(identity.current.user):
+        raise Forbidden403('Cannot edit system')
     data = read_json_request(request)
+    # helper for recording activity below
+    def record_activity(field, old, new, action=u'Changed'):
+        system.record_activity(user=identity.current.user, service=u'HTTP',
+                action=action, field=field, old=old, new=new)
     with convert_internal_errors():
         # XXX what a nightmare... need to use a validation/conversion library, 
         # and maybe simplify/relocate the activity recording stuff somehow
@@ -343,13 +350,9 @@ def update_system(fqdn):
         if 'fqdn' in data:
             new_fqdn = data['fqdn'].lower()
             if new_fqdn != system.fqdn:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change fqdn')
                 if System.query.filter(System.fqdn == new_fqdn).count():
                     raise Conflict409('System %s already exists' % new_fqdn)
-                system.record_activity(user=identity.current.user,
-                        service=u'HTTP', action=u'Changed', field=u'FQDN',
-                        old=system.fqdn, new=new_fqdn)
+                record_activity(u'FQDN', system.fqdn, new_fqdn)
                 system.fqdn = new_fqdn
                 changed = True
                 renamed = True
@@ -359,25 +362,17 @@ def update_system(fqdn):
             new_owner = User.by_user_name(data['owner'].get('user_name'))
             if new_owner is None:
                 raise BadRequest400('No such user %s' % data['owner'].get('user_name'))
-            system.record_activity(user=identity.current.user, service=u'HTTP',
-                    action=u'Changed', field=u'Owner', old=system.owner,
-                    new=new_owner)
+            record_activity(u'Owner', system.owner, new_owner)
             system.owner = new_owner
             changed = True
         if 'status' in data:
             new_status = SystemStatus.from_string(data['status'])
             if new_status != system.status:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change status')
-                system.record_activity(user=identity.current.user,
-                        service=u'HTTP', action=u'Changed', field=u'Status',
-                        old=system.status, new=new_status)
+                record_activity(u'Status', system.status, new_status)
                 system.status = new_status
                 if not new_status.bad and system.status_reason:
                     # clear the status reason for "good" statuses
-                    system.record_activity(user=identity.current.user,
-                            service=u'HTTP', action=u'Changed', field=u'Status Reason',
-                            old=system.status_reason, new=None)
+                    record_activity(u'Status Reason', system.status_reason, None)
                     system.status_reason = None
                 changed = True
         if 'status_reason' in data:
@@ -386,21 +381,13 @@ def update_system(fqdn):
                 raise ValueError('Cannot set status reason when status is %s'
                         % system.status)
             if new_reason != system.status_reason:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change status reason')
-                system.record_activity(user=identity.current.user,
-                        service=u'HTTP', action=u'Changed', field=u'Status Reason',
-                        old=system.status_reason, new=new_reason)
+                record_activity(u'Status Reason', system.status_reason, new_reason)
                 system.status_reason = new_reason
                 changed = True
         if 'type' in data:
             new_type = SystemType.from_string(data['type'])
             if new_type != system.type:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change type')
-                system.record_activity(user=identity.current.user,
-                        service=u'HTTP', action=u'Changed', field=u'Type',
-                        old=system.type, new=new_type)
+                record_activity(u'Type', system.type, new_type)
                 system.type = new_type
                 changed = True
         if 'arches' in data:
@@ -408,16 +395,10 @@ def update_system(fqdn):
             added_arches = set(new_arches).difference(system.arch)
             removed_arches = set(system.arch).difference(new_arches)
             if added_arches or removed_arches:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change arches')
                 for added_arch in added_arches:
-                    system.record_activity(user=identity.current.user,
-                            service=u'HTTP', action=u'Added', field=u'Arch',
-                            old=None, new=added_arch)
+                    record_activity(u'Arch', None, added_arch, u'Added')
                 for removed_arch in removed_arches:
-                    system.record_activity(user=identity.current.user,
-                            service=u'HTTP', action=u'Removed', field=u'Arch',
-                            old=removed_arch, new=None)
+                    record_activity(u'Arch', removed_arch, None, u'Removed')
                 system.arch[:] = new_arches
                 changed = True
         if 'lab_controller_id' in data:
@@ -426,44 +407,86 @@ def update_system(fqdn):
             else:
                 new_lc = None
             if new_lc != system.lab_controller:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change lab controller')
                 if system.open_reservation is not None:
                     raise Conflict409('Unable to change lab controller while system '
                             'is in use (return the system first)')
-                system.record_activity(user=identity.current.user, service=u'HTTP',
-                        action=u'Changed', field=u'Lab Controller',
-                        old=system.lab_controller, new=new_lc)
+                record_activity(u'Lab Controller', system.lab_controller, new_lc)
                 system.lab_controller = new_lc
+                changed = True
+        # If we're given any power-related keys, need to ensure system.power exists
+        if not system.power and set(['power_type', 'power_address', 'power_user',
+                'power_password', 'power_id', 'power_quiescent_period'])\
+                .intersection(data.keys()):
+            system.power = Power()
+        if 'power_type' in data:
+            new_power_type = PowerType.by_name(data['power_type'])
+            if new_power_type != system.power.power_type:
+                record_activity(u'power_type', system.power.power_type.name,
+                        new_power_type.name)
+                system.power.power_type = new_power_type
+                changed = True
+        if 'power_address' in data:
+            new_power_address = data['power_address'] or u''
+            if new_power_address != system.power.power_address:
+                record_activity(u'power_address', system.power.power_address,
+                        data['power_address'])
+                system.power.power_address = data['power_address']
+                changed = True
+        if 'power_user' in data and data['power_user'] != system.power.power_user:
+            record_activity(u'power_user', u'********', u'********')
+            system.power.power_user = data['power_user']
+            changed = True
+        if 'power_password' in data and data['power_password'] != system.power.power_passwd:
+            record_activity(u'power_passwd', u'********', u'********')
+            system.power.power_passwd = data['power_password']
+            changed = True
+        if 'power_id' in data and data['power_id'] != system.power.power_id:
+            record_activity(u'power_id', system.power.power_id, data['power_id'])
+            system.power.power_id = data['power_id']
+            changed = True
+        if 'power_quiescent_period' in data:
+            new_qp = int(data['power_quiescent_period'])
+            if new_qp != system.power.power_quiescent_period:
+                record_activity(u'power_quiescent_period',
+                        system.power.power_quiescent_period, new_qp)
+                system.power.power_quiescent_period = new_qp
+                changed = True
+        if 'release_action' in data:
+            new_release_action = ReleaseAction.from_string(data['release_action'])
+            if new_release_action != (system.release_action or ReleaseAction.power_off):
+                record_activity(u'release_action',
+                        (system.release_action or ReleaseAction.power_off),
+                        new_release_action)
+                system.release_action = new_release_action
+                changed = True
+        if 'reprovision_distro_tree' in data:
+            if (not data['reprovision_distro_tree'] or
+                    'id' not in data['reprovision_distro_tree']):
+                new_rpdt = None
+            else:
+                new_rpdt = DistroTree.by_id(data['reprovision_distro_tree']['id'])
+            if new_rpdt != system.reprovision_distro_tree:
+                record_activity(u'reprovision_distro_tree',
+                        unicode(system.reprovision_distro_tree),
+                        unicode(new_rpdt))
+                system.reprovision_distro_tree = new_rpdt
                 changed = True
         if 'location' in data:
             new_location = data['location'] or None
             if new_location != system.location:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change location')
-                system.record_activity(user=identity.current.user, service=u'HTTP',
-                        action=u'Changed', field='Location',
-                        old=system.location, new=new_location)
+                record_activity(u'Location', system.location, new_location)
                 system.location = new_location
                 changed = True
         if 'lender' in data:
             new_lender = data['lender'] or None
             if new_lender != system.lender:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change lender')
-                system.record_activity(user=identity.current.user, service=u'HTTP',
-                        action=u'Changed', field='Lender',
-                        old=system.lender, new=new_lender)
+                record_activity(u'Lender', system.lender, new_lender)
                 system.lender = new_lender
                 changed = True
         if 'kernel_type' in data:
             new_kernel_type = KernelType.by_name(data['kernel_type'])
             if new_kernel_type != system.kernel_type:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change kernel type')
-                system.record_activity(user=identity.current.user, service=u'HTTP',
-                        action=u'Changed', field=u'Kernel Type',
-                        old=system.kernel_type, new=new_kernel_type)
+                record_activity(u'Kernel Type', system.kernel_type, new_kernel_type)
                 system.kernel_type = new_kernel_type
                 changed = True
         if 'hypervisor' in data:
@@ -472,61 +495,37 @@ def update_system(fqdn):
             else:
                 new_hypervisor = None
             if new_hypervisor != system.hypervisor:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change hypervisor')
-                system.record_activity(user=identity.current.user, service=u'HTTP',
-                        action=u'Changed', field=u'Hypervisor', old=system.hypervisor,
-                        new=new_hypervisor)
+                record_activity(u'Hypervisor', system.hypervisor, new_hypervisor)
                 system.hypervisor = new_hypervisor
                 changed = True
         if 'vendor' in data:
             new_vendor = data['vendor'] or None
             if new_vendor != system.vendor:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change vendor')
-                system.record_activity(user=identity.current.user, service=u'HTTP',
-                        action=u'Changed', field='Vendor',
-                        old=system.vendor, new=new_vendor)
+                record_activity(u'Vendor', system.vendor, new_vendor)
                 system.vendor = new_vendor
                 changed = True
         if 'model' in data:
             new_model = data['model'] or None
             if new_model != system.model:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change model')
-                system.record_activity(user=identity.current.user, service=u'HTTP',
-                        action=u'Changed', field='Model',
-                        old=system.model, new=new_model)
+                record_activity(u'Model', system.model, new_model)
                 system.model = new_model
                 changed = True
         if 'serial_number' in data:
             new_serial_number = data['serial_number'] or None
             if new_serial_number != system.serial:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change serial_number')
-                system.record_activity(user=identity.current.user, service=u'HTTP',
-                        action=u'Changed', field='Serial Number',
-                        old=system.serial, new=new_serial_number)
+                record_activity(u'Serial Number', system.serial, new_serial_number)
                 system.serial = new_serial_number
                 changed = True
         if 'mac_address' in data:
             new_mac_address = data['mac_address'] or None
             if new_mac_address != system.mac_address:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change mac_address')
-                system.record_activity(user=identity.current.user, service=u'HTTP',
-                        action=u'Changed', field='MAC Address',
-                        old=system.mac_address, new=new_mac_address)
+                record_activity(u'MAC Address', system.mac_address, new_mac_address)
                 system.mac_address = new_mac_address
                 changed = True
         if 'memory' in data:
             new_memory = int(data['memory']) if data['memory'] else None
             if new_memory != system.memory:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change memory')
-                system.record_activity(user=identity.current.user, service=u'HTTP',
-                        action=u'Changed', field='Memory',
-                        old=system.memory, new=new_memory)
+                record_activity(u'Memory', system.memory, new_memory)
                 system.memory = new_memory
                 changed = True
         if 'numa_nodes' in data:
@@ -534,11 +533,7 @@ def update_system(fqdn):
             if not system.numa:
                 system.numa = Numa()
             if new_numa_nodes != system.numa.nodes:
-                if not system.can_edit(identity.current.user):
-                    raise Forbidden403('Cannot change numa_nodes')
-                system.record_activity(user=identity.current.user, service=u'HTTP',
-                        action=u'Changed', field='NUMA/Nodes',
-                        old=system.numa.nodes, new=new_numa_nodes)
+                record_activity(u'NUMA/Nodes', system.numa.nodes, new_numa_nodes)
                 system.numa.nodes = new_numa_nodes
                 changed = True
         if changed:

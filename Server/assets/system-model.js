@@ -122,6 +122,8 @@ window.System = Backbone.Model.extend({
                 new Reservation(data['previous_reservation'], {parse: true}) : null);
         data['access_policy'] = new AccessPolicy(data['access_policy'],
                 {url: this.url + 'access-policy', parse: true});
+        data['reprovision_distro_tree'] = (!_.isEmpty(data['reprovision_distro_tree']) ?
+                new DistroTree(data['reprovision_distro_tree'], {parse: true}) : null);
         return data;
     },
     add_cc: function (cc, options) {

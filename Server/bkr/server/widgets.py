@@ -835,47 +835,6 @@ class LabInfoForm(HorizontalForm):
                 d['value']['wattage'] = labinfo.wattage
                 d['value']['cooling'] = labinfo.cooling
 
-class PowerForm(HorizontalForm):
-    fields = [
-        HiddenField(name="fqdn"),
-        HiddenField(name="power"),
-        SingleSelectField(name='power_type_id',
-            label=_(u'Power Type'),
-            options=model.PowerType.get_all,
-            validator=validators.NotEmpty()),
-        TextField(name='power_address', label=_(u'Power Address'),
-            validator=validators.UnicodeString(if_empty='')),
-        TextField(name='power_user', label=_(u'Power Login')),
-        TextField(name='power_passwd', label=_(u'Power Password')),
-        TextField(name='power_id', label=_(u'Power Port/Plug/etc')),
-        TextField(name='power_quiescent_period', label=_(u'Quiescent Period'),
-            validator=validators.Int(not_empty=True),
-            default=model.Power.default_quiescent_period),
-        RadioButtonList(name='release_action',
-            label=_(u'Release Action'),
-            options=[(ra, unicode(ra)) for ra in model.ReleaseAction],
-            default=model.ReleaseAction.power_off,
-            validator=ValidEnumValue(model.ReleaseAction)),
-        SingleSelectField(name='reprovision_distro_tree_id',
-            label=_(u'Reprovision Distro'),
-            options=[],
-            validator=validators.Int(non_empty=True)),
-    ]
-    submit_text = _(u'Save Power Changes')
-
-    def update_params(self, d):
-        super(PowerForm, self).update_params(d)
-        if 'power' in d['value']:
-            if d['value']['power']:
-                power = d['value']['power']
-                d['value']['power_type_id'] = power.power_type_id
-                d['value']['power_address'] = power.power_address
-                d['value']['power_user'] = power.power_user
-                d['value']['power_passwd'] = power.power_passwd
-                d['value']['power_id'] = power.power_id
-                d['value']['power_quiescent_period'] = power.power_quiescent_period
-
-
 class ExcludedFamilies(FormField):
     template = """
     <ul xmlns:py="http://purl.org/kid/ns#"

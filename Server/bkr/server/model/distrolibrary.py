@@ -381,6 +381,12 @@ class Distro(DeclarativeMappedObject):
     def __repr__(self):
         return '%s(name=%r)' % (self.__class__.__name__, self.name)
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+        }
+
     @property
     def link(self):
         return make_link(url = '/distros/view?id=%s' % self.id,
@@ -438,6 +444,14 @@ class DistroTree(DeclarativeMappedObject):
         query = cls.query.filter(DistroTree.lab_controller_assocs.any())
         query = apply_distro_filter(filter, query)
         return query.order_by(DistroTree.date_created.desc())
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'distro': self.distro,
+            'variant': self.variant,
+            'arch': self.arch,
+        }
 
     def expire(self, lab_controller=None, service=u'XMLRPC'):
         """ Expire this tree """

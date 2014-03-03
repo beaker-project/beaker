@@ -24,6 +24,7 @@ window.DistroPicker = Backbone.View.extend({
             tag: options.selection['tag'],
             distro: options.selection['distro'],
             distro_tree_id: options.selection['distro_tree_id'],
+            distro_tree_label: '',
         });
     },
     render: function () {
@@ -42,6 +43,12 @@ window.DistroPicker = Backbone.View.extend({
         var selection = this.selection;
         this.$('select').each(function (i, elem) {
             selection.set(elem.name, $(elem).val());
+            // XXX this distro_tree_label stuff is a bit of a hack, we should 
+            // keep an actual DistroTree object instead of just re-using the 
+            // label that the server gives us
+            if (elem.name == 'distro_tree_id') {
+                selection.set('distro_tree_label', $(elem).children('option:checked').text());
+            }
         });
     },
     get_distros: function () {
@@ -97,6 +104,37 @@ window.DistroPicker = Backbone.View.extend({
             select.append($('<option/>').attr('value', option[0]).text(option[1]));
         });
         select.change();
+    },
+});
+
+window.DistroPickerModal = Backbone.View.extend({
+    tagName: 'div',
+    className: 'modal',
+    template: JST['distro-picker-modal'],
+    events: {
+        'submit form': 'submit',
+        'hidden': 'remove',
+    },
+    initialize: function (options) {
+        this.distro_picker = new DistroPicker({
+            multiple: false,
+            system: options.system,
+            options: options.options,
+            selection: options.selection,
+        });
+        this.selection = this.distro_picker.selection;
+        this.render();
+        this.$el.modal();
+        this.$('[name=osmajor]').focus();
+    },
+    render: function () {
+        this.$el.html(this.template({}));
+        this.distro_picker.setElement(this.$('.distro-picker')).render();
+    },
+    submit: function (evt) {
+        evt.preventDefault();
+        this.trigger('select', this.selection);
+        this.$el.modal('hide');
     },
 });
 

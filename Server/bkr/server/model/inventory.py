@@ -390,6 +390,11 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'possible_kernel_types': KernelType.query.all(),
             'location': self.location,
             'lender': self.lender,
+            'release_action': self.release_action or ReleaseAction.power_off,
+            'possible_release_actions': list(ReleaseAction),
+            'reprovision_distro_tree': self.reprovision_distro_tree,
+            # The actual power settings are not included here because they must 
+            # not be exposed to unprivileged users.
             'has_power': bool(self.power) and bool(self.power.power_type),
             'has_console': False, # IMPLEMENTME
             'created_date': self.date_added,
@@ -408,6 +413,11 @@ class System(DeclarativeMappedObject, ActivityMixin):
         }
         if self.lab_controller:
             data['lab_controller_id'] = self.lab_controller.id
+        if identity.current.user and self.can_edit(identity.current.user):
+            if self.power:
+                data.update(self.power.__json__())
+            else:
+                data.update(Power.empty_json())
         if self.numa:
             data.update({
                 'numa_nodes': self.numa.nodes,
@@ -456,6 +466,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_status'] = self.can_edit(u)
             data['can_change_type'] = self.can_edit(u)
             data['can_change_hardware'] = self.can_edit(u)
+            data['can_change_power'] = self.can_edit(u)
             data['can_power'] = self.can_power(u)
             data['can_take'] = self.is_free() and self.can_reserve_manually(u)
             data['can_return'] = (self.open_reservation is not None
@@ -474,6 +485,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_status'] = False
             data['can_change_type'] = False
             data['can_change_hardware'] = False
+            data['can_change_power'] = False
             data['can_power'] = False
             data['can_take'] = False
             data['can_return'] = False
@@ -1940,6 +1952,35 @@ class Power(DeclarativeMappedObject):
     power_id = Column(String(255))
     power_quiescent_period = Column(Integer, default=default_quiescent_period,
         nullable=False)
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'power_type': self.power_type.name,
+            'power_address': self.power_address,
+            'power_user': self.power_user,
+            'power_password': self.power_passwd,
+            'power_id': self.power_id,
+            'power_quiescent_period': self.power_quiescent_period,
+            'possible_power_types': [t.name for t in PowerType.query.order_by(PowerType.name)],
+        }
+
+    @classmethod
+    def empty_json(cls):
+        """
+        Returns the JSON representation of a default empty power config, to be 
+        used in the cases where a system's power config has not been 
+        initialized yet.
+        """
+        return {
+            'power_type': None,
+            'power_address': None,
+            'power_user': None,
+            'power_password': None,
+            'power_id': None,
+            'power_quiescent_period': cls.default_quiescent_period,
+            'possible_power_types': [t.name for t in PowerType.query.order_by(PowerType.name)],
+        }
 
 # note model
 class Note(DeclarativeMappedObject):

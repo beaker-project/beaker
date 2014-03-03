@@ -8,9 +8,9 @@ from bkr.server.model import (TaskBase, Device, System, SystemGroup,
                               SystemActivity, Key, OSMajor, DistroTree,
                               Arch, TaskPriority, Group, GroupActivity,
                               RecipeSet, RecipeSetActivity, User,
-                              LabInfo, ReleaseAction, PowerType,
+                              LabInfo, ReleaseAction,
                               LabController, Hypervisor, KernelType,
-                              SystemType, Distro, Note, Power, Job,
+                              SystemType, Distro, Note, Job,
                               InstallOptions, ExcludeOSMajor,
                               ExcludeOSVersion, OSVersion,
                               Provision, ProvisionFamily,
@@ -40,7 +40,7 @@ from bkr.server.system_action import SystemAction as SystemActionController
 from bkr.server.widgets import TaskSearchForm, SearchBar, \
     SystemInstallOptions, SystemGroups, \
     SystemNotes, SystemKeys, SystemExclude, SystemDetails, \
-    LabInfoForm, myPaginateDataGrid, PowerForm
+    LabInfoForm, myPaginateDataGrid
 from bkr.server.preferences import Preferences
 from bkr.server.authentication import Auth
 from bkr.server.xmlrpccontroller import RPCRoot
@@ -166,7 +166,6 @@ class Root(RPCRoot):
                 controller, entry_point.name)
         locals()[entry_point.name] = controller
 
-    power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')
     system_details = SystemDetails()
     system_exclude = SystemExclude(name='excluded_families')
@@ -618,13 +617,11 @@ class Root(RPCRoot):
             is_user = (system.user == our_user)
             has_loan = (system.loaned == our_user)
             can_reserve = system.can_reserve(our_user)
-            can_power = system.can_power(our_user)
         else:
             readonly = True
             is_user = False
             has_loan = False
             can_reserve = False
-            can_power = False
         title = system.fqdn
         distro_picker_options = {
             'tag': [tag.tag for tag in DistroTag.used()],
@@ -655,7 +652,6 @@ class Root(RPCRoot):
                         keys      = self.system_keys,
                         notes     = self.system_notes,
                       )
-        widgets['power'] = self.power_form
         # Lab Info is deprecated, only show it if the system has existing data
         widgets['labinfo'] = self.labinfo_form if system.labinfo else None
 
@@ -668,8 +664,7 @@ class Root(RPCRoot):
             groups_widget   = self.system_groups,
             install_widget  = self.system_installoptions,
             widgets         = widgets,
-            widgets_action  = dict( power     = url('/save_power'),
-                                    labinfo   = url('/save_labinfo'),
+            widgets_action  = dict( labinfo   = url('/save_labinfo'),
                                     exclude   = url('/save_exclude'),
                                     keys      = url('/save_keys'),
                                     notes     = url('/save_note'),
@@ -677,8 +672,7 @@ class Root(RPCRoot):
                                     install   = url('/save_install'),
                                     tasks     = '/tasks/do_search',
                                   ),
-            widgets_options = dict(power  = options,
-                                   labinfo   = options,
+            widgets_options = dict(labinfo   = options,
                                    exclude   = options,
                                    keys      = dict(readonly = readonly,
                                                 key_values_int = system.key_values_int,
@@ -771,121 +765,6 @@ class Root(RPCRoot):
         system.labinfo = labinfo
         system.date_modified = datetime.utcnow()
         flash( _(u"Saved Lab Info") )
-        redirect("/view/%s" % system.fqdn)
-
-    @error_handler(view)
-    @expose()
-    @identity.require(identity.not_anonymous())
-    @validate(form=power_form)
-    def save_power(self,
-                   fqdn,
-                   power_address,
-                   power_type_id,
-                   release_action,
-                   power_quiescent_period,
-                   **kw):
-        try:
-            system = System.by_fqdn(fqdn, identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to save Power for system %r" % fqdn) )
-            redirect("/")
-
-        if kw.get('reprovision_distro_tree_id'):
-            try:
-                reprovision_distro_tree = DistroTree.by_id(kw['reprovision_distro_tree_id'])
-            except NoResultFound:
-                reprovision_distro_tree = None
-            system.activity.append(SystemActivity(user=identity.current.user,
-                    service='WEBUI', action='Changed',
-                    field_name='reprovision_distro_tree',
-                    old_value=unicode(system.reprovision_distro_tree),
-                    new_value=unicode(reprovision_distro_tree)))
-            system.reprovision_distro_tree = reprovision_distro_tree
-
-        try:
-            release_action = ReleaseAction.from_string(release_action)
-        except ValueError:
-            release_action = None
-        system.activity.append(SystemActivity(identity.current.user, 'WEBUI',
-                'Changed', 'release_action',
-                '%s' % system.release_action, '%s' % release_action))
-        system.release_action = release_action
-
-        if system.power:
-            power_quiescent_period = int(power_quiescent_period)
-            if power_quiescent_period != system.power.power_quiescent_period:
-                # Quiescent period changed
-                activity = SystemActivity(identity.current.user, 'WEBUI',
-                    'Changed', 'power_quiescent_period',
-                    system.power.power_quiescent_period,
-                    power_quiescent_period)
-                system.power.power_quiescent_period = power_quiescent_period
-                system.activity.append(activity)
-            if power_address != system.power.power_address:
-                #Power Address Changed
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_address', system.power.power_address, power_address )
-                system.power.power_address = power_address
-                system.activity.append(activity)
-            if kw.get('power_user'):
-                if kw['power_user'] != system.power.power_user:
-                    #Power User Changed
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_user', '********', '********' )
-                    system.power.power_user = kw['power_user']
-                    system.activity.append(activity)
-            else:
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'power_user', '********', '********' )
-                system.activity.append(activity)
-                system.power.power_user = None
-            if kw.get('power_passwd'):
-                if kw['power_passwd'] != system.power.power_passwd:
-                    #Power Passwd Changed
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_passwd', '********', '********' )
-                    system.power.power_passwd = kw['power_passwd']
-                    system.activity.append(activity)
-            else:
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'power_passwd', '********', '********' )
-                system.activity.append(activity)
-                system.power.power_passwd = None
-            if kw.get('power_id'):
-                if kw['power_id'] != system.power.power_id:
-                    #Power ID Changed
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_id', system.power.power_id, kw['power_id'] )
-                    system.power.power_id = kw['power_id']
-                    system.activity.append(activity)
-            else:
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'power_id', system.power.power_id, '' )
-                system.activity.append(activity)
-                system.power.power_id = None
-            if power_type_id != system.power.power_type_id:
-                #Power Type Changed
-                if int(power_type_id) == 0:
-                    system.power = None
-                else:
-                    try:
-                        power_type = PowerType.by_id(power_type_id)
-                    except InvalidRequestError:
-                        flash( _(u"Invalid power type %s" % power_type_id) )
-                        redirect("/view/%s" % system.fqdn)
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_type', system.power.power_type.name, power_type.name )
-                    system.power.power_type = power_type
-                    system.activity.append(activity)
-            flash( _(u"Updated Power") )
-        else:
-            try:
-                power_type = PowerType.by_id(power_type_id)
-            except InvalidRequestError:
-                flash( _(u"Invalid power type %s" % power_type_id) )
-                redirect("/view/%s" % system.fqdn)
-            power = Power(power_type=power_type, power_address=power_address)
-            if kw.get('power_user'):
-                power.power_user = kw['power_user']
-            if kw.get('power_passwd'):
-                power.power_passwd = kw['power_passwd']
-            if kw.get('power_id'):
-                power.power_id = kw['power_id']
-            system.power = power
-            flash( _(u"Saved Power") )
-        system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
     @expose()

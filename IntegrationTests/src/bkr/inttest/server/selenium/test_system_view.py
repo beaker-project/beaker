@@ -385,36 +385,45 @@ class SystemViewTestWD(WebDriverTestCase):
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
 
+    def test_unprivileged_user_cannot_see_power_settings(self):
+        with session.begin():
+            self.system.power.power_passwd = u'midnight'
+        b = self.browser
+        login(b, self.unprivileged_user.user_name, 'password')
+        self.go_to_system_view(tab='Power')
+        tab = b.find_element_by_id('power')
+        self.assertEquals(tab.find_element_by_class_name('alert-info').text,
+                'You do not have permission to edit power configuration '
+                'for this system.')
+        self.assertNotIn('midnight', tab.text)
+
     def test_power_quiescent_default_value(self):
         with session.begin():
             lc = data_setup.create_labcontroller()
             system = data_setup.create_system(lab_controller=lc, with_power=False)
         b = self.browser
         login(b)
-        self.go_to_system_view(system, tab='Power')
-        period = b.find_element_by_name('power_quiescent_period').get_attribute('value')
+        self.go_to_system_view(tab='Power')
+        tab = b.find_element_by_id('power')
+        period = tab.find_element_by_name('power_quiescent_period').get_attribute('value')
         self.assertEqual(period, str(5))
 
-    def test_update_power_quiescent_validator(self):
+    def test_update_power_invalid_quiescent_period(self):
         b = self.browser
         login(b)
         self.go_to_system_view(tab='Power')
+        tab = b.find_element_by_id('power')
         # Empty value
-        b.find_element_by_name('power_quiescent_period').clear()
-        b.find_element_by_xpath("//form[@id='power']").submit()
-        error_text = b.find_element_by_xpath('//span[@class="help-block error"'
-            ' and preceding-sibling::'
-            'input[@id="power_power_quiescent_period"]]').text
-        self.assertEqual(error_text, u'Please enter a value')
+        tab.find_element_by_name('power_quiescent_period').clear()
+        tab.find_element_by_tag_name('form').submit()
+        # we can't actually check the HTML5 validation error
+        tab.find_element_by_css_selector('input[name=power_quiescent_period]:invalid')
 
         # Non int value
-        b.find_element_by_name('power_quiescent_period').clear()
-        b.find_element_by_name('power_quiescent_period').send_keys('nonint')
-        b.find_element_by_xpath("//form[@id='power']").submit()
-        error_text = b.find_element_by_xpath('//span[@class="help-block error"'
-            ' and preceding-sibling::'
-            'input[@id="power_power_quiescent_period"]]').text
-        self.assertEqual(error_text, u'Please enter an integer value')
+        tab.find_element_by_name('power_quiescent_period').send_keys('nonint')
+        tab.find_element_by_tag_name('form').submit()
+        # we can't actually check the HTML5 validation error
+        tab.find_element_by_css_selector('input[name=power_quiescent_period]:invalid')
 
     def test_add_power_with_blank_address(self):
         with session.begin():
@@ -422,38 +431,36 @@ class SystemViewTestWD(WebDriverTestCase):
             system = data_setup.create_system(lab_controller=lc, with_power=False)
         b = self.browser
         login(b)
-        self.go_to_system_view(system)
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//'
-            'a[text()="Power Config"]').click()
-        Select(b.find_element_by_name('power_type_id'))\
+        self.go_to_system_view(tab='Power')
+        tab = b.find_element_by_id('power')
+        BootstrapSelect(tab.find_element_by_name('power_type'))\
             .select_by_visible_text('ilo')
-        self.assertEqual(b.find_element_by_name('power_address').text, '')
-        b.find_element_by_xpath("//form[@id='power']").submit()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
-            'Saved Power')
+        self.assertEqual(tab.find_element_by_name('power_address').text, '')
+        tab.find_element_by_tag_name('form').submit()
+        tab.find_element_by_xpath('.//span[@class="sync-status" and not(text())]')
 
     def test_update_power(self):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
         self.go_to_system_view(tab='Power')
-        b.find_element_by_name('power_address').clear()
-        b.find_element_by_name('power_address').send_keys('nowhere.example.com')
+        tab = b.find_element_by_id('power')
+        tab.find_element_by_name('power_address').clear()
+        tab.find_element_by_name('power_address').send_keys('nowhere.example.com')
 
-        b.find_element_by_name('power_user').clear()
-        b.find_element_by_name('power_user').send_keys('asdf')
+        tab.find_element_by_name('power_user').clear()
+        tab.find_element_by_name('power_user').send_keys('asdf')
 
-        b.find_element_by_name('power_passwd').clear()
-        b.find_element_by_name('power_passwd').send_keys('meh')
+        tab.find_element_by_name('power_password').clear()
+        tab.find_element_by_name('power_password').send_keys('meh')
 
-        b.find_element_by_name('power_quiescent_period').clear()
-        b.find_element_by_name('power_quiescent_period').send_keys('66')
+        tab.find_element_by_name('power_quiescent_period').clear()
+        tab.find_element_by_name('power_quiescent_period').send_keys('66')
 
         old_address = self.system.power.power_address
         old_quiescent = self.system.power.power_quiescent_period
-        b.find_element_by_xpath("//form[@id='power']").submit()
-        self.assertEquals(b.find_element_by_class_name('flash').text,
-            'Updated Power')
+        tab.find_element_by_tag_name('form').submit()
+        tab.find_element_by_xpath('.//span[@class="sync-status" and not(text())]')
         with session.begin():
             session.refresh(self.system)
             self.assert_(self.system.date_modified > orig_date_modified)
