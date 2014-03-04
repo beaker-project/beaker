@@ -152,6 +152,7 @@ Requires:       python-ldap
 Requires:       python-rdflib >= 3.2.0
 Requires:       python-daemon
 Requires:       python-lockfile >= 0.9
+Requires:       crontabs
 Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
@@ -211,6 +212,7 @@ Group:          Applications/Internet
 Provides:       beaker-redhat-support <= 0.19
 Obsoletes:      beaker-redhat-support <= 0.19
 Requires:       python
+Requires:       crontabs
 Requires:       httpd
 Requires:       cobbler >= 1.4
 Requires:       yum-utils
