@@ -391,8 +391,7 @@ class SystemViewTestWD(WebDriverTestCase):
             system = data_setup.create_system(lab_controller=lc, with_power=False)
         b = self.browser
         login(b)
-        self.go_to_system_view(system)
-        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="Power Config"]').click()
+        self.go_to_system_view(system, tab='Power')
         period = b.find_element_by_name('power_quiescent_period').get_attribute('value')
         self.assertEqual(period, str(5))
 
