@@ -18,7 +18,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
-        RecipeTask, RecipeTaskResult, DeclarativeMappedObject
+        RecipeTask, RecipeTaskResult, DeclarativeMappedObject, ReleaseAction
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
@@ -585,6 +585,21 @@ class SystemAccessPolicyTest(unittest.TestCase):
         self.assert_(SystemAccessPolicy.query
                 .filter(SystemAccessPolicy.id == self.policy.id)
                 .filter(SystemAccessPolicy.grants(user, perm)).count())
+
+
+class SystemReleaseAction(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    def test_power_default(self):
+        system = data_setup.create_system()
+        session.flush()
+        self.assertEqual(system.release_action, ReleaseAction.power_off)
+
 
 class TestJob(unittest.TestCase):
 

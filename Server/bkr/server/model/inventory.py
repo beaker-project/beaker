@@ -257,7 +257,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
     loan_id = Column(Integer, ForeignKey('tg_user.user_id'))
     loaned = relationship(User, primaryjoin=loan_id == User.user_id)
     loan_comment = Column(Unicode(1000))
-    release_action = Column(ReleaseAction.db_type())
+    release_action = Column(ReleaseAction.db_type(),
+        server_default=ReleaseAction.power_off.value, nullable=False)
     reprovision_distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
     reprovision_distro_tree = relationship(DistroTree)
     hypervisor_id = Column(Integer, ForeignKey('hypervisor.id'))
@@ -390,7 +391,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             'possible_kernel_types': KernelType.query.all(),
             'location': self.location,
             'lender': self.lender,
-            'release_action': self.release_action or ReleaseAction.power_off,
+            'release_action': self.release_action,
             'possible_release_actions': list(ReleaseAction),
             'reprovision_distro_tree': self.reprovision_distro_tree,
             # The actual power settings are not included here because they must 
@@ -1228,37 +1229,34 @@ class System(DeclarativeMappedObject, ActivityMixin):
     def action_release(self, service=u'Scheduler'):
         # Attempt to remove Netboot entry and turn off machine
         self.clear_netboot(service=service)
-        if self.release_action:
-            if self.release_action == ReleaseAction.power_off:
-                self.action_power(action=u'off', service=service)
-            elif self.release_action == ReleaseAction.leave_on:
-                self.action_power(action=u'on', service=service)
-            elif self.release_action == ReleaseAction.reprovision:
-                if self.reprovision_distro_tree:
-                    # There are plenty of things that can go wrong here if the 
-                    # system or distro tree is misconfigured. But we don't want 
-                    # that to prevent the recipe from being stopped, so we log 
-                    # and ignore any errors.
-                    try:
-                        from bkr.server.kickstart import generate_kickstart
-                        install_options = self.install_options(self.reprovision_distro_tree)
-                        if 'ks' not in install_options.kernel_options:
-                            rendered_kickstart = generate_kickstart(install_options,
-                                    distro_tree=self.reprovision_distro_tree,
-                                    system=self, user=self.owner)
-                            install_options.kernel_options['ks'] = rendered_kickstart.link
-                        self.configure_netboot(self.reprovision_distro_tree,
-                                install_options.kernel_options_str,
-                                service=service)
-                        self.action_power(action=u'reboot', service=service)
-                    except Exception:
-                        log.exception('Failed to re-provision %s on %s, ignoring',
-                                self.reprovision_distro_tree, self)
-            else:
-                raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
-        # Default is to power off, if we can
-        elif self.power:
+        if self.release_action == ReleaseAction.power_off:
             self.action_power(action=u'off', service=service)
+        elif self.release_action == ReleaseAction.leave_on:
+            self.action_power(action=u'on', service=service)
+        elif self.release_action == ReleaseAction.reprovision:
+            if self.reprovision_distro_tree:
+                # There are plenty of things that can go wrong here if the 
+                # system or distro tree is misconfigured. But we don't want 
+                # that to prevent the recipe from being stopped, so we log 
+                # and ignore any errors.
+                try:
+                    from bkr.server.kickstart import generate_kickstart
+                    install_options = self.install_options(self.reprovision_distro_tree)
+                    if 'ks' not in install_options.kernel_options:
+                        rendered_kickstart = generate_kickstart(install_options,
+                            distro_tree=self.reprovision_distro_tree,
+                            system=self, user=self.owner)
+                        install_options.kernel_options['ks'] = rendered_kickstart.link
+                    self.configure_netboot(self.reprovision_distro_tree,
+                        install_options.kernel_options_str,
+                        service=service)
+                    self.action_power(action=u'reboot', service=service)
+                except Exception:
+                    log.exception('Failed to re-provision %s on %s, ignoring',
+                        self.reprovision_distro_tree, self)
+        else:
+            raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
+
 
     def configure_netboot(self, distro_tree, kernel_options, service=u'Scheduler',
             callback=None):

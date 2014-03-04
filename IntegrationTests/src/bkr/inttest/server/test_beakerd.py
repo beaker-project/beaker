@@ -1466,19 +1466,23 @@ class TestBeakerdMetrics(unittest.TestCase):
         self.mail_capture = MailCaptureThread()
         self.mail_capture.start()
         session.begin()
-        # Other tests might have left behind systems and running recipes,
-        # so we remove or cancel them all so they don't pollute our metrics
-        manually_reserved = System.query.filter(System.open_reservation != None)
-        for system in manually_reserved:
-            data_setup.unreserve_manual(system)
-        systems = System.query.filter(System.status != SystemStatus.removed)
-        for system in systems:
-            system.status = SystemStatus.removed
-        running = Recipe.query.filter(not_(Recipe.status.in_(
+        try:
+            # Other tests might have left behind systems and running recipes,
+            # so we remove or cancel them all so they don't pollute our metrics
+            manually_reserved = System.query.filter(System.open_reservation != None)
+            for system in manually_reserved:
+                data_setup.unreserve_manual(system)
+            systems = System.query.filter(System.status != SystemStatus.removed)
+            for system in systems:
+                system.status = SystemStatus.removed
+            running = Recipe.query.filter(not_(Recipe.status.in_(
                 [s for s in TaskStatus if s.finished])))
-        for recipe in running:
-            recipe.cancel()
-            recipe.recipeset.job.update_status()
+            for recipe in running:
+                recipe.cancel()
+                recipe.recipeset.job.update_status()
+        except Exception, e:
+            session.rollback()
+            self.fail('setUp failed with: %s' % unicode(e))
 
     def tearDown(self):
         session.rollback()
