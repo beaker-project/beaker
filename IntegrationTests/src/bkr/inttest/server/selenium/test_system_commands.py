@@ -28,13 +28,13 @@ class SystemCommandsTest(WebDriverTestCase):
     def go_to_commands_tab(self, system):
         b = self.browser
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_link_text('Commands').click()
+        b.find_element_by_link_text('Power').click()
 
     def check_cannot_power(self, user, password, system, error_message):
         b = self.browser
         login(b, user.user_name, password)
         self.go_to_commands_tab(system)
-        pane = b.find_element_by_id('commands')
+        pane = b.find_element_by_id('power')
         pane.find_element_by_xpath('.//div[contains(@class, "alert") and text()="%s."]'
                 % error_message)
         # try issuing the request directly also
@@ -50,7 +50,7 @@ class SystemCommandsTest(WebDriverTestCase):
         b = self.browser
         login(b, user.user_name, password)
         self.go_to_commands_tab(system)
-        pane = b.find_element_by_id('commands')
+        pane = b.find_element_by_id('power')
         pane.find_element_by_xpath('.//div[contains(@class, "alert") and text()="%s."]'
                 % error_message)
         # try issuing the request directly also
@@ -65,7 +65,7 @@ class SystemCommandsTest(WebDriverTestCase):
     def check_power_on(self, system):
         b = self.browser
         self.go_to_commands_tab(system)
-        pane = b.find_element_by_id('commands')
+        pane = b.find_element_by_id('power')
         pane.find_element_by_xpath('.//button[normalize-space(string(.))="Power On"]').click()
         modal = b.find_element_by_class_name('modal')
         modal.find_element_by_xpath('.//p[text()="Are you sure you want to '
@@ -81,7 +81,7 @@ class SystemCommandsTest(WebDriverTestCase):
     def check_clear_netboot(self, system):
         b = self.browser
         self.go_to_commands_tab(system)
-        pane = b.find_element_by_id('commands')
+        pane = b.find_element_by_id('power')
         pane.find_element_by_xpath('.//button[normalize-space(string(.))="Clear Netboot"]').click()
         modal = b.find_element_by_class_name('modal')
         modal.find_element_by_xpath('.//p[text()="Are you sure you want to '
@@ -97,7 +97,7 @@ class SystemCommandsTest(WebDriverTestCase):
     def test_cannot_power_when_not_logged_in(self):
         b = self.browser
         self.go_to_commands_tab(self.system)
-        pane = b.find_element_by_id('commands')
+        pane = b.find_element_by_id('power')
         pane.find_element_by_xpath('.//div[contains(@class, "alert") and '
                 'text()="You are not logged in."]')
         # try issuing the request directly also

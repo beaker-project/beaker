@@ -24,12 +24,12 @@
             distro_picker_options: distro_picker_options,
         });
         new SystemLoanView({model: system, el: $('#loan')});
-        new SystemPowerConfigView({
+        new SystemPowerSettingsView({
             model: system,
-            el: $('#power'),
+            el: $('#power-settings'),
             distro_picker_options: distro_picker_options,
         });
-        new SystemSchedulerConfigView({model: system, el: $('#scheduler')});
+        new SystemSchedulerSettingsView({model: system, el: $('#scheduler-settings')});
         new SystemAccessPolicyView({model: system, el: $('#access-policy')});
         // Widgets which trigger additional HTTP requests are deferred until 
         // their tab is shown. This way we avoid the extra requests if the user 
@@ -37,8 +37,8 @@
         $('.system-nav a[href="#history"]').one('show', function () {
             new SystemActivityView({model: system, el: $('#history')});
         });
-        $('.system-nav a[href="#commands"]').one('show', function () {
-            new SystemCommandsView({model: system, el: $('#commands')});
+        $('.system-nav a[href="#power"]').one('show', function () {
+            new SystemCommandsView({model: system, el: $('#power')});
         });
     });
   </script>
@@ -57,7 +57,7 @@
       <li><a data-toggle="tab" href="#keys">Key/Values</a></li>
       <li py:if="widgets['labinfo']"><a data-toggle="tab" href="#labinfo">Lab Info</a></li>
       <li class="nav-header">Control</li>
-      <li><a data-toggle="tab" href="#commands">Commands</a></li>
+      <li><a data-toggle="tab" href="#power">Power</a></li>
       <li><a data-toggle="tab" href="#provision">Provision</a></li>
       <li class="nav-header">Access</li>
       <li><a data-toggle="tab" href="#owner">Owner</a></li>
@@ -65,8 +65,8 @@
       <li><a data-toggle="tab" href="#loan">Loan</a></li>
       <li><a data-toggle="tab" href="#access-policy">Access Policy</a></li>
       <li class="nav-header">Configuration</li>
-      <li><a data-toggle="tab" href="#power">Power</a></li>
-      <li><a data-toggle="tab" href="#scheduler">Scheduler</a></li>
+      <li><a data-toggle="tab" href="#power-settings">Power Settings</a></li>
+      <li><a data-toggle="tab" href="#scheduler-settings">Scheduler Settings</a></li>
       <li><a data-toggle="tab" href="#exclude">Excluded Families</a></li>
       <li><a data-toggle="tab" href="#install">Install Options</a></li>
       <li><a data-toggle="tab" href="#notes">Notes</a></li>
@@ -101,9 +101,9 @@
      System must be associated to a lab controller and have at least one architecture specified to edit exclude families.
     </span>
    </div>
-      <div class="tab-pane" id="commands"></div>
       <div class="tab-pane" id="power"></div>
-      <div class="tab-pane" id="scheduler"></div>
+      <div class="tab-pane" id="power-settings"></div>
+      <div class="tab-pane" id="scheduler-settings"></div>
    <div class="tab-pane" id="notes">
     ${widgets['notes'].display(method='get', action=widgets_action['notes'], value=value, options=widgets_options['notes'])} 
    </div>

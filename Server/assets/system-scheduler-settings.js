@@ -1,7 +1,7 @@
 ;(function () {
 
-window.SystemSchedulerConfigView = Backbone.View.extend({
-    template: JST['system-scheduler-config'],
+window.SystemSchedulerSettingsView = Backbone.View.extend({
+    template: JST['system-scheduler-settings'],
     events: {
         'change select[name=status]': 'status_changed',
         'submit form': 'submit',

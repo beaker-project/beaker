@@ -76,11 +76,11 @@ class SystemViewTestWD(WebDriverTestCase):
     def test_system_view_condition_report(self):
         b = self.browser
         login(b)
-        self.go_to_system_view(tab='Scheduler')
+        self.go_to_system_view(tab='Scheduler Settings')
         self.assertFalse(b.find_element_by_name('status_reason').is_enabled())
         with session.begin():
             self.system.status = SystemStatus.broken
-        self.go_to_system_view(tab='Scheduler')
+        self.go_to_system_view(tab='Scheduler Settings')
         self.assertTrue(b.find_element_by_name('status_reason').is_enabled())
 
     def test_current_job(self):
@@ -173,8 +173,8 @@ class SystemViewTestWD(WebDriverTestCase):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_view(tab='Scheduler')
-        tab = b.find_element_by_id('scheduler')
+        self.go_to_system_view(tab='Scheduler Settings')
+        tab = b.find_element_by_id('scheduler-settings')
         BootstrapSelect(tab.find_element_by_name('status'))\
             .select_by_visible_text('Broken')
         tab.find_element_by_xpath('.//button[text()="Save Changes"]').click()
@@ -206,8 +206,8 @@ class SystemViewTestWD(WebDriverTestCase):
             self.system.status = SystemStatus.automated
         b = self.browser
         login(b)
-        self.go_to_system_view(tab='Scheduler')
-        tab = b.find_element_by_id('scheduler')
+        self.go_to_system_view(tab='Scheduler Settings')
+        tab = b.find_element_by_id('scheduler-settings')
         BootstrapSelect(tab.find_element_by_name('status'))\
             .select_by_visible_text('Broken')
         tab.find_element_by_xpath('.//button[text()="Save Changes"]').click()
@@ -390,8 +390,8 @@ class SystemViewTestWD(WebDriverTestCase):
             self.system.power.power_passwd = u'midnight'
         b = self.browser
         login(b, self.unprivileged_user.user_name, 'password')
-        self.go_to_system_view(tab='Power')
-        tab = b.find_element_by_id('power')
+        self.go_to_system_view(tab='Power Settings')
+        tab = b.find_element_by_id('power-settings')
         self.assertEquals(tab.find_element_by_class_name('alert-info').text,
                 'You do not have permission to edit power configuration '
                 'for this system.')
@@ -403,16 +403,16 @@ class SystemViewTestWD(WebDriverTestCase):
             system = data_setup.create_system(lab_controller=lc, with_power=False)
         b = self.browser
         login(b)
-        self.go_to_system_view(tab='Power')
-        tab = b.find_element_by_id('power')
+        self.go_to_system_view(tab='Power Settings')
+        tab = b.find_element_by_id('power-settings')
         period = tab.find_element_by_name('power_quiescent_period').get_attribute('value')
         self.assertEqual(period, str(5))
 
     def test_update_power_invalid_quiescent_period(self):
         b = self.browser
         login(b)
-        self.go_to_system_view(tab='Power')
-        tab = b.find_element_by_id('power')
+        self.go_to_system_view(tab='Power Settings')
+        tab = b.find_element_by_id('power-settings')
         # Empty value
         tab.find_element_by_name('power_quiescent_period').clear()
         tab.find_element_by_tag_name('form').submit()
@@ -431,8 +431,8 @@ class SystemViewTestWD(WebDriverTestCase):
             system = data_setup.create_system(lab_controller=lc, with_power=False)
         b = self.browser
         login(b)
-        self.go_to_system_view(tab='Power')
-        tab = b.find_element_by_id('power')
+        self.go_to_system_view(tab='Power Settings')
+        tab = b.find_element_by_id('power-settings')
         BootstrapSelect(tab.find_element_by_name('power_type'))\
             .select_by_visible_text('ilo')
         self.assertEqual(tab.find_element_by_name('power_address').text, '')
@@ -443,8 +443,8 @@ class SystemViewTestWD(WebDriverTestCase):
         orig_date_modified = self.system.date_modified
         b = self.browser
         login(b)
-        self.go_to_system_view(tab='Power')
-        tab = b.find_element_by_id('power')
+        self.go_to_system_view(tab='Power Settings')
+        tab = b.find_element_by_id('power-settings')
         tab.find_element_by_name('power_address').clear()
         tab.find_element_by_name('power_address').send_keys('nowhere.example.com')
 

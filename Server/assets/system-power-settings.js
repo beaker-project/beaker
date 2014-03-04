@@ -1,7 +1,7 @@
 ;(function () {
 
-window.SystemPowerConfigView = Backbone.View.extend({
-    template: JST['system-power-config'],
+window.SystemPowerSettingsView = Backbone.View.extend({
+    template: JST['system-power-settings'],
     events: {
         'click #reprovision_distro_tree button': 'pick_reprovision_distro_tree',
         'submit form': 'submit',

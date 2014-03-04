@@ -27,12 +27,12 @@
 <p>
 <% if (can_change_status && (status == 'Broken' || status == 'Removed')) { %>
   <!-- For now we don't know whether the status is supposed to be set back to 
-  Automated or Manual, so we just punt and show the Scheduler Configuration tab 
+  Automated or Manual, so we just punt and show the Scheduler Settings tab 
   and let the user figure it out. But ideally, this would be a one-click 
   operation to mark a system as unbroken. -->
-  <a href="#scheduler" class="btn btn-block">Return to service</a>
+  <a href="#scheduler-settings" class="btn btn-block">Return to service</a>
 <% } else if (can_change_status) { %>
-  <a href="#scheduler" class="btn btn-block">Remove from service</a>
+  <a href="#scheduler-settings" class="btn btn-block">Remove from service</a>
 <% } else if (_.isEmpty(window.beaker_current_user)) { %>
   <button type="button" class="btn btn-block" disabled="disabled">Not logged in</button>
 <% } else if (status != 'Broken' && status != 'Removed') { %>
