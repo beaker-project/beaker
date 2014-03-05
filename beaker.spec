@@ -36,7 +36,7 @@ Version:        0.15.5
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
-License:        GPLv2+
+License:        GPLv2+ and BSD
 URL:            http://beaker-project.org/
 
 Source0:        http://beaker-project.org/releases/%{name}-%{upstream_version}.tar.gz
