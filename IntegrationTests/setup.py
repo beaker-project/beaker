@@ -18,6 +18,7 @@ setup(
     package_data={'': [
         '*.xml',
         '*.ldif',
+        'client/workflow_kickstart.cfg.tmpl',
         'labcontroller/install-failure-logs/*',
         'server/kickstarts/*',
         'server/motd.xml',

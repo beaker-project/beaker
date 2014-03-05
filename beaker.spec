@@ -135,6 +135,7 @@ Requires:       python-simplejson
 %endif
 Requires:       libxml2-python
 Requires:       python-prettytable
+Requires:       python-jinja2
 # beaker-wizard was moved from rhts-devel to here in 4.52
 Conflicts:      rhts-devel < 4.52
 
