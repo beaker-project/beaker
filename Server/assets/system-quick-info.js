@@ -62,37 +62,74 @@ window.SystemQuickUsage = Backbone.View.extend({
         'click .return': 'return',
         'click .borrow': 'borrow',
         'click .request-loan': 'request_loan',
+        'click .return-loan': 'return_loan',
     },
     initialize: function () {
+        this.request_in_progress = false;
         this.listenTo(this.model, 'change', this.render);
         this.render();
     },
     render: function () {
         this.$el.html(this.template(this.model.attributes));
     },
+    success: function (model, xhr) {
+        this.request_in_progress = false;
+    },
     error: function (model, xhr) {
+        this.request_in_progress = false;
         // XXX this isn't great... better to use notification float thingies
         this.$el.append(
             $('<div class="alert alert-error"/>')
             .text(xhr.statusText + ': ' + xhr.responseText));
     },
     take: function (evt) {
-        $(evt.currentTarget).prop('disabled', true)
+        evt.preventDefault();
+        if (this.request_in_progress) return;
+        this.request_in_progress = true;
+        $(evt.currentTarget).addClass('disabled')
             .html('<i class="icon-spinner icon-spin"></i> Taking&hellip;');
-        this.model.take({error: _.bind(this.error, this)});
+        this.model.take({
+            success: _.bind(this.success, this),
+            error: _.bind(this.error, this),
+        });
     },
     'return': function (evt) {
-        $(evt.currentTarget).prop('disabled', true)
+        evt.preventDefault();
+        if (this.request_in_progress) return;
+        this.request_in_progress = true;
+        $(evt.currentTarget).addClass('disabled')
             .html('<i class="icon-spinner icon-spin"></i> Returning&hellip;');
-        this.model.return({error: _.bind(this.error, this)});
+        this.model.return({
+            success: _.bind(this.success, this),
+            error: _.bind(this.error, this),
+        });
     },
     borrow: function (evt) {
-        $(evt.currentTarget).prop('disabled', true)
+        evt.preventDefault();
+        if (this.request_in_progress) return;
+        this.request_in_progress = true;
+        $(evt.currentTarget).addClass('disabled')
             .html('<i class="icon-spinner icon-spin"></i> Borrowing&hellip;');
-        this.model.borrow({error: _.bind(this.error, this)});
+        this.model.borrow({
+            success: _.bind(this.success, this),
+            error: _.bind(this.error, this),
+        });
     },
     request_loan: function (evt) {
+        evt.preventDefault();
+        if (this.request_in_progress) return;
         new SystemLoanRequestModal({model: this.model});
+    },
+    return_loan: function (evt) {
+        evt.preventDefault();
+        if (this.request_in_progress) return;
+        this.request_in_progress = true;
+        $(evt.currentTarget).addClass('disabled')
+            .html('<i class="icon-spinner icon-spin"></i> Returning loan&hellip;');
+        this.model.return_loan({
+            success: _.bind(this.success, this),
+            error: _.bind(this.error, this),
+        });
     },
 });
 

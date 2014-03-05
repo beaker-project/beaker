@@ -30,16 +30,31 @@
 <% } %>
 <p>
   <% if (can_return) { %>
-    <button type="button" class="btn btn-block return">Return</button>
+    <a href="#" class="btn btn-block return">Return</a>
+  <% } else if (can_take && can_return_loan) { %>
+    <% /*
+    Normally we want to show only *one* quick action button here, to avoid 
+    bloating the "quick info" boxes. However this is a special case for the 
+    situation where a system is loaned to the current user. In that case there 
+    are two equally likely actions they might want to do: take the system (if 
+    they just got the loan), or return the loan (if they have already 
+    taken+returned the system and are now done with it).
+    */ %>
+    <div class="btn-group btn-group-justified">
+      <a href="#" class="btn take">Take</a>
+      <a href="#" class="btn return-loan">Return Loan</a>
+    </div>
   <% } else if (can_take) { %>
-    <button type="button" class="btn btn-block take">Take</button>
+    <a href="#" class="btn btn-block take">Take</a>
+  <% } else if (can_return_loan) { %>
+    <a href="#" class="btn btn-block return-loan">Return Loan</a>
   <% } else if (can_borrow) { %>
-    <button type="button" class="btn btn-block borrow">Borrow</button>
+    <a href="#" class="btn btn-block borrow">Borrow</a>
   <% } else if (can_reserve) { %>
-    <a href="<%- beaker_url_prefix %>reserveworkflow/?system=<%- fqdn %>" class="btn btn-block">Reserve</a>
+    <a href="<%- beaker_url_prefix %>reserveworkflow/?system=<%- fqdn %>" class="btn btn-block">Schedule Reservation</a>
   <% } else if (_.isEmpty(window.beaker_current_user)) { %>
     <button type="button" class="btn btn-block" disabled="disabled">Not logged in</button>
   <% } else { %>
-    <button type="button" class="btn btn-block request-loan">Request loan</button>
+    <button type="button" class="btn btn-block request-loan">Request Loan</button>
   <% } %>
 </p>

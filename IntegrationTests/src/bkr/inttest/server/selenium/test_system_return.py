@@ -31,7 +31,7 @@ class SystemReturnTestWD(WebDriverTestCase):
         b.get(get_server_base() + 'view/%s' % system.fqdn)
         # "Return" button should be absent
         b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")'
-                ' and not(.//button[text()="Return"])]')
+                ' and not(.//a[text()="Return"])]')
         # try doing it directly
         s = requests.Session()
         requests_login(s)
@@ -53,7 +53,7 @@ class SystemReturnTestWD(WebDriverTestCase):
 
         # Take
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_xpath('//button[text()="Take"]').click()
+        b.find_element_by_link_text('Take').click()
         b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")]'
                 '//span[@class="label" and text()="Reserved"]')
 
@@ -63,7 +63,7 @@ class SystemReturnTestWD(WebDriverTestCase):
 
         # Attempt to return
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_xpath('//button[text()="Return"]').click()
+        b.find_element_by_link_text('Return').click()
         b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")]'
                 '//span[@class="label" and text()="Idle"]')
 
@@ -75,7 +75,7 @@ class SystemReturnTestWD(WebDriverTestCase):
         b = self.browser
         login(b) #login as admin
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_xpath('//button[text()="Take"]').click()
+        b.find_element_by_link_text('Take').click()
         b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")]'
                 '//span[@class="label" and text()="Reserved"]')
 
@@ -97,7 +97,7 @@ class SystemReturnTestWD(WebDriverTestCase):
         b = self.browser
         login(b, user.user_name, 'password')
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_xpath('//button[text()="Take"]').click()
+        b.find_element_by_link_text('Take').click()
         b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")]'
                 '//span[@class="label" and text()="Reserved"]')
 
@@ -106,6 +106,6 @@ class SystemReturnTestWD(WebDriverTestCase):
             system.lc = None
 
         b.get(get_server_base() + 'view/%s' % system.fqdn)
-        b.find_element_by_xpath('//button[text()="Return"]').click()
+        b.find_element_by_link_text('Return').click()
         b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")]'
                 '//span[@class="label" and text()="Idle"]')

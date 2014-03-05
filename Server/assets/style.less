@@ -142,6 +142,30 @@ td form, td input, td select, td .input-append, td .input-prepend {
     padding-top: 5px; // corresponds to .control-label
 }
 
+// Justified button groups. Add to a .btn-group to make it fill 100% width, with 
+// equal button widths. Only works with <a class="btn"/>.
+// Taken from Bootstrap 3, plus some border fixes.
+.btn-group-justified {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    & > .btn, & > .btn-group {
+        float: none;
+        display: table-cell;
+        width: 1%;
+    }
+    & > .btn-group .btn {
+        width: 100%;
+    }
+    & > .btn, & > .btn-group > .btn {
+        border-right-width: 0;
+        &:last-child {
+            border-right-width: 1px;
+        }
+    }
+}
+
 // Text inside btn-toolbars
 // Use <span class="btn-group btn-group-text">Some text</span>
 .btn-group-text {

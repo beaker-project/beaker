@@ -70,19 +70,6 @@ class SystemViewTestWD(WebDriverTestCase):
         self.go_to_system_view(tab='Scheduler Settings')
         self.assertTrue(b.find_element_by_name('status_reason').is_enabled())
 
-    def test_current_job(self):
-        b = self.browser
-        login(b)
-        with session.begin():
-            job = data_setup.create_job(owner=self.system.owner,
-                    distro_tree=self.distro_tree)
-            data_setup.mark_job_running(job, system=self.system)
-            recipe = job.recipesets[0].recipes[0]
-        self.go_to_system_view()
-        usage = b.find_element_by_class_name('system-quick-usage')
-        usage.find_element_by_xpath('//span[@class="label" and text()="Reserved"]')
-        usage.find_element_by_xpath('//a[text()="%s"]' % recipe.t_id)
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=631421
     def test_page_title_shows_fqdn(self):
         self.go_to_system_view()

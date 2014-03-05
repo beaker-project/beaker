@@ -264,7 +264,7 @@ class SystemAvailabilityTest(WebDriverTestCase):
     def check_take(self, system):
         self.go_to_system_view(system)
         b = self.browser
-        b.find_element_by_xpath('//button[text()="Take"]').click()
+        b.find_element_by_link_text('Take').click()
         b.find_element_by_xpath('//span[@class="label" and text()="Reserved"]')
 
     def check_cannot_take(self, system):
@@ -272,4 +272,4 @@ class SystemAvailabilityTest(WebDriverTestCase):
         b = self.browser
         # "Take" link should be absent
         b.find_element_by_xpath('//div[contains(@class, "system-quick-info")'
-                ' and not(.//button/text()="Take")]')
+                ' and not(.//a/text()="Take")]')
