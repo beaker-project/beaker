@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 # Mostly copy and pasted from kobo.client.__init__ (version 0.4.2-1)
 # Removed upload_task_log() and upload_file()
 import os

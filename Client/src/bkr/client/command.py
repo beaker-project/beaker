@@ -1,6 +1,13 @@
+
+# -*- coding: utf-8 -*-
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 # This is a copy and paste of various parts of kobo 0.4.2-1 needed to support the
 # creation of kobo commands
-# -*- coding: utf-8 -*-
 
 import sys
 import os
