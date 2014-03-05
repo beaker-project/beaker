@@ -105,8 +105,8 @@ def check_listen(port):
     """
     # with newer lsof we could just use -sTCP:LISTEN,
     # but RHEL5's lsof is too old so we have to filter for LISTEN state ourselves
-    output, _ = subprocess.Popen(['/usr/sbin/lsof', '-iTCP:%d' % port],
-            stdout=subprocess.PIPE).communicate()
+    output, error = subprocess.Popen(['/usr/sbin/lsof', '-iTCP:%d' % port],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
     for line in output.splitlines():
         if '(LISTEN)' in line:
             return True
