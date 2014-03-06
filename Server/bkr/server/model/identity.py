@@ -238,14 +238,18 @@ class User(DeclarativeMappedObject, ActivityMixin):
         if not raw_password:
             return False
 
-        verified, new_hash = self._password_context.verify_and_update(
-                raw_password, self._password)
-        if verified:
-            if new_hash:
-                log.info('Upgrading obsolete password hash for user %s', self)
-                # replace obsolete hash with new one
-                self._password = new_hash
-            return True
+        # If the account has a password set in Beaker, try verifying it.
+        if self._password:
+            verified, new_hash = self._password_context.verify_and_update(
+                    raw_password, self._password)
+            if verified:
+                if new_hash:
+                    log.info('Upgrading obsolete password hash for user %s', self)
+                    # replace obsolete hash with new one
+                    self._password = new_hash
+                return True
+            else:
+                return False
 
         # If LDAP is enabled, try an LDAP bind.
         ldapenabled = get('identity.ldap.enabled', False)
