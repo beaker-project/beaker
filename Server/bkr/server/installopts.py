@@ -26,10 +26,13 @@ def _parse(s): # based on Cobbler's string_to_hash
             result[name] = value
     return result
 
-def _unparse(d):
+def _unparse(d, quote=True):
     # items are sorted for predictable ordering of the output,
     # but a better solution would be to use OrderedDict in Python 2.7+
-
+    if quote:
+        quoted_value = lambda value: pipes.quote(str(value))
+    else:
+        quoted_value = lambda value: str(value)
     items = []
     for key, value in sorted(d.iteritems()):
         if value is None:
@@ -37,9 +40,9 @@ def _unparse(d):
         else:
             if isinstance(value, list):
                 for v in value:
-                    items.append('%s=%s' % (key, pipes.quote(str(v))))
+                    items.append('%s=%s' % (key, quoted_value(v)))
             else:
-                items.append('%s=%s' % (key, pipes.quote(str(value))))
+                items.append('%s=%s' % (key, quoted_value(value)))
 
     return ' '.join(items)
 
@@ -78,16 +81,19 @@ class InstallOptions(object):
 
     def as_strings(self):
         return dict(ks_meta=_unparse(self.ks_meta),
-                kernel_options=_unparse(self.kernel_options),
-                kernel_options_post=_unparse(self.kernel_options_post))
+                kernel_options=_unparse(self.kernel_options, quote=False),
+                kernel_options_post=_unparse(self.kernel_options_post, quote=False))
 
     @property
     def kernel_options_str(self):
-        return _unparse(self.kernel_options)
+        # Kernel options are plain space-separated, with no quoting or escaping 
+        # understood. Therefore we don't want sh-style quoting in our final 
+        # options string.
+        return _unparse(self.kernel_options, quote=False)
 
     @property
     def kernel_options_post_str(self):
-        return _unparse(self.kernel_options_post)
+        return _unparse(self.kernel_options_post, quote=False)
 
     def combined_with(self, other):
         """

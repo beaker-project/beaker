@@ -519,6 +519,19 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             self.assertEquals(system.command_queue, [])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1067924
+    def test_kernel_options_are_not_quoted(self):
+        # ks URL contains ~ which is quoted by pipes.quote
+        bad_arg = 'ks=http://example.com/~user/kickstart'
+        system = self.usable_system
+        self.server.auth.login_password(system.user.user_name, 'password')
+        self.server.systems.provision(system.fqdn, self.distro_tree.id,
+                'method=nfs', bad_arg)
+        with session.begin():
+            self.assertEquals(system.command_queue[0].action, 'reboot')
+            self.assertEquals(system.command_queue[1].action, 'configure_netboot')
+            self.assertEquals(system.command_queue[1].kernel_options,
+                    'console=ttyS0 %s ksdevice=eth0 noverifyssl' % bad_arg)
 
 class LegacyPushXmlRpcTest(XmlRpcTestCase):
 

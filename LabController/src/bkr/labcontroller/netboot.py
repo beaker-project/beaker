@@ -5,8 +5,6 @@ import socket
 import logging
 import tempfile
 import shutil
-import shlex
-import pipes
 from contextlib import contextmanager
 import collections
 import urllib
@@ -90,11 +88,11 @@ def extract_initrd_arg(kernel_options):
     """
     initrd = None
     tokens = []
-    for token in shlex.split(kernel_options):
+    for token in kernel_options.split():
         if token.startswith('initrd='):
             initrd = token[len('initrd='):]
         else:
-            tokens.append(pipes.quote(token))
+            tokens.append(token)
     if initrd:
         return (initrd, ' '.join(tokens))
     else:
