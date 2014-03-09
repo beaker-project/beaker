@@ -2758,7 +2758,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             task_time = self.task.avg_time if self.task else 0
             # add in 30 minutes at a minimum
             self.recipe.watchdog.kill_time = (datetime.utcnow() +
-                    timedelta(task_time + 1800))
+                    timedelta(seconds=(task_time + 1800)))
         self.recipe.recipeset.job._mark_dirty()
         return True
 

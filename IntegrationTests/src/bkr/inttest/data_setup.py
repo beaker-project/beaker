@@ -312,6 +312,7 @@ def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.
     task.valid = valid
     task.path = path
     task.description = description
+    task.avg_time = 1200
     if type:
         for t in type:
             task.types.append(TaskType.lazy_create(type=t))
