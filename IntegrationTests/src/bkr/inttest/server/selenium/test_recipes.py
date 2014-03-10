@@ -16,6 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import datetime
 import logging
 import re
 from turbogears.database import session
@@ -168,6 +169,28 @@ class TestRecipeView(WebDriverTestCase):
         b.find_element_by_xpath('//div[@id="recipe%s"]//button[text()="Logs"]' % r.id).click()
         r_server_link = b.find_element_by_xpath("//table/tbody//tr[position()=6]/td//a").get_attribute('href')
         self.assertEquals(r_server_link, 'http://dummy-archive-server/beaker/recipe_path/dummy.txt')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1072133
+    def test_watchdog_time_remaining_display(self):
+        b = self.browser
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe], owner=self.user)
+            data_setup.mark_job_running(job)
+            recipe.watchdog.kill_time = (datetime.datetime.utcnow() +
+                    datetime.timedelta(seconds=83 * 60 + 30))
+        self.go_to_recipe_view(recipe)
+        b.find_element_by_link_text('Show Results').click()
+        duration = b.find_element_by_xpath('//tr[contains(@class, "recipe_%s")][1]'
+                '//div[@class="task-duration"]' % recipe.id)
+        self.assertRegexpMatches(duration.text, r'^Time Remaining 1:23:\d\d$')
+        with session.begin():
+            recipe.watchdog.kill_time = (datetime.datetime.utcnow() +
+                    datetime.timedelta(days=2, seconds=83 * 60 + 30))
+        self.go_to_recipe_view(recipe)
+        duration = b.find_element_by_xpath('//tr[contains(@class, "recipe_%s")][1]'
+                '//div[@class="task-duration"]' % recipe.id)
+        self.assertRegexpMatches(duration.text, r'^Time Remaining 2 days, 1:23:\d\d$')
 
     def test_task_pagination(self):
         with session.begin():

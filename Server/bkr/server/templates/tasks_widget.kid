@@ -56,9 +56,9 @@
      ${task.recipe.resource == None and ' ' or task.recipe.resource.link}
     </td>
     <td class="task" style="white-space:nowrap;" py:if="not hidden.has_key('start')">
-      <div class="datetime" py:if="task.start_time">${task.start_time}</div>
-      <div class="datetime" py:if="task.finish_time">${task.finish_time}</div>
-      ${task.duration}
+      <div class="task-start-time datetime" py:if="task.start_time">${task.start_time}</div>
+      <div class="task-finish-time datetime" py:if="task.finish_time">${task.finish_time}</div>
+      <div class="task-duration">${task.duration}</div>
     </td>
     <td class="task logs" py:if="not hidden.has_key('logs')">
       <ul class="unstyled">

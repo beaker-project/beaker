@@ -6445,7 +6445,8 @@ class RecipeTask(TaskBase):
         if self.finish_time and self.start_time:
             duration =  self.finish_time - self.start_time
         elif self.watchdog and self.watchdog.kill_time:
-            duration =  'Time Remaining %.7s' % (self.watchdog.kill_time - datetime.utcnow())
+            delta = self.watchdog.kill_time - datetime.utcnow().replace(microsecond=0)
+            duration = 'Time Remaining %s' % delta
         return duration
     duration = property(_get_duration)
 
