@@ -819,9 +819,19 @@ Beaker 0.15.4
 Beaker 0.15.5
 ~~~~~~~~~~~~~
 
-* :issue:`1066586`: Users who have reserve permission on a Secret/NDA system
-  are now allowed to see the system. This matches the behaviour of group 
-  systems in Beaker 0.14 and earlier. (Contributed by Dan Callaghan)
+* Version 0.7.3 of the Beah test harness has been released, with one bug fix: 
 
-* The :program:`beaker-repo-update` command appends a trailing slash to the
-  harness base URL if it is missing. (Contributed by Dan Callaghan)
+  * :issue:`1067745`: The ``beah-beaker-backend`` service now listens on all
+    network interfaces, not just loopback. This fixes a regression introduced 
+    in Beah 0.7.2 where multi-host testing did not work because the other Beah 
+    processes in the recipe set were not reachable over the network. 
+    (Contributed by Dan Callaghan)
+
+* Other updates:
+
+  * :issue:`1066586`: Users who have reserve permission on a Secret/NDA
+    system are now allowed to see the system. This matches the behaviour of 
+    group systems in Beaker 0.14 and earlier. (Contributed by Dan Callaghan)
+
+  * The :program:`beaker-repo-update` command appends a trailing slash to the
+    harness base URL if it is missing. (Contributed by Dan Callaghan)
