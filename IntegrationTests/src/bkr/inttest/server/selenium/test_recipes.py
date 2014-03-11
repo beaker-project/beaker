@@ -10,14 +10,13 @@ import re
 from turbogears.database import session
 from nose.plugins.skip import SkipTest
 
-from bkr.server.model import Job, TaskStatus, TaskResult, RecipeTaskResult
-from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult
+from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present
-from selenium.webdriver.support.ui import WebDriverWait
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.assertions import assert_sorted
 
-class TestRecipesDataGrid(SeleniumTestCase):
+class TestRecipesDataGrid(WebDriverTestCase):
 
     log = logging.getLogger(__name__ + '.TestRecipesIndex')
 
@@ -36,32 +35,21 @@ class TestRecipesDataGrid(SeleniumTestCase):
                     data_setup.create_job(owner=user, distro_tree=distro_tree)
                     data_setup.create_completed_job(owner=user, distro_tree=distro_tree)
 
-        cls.selenium = sel = cls.get_selenium()
-        sel.start()
-
-        # log in
-        sel.open('')
-        sel.click('link=Log in')
-        sel.wait_for_page_to_load('30000')
-        sel.type('user_name', user.user_name)
-        sel.type('password', 'password')
-        sel.click('login')
-        sel.wait_for_page_to_load('30000')
+        cls.browser = cls.get_browser()
+        login(cls.browser, user=user.user_name, password='password')
 
     @classmethod
     def tearDownClass(cls):
-        cls.selenium.stop()
+        cls.browser.quit()
 
     # see https://bugzilla.redhat.com/show_bug.cgi?id=629147
     def check_column_sort(self, column, sort_key=None):
-        sel = self.selenium
-        sel.open('recipes/mine')
-        sel.click('//table[@id="widget"]/thead//th[%d]//a[@href]' % column)
-        sel.wait_for_page_to_load('30000')
-        row_count = int(sel.get_xpath_count(
-                '//table[@id="widget"]/tbody/tr/td[%d]' % column))
+        b = self.browser
+        b.get(get_server_base() + 'recipes/mine')
+        b.find_element_by_xpath('//table[@id="widget"]/thead//th[%d]//a[@href]' % column).click()
+        row_count = len(b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr/td[%d]' % column))
         self.assertEquals(row_count, 24)
-        cell_values = [sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
+        cell_values = [b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column)).text
                        for row in range(1, row_count + 1)]
         assert_sorted(cell_values, key=sort_key)
 
@@ -85,16 +73,14 @@ class TestRecipesDataGrid(SeleniumTestCase):
     # this version is different since the cell values will be like ['R:1', 'R:10', ...]
     def test_can_sort_by_id(self):
         column = 1
-        sel = self.selenium
-        sel.open('recipes/mine')
-        sel.click('//table[@id="widget"]/thead//th[%d]//a[@href]' % column)
-        sel.wait_for_page_to_load('30000')
-        row_count = int(sel.get_xpath_count(
-                '//table[@id="widget"]/tbody/tr/td[%d]' % column))
+        b = self.browser
+        b.get(get_server_base() + 'recipes/mine')
+        b.find_element_by_xpath('//table[@id="widget"]/thead//th[%d]//a[@href]' % column).click()
+        row_count = len(b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr/td[%d]' % column))
         self.assertEquals(row_count, 24)
         cell_values = []
         for row in range(1, row_count + 1):
-            raw_value = sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
+            raw_value = b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column)).text
             m = re.match(r'R:(\d+)$', raw_value)
             assert m.group(1)
             cell_values.append(int(m.group(1)))
