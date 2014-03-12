@@ -1,7 +1,7 @@
 What's New in Beaker 0.15?
 ==========================
 
-The principle feature added in Beaker 0.15 is
+The principal feature added in Beaker 0.15 is
 "system access policies", the initial phase of the
 `Access Policies for Systems
 <../../dev/proposals/access-policies-for-systems.html>`__

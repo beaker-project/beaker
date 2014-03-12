@@ -33,16 +33,32 @@ being upgraded to a new version.
 
        release-1.0/*
 
-Unreleased changes
-------------------
+.. unreleased changes, uncomment after 0.16 is branched
 
-The following changes will appear in the next Beaker release.
+    Unreleased changes
+    ------------------
+
+    The following changes will appear in the next Beaker release.
+
+    .. toctree::
+       :maxdepth: 2
+       :glob:
+
+       next/*
+
+
+Beaker 0.16
+-----------
+
+Beaker 0.16 adds experimental server-side support for external tasks, 
+configurable quiescent periods for system power, and several other 
+enhancements.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   next/*
+   release-0.16
+   upgrade-0.16
 
 
 Beaker 0.15

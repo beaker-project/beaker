@@ -1,7 +1,7 @@
 What's New in Beaker 0.13?
 ==========================
 
-The principle feature added in Beaker 0.13 is the initial implementation of
+The principal feature added in Beaker 0.13 is the initial implementation of
 elements of the :ref:`proposal-enhanced-user-groups` design proposal.
 
 Migrating to Beaker 0.13
