@@ -29,8 +29,6 @@
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
 %global upstream_version 0.16.2
 
-# Note: While some parts of this file use "%{name}, "beaker" is still
-# hardcoded in a lot of places, both here and in the source code
 Name:           beaker
 Version:        0.16.2
 Release:        1%{?dist}
@@ -442,12 +440,12 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with server}
 %files server
 %defattr(-,root,root,-)
-%dir %{_sysconfdir}/beaker
+%dir %{_sysconfdir}/%{name}
 %doc documentation/_build/text/whats-new/
 %{python2_sitelib}/bkr/server/
 %{python2_sitelib}/bkr.server-*-nspkg.pth
 %{python2_sitelib}/bkr.server-*.egg-info/
-%{_bindir}/%{name}-init
+%{_bindir}/beaker-init
 %{_bindir}/nag-mail
 %{_bindir}/beaker-log-delete
 %{_bindir}/log-delete
@@ -463,17 +461,17 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_unitdir}/beakerd.service
 %attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
 %else
-%{_sysconfdir}/init.d/%{name}d
+%{_sysconfdir}/init.d/beakerd
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
 %endif
 
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-server.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/beaker
-%attr(0755,root,root)%{_bindir}/%{name}d
-%config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-server.conf
+%attr(0755,root,root)%{_bindir}/beakerd
+%config(noreplace) %{_sysconfdir}/httpd/conf.d/beaker-server.conf
 %attr(-,apache,root) %dir %{_datadir}/bkr
-%attr(-,apache,root) %{_datadir}/bkr/%{name}-server.wsgi
+%attr(-,apache,root) %{_datadir}/bkr/beaker-server.wsgi
 %attr(-,apache,root) %{_datadir}/bkr/server
 %attr(0660,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
 %dir %{_localstatedir}/log/%{name}
@@ -493,7 +491,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %files client
 %defattr(-,root,root,-)
-%dir %{_sysconfdir}/beaker
+%dir %{_sysconfdir}/%{name}
 %doc Client/client.conf.example
 %{python2_sitelib}/bkr/client/
 %{python2_sitelib}/bkr.client-*-nspkg.pth
@@ -514,27 +512,27 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with labcontroller}
 %files lab-controller
 %defattr(-,root,root,-)
-%dir %{_sysconfdir}/beaker
-%config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
-%{_sysconfdir}/beaker/power-scripts/
-%{_sysconfdir}/beaker/install-failure-patterns/
+%dir %{_sysconfdir}/%{name}
+%config(noreplace) %{_sysconfdir}/%{name}/labcontroller.conf
+%{_sysconfdir}/%{name}/power-scripts/
+%{_sysconfdir}/%{name}/install-failure-patterns/
 %{python2_sitelib}/bkr/labcontroller/
 %{python2_sitelib}/bkr.labcontroller-*-nspkg.pth
 %{python2_sitelib}/bkr.labcontroller-*.egg-info/
-%{_bindir}/%{name}-proxy
-%{_bindir}/%{name}-watchdog
-%{_bindir}/%{name}-transfer
-%{_bindir}/%{name}-import
-%{_bindir}/%{name}-provision
-%{_bindir}/%{name}-pxemenu
-%{_bindir}/%{name}-expire-distros
-%{_bindir}/%{name}-clear-netboot
-%config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
+%{_bindir}/beaker-proxy
+%{_bindir}/beaker-watchdog
+%{_bindir}/beaker-transfer
+%{_bindir}/beaker-import
+%{_bindir}/beaker-provision
+%{_bindir}/beaker-pxemenu
+%{_bindir}/beaker-expire-distros
+%{_bindir}/beaker-clear-netboot
+%config(noreplace) %{_sysconfdir}/httpd/conf.d/beaker-lab-controller.conf
 %attr(-,apache,root) %dir %{_datadir}/bkr
 %attr(-,apache,root) %{_datadir}/bkr/lab-controller
 %config(noreplace) %{_sysconfdir}/cron.hourly/beaker_expire_distros
-%attr(-,apache,root) %dir %{_var}/www/beaker
-%attr(-,apache,root) %dir %{_var}/www/beaker/logs
+%attr(-,apache,root) %dir %{_var}/www/%{name}
+%attr(-,apache,root) %dir %{_var}/www/%{name}/logs
 %dir %{_localstatedir}/log/%{name}
 
 %if %{with_systemd}
@@ -544,21 +542,21 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_unitdir}/beaker-transfer.service
 %{_tmpfilesdir}/beaker-lab-controller.conf
 %else
-%{_sysconfdir}/init.d/%{name}-proxy
-%{_sysconfdir}/init.d/%{name}-watchdog
-%{_sysconfdir}/init.d/%{name}-transfer
-%{_sysconfdir}/init.d/%{name}-provision
+%{_sysconfdir}/init.d/beaker-proxy
+%{_sysconfdir}/init.d/beaker-watchdog
+%{_sysconfdir}/init.d/beaker-transfer
+%{_sysconfdir}/init.d/beaker-provision
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %endif
 
-%attr(0440,root,root) %config(noreplace) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
+%attr(0440,root,root) %config(noreplace) %{_sysconfdir}/sudoers.d/beaker_proxy_clear_netboot
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-lab-controller.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/beaker
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)
-%{_var}/lib/beaker/addDistro.sh
-%{_var}/lib/beaker/addDistro.d/*
+%{_var}/lib/%{name}/addDistro.sh
+%{_var}/lib/%{name}/addDistro.d/*
 %endif
 
 %changelog
