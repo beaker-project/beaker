@@ -34,7 +34,7 @@
 Name:           beaker
 Version:        0.16.2
 Release:        1%{?dist}
-Summary:        Filesystem layout for Beaker
+Summary:        Full-stack software and hardware integration testing system
 Group:          Applications/Internet
 License:        GPLv2+ and BSD
 URL:            http://beaker-project.org/
@@ -124,12 +124,19 @@ BuildRequires:  python-lxml
 BuildRequires:  libxslt-python
 
 
+%package common
+Summary:        Common components for Beaker packages
+Group:          Applications/Internet
+Provides:       %{name} = %{version}-%{release}
+Obsoletes:      %{name} < 0.17.0-1
+
+
 %package client
-Summary:        Client component for talking to Beaker server
+Summary:        Command-line client for interacting with Beaker
 Group:          Applications/Internet
 Requires:       python
 Requires:       python-setuptools
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-common = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
 %if 0%{?rhel} >= 6 || 0%{?fedora}
@@ -148,7 +155,7 @@ Conflicts:      rhts-devel < 4.52
 
 %if %{with server}
 %package server
-Summary:       Server component of Beaker
+Summary:        Beaker scheduler and web interface
 Group:          Applications/Internet
 Requires:       TurboGears >= 1.1.3
 %if 0%{?rhel} == 6
@@ -170,7 +177,7 @@ Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-common = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
 Requires:       createrepo
 Requires:       yum-utils
@@ -199,7 +206,7 @@ Requires(postun):  systemd
 %package integration-tests
 Summary:        Integration tests for Beaker
 Group:          Applications/Internet
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-common = %{version}-%{release}
 Requires:       %{name}-server = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
@@ -219,7 +226,7 @@ Requires:       python-gunicorn
 
 %if %{with labcontroller}
 %package lab-controller
-Summary:        Lab Controller xmlrpc server
+Summary:        Daemons for controlling a Beaker lab
 Group:          Applications/Internet
 Provides:       beaker-redhat-support <= 0.19
 Obsoletes:      beaker-redhat-support <= 0.19
@@ -236,7 +243,7 @@ Requires:       wsmancli
 Requires:       telnet
 Requires:       sudo
 Requires:       python-cpio
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-common = %{version}-%{release}
 Requires:       python-setuptools
 Requires:       python-xmltramp
 Requires:       python-krbV
@@ -252,29 +259,35 @@ Requires(postun):  systemd
 %endif
 
 %package lab-controller-addDistro
-Summary:        addDistro scripts for Lab Controller
+Summary:        Optional hooks for distro import on Beaker lab controllers
 Group:          Applications/Internet
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-common = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
 Provides:       beaker-redhat-support-addDistro <= 0.19
 Obsoletes:      beaker-redhat-support-addDistro <= 0.19
 %endif
 
-
 %description
-Filesystem layout for beaker
+Beaker is a full stack software and hardware integration testing system, with 
+the ability to manage a globally distributed network of test labs.
 
+%description common
+Python modules which are used by other Beaker packages.
 
 %description client
-This is the command line interface used to interact with the Beaker Server.
-
+The bkr client is a command-line tool for interacting with Beaker servers. You 
+can use it to submit Beaker jobs, fetch results, and perform many other tasks.
 
 %if %{with server}
 %description server
-To Be Filled in - Server Side..
+This package provides the central server components for Beaker, which 
+consist of:
+* a Python web application, providing services to remote lab controllers as 
+  well as a web interface for Beaker users; 
+* the beakerd scheduling daemon, which schedules recipes on systems; and 
+* command-line tools for managing a Beaker installation.
 %endif
-
 
 %if %{with inttests}
 %description integration-tests
@@ -282,15 +295,21 @@ This package contains integration tests for Beaker, which require a running
 database and Beaker server.
 %endif
 
-
 %if %{with labcontroller}
 %description lab-controller
-This is the interface to link Medusa and Cobbler together. Mostly provides
-snippets and kickstarts.
+The lab controller daemons connect to a central Beaker server in order to 
+manage a local lab of test systems.
+
+The daemons and associated lab controller tools:
+* set up netboot configuration files
+* control power for test systems
+* collect logs and results from test runs
+* track distros available from the lab's local mirror
 
 %description lab-controller-addDistro
-addDistro.sh can be called after distros have been imported into beaker.
-Automatically launch jobs against newly imported distros.
+addDistro.sh can be called after distros have been imported into Beaker. You 
+can install this on your lab controller to automatically launch jobs against 
+newly imported distros.
 %endif
 
 %prep
@@ -410,7 +429,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 %endif
 
-%files
+%files common
 %defattr(-,root,root,-)
 %dir %{python2_sitelib}/bkr/
 %{python2_sitelib}/bkr/__init__.py*
