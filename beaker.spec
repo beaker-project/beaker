@@ -401,6 +401,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %files
 %defattr(-,root,root,-)
+%dir %{python2_sitelib}/bkr/
 %{python2_sitelib}/bkr/__init__.py*
 %{python2_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python2_sitelib}/bkr/common/
