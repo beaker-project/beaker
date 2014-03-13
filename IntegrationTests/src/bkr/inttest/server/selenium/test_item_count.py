@@ -1,4 +1,3 @@
-#!/usr/bin/python
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -42,6 +41,3 @@ class ItemCount(WebDriverTestCase):
         b.find_element_by_xpath('//span[contains(text(), "Items found:")]')
         click_menu_item(b, 'Scheduler', 'Task Library')
         b.find_element_by_xpath('//span[contains(text(), "Items found:")]')
-
-if __name__ == "__main__":
-    unittest.main()

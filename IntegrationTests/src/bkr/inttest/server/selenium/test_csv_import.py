@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # vim: set fileencoding=utf-8 :
 
 # This program is free software; you can redistribute it and/or modify
@@ -373,6 +372,3 @@ class CSVImportTest(WebDriverTestCase):
         with session.begin():
             session.refresh(self.system)
             self.assertEquals(self.system.location, u'在我的办公桌')
-
-if __name__ == "__main__":
-    unittest.main()

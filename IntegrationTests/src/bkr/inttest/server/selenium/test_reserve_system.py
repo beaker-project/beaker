@@ -1,4 +1,3 @@
-#!/usr/bin/python
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -230,6 +229,3 @@ class ReserveSystem(WebDriverTestCase):
         search_for_system(b, group_system)
         b.implicitly_wait(0)
         self.assert_(is_results_table_empty(b))
-
-if __name__ == "__main__":
-    unittest.main()

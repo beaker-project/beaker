@@ -1,4 +1,3 @@
-#!/usr/bin/python
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -201,6 +200,3 @@ class UserPrefs(WebDriverTestCase):
         error_msg = b.find_element_by_css_selector(
                 '#ssh_key_add .control-group.error .help-inline').text
         self.assert_('not a valid SSH public key' in error_msg)
-
-if __name__ == "__main__":
-    unittest.main()

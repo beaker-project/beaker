@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # vim: set fileencoding=utf-8 :
 
 # This program is free software; you can redistribute it and/or modify
@@ -56,6 +55,3 @@ class CSVRoundtripTest(WebDriverTestCase):
                           "No Errors")
         session.refresh(self.system)
         self.assert_(orig_date_modified != self.system.date_modified)
-
-if __name__ == "__main__":
-    unittest.main()
