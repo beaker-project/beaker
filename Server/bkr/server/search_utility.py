@@ -972,7 +972,8 @@ class System(SystemObject):
                                             column_name='group_name',
                                             eagerload=False,)
                          }
-    search_values_dict = {'Status'    : lambda: model.SystemStatus.values(),
+    search_values_dict = {'Status'    : lambda: [status for status in 
+                                                 model.SystemStatus.values() if status != 'Removed'],
                           'Type'      : lambda: model.SystemType.values(),
                           'Hypervisor': lambda: [''] + model.Hypervisor.get_all_names(),
                          }

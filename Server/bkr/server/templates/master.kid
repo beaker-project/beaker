@@ -29,6 +29,7 @@ from bkr.server.reports import Reports
                     <li><a href="${tg.url('/')}">All</a></li>
                     <li><a href="${tg.url('/available/')}">Available</a></li>
                     <li><a href="${tg.url('/free/')}">Free</a></li>
+                    <li><a href="${tg.url('/removed/')}">Removed</a></li>
                 </ul>
             </li>
             <li class="dropdown">

@@ -25,7 +25,8 @@ from bkr.server.app import app
 from bkr.server import mail, identity
 
 from bkr.server.model import (Group, Permission, System, User, UserGroup,
-                              Activity, GroupActivity, SystemActivity)
+                              Activity, GroupActivity, SystemActivity, 
+                              SystemStatus)
 
 import logging
 log = logging.getLogger(__name__)
@@ -230,10 +231,12 @@ class Groups(AdminPage):
             flash(_(u'Need a valid group to search on'))
             redirect('../groups/mine')
 
-        systems = System.all(identity.current.user).filter(System.groups.contains(group))
+        systems = System.all(identity.current.user). \
+                  filter(System.groups.contains(group)). \
+                  filter(System.status != SystemStatus.removed)
         title = 'Systems in Group %s' % group.group_name
         from bkr.server.controllers import Root
-        return Root()._systems(systems,title, group_id = group_id,**kw)
+        return Root()._systems(systems, title, group_id = group_id,**kw)
 
     @expose(template='bkr.server.templates.group_form')
     def edit(self, group_id, **kw):
@@ -493,8 +496,11 @@ class Groups(AdminPage):
             groups = session.query(Group)
 
         def get_sys(x):
-            if len(x.systems):
-                return make_link('systems?group_id=%s' % x.group_id, u'System count: %s' % len(x.systems))
+            systems = System.all(identity.current.user). \
+                      filter(System.groups.contains(x)). \
+                      filter(System.status != SystemStatus.removed).all()
+            if len(systems):
+                return make_link('systems?group_id=%s' % x.group_id, u'System count: %s' % len(systems))
             else:
                 return 'System count: 0'
 
@@ -726,7 +732,9 @@ class Groups(AdminPage):
             response.status = 403
             return ['Invalid Group Id']
 
-        systems = group.systems
+        systems = System.all().filter(System.groups.contains(group)). \
+                  filter(System.status != SystemStatus.removed)
+
         return [(system.id, system.fqdn) for system in systems]
 
     # XML-RPC method for creating a group

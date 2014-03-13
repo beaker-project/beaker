@@ -330,9 +330,9 @@ class Root(RPCRoot):
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def index(self, *args, **kw): 
-        return self._systems(systems=System.all(identity.current.user),
-                title=u'Systems', *args, **kw)
-
+        return self._systems(systems=System.all(identity.current.user).
+                             filter(System.status != SystemStatus.removed),
+                             title=u'Systems', *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
@@ -351,6 +351,16 @@ class Root(RPCRoot):
     def free(self, *args, **kw): 
         return self._systems(systems=System.free(identity.current.user),
                 title=u'Free Systems', *args, **kw)
+
+    @expose(template='bkr.server.templates.grid')
+    @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
+            content_type='application/atom+xml', accept_format='application/atom+xml')
+    @paginate('list', default_order='fqdn', limit=20, max_limit=None)
+    def removed(self, *args, **kw): 
+        return  self._systems(systems=System.all().
+                              filter(System.status == SystemStatus.removed),
+                              title=u'Removed Systems', exclude_status=True, 
+                              *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
     @expose(template='bkr.server.templates.systems_feed', format='xml', as_format='atom',
@@ -443,6 +453,12 @@ class Root(RPCRoot):
         return return_dict
  
     def _systems(self, systems, title, *args, **kw):
+        # To exclude search on System/Status for the "Removed" Systems
+        # page
+        if kw.get('exclude_status', None):
+            exclude_fields = ['Status']
+        else:
+            exclude_fields = []
 
         # Added for group.get_systems()
         if kw.has_key('group_id'):
@@ -459,13 +475,13 @@ class Root(RPCRoot):
                                                    'pos' : 2,
                                                    'callback':url('/get_operators_keyvalue') }],
                                table=su.System.search.create_search_table(\
-                                   [{su.System:{'all':[]}},
+                                    [{su.System:{'exclude':exclude_fields}},
                                     {su.Cpu:{'all':[]}},
                                     {su.Device:{'all':[]}},
                                     {su.Disk:{'all':[]}},
                                     {su.Key:{'all':[]}}]),
                                complete_data = su.System.search.create_complete_search_table(\
-                                   [{su.System:{'all':[]}},
+                                   [{su.System:{'exclude':exclude_fields}},
                                     {su.Cpu:{'all':[]}},
                                     {su.Device:{'all':[]}},
                                     {su.Disk:{'all':[]}},
@@ -550,7 +566,8 @@ class Root(RPCRoot):
                     grid = display_grid,
                     list = systems,
                     searchvalue = searchvalue,
-                    options =  {'simplesearch' : simplesearch,'columns':col_data,
+                    options =  {'simplesearch' : simplesearch,
+                                'columns':col_data,
                                 'result_columns' : default_result_columns,
                                 'col_defaults' : col_data['default'],
                                 'col_options' : col_data['options'],

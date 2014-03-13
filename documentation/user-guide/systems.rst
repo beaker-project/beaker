@@ -1,8 +1,8 @@
 Systems
 -------
 
-Beaker provides an inventory of Systems(These could be a physical
-machine,laptop,virtual guest, or resource) attached to lab controllers.
+Beaker provides an inventory of Systems(these could be a physical
+machine, laptop, virtual guest, or resource) attached to lab controllers.
 Systems can be added, removed, have details changed, and be provisioned
 among other things.
 
@@ -18,7 +18,8 @@ System searches are conducted by clicking on one of the items of the
 
    -  *All*
 
-      -  Will search through all Systems listed in Beaker.
+      -  Will search through all existing Systems listed in
+         Beaker (excluding systems which have been removed).
 
    -  *Available*
 
@@ -29,6 +30,10 @@ System searches are conducted by clicking on one of the items of the
 
       -  Will search through only Systems that the currently logged in
          user has permission to reserve and are currently free.
+
+   -  *Removed*
+
+      -  Will search through only Systems that have been removed.
 
 .. figure:: system_menu.png
    :width: 100%
