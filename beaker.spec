@@ -226,8 +226,6 @@ Requires:       python-gunicorn
 %package lab-controller
 Summary:        Daemons for controlling a Beaker lab
 Group:          Applications/Internet
-Provides:       beaker-redhat-support <= 0.19
-Obsoletes:      beaker-redhat-support <= 0.19
 Requires:       python
 Requires:       crontabs
 Requires:       httpd
@@ -262,8 +260,6 @@ Group:          Applications/Internet
 Requires:       %{name}-common = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
-Provides:       beaker-redhat-support-addDistro <= 0.19
-Obsoletes:      beaker-redhat-support-addDistro <= 0.19
 %endif
 
 %description
