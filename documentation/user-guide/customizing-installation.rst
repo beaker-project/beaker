@@ -58,6 +58,14 @@ The following kernel options are treated specially by Beaker:
     ``initrd=`` option from the kernel command line and appends it to the boot 
     loader configuration.
 
+``devicetree=<tftp path>``
+    Alternate device tree binary to load. Use this to supply a different device 
+    tree binary than the one built into the kernel.
+
+    If the boot loader supports passing a device tree to the kernel (currently 
+    only GRUB for AArch64), Beaker extracts the ``devicetree=`` option from the 
+    kernel command line and appends it to the boot loader configuration.
+
 .. _kickstart-metadata:
 
 Kickstart metadata

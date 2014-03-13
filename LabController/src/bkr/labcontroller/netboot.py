@@ -131,23 +131,20 @@ def pxe_basename(fqdn):
     ipaddr = socket.gethostbyname(fqdn)
     return '%02X%02X%02X%02X' % tuple(int(octet) for octet in ipaddr.split('.'))
 
-# Unfortunately the initrd kernel arg needs some special handling. It can be
-# supplied from the Beaker side (e.g. a system-specific driver disk) but we
-# also supply the main initrd here which we have fetched from the distro.
-def extract_initrd_arg(kernel_options):
+def extract_arg(arg, kernel_options):
     """
-    Returns a tuple of (initrd arg value, rest of kernel options). If there was
-    no initrd= arg, the result will be (None, untouched kernel options).
+    Returns a tuple of (<arg> value, rest of kernel options). If there was
+    no <arg>, the result will be (None, untouched kernel options).
     """
-    initrd = None
+    value = None
     tokens = []
     for token in kernel_options.split():
-        if token.startswith('initrd='):
-            initrd = token[len('initrd='):]
+        if token.startswith(arg):
+            value = token[len(arg):]
         else:
             tokens.append(token)
-    if initrd:
-        return (initrd, ' '.join(tokens))
+    if value:
+        return (value, ' '.join(tokens))
     else:
         return (None, kernel_options)
 
@@ -167,12 +164,17 @@ def configure_aarch64(fqdn, kernel_options):
     """
     pxe_base = os.path.join(get_tftp_root(), 'pxelinux')
     makedirs_ignore(pxe_base, mode=0755)
+    devicetree, kernel_options = extract_arg('devicetree=', kernel_options)
+    if devicetree:
+        devicetree = 'devicetree %s' % devicetree
+    else:
+        devicetree = ''
     basename = "grub.cfg-%s" % pxe_basename(fqdn)
     config = '''  linux  ../images/%s/kernel %s
   initrd ../images/%s/initrd
-  devicetree /pxelinux/apm-mustang.dtb
+  %s
   boot
-''' % (fqdn, kernel_options, fqdn)
+''' % (fqdn, kernel_options, fqdn, devicetree)
     logger.debug('Writing aarch64 config for %s as %s', fqdn, basename)
     with atomically_replaced_file(os.path.join(pxe_base, basename)) as f:
         f.write(config)
@@ -252,7 +254,10 @@ def configure_pxelinux(fqdn, kernel_options):
     makedirs_ignore(pxe_dir, mode=0755)
 
     basename = pxe_basename(fqdn)
-    initrd, kernel_options = extract_initrd_arg(kernel_options)
+    # Unfortunately the initrd kernel arg needs some special handling. It can be
+    # supplied from the Beaker side (e.g. a system-specific driver disk) but we
+    # also supply the main initrd here which we have fetched from the distro.
+    initrd, kernel_options = extract_arg('initrd=', kernel_options)
     if initrd:
         initrd = '/images/%s/initrd,%s' % (fqdn, initrd)
     else:
@@ -304,7 +309,10 @@ def configure_efigrub(fqdn, kernel_options):
     atomic_symlink('../images', os.path.join(grub_dir, 'images'))
 
     basename = pxe_basename(fqdn)
-    initrd, kernel_options = extract_initrd_arg(kernel_options)
+    # Unfortunately the initrd kernel arg needs some special handling. It can be
+    # supplied from the Beaker side (e.g. a system-specific driver disk) but we
+    # also supply the main initrd here which we have fetched from the distro.
+    initrd, kernel_options = extract_arg('initrd=', kernel_options)
     if initrd:
         initrd = ' '.join(['/images/%s/initrd' % fqdn] + initrd.split(','))
     else:
