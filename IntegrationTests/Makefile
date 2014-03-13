@@ -20,3 +20,4 @@ clean:
 .PHONY: check
 check:
 	# This package contains only integration tests, no unit tests.
+	# We don't run pylint on test code.

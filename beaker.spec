@@ -55,6 +55,8 @@ BuildRequires:  make
 BuildRequires:  python-setuptools
 BuildRequires:  python-nose >= 0.10
 BuildRequires:  python-unittest2
+# pylint only understands namespace packages since 1.0
+BuildRequires:  pylint >= 1.0
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
 BuildRequires:  python-docutils >= 0.6
