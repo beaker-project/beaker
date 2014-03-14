@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import os
 import unittest2 as unittest
 import subprocess
@@ -813,36 +819,20 @@ class DistroImportTest(unittest.TestCase):
         trees = self.dry_run_import_trees(
             ['nfs://fake.example.com:/nfs/RHEL-4/U9/AS',
             '%sRHEL-4/U9/AS/' % self.distro_url])
-        self.assertTrue(len(trees) == 1)
-        tree = trees.pop()
-        self.assertEquals(tree, self.i386_rhel4)
+        self.assertItemsEqual(trees, [self.i386_rhel4])
 
     def test_rhel5_tree_import_compose(self):
         trees = self.dry_run_import_trees(['%sRHEL5-Server/' % self.distro_url])
-        self.assertTrue(len(trees) == 2) # Expecting two trees
-        for tree in trees:
-            if tree['arch'] == u'i386':
-                i386_tree = tree
-            if tree['arch'] == u'x86_64':
-                x86_64_tree = tree
-        self.assertEquals(i386_tree, self.i386_rhel5)
-        self.assertEquals(x86_64_tree, self.x86_64_rhel5)
+        self.assertItemsEqual(trees, [self.i386_rhel5, self.x86_64_rhel5])
 
     def test_rhel6_tree_import_compose(self):
         trees = self.dry_run_import_trees(['%sRHEL6-Server/' % self.distro_url])
-        self.assertTrue(len(trees) == 2) # Expecting two trees
-        for tree in trees:
-            if tree['arch'] == u'i386':
-                i386_tree = tree
-            if tree['arch'] == u'x86_64':
-                x86_64_tree = tree
-        self.assertEquals(i386_tree, self.i386_rhel6)
-        self.assertEquals(x86_64_tree, self.x86_64_rhel6)
+        self.assertItemsEqual(trees, [self.i386_rhel6, self.x86_64_rhel6])
 
     def test_rhel5_tree_import_tree(self):
         trees = self.dry_run_import_trees(['%sRHEL5-Server/i386/os/'
             % self.distro_url])
-        self.assertTrue(len(trees) == 1)
+        self.assertEquals(len(trees), 1)
         tree = trees.pop()
         # See https://bugzilla.redhat.com/show_bug.cgi?id=910243
         # The following is actually a bug, but current behaviour
@@ -853,7 +843,7 @@ class DistroImportTest(unittest.TestCase):
     def test_rhel5_tree_import_tree_with_iso(self):
         trees = self.dry_run_import_trees(['%sRHEL5-Server/i386/os/'
             % self.distro_url, 'nfs://fake.example.com:/nfs/RHEL5-Server/i386/os/'])
-        self.assertTrue(len(trees) == 1)
+        self.assertEquals(len(trees), 1)
         tree = trees.pop()
         # See https://bugzilla.redhat.com/show_bug.cgi?id=910243
         # The following is actually a bug, but current behaviour
@@ -868,7 +858,7 @@ class DistroImportTest(unittest.TestCase):
         trees = self.dry_run_import_trees(['%sRHEL6-Server/x86_64/os/'
             % self.distro_url,
             'nfs://invalid.example.com/RHEL6-Server/x86_64/os/'])
-        self.assertTrue(len(trees) == 1)
+        self.assertEquals(len(trees), 1)
         tree = trees.pop()
         # See https://bugzilla.redhat.com/show_bug.cgi?id=910243
         # The following is actually a bug, but current behaviour
@@ -882,7 +872,7 @@ class DistroImportTest(unittest.TestCase):
     def test_rhel6_tree_import_tree(self):
         trees = self.dry_run_import_trees(['%sRHEL6-Server/x86_64/os/'
             % self.distro_url])
-        self.assertTrue(len(trees) == 1)
+        self.assertEquals(len(trees), 1)
         tree = trees.pop()
         # See https://bugzilla.redhat.com/show_bug.cgi?id=910243
         # The following is actually a bug, but current behaviour
@@ -903,7 +893,7 @@ class DistroImportTest(unittest.TestCase):
         trees = self.dry_run_import_trees(['%sRHEL7Alpha3/'% self.distro_url,
             'nfs://fake.example.com:/nfes/RHEL7Alpha3/'])
 
-        self.assertTrue(len(trees) == 6)
+        self.assertEquals(len(trees), 6)
         for tree in trees:
             if tree['arch'] == u'x86_64':
                 x86_64_tree = tree
@@ -920,61 +910,36 @@ class DistroImportTest(unittest.TestCase):
 
         trees = self.dry_run_import_trees(['%sF-17/GOLD/Fedora/i386/os'
                                     % self.distro_url])
-        self.assertTrue(len(trees) == 1)
-        tree = trees.pop()
-        self.assertEquals(tree, self.i386_f17)
+        self.assertItemsEqual(trees, [self.i386_f17])
 
     def test_f17_tree_import_x86_64(self):
 
         trees = self.dry_run_import_trees(['%sF-17/GOLD/Fedora/x86_64/os'
                                     % self.distro_url])
-        self.assertTrue(len(trees) == 1)
-        tree = trees.pop()
-        self.assertEquals(tree, self.x86_64_f17)
+        self.assertItemsEqual(trees, [self.x86_64_f17])
 
     def test_f17_tree_import_compose(self):
 
         trees = self.dry_run_import_trees(['%sF-17/GOLD/Fedora/' % self.distro_url])
-        self.assertTrue(len(trees) == 2) # Expecting two trees
-        for tree in trees:
-            if tree['arch'] == u'i386':
-                i386_tree = tree
-            if tree['arch'] == u'x86_64':
-                x86_64_tree = tree
-
-        self.assertEquals(i386_tree, self.i386_f17_compose)
-        self.assertEquals(x86_64_tree, self.x86_64_f17_compose)
-
+        self.assertItemsEqual(trees, [self.i386_f17_compose, self.x86_64_f17_compose])
 
     def test_f18_tree_import_i386_with_iso(self):
 
         trees = self.dry_run_import_trees(
             ['%sF-18/GOLD/Fedora/i386/os' % self.distro_url,
             'nfs://fake.example.com:/nfs/F-18/GOLD/Fedora/i386/os'])
-        self.assertTrue(len(trees) == 1)
-        tree = trees.pop()
-        self.assertEquals(tree, self.i386_f18)
+        self.assertItemsEqual(trees, [self.i386_f18])
 
     def test_f18_tree_import_x86_64(self):
 
         trees = self.dry_run_import_trees(['%sF-18/GOLD/Fedora/x86_64/os'
             % self.distro_url])
-        self.assertTrue(len(trees) == 1)
-        tree = trees.pop()
-        self.assertEquals(tree, self.x86_64_f18)
+        self.assertItemsEqual(trees, [self.x86_64_f18])
 
     def test_f18_tree_import_compose(self):
 
         trees = self.dry_run_import_trees(['%sF-18/GOLD/Fedora/' % self.distro_url])
-        self.assertTrue(len(trees) == 2) # Expecting two trees
-        for tree in trees:
-            if tree['arch'] == u'i386':
-                i386_tree = tree
-            if tree['arch'] == u'x86_64':
-                x86_64_tree = tree
-
-        self.assertEquals(i386_tree, self.i386_f18_compose)
-        self.assertEquals(x86_64_tree, self.x86_64_f18_compose)
+        self.assertItemsEqual(trees, [self.i386_f18_compose, self.x86_64_f18_compose])
 
     def _rawhide_treeinfo(self, compose_tree):
         # "derive" the expected treeinfo data from the
@@ -991,62 +956,41 @@ class DistroImportTest(unittest.TestCase):
 
         trees = self.dry_run_import_trees(['%sFedora-rawhide/i386/os'
                                            % self.distro_url])
-        self.assertTrue(len(trees) == 1)
-        tree = trees.pop()
-
         expected_tree = self._rawhide_treeinfo(
             compose_tree = deepcopy(self.i386_fedora_rawhide))
-        self.assertEquals(tree, expected_tree)
+        self.assertItemsEqual(trees, [expected_tree])
 
     def test_fedora_rawhide_tree_import_x86_64(self):
 
         trees = self.dry_run_import_trees(['%sFedora-rawhide/x86_64/os'
                                            % self.distro_url])
-        self.assertTrue(len(trees) == 1)
-        tree = trees.pop()
-
         expected_tree = self._rawhide_treeinfo(
             compose_tree = deepcopy(self.x86_64_fedora_rawhide))
-        self.assertEquals(tree, expected_tree)
+        self.assertItemsEqual(trees, [expected_tree])
 
     def test_fedora_rawhide_tree_import_armhfp(self):
 
         trees = self.dry_run_import_trees(['%sFedora-rawhide/armhfp/os'
                                            % self.distro_url])
-        self.assertTrue(len(trees) == 1)
-        tree = trees.pop()
-
         expected_tree = self._rawhide_treeinfo(
             compose_tree = deepcopy(self.armhfp_fedora_rawhide))
-        self.assertEquals(tree, expected_tree)
+        self.assertItemsEqual(trees, [expected_tree])
 
     def test_fedora_rawhide_import_compose(self):
 
         trees = self.dry_run_import_trees(['%sFedora-rawhide/' % self.distro_url])
-        self.assertTrue(len(trees) == 3)
-        for tree in trees:
-            if tree['arch'] == u'i386':
-                i386_tree = tree
-            if tree['arch'] == u'x86_64':
-                x86_64_tree = tree
-            if tree['arch'] == u'armhfp':
-                armhfp_tree = tree
-
-        self.assertEquals(i386_tree, self.i386_fedora_rawhide)
-        self.assertEquals(x86_64_tree, self.x86_64_fedora_rawhide)
-        self.assertEquals(armhfp_tree, self.armhfp_fedora_rawhide)
+        self.assertItemsEqual(trees, [self.i386_fedora_rawhide,
+                self.x86_64_fedora_rawhide, self.armhfp_fedora_rawhide])
 
     def test_selective_compose_import(self):
         trees = self.dry_run_import_trees(['--arch', 'i386',
             '%sRHEL6-Server/' % self.distro_url])
-        self.assertTrue(len(trees) == 1)
-        tree = trees.pop()
-        self.assertEquals(tree, self.i386_rhel6)
+        self.assertItemsEqual(trees, [self.i386_rhel6])
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=907242
     def test_cannot_import_osmajor_existing_alias(self):
         trees = self.import_trees(['%sRHEL6-Server/' % self.distro_url])
-        self.assertTrue(len(trees) == 2) # Expecting two trees
+        self.assertEquals(len(trees), 2) # Expecting two trees
 
         # set an alias
         myalias = 'RHEL6'

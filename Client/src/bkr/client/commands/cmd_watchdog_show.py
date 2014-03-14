@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr watchdog-show: Show time remaining on Beaker watchdogs
 ==========================================================
@@ -53,6 +58,7 @@ from optparse import OptionValueError
 class Watchdog_Show(BeakerCommand):
     """Display Task's Watchdog"""
     enabled = True
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <task_id>..." % self.normalized_name

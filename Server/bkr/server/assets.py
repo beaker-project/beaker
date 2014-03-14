@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import os
 import webassets
 from webassets.filter.jst import JST
@@ -18,14 +23,9 @@ class YCSSMin(ExternalTool):
 _env = None
 _env_lock = threading.Lock()
 
-def _create_env():
-    directory = config.get('basepath.assets',
-            # default location is at the base of our source tree
-            os.path.join(os.path.dirname(__file__), '..', '..', 'assets'))
-    debug = config.get('assets.debug')
-    auto_build = config.get('assets.auto_build')
-    env = webassets.Environment(directory=directory, url='/assets',
-            manifest='file', debug=debug, auto_build=auto_build)
+def _create_env(**kwargs):
+    env = webassets.Environment(url='/assets', manifest='file', **kwargs)
+    env.config['UGLIFYJS_EXTRA_ARGS'] = ['--mangle', '--compress']
     env.register('css',
             'style.less',
             filters=['less', 'cssrewrite', YCSSMin()],
@@ -42,8 +42,8 @@ def _create_env():
             'bootstrap/js/bootstrap-collapse.js',
             'typeahead.js/dist/typeahead.js',
             'jquery.cookie.js',
-            'underscore-1.5.1.js',
-            'backbone-1.0.0.js',
+            'underscore/underscore.js',
+            'backbone/backbone.js',
             # ours
             webassets.Bundle(
                 'jst/*/*.html',
@@ -59,10 +59,23 @@ def _create_env():
             output='generated/beaker-%(version)s.js')
     return env
 
+def _create_runtime_env():
+    directory = config.get('basepath.assets',
+            # default location is at the base of our source tree
+            os.path.join(os.path.dirname(__file__), '..', '..', 'assets'))
+    debug = config.get('assets.debug')
+    auto_build = config.get('assets.auto_build')
+    return _create_env(directory=directory, debug=debug, auto_build=auto_build)
+
 def get_assets_env():
     global _env
     if _env is None:
         with _env_lock:
             if _env is None:
-                _env = _create_env()
+                _env = _create_runtime_env()
     return _env
+
+def build_assets(directory):
+    env = _create_env(directory=directory, debug=False, auto_build=False)
+    for bundle in env:
+        bundle.build()

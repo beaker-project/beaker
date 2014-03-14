@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from turbogears.database import session
 from turbogears import (expose, widgets, flash, error_handler,
                         validate, validators, redirect, paginate, url)
@@ -101,6 +107,7 @@ class Users(AdminPage):
             user = User.by_id(kw['user_id'])
         else:
             user =  User()
+            session.add(user)
         user.display_name = kw['display_name']
         user.user_name = kw['user_name']
         user.email_address = kw['email_address']

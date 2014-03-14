@@ -1,5 +1,7 @@
-%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
-%{!?pyver: %global pyver %(%{__python} -c "import sys ; print sys.version[:3]")}
+%if 0%{?rhel} && 0%{?rhel} <= 6
+%{!?__python2: %global __python2 /usr/bin/python2}
+%{!?python2_sitelib: %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%endif
 
 # The server, lab controller, and integration test subpackages can be conditionally built.
 # Enabled on RHEL 6 and F18+
@@ -25,22 +27,33 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1 
 # but that is not usable for the RPM Version because it sorts higher than 
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 0.15.5
+%global upstream_version 0.16.0
 
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.15.5
+Version:        0.16.0
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
-License:        GPLv2+
+License:        GPLv2+ and BSD
 URL:            http://beaker-project.org/
+
 Source0:        http://beaker-project.org/releases/%{name}-%{upstream_version}.tar.gz
+# Third-party JS/CSS libraries which are built into Beaker's generated JS/CSS
+# (these are submodules in Beaker's git tree, the commit hashes here should
+# correspond to the submodule commits)
+Source1:        https://github.com/twbs/bootstrap/archive/d9b502dfb876c40b0735008bac18049c7ee7b6d2/bootstrap-d9b502dfb876c40b0735008bac18049c7ee7b6d2.tar.gz
+Source2:        https://github.com/FortAwesome/Font-Awesome/archive/b1a8ad47303509e70e56079396fad2afadfd96d5/font-awesome-b1a8ad47303509e70e56079396fad2afadfd96d5.tar.gz
+Source3:        https://github.com/twitter/typeahead.js/archive/2bd1119ecdd5ed4bb6b78c83b904d70adc49e023/typeahead.js-2bd1119ecdd5ed4bb6b78c83b904d70adc49e023.tar.gz
+Source4:        https://github.com/jashkenas/underscore/archive/edbf2952c2b71f81c6449aef384bdf233a0d63bc/underscore-edbf2952c2b71f81c6449aef384bdf233a0d63bc.tar.gz
+Source5:        https://github.com/jashkenas/backbone/archive/699fe3271262043bb137bae97bd0003d6d193f27/backbone-699fe3271262043bb137bae97bd0003d6d193f27.tar.gz
+
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  make
 BuildRequires:  python-setuptools
+BuildRequires:  python-unittest2
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
 BuildRequires:  python-docutils >= 0.6
@@ -50,13 +63,27 @@ BuildRequires:  python-sphinx10
 BuildRequires:  python-sphinx >= 1.0
 %endif
 BuildRequires:  python-sphinxcontrib-httpdomain
-BuildRequires:  bash-completion
 BuildRequires:  python-prettytable
+# setup.py uses pkg-config to find the right installation paths
+%if 0%{?fedora} || 0%{?rhel} >= 7
+BuildRequires:  pkgconfig(bash-completion)
+%endif
+%if %{with_systemd}
+BuildRequires:  pkgconfig(systemd)
+%endif
 
 %if %{with server}
 BuildRequires:  python-kid
-# These server dependencies are needed in the build, because
-# sphinx imports bkr.server modules to generate API docs
+BuildRequires:  python-webassets
+BuildRequires:  /usr/bin/lessc
+BuildRequires:  /usr/bin/cssmin
+BuildRequires:  /usr/bin/uglifyjs
+# These runtime dependencies are needed at build time as well, because
+# the unit tests and Sphinx autodoc import the server code as part of the
+# build process.
+BuildRequires:  createrepo
+BuildRequires:  createrepo_c
+BuildRequires:  python-requests
 BuildRequires:  TurboGears >= 1.1.3
 %if 0%{?rhel} == 6
 BuildRequires:  python-turbojson13
@@ -70,14 +97,13 @@ BuildRequires:  python-ldap
 BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  cracklib-python
 BuildRequires:  rpm-python
-BuildRequires:  rhts-python
 BuildRequires:  python-netaddr
 BuildRequires:  ovirt-engine-sdk
 BuildRequires:  python-itsdangerous
 BuildRequires:  python-decorator
 BuildRequires:  python-flask
 BuildRequires:  python-markdown
-BuildRequires:  python-webassets
+BuildRequires:  python-passlib
 %if %{with_systemd}
 BuildRequires:  systemd
 %endif
@@ -85,7 +111,6 @@ BuildRequires:  systemd
 %endif
 
 # As above, these client dependencies are needed in build because of sphinx
-BuildRequires:  kobo-client >= 0.3
 BuildRequires:  python-krbV
 BuildRequires:  python-lxml
 BuildRequires:  libxslt-python
@@ -95,9 +120,8 @@ BuildRequires:  libxslt-python
 Summary:        Client component for talking to Beaker server
 Group:          Applications/Internet
 Requires:       python
-Requires:       kobo-client >= 0.3
-Requires:	python-setuptools
-Requires:	%{name} = %{version}-%{release}
+Requires:       python-setuptools
+Requires:       %{name} = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
 %if 0%{?rhel} >= 6 || 0%{?fedora}
@@ -132,27 +156,27 @@ Requires:       python-ldap
 Requires:       python-rdflib >= 3.2.0
 Requires:       python-daemon
 Requires:       python-lockfile >= 0.9
+Requires:       crontabs
 Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
-Requires:	%{name} = %{version}-%{release}
+Requires:       %{name} = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
-Requires:	createrepo
-Requires:	yum-utils
-Requires:       rhts-python
+Requires:       createrepo
+Requires:       yum-utils
 Requires:       cracklib-python
 Requires:       python-jinja2
 Requires:       python-netaddr
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
 Requires:       ovirt-engine-sdk
-Requires:  	kobo-client >= 0.3
 Requires:       python-itsdangerous
 Requires:       python-decorator
 Requires:       python-flask
 Requires:       python-markdown
 Requires:       python-webassets
+Requires:       python-passlib
 %if %{with_systemd}
 Requires:       systemd-units
 Requires(post): systemd
@@ -172,7 +196,6 @@ Requires:       %{name}-client = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       python-nose >= 0.10
 Requires:       selenium-python >= 2.12
-Requires:       kobo
 Requires:       java-openjdk >= 1:1.6.0
 Requires:       Xvfb
 Requires:       firefox
@@ -192,6 +215,7 @@ Group:          Applications/Internet
 Provides:       beaker-redhat-support <= 0.19
 Obsoletes:      beaker-redhat-support <= 0.19
 Requires:       python
+Requires:       crontabs
 Requires:       httpd
 Requires:       cobbler >= 1.4
 Requires:       yum-utils
@@ -201,15 +225,14 @@ Requires:       wsmancli
 Requires:       telnet
 Requires:       sudo
 Requires:       python-cpio
-Requires:	%{name} = %{version}-%{release}
-Requires:       kobo >= 0.3.2
-Requires:	kobo-client
-Requires:	python-setuptools
-Requires:	python-xmltramp
+Requires:       %{name} = %{version}-%{release}
+Requires:       python-setuptools
+Requires:       python-xmltramp
 Requires:       python-krbV
 Requires:       python-gevent >= 1.0
 Requires:       python-daemon
 Requires:       python-werkzeug
+Requires:       python-flask
 %if %{with_systemd}
 Requires:       systemd-units
 Requires(post): systemd
@@ -223,8 +246,8 @@ Group:          Applications/Internet
 Requires:       %{name} = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
-Provides:	beaker-redhat-support-addDistro
-Obsoletes:	beaker-redhat-support-addDistro
+Provides:       beaker-redhat-support-addDistro <= 0.19
+Obsoletes:      beaker-redhat-support-addDistro <= 0.19
 %endif
 
 
@@ -261,27 +284,32 @@ Automatically launch jobs against newly imported distros.
 
 %prep
 %setup -q -n %{name}-%{upstream_version}
+tar -C Server/assets/bootstrap --strip-components=1 -xzf %{SOURCE1}
+tar -C Server/assets/font-awesome --strip-components=1 -xzf %{SOURCE2}
+tar -C Server/assets/typeahead.js --strip-components=1 -xzf %{SOURCE3}
+tar -C Server/assets/underscore --strip-components=1 -xzf %{SOURCE4}
+tar -C Server/assets/backbone --strip-components=1 -xzf %{SOURCE5}
 
 %build
-[ "$RPM_BUILD_ROOT" != "/" ] && [ -d $RPM_BUILD_ROOT ] && rm -rf $RPM_BUILD_ROOT;
-DESTDIR=$RPM_BUILD_ROOT make \
+make \
     %{?with_server:WITH_SERVER=1} \
     %{?with_labcontroller:WITH_LABCONTROLLER=1} \
     %{?with_inttests:WITH_INTTESTS=1}
 
 %install
-DESTDIR=$RPM_BUILD_ROOT make \
+DESTDIR=%{buildroot} make \
     %{?with_server:WITH_SERVER=1} \
     %{?with_labcontroller:WITH_LABCONTROLLER=1} \
     %{?with_inttests:WITH_INTTESTS=1} \
     install
 
-%if %{with_systemd}
-mkdir -p  $RPM_BUILD_ROOT%{_tmpfilesdir}
-cp -p Server/tmpfiles.d/beaker-server.conf $RPM_BUILD_ROOT%{_tmpfilesdir}/beaker-server.conf
-cp -p LabController/tmpfiles.d/beaker-lab-controller.conf $RPM_BUILD_ROOT%{_tmpfilesdir}/beaker-lab-controller.conf
-%endif
 
+%check
+make \
+    %{?with_server:WITH_SERVER=1} \
+    %{?with_labcontroller:WITH_LABCONTROLLER=1} \
+    %{?with_inttests:WITH_INTTESTS=1} \
+    check
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -373,20 +401,21 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %files
 %defattr(-,root,root,-)
-%{python_sitelib}/bkr/__init__.py*
-%{python_sitelib}/bkr/timeout_xmlrpclib.py*
-%{python_sitelib}/bkr/common/
-%{python_sitelib}/bkr/log.py*
-%{python_sitelib}/bkr-*.egg-info/
+%{python2_sitelib}/bkr/__init__.py*
+%{python2_sitelib}/bkr/timeout_xmlrpclib.py*
+%{python2_sitelib}/bkr/common/
+%{python2_sitelib}/bkr/log.py*
+%{python2_sitelib}/bkr-*.egg-info/
 %doc COPYING
 
 %if %{with server}
 %files server
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/beaker
 %doc documentation/_build/text/whats-new/
-%{python_sitelib}/bkr/server/
-%{python_sitelib}/bkr.server-*-nspkg.pth
-%{python_sitelib}/bkr.server-*.egg-info/
+%{python2_sitelib}/bkr/server/
+%{python2_sitelib}/bkr.server-*-nspkg.pth
+%{python2_sitelib}/bkr.server-*.egg-info/
 %{_bindir}/%{name}-init
 %{_bindir}/nag-mail
 %{_bindir}/beaker-log-delete
@@ -401,10 +430,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %if %{with_systemd}
 %{_unitdir}/beakerd.service
-%exclude %{_sysconfdir}/init.d
+%attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
 %else
 %{_sysconfdir}/init.d/%{name}d
-%exclude /usr/lib/systemd
+%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
 %endif
 
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
@@ -420,27 +449,24 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
-%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
 %attr(-,apache,root) %dir %{_localstatedir}/lib/%{name}
-%if %{with_systemd}
-%attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
-%endif
 %endif
 
 %if %{with inttests}
 %files integration-tests
 %defattr(-,root,root,-)
-%{python_sitelib}/bkr/inttest/
-%{python_sitelib}/bkr.inttest-*-nspkg.pth
-%{python_sitelib}/bkr.inttest-*.egg-info/
+%{python2_sitelib}/bkr/inttest/
+%{python2_sitelib}/bkr.inttest-*-nspkg.pth
+%{python2_sitelib}/bkr.inttest-*.egg-info/
 %endif
 
 %files client
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/beaker
 %doc Client/client.conf.example
-%{python_sitelib}/bkr/client/
-%{python_sitelib}/bkr.client-*-nspkg.pth
-%{python_sitelib}/bkr.client-*.egg-info/
+%{python2_sitelib}/bkr/client/
+%{python2_sitelib}/bkr.client-*-nspkg.pth
+%{python2_sitelib}/bkr.client-*.egg-info/
 %{_bindir}/beaker-wizard
 %{_bindir}/bkr
 %{_mandir}/man1/beaker-wizard.1.gz
@@ -457,12 +483,13 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with labcontroller}
 %files lab-controller
 %defattr(-,root,root,-)
+%dir %{_sysconfdir}/beaker
 %config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
 %{_sysconfdir}/beaker/power-scripts/
 %{_sysconfdir}/beaker/install-failure-patterns/
-%{python_sitelib}/bkr/labcontroller/
-%{python_sitelib}/bkr.labcontroller-*-nspkg.pth
-%{python_sitelib}/bkr.labcontroller-*.egg-info/
+%{python2_sitelib}/bkr/labcontroller/
+%{python2_sitelib}/bkr.labcontroller-*-nspkg.pth
+%{python2_sitelib}/bkr.labcontroller-*.egg-info/
 %{_bindir}/%{name}-proxy
 %{_bindir}/%{name}-watchdog
 %{_bindir}/%{name}-transfer
@@ -484,22 +511,18 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_unitdir}/beaker-provision.service
 %{_unitdir}/beaker-watchdog.service
 %{_unitdir}/beaker-transfer.service
-%exclude %{_sysconfdir}/init.d
+%{_tmpfilesdir}/beaker-lab-controller.conf
 %else
 %{_sysconfdir}/init.d/%{name}-proxy
 %{_sysconfdir}/init.d/%{name}-watchdog
 %{_sysconfdir}/init.d/%{name}-transfer
 %{_sysconfdir}/init.d/%{name}-provision
-%exclude /usr/lib/systemd
+%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %endif
 
-%attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %attr(0440,root,root) %config(noreplace) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-lab-controller.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/beaker
-%if %{with_systemd}
-%attr(0644,apache,apache) %{_tmpfilesdir}/beaker-lab-controller.conf
-%endif
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)

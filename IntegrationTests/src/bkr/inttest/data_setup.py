@@ -1,20 +1,8 @@
-# Beaker
-#
-# Copyright (C) 2010 rmancy@redhat.com
-#
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import logging
 import re
@@ -25,7 +13,7 @@ import itertools
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session
-from bkr.server import model
+from bkr.server import dynamic_virt
 from bkr.server.model import LabController, User, Group, UserGroup, Distro, DistroTree, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
@@ -91,6 +79,7 @@ def create_labcontroller(fqdn=None, user=None):
             user = User(user_name='host/%s' % fqdn)
         lc = LabController(fqdn=fqdn)
         lc.user = user
+        session.add(lc)
         user.groups.append(Group.by_name(u'lab_controller'))
         return lc
     log.debug('labcontroller %s already exists' % fqdn)
@@ -149,7 +138,9 @@ def create_group(permissions=None, group_name=None, display_name=None,
 def create_permission(name=None):
     if not name:
         name = unique_name('permission%s')
-    return Permission(name)
+    permission = Permission(name)
+    session.add(permission)
+    return permission
 
 def add_user_to_group(user,group):
     user.groups.append(group)
@@ -195,6 +186,7 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
                 distro = create_distro(name=distro_name)
     distro_tree = DistroTree.lazy_create(distro=distro,
             arch=Arch.by_name(arch), variant=variant)
+    session.add(distro_tree)
     if distro_tree.arch not in distro.osversion.arches:
         distro.osversion.arches.append(distro_tree.arch)
     distro_tree.repos.append(DistroTreeRepo(repo_id=variant,
@@ -218,7 +210,7 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
 def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.automated,
         owner=None, fqdn=None, shared=True, exclude_osmajor=[],
         exclude_osversion=[], hypervisor=None, kernel_type=None,
-        date_added=None, return_existing=False, **kw):
+        date_added=None, return_existing=False, private=False, with_power=True, **kw):
     if owner is None:
         owner = create_user()
     if fqdn is None:
@@ -234,16 +226,19 @@ def create_system(arch=u'i386', type=SystemType.machine, status=SystemStatus.aut
     else:
         system = System(fqdn=fqdn,type=type, owner=owner,
             status=status, **kw)
+        session.add(system)
 
     if date_added is not None:
         system.date_added = date_added
-    # Always give it a custom policy, so that tests can fill in rules they need.
     system.custom_access_policy = SystemAccessPolicy()
+    if not private:
+        system.custom_access_policy.add_rule(SystemPermission.view, everybody=True)
     if shared:
         system.custom_access_policy.add_rule(
                 permission=SystemPermission.reserve, everybody=True)
     system.arch.append(Arch.by_name(arch))
-    configure_system_power(system)
+    if with_power:
+        configure_system_power(system)
     system.excluded_osmajor.extend(ExcludeOSMajor(arch=Arch.by_name(arch),
             osmajor=osmajor) for osmajor in exclude_osmajor)
     system.excluded_osversion.extend(ExcludeOSVersion(arch=Arch.by_name(arch),
@@ -275,6 +270,7 @@ def create_system_activity(user=None, **kw):
         user = create_user()
     activity = SystemActivity(user, u'WEBUI', u'Changed', u'Loaned To',
             unique_name(u'random_%s'), user.user_name)
+    session.add(activity)
     return activity
 
 def create_system_status_history(system, statuses):
@@ -316,6 +312,7 @@ def create_task(name=None, exclude_arch=None, exclude_osmajor=None, version=u'1.
     task.valid = valid
     task.path = path
     task.description = description
+    task.avg_time = 1200
     if type:
         for t in type:
             task.types.append(TaskType.lazy_create(type=t))
@@ -357,12 +354,12 @@ def create_recipe(distro_tree=None, task_list=None,
 
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
-            rt = RecipeTask(task=t)
+            rt = RecipeTask.from_task(t)
             rt.role = u'STANDALONE'
             recipe.tasks.append(rt)
         recipe.ttasks = len(task_list)
     else:
-        rt = RecipeTask(task=create_task(name=task_name))
+        rt = RecipeTask.from_task(create_task(name=task_name))
         rt.role = u'STANDALONE'
         recipe.tasks.append(rt)
     return recipe
@@ -377,6 +374,7 @@ def create_retention_tag(name=None, default=False, needs_product=False):
     if name is None:
         name = unique_name(u'tag%s')
     new_tag = RetentionTag(name,is_default=default,needs_product=needs_product)
+    session.add(new_tag)
     return new_tag
 
 def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,
@@ -490,7 +488,7 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
                 if not lab_controller:
                     lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
                 recipe.recipeset.lab_controller = lab_controller
-                with model.VirtManager() as manager:
+                with dynamic_virt.VirtManager() as manager:
                     recipe.resource.allocate(manager, [lab_controller])
             else:
                 if not system:

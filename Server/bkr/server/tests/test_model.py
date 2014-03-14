@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 # These are unit tests which don't need a MySQL database. Tests which need to
 # talk to external services belong in the IntegrationTests subdir.
 
@@ -14,7 +20,8 @@ from nose.plugins.skip import SkipTest
 from sqlalchemy.schema import MetaData, Table, Column
 from sqlalchemy.types import Integer, Unicode
 from turbogears.config import get, update
-from bkr.server.model import ConditionalInsert, TaskLibrary
+from bkr.server.model.sql import ConditionalInsert
+from bkr.server.model.tasklibrary import TaskLibrary
 
 
 class ConditionalInsertTest(unittest.TestCase):

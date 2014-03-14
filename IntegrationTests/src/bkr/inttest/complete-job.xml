@@ -34,7 +34,7 @@
                     <partition fs="btrfs" name="/usr/local" size="8" type="part"/>
                 </partitions>
                 <task name="/distribution/install" role="STANDALONE">
-                    <params/>
+                    <fetch subdir="install" url="git://example.com/externaltasks#master"/>
                 </task>
             </guestrecipe>
             <autopick random="true"/>
@@ -53,8 +53,11 @@
                 <system_type value="Machine"/>
             </hostRequires>
             <partitions/>
-            <task name="/distribution/install" role="STANDALONE">
-                <params/>
+            <task name="/distribution/install" role="STANDALONE"/>
+            <task name="/distribution/reservesys" role="STANDALONE">
+                <params>
+                    <param name="RESERVE_IF_FAIL" value="1"/>
+                </params>
             </task>
         </recipe>
     </recipeSet>

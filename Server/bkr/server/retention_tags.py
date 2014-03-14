@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from kid import XML
 from turbogears.database import session
 from turbogears import expose, flash, widgets, validate, error_handler, validators, redirect, paginate, url
@@ -5,23 +11,34 @@ from bkr.server import identity
 from bkr.server.widgets import myPaginateDataGrid, HorizontalForm
 from bkr.server.admin_page import AdminPage
 from bkr.server.model import RetentionTag as Tag
-from bkr.server.retention_tag_utility import RetentionTagUtility
 from bkr.server.helpers import make_edit_link
+from bkr.server.validators import UniqueRetentionTag
 
 import logging
 log = logging.getLogger(__name__)
+
+class TagFormSchema(validators.Schema):
+    id = validators.Int()
+    tag = validators.UnicodeString(not_empty=True, max=20, strip=True)
+    default = validators.StringBool(if_empty=False)
+    expire_in_days = validators.Int()
+    needs_product = validators.StringBool(if_empty=False)
+    chained_validators = [UniqueRetentionTag('id', 'tag')]
 
 class RetentionTag(AdminPage):
     exposed = False
 
     tag = widgets.TextField(name='tag', label=_(u'Tag'))
-    default = widgets.SingleSelectField(name='default', label=(u'Default'), options=[(0,'False'),(1,'True')])
+    default = widgets.SingleSelectField(name='default', label=(u'Default'),
+            options=[(0,'False'),(1,'True')])
     id = widgets.HiddenField(name='id') 
+    expire_in_days = widgets.TextField(name='expire_in_days', label=_(u'Expire In Days'),
+            help_text=_(u'Number of days after which jobs will expire'))
     needs_product = widgets.CheckBox('needs_product', label=u'Needs Product')
 
     tag_form = HorizontalForm(
         'Retention Tag',
-        fields = [tag, default, needs_product, id],
+        fields = [tag, default, expire_in_days, needs_product, id],
         action = 'save_data',
         submit_text = _(u'Save'),
     )
@@ -45,35 +62,17 @@ class RetentionTag(AdminPage):
             value = kw,
         )
 
-
     @identity.require(identity.in_group("admin"))
     @expose()
-    def save_edit(self, **kw):
-        try:
-            RetentionTagUtility.edit_default(**kw)
-        except Exception, e:
-            log.exception('Error editing tag: %s and default: %s' % (kw.get('tag'), kw.get('default_')))
-            flash(_(u"Problem editing tag %s: %s" % (kw.get('tag'), e)))
-            redirect("./admin")
+    @validate(form=tag_form, validators=TagFormSchema())
+    @error_handler(new)
+    def save(self, id=None, **kw):
+        retention_tag = Tag(kw['tag'], kw['default'], kw['needs_product'])
+        retention_tag.expire_in_days = kw['expire_in_days']
+        session.add(retention_tag)
         flash(_(u"OK"))
         redirect("./admin")
 
-    @identity.require(identity.in_group("admin"))
-    @expose()
-    @validate(validators = { 'tag' : validators.UnicodeString(not_empty=True, max=20, strip=True) })
-    @error_handler(new)
-    def save(self, **kw):
-        try:
-            RetentionTagUtility.save_tag(**kw)
-            session.flush()
-        except Exception, e:
-            session.rollback()
-            log.error('Error inserting tag: %s and default: %s' % (kw.get('tag'), kw.get('default_')))
-            flash(_(u"Problem saving tag %s" % kw.get('tag')))
-        else:
-            flash(_(u"OK"))
-        redirect("./admin")
-    
     @expose(format='json')
     def by_tag(self, input, *args, **kw):
         input = input.lower()
@@ -101,7 +100,7 @@ class RetentionTag(AdminPage):
             flash(u'%s is not applicable for deletion' % tag.tag)
             redirect('/retentiontag/admin')
         session.delete(tag)
-        flash(u'Succesfully deleted %s' % tag.tag)
+        flash(u'Successfully deleted %s' % tag.tag)
         redirect('/retentiontag/admin')
 
     @identity.require(identity.in_group("admin"))
@@ -116,6 +115,19 @@ class RetentionTag(AdminPage):
             value = tag,
             disabled_fields = ['tag']
         )
+
+    @identity.require(identity.in_group("admin"))
+    @expose()
+    @validate(form=tag_form, validators=TagFormSchema())
+    @error_handler(edit)
+    def save_edit(self, id=None, **kw):
+        retention_tag = Tag.by_id(id)
+        retention_tag.tag = kw['tag']
+        retention_tag.default = kw['default']
+        retention_tag.expire_in_days = kw['expire_in_days']
+        retention_tag.needs_product = kw['needs_product']
+        flash(_(u"OK"))
+        redirect("./admin")
 
     @expose(template="bkr.server.templates.grid")
     @paginate('list', default_order='tag', limit=20)

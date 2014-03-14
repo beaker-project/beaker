@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr user-modify: Modify Beaker users
 ====================================
@@ -7,8 +13,8 @@ bkr user-modify: Modify Beaker users
 Synopsis
 --------
 
-| :program:`bkr user-modify` [*options*] [--add-submission-delegate=<user>]
-|       [--remove-submission-delegate=<user>]
+| :program:`bkr user-modify` [*options*] [:option:`--add-submission-delegate` <user>]
+|       [:option:`--remove-submission-delegate` <user>]
 
 Description
 -----------

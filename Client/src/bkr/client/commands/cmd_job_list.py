@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr job-list: List Beaker jobs
 ==============================
@@ -9,7 +14,7 @@ Synopsis
 --------
 
 | :program:`bkr job-list` [*options*]
-|       [--family=<family>] [--tag=<tag>] [--product=<cpeid>] [--completeDays=<days>]
+|       [:option:`--family` <family>] [:option:`--tag` <tag>] [:option:`--product` <cpeid>] [:option:`--completeDays` <days>]
 
 Description
 -----------
@@ -106,6 +111,7 @@ from optparse import OptionValueError
 class Job_List(BeakerCommand):
     """List Beaker jobs """
     enabled = True
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s [options] ..." % self.normalized_name
@@ -209,6 +215,8 @@ class Job_List(BeakerCommand):
             self.parser.error('Please pass either the completeDays time delta, a tag, product, family, or owner')
 
         self.set_hub(**kwargs)
+        if mine:
+            self.hub._login()
         jobs = self.hub.jobs.filter(dict(tag=tag,
                                         daysComplete=complete_days,
                                         family=family,

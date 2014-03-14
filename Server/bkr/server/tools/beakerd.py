@@ -1,23 +1,10 @@
 #!/usr/bin/env python
-# Beaker - 
-#
-# Copyright (C) 2008 bpeck@redhat.com
-#
+# -*- coding: utf-8 -*-
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
-# -*- coding: utf-8 -*-
 
 # pkg_resources.requires() does not work if multiple versions are installed in 
 # parallel. This semi-supported hack using __requires__ is the workaround.
@@ -29,11 +16,16 @@ import sys
 import os
 import random
 from bkr.log import log_to_stream, log_to_syslog
-from bkr.server import needpropertyxml, utilisation
+from bkr.server import needpropertyxml, utilisation, metrics, dynamic_virt
 from bkr.server.bexceptions import BX, VMCreationFailedException, \
     StaleTaskStatusException, InsufficientSystemPermissions, \
     StaleSystemUserException
-from bkr.server.model import *
+from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
+        GuestRecipe, RecipeVirtStatus, TaskStatus, TaskPriority, LabController,
+        Watchdog, System, DistroTree, LabControllerDistroTree, SystemStatus,
+        VirtResource, SystemResource, GuestResource, Arch,
+        SystemAccessPolicy, SystemPermission, ConfigItem)
+from bkr.server.model.scheduler import machine_guest_map
 from bkr.server.util import load_config, log_traceback
 from bkr.server.recipetasks import RecipeTasks
 from turbogears.database import session
@@ -41,7 +33,7 @@ from turbogears import config
 from turbomail.control import interface
 from xmlrpclib import ProtocolError
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.sql.expression import func, select
+from sqlalchemy.sql.expression import func, select, and_, or_, not_
 from sqlalchemy.orm import aliased
 
 import socket
@@ -356,9 +348,9 @@ def schedule_queued_recipes(*args):
         # the most recent distro tree. It is to be used as a derived table.
         latest_guest_distro = select([machine_guest_map.c.machine_recipe_id.label('host_id'),
             func.max(DistroTree.date_created).label('latest_distro_date')],
-            from_obj=[machine_guest_map.join(guest_recipe_table,
-                    machine_guest_map.c.guest_recipe_id==guest_recipe_table.c.id). \
-                join(recipe_table).join(distro_tree_table)],
+            from_obj=[machine_guest_map.join(GuestRecipe.__table__,
+                    machine_guest_map.c.guest_recipe_id==GuestRecipe.__table__.c.id). \
+                join(Recipe.__table__).join(DistroTree.__table__)],
             whereclause=Recipe.status=='Queued',
             group_by=machine_guest_map.c.machine_recipe_id).alias()
 
@@ -499,8 +491,8 @@ def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
         .join(Recipe.recipeset, RecipeSet.job) \
         .join(System.lab_controller, LabController._distro_trees)\
         .join((DistroTree,
-            and_(distro_tree_lab_controller_map.c.distro_tree_id ==
-                DistroTree.id, recipe_table.c.distro_tree_id == DistroTree.id)))\
+            and_(LabControllerDistroTree.distro_tree_id ==
+                DistroTree.id, Recipe.distro_tree_id == DistroTree.id)))\
         .outerjoin((machine_guest_map,
             Recipe.id == machine_guest_map.c.machine_recipe_id))\
         .outerjoin((guest_recipe,
@@ -633,7 +625,7 @@ def provision_virt_recipes(*args):
             try:
                 # Don't leak the vm if it was created
                 if system_name:
-                    with VirtManager() as manager:
+                    with dynamic_virt.VirtManager() as manager:
                         manager.destroy_vm(system_name)
                 # As an added precaution, let's try and avoid this recipe in future
                 session.begin()
@@ -665,7 +657,7 @@ def provision_virt_recipe(system_name, recipe_id):
     recipe.systems = []
     recipe.watchdog = Watchdog()
     recipe.resource = VirtResource(system_name=system_name)
-    with VirtManager() as manager:
+    with dynamic_virt.VirtManager() as manager:
         recipe.resource.allocate(manager, lab_controllers)
     recipe.recipeset.lab_controller = recipe.resource.lab_controller
     recipe.schedule()

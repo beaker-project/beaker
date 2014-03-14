@@ -1,20 +1,9 @@
-# - Logan is the scheduling piece of the Beaker project
-#
-# Copyright (C) 2008 bpeck@redhat.com
-#
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 from turbogears.database import session
 from turbogears import expose, flash, widgets, validate, validators, redirect, paginate, url
 from cherrypy import response
@@ -28,7 +17,7 @@ from bkr.server.widgets import myPaginateDataGrid, \
     HorizontalForm, BeakerDataGrid
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
-from bkr.server import search_utility, identity
+from bkr.server import search_utility, identity, metrics
 from bkr.server.controller_utilities import _custom_status, _custom_result, \
     restrict_http_method
 import pkg_resources
@@ -532,6 +521,7 @@ class Jobs(RPCRoot):
         if not job.recipesets:
             raise BX(_('No RecipeSets! You can not have a Job with no recipeSets!'))
         session.add(job)
+        metrics.measure('counters.recipes_submitted', len(list(job.all_recipes)))
         return job
 
     def _jobs(self,job,**kw):
@@ -617,17 +607,21 @@ class Jobs(RPCRoot):
         xmltasks = []
         invalid_tasks = []
         for xmltask in xmlrecipe.iter_tasks():
-            try:
-                Task.by_name(xmltask.name, valid=1)
-            except InvalidRequestError, e:
-                invalid_tasks.append(xmltask.name)
-            else:
+            if hasattr(xmltask, 'fetch'):
+                # If fetch URL is given, the task doesn't need to exist.
                 xmltasks.append(xmltask)
+            elif Task.exists_by_name(xmltask.name, valid=True):
+                xmltasks.append(xmltask)
+            else:
+                invalid_tasks.append(xmltask.name)
         if invalid_tasks and not ignore_missing_tasks:
             raise BX(_('Invalid task(s): %s') % ', '.join(invalid_tasks))
         for xmltask in xmltasks:
-            task = Task.by_name(xmltask.name)
-            recipetask = RecipeTask(task=task)
+            if hasattr(xmltask, 'fetch'):
+                recipetask = RecipeTask.from_fetch_url(xmltask.fetch.url,
+                        subdir=xmltask.fetch.subdir, name=xmltask.name)
+            else:
+                recipetask = RecipeTask.from_task(Task.by_name(xmltask.name))
             recipetask.role = xmltask.role
             for xmlparam in xmltask.iter_params():
                 param = RecipeTaskParam( name=xmlparam.name, 

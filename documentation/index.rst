@@ -35,8 +35,6 @@ Resources
       admin-guide/index
       architecture-guide/index
 
-   * `Migrating from Cobbler (pre-Beaker 0.9) <../cobbler-migration.html>`_
-
 .. container:: resourcesbox
 
    .. raw:: html

@@ -4,12 +4,7 @@
 .PHONY: build
 build:
 	env PYTHONPATH=../Common$${PYTHONPATH:+:$$PYTHONPATH} \
-	    python setup.py build --install-data=/usr/share/ \
-	    | tee build.out
-	@if grep -q ImportError build.out ; then \
-	    echo "ImportErrors in build output, did Sphinx autodoc fail?" ; \
-	    exit 1 ; \
-	fi
+	    python setup.py build --install-data=/usr/share/
 
 .PHONY: install
 install: build
@@ -20,3 +15,7 @@ install: build
 clean:
 	python setup.py clean
 	rm -rf build
+
+.PHONY: check
+check:
+	./run-tests.sh

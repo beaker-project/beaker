@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from turbogears.database import session
 from turbogears import expose, flash, widgets, error_handler, redirect, paginate, url
 from bkr.server.helpers import make_edit_link, make_remove_link
@@ -65,6 +71,7 @@ class KeyTypes(AdminPage):
             key.key_name = kw['key_name']
         else:
             key = Key(key_name=kw['key_name'])
+            session.add(key)
         if 'numeric' in kw:
             key.numeric = kw['numeric']
         flash( _(u"OK") )

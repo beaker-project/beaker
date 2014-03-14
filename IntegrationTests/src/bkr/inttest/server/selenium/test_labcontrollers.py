@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import time
 import datetime
 from threading import Thread, Event
@@ -24,19 +29,19 @@ class LabControllerViewTest(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
-    def _add_lc(self, b, lc_name, lc_email, user_name,):
+    def _add_lc(self, b, lc_name, lc_email):
         b.get(get_server_base() + 'labcontrollers')
         b.find_element_by_link_text('Add').click()
         b.find_element_by_name('fqdn').send_keys(lc_name)
         b.find_element_by_name('email').send_keys(lc_email)
-        b.find_element_by_name('lusername').send_keys(user_name)
+        b.find_element_by_name('lusername').send_keys('host/' + lc_name)
         b.find_element_by_id('form').submit()
 
     def test_lab_controller_add(self):
         b = self.browser
         lc_name = data_setup.unique_name('lc%s.com')
         lc_email = data_setup.unique_name('me@my%s.com')
-        self._add_lc(b, lc_name, lc_email, data_setup.ADMIN_USER)
+        self._add_lc(b, lc_name, lc_email)
         self.assert_('%s saved' % lc_name in
             b.find_element_by_css_selector('.flash').text)
 
@@ -57,7 +62,7 @@ class LabControllerViewTest(WebDriverTestCase):
         self.assert_(is_activity_row_present(b,
             object_='LabController: %s' % lc_name, via='WEBUI',
             property_='User', action='Changed',
-            new_value=data_setup.ADMIN_USER))
+            new_value='host/' + lc_name))
         self.assert_(is_activity_row_present(b,
             object_='LabController: %s' % lc_name, via='WEBUI',
             property_='Disabled', action='Changed', new_value='False'))
@@ -66,7 +71,7 @@ class LabControllerViewTest(WebDriverTestCase):
         b = self.browser
         lc_name = data_setup.unique_name('lc%s.com')
         lc_email = data_setup.unique_name('me@my%s.com')
-        self._add_lc(b, lc_name, lc_email, data_setup.ADMIN_USER)
+        self._add_lc(b, lc_name, lc_email)
         with session.begin():
             sys = data_setup.create_system()
             sys.lab_controller = LabController.by_name(lc_name)

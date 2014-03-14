@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from sqlalchemy import select
 from sqlalchemy.sql.expression import case, func, and_, bindparam, not_
 from turbogears import expose, url, flash
@@ -194,23 +200,23 @@ class JobMatrix:
         # Let's get all the tasks that will be run, and the arch/whiteboard
         the_tasks = {}
         for recipe,arch in recipes:
-            the_tasks.update(dict([(rt.task.name,{}) for rt in recipe.tasks]))
+            the_tasks.update(dict([(rt.name,{}) for rt in recipe.tasks]))
             if arch in whiteboard_data:
                 if recipe.whiteboard not in whiteboard_data[arch]:
                     whiteboard_data[arch].append(recipe.whiteboard)
             else:
                 whiteboard_data[arch] = [recipe.whiteboard]
-        case0 = case([(model.recipe_task_table.c.result == u'New',1)],else_=0)
-        case1 = case([(model.recipe_task_table.c.result == u'Pass',1)],else_=0)
-        case2 = case([(model.recipe_task_table.c.result == u'Warn',1)],else_=0)
-        case3 = case([(model.recipe_task_table.c.result == u'Fail',1)],else_=0)
-        case4 = case([(model.recipe_task_table.c.result == u'Panic',1)],else_=0)
-        case5 = case([(model.recipe_task_table.c.result == u'None',1)],else_=0)
+        case0 = case([(model.RecipeTask.result == u'New',1)],else_=0)
+        case1 = case([(model.RecipeTask.result == u'Pass',1)],else_=0)
+        case2 = case([(model.RecipeTask.result == u'Warn',1)],else_=0)
+        case3 = case([(model.RecipeTask.result == u'Fail',1)],else_=0)
+        case4 = case([(model.RecipeTask.result == u'Panic',1)],else_=0)
+        case5 = case([(model.RecipeTask.result == u'None',1)],else_=0)
     
-        arch_alias = model.arch_table.alias()
-        recipe_table_alias = model.recipe_table.alias()
-        my_select = [model.task_table.c.id.label('task_id'),
-                     model.recipe_task_table.c.result,
+        arch_alias = model.Arch.__table__.alias()
+        recipe_table_alias = model.Recipe.__table__.alias()
+        my_select = [model.RecipeTask.name,
+                     model.RecipeTask.result,
                      recipe_table_alias.c.whiteboard,
                      arch_alias.c.arch,
                      arch_alias.c.id.label('arch_id'),
@@ -221,12 +227,11 @@ class JobMatrix:
                      case4.label('rc4'),
                      case5.label('rc5'),
                     ]
-        my_from = [model.recipe_set_table.join(recipe_table_alias). 
-                              join(model.distro_tree_table, model.distro_tree_table.c.id == recipe_table_alias.c.distro_tree_id).
-                              join(arch_alias, arch_alias.c.id == model.distro_tree_table.c.arch_id).
-                              join(model.recipe_task_table, model.recipe_task_table.c.recipe_id == recipe_table_alias.c.id).
-                              join(model.task_table, model.task_table.c.id == model.recipe_task_table.c.task_id)]
-                   
+        my_from = [model.RecipeSet.__table__.join(recipe_table_alias).
+                              join(model.DistroTree.__table__, model.DistroTree.id == recipe_table_alias.c.distro_tree_id).
+                              join(arch_alias, arch_alias.c.id == model.DistroTree.arch_id).
+                              join(model.RecipeTask.__table__, model.RecipeTask.recipe_id == recipe_table_alias.c.id)]
+
         #If this query starts to bog down and slow up, we could create a view for the inner select (s2)
         #SQLAlchemy Select object does not really support this,I think you would have to use SQLAlchemy text for s2, and then
         #build a specific table for it
@@ -236,18 +241,18 @@ class JobMatrix:
         for arch_val,whiteboard_set in whiteboard_data.iteritems():
             for whiteboard_val in whiteboard_set:
                 if whiteboard_val is not None:
-                    my_and = [model.recipe_set_table.c.job_id.in_(job_ids),
+                    my_and = [model.RecipeSet.job_id.in_(job_ids),
                                    arch_alias.c.arch == bindparam('arch'), 
                                    recipe_table_alias.c.whiteboard == bindparam('recipe_whiteboard')]
                 else: 
-                    my_and = [model.recipe_set_table.c.job_id.in_(job_ids),
+                    my_and = [model.RecipeSet.job_id.in_(job_ids),
                                    arch_alias.c.arch == bindparam('arch'), 
                                    recipe_table_alias.c.whiteboard==None]
 
                 # FIXME: Should this be "if exclude_recipe_sets" instead?
                 try:
                     locals()['exclude_recipe_sets']
-                    my_and.append(not_(model.recipe_set_table.c.id.in_(exclude_recipe_sets)))
+                    my_and.append(not_(model.RecipeSet.id.in_(exclude_recipe_sets)))
                 except KeyError: pass
 
                 s2 = select(my_select,from_obj=my_from,whereclause=and_(*my_and)).alias('foo')
@@ -265,10 +270,8 @@ class JobMatrix:
                               s2.c.whiteboard,
                               s2.c.arch,
                               s2.c.arch_id,
-                              model.task_table.c.name.label('task_name'),
-                              s2.c.task_id.label('task_id_pk')],
-                              s2.c.task_id == model.task_table.c.id,
-                              from_obj=[model.task_table,s2]).group_by(model.task_table.c.name).order_by(model.task_table.c.name).alias()
+                              s2.c.name.label('task_name')],
+                              from_obj=[s2]).group_by(s2.c.name).order_by(s2.c.name).alias()
                 results = session.connection(model.Recipe).execute(s1)
                 for task_details in results:
                     if task_details.arch in the_tasks[task_details.task_name]:

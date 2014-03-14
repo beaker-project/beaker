@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr policy-revoke: Revoke permissions in an access policy
 =========================================================
@@ -8,9 +13,9 @@ bkr policy-revoke: Revoke permissions in an access policy
 Synopsis
 --------
 
-| :program:`bkr policy-revoke` [*options*] --system=<fqdn>
-|       --permission=<permission> [--permission=<permission> ...]
-|       [--user=<username> | --group=<groupname> | --everybody]
+| :program:`bkr policy-revoke` [*options*] :option:`--system` <fqdn>
+|       :option:`--permission` <permission> [:option:`--permission` <permission> ...]
+|       [:option:`--user` <username> | :option:`--group` <groupname> | :option:`--everybody`]
 
 Description
 -----------

@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 .. _bkr-job-logs:
 
@@ -56,6 +61,7 @@ import libxml2
 class Job_Logs(BeakerCommand):
     """Print URLs of recipe log files"""
     enabled = True
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name

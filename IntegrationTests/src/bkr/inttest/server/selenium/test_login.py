@@ -1,51 +1,36 @@
 
-# Beaker
-#
-# Copyright (C) 2010 Red Hat, Inc.
-#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import sys
 import os
-import logging
 import turbogears.config
 from turbogears.database import session
 import unittest
 import xmlrpclib
+from hashlib import sha1
 from nose.plugins.skip import SkipTest
 try:
     import krbV
 except ImportError:
     krbV = None
-from bkr.inttest import data_setup, with_transaction
-from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase
+from bkr.inttest import data_setup, with_transaction, get_server_base
+from bkr.inttest.server.selenium import WebDriverTestCase, XmlRpcTestCase
+from bkr.inttest.server.webdriver_utils import login
 
-log = logging.getLogger(__name__)
-
-class LoginTest(SeleniumTestCase):
+class LoginTest(WebDriverTestCase):
 
     password = u'password'
 
     @with_transaction
     def setUp(self):
         self.user = data_setup.create_user(password=self.password)
-        self.selenium = self.get_selenium()
-        self.selenium.start()
+        self.browser = self.get_browser()
 
     def tearDown(self):
-        self.selenium.stop()
+        self.browser.quit()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=660527
     def test_referer_redirect(self):
@@ -53,86 +38,84 @@ class LoginTest(SeleniumTestCase):
             system = data_setup.create_system()
 
         # Go to the system page
-        sel = self.selenium
-        sel.open('')
-        sel.type('simplesearch', system.fqdn)
-        sel.submit('systemsearch_simple')
-        sel.wait_for_page_to_load('30000')
-        sel.click('link=%s' % system.fqdn)
-        sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_title(), system.fqdn)
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_name('simplesearch').send_keys(system.fqdn)
+        b.find_element_by_id('simpleform').submit()
+        b.find_element_by_link_text(system.fqdn).click()
+        b.find_element_by_xpath('//title[text()="%s"]' % system.fqdn)
 
         # Click log in, and fill in details
-        sel.click('link=Log in')
-        sel.wait_for_page_to_load('30000')
-        sel.type('user_name', self.user.user_name)
-        sel.type('password', self.password)
-        sel.click('login')
-        sel.wait_for_page_to_load('30000')
+        b.find_element_by_link_text('Log in').click()
+        b.find_element_by_name('user_name').send_keys(self.user.user_name)
+        b.find_element_by_name('password').send_keys(self.password)
+        b.find_element_by_name('login').click()
 
         # We should be back at the system page
-        self.assertEquals(sel.get_title(), system.fqdn)
+        b.find_element_by_xpath('//title[text()="%s"]' % system.fqdn)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=663277
     def test_NestedVariablesFilter_redirect(self):
-        sel = self.selenium
+        b = self.browser
         # Open jobs/mine (which requires login) with some funky params
-        sel.open('jobs/mine?'
+        b.get(get_server_base() + 'jobs/mine?'
                 'jobsearch-0.table=Status&'
                 'jobsearch-0.operation=is+not&'
                 'jobsearch-0.value=Completed&'
                 'jobsearch-1.table=Status&'
                 'jobsearch-1.operation=is+not&'
-                'jobsearch-1.value=Cancelled',
-                ignoreResponseCode=True)
+                'jobsearch-1.value=Cancelled')
         # Fill in the login form
-        sel.type('user_name', self.user.user_name)
-        sel.type('password', self.password)
-        sel.click('login')
-        sel.wait_for_page_to_load('30000')
+        b.find_element_by_name('user_name').send_keys(self.user.user_name)
+        b.find_element_by_name('password').send_keys(self.password)
+        b.find_element_by_name('login').click()
         # Did it work?
-        self.assertEquals(sel.get_title(), 'My Jobs')
+        b.find_element_by_xpath('//title[text()="My Jobs"]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=674566
 
     def test_message_when_not_logged_in(self):
-        sel = self.selenium
-        try:
-            sel.open('jobs/mine', ignoreResponseCode=False)
-            self.fail('Should raise 403')
-        except Exception, e:
-            if isinstance(e, AssertionError): raise
-            self.assert_('Response_Code = 403' in e.args[0], e)
-        sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_text('css=#message'), 'Please log in.')
+        b = self.browser
+        b.get(get_server_base() + 'jobs/mine')
+        # XXX should check for 403 response code
+        self.assertEquals(b.find_element_by_css_selector('#message').text,
+                'Please log in.')
 
     def test_message_when_explicitly_logging_in(self):
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=Log in')
-        sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_text('css=#message'), 'Please log in.')
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Log in').click()
+        self.assertEquals(b.find_element_by_css_selector('#message').text,
+                'Please log in.')
 
     def test_message_when_permissions_insufficient(self):
-        self.login(self.user.user_name, self.password)
-        sel = self.selenium
-        try:
-            sel.open('labcontrollers', ignoreResponseCode=False)
-            self.fail('Should raise 403')
-        except Exception, e:
-            if isinstance(e, AssertionError): raise
-            self.assert_('Response_Code = 403' in e.args[0], e)
-        sel.wait_for_page_to_load('30000')
-        self.assertEquals(sel.get_title(), 'Forbidden')
-        self.assertEquals(sel.get_text('css=#reasons'),
+        b = self.browser
+        login(b, self.user.user_name, self.password)
+        b.get(get_server_base() + 'labcontrollers')
+        # XXX should check for 403 response code
+        b.find_element_by_xpath('//title[text()="Forbidden"]')
+        self.assertEquals(b.find_element_by_css_selector('#reasons').text,
                 'Not member of group: admin')
 
     def test_message_when_password_mistyped(self):
-        self.login(self.user.user_name, 'not the right password')
-        sel = self.selenium
-        self.assertEquals(sel.get_text('css=#message'),
+        b = self.browser
+        login(b, self.user.user_name, 'not the right password')
+        self.assertEquals(b.find_element_by_css_selector('#message').text,
                 'The credentials you supplied were not correct or '
                 'did not grant access to this resource.')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=994751
+    def test_old_password_hashes_are_migrated(self):
+        with session.begin():
+            # unsalted SHA1 is the old hash format from TurboGears 1.0
+            self.user._password = sha1(self.password).hexdigest()
+        b = self.browser
+        login(b, self.user.user_name, self.password)
+        b.find_element_by_xpath('//title[text()="Systems"]')
+        with session.begin():
+            session.refresh(self.user)
+            self.assert_(self.user._password.startswith('$pbkdf2-sha512$'),
+                    self.user._password)
 
 class XmlRpcLoginTest(XmlRpcTestCase):
 

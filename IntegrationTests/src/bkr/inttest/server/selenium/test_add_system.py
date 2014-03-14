@@ -1,6 +1,11 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from selenium.webdriver.support.ui import Select
-from bkr.server.model import session, System
+from bkr.server.model import session, System, SystemPermission
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login
 from bkr.inttest import data_setup, get_server_base
@@ -18,14 +23,12 @@ class AddSystem(WebDriverTestCase):
 
     # the default values are the same as that presented by the Web UI
     def add_system(self, fqdn='', lender='', serial='', status='Automated',
-                   lab_controller='None', type='Laptop', private=False,
+                   lab_controller='None', type='Laptop',
                    vendor='', model='', location='', mac=''):
         b = self.browser
         b.find_element_by_name('fqdn').send_keys(fqdn)
         b.find_element_by_name('lender').send_keys(lender)
         Select(b.find_element_by_name('status')).select_by_visible_text(status)
-        if private:
-            b.find_element_by_name('private').click()
         if status == 'Broken':
             b.find_element_by_name('status_reason').send_keys(self.condition_report)
         Select(b.find_element_by_name('lab_controller_id'))\
@@ -50,7 +53,6 @@ class AddSystem(WebDriverTestCase):
                               status = 'Automated', 
                               lab_controller = 'lab-devel.rhts.eng.bos.redhat.com',
                               type = 'Machine',
-                              private = False,
                               vendor = 'Intel',
                               model = 'model',
                               location = 'brisbane',
@@ -65,7 +67,6 @@ class AddSystem(WebDriverTestCase):
         self.assert_system_view_text('lender', system_details['lender'])
         self.assert_system_view_text('model', system_details['model'])
         self.assert_system_view_text('location', system_details['location'])
-        self.assert_system_view_text('private', 'False')
         with session.begin():
             system = System.query.filter_by(fqdn=system_details['fqdn']).one()
             self.assertEquals(unicode(system.status), system_details['status'])
@@ -77,7 +78,6 @@ class AddSystem(WebDriverTestCase):
                               status = 'Broken',
                               lab_controller = 'None',
                               type = 'Laptop',
-                              private = False,
                               vendor = 'Intel',
                               model = 'model',
                               location = 'brisbane',
@@ -94,7 +94,6 @@ class AddSystem(WebDriverTestCase):
         self.assert_system_view_text('status_reason', self.condition_report)
         self.assert_system_view_text('model', system_details['model'])
         self.assert_system_view_text('location', system_details['location'])
-        self.assert_system_view_text('private', 'False')
 
     def test_case_3(self):
         system_details = dict(fqdn = 'test-system-3',
@@ -103,7 +102,6 @@ class AddSystem(WebDriverTestCase):
                               status = 'Automated', 
                               lab_controller = 'None',
                               type = 'Resource',
-                              private = True,
                               vendor = 'AMD',
                               model = 'model',
                               location = '',
@@ -119,7 +117,6 @@ class AddSystem(WebDriverTestCase):
         self.assert_system_view_text('vendor', system_details['vendor'])
         self.assert_system_view_text('model', system_details['model'])
         self.assert_system_view_text('location', system_details['location'])
-        self.assert_system_view_text('private', 'True')
 
     def test_case_4(self):
         system_details = dict(fqdn = 'test-system-4',
@@ -128,7 +125,6 @@ class AddSystem(WebDriverTestCase):
                               status = 'Broken',
                               lab_controller = 'None',
                               type = 'Prototype',
-                              private = True,
                               vendor = 'AMD',
                               model = 'model',
                               location = 'brisbane',
@@ -144,7 +140,6 @@ class AddSystem(WebDriverTestCase):
         self.assert_system_view_text('vendor', system_details['vendor'])
         self.assert_system_view_text('model', system_details['model'])
         self.assert_system_view_text('location', system_details['location'])
-        self.assert_system_view_text('private', 'True')
 
     def test_case_5(self):
         with session.begin():
@@ -155,7 +150,6 @@ class AddSystem(WebDriverTestCase):
                               status = 'Broken', 
                               lab_controller = 'None',
                               type = 'Prototype',
-                              private = True,
                               vendor = 'AMD',
                               model = 'model',
                               location = 'brisbane',
@@ -178,3 +172,16 @@ class AddSystem(WebDriverTestCase):
         error_msg = b.find_element_by_css_selector(
             '.control-group.error .help-inline').text
         self.assertEquals(error_msg, 'Please enter a value')
+
+    def test_grants_view_permission_to_everybody_by_default(self):
+        fqdn = data_setup.unique_name(u'test-add-system%s.example.invalid')
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Add').click()
+        b.find_element_by_name('fqdn').send_keys(fqdn)
+        b.find_element_by_name('form').submit()
+        b.find_element_by_xpath('//h1[text()="%s"]' % fqdn)
+        with session.begin():
+            system = System.query.filter(System.fqdn == fqdn).one()
+            self.assertTrue(system.custom_access_policy.grants_everybody(
+                    SystemPermission.view))

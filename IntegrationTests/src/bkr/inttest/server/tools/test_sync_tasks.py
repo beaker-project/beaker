@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import sys
 import unittest2 as unittest
 import os
@@ -10,7 +16,7 @@ from bkr.inttest import get_server_base
 import pkg_resources
 
 _beaker_sync_tasks = pkg_resources.resource_filename('bkr.server.tools', 'sync_tasks.py')
-_sync_tasks_dir = pkg_resources.resource_filename('bkr.inttest.server.tools', 'task_rpms')
+_sync_tasks_dir = pkg_resources.resource_filename('bkr.inttest.server', 'task-rpms')
 _http_server = pkg_resources.resource_filename('bkr.inttest', 'http_server.py')
 _current_dir = os.path.dirname(__file__)
 class TestTaskLibrarySync(unittest.TestCase):

@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import urlparse
 import cherrypy
 from kid import Element
@@ -8,7 +13,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from turbogears import expose, flash, redirect, paginate
 from bkr.server.model import session, DistroTree, Distro, OSVersion, OSMajor, \
         LabController, LabControllerDistroTree, DistroTreeActivity, \
-        distro_tree_lab_controller_map, lab_controller_table, Arch, DistroTag
+        Arch, DistroTag
 from bkr.server.widgets import TaskSearchForm, myPaginateDataGrid, SearchBar, \
         DistroTreeInstallOptionsWidget, DeleteLinkWidgetForm
 from bkr.server.helpers import make_link
@@ -306,7 +311,7 @@ gpgcheck=0
                     LabControllerDistroTree.url.like('%s' % treepath)))
         elif labcontroller:
             query = query.filter(exists([1],
-                    from_obj=[distro_tree_lab_controller_map.join(lab_controller_table)])
+                    from_obj=[LabControllerDistroTree.__table__.join(LabController.__table__)])
                     .where(LabControllerDistroTree.distro_tree_id == DistroTree.id)
                     .where(LabController.fqdn.like(labcontroller)))
         else:

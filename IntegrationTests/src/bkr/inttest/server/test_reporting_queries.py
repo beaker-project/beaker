@@ -1,9 +1,15 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import unittest
 import pkg_resources
 import datetime
 from decimal import Decimal
 from turbogears.database import session
-from bkr.server import model
+from bkr.server import dynamic_virt
 from bkr.server.model import System, RecipeTask, Cpu, SystemStatus, \
     SystemActivity, TaskPriority, RecipeSetActivity
 from bkr.inttest import data_setup, DummyVirtManager
@@ -11,12 +17,12 @@ from bkr.inttest import data_setup, DummyVirtManager
 class ReportingQueryTest(unittest.TestCase):
 
     def setUp(self):
-        self.orig_VirtManager = model.VirtManager
-        model.VirtManager = DummyVirtManager
+        self.orig_VirtManager = dynamic_virt.VirtManager
+        dynamic_virt.VirtManager = DummyVirtManager
         session.begin()
 
     def tearDown(self):
-        model.VirtManager = self.orig_VirtManager
+        dynamic_virt.VirtManager = self.orig_VirtManager
         session.rollback()
 
     def execute_reporting_query(self, name):
@@ -225,8 +231,7 @@ class ReportingQueryTest(unittest.TestCase):
     def test_task_durations(self):
         short_task = data_setup.create_task()
         long_task = data_setup.create_task()
-        r = data_setup.create_recipe()
-        r.tasks[:] = [RecipeTask(task=short_task), RecipeTask(task=long_task)]
+        r = data_setup.create_recipe(task_list=[short_task, long_task])
         data_setup.mark_job_complete(
                 data_setup.create_job_for_recipes([r]))
         r.tasks[0].start_time = datetime.datetime(2012, 10, 15, 10, 54, 0)

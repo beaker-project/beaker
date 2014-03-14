@@ -1,9 +1,15 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import re
 import unittest2 as unittest
 import pipes
 import xmltramp
 import crypt
-from bkr.server import model
+from bkr.server import dynamic_virt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
         CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch
 from bkr.server.kickstart import template_env, generate_kickstart
@@ -23,8 +29,8 @@ class KickstartTest(unittest.TestCase):
     def setUpClass(cls):
         cls.orig_template_loader = template_env.loader
         template_env.loader = jinja_choice_loader(cls.orig_template_loader)
-        cls.orig_VirtManager = model.VirtManager
-        model.VirtManager = DummyVirtManager
+        cls.orig_VirtManager = dynamic_virt.VirtManager
+        dynamic_virt.VirtManager = DummyVirtManager
         with session.begin():
             cls.lab_controller = create_lab_controller()
             cls.system = create_x86_64_automated(cls.lab_controller)
@@ -226,7 +232,7 @@ class KickstartTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        model.VirtManager = cls.orig_VirtManager
+        dynamic_virt.VirtManager = cls.orig_VirtManager
         template_env.loader = cls.orig_template_loader
 
     def provision_recipe(self, xml, system=None, virt=False):
@@ -1688,6 +1694,26 @@ mysillypackage
         self.assert_('repo --name=beaker-optional-x86_64-debug' not in k, k)
         self.assert_('/etc/yum.repos.d/beaker-debug.repo' not in k, k)
         self.assert_('/etc/yum.repos.d/beaker-optional-x86_64-debug.repo' not in k, k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=874191
+    def test_no_updates_repos_fedora(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="no_updates_repos">
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('repo --name=fedora-updates' not in k, k)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=869758
     def test_repo_url_containing_yum_variable(self):

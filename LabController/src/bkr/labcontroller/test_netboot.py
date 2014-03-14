@@ -1,7 +1,12 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import os, os.path
 import socket
-import unittest
+import unittest2 as unittest
 import tempfile
 import random
 import shutil
@@ -238,6 +243,17 @@ label linux
     append initrd=/images/fqdn.example.invalid/initrd,/mydriverdisk.img ks=http://lol/ netboot_method=pxe
 ''')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1067924
+    def test_kernel_options_are_not_quoted(self):
+        netboot.configure_pxelinux(TEST_FQDN,
+                'initrd=/mydriverdisk.img ks=http://example.com/~user/kickstart')
+        pxelinux_config_path = os.path.join(self.tftp_root, 'pxelinux.cfg', '7F0000FF')
+        config = open(pxelinux_config_path).read()
+        self.assertIn('    append '
+                'initrd=/images/fqdn.example.invalid/initrd,/mydriverdisk.img '
+                'ks=http://example.com/~user/kickstart netboot_method=pxe',
+                config)
+
     def test_doesnt_overwrite_existing_default_config(self):
         pxelinux_dir = os.path.join(self.tftp_root, 'pxelinux.cfg')
         makedirs_ignore(pxelinux_dir, mode=0755)
@@ -286,6 +302,16 @@ title Beaker scheduled job for fqdn.example.invalid
     kernel /images/fqdn.example.invalid/kernel ks=http://lol/ netboot_method=efigrub
     initrd /images/fqdn.example.invalid/initrd /mydriverdisk.img
 ''')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1067924
+    def test_kernel_options_are_not_quoted(self):
+        netboot.configure_efigrub(TEST_FQDN,
+                'initrd=/mydriverdisk.img ks=http://example.com/~user/kickstart')
+        grub_config_path = os.path.join(self.tftp_root, 'grub', '7F0000FF')
+        config = open(grub_config_path).read()
+        self.assertIn('    kernel /images/fqdn.example.invalid/kernel '
+                'ks=http://example.com/~user/kickstart netboot_method=efigrub',
+                config)
 
 class ZpxeTest(NetBootTestCase):
 

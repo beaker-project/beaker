@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import xml.dom.minidom
 import re, errno, sys, os
 from urlparse import urljoin
 import optparse
 from optparse import OptionGroup
-from kobo.client import ClientCommand
-import kobo.conf
+from bkr.client.command import Command
+from bkr.common.pyconfig import PyConfigParser
 
 config_file = os.environ.get("BEAKER_CLIENT_CONF", None)
 if not config_file:
@@ -22,17 +27,18 @@ if not config_file:
     else:
         pass
 
-conf = kobo.conf.PyConfigParser()
+conf = PyConfigParser()
 if config_file:
     conf.load_from_file(config_file)
 
-class BeakerCommand(ClientCommand):
+class BeakerCommand(Command):
     enabled = False
+    requires_login = True
 
     def set_hub(self, username=None, password=None, **kwargs):
         if kwargs.get('hub'):
             self.conf['HUB_URL'] = kwargs['hub']
-        self.container.set_hub(username, password)
+        self.container.set_hub(username, password, auto_login=self.requires_login)
 
     def requests_session(self):
         import bkr.client.json_compat as json
@@ -42,11 +48,11 @@ class BeakerCommand(ClientCommand):
             # requests is not available for Python < 2.6 (for example on RHEL5),
             # so client commands which use it will raise this exception.
             raise RuntimeError('The requests package is not available on your system')
-        # share cookiejar with kobo hub, to re-use authentication token
+        # share cookiejar with hub, to re-use authentication token
         cookies = self.hub._transport.cookiejar
         # use custom CA cert/bundle, if given
         ca_cert = self.conf.get('CA_CERT', None)
-        # HUB_URL will have no trailing slash in the config, due to kobo
+        # HUB_URL will have no trailing slash in the config
         base_url = self.conf['HUB_URL'] + '/'
         class BeakerClientRequestsSession(requests.Session):
             """

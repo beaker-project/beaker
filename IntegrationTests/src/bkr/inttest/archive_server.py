@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 A fake archive server for Beaker logs. It answers the following paths:
 
@@ -40,7 +45,10 @@ class ArchiveServer(object):
             return []
         if environ['REQUEST_METHOD'] == 'GET':
             start_response('200 OK', [])
-            return wsgiref.util.FileWrapper(open(localpath, 'r'))
+            if os.path.isdir(localpath):
+                return '\n'.join(os.listdir(localpath))
+            else:
+                return wsgiref.util.FileWrapper(open(localpath, 'r'))
         elif environ['REQUEST_METHOD'] == 'DELETE':
             shutil.rmtree(localpath)
             start_response('204 No Content', [])

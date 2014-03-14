@@ -56,6 +56,8 @@ install: man
 	install -m0644 _build/man/*.1 $(DESTDIR)/usr/share/man/man1
 	ln -s bkr-distro-trees-verify.1.gz $(DESTDIR)/usr/share/man/man1/bkr-distros-verify.1.gz
 
+.PHONY: check
+
 .PHONY: help clean html dirhtml singlehtml pickle json htmlhelp qthelp devhelp epub latex latexpdf text man changes linkcheck doctest gettext
 
 help:

@@ -1,19 +1,8 @@
-#
-# Copyright (C) 2008 bpeck@redhat.com
-#
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 from turbogears import expose
 from sqlalchemy.exc import InvalidRequestError
@@ -132,7 +121,6 @@ class RecipeTasks(RPCRoot):
         return task.extend(kill_time)
 
     @cherrypy.expose
-    @identity.require(identity.not_anonymous())
     def watchdog(self, task_id):
         """
         Returns number of seconds left on task_id watchdog, or False if it doesn't exist.
@@ -158,6 +146,23 @@ class RecipeTasks(RPCRoot):
                              (stop_type, task.stop_types)))
         kwargs = dict(msg = msg)
         return getattr(task,stop_type)(**kwargs)
+
+    @cherrypy.expose
+    @identity.require(identity.not_anonymous())
+    def update(self, task_id, data):
+        """
+        XML-RPC method used by the lab controller harness API to update 
+        a recipe-task's attributes.
+        """
+        try:
+            task = RecipeTask.by_id(task_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid task ID: %s' % task_id))
+        if 'name' in data:
+            task.name = data['name']
+        if 'version' in data:
+            task.version = data['version']
+        return task.__json__()
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

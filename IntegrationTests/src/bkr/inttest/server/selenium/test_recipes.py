@@ -1,34 +1,22 @@
-# Beaker
-#
-# Copyright (C) 2010 dcallagh@redhat.com
-#
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+import datetime
 import logging
 import re
 from turbogears.database import session
 from nose.plugins.skip import SkipTest
 
-from bkr.server.model import Job, TaskStatus, TaskResult, RecipeTaskResult
-from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.server.model import TaskStatus, TaskResult, RecipeTaskResult
+from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present
-from selenium.webdriver.support.ui import WebDriverWait
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.assertions import assert_sorted
 
-class TestRecipesDataGrid(SeleniumTestCase):
+class TestRecipesDataGrid(WebDriverTestCase):
 
     log = logging.getLogger(__name__ + '.TestRecipesIndex')
 
@@ -47,32 +35,21 @@ class TestRecipesDataGrid(SeleniumTestCase):
                     data_setup.create_job(owner=user, distro_tree=distro_tree)
                     data_setup.create_completed_job(owner=user, distro_tree=distro_tree)
 
-        cls.selenium = sel = cls.get_selenium()
-        sel.start()
-
-        # log in
-        sel.open('')
-        sel.click('link=Log in')
-        sel.wait_for_page_to_load('30000')
-        sel.type('user_name', user.user_name)
-        sel.type('password', 'password')
-        sel.click('login')
-        sel.wait_for_page_to_load('30000')
+        cls.browser = cls.get_browser()
+        login(cls.browser, user=user.user_name, password='password')
 
     @classmethod
     def tearDownClass(cls):
-        cls.selenium.stop()
+        cls.browser.quit()
 
     # see https://bugzilla.redhat.com/show_bug.cgi?id=629147
     def check_column_sort(self, column, sort_key=None):
-        sel = self.selenium
-        sel.open('recipes/mine')
-        sel.click('//table[@id="widget"]/thead//th[%d]//a[@href]' % column)
-        sel.wait_for_page_to_load('30000')
-        row_count = int(sel.get_xpath_count(
-                '//table[@id="widget"]/tbody/tr/td[%d]' % column))
+        b = self.browser
+        b.get(get_server_base() + 'recipes/mine')
+        b.find_element_by_xpath('//table[@id="widget"]/thead//th[%d]//a[@href]' % column).click()
+        row_count = len(b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr/td[%d]' % column))
         self.assertEquals(row_count, 24)
-        cell_values = [sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
+        cell_values = [b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column)).text
                        for row in range(1, row_count + 1)]
         assert_sorted(cell_values, key=sort_key)
 
@@ -96,16 +73,14 @@ class TestRecipesDataGrid(SeleniumTestCase):
     # this version is different since the cell values will be like ['R:1', 'R:10', ...]
     def test_can_sort_by_id(self):
         column = 1
-        sel = self.selenium
-        sel.open('recipes/mine')
-        sel.click('//table[@id="widget"]/thead//th[%d]//a[@href]' % column)
-        sel.wait_for_page_to_load('30000')
-        row_count = int(sel.get_xpath_count(
-                '//table[@id="widget"]/tbody/tr/td[%d]' % column))
+        b = self.browser
+        b.get(get_server_base() + 'recipes/mine')
+        b.find_element_by_xpath('//table[@id="widget"]/thead//th[%d]//a[@href]' % column).click()
+        row_count = len(b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr/td[%d]' % column))
         self.assertEquals(row_count, 24)
         cell_values = []
         for row in range(1, row_count + 1):
-            raw_value = sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
+            raw_value = b.find_element_by_xpath('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column)).text
             m = re.match(r'R:(\d+)$', raw_value)
             assert m.group(1)
             cell_values.append(int(m.group(1)))
@@ -169,6 +144,28 @@ class TestRecipeView(WebDriverTestCase):
         r_server_link = b.find_element_by_xpath("//table/tbody//tr[position()=6]/td//a").get_attribute('href')
         self.assertEquals(r_server_link, 'http://dummy-archive-server/beaker/recipe_path/dummy.txt')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1072133
+    def test_watchdog_time_remaining_display(self):
+        b = self.browser
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            job = data_setup.create_job_for_recipes([recipe], owner=self.user)
+            data_setup.mark_job_running(job)
+            recipe.watchdog.kill_time = (datetime.datetime.utcnow() +
+                    datetime.timedelta(seconds=83 * 60 + 30))
+        self.go_to_recipe_view(recipe)
+        b.find_element_by_link_text('Show Results').click()
+        duration = b.find_element_by_xpath('//tr[contains(@class, "recipe_%s")][1]'
+                '//div[@class="task-duration"]' % recipe.id)
+        self.assertRegexpMatches(duration.text, r'^Time Remaining 1:23:\d\d$')
+        with session.begin():
+            recipe.watchdog.kill_time = (datetime.datetime.utcnow() +
+                    datetime.timedelta(days=2, seconds=83 * 60 + 30))
+        self.go_to_recipe_view(recipe)
+        duration = b.find_element_by_xpath('//tr[contains(@class, "recipe_%s")][1]'
+                '//div[@class="task-duration"]' % recipe.id)
+        self.assertRegexpMatches(duration.text, r'^Time Remaining 2 days, 1:23:\d\d$')
+
     def test_task_pagination(self):
         with session.begin():
             num_of_tasks = 35
@@ -182,6 +179,21 @@ class TestRecipeView(WebDriverTestCase):
                 % the_recipe.id).click()
         for t in the_job.recipesets[0].recipes[0].tasks:
             self.assertTrue(is_text_present(b, "T:%s" %t.id))
+
+    def test_task_versions_are_shown(self):
+        with session.begin():
+            recipe = self.job.recipesets[0].recipes[0]
+            recipetask = recipe.tasks[0]
+            recipetask.version = u'1.10-23'
+        b = self.browser
+        self.go_to_recipe_view(recipe)
+        b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]'
+                % recipe.id).click()
+        tasks_table = b.find_element_by_xpath('//div[@id="recipe%s"]'
+                '//table[contains(@class, "tasks")]' % recipe.id)
+        self.assertIn('1.10-23',
+                tasks_table.find_element_by_xpath('//tr[td/a/text()="%s"]/td[2]'
+                    % recipetask.t_id).text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=751330
     def test_fetching_large_results_is_not_too_slow(self):

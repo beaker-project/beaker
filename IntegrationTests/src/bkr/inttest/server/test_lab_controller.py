@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import unittest
 import xmltramp
 import pkg_resources
@@ -17,8 +22,7 @@ class TestLabController(unittest.TestCase):
 
     def test_lookup_secret_fqdn(self):
         with session.begin():
-            system = data_setup.create_system()
-            system.private = True
+            system = data_setup.create_system(private=True)
         lab_controller_user = LabController.by_name(self.lc_fqdn).user
         system2 = System.by_fqdn(str(system.fqdn), user=lab_controller_user)
         self.assertEquals(system, system2)

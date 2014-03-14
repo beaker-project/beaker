@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import check_task_search_results, \
@@ -114,6 +119,22 @@ class ExecutedTasksTest(WebDriverTestCase):
         b.get(get_server_base() + 'tasks%s' % task.name)
         b.find_element_by_id('form').submit()
         self.check_recipetask_absent_from_results(recipe.tasks[0])
+
+    def test_search_by_version(self):
+        with session.begin():
+            task = data_setup.create_task()
+            old_recipe = data_setup.create_recipe(task_list=[task])
+            data_setup.create_job_for_recipes([old_recipe])
+            old_recipe.tasks[0].version = u'1.0-0'
+            recent_recipe = data_setup.create_recipe(task_list=[task])
+            data_setup.create_job_for_recipes([recent_recipe])
+            recent_recipe.tasks[0].version = u'2.3-4'
+        b = self.browser
+        b.get(get_server_base() + 'tasks%s' % task.name)
+        b.find_element_by_id('form_version').send_keys('1.0-*')
+        b.find_element_by_id('form').submit()
+        self.check_recipetask_present_in_results(old_recipe.tasks[0])
+        self.check_recipetask_absent_from_results(recent_recipe.tasks[0])
 
 class Search(WebDriverTestCase):
 

@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 # pkg_resources.requires() does not work if multiple versions are installed in 
 # parallel. This semi-supported hack using __requires__ is the workaround.
 # http://bugs.python.org/setuptools/issue139
@@ -109,7 +114,16 @@ def log_delete(print_logs=False, dry=False, limit=None):
             for log in logs:
                 if not dry:
                     if urlparse.urlparse(log).scheme:
-                        response = requests_session.delete(log)
+                        # We need to handle redirects ourselves, since requests
+                        # turns DELETE into GET on 302 which we do not want.
+                        response = requests_session.delete(log, allow_redirects=False)
+                        redirect_limit = 10
+                        while redirect_limit > 0 and response.status_code in (
+                                301, 302, 303, 307):
+                            response = requests_session.delete(
+                                    response.headers['Location'],
+                                    allow_redirects=False)
+                            redirect_limit -= 1
                         if response.status_code not in (200, 204, 404):
                             response.raise_for_status()
                     else:

@@ -6,12 +6,6 @@ Alternative Harness Guide
 This guide is for Beaker users who want to use a different harness than Beah in 
 their recipes.
 
-.. admonition:: These interfaces are currently provisional
-
-   There may be minor backwards-incompatible changes made in future versions of 
-   Beaker. Once the interfaces have been validated, they will be declared 
-   "stable" and no further backwards-incompatible changes will be made to them.
-
 Selecting an alternative harness in your recipe
 -----------------------------------------------
 
@@ -105,14 +99,30 @@ the request body must be given as HTML form data
    runs (see below). This is provided as a convenience only, to abort all tasks 
    in a recipe.
 
-.. http:post:: /recipes/(recipe_id)/tasks/(task_id)/status
+.. http:patch:: /recipes/(recipe_id)/tasks/(task_id)/
 
-   Updates the status of a task.
+   Updates the attributes of a task. The request must be 
+   :mimetype:`application/x-www-form-urlencoded` or 
+   :mimetype:`application/json` containing one or more attributes to update.
 
-   :form status: The new status. Must be *Running*, *Completed*, or *Aborted*.
-   :status 204: The task status was updated.
-   :status 400: Bad parameters given.
-   :status 409: Requested state transition is invalid.
+   :form status:
+        Current status of the task. Must be *Running*, *Completed*, or 
+        *Aborted* (see the note below about valid transitions).
+   :form name:
+        Name of the task. This is presented to the user in the recipe results. 
+        The harness may determine the name by reading it from metadata 
+        associated with the task (for example, RHTS-format tasks define their 
+        name in :file:`testinfo.desc`).
+   :form version:
+        Version of the task which is running. This is recorded in the recipe 
+        results to aid in debugging and reproduceability.
+   :status 200:
+        The task was successfully updated. The response body contains the 
+        updated attributes.
+   :status 400:
+        Bad parameters were given.
+   :status 409:
+        The requested status transition is invalid.
 
    Tasks in Beaker always start out having the *New* status. Once a task is 
    *Running*, its status may only change to *Completed*, meaning that the task 
@@ -121,6 +131,19 @@ the request body must be given as HTML form data
    a task is *Completed* or *Aborted* its status may not be changed. Attempting 
    to change the status in a way that violates these rules will result in 
    a :http:statuscode:`409` response.
+
+.. http:post:: /recipes/(recipe_id)/tasks/(task_id)/status
+
+   .. deprecated:: 0.16
+      Use :http:patch:`/recipes/(recipe_id)/tasks/(task_id)/` instead.
+
+   Updates the status of a task. See the note above about valid transitions for 
+   the status attribute.
+
+   :form status: The new status. Must be *Running*, *Completed*, or *Aborted*.
+   :status 204: The task status was updated.
+   :status 400: Bad parameters given.
+   :status 409: Requested state transition is invalid.
 
 .. http:post:: /recipes/(recipe_id)/tasks/(task_id)/results/
 

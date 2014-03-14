@@ -1,6 +1,11 @@
 
 # vim: set fileencoding=utf-8 :
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from turbogears.database import session
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.selenium import WebDriverTestCase
@@ -127,8 +132,7 @@ class CSVExportTest(WebDriverTestCase):
     def test_export_systems_obeys_secrecy(self):
         with session.begin():
             unprivileged_user = data_setup.create_user(password=u'asdf')
-            secret_system = data_setup.create_system(shared=False)
-            secret_system.private = True
+            secret_system = data_setup.create_system(shared=False, private=True)
         login(self.browser, user=unprivileged_user.user_name, password=u'asdf')
         csv_request = self.get_csv('system')
         self.assert_(not any(row['fqdn'] == secret_system.fqdn

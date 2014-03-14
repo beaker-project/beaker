@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import errno
 import os
 import sys
@@ -9,6 +15,7 @@ import base64
 import xmltramp
 import glob
 import re
+import json
 import shutil
 import tempfile
 import xmlrpclib
@@ -20,17 +27,15 @@ from socket import gethostname
 from threading import Thread, Event
 from xml.sax.saxutils import escape as xml_escape, quoteattr as xml_quoteattr
 from werkzeug.wrappers import Response
-from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound, LengthRequired
+from werkzeug.exceptions import BadRequest, NotAcceptable, NotFound, \
+        LengthRequired, UnsupportedMediaType, Conflict
 from werkzeug.utils import redirect
 from werkzeug.http import parse_content_range_header
 from werkzeug.wsgi import wrap_file
-import kobo.conf
-from kobo.client import HubProxy
-from kobo.exceptions import ShutdownException
-from kobo.xmlrpc import CookieTransport, SafeCookieTransport
+from bkr.common.hub import HubProxy
+from bkr.common.xmlrpc import CookieTransport, SafeCookieTransport
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
-from kobo.process import kill_process_group
 import utils
 try:
     from subprocess import check_output
@@ -42,7 +47,9 @@ logger = logging.getLogger(__name__)
 def replace_with_blanks(match):
     return ' ' * (match.end() - match.start() - 1) + '\n'
 
-# Based on kobo.xmlrpc.retry_request_decorator
+# Originally based on kobo.xmlrpc.retry_request_decorator
+# Now that relevant pieces of kobo have been added directly
+# to the Beaker code, should be merged into bkr.common.xmlrpc
 def retry_transport(transport_class, retry_count=5, retry_delay=30,
                     exceptions=(socket.error, socket.herror,
                                 socket.gaierror, socket.timeout)):
@@ -55,7 +62,8 @@ def retry_transport(transport_class, retry_count=5, retry_delay=30,
                     result = transport_class.request(self, *args, **kwargs)
                     return result
                 except exceptions, ex:
-                    self.close()
+                    if hasattr(self, 'close'):
+                        self.close()
                     if i == retry_count:
                         raise
                     retries_left = retry_count - i
@@ -73,6 +81,7 @@ def retry_transport(transport_class, retry_count=5, retry_delay=30,
     RetryTransportClass.__name__ = transport_class.__name__
     RetryTransportClass.__doc__ = transport_class.__name__
     return RetryTransportClass
+
 
 class ProxyHelper(object):
 
@@ -96,7 +105,7 @@ class ProxyHelper(object):
             TransportClass = retry_transport(SafeCookieTransport)
         else:
             TransportClass = retry_transport(CookieTransport)
-        self.hub = HubProxy(logger=logging.getLogger('kobo.client.HubProxy'), conf=self.conf,
+        self.hub = HubProxy(logger=logging.getLogger('bkr.common.hub.HubProxy'), conf=self.conf,
                 transport=TransportClass(timeout=120), auto_logout=False, **kwargs)
         self.log_storage = LogStorage(self.conf.get("CACHEPATH"),
                 "%s://%s/beaker/logs" % (self.conf.get('URL_SCHEME',
@@ -833,7 +842,11 @@ class ProxyHTTP(object):
     def post_task_status(self, req, recipe_id, task_id):
         if 'status' not in req.form:
             raise BadRequest('Missing "status" parameter')
-        status = req.form['status'].lower()
+        self._update_status(task_id, req.form['status'], req.form.get('message'))
+        return Response(status=204)
+
+    def _update_status(self, task_id, status, message):
+        status = status.lower()
         if status not in ['running', 'completed', 'aborted']:
             raise BadRequest('Unknown status %r' % req.form['status'])
         try:
@@ -842,16 +855,31 @@ class ProxyHTTP(object):
             elif status == 'completed':
                 self.hub.recipes.tasks.stop(task_id, 'stop')
             elif status == 'aborted':
-                self.hub.recipes.tasks.stop(task_id, 'abort',
-                        req.form.get('message'))
-            return Response(status=204)
+                self.hub.recipes.tasks.stop(task_id, 'abort', message)
         except xmlrpclib.Fault, fault:
             # XXX need to find a less fragile way to do this
             if 'Cannot restart finished task' in fault.faultString:
-                return Response(status=409, response=fault.faultString,
-                        content_type='text/plain')
+                raise Conflict(fault.faultString)
             else:
                 raise
+
+    def patch_task(self, request, recipe_id, task_id):
+        if request.json:
+            data = dict(request.json)
+        elif request.form:
+            data = request.form.to_dict()
+        else:
+            raise UnsupportedMediaType
+        if 'status' in data:
+            status = data.pop('status')
+            self._update_status(task_id, status, data.pop('message', None))
+            # If the caller only wanted to update the status and nothing else, 
+            # we will avoid making a second XML-RPC call.
+            updated = {'status': status}
+        if data:
+            updated = self.hub.recipes.tasks.update(task_id, data)
+        return Response(status=200, response=json.dumps(updated),
+                content_type='application/json')
 
     def post_watchdog(self, req, recipe_id):
         if 'seconds' not in req.form:

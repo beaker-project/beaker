@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import unittest2 as unittest
 from bkr.server.model import session, SystemPermission, User
 from bkr.inttest import data_setup
@@ -39,14 +44,16 @@ class PolicyListTest(unittest.TestCase):
         expected_output = self.gen_expected_pretty_table(
             (['control_system', 'X', self.group.group_name, 'No'],
              ['control_system', self.user2.user_name, 'X', 'No'],
-             ['edit_system', self.user1.user_name, 'X', 'No'])) + '\n'
+             ['edit_system', self.user1.user_name, 'X', 'No'],
+             ['view', 'X', 'X', 'Yes'])) + '\n'
         self.assertEquals(out, expected_output)
 
         # For the second system
         out = run_client(['bkr', 'policy-list', self.system_public.fqdn,
                           '--format','tabular'])
         expected_output = self.gen_expected_pretty_table(
-            (['control_system', 'X', 'X', 'Yes'],)) + '\n'
+            (['control_system', 'X', 'X', 'Yes'],
+             ['view', 'X', 'X', 'Yes'])) + '\n'
 
         self.assertEquals(out, expected_output)
 
@@ -54,7 +61,7 @@ class PolicyListTest(unittest.TestCase):
         out = run_client(['bkr', 'policy-list', self.system.fqdn,
                           '--format','json'])
         out = json.loads(out)
-        self.assertEquals(len(out['rules']), 3)
+        self.assertEquals(len(out['rules']), 4)
 
     def test_list_policy_non_existent_system(self):
 
@@ -76,16 +83,6 @@ class PolicyListTest(unittest.TestCase):
         expected_output = self.gen_expected_pretty_table(
             (['edit_system', 'admin', 'X', 'No'], )) + '\n'
         self.assertEquals(out, expected_output)
-
-        # --mine without authentication
-        try:
-            out = run_client(['bkr', 'policy-list',
-                              '--mine', self.system.fqdn],
-                             config = create_client_config(anonymous=True))
-            self.fail('Must fail or die')
-        except ClientError as e:
-            self.assertIn("The 'mine' access policy filter requires authentication",
-                          e.stderr_output)
 
     def test_list_policy_filter_user(self):
 

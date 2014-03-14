@@ -47,6 +47,13 @@ The following permissions can be granted in an access policy:
 ============== =================== ===========================================
 Name           Label               Description
 ============== =================== ===========================================
+view           View                The user can view the system and find it in 
+                                   search results. If the system is loaned to 
+                                   a user, they are permitted to view it for 
+                                   the duration of the loan. If a user is not 
+                                   permitted to view the system, they cannot 
+                                   interact with it in any way and any other 
+                                   permissions granted to them have no effect.
 edit_policy    Edit this policy    The user can edit the access policy to grant
                                    or revoke permissions, including adding new 
                                    users and groups to the policy. Users with

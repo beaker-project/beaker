@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr distro-trees-list: List Beaker distro trees
 ===============================================
@@ -10,9 +15,9 @@ Synopsis
 --------
 
 | :program:`bkr distro-trees-list` [*options*]
-|       [--tag=<tag>] [--name=<name>] [--treepath=<url>] [--family=<family>]
-        [--arch=<arch>] [--distro-id=<distroid>] [--distro-tree-id=<distrotreeid>]
-|       [--limit=<number>] [--format=<format>]
+|       [:option:`--tag` <tag>] [:option:`--name` <name>] [:option:`--treepath` <url>] [:option:`--family` <family>]
+        [:option:`--arch` <arch>] [:option:`--distro-id` <distroid>] [:option:`--distro-tree-id` <distrotreeid>]
+|       [:option:`--limit` <number>] [:option:`--format` <format>]
 
 Description
 -----------
@@ -105,7 +110,7 @@ from bkr.client import BeakerCommand
 class Distro_Trees_List(BeakerCommand):
     """List distro trees"""
     enabled = True
-
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s" % self.normalized_name

@@ -210,11 +210,14 @@ Access Policy
     system. See :ref:`system-access-policies`.
 Excluded Families
     Are the list of Distros that this System does not support. 
-Power
-    Allows the powering off/on and rebooting of this System. These options are 
-    only available if you are the current user of this System, in the admin 
-    group or are part of a group that has been given admin rights over the 
-    machine. Also the machine must be "taken".
+Commands
+    Perform remote power operations, as well as clear an existing netboot entry.
+
+.. _power-config:
+
+Power Config
+    Update a system's power configuration. Only available if you have the 
+    correct permissions.
 Notes
     Any info about the system that you want others to see and doesn't fit in 
     anywhere else. If you have admin rights over the system you will be able to add 

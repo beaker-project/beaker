@@ -1,0 +1,68 @@
+<job retention_tag="scratch">
+  <whiteboard>
+    An example job for testing Virtualization Workflow
+  </whiteboard>
+  <recipeSet priority="Normal">
+    <recipe role="RECIPE_MEMBERS" whiteboard="">
+      <guestrecipe guestargs="--ram=1024 --vcpus=2 --file-size=20 --kvm" guestname="guest1" role="RECIPESERVERS" whiteboard="">
+        <autopick random="false"/>
+        <watchdog panic="None"/>
+        <packages/>
+        <ks_appends/>
+        <repos/>
+        <distroRequires>
+          <and>
+            <distro_name op="=" value="RHEL-6.3"/>
+            <distro_variant op="=" value="Server"/>
+            <distro_arch op="=" value="x86_64"/>
+          </and>
+        </distroRequires>
+        <hostRequires>
+          <system_type value="Virtual"/>
+        </hostRequires>
+        <partitions/>
+        <task name="/distribution/install" role="None"/>
+      </guestrecipe>
+      <guestrecipe guestargs="--ram=1024 --vcpus=2 --file-size=20 --kvm" guestname="guest2" role="RECIPECLIENTS" whiteboard="">
+        <autopick random="false"/>
+        <watchdog panic="None"/>
+        <packages/>
+        <ks_appends/>
+        <repos/>
+        <distroRequires>
+          <and>
+            <distro_name op="=" value="RHEL-6.3"/>
+            <distro_variant op="=" value="Server"/>
+            <distro_arch op="=" value="x86_64"/>
+          </and>
+        </distroRequires>
+        <hostRequires>
+          <system_type value="Virtual"/>
+        </hostRequires>
+        <partitions/>
+        <task name="/distribution/install" role="None"/>
+      </guestrecipe>
+      <autopick random="false"/>
+      <watchdog panic="ignore"/>
+      <packages/>
+      <ks_appends/>
+      <repos/>
+      <distroRequires>
+        <and>
+          <distro_name op="=" value="RHEL-6.3"/>
+          <distro_variant op="=" value="Server"/>
+          <distro_arch op="=" value="x86_64"/>
+        </and>
+      </distroRequires>
+      <hostRequires>
+        <system_type value="Machine"/>
+        <key_value key="HVM" op="=" value="1"/>
+      </hostRequires>
+      <partitions/>
+      <task name="/distribution/install" role="STANDALONE"/>
+      <task name="/distribution/virt/install" role="STANDALONE"/>
+      <task name="/distribution/virt/start" role="STANDALONE"/>
+      <task name="/distribution/reservesys" role="STANDALONE"/>
+    </recipe>
+  </recipeSet>
+</job>

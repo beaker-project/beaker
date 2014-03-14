@@ -1,23 +1,10 @@
 #!/usr/bin/env python
-# Beaker - 
-#
-# Copyright (C) 2008 bpeck@redhat.com
-#
+# -*- coding: utf-8 -*-
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-
-# -*- coding: utf-8 -*-
 
 # pkg_resources.requires() does not work if multiple versions are installed in 
 # parallel. This semi-supported hack using __requires__ is the workaround.
@@ -26,8 +13,11 @@
 __requires__ = ['CherryPy < 3.0']
 
 import sys
+from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy.orm.exc import NoResultFound
 from bkr.log import log_to_stream
-from bkr.server.model import *
+from bkr.server.model import (User, Group, Permission, Hypervisor, KernelType,
+        Arch, PowerType, Key, Response, RetentionTag, ConfigItem)
 from bkr.server.util import load_config
 from turbogears.database import session
 from os.path import dirname, exists, join
@@ -52,13 +42,15 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         admin = Group.by_name(u'admin')
     except InvalidRequestError:
         admin     = Group(group_name=u'admin',display_name=u'Admin')
+        session.add(admin)
 
     try:
         lab_controller = Group.by_name(u'lab_controller')
     except InvalidRequestError:
         lab_controller = Group(group_name=u'lab_controller',
                                display_name=u'Lab Controller')
-    
+        session.add(lab_controller)
+
     #Setup User account
     if user_name:
         if password:
@@ -79,12 +71,14 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         distro_expire_perm = Permission.by_name(u'distro_expire')
     except NoResultFound:
         distro_expire_perm = Permission(u'distro_expire')
+        session.add(distro_expire_perm)
 
     # Create proxy_auth perm if not present
     try:
         proxy_auth_perm = Permission.by_name(u'proxy_auth')
     except NoResultFound:
         proxy_auth_perm = Permission(u'proxy_auth')
+        session.add(proxy_auth_perm)
 
     # Create tag_distro perm if not present
     try:
@@ -111,90 +105,71 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
 
     #Setup Hypervisors Table
     if Hypervisor.query.count() == 0:
-        kvm       = Hypervisor(hypervisor=u'KVM')
-        xen       = Hypervisor(hypervisor=u'Xen')
-        hyperv    = Hypervisor(hypervisor=u'HyperV')
-        vmware    = Hypervisor(hypervisor=u'VMWare')
+        for h in [u'KVM', u'Xen', u'HyperV', u'VMWare']:
+            session.add(Hypervisor(hypervisor=h))
 
     #Setup kernel_type Table
     if KernelType.query.count() == 0:
-        default  = KernelType(kernel_type=u'default', uboot=False)
-        highbank = KernelType(kernel_type=u'highbank', uboot=False)
-        imx      = KernelType(kernel_type=u'imx', uboot=False)
-        mvebu    = KernelType(kernel_type=u'mvebu', uboot=True)
-        omap     = KernelType(kernel_type=u'omap', uboot=False)
-        tegra    = KernelType(kernel_type=u'tegra', uboot=False)
+        for type in [u'default', u'highbank', u'imx', u'omap', u'tegra']:
+            session.add(KernelType(kernel_type=type, uboot=False))
+        for type in [u'mvebu']:
+            session.add(KernelType(kernel_type=type, uboot=True))
 
     #Setup base Architectures
     if Arch.query.count() == 0:
-        i386   = Arch(u'i386')
-        x86_64 = Arch(u'x86_64')
-        ia64   = Arch(u'ia64')
-        ppc    = Arch(u'ppc')
-        ppc64  = Arch(u'ppc64')
-        s390   = Arch(u's390')
-        s390x  = Arch(u's390x')
-        armhfp = Arch(u'armhfp')
+        for arch in [u'i386', u'x86_64', u'ia64', u'ppc', u'ppc64',
+                u's390', u's390x', u'armhfp']:
+            session.add(Arch(arch))
 
     #Setup base power types
     if PowerType.query.count() == 0:
-        apc_snmp    = PowerType(u'apc_snmp')
-        PowerType(u'apc_snmp_then_etherwake')
-        bladecenter = PowerType(u'bladecenter')
-        bullpap     = PowerType(u'bladepap')
-        drac        = PowerType(u'drac')
-        ether_wake  = PowerType(u'ether_wake')
-        PowerType(u'hyper-v')
-        ilo         = PowerType(u'ilo')
-        integrity   = PowerType(u'integrity')
-        ipmilan     = PowerType(u'ipmilan')
-        ipmitool    = PowerType(u'ipmitool')
-        lpar        = PowerType(u'lpar')
-        rsa         = PowerType(u'rsa')
-        virsh       = PowerType(u'virsh')
-        wti         = PowerType(u'wti')
+        for power_type in [u'apc_snmp', u'apc_snmp_then_etherwake',
+                u'bladecenter', u'bladepap', u'drac', u'ether_wake', u'hyper-v',
+                u'ilo', u'integrity', u'ipmilan', u'ipmitool', u'lpar', u'rsa',
+                u'virsh', u'wti']:
+            session.add(PowerType(power_type))
 
     #Setup key types
     if Key.query.count() == 0:
-        DISKSPACE       = Key(u'DISKSPACE',True)
-        COMMENT         = Key(u'COMMENT')
-        CPUFAMILY       = Key(u'CPUFAMILY',True)
-        CPUFLAGS        = Key(u'CPUFLAGS')
-        CPUMODEL        = Key(u'CPUMODEL')
-        CPUMODELNUMBER  = Key(u'CPUMODELNUMBER', True)
-        CPUSPEED        = Key(u'CPUSPEED',True)
-        CPUVENDOR       = Key(u'CPUVENDOR')
-        DISK            = Key(u'DISK',True)
-        FORMFACTOR      = Key(u'FORMFACTOR')
-        HVM             = Key(u'HVM')
-        MEMORY          = Key(u'MEMORY',True)
-        MODEL           = Key(u'MODEL')
-        MODULE          = Key(u'MODULE')
-        NETWORK         = Key(u'NETWORK')
-        NR_DISKS        = Key(u'NR_DISKS',True)
-        NR_ETH          = Key(u'NR_ETH',True)
-        NR_IB           = Key(u'NR_IB',True)
-        PCIID           = Key(u'PCIID')
-        PROCESSORS      = Key(u'PROCESSORS',True)
-        RTCERT          = Key(u'RTCERT')
-        SCRATCH         = Key(u'SCRATCH')
-        STORAGE         = Key(u'STORAGE')
-        USBID           = Key(u'USBID')
-        VENDOR          = Key(u'VENDOR')
-        XENCERT         = Key(u'XENCERT')
-        NETBOOT         = Key(u'NETBOOT_METHOD')
+        session.add(Key(u'DISKSPACE',True))
+        session.add(Key(u'COMMENT'))
+        session.add(Key(u'CPUFAMILY',True))
+        session.add(Key(u'CPUFLAGS'))
+        session.add(Key(u'CPUMODEL'))
+        session.add(Key(u'CPUMODELNUMBER', True))
+        session.add(Key(u'CPUSPEED',True))
+        session.add(Key(u'CPUVENDOR'))
+        session.add(Key(u'DISK',True))
+        session.add(Key(u'FORMFACTOR'))
+        session.add(Key(u'HVM'))
+        session.add(Key(u'MEMORY',True))
+        session.add(Key(u'MODEL'))
+        session.add(Key(u'MODULE'))
+        session.add(Key(u'NETWORK'))
+        session.add(Key(u'NR_DISKS',True))
+        session.add(Key(u'NR_ETH',True))
+        session.add(Key(u'NR_IB',True))
+        session.add(Key(u'PCIID'))
+        session.add(Key(u'PROCESSORS',True))
+        session.add(Key(u'RTCERT'))
+        session.add(Key(u'SCRATCH'))
+        session.add(Key(u'STORAGE'))
+        session.add(Key(u'USBID'))
+        session.add(Key(u'VENDOR'))
+        session.add(Key(u'XENCERT'))
+        session.add(Key(u'NETBOOT_METHOD'))
 
     #Setup ack/nak reposnses
     if Response.query.count() == 0:
-        ACK      = Response(response=u'ack')
-        NAK      = Response(response=u'nak')
+        session.add(Response(response=u'ack'))
+        session.add(Response(response=u'nak'))
 
     if RetentionTag.query.count() == 0:
-        SCRATCH         = RetentionTag(tag=u'scratch', is_default=1, expire_in_days=30)
-        SIXTYDAYS       = RetentionTag(tag=u'60days', needs_product=False, expire_in_days=60)
-        ONETWENTYDAYS   = RetentionTag(tag=u'120days', needs_product=False, expire_in_days=120)
-        ACTIVE          = RetentionTag(tag=u'active', needs_product=True)
-        AUDIT           = RetentionTag(tag=u'audit', needs_product=True)
+        session.add(RetentionTag(tag=u'scratch', is_default=1, expire_in_days=30))
+        session.add(RetentionTag(tag=u'60days', needs_product=False, expire_in_days=60))
+        session.add(RetentionTag(tag=u'120days', needs_product=False, expire_in_days=120))
+        session.add(RetentionTag(tag=u'active', needs_product=True))
+        session.add(RetentionTag(tag=u'audit', needs_product=True))
 
     config_items = [
         # name, description, numeric
@@ -205,11 +180,7 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         (u'guest_name_prefix', u'Prefix for names of dynamic guests in oVirt', False),
     ]
     for name, description, numeric in config_items:
-        try:
-            ConfigItem.by_name(name)
-        except NoResultFound:
-            ConfigItem(name=name, description=description, numeric=numeric)
-    session.flush()
+        ConfigItem.lazy_create(name=name, description=description, numeric=numeric)
     if ConfigItem.by_name(u'root_password').current_value() is None:
         ConfigItem.by_name(u'root_password').set(u'beaker', user=admin.users[0])
 

@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import sys
 import re
 import time
@@ -9,27 +15,30 @@ import email
 import inspect
 from turbogears.database import session
 from bkr.server.installopts import InstallOptions
-from bkr.server import model
+from bkr.server import model, dynamic_virt
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
-        Cpu, Numa, Provision, job_cc_table, Arch, DistroTree, \
+        Cpu, Numa, Provision, Arch, DistroTree, \
         LabControllerDistroTree, TaskType, TaskPackage, Device, DeviceClass, \
         GuestRecipe, GuestResource, Recipe, LogRecipe, RecipeResource, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
-        RecipeTask, RecipeTaskResult
+        RecipeTask, RecipeTaskResult, DeclarativeMappedObject
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
 import netaddr
 from bkr.inttest import data_setup, DummyVirtManager
 from nose.plugins.skip import SkipTest
+import turbogears
+import os
+import yum
 
 class SchemaSanityTest(unittest.TestCase):
 
     def test_all_tables_use_innodb(self):
-        engine = session.get_bind(System.mapper)
+        engine = DeclarativeMappedObject.metadata.bind
         if engine.url.drivername != 'mysql':
             raise SkipTest('not using MySQL')
         for table in engine.table_names():
@@ -134,12 +143,12 @@ class TestSystem(unittest.TestCase):
         def bad_markdown(data, *args, **kwds):
             self.assertEqual(data, note_text)
             raise Exception("HTML converter should have stopped this...")
-        orig_markdown = model.markdown
-        model.markdown = bad_markdown
+        orig_markdown = model.inventory.markdown
+        model.inventory.markdown = bad_markdown
         try:
             actual = system.notes[0].html
         finally:
-            model.markdown = orig_markdown
+            model.inventory.markdown = orig_markdown
         self.assertEqual(actual, note_text)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1037878
@@ -574,7 +583,7 @@ class TestJob(unittest.TestCase):
     def test_cc_property(self):
         job = data_setup.create_job()
         session.flush()
-        session.execute(job_cc_table.insert(values={'job_id': job.id,
+        session.execute(JobCc.__table__.insert(values={'job_id': job.id,
                 'email_address': u'person@nowhere.example.com'}))
         session.refresh(job)
         self.assertEquals(job.cc, ['person@nowhere.example.com'])
@@ -2276,6 +2285,15 @@ class RecipeTest(unittest.TestCase):
         self.assertRegexpMatches(installation.get('postinstall_finished'),
                 r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=999056
+    def test_empty_params_element_is_not_added_to_xml(self):
+        recipe = data_setup.create_recipe()
+        data_setup.create_job_for_recipes([recipe])
+        recipe.tasks[0].params = []
+        root = lxml.etree.fromstring(recipe.to_xml(clone=True).toxml())
+        task = root.find('recipeSet/recipe/task')
+        self.assertEquals(len(task), 0, '<task/> should have no children')
+
 
 class CheckDynamicVirtTest(unittest.TestCase):
 
@@ -2468,8 +2486,8 @@ class GuestRecipeTest(unittest.TestCase):
 class MACAddressAllocationTest(unittest.TestCase):
 
     def setUp(self):
-        self.orig_VirtManager = model.VirtManager
-        model.VirtManager = DummyVirtManager
+        self.orig_VirtManager = dynamic_virt.VirtManager
+        dynamic_virt.VirtManager = DummyVirtManager
         session.begin()
         # Other tests might have left behind running recipes using MAC
         # addresses, let's cancel them all
@@ -2480,7 +2498,7 @@ class MACAddressAllocationTest(unittest.TestCase):
             rs.job.update_status()
 
     def tearDown(self):
-        model.VirtManager = self.orig_VirtManager
+        dynamic_virt.VirtManager = self.orig_VirtManager
         session.rollback()
 
     def test_lowest_free_mac_none_in_use(self):
@@ -2574,7 +2592,7 @@ class LogRecipeTest(unittest.TestCase):
     def test_lazy_create_can_deal_with_deadlocks(self):
         global _raise_counter
         _max_valid_attempts = 6
-        orig_ConditionalInsert = model.ConditionalInsert
+        orig_ConditionalInsert = model.base.ConditionalInsert
         def _raise_deadlock_exception(raise_this_many=0):
 
             global _raise_counter
@@ -2584,14 +2602,14 @@ class LogRecipeTest(unittest.TestCase):
                 if _raise_counter < raise_this_many:
                     _raise_counter += 1
                     raise OperationalError('statement', {}, '(OperationalError) (1213, blahlbha')
-                model.ConditionalInsert = orig_ConditionalInsert
-                return model.ConditionalInsert(*args, **kwargs)
+                model.base.ConditionalInsert = orig_ConditionalInsert
+                return model.base.ConditionalInsert(*args, **kwargs)
 
             return inner
 
         try:
             # This should raise 3 times and then just work
-            model.ConditionalInsert = _raise_deadlock_exception(3)
+            model.base.ConditionalInsert = _raise_deadlock_exception(3)
             lr1 = LogRecipe.lazy_create(path=u'/', filename=u'dummy.log',
                     recipe_id=self.recipe.id)
             self.assertEquals(_raise_counter, 3)
@@ -2599,7 +2617,7 @@ class LogRecipeTest(unittest.TestCase):
 
             # We should have no deadlock exception now
             _raise_counter = 0
-            model.ConditionalInsert = _raise_deadlock_exception(0)
+            model.base.ConditionalInsert = _raise_deadlock_exception(0)
             lr2 = LogRecipe.lazy_create(path=u'/', filename=u'dummy2.log',
                     recipe_id=self.recipe.id)
             self.assertEquals(_raise_counter, 0)
@@ -2607,7 +2625,7 @@ class LogRecipeTest(unittest.TestCase):
 
             # We should exhaust our max number of attempts.
             _raise_counter = 0
-            model.ConditionalInsert = _raise_deadlock_exception(_max_valid_attempts + 1)
+            model.base.ConditionalInsert = _raise_deadlock_exception(_max_valid_attempts + 1)
             try:
                 LogRecipe.lazy_create(path=u'/', filename=u'dummy3.log',
                         recipe_id=self.recipe.id)
@@ -2617,7 +2635,7 @@ class LogRecipeTest(unittest.TestCase):
                     raise
             self.assertEquals(_raise_counter, _max_valid_attempts)
         finally:
-            model.ConditionalInsert = orig_ConditionalInsert
+            model.base.ConditionalInsert = orig_ConditionalInsert
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=865265
     def test_path_is_normalized(self):
@@ -2712,11 +2730,86 @@ class TaskTest(unittest.TestCase):
         tasks = Task.query.filter(Task.name == 'Task1').all()
         self.assertEquals(len(tasks), 1)
 
+class TaskLibraryTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+        self.task_rpm_name_new = 'tmp-distribution-beaker-task_test-2.1-0.noarch.rpm'
+        self.task_rpm_name_old = 'tmp-distribution-beaker-task_test-1.1-0.noarch.rpm'
+        self.task_rpm_new = pkg_resources.resource_filename('bkr.inttest.server',
+                                                            'task-rpms/' + self.task_rpm_name_new)
+        self.task_rpm_old = pkg_resources.resource_filename('bkr.inttest.server',
+                                                            'task-rpms/' + self.task_rpm_name_old)
+
+    def tearDown(self):
+        session.rollback()
+        session.close()
+
+    def query_task_repo(self, task_name):
+
+        task_dir = turbogears.config.get('basepath.rpms')
+        yb = yum.YumBase()
+        yb.preconf.init_plugins = False
+        if not yb.setCacheDir(os.path.join(task_dir, 'cache')):
+            sys.exit(1)
+        yb.repos.disableRepo('*')
+        yb.add_enable_repo('myrepo',
+                           ['file://' + task_dir])
+        return [''.join([pkg.version, '-', pkg.rel]) for pkg, _ in
+                yb.searchGenerator(['name'], [task_name])]
+
+    def write_data_file(self, rpm):
+        rpm_data = open(rpm)
+
+        def write_data(f):
+            f.write(rpm_data.read())
+        return write_data
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1044934
+    def test_downgrade_task(self):
+
+        # first add a "newer" task
+        Task.update_task(self.task_rpm_name_new,
+                         self.write_data_file(self.task_rpm_new))
+        # Downgrade now
+        Task.update_task(self.task_rpm_name_old,
+                         self.write_data_file(self.task_rpm_old))
+
+        # query the task repo and check the version and release
+        results = self.query_task_repo('tmp-distribution-beaker-task_test')
+        self.assertEquals(len(results), 1)
+        self.assertEquals(results[0], '1.1-0')
+
+    def test_upgrade_task(self):
+
+        Task.update_task(self.task_rpm_name_old,
+                         self.write_data_file(self.task_rpm_old))
+        Task.update_task(self.task_rpm_name_new,
+                         self.write_data_file(self.task_rpm_new))
+
+        # query the task repo and check the version and release
+        vr_list = self.query_task_repo('tmp-distribution-beaker-task_test')
+        self.assertEquals(len(vr_list), 2)
+        self.assertIn('1.1-0', vr_list)
+        self.assertIn('2.1-0', vr_list)
+
+class RecipeTaskTest(unittest.TestCase):
+
+    def test_version_in_xml(self):
+        task = data_setup.create_task(name=u'/distribution/install')
+        recipe = data_setup.create_recipe(task_list=[task])
+        data_setup.create_job_for_recipes([recipe])
+        data_setup.mark_recipe_running(recipe)
+        rt = recipe.tasks[0]
+        rt.version = '1.2-3'
+        root = lxml.etree.fromstring(rt.to_xml(clone=False).toxml())
+        self.assertEquals(root.get('version'), '1.2-3')
+
 class RecipeTaskResultTest(unittest.TestCase):
 
     def test_short_path(self):
         task = data_setup.create_task(name=u'/distribution/install')
-        rt = RecipeTask(task=task)
+        rt = RecipeTask.from_task(task)
         rtr = RecipeTaskResult(recipetask=rt, path=u'/distribution/install/Sysinfo')
         self.assertEquals(rtr.short_path, u'Sysinfo')
         rtr = RecipeTaskResult(recipetask=rt, path=u'/start')

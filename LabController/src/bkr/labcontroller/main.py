@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import os
 import time
 import sys
@@ -9,7 +14,7 @@ from optparse import OptionParser
 from datetime import datetime
 from SimpleXMLRPCServer import SimpleXMLRPCDispatcher
 from DocXMLRPCServer import XMLRPCDocGenerator
-from werkzeug.wrappers import Request, Response
+from flask.wrappers import Request, Response
 from werkzeug.routing import Map as RoutingMap, Rule
 from werkzeug.exceptions import HTTPException, NotFound, MethodNotAllowed, BadRequest
 import gevent, gevent.pool, gevent.wsgi, gevent.event, gevent.monkey
@@ -65,6 +70,8 @@ class WSGIApplication(object):
                     endpoint=(self.proxy_http, 'post_watchdog')),
             Rule('/recipes/<recipe_id>/status', methods=['POST'],
                     endpoint=(self.proxy_http, 'post_recipe_status')),
+            Rule('/recipes/<recipe_id>/tasks/<task_id>/', methods=['PATCH'],
+                    endpoint=(self.proxy_http, 'patch_task')),
             Rule('/recipes/<recipe_id>/tasks/<task_id>/status', methods=['POST'],
                     endpoint=(self.proxy_http, 'post_task_status')),
             Rule('/recipes/<recipe_id>/tasks/<task_id>/results/', methods=['POST'],
@@ -181,7 +188,7 @@ def main():
     if pid_file is None:
         pid_file = conf.get("PROXY_PID_FILE", "/var/run/beaker-lab-controller/beaker-proxy.pid")
 
-    # kobo.client.HubProxy will try to log some stuff, even though we 
+    # HubProxy will try to log some stuff, even though we 
     # haven't configured our logging handlers yet. So we send logs to stderr 
     # temporarily here, and configure it again below.
     log_to_stream(sys.stderr, level=logging.WARNING)

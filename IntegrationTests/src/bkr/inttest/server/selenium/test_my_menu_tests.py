@@ -1,35 +1,27 @@
-#!/usr/bin/python
-from bkr.inttest.server.selenium import SeleniumTestCase
-from bkr.inttest import data_setup
-import unittest, time, re, os
-from turbogears.database import session
 
-class Menu(SeleniumTestCase):
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login, click_menu_item
+from bkr.inttest import data_setup, get_server_base
+
+class Menu(WebDriverTestCase):
+
     def setUp(self):
-        self.verificationErrors = []
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-        try:
-            self.logout() 
-        except:pass
-        self.login()
-    
-    def test_my_menu(self):
-        sel = self.selenium
-        try:
-            sel.open("")
-            sel.click("link=My Jobs")
-            sel.wait_for_page_to_load('30000')
-            sel.click("link=My Recipes")
-            sel.wait_for_page_to_load('30000')
-            sel.click("link=My Systems")
-            sel.wait_for_page_to_load('30000')
-        except Exception, e: 
-            self.verificationErrors.append(str(e))
-         
-    def tearDown(self):
-        self.selenium.stop()
-        self.assertEqual([], self.verificationErrors)
+        self.browser = self.get_browser()
 
-if __name__ == "__main__":
-    unittest.main()
+    def tearDown(self):
+        self.browser.quit()
+
+    def test_my_menu(self):
+        b = self.browser
+        login(b)
+        click_menu_item(b, 'Hello, %s' % data_setup.ADMIN_USER, 'My Jobs')
+        b.find_element_by_xpath('//title[text()="My Jobs"]')
+        click_menu_item(b, 'Hello, %s' % data_setup.ADMIN_USER, 'My Recipes')
+        b.find_element_by_xpath('//title[text()="Recipes"]')
+        click_menu_item(b, 'Hello, %s' % data_setup.ADMIN_USER, 'My Systems')
+        b.find_element_by_xpath('//title[text()="My Systems"]')

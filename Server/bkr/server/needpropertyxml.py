@@ -1,22 +1,9 @@
 #!/usr/bin/python
 
-# Medusa - 
-#
-# Copyright (C) 2008 bpeck@redhat.com
-#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import operator
 from sqlalchemy import or_, and_, not_, exists
@@ -28,8 +15,7 @@ from lxml import etree
 from bkr.server.model import (Arch, Distro, DistroTree, DistroTag,
                               OSMajor, OSVersion, Group, System, User,
                               Key, Key_Value_Int, Key_Value_String,
-                              LabController, distro_tree_lab_controller_map,
-                              lab_controller_table, LabControllerDistroTree,
+                              LabController, LabControllerDistroTree,
                               Hypervisor, Cpu, CpuFlag, Numa, Device,
                               DeviceClass, Disk, Power, PowerType)
 
@@ -442,12 +428,12 @@ class XmlDistroLabController(ElementWrapper):
             return (joins, None)
         if op == '__eq__':
             query = exists([1],
-                    from_obj=[distro_tree_lab_controller_map.join(lab_controller_table)])\
+                    from_obj=[LabControllerDistroTree.__table__.join(LabController.__table__)])\
                     .where(LabControllerDistroTree.distro_tree_id == DistroTree.id)\
                     .where(LabController.fqdn == value)
         else:
             query = not_(exists([1],
-                    from_obj=[distro_tree_lab_controller_map.join(lab_controller_table)])\
+                    from_obj=[LabControllerDistroTree.__table__.join(LabController.__table__)])\
                     .where(LabControllerDistroTree.distro_tree_id == DistroTree.id)\
                     .where(LabController.fqdn == value))
         return (joins, query)

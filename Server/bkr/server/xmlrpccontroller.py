@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import sys
 import logging
 import xmlrpclib
@@ -72,5 +78,5 @@ class RPCRoot(controllers.Controller):
         cherrypy.response.headers["Content-Type"] = "text/xml"
         return response
 
-    # Compat with kobo client
+    # Compat with the migrated kobo client
     client = RPC2

@@ -1,8 +1,0 @@
-#!/bin/bash
-set -e
-echo -n "dummy_medium: sleeping for 5 seconds... "
-sleep 5
-echo "done"
-if [ "$power_mode" == "on" ] ; then
-    curl -f -X PUT "http://localhost:8001/beah_dummy/$power_id"
-fi

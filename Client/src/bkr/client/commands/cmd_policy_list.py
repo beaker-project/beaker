@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 .. _bkr-policy-list:
 
@@ -77,6 +82,7 @@ from prettytable import PrettyTable
 class Policy_List(BeakerCommand):
     """Retrieves policy list"""
     enabled = True
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s <options> <fqdn>" % self.normalized_name
@@ -119,6 +125,8 @@ class Policy_List(BeakerCommand):
             query_string['group'] = rules_group
 
         self.set_hub(**kwargs)
+        if rules_mine:
+            self.hub._login()
         requests_session = self.requests_session()
         rules_url = 'systems/%s/access-policy' % urllib.quote(fqdn, '')
         res = requests_session.get(rules_url, params=query_string)

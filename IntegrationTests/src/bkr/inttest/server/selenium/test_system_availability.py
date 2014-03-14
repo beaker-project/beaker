@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from selenium.webdriver.support.ui import Select
 from bkr.server.model import SystemStatus, SystemPermission
 from bkr.inttest.server.selenium import WebDriverTestCase
@@ -250,6 +255,17 @@ class SystemAvailabilityTest(WebDriverTestCase):
         self.check_system_is_not_free(system)
         self.check_cannot_take(system)
         self.check_cannot_provision(system, MSG_MANUAL)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=920018
+    def test_lc_disabled(self):
+        with session.begin():
+            system = data_setup.create_system(status=SystemStatus.manual,
+                    shared=True, lab_controller=self.lc)
+            self.lc.disabled = True
+        b = self.browser
+        login(b)
+        self.check_system_is_available(system)
+        self.check_system_is_not_free(system)
 
     def check_system_is_available(self, system):
         """

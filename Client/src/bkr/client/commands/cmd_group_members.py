@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr group-members: List members of a group
 ==========================================
@@ -42,6 +48,7 @@ import bkr.client.json_compat as json
 class Group_Members(BeakerCommand):
     """List group members"""
     enabled = True
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s <group-name>" % self.normalized_name

@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from turbogears.database import session
 from turbogears import expose, flash, widgets, validate, error_handler, validators, paginate, url
 from turbogears import redirect, config
@@ -15,7 +21,8 @@ from bkr.server.model import (TaskBase, Device, System, SystemGroup,
                               ExcludeOSVersion, OSVersion,
                               Provision, ProvisionFamily,
                               ProvisionFamilyUpdate, SystemStatus,
-                              Key_Value_Int, Key_Value_String)
+                              Key_Value_Int, Key_Value_String,
+                              SystemAccessPolicy, SystemPermission)
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
@@ -1148,16 +1155,18 @@ class Root(RPCRoot):
     @error_handler(view)
     @expose()
     @identity.require(identity.not_anonymous())
-    def save_power(self, 
-                   id,
+    @validate(form=power_form)
+    def save_power(self,
+                   fqdn,
                    power_address,
                    power_type_id,
                    release_action,
+                   power_quiescent_period,
                    **kw):
         try:
-            system = System.by_id(id,identity.current.user)
+            system = System.by_fqdn(fqdn, identity.current.user)
         except InvalidRequestError:
-            flash( _(u"Unable to save Power for %s" % id) )
+            flash( _(u"Unable to save Power for system %r" % fqdn) )
             redirect("/")
 
         if kw.get('reprovision_distro_tree_id'):
@@ -1182,6 +1191,15 @@ class Root(RPCRoot):
         system.release_action = release_action
 
         if system.power:
+            power_quiescent_period = int(power_quiescent_period)
+            if power_quiescent_period != system.power.power_quiescent_period:
+                # Quiescent period changed
+                activity = SystemActivity(identity.current.user, 'WEBUI',
+                    'Changed', 'power_quiescent_period',
+                    system.power.power_quiescent_period,
+                    power_quiescent_period)
+                system.power.power_quiescent_period = power_quiescent_period
+                system.activity.append(activity)
             if power_address != system.power.power_address:
                 #Power Address Changed
                 activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_address', system.power.power_address, power_address )
@@ -1271,6 +1289,11 @@ class Root(RPCRoot):
                 flash( _(u"%s already exists!" % kw['fqdn']) )
                 redirect("/")
             system = System(fqdn=kw['fqdn'],owner=identity.current.user)
+            session.add(system)
+            # new systems are visible to everybody by default
+            system.custom_access_policy = SystemAccessPolicy()
+            system.custom_access_policy.add_rule(SystemPermission.view,
+                    everybody=True)
 
         if kw['lab_controller_id'] == 0:
             kw['lab_controller'] = None
@@ -1314,16 +1337,6 @@ class Root(RPCRoot):
                 activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val)
                 system.activity.append(activity)
                 
-        log_bool_fields = [ 'private' ]
-        for field in log_bool_fields:
-            try:
-                current_val = unicode(getattr(system,field) and True or False)
-            except KeyError:
-                current_val = u""
-            new_val = unicode(kw.get(field) or False)
-            if current_val != new_val:
-                activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val )
-                system.activity.append(activity)
         system.status = kw['status']
         system.location=kw['location']
         system.model=kw['model']
@@ -1336,10 +1349,6 @@ class Root(RPCRoot):
         system.status_reason = kw['status_reason']
         system.date_modified = datetime.utcnow()
         system.kernel_type = kw['kernel_type']
-        if kw.get('private'):
-            system.private=kw['private']
-        else:
-            system.private=False
 
         # Change Lab Controller
         system.lab_controller = kw['lab_controller']

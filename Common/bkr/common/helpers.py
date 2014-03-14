@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from threading import Thread, Event
 import Queue, copy
 from logging import getLogger
@@ -244,3 +250,12 @@ class Flock(object):
     def __exit__(self, type, value, traceback):
         os.close(self.fd)
         del self.fd
+
+# This is a method on timedelta in Python 2.7+
+def total_seconds(td):
+    """
+    Returns the total number of seconds (float)
+    represented by the given timedelta.
+    """
+    return (float(td.microseconds) + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
+

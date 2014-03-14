@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import contextlib
 import unittest2 as unittest
 from turbogears.database import session
@@ -163,9 +169,8 @@ class SystemLoanTest(unittest.TestCase):
     def test_user_with_borrow_permissions_only(self):
         # Grant everyone borrow permissions on the system
         with session.begin():
-            policy = self.system.custom_access_policy = SystemAccessPolicy()
-            policy.add_rule(permission=SystemPermission.loan_self,
-                            everybody=True)
+            self.system.custom_access_policy.add_rule(
+                    permission=SystemPermission.loan_self, everybody=True)
 
         # user2 should now be able to borrow and return the system
         out = run_client(['bkr', 'loan-grant', self.system.fqdn],

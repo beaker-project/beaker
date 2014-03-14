@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from turbogears import expose, paginate
 from sqlalchemy.orm import contains_eager, joinedload_all
 from bkr.server import identity
@@ -28,7 +34,7 @@ class Watchdogs(RPCRoot):
         fields = [col(name='job_id', getter=lambda x: x.recipe.recipeset.job.link, title="Job ID"),
                   col(name='system_name', getter=lambda x: x.recipe.resource.link, title="System"),
                   col(name='lab_controller', getter=lambda x: x.recipe.recipeset.lab_controller, title="Lab Controller"),
-                  col(name='task_name', getter=lambda x: x.recipetask.link
+                  col(name='task_name', getter=lambda x: x.recipetask.name_markup
                         if x.recipetask is not None else None, title="Task Name"),
                   col(name='kill_time', getter=lambda x: x.kill_time,
                       title="Kill Time", options=dict(datetime=True))]

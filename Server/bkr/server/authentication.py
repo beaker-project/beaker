@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from turbogears.config import get
 from bkr.common.bexceptions import BX
 from bkr.server import identity
@@ -43,7 +49,8 @@ class Auth(RPCRoot):
     @cherrypy.expose
     def renew_session(self, *args, **kw):
         """
-        Renew session, here to support kobo.
+        Renew session, here to support the login method
+        that was migrated from kobo.
         """
         if identity.current.anonymous:
             return True

@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from turbogears.database import session
 from turbogears import expose, flash, redirect, paginate, url
 from sqlalchemy.exc import InvalidRequestError
@@ -14,7 +20,7 @@ from bkr.server import search_utility, identity
 from bkr.common.bexceptions import BX
 
 from bkr.server.model import (OSMajor, OSVersion, Distro, DistroTree,
-                             DistroTag, DistroActivity, distro_table)
+                             DistroTag, DistroActivity)
 
 __all__ = ['Distros']
 
@@ -290,7 +296,7 @@ class Distros(RPCRoot):
             'RedHatEnterpriseLinuxServer5.6' or 'Fedora14'
         :type version: string
         """
-        distros = session.query(Distro).filter(distro_table.c.name.like('%s' % name))
+        distros = Distro.query.filter(Distro.name.like(unicode(name)))
         edited = []
 
         os_major = version.split('.')[0]
@@ -302,16 +308,10 @@ class Distros(RPCRoot):
             os_minor = '0'
 
         # Try and find OSMajor
-        try:
-            osmajor = OSMajor.by_name(os_major)
-        except InvalidRequestError: 
-            osmajor = OSMajor(os_major)
+        osmajor = OSMajor.lazy_create(osmajor=os_major)
 
         # Try and find OSVersion
-        try:
-            osversion = OSVersion.by_name(osmajor,os_minor)
-        except InvalidRequestError: 
-            osversion = OSVersion(osmajor,os_minor)
+        osversion = OSVersion.lazy_create(osmajor=osmajor, osminor=os_minor)
 
         # Check each Distro
         for distro in distros:

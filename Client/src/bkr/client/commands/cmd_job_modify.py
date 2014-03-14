@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr job-modify: Modify Beaker jobs
 ==================================
@@ -10,8 +15,8 @@ Synopsis
 --------
 
 | :program:`bkr job-modify` [*options*] <taskspec>
-|       [--response=<response>] [--retention-tag=<retention_tag>]
-|       [--product=<product>]
+|       [:option:`--response` <response>] [:option:`--retention-tag` <retention_tag>]
+|       [:option:`--product` <product>]
 
 
 Description

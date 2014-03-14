@@ -7,3 +7,9 @@
 [submodule "typeahead.js"]
 	path = Server/assets/typeahead.js
 	url = https://github.com/twitter/typeahead.js.git
+[submodule "underscore"]
+	path = Server/assets/underscore
+	url = https://github.com/jashkenas/underscore.git
+[submodule "backbone"]
+	path = Server/assets/backbone
+	url = https://github.com/jashkenas/backbone.git

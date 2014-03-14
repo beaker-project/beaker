@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr job-submit: Submit job XML to Beaker
 ========================================
@@ -11,7 +16,7 @@ Synopsis
 
 | :program:`bkr job-submit` [*options*]
 |       [--debug] [--convert] [--combine] [--ignore-missing-tasks]
-|       [--dryrun | --wait] <jobxml>...
+|       [:option:`--dryrun` | :option:`--wait`] <jobxml>...
 
 Description
 -----------

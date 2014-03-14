@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import os, os.path
 import re
 import posixpath
@@ -12,7 +18,7 @@ import requests
 import time
 from nose.plugins.skip import SkipTest
 from bkr.server.model import session, TaskResult, TaskStatus, LogRecipe, \
-        LogRecipeTask, LogRecipeTaskResult
+        LogRecipeTask, LogRecipeTaskResult, RecipeTask
 from bkr.labcontroller.proxy import ProxyHelper
 from bkr.labcontroller.config import get_conf
 from bkr.inttest import data_setup
@@ -278,6 +284,102 @@ class TaskStatusTest(LabControllerTestCase):
         self.assertEquals(response.status_code, 204)
         response = requests.post(status_url, data=dict(status='Running'))
         self.assertEquals(response.status_code, 409)
+
+class UpdateTaskTest(LabControllerTestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.recipe = data_setup.create_recipe(task_name=u'/distribution/install')
+            self.recipe.tasks.extend([
+                RecipeTask.from_task(data_setup.create_task()),
+                RecipeTask.from_fetch_url(u'http://example.com/tasks/example.tar.bz2'),
+            ])
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_running(self.recipe)
+
+    def test_start_and_complete_task(self):
+        # This simulates the traditional beah style where the task comes from 
+        # the task library, and its name and version are already known. We just 
+        # set it to Running and then to Completed.
+        task_url = '%srecipes/%s/tasks/%s/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[1].id)
+        response = requests.patch(task_url, data=dict(status='Running'))
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(response.json()['status'], 'Running')
+        with session.begin():
+            task = self.recipe.tasks[1]
+            session.refresh(task)
+            self.assertEquals(task.status, TaskStatus.running)
+        response = requests.patch(task_url, data=dict(status='Completed'))
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(response.json()['status'], 'Completed')
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[1]
+            self.assertEquals(task.status, TaskStatus.completed)
+
+    def test_start_and_complete_external_task(self):
+        # Alternative harnesses which support external tasks can report back 
+        # the name and version of the task after they fetch it.
+        task_url = '%srecipes/%s/tasks/%s/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[2].id)
+        name = '/external/example'
+        version = '3.14-1'
+        response = requests.patch(task_url, data=dict(status='Running',
+                name=name, version=version))
+        self.assertEquals(response.status_code, 200)
+        json = response.json()
+        self.assertEquals(json['status'], 'Running')
+        self.assertEquals(json['name'], name)
+        self.assertEquals(json['version'], version)
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[2]
+            self.assertEquals(task.status, TaskStatus.running)
+            self.assertEquals(task.name, name)
+            self.assertEquals(task.version, version)
+        response = requests.patch(task_url, data=dict(status='Completed'))
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(response.json()['status'], 'Completed')
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[2]
+            self.assertEquals(task.status, TaskStatus.completed)
+
+    def test_abort_task(self):
+        task_url = '%srecipes/%s/tasks/%s/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.patch(task_url, data=dict(status='Aborted',
+                message='fooed the bar up'))
+        self.assertEquals(response.status_code, 200)
+        self.assertEquals(response.json()['status'], 'Aborted')
+        with session.begin():
+            session.expire_all()
+            task = self.recipe.tasks[0]
+            self.assertEquals(task.status, TaskStatus.aborted)
+            self.assertEquals(task.results[-1].log, u'fooed the bar up')
+
+    def test_invalid_status_transition(self):
+        task_url = '%srecipes/%s/tasks/%s/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[0].id)
+        response = requests.patch(task_url, data=dict(status='Completed'))
+        self.assertEquals(response.status_code, 200)
+        response = requests.patch(task_url, data=dict(status='Running'))
+        self.assertEquals(response.status_code, 409)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1072133
+    def test_initial_watchdog_set_correctly(self):
+        # When a task is started the watchdog is implicitly extended to the 
+        # task's expected time plus 30 minutes.
+        task_url = '%srecipes/%s/tasks/%s/' % (self.get_proxy_url(),
+                self.recipe.id, self.recipe.tasks[1].id)
+        response = requests.patch(task_url, data=dict(status='Running'))
+        response.raise_for_status()
+        with session.begin():
+            self.assertEquals(self.recipe.tasks[1].task.avg_time, 1200)
+            assert_datetime_within(self.recipe.watchdog.kill_time,
+                    tolerance=datetime.timedelta(seconds=10),
+                    reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=3000))
 
 class RecipeStatusTest(LabControllerTestCase):
 

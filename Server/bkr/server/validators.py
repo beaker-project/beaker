@@ -1,8 +1,15 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import cracklib
-from turbogears.validators import FormValidator, Invalid, TgFancyValidator, Email
+from turbogears.validators import FormValidator, Invalid, TgFancyValidator, \
+        Email, UnicodeString
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
-from bkr.server.model import System, Recipe, User, LabController
+from bkr.server.model import System, Recipe, User, LabController, RetentionTag
 
 
 class StrongPassword(TgFancyValidator):
@@ -186,3 +193,19 @@ class SSHPubKey(TgFancyValidator):
         if isinstance(value, tuple):
             return ' '.join(value)
         return value
+
+
+class UniqueRetentionTag(FormValidator):
+
+    __unpackargs__ = ('*', 'field_names')
+    messages = {
+        'not_unique': 'Retention tag already exists',
+    }
+
+    def validate_python(self, form_fields, state):
+        id = form_fields.get('id')
+        tag = form_fields['tag']
+        existing = RetentionTag.query.filter_by(tag=tag).first()
+        if existing and (not id or existing.id != id):
+            error = self.message('not_unique', state)
+            raise Invalid(error, form_fields, state, error_dict={'tag': error})

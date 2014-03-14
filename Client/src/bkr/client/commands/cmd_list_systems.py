@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr list-systems: List Beaker systems
 =====================================
@@ -9,12 +14,12 @@ Synopsis
 --------
 
 | :program:`bkr list-systems` [*options*]
-|       [--available | --free | --mine]
-|       [--type=<type>] [--status=<status>] [--group=<group>]
-|       [--arch=<arch>] [--dev-vendor-id=<vendorid>]
-|       [--dev-device-id=<deviceid>] [--dev-driver=<driver>]
-|       [--dev-description=<description>] [--dev-sub-vendor-id=<subvendorid>]
-        [--dev-sub-device-id=<subdeviceid>]
+|       [:option:`--available` | :option:`--free` | :option:`--mine`]
+|       [:option:`--type` <type>] [:option:`--status` <status>] [:option:`--group` <group>]
+|       [:option:`--arch` <arch>] [:option:`--dev-vendor-id` <vendorid>]
+|       [:option:`--dev-device-id` <deviceid>] [:option:`--dev-driver` <driver>]
+|       [:option:`--dev-description` <description>] [:option:`--dev-sub-vendor-id` <subvendorid>]
+        [:option:`--dev-sub-device-id` <subdeviceid>]
 
 Description
 -----------

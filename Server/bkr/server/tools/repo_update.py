@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 # pkg_resources.requires() does not work if multiple versions are installed in 
 # parallel. This semi-supported hack using __requires__ is the workaround.
 # http://bugs.python.org/setuptools/issue139
@@ -17,12 +22,14 @@ import urlparse
 import shutil
 import yum, yum.misc, yum.packages
 import urllib
+import logging
 
 __version__ = '0.1'
 __description__ = 'Script to update harness repos'
 
 USAGE_TEXT = """ Usage: repo_update """
 
+log = logging.getLogger(__name__)
 
 def get_parser():
     usage = "usage: %prog [options]"
@@ -34,6 +41,8 @@ def get_parser():
                       default=None,
                       help="Optionally specify the harness dest.")
     parser.add_option("-c","--config-file",dest="configfile",default=None)
+    parser.add_option('--debug', action='store_true',
+            help='Show detailed progress information')
     return parser
 
 
@@ -56,12 +65,15 @@ class RepoSyncer(yum.YumBase):
         self.repos.disableRepo('*')
         repo_id = repo_url.replace('/', '-')
         self.add_enable_repo(repo_id, baseurls=[repo_url])
+        self.repo_url = repo_url
         self.output_dir = output_dir
 
         # yum foolishness: http://lists.baseurl.org/pipermail/yum-devel/2010-June/007168.html
         yum.packages.base = None
 
     def sync(self):
+        has_new_packages = False
+        log.info('Syncing packages from %s to %s', self.repo_url, self.output_dir)
         self.doRepoSetup()
         # have to list every possible arch here, ughhhh
         self.doSackSetup(archlist='noarch i386 i686 x86_64 ia64 ppc ppc64 s390 s390x'.split())
@@ -73,16 +85,18 @@ class RepoSyncer(yum.YumBase):
         for package in package_sack.returnNewestByNameArch():
             dest = os.path.join(self.output_dir, os.path.basename(package.relativepath))
             if os.path.exists(dest) and os.path.getsize(dest) == package.size:
-                print 'Skipping %s' % dest
+                log.info('Skipping %s', dest)
                 continue
-            print 'Fetching %s' % dest
+            log.info('Fetching %s', dest)
             package.localpath = dest
             cached_package = repo.getPackage(package)
+            has_new_packages = True
             # Based on some confusing cache configuration, yum may or may not 
             # have fetched the package to the right place for us already
             if os.path.exists(dest) and os.path.samefile(cached_package, dest):
                 continue
             shutil.copy2(cached_package, dest)
+        return has_new_packages
 
 def update_repos(baseurl, basepath):
     for osmajor in OSMajor.query:
@@ -91,19 +105,20 @@ def update_repos(baseurl, basepath):
         dest = "%s/%s" % (basepath,osmajor)
         syncer = RepoSyncer(urlparse.urljoin(baseurl, '%s/' % urllib.quote(osmajor)), dest)
         try:
-            syncer.sync()
+            has_new_packages = syncer.sync()
         except KeyboardInterrupt:
             raise
         except Exception, e:
-            print >>sys.stderr, str(e)
+            log.warning('%s', e)
             continue
-        createrepo_results = run_createrepo(cwd=dest)
-        returncode = createrepo_results.returncode
-        if returncode != 0:
-            err = createrepo_results.err
-            command = createrepo_results.command
-            raise RuntimeError('Createrepo failed.\nreturncode:%s cmd:%s err:%s'
-                 % (returncode, command, err))
+        if has_new_packages:
+            createrepo_results = run_createrepo(cwd=dest)
+            returncode = createrepo_results.returncode
+            if returncode != 0:
+                err = createrepo_results.err
+                command = createrepo_results.command
+                raise RuntimeError('Createrepo failed.\nreturncode:%s cmd:%s err:%s'
+                     % (returncode, command, err))
 
 
 def main():
@@ -115,7 +130,7 @@ def main():
     if not baseurl.endswith('/'):
         baseurl += '/'
     load_config(configfile)
-    log_to_stream(sys.stderr)
+    log_to_stream(sys.stderr, level=logging.DEBUG if opts.debug else logging.WARNING)
     if opts.basepath:
         basepath = opts.basepath
     else:

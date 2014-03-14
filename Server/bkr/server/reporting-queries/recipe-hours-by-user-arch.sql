@@ -38,8 +38,14 @@ LEFT OUTER JOIN system_access_policy ON system.id = system_access_policy.system_
 WHERE recipe.start_time < '2012-11-01 00:00:00'
     AND (recipe.finish_time >= '2012-10-01 00:00:00'
          OR recipe.finish_time IS NULL)
-    -- limit to systems which everybody is allowed to reserve
-    AND system.private = 0 AND EXISTS (
+    -- limit to systems which everybody is allowed to view and reserve
+    AND EXISTS (
+        SELECT 1
+        FROM system_access_policy_rule
+        WHERE policy_id = system_access_policy.id
+            AND permission = 'view'
+            AND user_id IS NULL AND group_id IS NULL)
+    AND EXISTS (
         SELECT 1
         FROM system_access_policy_rule
         WHERE policy_id = system_access_policy.id

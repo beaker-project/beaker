@@ -1,23 +1,10 @@
 
 # vim: set fileencoding=utf-8:
 
-# Beaker
-#
-# Copyright (C) 2010 Red Hat, Inc.
-#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import unittest
 import logging
@@ -519,6 +506,19 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             self.assertEquals(system.command_queue, [])
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1067924
+    def test_kernel_options_are_not_quoted(self):
+        # ks URL contains ~ which is quoted by pipes.quote
+        bad_arg = 'ks=http://example.com/~user/kickstart'
+        system = self.usable_system
+        self.server.auth.login_password(system.user.user_name, 'password')
+        self.server.systems.provision(system.fqdn, self.distro_tree.id,
+                'method=nfs', bad_arg)
+        with session.begin():
+            self.assertEquals(system.command_queue[0].action, 'reboot')
+            self.assertEquals(system.command_queue[1].action, 'configure_netboot')
+            self.assertEquals(system.command_queue[1].kernel_options,
+                    'console=ttyS0 %s ksdevice=eth0 noverifyssl' % bad_arg)
 
 class LegacyPushXmlRpcTest(XmlRpcTestCase):
 

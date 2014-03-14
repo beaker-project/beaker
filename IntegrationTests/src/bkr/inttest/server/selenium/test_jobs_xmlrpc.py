@@ -1,23 +1,10 @@
 
 # vim: set fileencoding=utf-8 :
 
-# Beaker
-#
-# Copyright (C) 2010 Red Hat, Inc.
-#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import unittest
 import logging
@@ -26,7 +13,7 @@ import datetime
 from turbogears.database import session
 from bkr.inttest.server.selenium import XmlRpcTestCase
 from bkr.inttest import data_setup
-from bkr.server.model import Job, Distro, ConfigItem, User
+from bkr.server.model import Job, Distro, ConfigItem, User, TaskBase
 
 class JobUploadTest(XmlRpcTestCase):
 
@@ -140,3 +127,61 @@ class JobUploadTest(XmlRpcTestCase):
             </job>
             '''.encode('utf8'))
         self.assert_(job_tid.startswith('J:'))
+
+    def test_external_tasks(self):
+        job_tid = self.server.jobs.upload('''
+            <job>
+                <whiteboard>job with external task</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                        <task name="/distribution/example">
+                            <fetch url="git://example.com/externaltasks/example#master"/>
+                        </task>
+                        <task>
+                            <fetch url="git://example.com/externaltasks/example2#master"/>
+                        </task>
+                        <task name="/distribution/example3">
+                            <fetch url="git://example.com/externaltasks#master"
+                                   subdir="examples/3" />
+                        </task>
+                        <task>
+                            <fetch url="git://example.com/externaltasks#master"
+                                   subdir="examples/4" />
+                        </task>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        self.assert_(job_tid.startswith('J:'))
+        with session.begin():
+            job = TaskBase.get_by_t_id(job_tid)
+            recipe = job.recipesets[0].recipes[0]
+            self.assertEquals(len(recipe.tasks), 5)
+            self.assertEquals(recipe.tasks[0].name, u'/distribution/install')
+            self.assertEquals(recipe.tasks[0].task.name, u'/distribution/install')
+            self.assertEquals(recipe.tasks[0].fetch_url, None)
+            self.assertEquals(recipe.tasks[1].name, u'/distribution/example')
+            self.assertEquals(recipe.tasks[1].task, None)
+            self.assertEquals(recipe.tasks[1].fetch_url,
+                     'git://example.com/externaltasks/example#master')
+            self.assertEquals(recipe.tasks[2].name,
+                    u'git://example.com/externaltasks/example2#master')
+            self.assertEquals(recipe.tasks[2].task, None)
+            self.assertEquals(recipe.tasks[2].fetch_url,
+                    u'git://example.com/externaltasks/example2#master')
+            self.assertEquals(recipe.tasks[3].name, u'/distribution/example3')
+            self.assertEquals(recipe.tasks[3].task, None)
+            self.assertEquals(recipe.tasks[3].fetch_url,
+                    u'git://example.com/externaltasks#master')
+            self.assertEquals(recipe.tasks[3].fetch_subdir, u'examples/3')
+            self.assertEquals(recipe.tasks[4].name,
+                    u'git://example.com/externaltasks#master examples/4')
+            self.assertEquals(recipe.tasks[4].task, None)
+            self.assertEquals(recipe.tasks[4].fetch_url,
+                    u'git://example.com/externaltasks#master')
+            self.assertEquals(recipe.tasks[4].fetch_subdir, u'examples/4')

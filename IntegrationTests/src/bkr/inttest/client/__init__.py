@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import os
 import subprocess
 import tempfile
@@ -9,18 +14,14 @@ log = logging.getLogger(__name__)
 
 def create_client_config(username=data_setup.ADMIN_USER,
                          password=data_setup.ADMIN_PASSWORD, hub_url=None,
-                         qpid_broker='localhost',qpid_krb=False, anonymous=False):
+                         qpid_broker='localhost',qpid_krb=False):
     if hub_url is None:
         hub_url = get_server_base()
     config = tempfile.NamedTemporaryFile(prefix='bkr-inttest-client-conf-')
-    if not anonymous:
-        config.write('\n'.join([
-            'AUTH_METHOD = "password"',
-            'USERNAME = "%s"' % username,
-            'PASSWORD = "%s"' % password,
-            ]))
-
     config.write('\n'.join([
+                'AUTH_METHOD = "password"',
+                'USERNAME = "%s"' % username,
+                'PASSWORD = "%s"' % password,
                 # Kobo wigs out if HUB_URL ends with a trailing slash, not sure why..
                 'HUB_URL = "%s"' % hub_url.rstrip('/'),
                 'QPID_TOPIC_EXCHANGE = "amqp.topic"',

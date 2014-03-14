@@ -1,12 +1,18 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import copy
 import socket
 import os
-import kobo.conf
+from bkr.common.pyconfig import PyConfigParser
 
 __all__ = ['load_conf', 'get_conf']
 
 
-class Config(kobo.conf.PyConfigParser):
+class Config(PyConfigParser):
 
     def get_url_domain(self):
         # URL_DOMAIN used to be called SERVER

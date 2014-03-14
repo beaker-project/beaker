@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr job-delete: Delete Beaker jobs
 ==================================
@@ -15,7 +20,7 @@ Delete specific jobs:
 Delete by criteria:
 
 | :program:`bkr job-delete` [*options*] [--dryrun]
-|       [--family=<family>] [--tag=<tag>] [--product=<cpeid>] [--completeDays=<days>]
+|       [:option:`--family` <family>] [:option:`--tag` <tag>] [:option:`--product` <cpeid>] [:option:`--completeDays` <days>]
 
 Description
 -----------

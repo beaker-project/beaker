@@ -1,19 +1,9 @@
-#
-# Copyright (C) 2008 bpeck@redhat.com
-#
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 from datetime import datetime
 from turbogears.database import session
 from turbogears import expose, flash, widgets, redirect, paginate, url
@@ -24,7 +14,7 @@ from bkr.common.bexceptions import BX
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import RecipeWidget
 from bkr.server.widgets import SearchBar
-from bkr.server import search_utility, identity
+from bkr.server import search_utility, identity, dynamic_virt
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server.recipetasks import RecipeTasks
@@ -36,7 +26,7 @@ import cherrypy
 
 from bkr.server.model import (Recipe, RecipeSet, TaskStatus, Job, System,
                               MachineRecipe, SystemResource, VirtResource,
-                              VirtManager, LogRecipe, LogRecipeTask,
+                              LogRecipe, LogRecipeTask,
                               LogRecipeTaskResult)
 
 import logging
@@ -282,7 +272,7 @@ class Recipes(RPCRoot):
                     service=u'XMLRPC', delay=30)
         elif isinstance(recipe.resource, VirtResource):
             # XXX this should also be delayed 30 seconds but there is no way
-            with VirtManager() as manager:
+            with dynamic_virt.VirtManager() as manager:
                 vm = manager.api.vms.get(recipe.resource.system_name)
                 vm.stop()
                 vm.start()

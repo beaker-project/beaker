@@ -1,15 +1,13 @@
-# License: GPL v2 or later
-# Copyright Red Hat Inc. 2008
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
 
 .PHONY: build
 build:
 	env PYTHONPATH=../Common:src:$${PYTHONPATH:+:$$PYTHONPATH} \
-	    python setup.py build \
-	    | tee build.out
-	@if grep -q ImportError build.out ; then \
-	    echo "ImportErrors in build output, did Sphinx autodoc fail?" ; \
-	    exit 1 ; \
-	fi
+	    python setup.py build
 
 .PHONY: install
 install:
@@ -19,3 +17,7 @@ install:
 clean:
 	python setup.py clean
 	rm -rf build
+
+.PHONY: check
+check:
+	./run-tests.sh

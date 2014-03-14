@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr job-watch: Watch the progress of a Beaker job
 =================================================
@@ -65,6 +70,7 @@ from bkr.client.task_watcher import *
 class Job_Watch(BeakerCommand):
     """Watch Jobs/Recipes"""
     enabled = True
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name

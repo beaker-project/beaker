@@ -96,12 +96,6 @@ $(document).ready(function(){
         </div>
       </div>
       <div class="control-group">
-        ${label_for('private')}
-        <div class="controls">
-        ${display_system_property("private")}
-        </div>
-      </div>
-      <div class="control-group">
         ${label_for('lab_controller_id')}
         <div class="controls">
         ${display_system_property("lab_controller_id")}

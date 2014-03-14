@@ -1,4 +1,15 @@
-import unittest, datetime, os, threading
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+import unittest2 as unittest
+import datetime
+import os
+import threading
+import shutil
+import pkg_resources
 import bkr
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
@@ -43,11 +54,9 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             task = data_setup.create_task()
             rpm_path = Task.get_rpm_path(task.rpm)
-            with open(rpm_path, 'wb'): pass
-            # TODO (ncoghlan): This results in a logged warning from
-            # createrepo, complaining about an invalid RPM file.
-            # It would be better (but trickier) to write a valid RPM file
-            # instead of a blank file
+            shutil.copyfile(
+                    pkg_resources.resource_filename('bkr.inttest.server', 'task-rpms/empty.rpm'),
+                    rpm_path)
             return task.id, task.rpm
 
     def disable_example_task(self, task_id):
@@ -516,13 +525,10 @@ class TestBeakerd(unittest.TestCase):
             if recipe_id == spare_recipe.id:
                 # We need to now release System B
                 # to make sure it is not picked up
-                complete_me = session1.query(Recipe).filter(Recipe.id ==
-                    holds_deadlocking_resource_recipe.id).one()
-                orig_session = bkr.server.model.session
-                bkr.server.model.session = session1
-                data_setup.mark_recipe_complete(complete_me, only=True)
-                session1.commit()
-                bkr.server.model.session = orig_session
+                with session1.begin():
+                    complete_me = session1.query(Recipe).filter(Recipe.id ==
+                        holds_deadlocking_resource_recipe.id).one()
+                    data_setup.mark_recipe_complete(complete_me, only=True)
             else:
                 pass
             original_sqr(recipe_id)
@@ -1101,6 +1107,33 @@ class TestBeakerd(unittest.TestCase):
             self.assertEqual(system.command_queue[1].action, 'configure_netboot')
             self.assertEqual(system.command_queue[2].action, 'clear_logs')
 
+    def test_task_versions_are_recorded(self):
+        with session.begin():
+            system = data_setup.create_system(shared=True,
+                    lab_controller=self.lab_controller)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            task = Task.by_id(self.task_id)
+            recipe = data_setup.create_recipe(distro_tree=distro_tree,
+                    task_list=[task])
+            recipe._host_requires = (u"""
+                <hostRequires>
+                    <hostname op="=" value="%s" />
+                </hostRequires>
+                """ % system.fqdn)
+            job = data_setup.create_job_for_recipes([recipe])
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEquals(job.recipesets[0].recipes[0].tasks[0].version,
+                    task.version)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=880852
     def test_recipe_no_longer_has_access(self):
         with session.begin():
@@ -1188,6 +1221,38 @@ class TestBeakerd(unittest.TestCase):
             system = System.query.get(system.id)
             self.assertEqual(system.command_queue[1].action, 'configure_netboot')
             self.assert_('vnc' not in system.command_queue[1].kernel_options)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1067924
+    def test_kernel_options_are_not_quoted(self):
+        # URL contains ~ which is quoted by pipes.quote
+        bad_arg = 'inst.updates=http://people.redhat.com/~dlehman/updates-1054806.1.img'
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            system = data_setup.create_system(shared=True,
+                    lab_controller=self.lab_controller)
+            job = data_setup.create_job(distro_tree=distro_tree)
+            job.recipesets[0].recipes[0].kernel_options = u'%s' % bad_arg
+            job.recipesets[0].recipes[0]._host_requires = (u"""
+                <hostRequires>
+                    <hostname op="=" value="%s" />
+                </hostRequires>
+                """ % system.fqdn)
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.provision_scheduled_recipesets()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.status, TaskStatus.waiting)
+            system = System.query.get(system.id)
+            self.assertEqual(system.command_queue[1].action, 'configure_netboot')
+            self.assertIn(bad_arg, system.command_queue[1].kernel_options)
 
     def test_order_by(self):
         controller = Jobs()

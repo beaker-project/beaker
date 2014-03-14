@@ -10,16 +10,6 @@ the Beaker server and required components, another for packages needed
 to run the Beaker client. Download the repo file that suits your requirements 
 and copy it to ``/etc/yum.repos.d``.
 
-.. warning::
-
-   Beaker's internal password based authentication for the main web service
-   does not currently salt user passwords before hashing them. Accordingly,
-   *IT IS NOT CONSIDERED SUITABLE FOR PRODUCTION USE AS THE PRIMARY
-   AUTHENTICATION MECHANISM* for Beaker installations, especially those
-   accessible via the public Internet. A more robust Apache level
-   authentication mechanism, such as ``mod_auth_kerb`` or
-   ``mod_authnz_persona``, should be used instead.
-
 
 Installing the Beaker server
 ----------------------------

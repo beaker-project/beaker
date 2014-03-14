@@ -12,7 +12,7 @@ def get_compose_layout():
 
 setup(
     name='bkr.inttest',
-    version='0.15.5',
+    version='0.16.0',
     packages=find_packages('src'),
     package_dir={'': 'src'},
     package_data={'': [
@@ -22,9 +22,8 @@ setup(
         'server/kickstarts/*',
         'server/motd.xml',
         'server/selenium/*.csv',
-        'server/selenium/*.rpm',
         'server/selenium/invalid-task_file',
-        'server/tools/task_rpms/*'] +
+        'server/task-rpms/*'] +
         get_compose_layout()
     },
     namespace_packages=['bkr'],
@@ -32,6 +31,5 @@ setup(
         'bkr.server',
         'bkr.client',
         'selenium',
-        'kobo',
     ],
 )

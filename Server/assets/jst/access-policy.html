@@ -15,10 +15,9 @@
     <!-- group rows go here -->
     <% if (!readonly) { %>
       <tr>
-        <td>
+        <td colspan="<%- possible_permissions.length + 1 %>">
           <input type="text" placeholder="Group name" />
         </td>
-        <td colspan="<%- possible_permissions.length %>"></td>
       </tr>
     <% } %>
   </tbody>
@@ -29,8 +28,9 @@
     <!-- user rows go here -->
     <% if (!readonly) { %>
       <tr>
-        <td><input type="text" placeholder="Username" /></td>
-        <td colspan="<%- possible_permissions.length %>"></td>
+        <td colspan="<%- possible_permissions.length + 1 %>">
+          <input type="text" placeholder="Username" />
+        </td>
       </tr>
     <% } %>
   </tbody>

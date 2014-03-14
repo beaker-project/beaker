@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr job-results: Export Beaker job results as XML
 =================================================
@@ -60,6 +65,7 @@ from xml.dom.minidom import Document, parseString
 class Job_Results(BeakerCommand):
     """Get Jobs/Recipes Results"""
     enabled = True
+    requires_login = False
 
     def options(self):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name

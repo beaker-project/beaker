@@ -1,5 +1,10 @@
 
-import unittest
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+import unittest2 as unittest
 import xmltramp
 import pkg_resources
 from turbogears import testutil
@@ -10,6 +15,8 @@ from bkr.inttest import data_setup, with_transaction
 from bkr.server.model import Distro
 
 class TestJobsController(unittest.TestCase):
+
+    maxDiff = None
 
     @with_transaction
     def setUp(self):
@@ -69,4 +76,4 @@ class TestJobsController(unittest.TestCase):
         with session.begin():
             job = testutil.call(self.controller.process_xmljob, xmljob, self.user)
         roundtripped_xml = job.to_xml(clone=True).toprettyxml(indent='    ')
-        self.assertEquals(roundtripped_xml, complete_job_xml)
+        self.assertMultiLineEqual(roundtripped_xml, complete_job_xml)

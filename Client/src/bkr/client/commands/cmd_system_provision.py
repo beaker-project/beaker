@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr system-provision: Provision a Beaker system
 ===============================================
@@ -9,8 +14,8 @@ Synopsis
 --------
 
 | :program:`bkr system-provision` [*options*]
-|       [--ks-meta=<variables>] [--kernel-options=<opts>] [--kernel-option-post=<opts>] [--kickstart=<file>]
-|       [--no-reboot] --distro=<name> <fqdn>
+|       [:option:`--ks-meta` <variables>] [:option:`--kernel-options` <opts>] [:option:`--kernel-option-post` <opts>] [:option:`--kickstart` <file>]
+|       [--no-reboot] :option:`--distro` <name> <fqdn>
 
 Description
 -----------

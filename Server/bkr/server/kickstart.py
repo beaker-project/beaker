@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import string
 import re
 import urlparse
@@ -178,7 +183,8 @@ def generate_kickstart(install_options, distro_tree, system, user,
 
     restricted_context.update(install_options.ks_meta)
     # XXX find a better place to set this, perhaps from the kickstart templates
-    rhel_osmajor = ['RedHatEnterpriseLinux6', 'RedHatEnterpriseLinux7']
+    rhel_osmajor = ['RedHatEnterpriseLinux6', 'RedHatEnterpriseLinux7',
+                    'RedHatServerforARMDevelopmentPreview2']
     if distro_tree.distro.osversion.osmajor.osmajor in rhel_osmajor \
             or distro_tree.distro.osversion.osmajor.osmajor.startswith('Fedora'):
         restricted_context['end'] = '%end'
@@ -236,6 +242,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
             result = template.render(context)
 
     rendered_kickstart = RenderedKickstart(kickstart=result)
+    session.add(rendered_kickstart)
     session.flush() # so that it has an id
     return rendered_kickstart
 

@@ -23,6 +23,17 @@ Glossary
    FQDN
        Fully qualified domain name.
 
+   Guest Recipe
+
+       Guest recipes are used to run one or more recipe tasks in one
+       or more virtual machines as part of a larger :term:`host
+       recipe`.
+
+   Host Recipe
+
+       A host recipe is a :term:`recipe` which runs one or more guest
+       recipes in virtual machines.
+
    Job
        The highest unit of work in Beaker, it is a container for one or
        more recipe sets that are run independently of each other.
@@ -32,6 +43,10 @@ Glossary
        Main responsibilities include provisioning of systems, monitoring of
        systems via the external watchdog, transfer of system logs,
        reporting of recipe task results, and importing distros.
+
+   Quiescent Period
+       The 'quiescent period' is the minimum amount of time (in seconds)
+       between power operations.
 
    Recipe Set
        A recipe set is contained within a job and can contain one or more

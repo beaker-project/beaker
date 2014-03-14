@@ -1,16 +1,8 @@
-# $Id: util.py,v 1.2 2006/12/31 09:10:14 lmacken Exp $
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; version 2 of the License.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Library General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
 
 """
 Random functions that don't fit elsewhere
@@ -69,8 +61,9 @@ def load_config(configfile=None):
     # In general, we want all messages from application code.
     logging.getLogger().setLevel(logging.DEBUG)
     # Well-behaved libraries will set their own log levels to something 
-    # suitable (sqlalchemy sets it to WARNING, for example) but the TurboGears 
-    # stuff leaves its unset.
+    # suitable (sqlalchemy sets it to WARNING, for example) but a number of 
+    # libraries leave their level unset.
+    logging.getLogger('passlib').setLevel(logging.INFO)
     logging.getLogger('turbomail').setLevel(logging.INFO)
     logging.getLogger('turbogears').setLevel(logging.INFO)
     logging.getLogger('turbokid').setLevel(logging.INFO)
@@ -183,26 +176,20 @@ def log_traceback(logger):
         return decorated
     return decorator
 
-# This is a method on timedelta in Python 2.7+
-def total_seconds(td):
-    """
-    Returns the total number of seconds (float)
-    represented by the given timedelta.
-    """
-    return (float(td.microseconds) + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
-
 def run_createrepo(cwd=None, update=False):
     createrepo_command = config.get('beaker.createrepo_command', 'createrepo')
     args = [createrepo_command, '-q', '--no-database', '--checksum', 'sha']
     if update:
         args.append('--update')
     args.append('.')
+    log.debug('Running createrepo as %r in %s', args, cwd)
     p = subprocess.Popen(args, cwd=cwd, stderr=subprocess.PIPE,
         stdout=subprocess.PIPE)
     out, err = p.communicate()
     # Perhaps a bit fragile, but maybe better than checking version?
     if p.returncode != 0 and 'no such option: --no-database' in err:
         args.remove('--no-database')
+        log.debug('Re-trying createrepo as %r in %s', args, cwd)
         p = subprocess.Popen(args, cwd=cwd, stderr=subprocess.PIPE,
             stdout=subprocess.PIPE)
         out, err = p.communicate()

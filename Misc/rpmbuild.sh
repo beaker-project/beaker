@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 # Builds a development (S)RPM from HEAD.
 
 set -e
@@ -27,6 +32,11 @@ outdir="$(readlink -f ./rpmbuild-output)"
 mkdir -p "$outdir"
 
 git archive --format=tar --prefix="beaker-${version}/" HEAD | gzip >"$workdir/beaker-${version}.tar.gz"
+git ls-tree -r HEAD | grep ^160000 | while read mode type sha path ; do
+    # for submodules we produce a tar archive that mimics the style of the 
+    # GitHub archives we are expecting in the RPM build
+    (cd $path && git archive --format=tar --prefix="$(basename $path)-$sha/" $sha) | gzip >"$workdir/$(basename $path)-$sha.tar.gz"
+done
 git show HEAD:beaker.spec >"$workdir/beaker.spec"
 
 if [ "$commitcount" -gt 0 ] ; then

@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 Utilities to help with Flask based web interfaces
 """
@@ -17,7 +23,7 @@ from bkr.server.bexceptions import InsufficientSystemPermissions
 class PlainTextHTTPException(HTTPException):
     """A base class for returning error details as plain text"""
     def get_body(self, environ):
-        return self.get_description(environ)
+        return self.description
     def get_headers(self, environ):
         return [('Content-Type', 'text/plain')]
 
@@ -29,9 +35,8 @@ class Unauthorised401(PlainTextHTTPException):
 
 class Forbidden403(PlainTextHTTPException):
     code = 403
-    def get_description(self, environ):
-        return ("Insufficient permissions: " +
-                    PlainTextHTTPException.get_description(self, environ))
+    def get_body(self, environ):
+        return ("Insufficient permissions: " + self.description)
 
 class NotFound404(PlainTextHTTPException):
     code = 404

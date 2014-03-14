@@ -1,23 +1,18 @@
 Virtualization workflow
 -----------------------
 
-Virtualization workflow is designed to take advantage all Beaker offers
-to be used for virtualization testing. The audience of this tutorial is
-expected to have basic familiarity with Beaker.
-
-Virtualization testing framework in Beaker utilizes libvirt tools,
+The virtualization testing framework in Beaker utilizes libvirt tools,
 particularly virt-install program to have a framework abstracted from
 the underlying virtualization technology of the OS. The crux of
-virtualization test framework is guestrecipe. Each virtual machine is
-defined in its own guestrecipe and guestrecipes are a part of the host's
-(dom0) recipe. To illustrate, let's say, we would like to create a job
-that will create a host and 2 guests, named guest1 and guest2
+the virtualization test framework is a :term:`guest recipe`. Each virtual machine is
+defined in its own ``<guestrecipe/>`` element and the guest recipes are a
+part of the host's recipe. To illustrate, let's say, we would like to
+create a job that will create a host and 2 guests, named guest1 and guest2
 respectively. The skeleton of the recipe will look like this::
 
     <recipe>
             ...
-            (dom0 test recipe)
-            ...
+ 
             <guestrecipe guestname=guest1 ...>
               ...
               (guest1 test recipe)
@@ -28,32 +23,20 @@ respectively. The skeleton of the recipe will look like this::
               (guest2 test recipe)
               ...
             </guestrecipe>
+           ...
+    </recipe>
 
-         </recipe>
+Here is a complete job description corresponding to the above skeleton:
 
-Here is a sample xml that can be passed into Beaker to get a system
-reserved.
+.. literalinclude:: virtualization-workflow-sample-job.xml
 
-::
-
-    - Request a host with the following:
-    - CPU Vendor GenuineIntel
-    - > 3 CPUs
-    - Supports KVM
-    -> 4096Mb of Ram
-    - > 75000Mb of Diskspace
-    - x86_64 Arch
-
-    - The that will be built is the following:
-    - KVM guest
-    - 1024Mb ram
-    - 1 CPU
-    - File System size 20Mb
-
-    All that you need to do is replace ##USERNAMEHERE## with your real kerberos username. Then use bkr to submit it.
+The above job sets up two guest systems ``guest1`` and ``guest2``
+and runs the ``/distribution/install`` task in each of them to
+indicate whether or not the installation worked and upload the
+relevant log files.
 
 Anything that can be described inside a recipe can also be described
-inside a guestrecipe. This allows the testers to run any existing Beaker
+inside a guest recipe. This allows the testers to run any existing Beaker
 test inside the guest just like it'd be run inside a baremetal machine.
 
 .. admonition:: Guest console logging
