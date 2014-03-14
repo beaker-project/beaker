@@ -68,8 +68,8 @@ class ReserveWorkflow:
         for id in distro_tree_id:
             try:
                 distro_tree = DistroTree.by_id(id)
-                if System.by_type(type=SystemType.machine,
-                        systems=distro_tree.systems(user=identity.current.user))\
+                if distro_tree.systems(user=identity.current.user)\
+                        .filter(System.type == SystemType.machine)\
                         .count() < 1:
                     warn = _(u'No systems compatible with %s') % distro_tree
                 distro_names.append(unicode(distro_tree))

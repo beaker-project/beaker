@@ -392,8 +392,8 @@ class Root(RPCRoot):
         except NoResultFound:
             flash(_(u'Invalid distro tree id %s') % kw['distro_tree_id'])
             redirect(url('/reserveworkflow',**kw))
-        avail_systems_distro_query = System.by_type(type=SystemType.machine,
-                systems=distro_tree.systems(user=identity.current.user))\
+        avail_systems_distro_query = distro_tree.systems(user=identity.current.user)\
+                .filter(System.type == SystemType.machine)\
                 .order_by(None)
         warn = None
         if avail_systems_distro_query.count() < 1:

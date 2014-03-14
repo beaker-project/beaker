@@ -474,28 +474,6 @@ class System(DeclarativeMappedObject, ActivityMixin):
     def by_id(cls, id, user):
         return System.all(user).filter(System.id == id).one()
 
-    @classmethod
-    def by_group(cls,group_id,*args,**kw):
-        return System.query.join(SystemGroup,Group).filter(Group.group_id == group_id)
-
-    @classmethod
-    def by_type(cls,type,user=None,systems=None):
-        if systems:
-            query = systems
-        else:
-            if user:
-                query = System.all(user)
-            else:
-                query = System.all()
-        return query.filter(System.type == type)
-
-    @classmethod
-    def by_arch(cls,arch,query=None):
-        if query:
-            return query.filter(System.arch.any(Arch.arch == arch))
-        else:
-            return System.query.filter(System.arch.any(Arch.arch == arch))
-
     def has_manual_reservation(self, user):
         """Does the specified user currently have a manual reservation?"""
         reservation = self.open_reservation
