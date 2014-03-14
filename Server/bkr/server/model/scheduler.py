@@ -1818,10 +1818,14 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         ks_meta = {
             'packages': ':'.join(p.package for p in self.packages),
             'customrepos': [dict(repo_id=r.name, path=r.url) for r in self.repos],
-            'harnessrepo': '%s,%s' % self.harness_repo(),
             'taskrepo': '%s,%s' % self.task_repo(),
             'partitions': self.partitionsKSMeta,
         }
+
+        harness_repo = self.harness_repo()
+        if harness_repo:
+            ks_meta['harnessrepo'] = '%s,%s' % harness_repo
+
         return InstallOptions(ks_meta, {}, {})
 
     def to_xml(self, recipe, clone=False, from_recipeset=False, from_machine=False):
@@ -2177,13 +2181,16 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         return self.status
 
     def provision(self):
-        if not self.harness_repo():
-            raise ValueError('Failed to find repo for harness')
+
         from bkr.server.kickstart import generate_kickstart
         install_options = self.resource.install_options(self.distro_tree)\
                 .combined_with(self.generated_install_options())\
                 .combined_with(InstallOptions.from_strings(self.ks_meta,
                     self.kernel_options, self.kernel_options_post))
+
+        if 'harness' not in install_options.ks_meta and not self.harness_repo():
+            raise ValueError('Failed to find repo for harness')
+
         if 'ks' in install_options.kernel_options:
             # Use it as is
             pass
