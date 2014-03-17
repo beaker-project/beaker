@@ -125,11 +125,8 @@ class TaskLibraryTest(unittest.TestCase):
             rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
                 'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
             copy(rpm_file, basepath)
-            try:
+            with self.assertRaises(OSError):
                 self.tasklibrary.update_repo()
-                self.fail('Should throw exception with invalid command')
-            except OSError, e:
-                self.assertEqual(e.errno, errno.ENOENT)
         finally:
             rmtree(basepath)
 

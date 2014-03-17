@@ -53,6 +53,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  make
 BuildRequires:  python-setuptools
+BuildRequires:  python-nose >= 0.10
 BuildRequires:  python-unittest2
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
@@ -401,6 +402,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %files
 %defattr(-,root,root,-)
+%dir %{python2_sitelib}/bkr/
 %{python2_sitelib}/bkr/__init__.py*
 %{python2_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python2_sitelib}/bkr/common/

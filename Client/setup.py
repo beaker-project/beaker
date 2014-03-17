@@ -22,6 +22,7 @@ setup(
     namespace_packages = ['bkr'],
 
     data_files = [
+        ('/etc/beaker', []),
         (bash_completion_dir(), ['bash-completion/bkr']),
     ],
 
