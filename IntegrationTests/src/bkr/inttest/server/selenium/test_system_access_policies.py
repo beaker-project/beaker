@@ -148,15 +148,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         # grant edit_policy permission to marple user
         pane = b.find_element_by_id('access-policy')
         pane.find_element_by_xpath('.//input[@placeholder="Username"]')\
-            .send_keys('marple')
-        # There is a small race here between typing and the typeahead 
-        # suggestions appearing. I don't think humans can hit it, but the tests 
-        # can, so we make sure the typeahead suggestion has appeared before we 
-        # press tab.
-        pane.find_element_by_xpath('.//div[@class="tt-suggestion" and '
-                'contains(string(.), "marple")]')
-        pane.find_element_by_xpath('.//input[@placeholder="Username"]')\
-            .send_keys('\t')
+            .send_keys('marple\n')
         self.find_checkbox('marple', 'Edit this policy').click()
         self.check_row_is_dirty('marple')
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
