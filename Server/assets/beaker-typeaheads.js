@@ -23,6 +23,10 @@ $.fn.beaker_typeahead = function (type) {
                 url: beaker_url_prefix + 'groups/+typeahead',
                 filter: results_filter,
             },
+            remote: {
+                url: beaker_url_prefix + 'groups/+typeahead?q=%QUERY',
+                filter: results_filter,
+            },
             valueKey: 'group_name',
             limit: 8,
             template: JST['beaker-typeaheads/group-name'],

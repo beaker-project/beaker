@@ -6,7 +6,8 @@
 
 import unittest2 as unittest
 import requests
-from bkr.server.model import session, SystemAccessPolicy, SystemPermission
+from bkr.server.model import session, SystemAccessPolicy, SystemPermission, \
+        Group
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login
@@ -158,6 +159,30 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
         b.find_element_by_link_text('Access Policy').click()
         self.assertTrue(self.find_checkbox('marple', 'Edit this policy').is_selected())
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1076322
+    def test_group_not_in_cache(self):
+        b = self.browser
+        login(b, user=self.system_owner.user_name, password='owner')
+        b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        # type the group name before it exists
+        with session.begin():
+            self.assertEquals(Group.query.filter_by(group_name=u'beatles').first(), None)
+        group_input = pane.find_element_by_xpath('.//input[@placeholder="Group name"]')
+        group_input.send_keys('beatles')
+        # group is created
+        with session.begin():
+            data_setup.create_group(group_name=u'beatles')
+        # type it again
+        group_input.clear()
+        group_input.send_keys('beatles')
+        # suggestion should appear
+        pane.find_element_by_xpath('.//div[@class="tt-suggestion" and '
+                'contains(string(.), "beatles")]')
+        group_input.send_keys('\n')
+        self.find_checkbox('beatles', 'Edit this policy')
 
 class SystemAccessPolicyHTTPTest(unittest.TestCase):
     """
