@@ -21,6 +21,9 @@ RECIPEID={{ recipe.id }}
 FILE_SIZE_LIMIT=200000000
 TASK_SIZE_LIMIT=800000000
 
+{% if beah_no_ipv6 is defined %}
+IPV6_DISABLED=True
+{% endif %}
 EOF
 
 cp /etc/beah.conf{,.default}

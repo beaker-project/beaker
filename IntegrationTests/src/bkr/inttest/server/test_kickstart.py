@@ -2345,3 +2345,22 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
             </job>''')
         ks = recipe.rendered_kickstart.kickstart
         self.assertIn('yum -y install beah-0.6.48 ', ks)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1065811
+    def test_disable_ipv6_beah(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="beah_no_ipv6">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL5-Server-U8" />
+                            <distro_arch op="=" value="ia64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('IPV6_DISABLED=True', ks)
