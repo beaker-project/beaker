@@ -44,12 +44,14 @@ events in this case is:
 3. Use Yum to upgrade all relevant packages.
 4. Apply database changes and perform any other steps in the release notes.
 5. Start Apache and beakerd on the Beaker server.
-6. Start Beaker daemons on the lab controllers.
+6. Extend all watchdogs using :program:`bkr watchdogs-extend`.
+7. Start Beaker daemons on the lab controllers.
 
 Note that during the outage period, running jobs will be affected. The harness 
 will be unable to report in to Beaker, so the effects may include missing 
-results, missing logs, and recipes terminated by the external watchdog even 
-though they ran successfully.
+results and missing logs. Extending all watchdogs at the end of the upgrade 
+will mitigate the problem, by allowing recipes to complete normally if their 
+watchdog time was exceeded during the outage.
 
 .. _updating-harness-packages:
 
