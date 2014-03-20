@@ -109,20 +109,20 @@ def configure_aarch64(fqdn, kernel_options):
     """
     Creates PXE bootloader files for aarch64 Linux
 
-    <get_tftp_root()>/pxelinux/grub.cfg-<pxe_basename(fqdn)>
+    <get_tftp_root()>/aarch64/grub.cfg-<pxe_basename(fqdn)>
 
     Also ensures <fqdn>.efi is symlinked to bootaa64.efi
 
-    Specify filename "pxelinux/<fqdn>.efi"; in your dhcpd.conf file
+    Specify filename "aarch64/<fqdn>.efi"; in your dhcpd.conf file
     We remove this when the install is done.  This allows efi
     to fall through to the next boot entry.
     """
-    pxe_base = os.path.join(get_tftp_root(), 'pxelinux')
+    pxe_base = os.path.join(get_tftp_root(), 'aarch64')
     makedirs_ignore(pxe_base, mode=0755)
     basename = "grub.cfg-%s" % pxe_basename(fqdn)
     config = '''  linux  ../images/%s/kernel %s
   initrd ../images/%s/initrd
-  devicetree /pxelinux/apm-mustang.dtb
+  devicetree /aarch64/apm-mustang.dtb
   boot
 ''' % (fqdn, kernel_options, fqdn)
     logger.debug('Writing aarch64 config for %s as %s', fqdn, basename)
@@ -134,7 +134,7 @@ def clear_aarch64(fqdn):
     """
     Removes PXE bootloader file created by configure_aarch64
     """
-    pxe_base = os.path.join(get_tftp_root(), 'pxelinux')
+    pxe_base = os.path.join(get_tftp_root(), 'aarch64')
     basename = "grub.cfg-%s" % pxe_basename(fqdn)
     logger.debug('Removing aarch64 config for %s as %s', fqdn, basename)
     unlink_ignore(os.path.join(pxe_base, "%s.efi" % fqdn))
