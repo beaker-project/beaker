@@ -51,6 +51,9 @@ statements.
     ALTER TABLE power
     ADD COLUMN (power_quiescent_period int NOT NULL);
 
+    UPDATE power
+    SET power_quiescent_period = 5;
+
     ALTER TABLE tg_user
     MODIFY password TEXT DEFAULT NULL;
 
