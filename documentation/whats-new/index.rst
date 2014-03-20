@@ -33,18 +33,16 @@ being upgraded to a new version.
 
        release-1.0/*
 
-.. unreleased changes, uncomment after 0.16 is branched
+Unreleased changes
+------------------
 
-    Unreleased changes
-    ------------------
+The following changes will appear in the next Beaker release.
 
-    The following changes will appear in the next Beaker release.
+.. toctree::
+   :maxdepth: 2
+   :glob:
 
-    .. toctree::
-       :maxdepth: 2
-       :glob:
-
-       next/*
+   next/*
 
 
 Beaker 0.16
