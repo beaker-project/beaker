@@ -58,7 +58,7 @@ class Distros(RPCRoot):
         osmajors = session.query(OSMajor.osmajor)
         if tags:
             osmajors = osmajors\
-                .join(OSMajor.osversion, OSVersion.distros, Distro.trees)\
+                .join(OSMajor.osversions, OSVersion.distros, Distro.trees)\
                 .filter(DistroTree.lab_controller_assocs.any())\
                 .filter(Distro._tags.any(DistroTag.tag.in_(tags)))
         return [osmajor for osmajor, in osmajors.distinct()]
@@ -88,7 +88,7 @@ class Distros(RPCRoot):
         elif 'osmajor' in filter:
             # look up osmajor
             try:
-                arches = [arch.arch for arch in OSMajor.by_name(filter['osmajor']).osminor[0].arches]
+                arches = [arch.arch for arch in OSMajor.by_name(filter['osmajor']).osversions[0].arches]
             except InvalidRequestError:
                 raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
         return arches
