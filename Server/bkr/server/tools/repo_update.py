@@ -78,6 +78,7 @@ class RepoSyncer(yum.YumBase):
         # have to list every possible arch here, ughhhh
         self.doSackSetup(archlist='noarch i386 i686 x86_64 ia64 ppc ppc64 s390 s390x'.split())
         repo, = self.repos.listEnabled()
+        repo.copy_local = True
         package_sack = yum.packageSack.ListPackageSack(
                 self.pkgSack.returnPackages(repoid=repo.id))
         if not os.path.exists(self.output_dir):
