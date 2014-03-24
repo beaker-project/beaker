@@ -1112,7 +1112,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         except Exception:
             user = None
         if self.lab_controller:
-            self.command_queue.append(CommandActivity(user=user,
+            self.command_queue.insert(0, CommandActivity(user=user,
                     service=service, action=u'clear_logs',
                     status=CommandStatus.queued, callback=callback))
             command = CommandActivity(user=user,
@@ -1120,7 +1120,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     status=CommandStatus.queued, callback=callback)
             command.distro_tree = distro_tree
             command.kernel_options = kernel_options
-            self.command_queue.append(command)
+            self.command_queue.insert(0, command)
         else:
             return False
 
@@ -1137,7 +1137,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                  self.power.power_quiescent_period)
             if delay:
                 activity.delay_until = datetime.utcnow() + timedelta(seconds=delay)
-            self.command_queue.append(activity)
+            self.command_queue.insert(0, activity)
             return activity
         else:
             return False
@@ -1148,7 +1148,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         except Exception:
             user = None
         if self.lab_controller:
-            self.command_queue.append(CommandActivity(user=user,
+            self.command_queue.insert(0, CommandActivity(user=user,
                     service=service, action=u'clear_netboot',
                     status=CommandStatus.queued))
 
