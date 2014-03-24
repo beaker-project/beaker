@@ -115,9 +115,9 @@ class SystemManualProvisionInstallOptionsTest(WebDriverTestCase):
         self.assert_(b.find_element_by_class_name('flash').text.startswith('Success'))
 
         # check
-        self.assertEquals(self.system.command_queue[1].action, u'configure_netboot')
+        self.assertEquals(self.system.command_queue[2].action, u'configure_netboot')
         self.assert_(u'key1=value1 key1=value2 key2=value key3' in \
-                         self.system.command_queue[1].kernel_options)
+                         self.system.command_queue[2].kernel_options)
 
 if __name__ == "__main__":
     unittest.main()

@@ -1137,9 +1137,10 @@ class TestBeakerd(unittest.TestCase):
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
-            self.assertEqual(system.command_queue[0].action, 'reboot')
-            self.assertEqual(system.command_queue[1].action, 'configure_netboot')
-            self.assertEqual(system.command_queue[2].action, 'clear_logs')
+            self.assertEqual(system.command_queue[0].action, 'on')
+            self.assertEqual(system.command_queue[1].action, 'off')
+            self.assertEqual(system.command_queue[2].action, 'configure_netboot')
+            self.assertEqual(system.command_queue[3].action, 'clear_logs')
 
     def test_task_versions_are_recorded(self):
         with session.begin():
@@ -1253,8 +1254,8 @@ class TestBeakerd(unittest.TestCase):
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
-            self.assertEqual(system.command_queue[1].action, 'configure_netboot')
-            self.assert_('vnc' not in system.command_queue[1].kernel_options)
+            self.assertEqual(system.command_queue[2].action, 'configure_netboot')
+            self.assert_('vnc' not in system.command_queue[2].kernel_options)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1067924
     def test_kernel_options_are_not_quoted(self):
@@ -1285,8 +1286,8 @@ class TestBeakerd(unittest.TestCase):
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
-            self.assertEqual(system.command_queue[1].action, 'configure_netboot')
-            self.assertIn(bad_arg, system.command_queue[1].kernel_options)
+            self.assertEqual(system.command_queue[2].action, 'configure_netboot')
+            self.assertIn(bad_arg, system.command_queue[2].kernel_options)
 
     def test_order_by(self):
         controller = Jobs()

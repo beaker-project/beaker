@@ -124,7 +124,10 @@ class CommandQueuePoller(ProxyHelper):
             if command['action'] in (u'on', u'off', 'interrupt'):
                 handle_power(command)
             elif command['action'] == u'reboot':
+                # For backwards compatibility only. The server now splits 
+                # reboots into 'off' followed by 'on'.
                 handle_power(dict(command.items() + [('action', u'off')]))
+                time.sleep(5)
                 handle_power(dict(command.items() + [('action', u'on')]))
             elif command['action'] == u'clear_logs':
                 handle_clear_logs(self.conf, command)

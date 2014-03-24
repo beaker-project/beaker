@@ -552,7 +552,8 @@ class PostrebootTest(LabControllerTestCase):
         s.postreboot(self.recipe.id)
         with session.begin():
             session.expire_all()
-            self.assertEqual(self.system.command_queue[0].action, 'reboot')
+            self.assertEqual(self.system.command_queue[0].action, 'on')
+            self.assertEqual(self.system.command_queue[1].action, 'off')
 
     def test_postreboot_GET(self):
         response = requests.get('%spostreboot/%s' %
@@ -560,7 +561,8 @@ class PostrebootTest(LabControllerTestCase):
         response.raise_for_status()
         with session.begin():
             session.expire_all()
-            self.assertEqual(self.system.command_queue[0].action, 'reboot')
+            self.assertEqual(self.system.command_queue[0].action, 'on')
+            self.assertEqual(self.system.command_queue[1].action, 'off')
 
 
 class LogUploadTestRestartProxy(LabControllerTestCase):

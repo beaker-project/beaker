@@ -1107,50 +1107,49 @@ class System(DeclarativeMappedObject, ActivityMixin):
 
     def configure_netboot(self, distro_tree, kernel_options, service=u'Scheduler',
             callback=None):
-        try:
-            user = identity.current.user
-        except Exception:
-            user = None
-        if self.lab_controller:
-            self.command_queue.insert(0, CommandActivity(user=user,
-                    service=service, action=u'clear_logs',
-                    status=CommandStatus.queued, callback=callback))
-            command = CommandActivity(user=user,
-                    service=service, action=u'configure_netboot',
-                    status=CommandStatus.queued, callback=callback)
-            command.distro_tree = distro_tree
-            command.kernel_options = kernel_options
-            self.command_queue.insert(0, command)
-        else:
-            return False
+        if not self.lab_controller:
+            return
+        self.enqueue_command(u'clear_logs', service=service, callback=callback)
+        command = self.enqueue_command(u'configure_netboot',
+                service=service, callback=callback)
+        command.distro_tree = distro_tree
+        command.kernel_options = kernel_options
 
     def action_power(self, action=u'reboot', service=u'Scheduler',
             callback=None, delay=0):
-        try:
-            user = identity.current.user
-        except Exception:
-            user = None
-
-        if self.lab_controller and self.power:
-            status = CommandStatus.queued
-            activity = CommandActivity(user, service, action, status, callback,
-                 self.power.power_quiescent_period)
-            if delay:
-                activity.delay_until = datetime.utcnow() + timedelta(seconds=delay)
-            self.command_queue.insert(0, activity)
-            return activity
+        if not self.lab_controller or not self.power:
+            return
+        if action == u'reboot':
+            self.enqueue_command(u'off', service=service,
+                    callback=callback, delay=delay,
+                    quiescent_period=self.power.power_quiescent_period)
+            self.enqueue_command(u'on', service=service,
+                    callback=callback, delay=delay,
+                    quiescent_period=self.power.power_quiescent_period)
         else:
-            return False
+            self.enqueue_command(action, service=service,
+                    callback=callback, delay=delay,
+                    quiescent_period=self.power.power_quiescent_period)
 
     def clear_netboot(self, service=u'Scheduler'):
+        if not self.lab_controller:
+            return
+        self.enqueue_command(u'clear_netboot', service=service)
+
+    def enqueue_command(self, action, service, callback=None,
+            quiescent_period=None, delay=None):
         try:
             user = identity.current.user
         except Exception:
             user = None
-        if self.lab_controller:
-            self.command_queue.insert(0, CommandActivity(user=user,
-                    service=service, action=u'clear_netboot',
-                    status=CommandStatus.queued))
+        activity = CommandActivity(user=user, service=service,
+                action=action, status=CommandStatus.queued, callback=callback)
+        if quiescent_period:
+            activity.quiescent_period = quiescent_period
+        if delay:
+            activity.delay_until = datetime.utcnow() + timedelta(seconds=delay)
+        self.command_queue.insert(0, activity)
+        return activity
 
     def __repr__(self):
         return self.fqdn
