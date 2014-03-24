@@ -97,6 +97,9 @@ class CommandQueuePoller(ProxyHelper):
                     command['delay'], command['id'])
             if shutting_down.wait(timeout=command['delay']):
                 return
+        gevent.joinall(predecessors)
+        if shutting_down.is_set():
+            return
         quiescent_period = command.get('quiescent_period')
         if quiescent_period:
             system_fqdn = command.get('fqdn')
@@ -115,10 +118,6 @@ class CommandQueuePoller(ProxyHelper):
                     ' command %s' % (seconds_to_wait, command['id']))
                 if shutting_down.wait(timeout=seconds_to_wait):
                     return
-            self.last_command_datetime[system_fqdn] = datetime.datetime.utcnow()
-        gevent.joinall(predecessors)
-        if shutting_down.is_set():
-            return
         logger.debug('Handling command %r', command)
         self.mark_command_running(command['id'])
         try:
@@ -138,9 +137,11 @@ class CommandQueuePoller(ProxyHelper):
                 # XXX or should we just ignore it and leave it queued?
         except Exception, e:
             logger.exception('Error processing command %s', command['id'])
+            self.last_command_datetime[command['fqdn']] = datetime.datetime.utcnow()
             self.mark_command_failed(command['id'],
                     '%s: %s' % (e.__class__.__name__, e))
         else:
+            self.last_command_datetime[command['fqdn']] = datetime.datetime.utcnow()
             self.mark_command_completed(command['id'])
         logger.debug('Finished handling command %s', command['id'])
 

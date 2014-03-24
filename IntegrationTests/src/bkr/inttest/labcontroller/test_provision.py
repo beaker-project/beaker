@@ -65,6 +65,23 @@ class PowerTest(LabControllerTestCase):
             command = system.command_queue[0]
         assert_command_is_delayed(command, quiescent_period - 0.5, 10)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1079816
+    def test_quiescent_period_is_obeyed_for_consecutive_commands(self):
+        quiescent_period = 3
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.get_lc())
+            system.power.power_type = PowerType.lazy_create(name=u'dummy')
+            system.power.power_quiescent_period = quiescent_period
+            system.power.power_id = u'' # make power script not sleep
+            system.power.delay_until = None
+            system.action_power(action=u'on', service=u'testdata')
+            system.action_power(action=u'on', service=u'testdata')
+            system.action_power(action=u'on', service=u'testdata')
+            commands = system.command_queue[:3]
+        assert_command_is_delayed(commands[2], quiescent_period - 0.5, 10)
+        assert_command_is_delayed(commands[1], quiescent_period - 0.5, 10)
+        assert_command_is_delayed(commands[0], quiescent_period - 0.5, 10)
+
     def test_power_quiescent_period_statefulness_not_elapsed(self):
         if daemons_running_externally():
             raise SkipTest('cannot examine logs of remote beaker-provision')
