@@ -38,6 +38,7 @@ from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
 import utils
 try:
+    #pylint: disable=E0611
     from subprocess import check_output
 except ImportError:
     from utils import check_output

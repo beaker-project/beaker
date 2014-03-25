@@ -350,7 +350,7 @@ class TaskBase(object):
         _change_status will update the status if needed
         Returns True when status is changed
         """
-        current_status = self.status
+        current_status = self.status #pylint: disable=E0203
         if current_status != new_status:
             # Sanity check to make sure the status never goes backwards.
             if isinstance(self, (Recipe, RecipeTask)) and \
