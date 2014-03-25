@@ -27,8 +27,6 @@ def url_exists(url):
         urllib2.urlopen(url)
     except urllib2.URLError:
         return False
-    except urllib2.HTTPError:
-        return False
     except IOError, e:
         # errno 21 is you tried to retrieve a directory.  Thats ok. We just
         # want to ensure the path is valid so far.
@@ -126,6 +124,8 @@ class Parser(object):
     url = None
     parser = None
     last_modified = 0.0
+    infofile = None # overriden in subclasses
+    discinfo = None
 
     def parse(self, url):
         self.url = url
@@ -135,8 +135,6 @@ class Parser(object):
             self.parser.readfp(f)
             f.close()
         except urllib2.URLError:
-            return False
-        except urllib2.HTTPError:
             return False
         except ConfigParser.MissingSectionHeaderError, e:
             raise BX('%s/%s is not parsable: %s' % (self.url,
@@ -149,8 +147,6 @@ class Parser(object):
                 self.last_modified = f.read().split("\n")[0]
                 f.close()
             except urllib2.URLError:
-                pass
-            except urllib2.HTTPError:
                 pass
         return True
 

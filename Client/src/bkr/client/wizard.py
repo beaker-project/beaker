@@ -1100,7 +1100,7 @@ class Inquisitor:
         self.description = None
         self.default()
 
-    def default(self, optpref):
+    def default(self, optpref=None):
         """ Initialize default option data """
         # nothing to do when options not supplied
         if not optpref: return
