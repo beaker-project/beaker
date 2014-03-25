@@ -18,3 +18,5 @@ clean:
 	rm -rf build
 
 .PHONY: check
+check:
+	./run-tests.sh

@@ -111,6 +111,11 @@ BuildRequires:  systemd
 
 %endif
 
+%if %{with labcontroller}
+# These LC dependencies are needed in build due to tests
+BuildRequires:  python-gevent >= 1.0
+%endif
+
 # As above, these client dependencies are needed in build because of sphinx
 BuildRequires:  python-krbV
 BuildRequires:  python-lxml
