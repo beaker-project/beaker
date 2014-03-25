@@ -1041,7 +1041,6 @@ class Job(TaskBase, DeclarativeMappedObject):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    #subtask_id_list = ["R:%s" % r.id for r in self.all_recipes]
                    )
 
     def all_recipes(self):
@@ -1615,7 +1614,6 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    #subtask_id_list = ["R:%s" % r.id for r in self.recipes]
                    )
 
     def allowed_priorities(self,user):
@@ -2305,9 +2303,6 @@ class Recipe(TaskBase, DeclarativeMappedObject):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-# Disable tasks status, TaskWatcher needs to do this differently.  its very resource intesive to make
-# so many xmlrpc calls.
-#                    subtask_id_list = ["T:%s" % t.id for t in self.tasks],
                    )
 
     def extend(self, kill_time):
@@ -2888,7 +2883,6 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    #subtask_id_list = ["TR:%s" % tr.id for tr in self.results]
                    )
 
     def no_value(self):
