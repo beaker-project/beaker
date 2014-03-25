@@ -396,6 +396,7 @@ class TaskBase(object):
                                 TaskResult.fail,
                                 TaskResult.panic])
     @is_failed.expression
+    @classmethod
     def is_failed(cls):
         """
         Return SQL expression that is true if the task has failed
