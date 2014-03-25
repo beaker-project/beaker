@@ -31,7 +31,9 @@ _email_to_name = {
     'asaha@redhat.com': 'Amit Saha',
     'ncoghlan@redhat.com': 'Nick Coghlan',
     'dcallagh@redhat.com': 'Dan Callaghan',
-    'rmancy@redhat.com': 'Raymond Mancy'}
+    'rmancy@redhat.com': 'Raymond Mancy',
+    'mjia@redhat.com': 'Matt Jia',
+}
 
 def main():
     parser = OptionParser('usage: %prog [options]',

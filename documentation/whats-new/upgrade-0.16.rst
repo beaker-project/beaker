@@ -66,6 +66,10 @@ statements.
     DROP TABLE serial_type;
     DROP TABLE install;
 
+.. versionchanged:: 0.16.1
+   Added missing ``UPDATE`` statement to set the default value for the 
+   ``power.power_quiescent_period`` column.
+
 To roll back the upgrade, downgrade the ``beaker-server`` package and run 
 :program:`beaker-init` to re-create the dropped tables. Then run the following 
 SQL.
