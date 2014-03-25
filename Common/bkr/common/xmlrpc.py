@@ -416,7 +416,7 @@ class CookieTransport(xmlrpclib.Transport):
         except AttributeError:
             sock = None
 
-        return self._parse_response(h.getfile(), sock)
+        return self.parse_response(h.getfile())
 
     def _single_request(self, host, handler, request_body, verbose=0):
         # issue XML-RPC request
