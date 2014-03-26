@@ -81,6 +81,12 @@ td form, td input, td select, td .input-append, td .input-prepend {
     margin-bottom: 0;
 }
 
+// "default" segment for progress bars (the actual default is blue, this is 
+// "default" as in grey to match the default label colour)
+.progress-default .bar, .progress .bar-default {
+  #gradient > .vertical(lighten(@gray, 15%), @gray);
+}
+
 // dirty rows in editable tables
 .table > tbody > tr.dirty {
     & > td, & > th {

@@ -420,8 +420,11 @@ class TaskBase(object):
         # to fill the bar reliably when all tasks are complete without needing
         # to fiddle directly with the width of any of the subelements
         fmt_style = 'width:%.3f%%'
-        pstyle = wstyle = fstyle = kstyle = fmt_style % 0
+        nstyle = pstyle = wstyle = fstyle = kstyle = fmt_style % 0
         completed = 0
+        if getattr(self, 'ntasks', None):
+            completed += self.ntasks
+            nstyle = fmt_style % (100.0 * self.ntasks / self.ttasks)
         if getattr(self, 'ptasks', None):
             completed += self.ptasks
             pstyle = fmt_style % (100.0 * self.ptasks / self.ttasks)
@@ -439,6 +442,7 @@ class TaskBase(object):
         percentCompleted = "%d%%" % int(100.0 * completed / self.ttasks)
         # Build the HTML
         div = Element('div', {'class': 'progress'})
+        div.append(Element('div', {'class': 'bar bar-default', 'style': nstyle}))
         div.append(Element('div', {'class': 'bar bar-success', 'style': pstyle}))
         div.append(Element('div', {'class': 'bar bar-warning', 'style': wstyle}))
         div.append(Element('div', {'class': 'bar bar-danger', 'style': fstyle}))
@@ -506,6 +510,8 @@ class Job(TaskBase, DeclarativeMappedObject):
     to_delete = Column(DateTime, default=None, index=True)
     # Total tasks
     ttasks = Column(Integer, default=0)
+    # Total tasks completed with no result
+    ntasks = Column(Integer, default=0)
     # Total Passing tasks
     ptasks = Column(Integer, default=0)
     # Total Warning tasks
@@ -1071,6 +1077,7 @@ class Job(TaskBase, DeclarativeMappedObject):
         """
         Update number of passes, failures, warns, panics..
         """
+        self.ntasks = 0
         self.ptasks = 0
         self.wtasks = 0
         self.ftasks = 0
@@ -1079,6 +1086,7 @@ class Job(TaskBase, DeclarativeMappedObject):
         min_status = TaskStatus.max()
         for recipeset in self.recipesets:
             recipeset._update_status()
+            self.ntasks += recipeset.ntasks
             self.ptasks += recipeset.ptasks
             self.wtasks += recipeset.wtasks
             self.ftasks += recipeset.ftasks
@@ -1394,6 +1402,8 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
     lab_controller = relationship(LabController)
     # Total tasks
     ttasks = Column(Integer, default=0)
+    # Total tasks completed with no result
+    ntasks = Column(Integer, default=0)
     # Total Passing tasks
     ptasks = Column(Integer, default=0)
     # Total Warning tasks
@@ -1555,6 +1565,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
         """
         Update number of passes, failures, warns, panics..
         """
+        self.ntasks = 0
         self.ptasks = 0
         self.wtasks = 0
         self.ftasks = 0
@@ -1563,6 +1574,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
         min_status = TaskStatus.max()
         for recipe in self.recipes:
             recipe._update_status()
+            self.ntasks += recipe.ntasks
             self.ptasks += recipe.ptasks
             self.wtasks += recipe.wtasks
             self.ftasks += recipe.ftasks
@@ -1669,6 +1681,8 @@ class Recipe(TaskBase, DeclarativeMappedObject):
     type = Column(String(30), nullable=False)
     # Total tasks
     ttasks = Column(Integer, default=0)
+    # Total tasks completed with no result
+    ntasks = Column(Integer, default=0)
     # Total Passing tasks
     ptasks = Column(Integer, default=0)
     # Total Warning tasks
@@ -2114,6 +2128,7 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         """
         Update number of passes, failures, warns, panics..
         """
+        self.ntasks = 0
         self.ptasks = 0
         self.wtasks = 0
         self.ftasks = 0
@@ -2127,12 +2142,14 @@ class Recipe(TaskBase, DeclarativeMappedObject):
             if task.is_finished():
                 if task.result == TaskResult.pass_:
                     self.ptasks += 1
-                if task.result == TaskResult.warn:
+                elif task.result == TaskResult.warn:
                     self.wtasks += 1
-                if task.result == TaskResult.fail:
+                elif task.result == TaskResult.fail:
                     self.ftasks += 1
-                if task.result == TaskResult.panic:
+                elif task.result == TaskResult.panic:
                     self.ktasks += 1
+                else:
+                    self.ntasks += 1
             if task.status.severity < min_status.severity:
                 min_status = task.status
             if task.result.severity > max_result.severity:

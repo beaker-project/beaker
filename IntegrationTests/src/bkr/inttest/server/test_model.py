@@ -655,7 +655,7 @@ class TestJob(unittest.TestCase):
         data_setup.mark_job_complete(job)
         job.update_status()
         self.check_progress_bar(job.progress_bar,
-                                33.333, 0, 66.667, 0)
+                                0, 33.333, 0, 66.667, 0)
 
     def test_progress_bar_sums_to_100_pass4_warn1_fail1(self):
         recipe = data_setup.create_recipe(
@@ -670,7 +670,21 @@ class TestJob(unittest.TestCase):
         data_setup.mark_job_complete(job)
         job.update_status()
         self.check_progress_bar(job.progress_bar,
-                                66.667, 16.667, 16.667, 0)
+                                0, 66.667, 16.667, 16.667, 0)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1072192
+    def test_progress_bar_includes_completed_task_with_no_results(self):
+        recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/reservesys')] * 3)
+        job = data_setup.create_job_for_recipes([recipe])
+        recipe.tasks[0].pass_(u'/', 0, u'')
+        recipe.tasks[1].pass_(u'/', 0, u'')
+        # third task will be "New" due to no results recorded
+        data_setup.mark_job_complete(job, result=None)
+        self.assertEquals(recipe.tasks[2].result, TaskResult.new)
+        job.update_status()
+        self.check_progress_bar(job.progress_bar,
+                                33.333, 66.667, 0, 0, 0)
 
 
 class DistroTreeByFilterTest(unittest.TestCase):

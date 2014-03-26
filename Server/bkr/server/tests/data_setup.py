@@ -421,7 +421,8 @@ def create_completed_job(**kwargs):
 
 def mark_recipe_complete(recipe, result=TaskResult.pass_,
         finish_time=None, only=False, server_log=False, **kwargs):
-    assert result in TaskResult
+    # we accept result=None to mean: don't add any results to recipetasks
+    assert result is None or result in TaskResult
     finish_time = finish_time or datetime.datetime.utcnow()
     if not only:
         mark_recipe_running(recipe, **kwargs)
@@ -452,12 +453,13 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
                 path=u'/', filename=u'result.txt')
 
     for recipe_task in recipe.tasks:
-        rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
-        rtr.logs = [rtr_log()]
+        if result is not None:
+            rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
+            rtr.logs = [rtr_log()]
+            recipe_task.results.append(rtr)
         recipe_task.logs = [rt_log()]
         recipe_task.finish_time = finish_time
         recipe_task._change_status(TaskStatus.completed)
-        recipe_task.results.append(rtr)
     recipe.resource.install_done = finish_time
     recipe.resource.postinstall_done = finish_time
     recipe.recipeset.job.update_status()
