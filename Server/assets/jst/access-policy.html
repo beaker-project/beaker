@@ -16,7 +16,10 @@
     <% if (!readonly) { %>
       <tr>
         <td colspan="<%- possible_permissions.length + 1 %>">
-          <input type="text" placeholder="Group name" />
+          <div class="input-append">
+            <input type="text" id="access-policy-group-input" placeholder="Group name" />
+            <button class="btn add" type="button"><i class="icon-plus"></i> Add</button>
+          </div>
         </td>
       </tr>
     <% } %>
@@ -29,7 +32,10 @@
     <% if (!readonly) { %>
       <tr>
         <td colspan="<%- possible_permissions.length + 1 %>">
-          <input type="text" placeholder="Username" />
+          <div class="input-append">
+            <input type="text" id="access-policy-user-input" placeholder="Username" />
+            <button class="btn add" type="button"><i class="icon-plus"></i> Add</button>
+          </div>
         </td>
       </tr>
     <% } %>

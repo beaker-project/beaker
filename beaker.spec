@@ -27,12 +27,12 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1 
 # but that is not usable for the RPM Version because it sorts higher than 
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 0.16.0
+%global upstream_version 0.16.1
 
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.16.0
+Version:        0.16.1
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -53,6 +53,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  make
 BuildRequires:  python-setuptools
+BuildRequires:  python-nose >= 0.10
 BuildRequires:  python-unittest2
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
@@ -134,6 +135,7 @@ Requires:       python-simplejson
 %endif
 Requires:       libxml2-python
 Requires:       python-prettytable
+Requires:       python-jinja2
 # beaker-wizard was moved from rhts-devel to here in 4.52
 Conflicts:      rhts-devel < 4.52
 
@@ -401,6 +403,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %files
 %defattr(-,root,root,-)
+%dir %{python2_sitelib}/bkr/
 %{python2_sitelib}/bkr/__init__.py*
 %{python2_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python2_sitelib}/bkr/common/

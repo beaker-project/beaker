@@ -245,7 +245,7 @@ class OSVersion(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     osmajor_id = Column(Integer, ForeignKey('osmajor.id'))
     osminor = Column(Unicode(255))
-    osmajor = relationship(OSMajor, backref=backref('osversion', order_by=[osminor]))
+    osmajor = relationship(OSMajor, backref=backref('osversions', order_by=[osminor]))
     arches = relationship(Arch, secondary=osversion_arch_map)
 
     @classmethod

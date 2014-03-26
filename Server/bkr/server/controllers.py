@@ -280,7 +280,7 @@ class Root(RPCRoot):
             osmajor = OSMajor.by_id(osmajor_id)
             osversions.extend([(osversion.id,
                            osversion.osminor
-                          ) for osversion in osmajor.osminor])
+                          ) for osversion in osmajor.osversions])
         except InvalidRequestError:
             pass
         return dict(osversions = osversions)
@@ -855,7 +855,11 @@ class Root(RPCRoot):
         #Excluded Family options
         options['excluded_families'] = []
         for arch in system.arch:
-            options['excluded_families'].append((arch.arch, [(osmajor.id, osmajor.osmajor, [(osversion.id, '%s' % osversion, attrs) for osversion in osmajor.osversion],attrs) for osmajor in OSMajor.query]))
+            options['excluded_families'].append((arch.arch,
+                    [(osmajor.id, osmajor.osmajor,
+                     [(osversion.id, '%s' % osversion, attrs)
+                      for osversion in osmajor.osversions],
+                     attrs) for osmajor in OSMajor.query]))
 
         # If you have anything in your widgets 'javascript' variable,
         # do not return the widget here, the JS will not be loaded,
@@ -1181,14 +1185,11 @@ class Root(RPCRoot):
                     new_value=unicode(reprovision_distro_tree)))
             system.reprovision_distro_tree = reprovision_distro_tree
 
-        try:
-            release_action = ReleaseAction.from_string(release_action)
-        except ValueError:
-            release_action = None
-        system.activity.append(SystemActivity(identity.current.user, 'WEBUI',
-                'Changed', 'release_action',
-                '%s' % system.release_action, '%s' % release_action))
-        system.release_action = release_action
+        if release_action != system.release_action:
+            system.activity.append(SystemActivity(identity.current.user, u'WEBUI',
+                    u'Changed', u'release_action',
+                    unicode(system.release_action), unicode(release_action)))
+            system.release_action = release_action
 
         if system.power:
             power_quiescent_period = int(power_quiescent_period)

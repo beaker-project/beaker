@@ -1,0 +1,27 @@
+{%- if OS_MAJOR == 6 %}
+key --skip
+{% endif %}
+
+firewall --disabled
+rootpw
+vnc
+keyboard us
+lang en_US
+reboot
+timezone --isUtc America/New_York
+bootloader --location=mbr
+zerombr
+clearpart --all --initlabel 
+{%- if OS_MAJOR >= 7 %}
+part biosboot --fstype="biosboot" --size=1
+{% endif %}
+part /boot --asprimary --fstype="ext3" --size=200 --label=BOOT
+part swap --fstype="swap" --recommended --label=SWAP
+part / --fstype="ext4" --grow --size=2048
+
+%packages --ignoremissing
+@base
+{%- if OS_MAJOR > 5 %}
+%end
+{% endif %}
+

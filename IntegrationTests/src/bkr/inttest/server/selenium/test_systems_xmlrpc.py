@@ -230,10 +230,11 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
         server.systems.release(system.fqdn)
         with session.begin():
             session.expire(system)
-            self.assertEquals(system.command_queue[0].action, 'reboot')
-            self.assertEquals(system.command_queue[1].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[2].action, 'clear_logs')
-            self.assertEquals(system.command_queue[3].action, 'clear_netboot')
+            self.assertEquals(system.command_queue[0].action, 'on')
+            self.assertEquals(system.command_queue[1].action, 'off')
+            self.assertEquals(system.command_queue[2].action, 'configure_netboot')
+            self.assertEquals(system.command_queue[3].action, 'clear_logs')
+            self.assertEquals(system.command_queue[4].action, 'clear_netboot')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=837710
     def test_reprovision_failure(self):
@@ -309,7 +310,7 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         with session.begin():
             self.assertEquals(system.command_queue, [])
 
-    def check_power_action(self, action):
+    def check_power_action(self, action, command_actions):
         with session.begin():
             user = data_setup.create_user(password=u'password')
             system = data_setup.create_system()
@@ -318,18 +319,18 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
             system.user = user
         self.server.auth.login_password(user.user_name, 'password')
         self.server.systems.power(action, system.fqdn)
-        self.assertEqual(
-                System.by_fqdn(system.fqdn, user).command_queue[0].action,
-                action)
+        with session.begin():
+            for i, a in enumerate(command_actions):
+                self.assertEqual(system.command_queue[i].action, a)
 
     def test_power_on(self):
-        self.check_power_action('on')
+        self.check_power_action('on', [u'on'])
 
     def test_power_off(self):
-        self.check_power_action('off')
+        self.check_power_action('off', [u'off'])
 
     def test_reboot(self):
-        self.check_power_action('reboot')
+        self.check_power_action('reboot', [u'on', u'off'])
 
     def test_can_force_powering_system_in_use(self):
         with session.begin():
@@ -354,8 +355,9 @@ class SystemPowerXmlRpcTest(XmlRpcTestCase):
         self.server.auth.login_password(owner.user_name, 'password')
         self.server.systems.power('reboot', system.fqdn, True)
         with session.begin():
-            self.assertEqual(system.command_queue[0].action, 'reboot')
-            self.assertEqual(system.command_queue[1].action, 'clear_netboot')
+            self.assertEqual(system.command_queue[0].action, 'on')
+            self.assertEqual(system.command_queue[1].action, 'off')
+            self.assertEqual(system.command_queue[2].action, 'clear_netboot')
 
 class SystemProvisionXmlRpcTest(XmlRpcTestCase):
 
@@ -432,12 +434,13 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             rendered_kickstart = RenderedKickstart.query\
                     .order_by(RenderedKickstart.id.desc()).first()
             self.assert_(kickstart in rendered_kickstart.kickstart)
-            self.assertEquals(system.command_queue[0].action, 'reboot')
-            self.assertEquals(system.command_queue[1].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[1].distro_tree, self.distro_tree)
-            self.assertEquals(system.command_queue[1].kernel_options,
+            self.assertEquals(system.command_queue[0].action, 'on')
+            self.assertEquals(system.command_queue[1].action, 'off')
+            self.assertEquals(system.command_queue[2].action, 'configure_netboot')
+            self.assertEquals(system.command_queue[2].distro_tree, self.distro_tree)
+            self.assertEquals(system.command_queue[2].kernel_options,
                     'console=ttyS0 ks=%s ksdevice=eth0 noapic noverifyssl' % rendered_kickstart.link)
-            self.assertEquals(system.command_queue[2].action, 'clear_logs')
+            self.assertEquals(system.command_queue[3].action, 'clear_logs')
 
     def test_provision_without_reboot(self):
         system = self.usable_system
@@ -484,10 +487,11 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
                 None, 'ksdevice=eth1')
         with session.begin():
             # console=ttyS0 comes from arch default, created in setUp()
-            self.assertEquals(system.command_queue[0].action, 'reboot')
-            self.assert_('console=ttyS0' in system.command_queue[1].kernel_options)
-            self.assert_('ksdevice=eth1' in system.command_queue[1].kernel_options)
-            self.assert_('ksdevice=eth0' not in system.command_queue[1].kernel_options)
+            self.assertEquals(system.command_queue[0].action, 'on')
+            self.assertEquals(system.command_queue[1].action, 'off')
+            self.assert_('console=ttyS0' in system.command_queue[2].kernel_options)
+            self.assert_('ksdevice=eth1' in system.command_queue[2].kernel_options)
+            self.assert_('ksdevice=eth0' not in system.command_queue[2].kernel_options)
 
     def test_provision_expired_user_root_password(self):
         system = self.usable_system
@@ -515,9 +519,10 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
         self.server.systems.provision(system.fqdn, self.distro_tree.id,
                 'method=nfs', bad_arg)
         with session.begin():
-            self.assertEquals(system.command_queue[0].action, 'reboot')
-            self.assertEquals(system.command_queue[1].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[1].kernel_options,
+            self.assertEquals(system.command_queue[0].action, 'on')
+            self.assertEquals(system.command_queue[1].action, 'off')
+            self.assertEquals(system.command_queue[2].action, 'configure_netboot')
+            self.assertEquals(system.command_queue[2].kernel_options,
                     'console=ttyS0 %s ksdevice=eth0 noverifyssl' % bad_arg)
 
 class LegacyPushXmlRpcTest(XmlRpcTestCase):

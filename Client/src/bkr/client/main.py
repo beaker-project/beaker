@@ -63,6 +63,9 @@ def main():
         if e.args[0] == krbV.KRB5KRB_AP_ERR_TKT_EXPIRED:
             sys.stderr.write('Kerberos ticket expired (run kinit to obtain a new ticket)\n')
             return 1
+        elif e.args[0] == krbV.KRB5_FCC_NOFILE:
+            sys.stderr.write('No Kerberos credential cache found (run kinit to create one)\n')
+            return 1
         else:
             raise
     except xmlrpclib.Fault, e:

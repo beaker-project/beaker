@@ -12,7 +12,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import cherrypy
 from cherrypy import response
 from kid import XML
-from flask import jsonify
+from flask import jsonify, request
 from bkr.server.validators import StrongPassword
 from bkr.server.helpers import make_link
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
@@ -944,9 +944,13 @@ class Groups(AdminPage):
 
 @app.route('/groups/+typeahead')
 def groups_typeahead():
+    if 'q' in request.args:
+        groups = Group.list_by_name(request.args['q'], find_anywhere=False)
+    else:
+        groups = Group.query
     data = [{'group_name': group.group_name, 'display_name': group.display_name,
              'tokens': [group.group_name]}
-            for group in Group.query]
+            for group in groups.values(Group.group_name, Group.display_name)]
     return jsonify(data=data)
 
 # for sphinx

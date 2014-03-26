@@ -5,6 +5,7 @@
 # (at your option) any later version.
 
 import time
+import logging
 from turbogears.database import session
 from nose.plugins.skip import SkipTest
 from bkr.server.model import LabController, PowerType, CommandStatus
@@ -15,12 +16,31 @@ from bkr.inttest.labcontroller import LabControllerTestCase, processes, \
         daemons_running_externally
 from bkr.server.model import System, User
 
+log = logging.getLogger(__name__)
+
 def wait_for_commands_completed(system, timeout):
     def _commands_completed():
         with session.begin():
             session.expire_all()
             return system.command_queue[0].status == CommandStatus.completed
     wait_for_condition(_commands_completed, timeout=timeout)
+
+def assert_command_is_delayed(command, min_delay, timeout):
+    """
+    Asserts that the given command is not run for at least *min_delay* seconds, 
+    and also completes within *timeout* seconds after the delay has elapsed.
+    """
+    def _command_completed():
+        with session.begin():
+            session.refresh(command)
+            return command.status == CommandStatus.completed
+    assert not _command_completed(), 'Command should not be completed initially'
+    log.info('Command %s is not completed initially', command.id)
+    time.sleep(min_delay)
+    assert not _command_completed(), 'Command should still not be completed after delay'
+    log.info('Command %s is still not completed after delay', command.id)
+    wait_for_condition(_command_completed, timeout=timeout)
+    log.info('Command %s is completed', command.id)
 
 class PowerTest(LabControllerTestCase):
 
@@ -31,37 +51,36 @@ class PowerTest(LabControllerTestCase):
 
     def test_power_quiescent_period(self):
         # Test that we do in fact wait for the quiescent period to pass
-        # before running a command
-        if daemons_running_externally():
-            raise SkipTest('cannot examine logs of remote beaker-provision')
-        provision_process, = [p for p in processes if p.name ==  \
-            'beaker-provision']
-        # These times are needed to guarantee that we are actually waiting for
-        # the quiescent period and not waiting for another poll loop
+        # before running a command.
+        # This time is needed to guarantee that we are actually waiting for
+        # the quiescent period and not waiting for another poll loop:
         quiescent_period = get_conf().get('SLEEP_TIME') * 3
-        timeout = get_conf().get('SLEEP_TIME') * 2
-        try:
-            provision_process.start_output_capture()
-            with session.begin():
-                system = data_setup.create_system(lab_controller=self.get_lc())
-                system.power.power_type = PowerType.lazy_create(name=u'dummy')
-                system.power.power_quiescent_period = quiescent_period
-                system.power.power_id = u'' # make power script not sleep
-                system.power.delay_until = None
-                system.action_power(action=u'off', service=u'testdata')
-            wait_for_commands_completed(system, timeout=timeout)
-            self.fail('The quiescent period is not being respected')
-        except AssertionError:
-            # wait_for_commands() should timeout if the quiescent period is
-            #respected
-            pass
-        finally:
-            provision_output = provision_process.finish_output_capture()
-        # The initial command seen for a system will always wait for the full
-        # quiescent period
-        self.assertIn('Entering quiescent period, delaying %s seconds for '
-            'command %s'  % (quiescent_period, system.command_queue[0].id),
-                provision_output)
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.get_lc())
+            system.power.power_type = PowerType.lazy_create(name=u'dummy')
+            system.power.power_quiescent_period = quiescent_period
+            system.power.power_id = u'' # make power script not sleep
+            system.power.delay_until = None
+            system.action_power(action=u'off', service=u'testdata')
+            command = system.command_queue[0]
+        assert_command_is_delayed(command, quiescent_period - 0.5, 10)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1079816
+    def test_quiescent_period_is_obeyed_for_consecutive_commands(self):
+        quiescent_period = 3
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.get_lc())
+            system.power.power_type = PowerType.lazy_create(name=u'dummy')
+            system.power.power_quiescent_period = quiescent_period
+            system.power.power_id = u'' # make power script not sleep
+            system.power.delay_until = None
+            system.action_power(action=u'on', service=u'testdata')
+            system.action_power(action=u'on', service=u'testdata')
+            system.action_power(action=u'on', service=u'testdata')
+            commands = system.command_queue[:3]
+        assert_command_is_delayed(commands[2], quiescent_period - 0.5, 10)
+        assert_command_is_delayed(commands[1], quiescent_period - 0.5, 10)
+        assert_command_is_delayed(commands[0], quiescent_period - 0.5, 10)
 
     def test_power_quiescent_period_statefulness_not_elapsed(self):
         if daemons_running_externally():

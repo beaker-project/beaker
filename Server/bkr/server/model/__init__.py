@@ -94,7 +94,7 @@ def auto_cmd_handler(command, new_status):
     recipe = command.system.open_reservation.recipe
     if new_status in (CommandStatus.failed, CommandStatus.aborted):
         recipe.abort("Command %s failed" % command.id)
-    elif command.action == u'reboot':
+    elif command.action == u'on':
         recipe.resource.rebooted = datetime.utcnow()
         first_task = recipe.first_task
         first_task.start()
