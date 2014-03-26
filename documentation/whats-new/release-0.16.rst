@@ -202,6 +202,9 @@ Beaker 0.16.1
   XML-RPC method to fail. This method is called by workflow commands when 
   specifying a distro family and no architectures. (Contributed by Dan 
   Callaghan)
+* :issue:`1080685`: Fixed a regression where the :guilabel:`Release Action`
+  field in the system power configuration was always saved as "Power Off" 
+  regardless of the selected value. (Contributed by Dan Callaghan)
 * :issue:`1079816`: The power quiescent period is now obeyed for consecutive
   power commands. (Contributed by Dan Callaghan)
 * :issue:`1079603`: Reboot commands are now implemented as separate 'off' and
