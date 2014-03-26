@@ -44,6 +44,13 @@ from .lab import LabController
 from .distrolibrary import (Arch, KernelType, OSMajor, OSVersion, Distro, DistroTree,
         LabControllerDistroTree)
 
+try:
+    from sqlalchemy.sql.expression import true # SQLAlchemy 0.8+
+except ImportError:
+    from sqlalchemy.sql import text
+    def true():
+        return text('TRUE')
+
 log = logging.getLogger(__name__)
 
 xmldoc = xml.dom.minidom.Document()
@@ -353,38 +360,54 @@ class System(DeclarativeMappedObject, ActivityMixin):
         return host_requires
 
     @classmethod
-    def all(cls, user=None, system=None):
+    def all(cls, user, system=None):
         """
-        Only systems that the current user has permission to see
-
+        Returns a query of systems which the given user is allowed to see.
+        If user is None, only includes systems which anonymous users are
+        allowed to see.
         """
         if system is None:
             system = cls.query
-        return cls.permissable_systems(query=system, user=user)
-
-    @classmethod
-    def permissable_systems(cls, query, user=None, *arg, **kw):
-
         if user is None:
-            try:
-                user = identity.current.user
-            except AttributeError:
-                user = None
-
-        if user:
-            if not user.is_admin() and \
-               not user.has_permission(u'secret_visible'):
-                query = query.outerjoin(System.custom_access_policy).filter(
-                            or_(SystemAccessPolicy.grants(user, SystemPermission.view),
-                                System.owner == user,
-                                System.loaned == user,
-                                System.user == user))
+            clause = cls.visible_to_anonymous
         else:
-            query = query.outerjoin(System.custom_access_policy).filter(
-                    SystemAccessPolicy.grants_everybody(SystemPermission.view))
+            clause = cls.visible_to_user(user)
+        return system.outerjoin(System.custom_access_policy).filter(clause)
 
-        return query
+    @hybrid_method
+    def visible_to_user(self, user):
+        if user.is_admin() or user.has_permission(u'secret_visible'):
+            return True
+        return ((self.custom_access_policy and
+                 self.custom_access_policy.grants(user, SystemPermission.view)) or
+                self.owner == user or
+                self.loaned == user or
+                self.user == user)
 
+    @visible_to_user.expression
+    def visible_to_user(cls, user):
+        if user.is_admin() or user.has_permission(u'secret_visible'):
+            return true()
+        return or_(SystemAccessPolicy.grants(user, SystemPermission.view),
+                cls.owner == user,
+                cls.loaned == user,
+                cls.user == user)
+
+    @hybrid_property
+    def visible_to_anonymous(self):
+        return (self.custom_access_policy and
+                self.custom_access_policy.grants_everybody(SystemPermission.view))
+
+    @visible_to_anonymous.expression
+    def visible_to_anonymous(cls):
+        return SystemAccessPolicy.grants_everybody(SystemPermission.view)
+
+    @hybrid_property
+    def visible_to_current_user(self):
+        if identity.current.anonymous:
+            return self.visible_to_anonymous
+        else:
+            return self.visible_to_user(identity.current.user)
 
     @classmethod
     def free(cls, user, systems=None):

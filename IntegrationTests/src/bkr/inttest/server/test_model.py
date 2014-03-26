@@ -165,6 +165,50 @@ class TestSystem(unittest.TestCase):
         except ValueError as e:
             self.assertIn('System has an invalid FQDN', str(e))
 
+class SystemFilterMethodsTest(unittest.TestCase):
+    """
+    Test cases for the hybrid methods/properties used to build system queries.
+    """
+
+    def setUp(self):
+        session.begin()
+        self.addCleanup(session.rollback)
+
+    def check_hybrid(self, func, included, excluded):
+        session.flush()
+        query = System.query\
+                .outerjoin(System.custom_access_policy)\
+                .filter(func(System))
+        if included:
+            # check that the query matches all included systems
+            self.assertItemsEqual(included,
+                    query.filter(System.id.in_([s.id for s in included])).all())
+            # check that the method returns true for all included systems
+            for system in included:
+                self.assertTrue(func(system))
+        if excluded:
+            # check that the query matches no excluded systems
+            self.assertItemsEqual([],
+                    query.filter(System.id.in_([s.id for s in excluded])).all())
+            # check that the method returns false for all excluded systems
+            for system in excluded:
+                self.assertFalse(func(system))
+
+    def test_visible_to_anonymous(self):
+        private = data_setup.create_system(private=True)
+        public = data_setup.create_system(private=False)
+        self.check_hybrid(lambda s: s.visible_to_anonymous,
+                included=[public], excluded=[private])
+
+    def test_visible_to_user(self):
+        private = data_setup.create_system(private=True)
+        public = data_setup.create_system(private=False)
+        self.check_hybrid(lambda s: s.visible_to_user(private.owner),
+                included=[public, private], excluded=[])
+        other_user = data_setup.create_user()
+        self.check_hybrid(lambda s: s.visible_to_user(other_user),
+                included=[public], excluded=[private])
+
 class TestSystemKeyValue(unittest.TestCase):
 
     def setUp(self):

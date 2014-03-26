@@ -357,8 +357,9 @@ class Root(RPCRoot):
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def removed(self, *args, **kw): 
-        return  self._systems(systems=System.all().
-                              filter(System.status == SystemStatus.removed),
+        query = System.all(identity.current.user)\
+                .filter(System.status == SystemStatus.removed)
+        return  self._systems(systems=query,
                               title=u'Removed Systems', exclude_status=True, 
                               *args, **kw)
 

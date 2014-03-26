@@ -283,7 +283,7 @@ class CSV_System(CSV):
 
     @classmethod
     def query(cls):
-        for system in System.permissable_systems(System.query.outerjoin('user')):
+        for system in System.all(identity.current.user):
             yield CSV_System(system)
 
     @classmethod
@@ -453,8 +453,7 @@ class CSV_System_id(CSV_System):
 
     @classmethod
     def query(cls):
-        for system in System.permissable_systems \
-            (System.query.outerjoin('user')):
+        for system in System.all(identity.current.user):
             yield CSV_System_id(system)
 
 
@@ -506,9 +505,8 @@ class CSV_Power(CSV):
 
     @classmethod
     def query(cls):
-        for power in System.permissable_systems(Power.query.outerjoin('system','user')):
-            if power.system:
-                yield CSV_Power(power)
+        for system in System.all(identity.current.user).join(System.power):
+            yield CSV_Power(system.power)
 
     def __init__(self, power):
         self.power = power
@@ -525,9 +523,8 @@ class CSV_LabInfo(CSV):
 
     @classmethod
     def query(cls):
-        for labinfo in System.permissable_systems(LabInfo.query.outerjoin('system','user')):
-            if labinfo.system:
-                yield CSV_LabInfo(labinfo)
+        for system in System.all(identity.current.user).join(System.labinfo):
+            yield CSV_LabInfo(system.labinfo)
 
     def __init__(self, labinfo):
         self.labinfo = labinfo
@@ -555,11 +552,10 @@ class CSV_Exclude(CSV):
 
     @classmethod
     def query(cls):
-        for exclude in System.permissable_systems(ExcludeOSMajor.query.outerjoin('system','user')):
-            if exclude.system:
+        for system in System.all(identity.current.user):
+            for exclude in system.excluded_osmajor:
                 yield CSV_Exclude(exclude)
-        for exclude in System.permissable_systems(ExcludeOSVersion.query.outerjoin('system','user')):
-            if exclude.system:
+            for exclude in system.excluded_osversion:
                 yield CSV_Exclude(exclude)
 
     @classmethod
@@ -635,8 +631,8 @@ class CSV_Install(CSV):
 
     @classmethod
     def query(cls):
-        for install in System.permissable_systems(Provision.query.outerjoin('system','user')):
-            if install.system:
+        for system in System.all(identity.current.user):
+            for install in system.provisions.itervalues():
                 yield CSV_Install(install)
 
     @classmethod
@@ -775,12 +771,11 @@ class CSV_KeyValue(CSV):
     csv_keys = ['fqdn', 'key', 'key_value', 'deleted' ]
 
     @classmethod
-    def query(cls):        
-        for key_int in System.permissable_systems(Key_Value_Int.query.outerjoin('system','user')):
-            if key_int.system:
+    def query(cls):
+        for system in System.all(identity.current.user):
+            for key_int in system.key_values_int:
                 yield CSV_KeyValue(key_int)
-        for key_string in System.permissable_systems(Key_Value_String.query.outerjoin('system','user')):
-            if key_string.system:
+            for key_string in system.key_values_string:
                 yield CSV_KeyValue(key_string)
 
     @classmethod
@@ -895,7 +890,7 @@ class CSV_GroupSystem(CSV):
 
     @classmethod
     def query(cls):
-        for system in System.permissable_systems(System.query.outerjoin('user')):
+        for system in System.all(identity.current.user):
             for group in system.groups:
                 yield CSV_GroupSystem(system, group)
 

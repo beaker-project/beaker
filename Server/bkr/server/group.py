@@ -732,7 +732,7 @@ class Groups(AdminPage):
             response.status = 403
             return ['Invalid Group Id']
 
-        systems = System.all().filter(System.groups.contains(group)). \
+        systems = System.all(identity.current.user).filter(System.groups.contains(group)). \
                   filter(System.status != SystemStatus.removed)
 
         return [(system.id, system.fqdn) for system in systems]
