@@ -18,7 +18,7 @@ from bkr.inttest import data_setup, get_server_base, \
         assertions, with_transaction
 from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
-        SystemStatus, LabInfo
+        SystemStatus, LabInfo, ReleaseAction
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_system_search_results, \
         delete_and_confirm, logout, click_menu_item
@@ -504,6 +504,9 @@ class SystemViewTestWD(WebDriverTestCase):
         b.find_element_by_name('power_quiescent_period').clear()
         b.find_element_by_name('power_quiescent_period').send_keys('66')
 
+        b.find_element_by_xpath('//label[normalize-space(string(.))="LeaveOn"]'
+                '/input[@type="radio"]').click()
+
         old_address = self.system.power.power_address
         old_quiescent = self.system.power.power_quiescent_period
         b.find_element_by_xpath("//form[@id='power']").submit()
@@ -517,9 +520,11 @@ class SystemViewTestWD(WebDriverTestCase):
                 'nowhere.example.com')
             self.assertEqual(self.system.power.power_user, 'asdf')
             self.assertEqual(self.system.power.power_passwd, 'meh')
+            self.assertEqual(self.system.release_action,
+                    ReleaseAction.leave_on)
 
             activities_to_find = ['power_address', 'power_quiescent_period',
-                'power_passwd', 'power_user']
+                'power_passwd', 'power_user', 'release_action']
             for activity in self.system.activity:
                 if activity.field_name == 'power_passwd':
                     # Can't actually test what the activity entry is
@@ -535,9 +540,12 @@ class SystemViewTestWD(WebDriverTestCase):
                     activities_to_find.remove(activity.field_name)
                     self.assertEqual(activity.old_value, str(5))
                     self.assertEqual(activity.new_value, str(66))
+                if activity.field_name == 'release_action':
+                    activities_to_find.remove(activity.field_name)
+                    self.assertEqual(activity.old_value, 'None')
+                    self.assertEqual(activity.new_value, 'LeaveOn')
             if activities_to_find:
                 raise AssertionError('Could not find activity entries for %s' % ' '.join(activities_to_find))
-
 
     def test_add_install_options(self):
         orig_date_modified = self.system.date_modified

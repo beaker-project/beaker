@@ -51,6 +51,9 @@ statements.
     ALTER TABLE power
     ADD COLUMN (power_quiescent_period int NOT NULL);
 
+    UPDATE power
+    SET power_quiescent_period = 5;
+
     ALTER TABLE tg_user
     MODIFY password TEXT DEFAULT NULL;
 
@@ -62,6 +65,10 @@ statements.
     DROP TABLE serial;
     DROP TABLE serial_type;
     DROP TABLE install;
+
+.. versionchanged:: 0.16.1
+   Added missing ``UPDATE`` statement to set the default value for the 
+   ``power.power_quiescent_period`` column.
 
 To roll back the upgrade, downgrade the ``beaker-server`` package and run 
 :program:`beaker-init` to re-create the dropped tables. Then run the following 

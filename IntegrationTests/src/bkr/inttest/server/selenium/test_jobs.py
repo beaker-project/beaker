@@ -342,6 +342,38 @@ class NewJobTestWD(WebDriverTestCase):
                 "Invalid job XML: 'utf8' codec can't decode byte 0x89 "
                 "in position 0: invalid start byte")
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=883887
+    def test_duplicate_packages_are_merged(self):
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'jobs/new')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with duplicate packages</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <packages>
+                            <package name="system-config-kdump"/>
+                            <package name="system-config-kdump"/>
+                        </packages>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
+        b.find_element_by_xpath("//button[text()='Submit Data']").click()
+        b.find_element_by_xpath("//button[text()='Queue']").click()
+        flash_text = b.find_element_by_class_name('flash').text
+        self.assert_('Success!' in flash_text, flash_text)
+        self.assertEqual(b.title, 'My Jobs')
+
 class NewJobTest(WebDriverTestCase):
 
     @with_transaction
@@ -675,7 +707,6 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Queue"]').click()
         flash_message = b.find_element_by_class_name('flash').text
         self.assert_(flash_message.startswith('Success!'), flash_message)
-
 
 class JobAttributeChangeTest(WebDriverTestCase):
 

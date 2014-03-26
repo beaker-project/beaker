@@ -32,25 +32,14 @@ window.AccessPolicy = Backbone.Model.extend({
     },
 });
 
-var blur_on_enter = function (evt) {
-    if (evt.which == 13) {
-        $(evt.target).trigger('blur');
-        return false;
-    }
-};
-
 window.AccessPolicyView = Backbone.View.extend({
     template: JST['access-policy'],
     events: {
         'change   input[type=checkbox]': 'changed_checkbox',
-        'keypress .group-rows input[type=text]': blur_on_enter,
-        'blur     .group-rows input[type=text]': 'typed_group',
-        'typeahead:selected      .group-rows input[type=text]': 'typed_group',
-        'typeahead:autocompleted .group-rows input[type=text]': 'typed_group',
-        'keypress .user-rows input[type=text]': blur_on_enter,
-        'blur     .user-rows input[type=text]': 'typed_user',
-        'typeahead:selected      .user-rows input[type=text]': 'typed_user',
-        'typeahead:autocompleted .user-rows input[type=text]': 'typed_user',
+        'click    .group-rows button.add': 'add_group',
+        'keypress .group-rows input[type=text]': 'add_group_on_enter',
+        'click    .user-rows button.add': 'add_user',
+        'keypress .user-rows input[type=text]': 'add_user_on_enter',
         'submit   form': 'submit',
         'reset    form': 'reset',
     },
@@ -90,7 +79,7 @@ window.AccessPolicyView = Backbone.View.extend({
         this.$('.user-rows input[type=text]').beaker_typeahead('user-name');
     },
     update_button_state: function () {
-        this.$('button').prop('disabled',
+        this.$('.form-actions button').prop('disabled',
                 (!this.dirty || this.request_in_progress));
     },
     sync_started: function () {
@@ -107,9 +96,11 @@ window.AccessPolicyView = Backbone.View.extend({
     sync_error: function (model, xhr) {
         this.request_in_progress = false;
         this.update_button_state();
+        var msg = 'Server request failed: ' + xhr.statusText;
+        if (xhr.status >= 400 && xhr.status < 500)
+            msg += ': ' + xhr.responseText;
         this.$('.sync-status').empty().append(
-            $('<span class="alert alert-error"/>')
-            .text('Server request failed: ' + xhr.statusText));
+                $('<span class="alert alert-error"/>').text(msg));
     },
     submit: function () {
         if (this.request_in_progress) return false;
@@ -123,28 +114,40 @@ window.AccessPolicyView = Backbone.View.extend({
         this.model.fetch();
         return false;
     },
-    typed_group: function (evt) {
-        var $input = $(evt.target);
+    add_group: function () {
+        var $input = this.$('#access-policy-group-input');
         var val = $input.val();
-        if (val && $input.data('typeahead_match')) {
+        if (val) {
             var $row = this.find_group_row(val);
             if (!$row.length) {
                 var $row = this.add_group_row(val);
             }
             $row.find('input[type=checkbox]').first().focus();
             $input.typeahead('setQuery', '');
-        };
+        }
     },
-    typed_user: function (evt) {
-        var $input = $(evt.target);
+    add_group_on_enter: function (evt) {
+        if (evt.which == 13) {
+            evt.preventDefault();
+            this.add_group();
+        }
+    },
+    add_user: function () {
+        var $input = this.$('#access-policy-user-input');
         var val = $input.val();
-        if (val && $input.data('typeahead_match')) {
+        if (val) {
             var $row = this.find_user_row(val);
             if (!$row.length) {
                 var $row = this.add_user_row(val);
             }
             $row.find('input[type=checkbox]').first().focus();
             $input.typeahead('setQuery', '');
+        }
+    },
+    add_user_on_enter: function (evt) {
+        if (evt.which == 13) {
+            evt.preventDefault();
+            this.add_user();
         }
     },
     find_group_row: function (group) {

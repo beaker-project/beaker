@@ -188,3 +188,47 @@ been released, with the following fixes:
    * :issue:`1070561`: Meet ISE 500 if power address is blank
    * :issue:`1072127`: attempting to use bkr client password authentication on an account with no password causes XML-RPC fault: TypeError: hash must be unicode or bytes, not None
    * :issue:`1074345`: initial watchdog value at start of task is 60*60*24 times too long
+
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 0.16 maintenance updates.
+
+Beaker 0.16.1
+~~~~~~~~~~~~~
+
+* :issue:`1078941`: Fixed a regression which caused the ``distros.get_arch``
+  XML-RPC method to fail. This method is called by workflow commands when 
+  specifying a distro family and no architectures. (Contributed by Dan 
+  Callaghan)
+* :issue:`1080685`: Fixed a regression where the :guilabel:`Release Action`
+  field in the system power configuration was always saved as "Power Off" 
+  regardless of the selected value. (Contributed by Dan Callaghan)
+* :issue:`1079816`: The power quiescent period is now obeyed for consecutive
+  power commands. (Contributed by Dan Callaghan)
+* :issue:`1079603`: Reboot commands are now implemented as separate 'off' and
+  'on' commands, so that the quiescent period takes effect between them. 
+  (Contributed by Dan Callaghan)
+* :issue:`1078620`: The :doc:`database upgrade instructions for Beaker 0.16
+  <upgrade-0.16>` have been updated to correctly set the quiescent period for 
+  existing rows. (Contributed by Dan Callaghan)
+* :issue:`1026730`: The :program:`bkr` client includes a :ref:`new workflow
+  command <bkr-workflow-installer-test>` which can be used to test Anaconda 
+  behaviour. The command generates a kickstart and kernel options on the client 
+  side using a Jinja template. (Contributed by Alexander Todorov)
+* :issue:`1076322`: The entry fields for user and group in the system access
+  policy editor have been made more robust. An explicit action is now required 
+  to add a new row (click :guilabel:`Add` or press Enter) instead of adding 
+  a row implicitly when the field is blurred. Typeahead suggestions now appear 
+  for new groups which were created after the typeahead cache was prefetched. 
+  (Contributed by Dan Callaghan)
+* :issue:`883887`: If the same package is specified multiple times in
+  a recipe's ``<packages/>``, the duplicates are now ignored instead of causing 
+  a database error. (Contributed by Matt Jia)
+* :issue:`1005865`: Beaker no longer requires a local harness repo to be
+  present if the recipe is using an alternative harness. (Contributed by Amit 
+  Saha)
+* :issue:`1074832`: The :program:`bkr` client now prints an error message
+  instead of an uncaught exception when the Kerberos credential cache does not 
+  exist. (Contributed by Dan Callaghan)

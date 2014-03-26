@@ -14,7 +14,7 @@ from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, start_client, \
     create_client_config, ClientError
-from bkr.server.model import Job
+from bkr.server.model import Job, Arch
 
 class WorkflowSimpleTest(unittest.TestCase):
 
@@ -184,3 +184,27 @@ class WorkflowSimpleTest(unittest.TestCase):
             self.assertEquals(len(job.recipesets[0].recipes), 2)
             self.assertEquals(job.recipesets[0].recipes[0].tasks[1].role, 'SERVERS')
             self.assertEquals(job.recipesets[0].recipes[1].tasks[1].role, 'SERVERS')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1078941
+    def test_lookup_arches_by_family(self):
+        # When a family is given but no arches, the workflow commands are 
+        # supposed to look up all applicable arches and create a recipe set for 
+        # each one.
+        with session.begin():
+            distro = data_setup.create_distro(osmajor=u'DansAwesomeLinux7',
+                    tags=[u'STABLE'])
+            data_setup.create_distro_tree(distro=distro, arch=u'x86_64')
+            data_setup.create_distro_tree(distro=distro, arch=u's390x')
+        out = run_client(['bkr', 'workflow-simple',
+                '--family', distro.osversion.osmajor.osmajor,
+                '--task', self.task.name])
+        self.assertTrue(out.startswith('Submitted:'), out)
+        m = re.search('J:(\d+)', out)
+        job_id = m.group(1)
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEquals(len(job.recipesets), 2)
+            self.assertEquals(job.recipesets[0].recipes[0].distro_tree.arch,
+                    Arch.by_name(u'x86_64'))
+            self.assertEquals(job.recipesets[1].recipes[0].distro_tree.arch,
+                    Arch.by_name(u's390x'))

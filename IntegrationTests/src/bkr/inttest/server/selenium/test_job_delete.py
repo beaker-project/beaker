@@ -120,8 +120,8 @@ class JobDeleteWD(WebDriverTestCase):
         b.find_element_by_id('searchform').submit()
 
         delete_and_confirm(b, "//tr[td/a[normalize-space(text())='%s']]" % job.t_id)
-        b.find_element_by_xpath("//table[@id='widget']//"
-            "a[not(normalize-space(text())='%s')]" % job.t_id)
+        # table should have no remaining rows, since we searched by id
+        b.find_element_by_xpath("//table[@id='widget']/tbody[not(./tr)]")
         recipe = job.recipesets[0].recipes[0]
         b.get(get_server_base() + 'recipes/%d' % recipe.id)
         warn_text = b.find_element_by_class_name('flash').text
