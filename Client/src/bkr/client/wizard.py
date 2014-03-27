@@ -381,7 +381,7 @@ MaxLengthSuggestedDesc = 50
 MaxLengthTestName = 50
 ReviewWidth = 22
 MakefileLineWidth = 17
-VimDictionary = "# vim: dict=/usr/share/beakerlib/dictionary.vim cpt=.,w,b,u,t,i,k"
+VimDictionary = "# vim: dict+=/usr/share/beakerlib/dictionary.vim cpt=.,w,b,u,t,i,k"
 BugzillaUrl = 'https://bugzilla.redhat.com/show_bug.cgi?id='
 BugzillaXmlrpc = 'https://bugzilla.redhat.com/xmlrpc.cgi'
 PreferencesDir = os.getenv('HOME') + "/.beaker_client"
