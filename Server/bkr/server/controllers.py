@@ -349,7 +349,9 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def free(self, *args, **kw): 
-        return self._systems(systems=System.free(identity.current.user),
+        query = System.available(identity.current.user)\
+                .filter(System.is_free(identity.current.user))
+        return self._systems(systems=query,
                 title=u'Free Systems', *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
@@ -379,7 +381,7 @@ class Root(RPCRoot):
     def reserve_system(self, *args,**kw):
         
         def reserve_link(x, distro_tree):
-            if x.is_free():
+            if x.is_free(identity.current.user):
                 return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
                         % (x.id, distro_tree.id), 'Reserve Now', elem_class='btn')
             else:
@@ -708,7 +710,7 @@ class Root(RPCRoot):
                   system.open_reservation.type != 'recipe' and
                   system.can_unreserve(our_user)):
                 options['user_change_text'] = 'Return'
-            elif system.is_free() and system.can_reserve_manually(our_user):
+            elif system.is_free(our_user) and system.can_reserve_manually(our_user):
                 options['user_change_text'] = 'Take'
 
         if system.open_reservation is not None and \

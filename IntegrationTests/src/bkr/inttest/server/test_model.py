@@ -15,7 +15,8 @@ import email
 import inspect
 from turbogears.database import session
 from bkr.server.installopts import InstallOptions
-from bkr.server import model, dynamic_virt
+from bkr.server import model, dynamic_virt, identity
+from bkr.server.app import app
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
         Cpu, Numa, Provision, Arch, DistroTree, \
@@ -174,11 +175,9 @@ class SystemFilterMethodsTest(unittest.TestCase):
         session.begin()
         self.addCleanup(session.rollback)
 
-    def check_hybrid(self, func, included, excluded):
+    def check_hybrid(self, base_query, func, included, excluded):
         session.flush()
-        query = System.query\
-                .outerjoin(System.custom_access_policy)\
-                .filter(func(System))
+        query = base_query.filter(func(System))
         if included:
             # check that the query matches all included systems
             self.assertItemsEqual(included,
@@ -197,17 +196,45 @@ class SystemFilterMethodsTest(unittest.TestCase):
     def test_visible_to_anonymous(self):
         private = data_setup.create_system(private=True)
         public = data_setup.create_system(private=False)
-        self.check_hybrid(lambda s: s.visible_to_anonymous,
+        self.check_hybrid(
+                System.query.outerjoin(System.custom_access_policy),
+                lambda s: s.visible_to_anonymous,
                 included=[public], excluded=[private])
 
     def test_visible_to_user(self):
         private = data_setup.create_system(private=True)
         public = data_setup.create_system(private=False)
-        self.check_hybrid(lambda s: s.visible_to_user(private.owner),
+        self.check_hybrid(
+                System.query.outerjoin(System.custom_access_policy),
+                lambda s: s.visible_to_user(private.owner),
                 included=[public, private], excluded=[])
         other_user = data_setup.create_user()
-        self.check_hybrid(lambda s: s.visible_to_user(other_user),
+        self.check_hybrid(
+                System.query.outerjoin(System.custom_access_policy),
+                lambda s: s.visible_to_user(other_user),
                 included=[public], excluded=[private])
+
+    def test_is_free(self):
+        lc = data_setup.create_labcontroller()
+        disabled_lc = data_setup.create_labcontroller()
+        disabled_lc.disabled = True
+        user = data_setup.create_user()
+        reserved = data_setup.create_system(lab_controller=lc)
+        reserved.user = user
+        reserved_by_other = data_setup.create_system(lab_controller=lc)
+        reserved_by_other.user = data_setup.create_user()
+        loaned = data_setup.create_system(lab_controller=lc)
+        loaned.loaned = user
+        loaned_to_other = data_setup.create_system(lab_controller=lc)
+        loaned_to_other.loaned = data_setup.create_user()
+        attached_to_disabled_lc = data_setup.create_system(
+                lab_controller=disabled_lc)
+        not_reserved_not_loaned = data_setup.create_system(lab_controller=lc)
+        self.check_hybrid(System.all(user),
+                lambda s: s.is_free(user),
+                included=[not_reserved_not_loaned, loaned],
+                excluded=[reserved, reserved_by_other, loaned_to_other,
+                          attached_to_disabled_lc])
 
     def test_compatible_with_distro_tree(self):
         distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
@@ -217,7 +244,8 @@ class SystemFilterMethodsTest(unittest.TestCase):
         osversion_excluded = data_setup.create_system(arch=u'x86_64',
                 exclude_osversion=[distro_tree.distro.osversion])
         compatible = data_setup.create_system(arch=u'x86_64')
-        self.check_hybrid(lambda s: s.compatible_with_distro_tree(distro_tree),
+        self.check_hybrid(System.query,
+                lambda s: s.compatible_with_distro_tree(distro_tree),
                 included=[compatible],
                 excluded=[wrong_arch, osmajor_excluded, osversion_excluded])
 

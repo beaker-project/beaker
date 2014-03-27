@@ -372,7 +372,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
             clause = cls.visible_to_anonymous
         else:
             clause = cls.visible_to_user(user)
-        return system.outerjoin(System.custom_access_policy).filter(clause)
+        return system.outerjoin(System.lab_controller)\
+                .outerjoin(System.custom_access_policy)\
+                .filter(clause)
 
     @hybrid_method
     def visible_to_user(self, user):
@@ -408,15 +410,6 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return self.visible_to_anonymous
         else:
             return self.visible_to_user(identity.current.user)
-
-    @classmethod
-    def free(cls, user, systems=None):
-        """
-        Builds on available.  Only systems with no users, and not Loaned.
-        """
-        return System.available(user,systems).\
-            filter(and_(System.user==None, or_(System.loaned==None, System.loaned==user))). \
-            join(System.lab_controller).filter(LabController.disabled==False)
 
     @classmethod
     def available_for_schedule(cls, user, systems=None):
@@ -582,18 +575,22 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     result = result.combined_with(pfu_opts)
         return result
 
-    def is_free(self):
-        try:
-            user = identity.current.user
-        except Exception:
-            user = None
+    @hybrid_method
+    def is_free(self, user):
+        self._ensure_user_is_authenticated(user)
+        return (self.user is None and
+                (self.loaned is None or self.loaned == user) and
+                (self.lab_controller is None or not self.lab_controller.disabled))
 
-        if not self.user and (not self.loaned or self.loaned == user):
-            return True
-        else:
-            return False
+    @is_free.expression
+    def is_free(cls, user):
+        cls._ensure_user_is_authenticated(user)
+        return and_(cls.user == None,
+                or_(cls.loaned == None, cls.loaned == user),
+                or_(LabController.disabled == None, LabController.disabled == False))
 
-    def _ensure_user_is_authenticated(self, user):
+    @staticmethod
+    def _ensure_user_is_authenticated(user):
         if user is None:
             raise RuntimeError("Cannot check permissions for an "
                                "unauthenticated user.")

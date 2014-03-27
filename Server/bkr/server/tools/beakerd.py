@@ -553,7 +553,7 @@ def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
     # Check to see if user still has proper permissions to use the system.
     # Remember the mapping of available systems could have happend hours or even
     # days ago and groups or loans could have been put in place since.
-    if not System.free(user).filter(System.id == system.id).first():
+    if not system.can_reserve(recipe.recipeset.job.owner):
         log.debug("System : %s recipe: %s no longer has access. removing" % (system, 
                                                                              recipe.id))
         recipe.systems.remove(system)
