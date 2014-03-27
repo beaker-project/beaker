@@ -456,6 +456,26 @@ class System(DeclarativeMappedObject, ActivityMixin):
         """
         return cls._available(user, systems=systems)
 
+    @hybrid_method
+    def compatible_with_distro_tree(self, distro_tree):
+        return (distro_tree.arch in self.arch and
+                not any(e.osmajor == distro_tree.distro.osversion.osmajor
+                    and e.arch == distro_tree.arch
+                    for e in self.excluded_osmajor) and
+                not any(e.osversion == distro_tree.distro.osversion
+                    and e.arch == distro_tree.arch
+                    for e in self.excluded_osversion))
+
+    @compatible_with_distro_tree.expression
+    def compatible_with_distro_tree(cls, distro_tree):
+        return and_(cls.arch.contains(distro_tree.arch),
+                not_(cls.excluded_osmajor.any(and_(
+                    ExcludeOSMajor.osmajor == distro_tree.distro.osversion.osmajor,
+                    ExcludeOSMajor.arch == distro_tree.arch))),
+                not_(System.excluded_osversion.any(and_(
+                    ExcludeOSVersion.osversion == distro_tree.distro.osversion,
+                    ExcludeOSVersion.arch == distro_tree.arch))))
+
     @classmethod
     def scheduler_ordering(cls, user, query):
         # Order by:

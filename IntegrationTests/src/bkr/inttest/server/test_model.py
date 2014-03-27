@@ -24,7 +24,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
-        RecipeTask, RecipeTaskResult, DeclarativeMappedObject
+        RecipeTask, RecipeTaskResult, DeclarativeMappedObject, OSVersion
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
@@ -208,6 +208,18 @@ class SystemFilterMethodsTest(unittest.TestCase):
         other_user = data_setup.create_user()
         self.check_hybrid(lambda s: s.visible_to_user(other_user),
                 included=[public], excluded=[private])
+
+    def test_compatible_with_distro_tree(self):
+        distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
+        wrong_arch = data_setup.create_system(arch=u'i386')
+        osmajor_excluded = data_setup.create_system(arch=u'x86_64',
+                exclude_osmajor=[distro_tree.distro.osversion.osmajor])
+        osversion_excluded = data_setup.create_system(arch=u'x86_64',
+                exclude_osversion=[distro_tree.distro.osversion])
+        compatible = data_setup.create_system(arch=u'x86_64')
+        self.check_hybrid(lambda s: s.compatible_with_distro_tree(distro_tree),
+                included=[compatible],
+                excluded=[wrong_arch, osmajor_excluded, osversion_excluded])
 
 class TestSystemKeyValue(unittest.TestCase):
 
@@ -877,40 +889,6 @@ class DistroTreeTest(unittest.TestCase):
 
     def tearDown(self):
         session.commit()
-
-    def test_all_systems_obeys_osmajor_exclusions(self):
-        included_system = data_setup.create_system(arch=u'i386',
-                lab_controller=self.lc)
-        excluded_system = data_setup.create_system(arch=u'i386',
-                lab_controller=self.lc,
-                exclude_osmajor=[self.distro_tree.distro.osversion.osmajor])
-        excluded_system.arch.append(Arch.by_name(u'x86_64'))
-        session.flush()
-        systems = self.distro_tree.all_systems().all()
-        self.assert_(included_system in systems and
-                excluded_system not in systems, systems)
-
-    def test_all_systems_obeys_osversion_exclusions(self):
-        included_system = data_setup.create_system(arch=u'i386',
-                lab_controller=self.lc)
-        excluded_system = data_setup.create_system(arch=u'i386',
-                lab_controller=self.lc,
-                exclude_osversion=[self.distro_tree.distro.osversion])
-        excluded_system.arch.append(Arch.by_name(u'x86_64'))
-        session.flush()
-        systems = self.distro_tree.all_systems().all()
-        self.assert_(included_system in systems and
-                excluded_system not in systems, systems)
-
-    def test_all_systems_matches_arch(self):
-        included_system = data_setup.create_system(arch=u'i386',
-                lab_controller=self.lc)
-        excluded_system = data_setup.create_system(arch=u'ppc64',
-                lab_controller=self.lc)
-        session.flush()
-        systems = self.distro_tree.all_systems().all()
-        self.assert_(included_system in systems and
-                excluded_system not in systems, systems)
 
     def test_url_in_lab(self):
         self.distro_tree.lab_controller_assocs[:] = [

@@ -447,7 +447,9 @@ class DistroTree(DeclarativeMappedObject):
         from bkr.server.needpropertyxml import apply_system_filter
         systems = System.query
         systems = apply_system_filter(filter, systems)
-        systems = self.all_systems(user, systems)
+        systems = System.available_for_schedule(user, systems=systems)
+        systems = systems.filter(System.compatible_with_distro_tree(self))
+        systems = System.scheduler_ordering(user, query=systems)
         if only_in_lab:
             systems = systems.join(System.lab_controller)\
                     .filter(LabController._distro_trees.any(
@@ -466,7 +468,7 @@ class DistroTree(DeclarativeMappedObject):
                 .filter(not_(Task.excluded_osmajor.any(
                     TaskExcludeOSMajor.osmajor == self.distro.osversion.osmajor)))
 
-    def systems(self, user=None):
+    def systems(self, user):
         """
         List of systems that support this distro
         Limit to only lab controllers which have the distro.
@@ -474,33 +476,12 @@ class DistroTree(DeclarativeMappedObject):
         """
         # Delayed import to avoid circular dependency
         from . import System
-        return self.all_systems(user).join(System.lab_controller)\
+        systems = System.available_for_schedule(user)
+        systems = systems.filter(System.compatible_with_distro_tree(self))
+        systems = System.scheduler_ordering(user, query=systems)
+        return systems.join(System.lab_controller)\
                 .filter(LabController._distro_trees.any(
                     LabControllerDistroTree.distro_tree == self))
-
-    def all_systems(self, user=None, systems=None):
-        """
-        List of systems that support this distro tree.
-        Will return all possible systems even if the tree is not on the lab controller yet.
-        Limit to what is available to user if user passed in.
-        """
-        # Delayed import to avoid circular dependency
-        from . import System, ExcludeOSMajor, ExcludeOSVersion
-        if user:
-            systems = System.available_for_schedule(user, systems=systems)
-            systems = System.scheduler_ordering(user, query=systems)
-        elif not systems:
-            systems = System.query
-
-        return systems.filter(and_(
-                System.arch.contains(self.arch),
-                not_(System.excluded_osmajor.any(and_(
-                        ExcludeOSMajor.osmajor == self.distro.osversion.osmajor,
-                        ExcludeOSMajor.arch == self.arch))),
-                not_(System.excluded_osversion.any(and_(
-                        ExcludeOSVersion.osversion == self.distro.osversion,
-                        ExcludeOSVersion.arch == self.arch))),
-                ))
 
     @property
     def link(self):

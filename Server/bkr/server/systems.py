@@ -229,7 +229,7 @@ class SystemsController(controllers.Controller):
         distro_tree = DistroTree.by_id(distro_tree_id)
 
         # sanity check: does the distro tree apply to this system?
-        if distro_tree.systems().filter(System.id == system.id).count() < 1:
+        if distro_tree.systems(identity.current.user).filter(System.id == system.id).count() < 1:
             raise BX(_(u'Distro tree %s cannot be provisioned on %s')
                     % (distro_tree, system.fqdn))
 
