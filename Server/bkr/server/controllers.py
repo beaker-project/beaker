@@ -340,7 +340,8 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def available(self, *args, **kw):
-        query = System.available(identity.current.user)\
+        query = System.all(identity.current.user)\
+                .filter(System.can_reserve(identity.current.user))\
                 .filter(System.status.in_([SystemStatus.automated, SystemStatus.manual]))
         return self._systems(systems=query,
                 title=u'Available Systems', *args, **kw)
@@ -351,7 +352,8 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def free(self, *args, **kw): 
-        query = System.available(identity.current.user)\
+        query = System.all(identity.current.user)\
+                .filter(System.can_reserve(identity.current.user))\
                 .filter(System.status.in_([SystemStatus.automated, SystemStatus.manual]))\
                 .filter(System.is_free(identity.current.user))
         return self._systems(systems=query,

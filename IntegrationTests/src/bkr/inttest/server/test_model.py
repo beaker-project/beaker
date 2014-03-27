@@ -249,6 +249,18 @@ class SystemFilterMethodsTest(unittest.TestCase):
                 included=[compatible],
                 excluded=[wrong_arch, osmajor_excluded, osversion_excluded])
 
+    def test_can_reserve(self):
+        user = data_setup.create_user()
+        owned = data_setup.create_system(owner=user)
+        loaned = data_setup.create_system()
+        loaned.loaned = user
+        shared = data_setup.create_system(shared=True)
+        not_shared = data_setup.create_system(shared=False)
+        self.check_hybrid(System.all(user),
+                lambda s: s.can_reserve(user),
+                included=[owned, loaned, shared],
+                excluded=[not_shared])
+
 class TestSystemKeyValue(unittest.TestCase):
 
     def setUp(self):

@@ -445,9 +445,9 @@ class DistroTree(DeclarativeMappedObject):
         # Delayed import to avoid circular dependency
         from . import System
         from bkr.server.needpropertyxml import apply_system_filter
-        systems = System.query
+        systems = System.all(user)
         systems = apply_system_filter(filter, systems)
-        systems = System.available(user, systems=systems)
+        systems = systems.filter(System.can_reserve(user))
         systems = systems.filter(System.status == SystemStatus.automated)
         systems = systems.filter(System.compatible_with_distro_tree(self))
         systems = System.scheduler_ordering(user, query=systems)
@@ -477,7 +477,8 @@ class DistroTree(DeclarativeMappedObject):
         """
         # Delayed import to avoid circular dependency
         from . import System
-        systems = System.available(user)
+        systems = System.all(user)
+        systems = systems.filter(System.can_reserve(user))
         systems = systems.filter(System.status == SystemStatus.automated)
         systems = systems.filter(System.compatible_with_distro_tree(self))
         systems = System.scheduler_ordering(user, query=systems)

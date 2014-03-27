@@ -360,19 +360,17 @@ class System(DeclarativeMappedObject, ActivityMixin):
         return host_requires
 
     @classmethod
-    def all(cls, user, system=None):
+    def all(cls, user):
         """
         Returns a query of systems which the given user is allowed to see.
         If user is None, only includes systems which anonymous users are
         allowed to see.
         """
-        if system is None:
-            system = cls.query
         if user is None:
             clause = cls.visible_to_anonymous
         else:
             clause = cls.visible_to_user(user)
-        return system.outerjoin(System.lab_controller)\
+        return cls.query.outerjoin(System.lab_controller)\
                 .outerjoin(System.custom_access_policy)\
                 .filter(clause)
 
@@ -410,19 +408,6 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return self.visible_to_anonymous
         else:
             return self.visible_to_user(identity.current.user)
-
-    @classmethod
-    def available(self, user, systems=None):
-        """
-        Builds on all.  Only systems which this user has permission to reserve.
-        """
-        query = System.all(user, system=systems)
-        # these filter conditions correspond to can_reserve
-        query = query.outerjoin(System.custom_access_policy).filter(or_(
-                System.owner == user,
-                System.loaned == user,
-                SystemAccessPolicy.grants(user, SystemPermission.reserve)))
-        return query
 
     @hybrid_method
     def compatible_with_distro_tree(self, distro_tree):
@@ -654,6 +639,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         # Loan admins can return anyone's loan
         return self.can_lend(user)
 
+    @hybrid_method
     def can_reserve(self, user):
         """
         Does the given user have permission to reserve this system?
@@ -676,6 +662,13 @@ class System(DeclarativeMappedObject, ActivityMixin):
         # grant themselves the appropriate permissions first (or loan the
         # system to themselves)
         return False
+
+    @can_reserve.expression
+    def can_reserve(cls, user):
+        cls._ensure_user_is_authenticated(user)
+        return or_(SystemAccessPolicy.grants(user, SystemPermission.reserve),
+                cls.owner == user,
+                cls.loaned == user)
 
     def can_reserve_manually(self, user):
         """
