@@ -412,42 +412,17 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return self.visible_to_user(identity.current.user)
 
     @classmethod
-    def available_for_schedule(cls, user, systems=None):
-        """
-        Will return systems that are available to user for scheduling
-        """
-        return cls._available(user, systems=systems, system_status=SystemStatus.automated)
-
-    @classmethod
-    def _available(self, user, system_status=None, systems=None):
+    def available(self, user, systems=None):
         """
         Builds on all.  Only systems which this user has permission to reserve.
-        Can take varying system_status' as args as well
         """
-
         query = System.all(user, system=systems)
-        if system_status is None:
-            query = query.filter(or_(System.status==SystemStatus.automated,
-                    System.status==SystemStatus.manual))
-        elif isinstance(system_status, list):
-            query = query.filter(or_(*[System.status==k for k in system_status]))
-        else:
-            query = query.filter(System.status==system_status)
-
         # these filter conditions correspond to can_reserve
         query = query.outerjoin(System.custom_access_policy).filter(or_(
                 System.owner == user,
                 System.loaned == user,
                 SystemAccessPolicy.grants(user, SystemPermission.reserve)))
         return query
-
-
-    @classmethod
-    def available(cls, user, systems=None):
-        """
-        Will return systems that are available to user
-        """
-        return cls._available(user, systems=systems)
 
     @hybrid_method
     def compatible_with_distro_tree(self, distro_tree):

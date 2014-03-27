@@ -20,7 +20,7 @@ from bkr.server.helpers import make_link
 from bkr.server.installopts import InstallOptions
 from .sql import ConditionalInsert
 from .base import DeclarativeMappedObject
-from .types import ImageType
+from .types import ImageType, SystemStatus
 from .activity import Activity
 from .lab import LabController
 
@@ -447,7 +447,8 @@ class DistroTree(DeclarativeMappedObject):
         from bkr.server.needpropertyxml import apply_system_filter
         systems = System.query
         systems = apply_system_filter(filter, systems)
-        systems = System.available_for_schedule(user, systems=systems)
+        systems = System.available(user, systems=systems)
+        systems = systems.filter(System.status == SystemStatus.automated)
         systems = systems.filter(System.compatible_with_distro_tree(self))
         systems = System.scheduler_ordering(user, query=systems)
         if only_in_lab:
@@ -476,7 +477,8 @@ class DistroTree(DeclarativeMappedObject):
         """
         # Delayed import to avoid circular dependency
         from . import System
-        systems = System.available_for_schedule(user)
+        systems = System.available(user)
+        systems = systems.filter(System.status == SystemStatus.automated)
         systems = systems.filter(System.compatible_with_distro_tree(self))
         systems = System.scheduler_ordering(user, query=systems)
         return systems.join(System.lab_controller)\
