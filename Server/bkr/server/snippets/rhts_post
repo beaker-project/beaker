@@ -43,10 +43,18 @@ fi
  #}
 {% if no_clock_sync is undefined %}
 if [ -e /etc/sysconfig/ntpdate ] ; then
+{% if systemd == True  %}
+    systemctl enable ntpdate
+{% else %}
     /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
+{% endif %}
 fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
+{% if systemd == True  %}
+    systemctl enable ntpd
+{% else %}
     /sbin/chkconfig ntpd on >/dev/null 2>&1 || :
+{% endif %}
     GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
     if [ -z "$GOT_G" ]; then
@@ -61,8 +69,13 @@ if [ -e /etc/chrony.conf ] ; then
     # setting iburst should speed up initial sync
     # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
+{% if systemd == True %}
+    systemctl disable ntpd
+    systemctl disable ntpdate
+{% else %}
     /sbin/chkconfig ntpd off >/dev/null 2>&1 || :
     /sbin/chkconfig ntpdate off >/dev/null 2>&1 || :
+{% endif %}
 fi
 {% endif %}
 

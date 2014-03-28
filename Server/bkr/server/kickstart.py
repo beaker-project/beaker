@@ -189,6 +189,17 @@ def generate_kickstart(install_options, distro_tree, system, user,
             or distro_tree.distro.osversion.osmajor.osmajor.startswith('Fedora'):
         restricted_context['end'] = '%end'
 
+    # Is it F15+ or RHEL7+? (for systemd and others)
+    osmajor = distro_tree.distro.osversion.osmajor.osmajor
+    systemd = False
+    if osmajor.startswith('Fedora'):
+        if osmajor[6:] == 'rawhide' or int(osmajor[6:]) >= 15:
+            systemd = True
+    elif osmajor in ['RedHatEnterpriseLinux7',
+                     'RedHatServerforARMDevelopmentPreview2',
+                     'CentOS7']:
+        systemd = True
+
     # System templates and snippets have access to more useful stuff.
     context = dict(restricted_context)
     context.update({
@@ -200,6 +211,7 @@ def generate_kickstart(install_options, distro_tree, system, user,
         'recipe': recipe,
         'config': config,
         'ks_appends': ks_appends or [],
+        'systemd' : systemd
     })
 
     snippet_locations = []

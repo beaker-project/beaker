@@ -119,10 +119,10 @@ __EOT__
 
 
 if [ -e /etc/sysconfig/ntpdate ] ; then
-    /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
+    systemctl enable ntpdate
 fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
-    /sbin/chkconfig ntpd on >/dev/null 2>&1 || :
+    systemctl enable ntpd
     GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
     if [ -z "$GOT_G" ]; then
@@ -137,8 +137,8 @@ if [ -e /etc/chrony.conf ] ; then
     # setting iburst should speed up initial sync
     # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
-    /sbin/chkconfig ntpd off >/dev/null 2>&1 || :
-    /sbin/chkconfig ntpdate off >/dev/null 2>&1 || :
+    systemctl disable ntpd
+    systemctl disable ntpdate
 fi
 
 
@@ -232,9 +232,9 @@ INTERFACE=
 
 EOF
 
-chkconfig --level 345 beah-srv on
-chkconfig --level 345 beah-beaker-backend on
-chkconfig --level 345 beah-fwd-backend on
+systemctl enable beah-srv
+systemctl enable beah-beaker-backend
+systemctl enable beah-fwd-backend
 
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
@@ -273,6 +273,3 @@ END
 # no snippet data for Fedora_post
 # no snippet data for system_post
 %end
-
-
-
