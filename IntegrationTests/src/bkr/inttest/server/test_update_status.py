@@ -277,7 +277,7 @@ class ConcurrentUpdateTest(unittest.TestCase):
             lab_controller = data_setup.create_labcontroller()
             system = data_setup.create_system(shared=True,
                     lab_controller=lab_controller)
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora',
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20',
                     lab_controllers=[lab_controller])
             job = data_setup.create_job(distro_tree=distro_tree)
             job.recipesets[0].recipes[0]._host_requires = (u"""
