@@ -38,6 +38,9 @@ CONSOLE_LOG=Console
 # To turn on debug logging uncomment the following line. Warning: this is
 # rather verbose! This also requires LOG to be Debug.
 #DEVEL=True
+{% if beah_no_ipv6 is defined %}
+IPV6_DISABLED=True
+{% endif %}
 
 [TASK]
 INTERFACE=

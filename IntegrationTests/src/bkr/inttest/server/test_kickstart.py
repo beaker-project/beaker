@@ -2335,8 +2335,9 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                 <recipeSet>
                     <recipe ks_meta="beah_rpm=beah-0.6.48">
                         <distroRequires>
-                            <distro_name op="=" value="RHEL5-Server-U8" />
-                            <distro_arch op="=" value="ia64" />
+                            <distro_name op="=" value="RHEL-7.0-20120314.0" />
+                            <distro_variant op="=" value="Workstation" />
+                            <distro_arch op="=" value="x86_64" />
                         </distroRequires>
                         <hostRequires/>
                         <task name="/distribution/install" />
@@ -2363,4 +2364,4 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                 </recipeSet>
             </job>''')
         ks = recipe.rendered_kickstart.kickstart
-        self.assertIn('IPV6_DISABLED=True', ks)
+        self.assertEquals(ks.count('IPV6_DISABLED=True\n'), 2)
