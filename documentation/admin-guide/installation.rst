@@ -179,17 +179,6 @@ the following settings:
    controller will use when logging in to Beaker. This is the username
    and password you picked when registering the lab controller above.
 
-To support system provisioing, we retrieve the supported bootloaders using
-Cobbler, copy them to the TFTP root directory and then stop the Cobbler
-daemon (aside from this initial retrieval of the bootloaders while setting
-up a new lab controller, Beaker doesn't rely on Cobbler for system
-provisioning)::
-
-    $ service cobblerd start
-    $ cobbler get-loaders
-    $ cobbler sync
-    $ service cobblerd stop
-
 Turn on Apache::
 
     $ chkconfig httpd on

@@ -219,7 +219,9 @@ Obsoletes:      beaker-redhat-support <= 0.19
 Requires:       python
 Requires:       crontabs
 Requires:       httpd
-Requires:       cobbler >= 1.4
+%ifarch %{ix86} x86_64
+Requires:       syslinux
+%endif
 Requires:       yum-utils
 Requires:       fence-agents
 Requires:       ipmitool

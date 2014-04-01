@@ -12,6 +12,7 @@ import tempfile
 import shutil
 from contextlib import contextmanager
 import collections
+from cStringIO import StringIO
 import urllib
 import urllib2
 from bkr.labcontroller.config import get_conf
@@ -23,19 +24,66 @@ logger = logging.getLogger(__name__)
 def get_tftp_root():
     return get_conf().get('TFTP_ROOT', '/var/lib/tftpboot')
 
-def write_ignore(path, content):
+def copy_ignore(path, source_file):
     """
-    Creates and populates the given file, but leaves it untouched (and
-    succeeds) if the file already exists.
+    Creates and populates a file by copying from a source file object.
+    The destination file will remain untouched if it already exists.
     """
     try:
         f = open(path, 'wx') # not sure this is portable to Python 3!
     except IOError, e:
-        if e.errno != errno.EEXIST:
+        if e.errno == errno.EEXIST:
+            return
+        else:
             raise
-    else:
+    try:
         logger.debug("%s didn't exist, writing it", path)
-        f.write(content)
+        siphon(source_file, f)
+    finally:
+        f.close()
+
+def write_ignore(path, content):
+    """
+    Creates and populates a file with the given string content.
+    The destination file will remain untouched if it already exists.
+    """
+    copy_ignore(path, StringIO(content))
+
+def copy_path_ignore(dest_path, source_path):
+    """
+    Creates and populates a file by copying from a source file.
+    The destination file will remain untouched if it already exists.
+    Nothing will be copied if the source file does not exist.
+    """
+    try:
+        source_file = open(source_path, 'rb')
+    except IOError as e:
+        if e.errno == errno.ENOENT:
+            return
+        else:
+            raise
+    try:
+        copy_ignore(dest_path, source_file)
+    finally:
+        source_file.close()
+
+def copy_default_loader_images():
+    """
+    Populates default boot loader images, where possible.
+
+    Ultimately it is up to the administrator to make sure that their desired 
+    boot loader images are available and match their DHCP configuration. 
+    However we can copy in some common loader images to their default locations 
+    as a convenience.
+    """
+    # We could also copy EFI GRUB, on RHEL6 it's located at /boot/efi/EFI/redhat/grub.efi
+    # ... the problem is that is either the ia32 version or the x64 version 
+    # depending on the architecture of the server, blerg.
+    makedirs_ignore(get_tftp_root(), mode=0755)
+    copy_path_ignore(os.path.join(get_tftp_root(), 'pxelinux.0'),
+            '/usr/share/syslinux/pxelinux.0')
+    copy_path_ignore(os.path.join(get_tftp_root(), 'menu.c32'),
+            '/usr/share/syslinux/menu.c32')
 
 def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
     """
