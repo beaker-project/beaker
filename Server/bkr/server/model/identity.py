@@ -93,9 +93,6 @@ class User(DeclarativeMappedObject, ActivityMixin):
     user_activity = relationship(UserActivity, backref='object',
             primaryjoin=user_id == UserActivity.user_id)
 
-    # XXX we probably shouldn't be doing this!
-    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
-
     activity_type = UserActivity
 
     def permissions(self):
