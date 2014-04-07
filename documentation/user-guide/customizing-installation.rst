@@ -125,6 +125,15 @@ correspond to the similarly-named kickstart option.
     Omits additional packages and scripts which ensure the system clock is 
     synchronized after installation.
 
+``packages=<package>:<package>``
+    Colon-separated list of package names to be installed during provisioning. 
+    If this variable is set, it replaces any packages defined by default in the 
+    kickstart templates. It also replaces any packages requested by the recipe, 
+    including task requirements.
+
+    In a recipe, considering using the ``<package/>`` element instead. This 
+    augments the package list instead of replacing it completely.
+
 ``password=<encrypted>``
     Root password to use. Must be encrypted in the conventional 
     :manpage:`crypt(3)` format.

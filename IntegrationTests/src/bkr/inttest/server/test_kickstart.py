@@ -2118,6 +2118,67 @@ network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netma
         kickstart_lines = k.splitlines()
         self.assert_(kickstart_lines.count('requires1') == 1)
 
+    def test_packages_ksmeta_replaces_recipe_packages(self):
+        # Users can pass a colon-separated list of packages in ksmeta and it 
+        # will replace all the recipe packages (from <packages/> and task 
+        # requirements).
+        # This was never really intended behaviour (since it's not very 
+        # useful), it was just a side-effect of how Beaker passed recipe 
+        # packages to Cobbler through ksmeta. However to avoid breaking 
+        # compatibility we need to continue supporting it.
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="packages=@core:httpd">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        k = recipe.rendered_kickstart.kickstart
+        self.assertIn('''\
+%packages --ignoremissing
+@core
+httpd
+# no snippet data for packages
+%end
+''', k)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=952635
+    def test_task_requirements_with_colons_are_preserved(self):
+        # Note that no package ever contains colons in its name, and a task 
+        # cannot use arbitrary RPM virtual requirements (like 
+        # perl(Archive::Tar) or similar), it has to depend on actual package 
+        # names because Anaconda only accepts real package names in %packages. 
+        # But, for completelness, we ensure colons are preserved as is in the 
+        # kickstart.
+        task = data_setup.create_task(requires=[u'some::weird::package'])
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="%s" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''' % task.name)
+        k = recipe.rendered_kickstart.kickstart
+        self.assertIn('%packages --ignoremissing\nsome::weird::package\n', k)
+
     def test_postreboot_for_rhev_guests(self):
         recipe = self.provision_recipe('''
             <job>

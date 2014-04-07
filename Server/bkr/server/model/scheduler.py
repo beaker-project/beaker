@@ -1815,7 +1815,6 @@ class Recipe(TaskBase, DeclarativeMappedObject):
 
     def generated_install_options(self):
         ks_meta = {
-            'packages': ':'.join(p.package for p in self.packages),
             'customrepos': [dict(repo_id=r.name, path=r.url) for r in self.repos],
             'taskrepo': '%s,%s' % self.task_repo(),
             'partitions': self.partitionsKSMeta,

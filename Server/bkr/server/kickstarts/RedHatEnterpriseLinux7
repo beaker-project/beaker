@@ -58,7 +58,7 @@ install
 {% snippet 'system' %}
 
 %packages --ignoremissing
-{% if packages %}
+{% if recipe or packages is defined %}
 {% snippet 'rhts_packages' %}
 {% else %}
 @development
