@@ -161,7 +161,7 @@ window.AccessPolicyView = Backbone.View.extend({
         td.appendTo(row);
         $('<a>',{
             text: group,
-            href: beaker_url_prefix + 'groups/edit?group_name=' + group
+            href: beaker_url_prefix + 'groups/edit?group_name=' + encodeURIComponent(group)
         }).appendTo(td);
         _.each(this.model.get('possible_permissions'),
             function (permission) {
