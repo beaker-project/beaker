@@ -301,7 +301,7 @@ class CSV_System(CSV):
                 'serial', 'vendor']
 
     spec_keys = ['arch', 'lab_controller', 'owner', 
-                 'secret', 'status','type','cc']
+                 'status','type','cc']
 
     csv_keys = reg_keys + spec_keys
 
