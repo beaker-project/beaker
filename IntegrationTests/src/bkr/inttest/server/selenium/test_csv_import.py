@@ -356,5 +356,13 @@ class CSVImportTest(WebDriverTestCase):
             self.assertEquals(len(self.system.status_durations), 1)
             self.assertEquals(self.system.status_durations[0].finish_time, None)
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1085238
+    def test_error_on_empty_csv(self):
+        login(self.browser)
+        self.import_csv((u'csv_type,fqdn,location,arch\n').encode('utf8'))
+        import_log = self.browser.find_element_by_xpath(
+                '//table[@id="csv-import-log"]//td').text
+        self.assertIn('Empty CSV file supplied', import_log)
+
 if __name__ == "__main__":
     unittest.main()

@@ -160,7 +160,12 @@ class CSV(RPCRoot):
             # ... process CSV file contents here ...
             missing = object()
             reader = csv.DictReader(csv_file.file, restkey=missing, restval=missing)
+            is_empty = True
+
             for data in reader:
+
+                is_empty = False
+
                 if missing in data:
                     log.append('Too many fields on line %s (expecting %s)'
                             % (reader.line_num, len(reader.fieldnames)))
@@ -180,6 +185,10 @@ class CSV(RPCRoot):
                 except Exception, e:
                     # log and continue processing more rows
                     log.append('Error importing line %s: %s' % (reader.line_num, e))
+
+            if is_empty:
+                log.append('Empty CSV file supplied')
+
         except csv.Error, e:
             session.rollback()
             log.append('Error parsing CSV file: %s' % e)
