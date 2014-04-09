@@ -925,7 +925,10 @@ def system_command(fqdn):
         action = request.form['action']
     else:
         raise UnsupportedMediaType415
-    if action in ['on', 'off', 'reboot', 'interrupt']:
+    if action == 'reboot':
+        raise BadRequest('"reboot" is not a valid power command, '
+                'send "off" followed by "on" instead')
+    elif action in ['on', 'off', 'interrupt']:
         if not system.power:
             raise BadRequest400('System is not configured for power support')
         command = system.action_power(service=u'HTTP', action=action)

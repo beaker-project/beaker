@@ -1272,6 +1272,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 service=service, callback=callback)
         command.distro_tree = distro_tree
         command.kernel_options = kernel_options
+        return command
 
     def action_power(self, action=u'reboot', service=u'Scheduler',
             callback=None, delay=0):
@@ -1281,18 +1282,18 @@ class System(DeclarativeMappedObject, ActivityMixin):
             self.enqueue_command(u'off', service=service,
                     callback=callback, delay=delay,
                     quiescent_period=self.power.power_quiescent_period)
-            self.enqueue_command(u'on', service=service,
+            return self.enqueue_command(u'on', service=service,
                     callback=callback, delay=delay,
                     quiescent_period=self.power.power_quiescent_period)
         else:
-            self.enqueue_command(action, service=service,
+            return self.enqueue_command(action, service=service,
                     callback=callback, delay=delay,
                     quiescent_period=self.power.power_quiescent_period)
 
     def clear_netboot(self, service=u'Scheduler'):
         if not self.lab_controller:
             return
-        self.enqueue_command(u'clear_netboot', service=service)
+        return self.enqueue_command(u'clear_netboot', service=service)
 
     def enqueue_command(self, action, service, callback=None,
             quiescent_period=None, delay=None):

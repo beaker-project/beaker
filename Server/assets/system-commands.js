@@ -37,6 +37,20 @@ var SystemCommandsToolbar = Backbone.View.extend({
     confirmed: function (command) {
         this.$('.sync-status').html(
                 '<i class="icon-spinner icon-spin"></i> Submitting command&hellip;');
+        if (command == 'reboot') {
+            // reboot is a special case, it is actually two commands: off then on
+            this.model.command_queue.create(
+                    {action: 'off'},
+                    {wait: true,
+                     at: 0, // add to the front of the local collection
+                     error: _.bind(this.error, this)});
+            this.model.command_queue.create(
+                    {action: 'on'},
+                    {wait: true,
+                     at: 0, // add to the front of the local collection
+                     success: _.bind(this.enqueued, this),
+                     error: _.bind(this.error, this)});
+        }
         this.model.command_queue.create(
                 {action: command},
                 {wait: true,
