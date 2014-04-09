@@ -9,6 +9,7 @@ from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present, \
     delete_and_confirm, logout
+from bkr.server.model import session, SystemPermission, SystemAccessPolicy
 
 
 class TestGroups(WebDriverTestCase):
@@ -99,3 +100,35 @@ class TestGroups(WebDriverTestCase):
         b.find_element_by_id('Search').submit()
         self.assert_('Remove' in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
                                                                  % group.group_name).text)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1085703
+    def test_group_has_access_policy_rule_remove(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            system = data_setup.create_system(owner=user,
+                                                   shared=False)
+            system.custom_access_policy = SystemAccessPolicy()
+            group = data_setup.create_group(owner=user)
+            p = system.custom_access_policy
+            p.add_rule(permission=SystemPermission.edit_system,
+                       group=group)
+
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+
+        # check current rules
+        self.assertEquals(len(p.rules), 1)
+        self.assert_(p.rules[0].user is None)
+        self.assertEquals(p.rules[0].group, group)
+
+        # delete the group
+        b.get(get_server_base() + 'groups/mine')
+        delete_and_confirm(b, "//tr[td/a[normalize-space(text())='%s']]" %
+                           group.group_name, delete_text='Remove')
+        self.assertEqual(
+            b.find_element_by_class_name('flash').text,
+            '%s deleted' % group.display_name)
+
+        # check if the access policy rule has been removed
+        session.refresh(p)
+        self.assertEquals(len(p.rules), 0)

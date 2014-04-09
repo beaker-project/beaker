@@ -1439,10 +1439,12 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
     # If both are NULL, the rule applies to everyone.
     user_id = Column(Integer, ForeignKey('tg_user.user_id',
             name='system_access_policy_rule_user_id_fk'))
-    user = relationship(User)
+    user = relationship(User, backref=backref('system_access_policy_rules',
+                                              cascade='all, delete, delete-orphan'))
     group_id = Column(Integer, ForeignKey('tg_group.group_id',
             name='system_access_policy_rule_group_id_fk'))
-    group = relationship(Group)
+    group = relationship(Group, backref=backref('system_access_policy_rules',
+                                                cascade='all, delete, delete-orphan'))
     permission = Column(SystemPermission.db_type())
 
     def __repr__(self):
