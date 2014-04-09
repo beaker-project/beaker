@@ -263,7 +263,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
     loaned = relationship(User, primaryjoin=loan_id == User.user_id)
     loan_comment = Column(Unicode(1000))
     release_action = Column(ReleaseAction.db_type(),
-        server_default=ReleaseAction.power_off.value, nullable=False)
+        default=ReleaseAction.power_off, nullable=False)
     reprovision_distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
     reprovision_distro_tree = relationship(DistroTree)
     hypervisor_id = Column(Integer, ForeignKey('hypervisor.id'))
