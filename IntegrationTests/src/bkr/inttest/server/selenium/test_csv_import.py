@@ -364,5 +364,15 @@ class CSVImportTest(WebDriverTestCase):
                 '//table[@id="csv-import-log"]//td').text
         self.assertIn('Empty CSV file supplied', import_log)
 
+    def test_system_unicode(self):
+        login(self.browser)
+        self.import_csv((u'csv_type,fqdn,location,arch\n'
+                         u'system,%s,在我的办公桌,ia64' % self.system.fqdn) \
+                        .encode('utf8'))
+        self.failUnless(is_text_present(self.browser, "No Errors"))
+        with session.begin():
+            session.refresh(self.system)
+            self.assertEquals(self.system.location, u'在我的办公桌')
+
 if __name__ == "__main__":
     unittest.main()

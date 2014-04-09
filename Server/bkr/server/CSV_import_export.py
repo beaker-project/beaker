@@ -31,12 +31,44 @@ logger = logging.getLogger(__name__)
 def smart_bool(s):
     if s is True or s is False:
         return s
-    t = str(s).strip().lower()
+    t = unicode(s).strip().lower()
     if t == 'true':
         return True
     if t == 'false':
         return False
     return s
+
+# Adapted from the recipe at 
+# https://docs.python.org/2/library/csv.html#csv-examples
+class UnicodeDictReader():
+
+    def __init__(self, f, **kw):
+        self.reader = csv.DictReader(f, **kw)
+
+    def next(self):
+        row = self.reader.next()
+        d = {}
+        for k, v in row.iteritems():
+
+            if isinstance(k, str):
+                k = k.decode('utf8')
+            if isinstance(v, str):
+                v = v.decode('utf8')
+
+            d[k] = v
+
+        return d
+
+    def __iter__(self):
+        return self
+
+    @property
+    def line_num(self):
+        return self.reader.line_num
+
+    @property
+    def fieldnames(self):
+        return self.reader.fieldnames
 
 class CSV(RPCRoot):
     # For XMLRPC methods in this class.
@@ -155,11 +187,12 @@ class CSV(RPCRoot):
         """
         TurboGears method to import data from csv
         """
+
         log = []
         try:
             # ... process CSV file contents here ...
             missing = object()
-            reader = csv.DictReader(csv_file.file, restkey=missing, restval=missing)
+            reader = UnicodeDictReader(csv_file.file, restkey=missing, restval=missing)
             is_empty = True
 
             for data in reader:
@@ -247,7 +280,7 @@ class CSV(RPCRoot):
                     newdata = smart_bool(data[key])
                 else:
                     newdata = None
-                if str(newdata) != str(current_data):
+                if unicode(newdata) != unicode(current_data):
                     activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '%s' % current_data, '%s' % newdata)
                     system.activity.append(activity)
                     setattr(csv_object,key,newdata)
@@ -289,7 +322,7 @@ class CSV_System(CSV):
                 else:
                     newdata = None
                 current_data = getattr(system, key, None)
-                if str(newdata) != str(current_data):
+                if unicode(newdata) != unicode(current_data):
                     setattr(system,key,newdata)
                     activity = SystemActivity(identity.current.user,
                                               'CSV', 'Changed', key, '%s' %
@@ -472,7 +505,7 @@ class CSV_Power(CSV):
                 else:
                     newdata = None
                 current_data = getattr(csv_object, key, None)
-                if str(newdata) != str(current_data):
+                if unicode(newdata) != unicode(current_data):
                     activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '***', '***')
                     system.activity.append(activity)
                     setattr(csv_object,key,newdata)
@@ -566,8 +599,8 @@ class CSV_Exclude(CSV):
 
         if data['update'] and data['family']:
             try:
-                osversion = OSVersion.by_name(OSMajor.by_name(str(data['family'])),
-                                                            str(data['update']))
+                osversion = OSVersion.by_name(OSMajor.by_name(unicode(data['family'])),
+                                                            unicode(data['update']))
             except InvalidRequestError:
                 log.append("%s: Invalid Family %s Update %s" % (system.fqdn,
                                                         data['family'],
@@ -666,7 +699,7 @@ class CSV_Install(CSV):
                     log.append("%s: Error! You must specify Family along with Update" % system.fqdn)
                     return False
                 try:
-                    update = OSVersion.by_name(family, str(update))
+                    update = OSVersion.by_name(family, unicode(update))
                 except InvalidRequestError:
                     log.append("%s: Error! Invalid update %s" % (system.fqdn,
                                                              data['update']))
