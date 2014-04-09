@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from datetime import datetime
 from sqlalchemy import Column, Integer, Unicode
 from sqlalchemy.sql import and_
@@ -89,7 +94,7 @@ def auto_cmd_handler(command, new_status):
     recipe = command.system.open_reservation.recipe
     if new_status in (CommandStatus.failed, CommandStatus.aborted):
         recipe.abort("Command %s failed" % command.id)
-    elif command.action == u'reboot':
+    elif command.action == u'on':
         recipe.resource.rebooted = datetime.utcnow()
         first_task = recipe.first_task
         first_task.start()

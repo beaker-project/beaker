@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import xml.dom.minidom
 import re, errno, sys, os
 from urlparse import urljoin
@@ -117,6 +122,12 @@ class BeakerWorkflow(BeakerCommand):
             default=False,
             action="store_true",
             help="Print generated job XML",
+        )
+        self.parser.add_option(
+            "--verbose",
+            default=False,
+            action="store_true",
+            help="Print informative messages to stdout"
         )
         self.parser.add_option(
             "--pretty-xml", "--prettyxml",

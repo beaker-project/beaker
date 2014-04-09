@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import re
 from datetime import datetime
 import urlparse
@@ -277,7 +282,7 @@ class OSVersion(DeclarativeMappedObject):
     id = Column(Integer, autoincrement=True, primary_key=True)
     osmajor_id = Column(Integer, ForeignKey('osmajor.id'))
     osminor = Column(Unicode(255))
-    osmajor = relationship(OSMajor, backref=backref('osversion', order_by=[osminor]))
+    osmajor = relationship(OSMajor, backref=backref('osversions', order_by=[osminor]))
     arches = relationship(Arch, secondary=osversion_arch_map)
 
     @classmethod

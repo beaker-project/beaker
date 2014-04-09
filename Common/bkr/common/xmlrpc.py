@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 # This is a cut and paste from kobo.xmlrpc, version 0.4.2-1
 import base64
 import cookielib
@@ -12,6 +17,7 @@ import threading
 import time
 import urllib2
 import xmlrpclib
+import urlparse
 
 try:
     import kerberos
@@ -108,6 +114,25 @@ class TimeoutHTTP(httplib.HTTP):
 
     def set_timeout(self, timeout):
         self._conn._timeout = timeout
+
+
+class TimeoutProxyHTTP(TimeoutHTTP):
+    _connection_class = TimeoutHTTPProxyConnection
+
+    def __init__(self, host='', proxy='',  port=None, strict=None,
+                 proxy_user=None, proxy_password=None):
+        if port == 0:
+            port = None
+        self._setup(self._connection_class(host, proxy, port=port,
+                    strict=strict,
+                    proxy_user=proxy_user,
+                    proxy_password=proxy_password))
+
+    def _setup(self, conn):
+        httplib.HTTP._setup(self, conn)
+        # XXX: Hack for python >= 2.7 where a _single_request method is used
+        # and the method needs a connection object with .getresponse() method
+        self.getresponse = conn.getresponse
 
 
 class TimeoutHTTPSConnection(httplib.HTTPSConnection):

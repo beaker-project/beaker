@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import os.path
 from datetime import datetime
 import subprocess
@@ -13,10 +18,9 @@ from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode, Boolean,
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import relationship
 from turbogears.config import get
-from rhts import testinfo
 from bkr.common.helpers import (AtomicFileReplacement, Flock,
                                 makedirs_ignore, unlink_ignore)
-from bkr.server import identity
+from bkr.server import identity, testinfo
 from bkr.server.bexceptions import BX
 from bkr.server.util import absolute_url, run_createrepo
 from .base import DeclarativeMappedObject

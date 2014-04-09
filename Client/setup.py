@@ -13,7 +13,7 @@ def bash_completion_dir():
 
 setup(
     name = "bkr.client",
-    version='0.15.5',
+    version='0.16.1',
     license = "GPLv2+",
 
     packages=find_packages('src'),
@@ -22,6 +22,7 @@ setup(
     namespace_packages = ['bkr'],
 
     data_files = [
+        ('/etc/beaker', []),
         (bash_completion_dir(), ['bash-completion/bkr']),
     ],
 

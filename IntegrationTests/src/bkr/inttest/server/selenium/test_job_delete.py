@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import delete_and_confirm, \
@@ -114,8 +120,8 @@ class JobDeleteWD(WebDriverTestCase):
         b.find_element_by_id('searchform').submit()
 
         delete_and_confirm(b, "//tr[td/a[normalize-space(text())='%s']]" % job.t_id)
-        b.find_element_by_xpath("//table[@id='widget']//"
-            "a[not(normalize-space(text())='%s')]" % job.t_id)
+        # table should have no remaining rows, since we searched by id
+        b.find_element_by_xpath("//table[@id='widget']/tbody[not(./tr)]")
         recipe = job.recipesets[0].recipes[0]
         b.get(get_server_base() + 'recipes/%d' % recipe.id)
         warn_text = b.find_element_by_class_name('flash').text

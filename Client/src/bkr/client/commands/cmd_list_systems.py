@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 """
 bkr list-systems: List Beaker systems
 =====================================
@@ -37,6 +42,10 @@ Options
 
    Like :option:`--available`, but only includes which can be scheduled *right 
    now*.
+
+.. option:: --removed
+
+   Limit to systems which have been marked as ``Removed``.
 
 .. option:: --mine
 
@@ -145,6 +154,9 @@ class List_Systems(BeakerCommand):
                 const='free', dest='feed',
                 help='Only include systems available '
                      'to this user and not currently being used')
+        self.parser.add_option('--removed', action='store_const',
+                const='removed', dest='feed',
+                help='Only include systems which have been removed')
         self.parser.add_option('--mine', action='store_const',
                 const='mine', dest='feed',
                 help='Only include systems owned by this user')

@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import time
 import datetime
 from threading import Thread, Event
@@ -498,7 +503,8 @@ class TestPowerFailures(XmlRpcTestCase):
             automated_system = data_setup.create_system(fqdn=u'broken1.example.org',
                                                         lab_controller=self.lab_controller,
                                                         status = SystemStatus.automated)
-            command = automated_system.action_power(u'on')
+            automated_system.action_power(u'on')
+            command = automated_system.command_queue[0]
         self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
                 u'needs moar powa')
@@ -515,7 +521,8 @@ class TestPowerFailures(XmlRpcTestCase):
             manual_system = data_setup.create_system(fqdn = u'broken2.example.org',
                                                      lab_controller = self.lab_controller,
                                                      status = SystemStatus.manual)
-            command = manual_system.action_power(u'on')
+            manual_system.action_power(u'on')
+            command = manual_system.command_queue[0]
         self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
                 u'needs moar powa')
@@ -556,7 +563,7 @@ class TestPowerFailures(XmlRpcTestCase):
             self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
             command = system.command_queue[0]
-            self.assertEquals(command.action, 'reboot')
+            self.assertEquals(command.action, 'on')
 
         self.server.labcontrollers.mark_command_running(command.id)
         self.server.labcontrollers.mark_command_failed(command.id,
@@ -593,7 +600,7 @@ class TestPowerFailures(XmlRpcTestCase):
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
-            command = system.command_queue[1]
+            command = system.command_queue[2]
             self.assertEquals(command.action, 'configure_netboot')
 
         self.server.labcontrollers.mark_command_running(command.id)

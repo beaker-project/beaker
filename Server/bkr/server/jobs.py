@@ -1,20 +1,9 @@
-# - Logan is the scheduling piece of the Beaker project
-#
-# Copyright (C) 2008 bpeck@redhat.com
-#
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 from turbogears.database import session
 from turbogears import expose, flash, widgets, validate, validators, redirect, paginate, url
 from cherrypy import response
@@ -605,12 +594,14 @@ class Jobs(RPCRoot):
         recipe.kernel_options = xmlrecipe.kernel_options
         recipe.kernel_options_post = xmlrecipe.kernel_options_post
         recipe.role = xmlrecipe.role
+        custom_packages = set()
         for xmlpackage in xmlrecipe.packages():
             package = TaskPackage.lazy_create(package='%s' % xmlpackage.name)
-            recipe.custom_packages.append(package)
+            custom_packages.add(package)
         for installPackage in xmlrecipe.installPackages():
             package = TaskPackage.lazy_create(package='%s' % installPackage)
-            recipe.custom_packages.append(package)
+            custom_packages.add(package)
+        recipe.custom_packages = list(custom_packages)
         for xmlrepo in xmlrecipe.iter_repos():
             recipe.repos.append(RecipeRepo(name=xmlrepo.name, url=xmlrepo.url))
         for xmlksappend in xmlrecipe.iter_ksappends():

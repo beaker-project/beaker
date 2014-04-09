@@ -26,8 +26,7 @@
   <thead>
   <tr>
    <th py:if="not hidden.has_key('rid')">Run ID</th>
-   <th py:if="not hidden.has_key('task')">Task</th>
-   <th py:if="hidden.has_key('task')">&nbsp;</th>
+   <th>Task</th>
    <th py:if="not hidden.has_key('distro_tree')">Distro Tree</th>
    <th py:if="not hidden.has_key('system')">System</th>
    <th py:if="not hidden.has_key('start')"><div>StartTime</div><div>[FinishTime]</div><div>[Duration]</div></th>
@@ -45,10 +44,10 @@
     <td class="task" py:if="not hidden.has_key('rid')">
      ${task.link_id}
     </td>
-    <td class="task" py:if="not hidden.has_key('task')">
+    <td class="task">
      ${task.name_markup}
+     <span class="version">${task.version}</span>
     </td>
-    <td class="task" py:if="hidden.has_key('task')">&nbsp;</td>
     <td class="task" py:if="not hidden.has_key('distro_tree')">
      ${task.recipe.distro_tree == None and ' ' or task.recipe.distro_tree.link}
     </td>
@@ -56,9 +55,9 @@
      ${task.recipe.resource == None and ' ' or task.recipe.resource.link}
     </td>
     <td class="task" style="white-space:nowrap;" py:if="not hidden.has_key('start')">
-      <div class="datetime" py:if="task.start_time">${task.start_time}</div>
-      <div class="datetime" py:if="task.finish_time">${task.finish_time}</div>
-      ${task.duration}
+      <div class="task-start-time datetime" py:if="task.start_time">${task.start_time}</div>
+      <div class="task-finish-time datetime" py:if="task.finish_time">${task.finish_time}</div>
+      <div class="task-duration">${task.duration}</div>
     </td>
     <td class="task logs" py:if="not hidden.has_key('logs')">
       <ul class="unstyled">

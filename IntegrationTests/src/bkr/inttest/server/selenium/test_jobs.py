@@ -1,23 +1,10 @@
 
 # vim: set fileencoding=utf-8 :
 
-# Beaker
-#
-# Copyright (C) 2010 dcallagh@redhat.com
-#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import unittest
 import logging
@@ -125,7 +112,7 @@ class TestViewJob(WebDriverTestCase):
         b.find_element_by_xpath('//div[@id="recipe%s"]//a[text()="Show Results"]' % recipe_id).click()
         b.find_element_by_xpath(
                 '//div[@id="recipe-%d-results"]//table' % recipe_id)
-        recipe_task_start, recipe_task_finish = \
+        recipe_task_start, recipe_task_finish, recipe_task_duration = \
                 b.find_elements_by_xpath(
                     '//div[@id="recipe-%d-results"]//table'
                     '/tbody/tr[1]/td[3]/div' % recipe_id)
@@ -354,6 +341,38 @@ class NewJobTestWD(WebDriverTestCase):
         self.assertEquals(flash_text,
                 "Invalid job XML: 'utf8' codec can't decode byte 0x89 "
                 "in position 0: invalid start byte")
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=883887
+    def test_duplicate_packages_are_merged(self):
+        b = self.browser
+        login(b, user=self.user.user_name, password='password')
+        b.get(get_server_base() + 'jobs/new')
+        xml_file = tempfile.NamedTemporaryFile()
+        xml_file.write('''
+            <job>
+                <whiteboard>job with duplicate packages</whiteboard>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <packages>
+                            <package name="system-config-kdump"/>
+                            <package name="system-config-kdump"/>
+                        </packages>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        xml_file.flush()
+        b.find_element_by_xpath("//input[@id='jobs_filexml']").send_keys(xml_file.name)
+        b.find_element_by_xpath("//button[text()='Submit Data']").click()
+        b.find_element_by_xpath("//button[text()='Queue']").click()
+        flash_text = b.find_element_by_class_name('flash').text
+        self.assert_('Success!' in flash_text, flash_text)
+        self.assertEqual(b.title, 'My Jobs')
 
 class NewJobTest(WebDriverTestCase):
 
@@ -688,7 +707,6 @@ class NewJobTest(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Queue"]').click()
         flash_message = b.find_element_by_class_name('flash').text
         self.assert_(flash_message.startswith('Success!'), flash_message)
-
 
 class JobAttributeChangeTest(WebDriverTestCase):
 

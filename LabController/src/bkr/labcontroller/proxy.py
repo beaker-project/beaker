@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import errno
 import os
 import sys
@@ -56,7 +62,8 @@ def retry_transport(transport_class, retry_count=5, retry_delay=30,
                     result = transport_class.request(self, *args, **kwargs)
                     return result
                 except exceptions, ex:
-                    self.close()
+                    if hasattr(self, 'close'):
+                        self.close()
                     if i == retry_count:
                         raise
                     retries_left = retry_count - i

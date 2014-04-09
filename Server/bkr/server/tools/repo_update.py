@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 # pkg_resources.requires() does not work if multiple versions are installed in 
 # parallel. This semi-supported hack using __requires__ is the workaround.
 # http://bugs.python.org/setuptools/issue139
@@ -73,6 +78,7 @@ class RepoSyncer(yum.YumBase):
         # have to list every possible arch here, ughhhh
         self.doSackSetup(archlist='noarch i386 i686 x86_64 ia64 ppc ppc64 s390 s390x'.split())
         repo, = self.repos.listEnabled()
+        repo.copy_local = True
         package_sack = yum.packageSack.ListPackageSack(
                 self.pkgSack.returnPackages(repoid=repo.id))
         if not os.path.exists(self.output_dir):

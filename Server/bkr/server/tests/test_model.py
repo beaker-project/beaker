@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 # These are unit tests which don't need a MySQL database. Tests which need to
 # talk to external services belong in the IntegrationTests subdir.
 
@@ -119,11 +125,8 @@ class TaskLibraryTest(unittest.TestCase):
             rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
                 'tmp-distribution-beaker-task_test-2.0-5.noarch.rpm')
             copy(rpm_file, basepath)
-            try:
+            with self.assertRaises(OSError):
                 self.tasklibrary.update_repo()
-                self.fail('Should throw exception with invalid command')
-            except OSError, e:
-                self.assertEqual(e.errno, errno.ENOENT)
         finally:
             rmtree(basepath)
 

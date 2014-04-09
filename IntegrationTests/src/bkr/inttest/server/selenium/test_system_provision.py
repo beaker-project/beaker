@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import datetime
 from selenium.webdriver.support.ui import Select
 from bkr.server.model import SystemStatus, SSHPubKey, RenderedKickstart, \
@@ -85,10 +90,11 @@ class SystemProvisionTest(WebDriverTestCase):
         b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
                 '/h4[text()="Provisioning successful"]')
         with session.begin():
-            self.assertEquals(system.command_queue[0].action, 'reboot')
-            self.assertEquals(system.command_queue[1].action, 'configure_netboot')
-            self.assertEquals(system.command_queue[1].distro_tree, self.distro_tree)
-            self.assertEquals(system.command_queue[2].action, 'clear_logs')
+            self.assertEquals(system.command_queue[0].action, 'on')
+            self.assertEquals(system.command_queue[1].action, 'off')
+            self.assertEquals(system.command_queue[2].action, 'configure_netboot')
+            self.assertEquals(system.command_queue[2].distro_tree, self.distro_tree)
+            self.assertEquals(system.command_queue[3].action, 'clear_logs')
 
     def test_provision_with_ssh_key(self):
         with session.begin():
@@ -149,6 +155,6 @@ class SystemProvisionTest(WebDriverTestCase):
                 './/div[contains(@class, "modal")]//a[text()="OK"]').click()
         b.find_element_by_xpath('//div[contains(@class, "alert-success")]'
                 '/h4[text()="Provisioning successful"]')
-        self.assertEquals(system.command_queue[1].action, 'configure_netboot')
+        self.assertEquals(system.command_queue[2].action, 'configure_netboot')
         self.assert_(u'key1=value1 key1=value2 key2=value key3' in \
-                         system.command_queue[1].kernel_options)
+                         system.command_queue[2].kernel_options)

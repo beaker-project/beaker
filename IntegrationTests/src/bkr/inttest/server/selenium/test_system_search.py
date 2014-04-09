@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from selenium.webdriver.support.ui import Select
 from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
     Device, DeviceClass, Disk, Cpu, SystemPermission
@@ -7,6 +13,7 @@ from bkr.inttest.server.webdriver_utils import get_server_base, login, \
 from bkr.inttest import data_setup, with_transaction, get_server_base
 import unittest, time, re, os, datetime
 from turbogears.database import session
+from urlparse import urljoin
 
 class SearchColumns(WebDriverTestCase):
 
@@ -172,7 +179,7 @@ class Search(WebDriverTestCase):
         cls.system_three_details = { 'fqdn' : u'a3',
                                     'type' : u'Laptop',
                                     'arch' : u'ia64',
-                                    'status' : u'Removed',
+                                    'status' : u'Automated',
                                     'owner' : data_setup.create_user(),}
         cls.system_three = data_setup.create_system(**cls.system_three_details)
         cls.system_three.numa = Numa(nodes=1)
@@ -185,6 +192,11 @@ class Search(WebDriverTestCase):
                                       device_class_id = device_class.id,
                                       description = 'blah')
         cls.system_three.devices.append(device2)
+
+        cls.system_four_details = {'status' : u'Removed',}
+        cls.system_four = data_setup.create_system(**cls.system_four_details)
+        cls.system_four.key_values_string.append(Key_Value_String(
+            Key.by_name(u'CPUMODEL'), 'foocodename'))
 
     @classmethod
     def tearDownClass(cls):
@@ -375,7 +387,26 @@ class Search(WebDriverTestCase):
         b.find_element_by_name('systemsearch-0.value').send_keys('foocodename')
         b.find_element_by_id('searchform').submit()
         check_system_search_results(b, present=[self.system_one],
-                absent=[self.system_two, self.system_three])
+                                    absent=[self.system_two, 
+                                            self.system_three, 
+                                            self.system_four])
+
+        # Key Value search from "Removed Systems"
+        b.get(urljoin(get_server_base(), 'removed'))
+        b.find_element_by_link_text('Show Search Options').click()
+        wait_for_animation(b, '#searchform')
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('Key/Value')
+        Select(b.find_element_by_name('systemsearch-0.keyvalue'))\
+            .select_by_visible_text('CPUMODEL')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('is')
+        b.find_element_by_name('systemsearch-0.value').send_keys('foocodename')
+        b.find_element_by_id('searchform').submit()
+        check_system_search_results(b, present=[self.system_four],
+                                    absent=[self.system_one, 
+                                            self.system_two, 
+                                            self.system_three])
 
     def test_by_key_value_is_not(self):
         b = self.browser

@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import logging
 import xmlrpclib
 import datetime
@@ -741,8 +746,14 @@ def save_system_access_policy(fqdn):
         policy.rules.remove(old_rule)
     for rule in data['rules']:
         if 'id' not in rule:
-            user = User.by_user_name(rule['user']) if rule['user'] else None
-            group = Group.by_name(rule['group']) if rule['group'] else None
+            try:
+                user = User.by_user_name(rule['user']) if rule['user'] else None
+            except NoResultFound:
+                raise BadRequest400('No such user %r' % rule['user'])
+            try:
+                group = Group.by_name(rule['group']) if rule['group'] else None
+            except NoResultFound:
+                raise BadRequest400('No such group %r' % rule['group'])
             permission = SystemPermission.from_string(rule['permission'])
             new_rule = policy.add_rule(user=user, group=group,
                     everybody=rule['everybody'], permission=permission)

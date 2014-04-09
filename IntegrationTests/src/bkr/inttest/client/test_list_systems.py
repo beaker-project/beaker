@@ -1,9 +1,14 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup
 from bkr.inttest.client import run_client, ClientError
-from bkr.server.model import System, Key, Key_Value_String
+from bkr.server.model import System, Key, Key_Value_String, SystemStatus
 import datetime
 
 class ListSystemsTest(unittest.TestCase):
@@ -18,8 +23,20 @@ class ListSystemsTest(unittest.TestCase):
     def test_list_all_systems(self):
         with session.begin():
             data_setup.create_system() # so that we have at least one
+            system1 = data_setup.create_system(status=SystemStatus.removed)
         out = run_client(['bkr', 'list-systems'])
-        self.assertEqual(len(out.splitlines()), System.query.count())
+        self.assertNotIn(system1.fqdn, out.splitlines())
+        self.assertEqual(len(out.splitlines()),
+                         System.query.filter(System.status!=SystemStatus.removed).count())
+
+    def test_list_removed_systems(self):
+        with session.begin():
+            system1 = data_setup.create_system() 
+            system2 = data_setup.create_system(status=SystemStatus.removed)
+        out = run_client(['bkr', 'list-systems', '--removed'])
+        self.assertIn(system2.fqdn, out.splitlines())
+        self.assertEqual(len(out.splitlines()),
+                         System.query.filter(System.status==SystemStatus.removed).count())
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=920018
     def test_list_systems_lc_disabled(self):

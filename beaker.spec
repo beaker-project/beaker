@@ -27,16 +27,16 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1 
 # but that is not usable for the RPM Version because it sorts higher than 
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 0.15.5
+%global upstream_version 0.16.1
 
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.15.5
+Version:        0.16.1
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
-License:        GPLv2+
+License:        GPLv2+ and BSD
 URL:            http://beaker-project.org/
 
 Source0:        http://beaker-project.org/releases/%{name}-%{upstream_version}.tar.gz
@@ -60,6 +60,8 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
 BuildRequires:  make
 BuildRequires:  python-setuptools
+BuildRequires:  python-nose >= 0.10
+BuildRequires:  python-unittest2
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
 BuildRequires:  python-docutils >= 0.6
@@ -84,8 +86,12 @@ BuildRequires:  python-webassets
 BuildRequires:  /usr/bin/lessc
 BuildRequires:  /usr/bin/cssmin
 BuildRequires:  /usr/bin/uglifyjs
-# These server dependencies are needed in the build, because
-# sphinx imports bkr.server modules to generate API docs
+# These runtime dependencies are needed at build time as well, because
+# the unit tests and Sphinx autodoc import the server code as part of the
+# build process.
+BuildRequires:  createrepo
+BuildRequires:  createrepo_c
+BuildRequires:  python-requests
 BuildRequires:  TurboGears >= 1.1.3
 %if 0%{?rhel} == 6
 BuildRequires:  python-turbojson13
@@ -99,7 +105,6 @@ BuildRequires:  python-ldap
 BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  cracklib-python
 BuildRequires:  rpm-python
-BuildRequires:  rhts-python
 BuildRequires:  python-netaddr
 BuildRequires:  ovirt-engine-sdk
 BuildRequires:  python-itsdangerous
@@ -137,6 +142,7 @@ Requires:       python-simplejson
 %endif
 Requires:       libxml2-python
 Requires:       python-prettytable
+Requires:       python-jinja2
 # beaker-wizard was moved from rhts-devel to here in 4.52
 Conflicts:      rhts-devel < 4.52
 
@@ -159,6 +165,7 @@ Requires:       python-ldap
 Requires:       python-rdflib >= 3.2.0
 Requires:       python-daemon
 Requires:       python-lockfile >= 0.9
+Requires:       crontabs
 Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
@@ -167,7 +174,6 @@ Requires:       %{name} = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
 Requires:       createrepo
 Requires:       yum-utils
-Requires:       rhts-python
 Requires:       cracklib-python
 Requires:       python-jinja2
 Requires:       python-netaddr
@@ -218,6 +224,7 @@ Group:          Applications/Internet
 Provides:       beaker-redhat-support <= 0.19
 Obsoletes:      beaker-redhat-support <= 0.19
 Requires:       python
+Requires:       crontabs
 Requires:       httpd
 Requires:       cobbler >= 1.4
 Requires:       yum-utils
@@ -312,6 +319,14 @@ DESTDIR=%{buildroot} make \
     %{?with_inttests:WITH_INTTESTS=1} \
     install
 
+
+%check
+make \
+    %{?with_server:WITH_SERVER=1} \
+    %{?with_labcontroller:WITH_LABCONTROLLER=1} \
+    %{?with_inttests:WITH_INTTESTS=1} \
+    check
+
 %clean
 %{__rm} -rf %{buildroot}
 
@@ -402,6 +417,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %files
 %defattr(-,root,root,-)
+%dir %{python2_sitelib}/bkr/
 %{python2_sitelib}/bkr/__init__.py*
 %{python2_sitelib}/bkr/timeout_xmlrpclib.py*
 %{python2_sitelib}/bkr/common/

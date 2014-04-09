@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from turbogears import redirect, config, expose, \
         flash, widgets, validate, error_handler, validators, redirect, \
         paginate, url
@@ -7,7 +12,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import cherrypy
 from cherrypy import response
 from kid import XML
-from flask import jsonify
+from flask import jsonify, request
 from bkr.server.validators import StrongPassword
 from bkr.server.helpers import make_link
 from bkr.server.widgets import BeakerDataGrid, myPaginateDataGrid, \
@@ -20,7 +25,8 @@ from bkr.server.app import app
 from bkr.server import mail, identity
 
 from bkr.server.model import (Group, Permission, System, User, UserGroup,
-                              Activity, GroupActivity, SystemActivity)
+                              Activity, GroupActivity, SystemActivity, 
+                              SystemStatus)
 
 import logging
 log = logging.getLogger(__name__)
@@ -225,10 +231,12 @@ class Groups(AdminPage):
             flash(_(u'Need a valid group to search on'))
             redirect('../groups/mine')
 
-        systems = System.all(identity.current.user).filter(System.groups.contains(group))
+        systems = System.all(identity.current.user). \
+                  filter(System.groups.contains(group)). \
+                  filter(System.status != SystemStatus.removed)
         title = 'Systems in Group %s' % group.group_name
         from bkr.server.controllers import Root
-        return Root()._systems(systems,title, group_id = group_id,**kw)
+        return Root()._systems(systems, title, group_id = group_id,**kw)
 
     @expose(template='bkr.server.templates.group_form')
     def edit(self, group_id, **kw):
@@ -488,8 +496,11 @@ class Groups(AdminPage):
             groups = session.query(Group)
 
         def get_sys(x):
-            if len(x.systems):
-                return make_link('systems?group_id=%s' % x.group_id, u'System count: %s' % len(x.systems))
+            systems = System.all(identity.current.user). \
+                      filter(System.groups.contains(x)). \
+                      filter(System.status != SystemStatus.removed).all()
+            if len(systems):
+                return make_link('systems?group_id=%s' % x.group_id, u'System count: %s' % len(systems))
             else:
                 return 'System count: 0'
 
@@ -721,7 +732,9 @@ class Groups(AdminPage):
             response.status = 403
             return ['Invalid Group Id']
 
-        systems = group.systems
+        systems = System.all().filter(System.groups.contains(group)). \
+                  filter(System.status != SystemStatus.removed)
+
         return [(system.id, system.fqdn) for system in systems]
 
     # XML-RPC method for creating a group
@@ -939,9 +952,13 @@ class Groups(AdminPage):
 
 @app.route('/groups/+typeahead')
 def groups_typeahead():
+    if 'q' in request.args:
+        groups = Group.list_by_name(request.args['q'], find_anywhere=False)
+    else:
+        groups = Group.query
     data = [{'group_name': group.group_name, 'display_name': group.display_name,
              'tokens': [group.group_name]}
-            for group in Group.query]
+            for group in groups.values(Group.group_name, Group.display_name)]
     return jsonify(data=data)
 
 # for sphinx

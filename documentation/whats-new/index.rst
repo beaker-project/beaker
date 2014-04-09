@@ -45,6 +45,20 @@ The following changes will appear in the next Beaker release.
    next/*
 
 
+Beaker 0.16
+-----------
+
+Beaker 0.16 adds experimental server-side support for external tasks, 
+configurable quiescent periods for system power, and several other 
+enhancements.
+
+.. toctree::
+   :maxdepth: 2
+
+   release-0.16
+   upgrade-0.16
+
+
 Beaker 0.15
 -----------
 

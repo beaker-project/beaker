@@ -1,3 +1,9 @@
+
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+
 // These are all the LESS files making up Bootstrap, in the order they are 
 // defined in boostrap.less and responsive.less. Unneeded bits are commented out 
 // as an optimisation.
@@ -103,7 +109,7 @@ time[title] {
 
 // We have some forms in table cells, and the bottom margin (from Bootstrap) 
 // ruins the row height.
-td form, td input, td select {
+td form, td input, td select, td .input-append, td .input-prepend {
     margin-bottom: 0 !important;
 }
 // Same for forms in modals.
@@ -143,7 +149,7 @@ td form, td input, td select {
 }
 
 // buttons in grid cells
-.table td .btn, .table th .btn {
+.table .btn {
     white-space: nowrap;
     padding: @paddingSmall;
 }
@@ -188,6 +194,13 @@ td form, td input, td select {
 .tt-suggestion small {
     .muted;
     margin-left: 0.5em;
+}
+input.tt-hint {
+    .muted;
+}
+// https://github.com/twitter/typeahead.js/issues/88
+.input-append .tt-suggestion, .input-prepend .tt-suggestion {
+    font-size: @baseFontSize;
 }
 
 // "Growl-like" notifications

@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import sys
 import os, os.path
 import errno
@@ -92,6 +97,9 @@ class CommandQueuePoller(ProxyHelper):
                     command['delay'], command['id'])
             if shutting_down.wait(timeout=command['delay']):
                 return
+        gevent.joinall(predecessors)
+        if shutting_down.is_set():
+            return
         quiescent_period = command.get('quiescent_period')
         if quiescent_period:
             system_fqdn = command.get('fqdn')
@@ -110,17 +118,16 @@ class CommandQueuePoller(ProxyHelper):
                     ' command %s' % (seconds_to_wait, command['id']))
                 if shutting_down.wait(timeout=seconds_to_wait):
                     return
-            self.last_command_datetime[system_fqdn] = datetime.datetime.utcnow()
-        gevent.joinall(predecessors)
-        if shutting_down.is_set():
-            return
         logger.debug('Handling command %r', command)
         self.mark_command_running(command['id'])
         try:
             if command['action'] in (u'on', u'off', 'interrupt'):
                 handle_power(command)
             elif command['action'] == u'reboot':
+                # For backwards compatibility only. The server now splits 
+                # reboots into 'off' followed by 'on'.
                 handle_power(dict(command.items() + [('action', u'off')]))
+                time.sleep(5)
                 handle_power(dict(command.items() + [('action', u'on')]))
             elif command['action'] == u'clear_logs':
                 handle_clear_logs(self.conf, command)
@@ -133,9 +140,11 @@ class CommandQueuePoller(ProxyHelper):
                 # XXX or should we just ignore it and leave it queued?
         except Exception, e:
             logger.exception('Error processing command %s', command['id'])
+            self.last_command_datetime[command['fqdn']] = datetime.datetime.utcnow()
             self.mark_command_failed(command['id'],
                     '%s: %s' % (e.__class__.__name__, e))
         else:
+            self.last_command_datetime[command['fqdn']] = datetime.datetime.utcnow()
             self.mark_command_completed(command['id'])
         logger.debug('Finished handling command %s', command['id'])
 

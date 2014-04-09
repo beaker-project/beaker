@@ -1,23 +1,10 @@
 
 # vim: set fileencoding=utf-8:
 
-# Beaker
-#
-# Copyright (C) 2010 Red Hat, Inc.
-#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 import unittest
 import logging
@@ -26,10 +13,11 @@ from urllib import urlencode, urlopen
 import lxml.etree
 from turbogears.database import session
 
-from bkr.inttest.server.selenium import SeleniumTestCase
+from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.assertions import assert_sorted
-from bkr.server.model import Cpu, Key, Key_Value_String
+from bkr.server.model import Cpu, Key, Key_Value_String, System, SystemStatus
+from bkr.inttest.server.webdriver_utils import check_system_search_results
 
 def atom_xpath(expr):
     return lxml.etree.XPath(expr, namespaces={'atom': 'http://www.w3.org/2005/Atom'})
@@ -194,13 +182,30 @@ class TestSystemsAtomFeed(unittest.TestCase):
     def test_all_systems(self):
         with session.begin():
             systems = [data_setup.create_system() for _ in range(25)]
+            removed_system = data_setup.create_system(status=SystemStatus.removed)
+
         feed_url = urljoin(get_server_base(), '?' + urlencode({
                 'tg_format': 'atom', 'list_tgp_order': '-date_modified',
                 'list_tgp_limit': '0'}))
         feed = lxml.etree.parse(urlopen(feed_url)).getroot()
         self.assert_(self.system_count(feed) >= 25, self.system_count(feed))
         for system in systems:
-            self.assert_(self.feed_contains_system(feed, system.fqdn))
+            self.assertTrue(self.feed_contains_system(feed, system.fqdn))
+        self.assertFalse(self.feed_contains_system(feed, removed_system.fqdn))
+
+    def test_removed_systems(self):
+        with session.begin():
+            system1 = data_setup.create_system(status=SystemStatus.removed)
+            system2 = data_setup.create_system()
+
+        feed_url = urljoin(get_server_base(), 'removed?' + urlencode({
+            'tg_format': 'atom', 'list_tgp_order': '-date_modified',
+            'list_tgp_limit': '0'}))
+        feed = lxml.etree.parse(urlopen(feed_url)).getroot()
+        self.assertEquals(self.system_count(feed), 
+                          System.query.filter(System.status==SystemStatus.removed).count())
+        self.assertTrue(self.feed_contains_system(feed, system1.fqdn))
+        self.assertFalse(self.feed_contains_system(feed, system2.fqdn))
 
     def test_link_to_rdfxml(self):
         with session.begin():
@@ -261,3 +266,28 @@ class TestSystemsAtomFeed(unittest.TestCase):
         feed = lxml.etree.parse(urlopen(feed_url)).getroot()
         self.assert_(self.feed_contains_system(feed, with_module.fqdn))
         self.assert_(not self.feed_contains_system(feed, without_module.fqdn))
+
+class SystemsBrowseTest(WebDriverTestCase):
+
+    def setUp(self):
+        self.browser = self.get_browser()
+
+    def tearDown(self):
+        self.browser.quit()
+
+    def test_group_systems(self):
+
+        b = self.browser
+        with session.begin():
+            group = data_setup.create_group()
+            system1 = data_setup.create_system()
+            system1.groups.append(group)
+            system2 = data_setup.create_system(status=SystemStatus.removed)
+            system2.groups.append(group)
+
+        b.get(urljoin(get_server_base(),
+                      'groups/systems?group_id={0}'.format(group.group_id)))
+        b.find_element_by_xpath('//h1[text()="Systems in Group {0}"]'.format(group.group_name))
+        check_system_search_results(b, present=[system1], absent=[system2])
+        self.assertEqual(
+            b.find_element_by_class_name('item-count').text, 'Items found: 1')

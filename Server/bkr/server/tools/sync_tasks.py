@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 __requires__=['TurboGears']
 
 DESCRIPTION = """ beaker-sync-tasks is a script to sync local Beaker Task RPMs from a remote

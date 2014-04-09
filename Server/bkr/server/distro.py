@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 from turbogears.database import session
 from turbogears import expose, flash, redirect, paginate, url
 from sqlalchemy.exc import InvalidRequestError
@@ -52,7 +58,7 @@ class Distros(RPCRoot):
         osmajors = session.query(OSMajor.osmajor)
         if tags:
             osmajors = osmajors\
-                .join(OSMajor.osversion, OSVersion.distros, Distro.trees)\
+                .join(OSMajor.osversions, OSVersion.distros, Distro.trees)\
                 .filter(DistroTree.lab_controller_assocs.any())\
                 .filter(Distro._tags.any(DistroTag.tag.in_(tags)))
         return [osmajor for osmajor, in osmajors.distinct()]
@@ -82,7 +88,7 @@ class Distros(RPCRoot):
         elif 'osmajor' in filter:
             # look up osmajor
             try:
-                arches = [arch.arch for arch in OSMajor.by_name(filter['osmajor']).osminor[0].arches]
+                arches = [arch.arch for arch in OSMajor.by_name(filter['osmajor']).osversions[0].arches]
             except InvalidRequestError:
                 raise BX(_('Invalid OSMajor: %s' % filter['osmajor']))
         return arches

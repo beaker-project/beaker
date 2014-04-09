@@ -1,4 +1,9 @@
 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import os.path
 import logging
 from datetime import datetime, timedelta
@@ -1823,10 +1828,14 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         ks_meta = {
             'packages': ':'.join(p.package for p in self.packages),
             'customrepos': [dict(repo_id=r.name, path=r.url) for r in self.repos],
-            'harnessrepo': '%s,%s' % self.harness_repo(),
             'taskrepo': '%s,%s' % self.task_repo(),
             'partitions': self.partitionsKSMeta,
         }
+
+        harness_repo = self.harness_repo()
+        if harness_repo:
+            ks_meta['harnessrepo'] = '%s,%s' % harness_repo
+
         return InstallOptions(ks_meta, {}, {})
 
     def to_xml(self, recipe, clone=False, from_recipeset=False, from_machine=False):
@@ -2182,13 +2191,16 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         return self.status
 
     def provision(self):
-        if not self.harness_repo():
-            raise ValueError('Failed to find repo for harness')
+
         from bkr.server.kickstart import generate_kickstart
         install_options = self.resource.install_options(self.distro_tree)\
                 .combined_with(self.generated_install_options())\
                 .combined_with(InstallOptions.from_strings(self.ks_meta,
                     self.kernel_options, self.kernel_options_post))
+
+        if 'harness' not in install_options.ks_meta and not self.harness_repo():
+            raise ValueError('Failed to find repo for harness')
+
         if 'ks' in install_options.kernel_options:
             # Use it as is
             pass
@@ -2694,7 +2706,8 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         if self.finish_time and self.start_time:
             duration =  self.finish_time - self.start_time
         elif self.watchdog and self.watchdog.kill_time:
-            duration =  'Time Remaining %.7s' % (self.watchdog.kill_time - datetime.utcnow())
+            delta = self.watchdog.kill_time - datetime.utcnow().replace(microsecond=0)
+            duration = 'Time Remaining %s' % delta
         return duration
     duration = property(_get_duration)
 
@@ -2763,7 +2776,7 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
             task_time = self.task.avg_time if self.task else 0
             # add in 30 minutes at a minimum
             self.recipe.watchdog.kill_time = (datetime.utcnow() +
-                    timedelta(task_time + 1800))
+                    timedelta(seconds=(task_time + 1800)))
         self.recipe.recipeset.job._mark_dirty()
         return True
 

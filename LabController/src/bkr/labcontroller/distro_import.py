@@ -1,3 +1,9 @@
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
 import sys, os
 import glob
 import xmlrpclib
@@ -1611,8 +1617,7 @@ kernel = images/pxeboot/vmlinuz
             return False
         if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
             return False
-        if not (parser.get('general', 'family').startswith("Red Hat Enterprise Linux")\
-	   or parser.get('general', 'family').startswith("CentOS")):
+        if not (parser.get('general', 'family').startswith(("Red Hat Enterprise Linux", "CentOS", "Red Hat Server"))):
             return False
         # Arm uses a different importer because of all the kernel types.
         if parser.get('general', 'arch') in ['arm', 'armhfp']:

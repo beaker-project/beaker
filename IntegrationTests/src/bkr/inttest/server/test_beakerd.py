@@ -1,4 +1,13 @@
-import unittest, datetime, os, threading
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+import unittest2 as unittest
+import datetime
+import os
+import threading
 import shutil
 import pkg_resources
 import bkr
@@ -997,6 +1006,40 @@ class TestBeakerd(unittest.TestCase):
             job = Job.by_id(job.id)
             self.assertEqual(job.status, TaskStatus.waiting)
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1005865
+    def test_harness_repo_not_required_when_using_alternative_harness(self):
+        with session.begin():
+            user = data_setup.create_user()
+            system = data_setup.create_system(owner=user, status=u'Automated', shared=True,
+                    lab_controller=self.lab_controller)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            job = data_setup.create_job(owner=user, distro_tree=distro_tree)
+            recipe = job.recipesets[0].recipes[0]
+            recipe.ks_meta = "harness='myharness'"
+            recipe._host_requires = (
+                    u'<hostRequires><and><hostname op="=" value="%s"/></and></hostRequires>'
+                    % system.fqdn)
+
+        harness_dir = '%s/%s' % (recipe.harnesspath, \
+                                 recipe.distro_tree.distro.osversion.osmajor)
+        try:
+            if os.path.exists(harness_dir):
+                os.rmdir(harness_dir)
+            beakerd.process_new_recipes()
+            beakerd.update_dirty_jobs()
+            beakerd.queue_processed_recipesets()
+            beakerd.update_dirty_jobs()
+            beakerd.schedule_queued_recipes()
+            beakerd.update_dirty_jobs()
+            beakerd.provision_scheduled_recipesets()
+            beakerd.update_dirty_jobs()
+            with session.begin():
+                job = Job.by_id(job.id)
+                self.assertEqual(job.status, TaskStatus.waiting)
+        finally:
+            if not os.path.exists(harness_dir):
+                os.mkdir(harness_dir)
+
     def test_single_processor_priority(self):
         with session.begin():
             user = data_setup.create_user()
@@ -1094,9 +1137,10 @@ class TestBeakerd(unittest.TestCase):
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
-            self.assertEqual(system.command_queue[0].action, 'reboot')
-            self.assertEqual(system.command_queue[1].action, 'configure_netboot')
-            self.assertEqual(system.command_queue[2].action, 'clear_logs')
+            self.assertEqual(system.command_queue[0].action, 'on')
+            self.assertEqual(system.command_queue[1].action, 'off')
+            self.assertEqual(system.command_queue[2].action, 'configure_netboot')
+            self.assertEqual(system.command_queue[3].action, 'clear_logs')
 
     def test_task_versions_are_recorded(self):
         with session.begin():
@@ -1210,8 +1254,40 @@ class TestBeakerd(unittest.TestCase):
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.waiting)
             system = System.query.get(system.id)
-            self.assertEqual(system.command_queue[1].action, 'configure_netboot')
-            self.assert_('vnc' not in system.command_queue[1].kernel_options)
+            self.assertEqual(system.command_queue[2].action, 'configure_netboot')
+            self.assert_('vnc' not in system.command_queue[2].kernel_options)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1067924
+    def test_kernel_options_are_not_quoted(self):
+        # URL contains ~ which is quoted by pipes.quote
+        bad_arg = 'inst.updates=http://people.redhat.com/~dlehman/updates-1054806.1.img'
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            system = data_setup.create_system(shared=True,
+                    lab_controller=self.lab_controller)
+            job = data_setup.create_job(distro_tree=distro_tree)
+            job.recipesets[0].recipes[0].kernel_options = u'%s' % bad_arg
+            job.recipesets[0].recipes[0]._host_requires = (u"""
+                <hostRequires>
+                    <hostname op="=" value="%s" />
+                </hostRequires>
+                """ % system.fqdn)
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        beakerd.schedule_queued_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.provision_scheduled_recipesets()
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.status, TaskStatus.waiting)
+            system = System.query.get(system.id)
+            self.assertEqual(system.command_queue[2].action, 'configure_netboot')
+            self.assertIn(bad_arg, system.command_queue[2].kernel_options)
 
     def test_order_by(self):
         controller = Jobs()
