@@ -24,6 +24,7 @@ from bkr.server.flask_util import BadRequest400, Unauthorised401, \
         convert_internal_errors, auth_required, read_json_request
 from turbogears.database import session
 import cherrypy
+from bkr.server.cherrypy_util import PlainTextHTTPException
 
 log = logging.getLogger(__name__)
 
@@ -51,9 +52,9 @@ class SystemsController(controllers.Controller):
         try:
             system.change_loan(loaning_to, loan_comment)
         except ValueError as exc:
-            raise cherrypy.HTTPError(400, str(exc))
+            raise PlainTextHTTPException(400, str(exc))
         except InsufficientSystemPermissions as exc:
-            raise cherrypy.HTTPError(403, str(exc))
+            raise PlainTextHTTPException(403, str(exc))
         return loaning_to if loaning_to else ''
 
     @expose()

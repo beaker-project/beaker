@@ -1753,7 +1753,7 @@ class LoanWidget(RPC, TableForm, CompoundWidget):
     def __init__(self, *args, **kw):
         super(LoanWidget, self).__init__(*args, **kw)
         self.javascript.extend([LocalJSLink('bkr',
-            '/static/javascript/loan_v1.js'),
+            '/static/javascript/loan_v2.js'),
             LocalJSLink('bkr',
             '/static/javascript/jquery.timers-1.2.js')])
 

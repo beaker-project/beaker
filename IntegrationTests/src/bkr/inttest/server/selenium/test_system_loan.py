@@ -45,10 +45,11 @@ class SystemLoanTest(WebDriverTestCase):
         b.find_element_by_xpath('//span[@id="loanee-name" and '
             'normalize-space(text())="%s"]' % user)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=999391
     def verify_loan_error(self, status, error):
-        # Error details are not currently displayed :(
-        fmt = 'Your request failed with the following error: Status %d'
-        msg = fmt % status
+        # FIXME: Do we need to display status code?
+        fmt = 'Your request failed with the following error: %s'
+        msg = fmt % error
         b = self.browser
         b.find_element_by_xpath('//p[normalize-space(text())="%s"]' % msg)
 

@@ -48,6 +48,6 @@ function loan_action_remote_form_request(form, options, action, callback) {
         data: queryString(query),
         beforeSend: function() {AjaxLoader.prototype.add_loader(form)},
         complete: function() {AjaxLoader.prototype.remove_loader(form)},
-        error: function(e) { failure('Status ' + e['status'])},
+        error: function(e) {failure(e.responseText)},
         success: callback()});
 }
