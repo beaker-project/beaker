@@ -24,6 +24,7 @@ import turbogears
 from turbogears.database import session
 from bkr.server.controllers import Root
 from bkr.server.util import load_config
+from bkr.server.tests import data_setup
 from bkr.log import log_to_stream
 
 # hack to make turbogears.testutil not do dumb stuff at import time
