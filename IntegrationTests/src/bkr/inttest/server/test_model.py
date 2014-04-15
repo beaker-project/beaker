@@ -249,6 +249,18 @@ class SystemFilterMethodsTest(unittest.TestCase):
                 included=[compatible],
                 excluded=[wrong_arch, osmajor_excluded, osversion_excluded])
 
+    def test_in_lab_with_distro_tree(self):
+        lc = data_setup.create_labcontroller()
+        distro_tree = data_setup.create_distro_tree(lab_controllers=[lc])
+        in_lab = data_setup.create_system(lab_controller=lc)
+        in_wrong_lab = data_setup.create_system(
+                lab_controller=data_setup.create_labcontroller())
+        in_no_lab = data_setup.create_system()
+        in_no_lab.lab_controller = None
+        self.check_hybrid(System.all(data_setup.create_user()),
+                lambda s: s.in_lab_with_distro_tree(distro_tree),
+                included=[in_lab], excluded=[in_wrong_lab, in_no_lab])
+
     def test_can_reserve(self):
         user = data_setup.create_user()
         owned = data_setup.create_system(owner=user)

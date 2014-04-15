@@ -469,23 +469,6 @@ class DistroTree(DeclarativeMappedObject):
                 .filter(not_(Task.excluded_osmajor.any(
                     TaskExcludeOSMajor.osmajor == self.distro.osversion.osmajor)))
 
-    def systems(self, user):
-        """
-        List of systems that support this distro
-        Limit to only lab controllers which have the distro.
-        Limit to what is available to user if user passed in.
-        """
-        # Delayed import to avoid circular dependency
-        from . import System
-        systems = System.all(user)
-        systems = systems.filter(System.can_reserve(user))
-        systems = systems.filter(System.status == SystemStatus.automated)
-        systems = systems.filter(System.compatible_with_distro_tree(self))
-        systems = System.scheduler_ordering(user, query=systems)
-        return systems.join(System.lab_controller)\
-                .filter(LabController._distro_trees.any(
-                    LabControllerDistroTree.distro_tree == self))
-
     @property
     def link(self):
         return make_link(url='/distrotrees/%s' % self.id, text=unicode(self))

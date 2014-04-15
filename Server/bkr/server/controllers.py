@@ -11,18 +11,13 @@ import bkr
 import bkr.server.stdvars
 import bkr.server.search_utility as su
 from bkr.server.model import (TaskBase, Device, System, SystemGroup,
-                              SystemActivity, Key, OSMajor, DistroTree,
-                              Arch, TaskPriority, Group, GroupActivity,
-                              RecipeSet, RecipeSetActivity, User,
-                              LabInfo, ReleaseAction, PowerType,
-                              LabController, Hypervisor, KernelType,
-                              SystemType, Distro, Note, Power, Job,
-                              InstallOptions, ExcludeOSMajor,
-                              ExcludeOSVersion, OSVersion,
-                              Provision, ProvisionFamily,
-                              ProvisionFamilyUpdate, SystemStatus,
-                              Key_Value_Int, Key_Value_String,
-                              SystemAccessPolicy, SystemPermission)
+        SystemActivity, Key, OSMajor, DistroTree, Arch, TaskPriority,
+        Group, GroupActivity, RecipeSet, RecipeSetActivity, User, LabInfo,
+        ReleaseAction, PowerType, LabController, Hypervisor, KernelType,
+        SystemType, Distro, Note, Power, Job, InstallOptions, ExcludeOSMajor,
+        ExcludeOSVersion, OSVersion, Provision, ProvisionFamily,
+        ProvisionFamilyUpdate, SystemStatus, Key_Value_Int, Key_Value_String,
+        SystemAccessPolicy, SystemPermission)
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
@@ -400,9 +395,13 @@ class Root(RPCRoot):
         except NoResultFound:
             flash(_(u'Invalid distro tree id %s') % kw['distro_tree_id'])
             redirect(url('/reserveworkflow',**kw))
-        avail_systems_distro_query = distro_tree.systems(user=identity.current.user)\
-                .filter(System.type == SystemType.machine)\
-                .order_by(None)
+        # XXX delete automated from this query when we have force=""
+        avail_systems_distro_query = System.all(identity.current.user)\
+                .filter(System.can_reserve(identity.current.user))\
+                .filter(System.compatible_with_distro_tree(distro_tree))\
+                .filter(System.in_lab_with_distro_tree(distro_tree))\
+                .filter(System.status == SystemStatus.automated)\
+                .filter(System.type == SystemType.machine)
         warn = None
         if avail_systems_distro_query.count() < 1:
             warn = u'No Systems compatible with %s' % distro_tree

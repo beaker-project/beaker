@@ -476,7 +476,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             self.server.systems.provision(self.usable_system.fqdn, self.distro_tree.id)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('cannot be provisioned on system' in e.faultString)
+            self.assertIn('is not available in lab', e.faultString)
         with session.begin():
             self.assertEquals(self.usable_system.command_queue, [])
 

@@ -429,6 +429,17 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     ExcludeOSVersion.osversion == distro_tree.distro.osversion,
                     ExcludeOSVersion.arch == distro_tree.arch))))
 
+    @hybrid_method
+    def in_lab_with_distro_tree(self, distro_tree):
+        return (self.lab_controller is not None and
+                distro_tree.url_in_lab(self.lab_controller) is not None)
+
+    @in_lab_with_distro_tree.expression
+    def in_lab_with_distro_tree(self, distro_tree):
+        # we assume System.lab_controller was joined, System.all() does that
+        return LabController._distro_trees.any(LabControllerDistroTree
+                .distro_tree == distro_tree)
+
     @classmethod
     def scheduler_ordering(cls, user, query):
         # Order by:

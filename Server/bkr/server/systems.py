@@ -229,9 +229,14 @@ class SystemsController(controllers.Controller):
         distro_tree = DistroTree.by_id(distro_tree_id)
 
         # sanity check: does the distro tree apply to this system?
-        if distro_tree.systems(identity.current.user).filter(System.id == system.id).count() < 1:
+        if not system.compatible_with_distro_tree(distro_tree):
             raise BX(_(u'Distro tree %s cannot be provisioned on %s')
                     % (distro_tree, system.fqdn))
+        if not system.lab_controller:
+            raise BX(_(u'System is not attached to a lab controller'))
+        if not distro_tree.url_in_lab(system.lab_controller):
+            raise BX(_(u'Distro tree %s is not available in lab %s')
+                    % (distro_tree, system.lab_controller))
 
         if identity.current.user.rootpw_expired:
             raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
