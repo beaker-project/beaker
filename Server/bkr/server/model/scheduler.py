@@ -36,14 +36,16 @@ from bkr.server.bexceptions import BX, BeakerException, StaleTaskStatusException
 from bkr.server.helpers import make_link, make_fake_link
 from bkr.server.hybrid import hybrid_method, hybrid_property
 from bkr.server.installopts import InstallOptions, global_install_options
+from bkr.server.needpropertyxml import apply_system_filter
 from bkr.server.util import absolute_url
 from .types import (UUID, MACAddress, TaskResult, TaskStatus, TaskPriority,
-        ResourceType, RecipeVirtStatus, mac_unix_padded_dialect)
+        ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus)
 from .base import DeclarativeMappedObject
 from .activity import Activity
 from .identity import User, Group
 from .lab import LabController
-from .distrolibrary import OSMajor, OSVersion, Distro, DistroTree
+from .distrolibrary import (OSMajor, OSVersion, Distro, DistroTree,
+        LabControllerDistroTree)
 from .tasklibrary import Task, TaskPackage
 from .inventory import System, SystemActivity, Reservation
 
@@ -2551,6 +2553,39 @@ class MachineRecipe(Recipe):
     t_id = property(t_id)
 
     distro_requires = property(_get_distro_requires, _set_distro_requires)
+
+    def candidate_systems(self, only_in_lab=True):
+        """
+        Returns a query of systems which are candidates to run this recipe.
+        """
+        systems = System.all(self.recipeset.job.owner)
+        systems = apply_system_filter(self.host_requires, systems)
+        systems = systems.filter(System.can_reserve(self.recipeset.job.owner))
+        # XXX adjust this condition when we have force=""
+        systems = systems.filter(System.status == SystemStatus.automated)
+        systems = systems.filter(System.compatible_with_distro_tree(self.distro_tree))
+        if only_in_lab:
+            systems = systems.filter(System.in_lab_with_distro_tree(self.distro_tree))
+        systems = System.scheduler_ordering(self.recipeset.job.owner, query=systems)
+        return systems
+
+    @classmethod
+    def hypothetical_candidate_systems(cls, user, distro_tree):
+        """
+        If a recipe were constructed according to the given arguments, what 
+        would its candidate systems be?
+        """
+        systems = System.all(user)
+        systems = apply_system_filter(
+                '<hostRequires><system_type value="%s"/></hostRequires>' % cls.systemtype,
+                systems)
+        systems = systems.filter(System.can_reserve(user))
+        # XXX adjust this condition when we have force=""
+        systems = systems.filter(System.status == SystemStatus.automated)
+        systems = systems.filter(System.compatible_with_distro_tree(distro_tree))
+        systems = systems.filter(System.in_lab_with_distro_tree(distro_tree))
+        systems = System.scheduler_ordering(user, query=systems)
+        return systems
 
 
 class RecipeTag(DeclarativeMappedObject):

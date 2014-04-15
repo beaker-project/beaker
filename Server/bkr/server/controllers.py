@@ -17,7 +17,7 @@ from bkr.server.model import (TaskBase, Device, System, SystemGroup,
         SystemType, Distro, Note, Power, Job, InstallOptions, ExcludeOSMajor,
         ExcludeOSVersion, OSVersion, Provision, ProvisionFamily,
         ProvisionFamilyUpdate, SystemStatus, Key_Value_Int, Key_Value_String,
-        SystemAccessPolicy, SystemPermission)
+        SystemAccessPolicy, SystemPermission, MachineRecipe)
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
@@ -395,13 +395,10 @@ class Root(RPCRoot):
         except NoResultFound:
             flash(_(u'Invalid distro tree id %s') % kw['distro_tree_id'])
             redirect(url('/reserveworkflow',**kw))
-        # XXX delete automated from this query when we have force=""
-        avail_systems_distro_query = System.all(identity.current.user)\
-                .filter(System.can_reserve(identity.current.user))\
-                .filter(System.compatible_with_distro_tree(distro_tree))\
-                .filter(System.in_lab_with_distro_tree(distro_tree))\
-                .filter(System.status == SystemStatus.automated)\
-                .filter(System.type == SystemType.machine)
+        # XXX add force here when we support it
+        avail_systems_distro_query = MachineRecipe.hypothetical_candidate_systems(
+                identity.current.user, distro_tree)\
+                .order_by(None)
         warn = None
         if avail_systems_distro_query.count() < 1:
             warn = u'No Systems compatible with %s' % distro_tree

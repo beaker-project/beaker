@@ -18,6 +18,7 @@ from bkr.server.widgets import myPaginateDataGrid, \
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server import search_utility, identity, metrics
+from bkr.server.needpropertyxml import apply_system_filter
 from bkr.server.controller_utilities import _custom_status, _custom_result, \
     restrict_http_method
 import pkg_resources
@@ -32,7 +33,7 @@ from bkr.server.model import (Job, RecipeSet, RetentionTag, TaskBase,
                               RecipeKSAppend, Task, Product, GuestRecipe,
                               RecipeTask, RecipeTaskParam, RecipeSetResponse,
                               Response, StaleTaskStatusException,
-                              RecipeSetActivity)
+                              RecipeSetActivity, System)
 
 from bkr.common.bexceptions import BeakerException, BX
 
@@ -581,7 +582,7 @@ class Jobs(RPCRoot):
             raise BX(_('No distro tree matches Recipe: %s') % recipe.distro_requires)
         try:
             # try evaluating the host_requires, to make sure it's valid
-            recipe.distro_tree.systems_filter(user, recipe.host_requires)
+            apply_system_filter(recipe.host_requires, System.query)
         except StandardError, e:
             raise BX(_('Error in hostRequires: %s' % e))
         recipe.whiteboard = xmlrecipe.whiteboard or None #'' -> NULL for DB

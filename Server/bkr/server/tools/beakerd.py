@@ -136,17 +136,11 @@ def process_new_recipe(recipe_id):
 
     # First query verifies that the distro tree 
     # exists in at least one lab that has a matching system.
-    systems = recipe.distro_tree.systems_filter(
-                                recipe.recipeset.job.owner,
-                                recipe.host_requires,
-                                only_in_lab=True)
+    systems = recipe.candidate_systems(only_in_lab=True)
     # Second query picks up all possible systems so that as 
     # trees appear in other labs those systems will be 
     # available.
-    all_systems = recipe.distro_tree.systems_filter(
-                                recipe.recipeset.job.owner,
-                                recipe.host_requires,
-                                only_in_lab=False)
+    all_systems = recipe.candidate_systems(only_in_lab=False)
     # based on above queries, condition on systems but add
     # all_systems.
     if systems.count():

@@ -441,22 +441,6 @@ class DistroTree(DeclarativeMappedObject):
         distro_requires.appendChild(xmland)
         return distro_requires
 
-    def systems_filter(self, user, filter, only_in_lab=False):
-        # Delayed import to avoid circular dependency
-        from . import System
-        from bkr.server.needpropertyxml import apply_system_filter
-        systems = System.all(user)
-        systems = apply_system_filter(filter, systems)
-        systems = systems.filter(System.can_reserve(user))
-        systems = systems.filter(System.status == SystemStatus.automated)
-        systems = systems.filter(System.compatible_with_distro_tree(self))
-        systems = System.scheduler_ordering(user, query=systems)
-        if only_in_lab:
-            systems = systems.join(System.lab_controller)\
-                    .filter(LabController._distro_trees.any(
-                    LabControllerDistroTree.distro_tree == self))
-        return systems
-
     def tasks(self):
         """
         List of tasks that support this distro

@@ -12,7 +12,7 @@ from bkr.server.widgets import ReserveWorkflow as ReserveWorkflowWidget
 from bkr.server.widgets import ReserveSystem
 from bkr.server.model import (Distro, Job, System, Arch, OSMajor, DistroTag,
         SystemType, OSVersion, DistroTree, LabController,
-        LabControllerDistroTree, SystemStatus)
+        LabControllerDistroTree, SystemStatus, MachineRecipe)
 from bkr.server.jobs import Jobs as JobController
 from bkr.common.bexceptions import BX
 
@@ -71,14 +71,8 @@ class ReserveWorkflow:
             except NoResultFound:
                 flash(_(u'Invalid distro tree ID %s') % id)
             else:
-                # This is what the candidate systems would be for 
-                # a hypothetical recipe.
-                query = System.all(identity.current.user)\
-                        .filter(System.can_reserve(identity.current.user))\
-                        .filter(System.compatible_with_distro_tree(distro_tree))\
-                        .filter(System.in_lab_with_distro_tree(distro_tree))\
-                        .filter(System.status == SystemStatus.automated)\
-                        .filter(System.type == SystemType.machine)
+                query = MachineRecipe.hypothetical_candidate_systems(
+                        identity.current.user, distro_tree)
                 if query.count() < 1:
                     warn = _(u'No systems compatible with %s') % distro_tree
                 distro_names.append(unicode(distro_tree))
