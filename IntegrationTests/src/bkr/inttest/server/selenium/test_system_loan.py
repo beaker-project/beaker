@@ -214,7 +214,7 @@ class SystemLoanTest(WebDriverTestCase):
         login(b, user=user.user_name, password='password')
         self.go_to_loan_page()
         self.change_loan(loanee_name)
-        error = "%s cannot lend system to %s" % (user.user_name, loanee_name)
+        error = "%s cannot lend this system to %s" % (user.user_name, loanee_name)
         self.verify_loan_error(403, error)
 
     def test_cannot_lend_to_invalid_user(self):
