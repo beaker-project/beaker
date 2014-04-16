@@ -37,6 +37,8 @@ the effective install options for each recipe.
    Describe syntax of the options, rules for parsing/unparsing, and how 
    combining/overriding works.
 
+.. _kickstart-metadata:
+
 Kickstart metadata
 ~~~~~~~~~~~~~~~~~~
 
