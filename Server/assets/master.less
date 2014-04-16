@@ -9,8 +9,14 @@
     margin-top: 20px;
 }
 footer {
+    padding-top: (@baseLineHeight / 2);
+    margin: @baseLineHeight @gridGutterWidth 0 @gridGutterWidth;
+    border-top: 1px solid @grayLighter;
     .muted;
-    text-align: right;
+    a {
+        .muted;
+        font-weight: bold;
+    }
 }
 @media (max-width: 1200px) {
     .navbar .navbar-wide-viewport-only {

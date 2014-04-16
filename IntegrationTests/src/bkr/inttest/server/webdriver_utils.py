@@ -35,7 +35,10 @@ def login(browser, user=None, password=None):
 
 def logout(browser):
     browser.get(get_server_base())
-    browser.find_element_by_link_text('Log out').click()
+    browser.find_element_by_xpath('//a[normalize-space(text())="Hello"]').click()
+    browser.find_element_by_css_selector('.dropdown.open')\
+           .find_element_by_link_text('Log out')\
+           .click()
 
 def is_text_present(browser, text):
     return bool(browser.find_elements_by_xpath(
