@@ -12,9 +12,11 @@ import signal
 from time import sleep
 import gevent
 try:
+    #pylint: disable=E0611
     from gevent import wait as gevent_wait
 except ImportError:
     # gevent.wait was gevent.run in 1.0 beta
+    #pylint: disable=E0611
     from gevent import run as gevent_wait
 from bkr.labcontroller.async import MonitoredSubprocess
 
@@ -38,29 +40,33 @@ class SubprocessTest(unittest.TestCase):
     def test_runaway_output_is_discarded(self):
         def _test():
             p = MonitoredSubprocess(['seq', '--format=%0.0f cans of spam on the wall',
-                    str(1024 * 1024)], stdout=subprocess.PIPE)
+                    str(1024 * 1024)], stdout=subprocess.PIPE,
+                    timeout=5)
             p.dead.wait()
             out = p.stdout_reader.get()
             self.assert_(len(out) <= 4096013, len(out))
             self.assert_(out.endswith('+++ DISCARDED'), out[:-10240])
-        gevent.spawn(_test)
+        greenlet = gevent.spawn(_test)
         gevent_wait()
+        greenlet.get(block=False)
 
     def test_timeout_is_enforced(self):
         def _test():
             p = MonitoredSubprocess(['sleep', '10'], timeout=1)
             p.dead.wait()
             self.assertEquals(p.returncode, -signal.SIGTERM)
-        gevent.spawn(_test)
+        greenlet = gevent.spawn(_test)
         gevent_wait()
+        greenlet.get(block=False)
 
     def test_child_is_process_group_leader(self):
         def _test():
-            p = MonitoredSubprocess(['sleep', '1'])
+            p = MonitoredSubprocess(['sleep', '1'], timeout=2)
             self._assert_child_is_process_group_leader(p)
             p.dead.wait()
-        gevent.spawn(_test)
+        greenlet = gevent.spawn(_test)
         gevent_wait()
+        greenlet.get(block=False)
 
     def test_process_group_is_killed_on_leader_timeout(self):
         # This test makes the following process tree:
@@ -86,8 +92,9 @@ class SubprocessTest(unittest.TestCase):
             p.dead.wait()
             self.assertIn(p.returncode, [-signal.SIGTERM, -signal.SIGKILL])
             self._assert_process_group_is_removed(p.pid)
-        gevent.spawn(_test)
+        greenlet = gevent.spawn(_test)
         gevent_wait()
+        greenlet.get(block=False)
 
     def test_orphan_child_is_killed_when_parent_exits(self):
         # This test makes the following process tree:
@@ -113,15 +120,17 @@ class SubprocessTest(unittest.TestCase):
             p.dead.wait()
             self.assertEquals(p.returncode, 0)
             self._assert_process_group_is_removed(p.pid)
-        gevent.spawn(_test)
+        greenlet = gevent.spawn(_test)
         gevent_wait()
+        greenlet.get(block=False)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=832250
     def test_reaper_race(self):
         def _test():
             procs = [MonitoredSubprocess(['true'], timeout=10)
-                    for _ in xrange(800)]
+                    for _ in xrange(600)]
             for p in procs:
                 p.dead.wait()
-        gevent.spawn(_test)
+        greenlet = gevent.spawn(_test)
         gevent_wait()
+        greenlet.get(block=False)

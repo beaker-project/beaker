@@ -124,12 +124,6 @@ class BeakerWorkflow(BeakerCommand):
             help="Print generated job XML",
         )
         self.parser.add_option(
-            "--verbose",
-            default=False,
-            action="store_true",
-            help="Print informative messages to stdout"
-        )
-        self.parser.add_option(
             "--pretty-xml", "--prettyxml",
             action="callback", 
             callback=prettyxml,

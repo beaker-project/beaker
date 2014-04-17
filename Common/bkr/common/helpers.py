@@ -103,7 +103,7 @@ class SensitiveStr(str):
     def __repr__(self):
         return '<repr blocked>'
     def decode(self, *args, **kwargs):
-        return SensitiveUnicode(super(SensitiveUnicode, self).decode(*args, **kwargs))
+        return SensitiveUnicode(super(SensitiveStr, self).decode(*args, **kwargs))
 
 # Would be nice if Python did this for us: http://bugs.python.org/issue8604
 class AtomicFileReplacement(object):

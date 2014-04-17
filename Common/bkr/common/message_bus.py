@@ -44,7 +44,8 @@ class BeakerBus(object):
 
 
     def do_krb_auth(self):
-        raise NotImplementedError('Configured to use kerberos auth but not implemented by class %s' % self.__name__)
+        raise NotImplementedError('Configured to use kerberos auth '
+                'but not implemented by class %s' % self.__class__.__name__)
 
     def _manage_initial_connection(self):
         """Connect to a broker, return connection object.

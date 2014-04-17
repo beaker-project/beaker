@@ -194,10 +194,8 @@ class Workflow_Installer_Test(BeakerWorkflow):
         return os_major
 
     def run(self, *args, **kwargs):
-        verbose = kwargs.get("verbose", False)
         debug  = kwargs.get("debug", False)
         dryrun = kwargs.get("dryrun", False)
-        wait = kwargs.get("wait", False)
         family = kwargs.get("family", None)
         distro = kwargs.get("distro", None)
         arches = kwargs.get("arches", [])
@@ -318,20 +316,13 @@ class Workflow_Installer_Test(BeakerWorkflow):
         if debug:
             print jobxml
 
-        if not hasattr(self,'hub'):
-            self.set_hub(**kwargs)
-
-        submitted_jobs = []
-        failed = False
-        if verbose:
-            print "Dry run only, nothing submitted."
         if not dryrun:
+            if not hasattr(self,'hub'):
+                self.set_hub(**kwargs)
             try:
-                submitted_jobs.append(self.hub.jobs.upload(jobxml))
+                job = self.hub.jobs.upload(jobxml)
             except Exception, ex:
-                failed = True
                 print >>sys.stderr, unicode(ex)
-            if verbose:
-                print "Submitted: %s" % submitted_jobs
-            if failed:
                 sys.exit(1)
+            else:
+                print "Submitted: %s" % job

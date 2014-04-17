@@ -26,6 +26,8 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
                     group=data_setup.create_group(group_name=u'detectives'))
             p.add_rule(permission=SystemPermission.loan_self,
                     group=data_setup.create_group(group_name=u'sidekicks'))
+            p.add_rule(permission=SystemPermission.loan_self,
+                    group=data_setup.create_group(group_name=u'test?123#123'))
             p.add_rule(permission=SystemPermission.control_system,
                     user=data_setup.create_user(user_name=u'poirot'))
             p.add_rule(permission=SystemPermission.loan_any,
@@ -42,7 +44,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         # Not sure, so let's do both for now.
         cell = pane.find_element_by_xpath('.//table/tbody'
                 '/tr[contains(@class, "dirty")]'
-                '/td[1][text()="%s"]' % row)
+                '/td[1][normalize-space(string(.))="%s"]' % row)
         self.assertNotEquals(cell.value_of_css_property('background-color'),
                 'transparent')
 
@@ -50,7 +52,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         pane = self.browser.find_element_by_id('access-policy')
         cell = pane.find_element_by_xpath('.//table/tbody'
                 '/tr[not(contains(@class, "dirty"))]'
-                '/td[1][text()="%s"]' % row)
+                '/td[1][normalize-space(string(.))="%s"]' % row)
         self.assertEquals(cell.value_of_css_property('background-color'),
                 'transparent')
 
@@ -62,7 +64,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         cols = pane.find_elements_by_xpath('.//table/thead/tr[1]/th')
         col_num = [col.text for col in cols].index(column) + 1
         # using * in the xpaths below since it could be td or th
-        row_elem = pane.find_element_by_xpath('.//table/tbody/tr[./*[1]/text()="%s"]' % row)
+        row_elem = pane.find_element_by_xpath('.//table/tbody/tr[normalize-space(string(.))="%s"]' % row)
         return row_elem.find_element_by_xpath('./*[%d]/input[@type="checkbox"]' % col_num)
 
     def check_checkboxes(self):
@@ -183,6 +185,18 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
                 'contains(string(.), "beatles")]')
         group_input.send_keys('\n')
         self.find_checkbox('beatles', 'Edit this policy')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1073767
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1085028
+    def test_click_group_name(self):
+        b = self.browser
+        login(b, user=self.system_owner.user_name, password='owner')
+        b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
+        b.find_element_by_link_text('Access Policy').click()
+        pane = b.find_element_by_id('access-policy')
+        pane.find_element_by_link_text('test?123#123').click()
+        b.find_element_by_xpath('//h1[text()="Group test?123#123"]')
+
 
 class SystemAccessPolicyHTTPTest(unittest.TestCase):
     """

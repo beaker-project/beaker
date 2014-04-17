@@ -21,6 +21,9 @@ RECIPEID={{ recipe.id }}
 FILE_SIZE_LIMIT=200000000
 TASK_SIZE_LIMIT=800000000
 
+{% if beah_no_ipv6 is defined %}
+IPV6_DISABLED=True
+{% endif %}
 EOF
 
 cp /etc/beah.conf{,.default}
@@ -35,13 +38,22 @@ CONSOLE_LOG=Console
 # To turn on debug logging uncomment the following line. Warning: this is
 # rather verbose! This also requires LOG to be Debug.
 #DEVEL=True
+{% if beah_no_ipv6 is defined %}
+IPV6_DISABLED=True
+{% endif %}
 
 [TASK]
 INTERFACE=
 
 EOF
 
+{% if systemd %}
+systemctl enable beah-srv
+systemctl enable beah-beaker-backend
+systemctl enable beah-fwd-backend
+{% else %}
 chkconfig --level 345 beah-srv on
 chkconfig --level 345 beah-beaker-backend on
 chkconfig --level 345 beah-fwd-backend on
+{% endif %}
 {% snippet 'default_rhts_compat' %}

@@ -350,7 +350,7 @@ class TaskBase(object):
         _change_status will update the status if needed
         Returns True when status is changed
         """
-        current_status = self.status
+        current_status = self.status #pylint: disable=E0203
         if current_status != new_status:
             # Sanity check to make sure the status never goes backwards.
             if isinstance(self, (Recipe, RecipeTask)) and \
@@ -396,6 +396,7 @@ class TaskBase(object):
                                 TaskResult.fail,
                                 TaskResult.panic])
     @is_failed.expression
+    @classmethod
     def is_failed(cls):
         """
         Return SQL expression that is true if the task has failed
@@ -1041,7 +1042,6 @@ class Job(TaskBase, DeclarativeMappedObject):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    #subtask_id_list = ["R:%s" % r.id for r in self.all_recipes]
                    )
 
     def all_recipes(self):
@@ -1615,7 +1615,6 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    #subtask_id_list = ["R:%s" % r.id for r in self.recipes]
                    )
 
     def allowed_priorities(self,user):
@@ -1816,7 +1815,6 @@ class Recipe(TaskBase, DeclarativeMappedObject):
 
     def generated_install_options(self):
         ks_meta = {
-            'packages': ':'.join(p.package for p in self.packages),
             'customrepos': [dict(repo_id=r.name, path=r.url) for r in self.repos],
             'taskrepo': '%s,%s' % self.task_repo(),
             'partitions': self.partitionsKSMeta,
@@ -2305,9 +2303,6 @@ class Recipe(TaskBase, DeclarativeMappedObject):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-# Disable tasks status, TaskWatcher needs to do this differently.  its very resource intesive to make
-# so many xmlrpc calls.
-#                    subtask_id_list = ["T:%s" % t.id for t in self.tasks],
                    )
 
     def extend(self, kill_time):
@@ -2888,7 +2883,6 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    #subtask_id_list = ["TR:%s" % tr.id for tr in self.results]
                    )
 
     def no_value(self):

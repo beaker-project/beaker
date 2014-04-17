@@ -71,7 +71,7 @@ install
 {% if distro is osmajor('Fedora17') and distro_tree is arch('armhfp') %}
 uboot-tools
 {% endif %}
-{% if packages %}
+{% if recipe or packages is defined %}
 {% snippet 'rhts_packages' %}
 {% else %}
 @development
