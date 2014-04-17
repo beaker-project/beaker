@@ -982,7 +982,7 @@ class TestBeakerd(unittest.TestCase):
             user = data_setup.create_user()
             system = data_setup.create_system(owner=user, status=u'Automated',
                     shared=True, lab_controller=self.lab_controller)
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
             job = data_setup.create_job(owner=user, distro_tree=distro_tree)
             recipe = job.recipesets[0].recipes[0]
             recipe._host_requires = (
@@ -1012,7 +1012,7 @@ class TestBeakerd(unittest.TestCase):
             user = data_setup.create_user()
             system = data_setup.create_system(owner=user, status=u'Automated', shared=True,
                     lab_controller=self.lab_controller)
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
             job = data_setup.create_job(owner=user, distro_tree=distro_tree)
             recipe = job.recipesets[0].recipes[0]
             recipe.ks_meta = "harness='myharness'"
@@ -1101,7 +1101,7 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             system = data_setup.create_system(shared=True,
                     lab_controller=self.lab_controller)
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
             job = data_setup.create_job(distro_tree=distro_tree)
             recipe = job.recipesets[0].recipes[0]
             recipe._host_requires = (u"""
@@ -1146,7 +1146,7 @@ class TestBeakerd(unittest.TestCase):
         with session.begin():
             system = data_setup.create_system(shared=True,
                     lab_controller=self.lab_controller)
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
             task = Task.by_id(self.task_id)
             recipe = data_setup.create_recipe(distro_tree=distro_tree,
                     task_list=[task])
@@ -1228,7 +1228,7 @@ class TestBeakerd(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=826379
     def test_recipe_install_options_can_remove_system_options(self):
         with session.begin():
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
             system = data_setup.create_system(shared=True,
                     lab_controller=self.lab_controller)
             system.provisions[distro_tree.arch] = Provision(arch=distro_tree.arch,
@@ -1262,7 +1262,7 @@ class TestBeakerd(unittest.TestCase):
         # URL contains ~ which is quoted by pipes.quote
         bad_arg = 'inst.updates=http://people.redhat.com/~dlehman/updates-1054806.1.img'
         with session.begin():
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
             system = data_setup.create_system(shared=True,
                     lab_controller=self.lab_controller)
             job = data_setup.create_job(distro_tree=distro_tree)

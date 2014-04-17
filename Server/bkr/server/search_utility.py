@@ -26,9 +26,9 @@ def get_alias_target(aliased_class):
     # on earlier versions we just hack it
     try:
         from sqlalchemy import inspect
-        return inspect(aliased_class).mapper.entity
     except ImportError:
         return aliased_class._AliasedClass__target
+    return inspect(aliased_class).mapper.entity #pylint: disable=E1102
 
 class MyColumn(object):
     """

@@ -37,6 +37,8 @@ the effective install options for each recipe.
    Describe syntax of the options, rules for parsing/unparsing, and how 
    combining/overriding works.
 
+.. _kickstart-metadata:
+
 Kickstart metadata
 ~~~~~~~~~~~~~~~~~~
 
@@ -61,6 +63,10 @@ correspond to the similarly-named kickstart option.
     as ``beah-0.6.48``). The default is ``beah`` which installs the latest 
     version from the harness repos. This variable has no effect when using 
     alternative harnesses.
+
+``beah_no_ipv6``
+    If specified, Beah will function in IPv4 only mode even if IPv6
+    connectivity is possible.
 
 ``ethdevices=<module>[,<module>...]``
     Comma-separated list of network modules to be loaded during installation.
@@ -120,6 +126,15 @@ correspond to the similarly-named kickstart option.
 ``no_clock_sync``
     Omits additional packages and scripts which ensure the system clock is 
     synchronized after installation.
+
+``packages=<package>:<package>``
+    Colon-separated list of package names to be installed during provisioning. 
+    If this variable is set, it replaces any packages defined by default in the 
+    kickstart templates. It also replaces any packages requested by the recipe, 
+    including task requirements.
+
+    In a recipe, considering using the ``<package/>`` element instead. This 
+    augments the package list instead of replacing it completely.
 
 ``password=<encrypted>``
     Root password to use. Must be encrypted in the conventional 

@@ -31,12 +31,44 @@ logger = logging.getLogger(__name__)
 def smart_bool(s):
     if s is True or s is False:
         return s
-    t = str(s).strip().lower()
+    t = unicode(s).strip().lower()
     if t == 'true':
         return True
     if t == 'false':
         return False
     return s
+
+# Adapted from the recipe at 
+# https://docs.python.org/2/library/csv.html#csv-examples
+class UnicodeDictReader():
+
+    def __init__(self, f, **kw):
+        self.reader = csv.DictReader(f, **kw)
+
+    def next(self):
+        row = self.reader.next()
+        d = {}
+        for k, v in row.iteritems():
+
+            if isinstance(k, str):
+                k = k.decode('utf8')
+            if isinstance(v, str):
+                v = v.decode('utf8')
+
+            d[k] = v
+
+        return d
+
+    def __iter__(self):
+        return self
+
+    @property
+    def line_num(self):
+        return self.reader.line_num
+
+    @property
+    def fieldnames(self):
+        return self.reader.fieldnames
 
 class CSV(RPCRoot):
     # For XMLRPC methods in this class.
@@ -111,18 +143,62 @@ class CSV(RPCRoot):
                                      disposition="attachment",
                                      name="%s.csv" % csv_type)
 
+    def _import_row(self, data, log):
+        if data['csv_type'] in system_types and ('fqdn' in data or 'id' in data):
+            if data.get('id', None):
+                try:
+                    system = System.query.filter(System.id == data['id']).one()
+                except InvalidRequestError as e:
+                    raise ValueError('Non-existent system id')
+            else:
+                try:
+                    system = System.query.filter(System.fqdn == data['fqdn']).one()
+                except InvalidRequestError:
+                    # Create new system with some defaults
+                    # Assume the system is broken until proven otherwise.
+                    # Also assumes its a machine.  we have to pick something
+                    system = System(fqdn=data['fqdn'],
+                                owner=identity.current.user,
+                                type=SystemType.machine,
+                                status=SystemStatus.broken)
+                    session.add(system)
+                    # new systems are visible to everybody by default
+                    system.custom_access_policy = SystemAccessPolicy()
+                    system.custom_access_policy.add_rule(
+                            SystemPermission.view, everybody=True)
+            if not system.can_edit(identity.current.user):
+                raise ValueError('You are not the owner of %s' % system.fqdn)
+            # we change the FQDN only when a valid system id is supplied
+            if not data.get('id', None):
+                data.pop('fqdn')
+            self.from_csv(system, data, log)
+        elif data['csv_type'] == 'user_group' and 'user' in data:
+            user = User.by_user_name(data['user'])
+            if user is None:
+                raise ValueError('%s is not a valid user' % data['user'])
+            CSV_GroupUser.from_csv(user, data, log)
+        else:
+            raise ValueError('Invalid csv_type %s or missing required fields'
+                    % data['csv_type'])
+
     @expose(template='bkr.server.templates.csv_import')
     @identity.require(identity.in_group('admin'))
     def action_import(self, csv_file, *args, **kw):
         """
         TurboGears method to import data from csv
         """
+
         log = []
         try:
             # ... process CSV file contents here ...
             missing = object()
-            reader = csv.DictReader(csv_file.file, restkey=missing, restval=missing)
+            reader = UnicodeDictReader(csv_file.file, restkey=missing, restval=missing)
+            is_empty = True
+
             for data in reader:
+
+                is_empty = False
+
                 if missing in data:
                     log.append('Too many fields on line %s (expecting %s)'
                             % (reader.line_num, len(reader.fieldnames)))
@@ -133,71 +209,19 @@ class CSV(RPCRoot):
                     log.append('Missing fields on line %s: %s' % (reader.line_num,
                             ', '.join(missing_fields)))
                     continue
-                if 'csv_type' in data:
-                    if data['csv_type'] in system_types and ('fqdn' in data or 'id' in data):
-                        if data.get('id', None):
-                            try:
-                                system = System.query.filter(System.id == data['id']).one()
-                            except InvalidRequestError as e:
-                                log.append('Error importing system on line %s: Non-existent system id' %
-                                           reader.line_num)
-                                continue
-                        else:
-                            try:
-                                system = System.query.filter(System.fqdn == data['fqdn']).one()
-                            except InvalidRequestError:
-                                # Create new system with some defaults
-                                # Assume the system is broken until proven otherwise.
-                                # Also assumes its a machine.  we have to pick something
-                                try:
-                                    system = System(fqdn=data['fqdn'],
-                                                owner=identity.current.user,
-                                                type=SystemType.machine,
-                                                status=SystemStatus.broken)
-                                    session.add(system)
-                                except ValueError as e:
-                                    log.append('Error importing system on line %s: %s' %
-                                               (reader.line_num, str(e)))
-                                    continue
-                                # new systems are visible to everybody by default
-                                system.custom_access_policy = SystemAccessPolicy()
-                                system.custom_access_policy.add_rule(
-                                        SystemPermission.view, everybody=True)
+                if 'csv_type' not in data:
+                    log.append('Missing csv_type on line %s' % reader.line_num)
+                    continue
+                try:
+                    with session.begin_nested():
+                        self._import_row(data, log)
+                except Exception, e:
+                    # log and continue processing more rows
+                    log.append('Error importing line %s: %s' % (reader.line_num, e))
 
-                        if system.can_edit(identity.current.user):
-                            # we change the FQDN only when a valid system id is supplied
-                            if not data.get('id', None):
-                                data.pop('fqdn')
-                            try:
-                                self.from_csv(system, data, log)
-                            except ValueError as e:
-                                log.append('Error importing system on line %s: %s' %
-                                           (reader.line_num, str(e)))
-                                if system.id:
-                                    # System already existed but some or all of the
-                                    #  import data was invalid.
-                                    session.expire(system)
-                                else:
-                                    # System didn't exist before import but some
-                                    # or all of the import data was invalid.
-                                    session.expunge(system)
-                                    del(system)
-                            else:
-                                session.add(system)
-                                session.flush()
-                        else:
-                            log.append("You are not the owner of %s" % system.fqdn)
-                    elif data['csv_type'] == 'user_group' and \
-                      'user' in data:
-                        user = User.by_user_name(data['user'])
-                        if user:
-                            CSV_GroupUser.from_csv(user, data, log)
-                        else:
-                            log.append('%s is not a valid user' % data['user'])
-                    else:
-                        log.append("Invalid csv_type %s or missing required fields" % data['csv_type'])
-                else:
-                    log.append("Missing csv_type from record")
+            if is_empty:
+                log.append('Empty CSV file supplied')
+
         except csv.Error, e:
             session.rollback()
             log.append('Error parsing CSV file: %s' % e)
@@ -256,7 +280,7 @@ class CSV(RPCRoot):
                     newdata = smart_bool(data[key])
                 else:
                     newdata = None
-                if str(newdata) != str(current_data):
+                if unicode(newdata) != unicode(current_data):
                     activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '%s' % current_data, '%s' % newdata)
                     system.activity.append(activity)
                     setattr(csv_object,key,newdata)
@@ -277,7 +301,7 @@ class CSV_System(CSV):
                 'serial', 'vendor']
 
     spec_keys = ['arch', 'lab_controller', 'owner', 
-                 'secret', 'status','type','cc']
+                 'status','type','cc']
 
     csv_keys = reg_keys + spec_keys
 
@@ -298,7 +322,7 @@ class CSV_System(CSV):
                 else:
                     newdata = None
                 current_data = getattr(system, key, None)
-                if str(newdata) != str(current_data):
+                if unicode(newdata) != unicode(current_data):
                     setattr(system,key,newdata)
                     activity = SystemActivity(identity.current.user,
                                               'CSV', 'Changed', key, '%s' %
@@ -480,7 +504,7 @@ class CSV_Power(CSV):
                 else:
                     newdata = None
                 current_data = getattr(csv_object, key, None)
-                if str(newdata) != str(current_data):
+                if unicode(newdata) != unicode(current_data):
                     activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '***', '***')
                     system.activity.append(activity)
                     setattr(csv_object,key,newdata)
@@ -571,8 +595,8 @@ class CSV_Exclude(CSV):
 
         if data['update'] and data['family']:
             try:
-                osversion = OSVersion.by_name(OSMajor.by_name(str(data['family'])),
-                                                            str(data['update']))
+                osversion = OSVersion.by_name(OSMajor.by_name(unicode(data['family'])),
+                                                            unicode(data['update']))
             except InvalidRequestError:
                 log.append("%s: Invalid Family %s Update %s" % (system.fqdn,
                                                         data['family'],
@@ -671,7 +695,7 @@ class CSV_Install(CSV):
                     log.append("%s: Error! You must specify Family along with Update" % system.fqdn)
                     return False
                 try:
-                    update = OSVersion.by_name(family, str(update))
+                    update = OSVersion.by_name(family, unicode(update))
                 except InvalidRequestError:
                     log.append("%s: Error! Invalid update %s" % (system.fqdn,
                                                              data['update']))

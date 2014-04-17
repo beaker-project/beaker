@@ -96,11 +96,6 @@ class TaskWatcher(object):
             print "No such task id: %s" % task.task_id
             sys.exit(1)
 
-        # watch new tasks
-        for i in task.task_info.get("subtask_id_list", []):
-            if i not in self.subtask_dict:
-                self.subtask_dict[i] = Task(task.hub, i, self.indentation_level + 1)
-
         changed = False
         state = task.task_info["state"]
         if last:

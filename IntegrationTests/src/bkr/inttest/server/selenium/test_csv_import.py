@@ -10,7 +10,8 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, logout, is_text_present
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.assertions import assert_has_key_with_value
-from bkr.server.model import Arch, System, OSMajor, SystemPermission
+from bkr.server.model import Arch, System, OSMajor, SystemPermission, \
+        SystemStatus
 from turbogears.database import session
 import pkg_resources
 import unittest2 as unittest
@@ -54,7 +55,7 @@ class CSVImportTest(WebDriverTestCase):
                          u'system,'',Under my desk,ia64').encode('utf8'))
         self.assertEquals(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
-                          "Error importing system on line 2: "
+                          "Error importing line 2: "
                           "System must have an associated FQDN")
 
         # attempting to import a system with an invalid FQDN should fail
@@ -62,7 +63,7 @@ class CSVImportTest(WebDriverTestCase):
                          u'system,invalid--fqdn,Under my desk,ia64').encode('utf8'))
         self.assertEquals(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
-                          "Error importing system on line 2: "
+                          "Error importing line 2: "
                           "System has an invalid FQDN: invalid--fqdn")
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=987157
@@ -82,7 +83,7 @@ class CSVImportTest(WebDriverTestCase):
         self.assertEquals(self.system.date_modified, orig_date_modified)
         self.assertEquals(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
-                          "Error importing system on line 2: "
+                          "Error importing line 2: "
                           "System has an invalid FQDN: new--fqdn.name")
 
         # attempt to rename a non-existent system should fail
@@ -96,7 +97,7 @@ class CSVImportTest(WebDriverTestCase):
         self.assertEquals(self.system.date_modified, orig_date_modified)
         self.assertEquals(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
-                          "Error importing system on line 2: "
+                          "Error importing line 2: "
                           "Non-existent system id")
 
         # successfully rename existing system
@@ -185,7 +186,7 @@ class CSVImportTest(WebDriverTestCase):
 
         self.assertEquals(self.browser.find_element_by_xpath(
             '//table[@id="csv-import-log"]//td').text,
-                          "Error importing system on line 3: "
+                          "Error importing line 3: "
                           "System has an invalid FQDN: --%s"%fqdn)
 
         with session.begin():
@@ -329,6 +330,49 @@ class CSVImportTest(WebDriverTestCase):
         self.assertEquals(self.browser.find_element_by_xpath(
                 '//table[@id="csv-import-log"]//td').text,
                 'Error parsing CSV file: line contains NULL byte')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1085047
+    def test_rolls_back_on_error(self):
+        # The bug was that a row contained invalid data, which meant it was 
+        # being discarded, but changes to system_status_duration were 
+        # nevertheless being committed.
+        # To reproduce, we upload a CSV which changes 'status' successfully 
+        # (thereby causing a row to be added to system_status_duration) but 
+        # then errors out on 'secret' which does not accept empty string.
+        with session.begin():
+            self.assertEquals(len(self.system.status_durations), 1)
+            self.assertEquals(self.system.status_durations[0].status,
+                    SystemStatus.automated)
+            self.assertEquals(self.system.status_durations[0].finish_time, None)
+        login(self.browser)
+        self.import_csv((u'csv_type,id,status,secret\n'
+                    u'system,%s,Manual,\n' % self.system.id).encode('utf8'))
+        import_log = self.browser.find_element_by_xpath(
+                '//table[@id="csv-import-log"]//td').text
+        self.assertIn('Invalid secret None', import_log)
+        with session.begin():
+            session.expire_all()
+            self.assertEquals(self.system.status, SystemStatus.automated)
+            self.assertEquals(len(self.system.status_durations), 1)
+            self.assertEquals(self.system.status_durations[0].finish_time, None)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1085238
+    def test_error_on_empty_csv(self):
+        login(self.browser)
+        self.import_csv((u'csv_type,fqdn,location,arch\n').encode('utf8'))
+        import_log = self.browser.find_element_by_xpath(
+                '//table[@id="csv-import-log"]//td').text
+        self.assertIn('Empty CSV file supplied', import_log)
+
+    def test_system_unicode(self):
+        login(self.browser)
+        self.import_csv((u'csv_type,fqdn,location,arch\n'
+                         u'system,%s,在我的办公桌,ia64' % self.system.fqdn) \
+                        .encode('utf8'))
+        self.failUnless(is_text_present(self.browser, "No Errors"))
+        with session.begin():
+            session.refresh(self.system)
+            self.assertEquals(self.system.location, u'在我的办公桌')
 
 if __name__ == "__main__":
     unittest.main()

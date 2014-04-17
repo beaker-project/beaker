@@ -8,7 +8,9 @@ import unittest
 import pkg_resources
 import lxml.etree
 
-class SchemaTest:
+class SchemaTestBase(unittest.TestCase):
+
+    schema_doc = None # filled by setUpClass
 
     def assert_valid(self, xml):
         schema = lxml.etree.RelaxNG(self.schema_doc)
@@ -20,7 +22,7 @@ class SchemaTest:
         messages = [str(e.message) for e in schema.error_log]
         self.assert_(error_message in messages, messages)
 
-class TaskSchemaTest(unittest.TestCase, SchemaTest):
+class TaskSchemaTest(SchemaTestBase):
 
     @classmethod
     def setUpClass(cls):
@@ -80,7 +82,7 @@ class TaskSchemaTest(unittest.TestCase, SchemaTest):
            ''')
 
 
-class JobSchemaTest(unittest.TestCase, SchemaTest):
+class JobSchemaTest(SchemaTestBase):
 
     @classmethod
     def setupClass(cls):

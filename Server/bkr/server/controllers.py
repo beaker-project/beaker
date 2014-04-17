@@ -1792,10 +1792,9 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @cherrypy.expose
-    # Testing auth via xmlrpc
-    #@identity.require(identity.in_group("admin"))
-    def lab_controllers(self, *args):
-        return [lc.fqdn for lc in LabController.query]
+    def lab_controllers(self):
+        query = LabController.query.filter(LabController.removed == None)
+        return [lc.fqdn for lc in query]
 
     @cherrypy.expose
     def legacypush(self, fqdn=None, inventory=None):

@@ -48,6 +48,18 @@ class SchemaSanityTest(unittest.TestCase):
                     'WHERE table_schema = DATABASE() AND table_name = %s',
                     table), 'InnoDB')
 
+class ModelInitializationTest(unittest.TestCase):
+
+    # We are testing the database creation done by bkr.server.tools.init. 
+    # However do not actually invoke that here, because it would be too 
+    # complicated to set up properly. Instead we just test the initialization 
+    # that was done by bkr.inttest.setup_package for this test run.
+
+    def test_admin_user_owns_admin_group(self):
+        admin_user = User.by_user_name(data_setup.ADMIN_USER)
+        admin_group = Group.by_name(u'admin')
+        self.assertTrue(admin_group.has_owner(admin_user))
+
 class ActivityMixinTest(unittest.TestCase):
 
     def test_field_names_correct(self):

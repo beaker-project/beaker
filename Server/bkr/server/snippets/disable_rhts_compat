@@ -1,15 +1,4 @@
-{% set disable_rhts_compat = False %}
-{% if distro.osversion.osmajor.osmajor.startswith('Fedora') %}
-{% set releasever = distro.osversion.osmajor.osmajor[6:] %}
-{% if releasever|int >= 15 or releasever == 'rawhide' %}
-{% set disable_rhts_compat = True %}
-{% endif %}
-{% else %}
-{% if distro is osmajor('RedHatEnterpriseLinux7') %}
-{% set disable_rhts_compat = True %}
-{% endif %}
-{% endif %}
-{% if disable_rhts_compat == True %}
+{% if systemd == True %}
 # Disable rhts-compat for Fedora15/RHEL7 and newer.
 cat >> /etc/profile.d/task-overrides-rhts.sh <<END
 export RHTS_OPTION_COMPATIBLE=

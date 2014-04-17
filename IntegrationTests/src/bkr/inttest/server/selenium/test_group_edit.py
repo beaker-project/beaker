@@ -660,6 +660,22 @@ class TestGroupsWD(WebDriverTestCase):
         self.assertTrue(user_name in [member1.user_name, member2.user_name])
         self.assertTrue(ownership, 'No')
 
+    def test_visit_edit_page_with_group_id_or_name(self):
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            group = data_setup.create_group(owner=user)
+
+        b = self.browser
+        login(b, user=user.user_name, password='password')
+
+        b.get(get_server_base() + 'groups/edit?group_id=%s' % group.group_id)
+        self.assertEquals(b.find_element_by_xpath('//input[@id="Group_group_name"]').get_attribute('value'),
+                          group.group_name)
+
+        b.get(get_server_base() + 'groups/edit?group_name=%s' % group.group_name)
+        self.assertEquals(b.find_element_by_xpath('//input[@id="Group_group_name"]').get_attribute('value'),
+                          group.group_name)
+
 
 class GroupSystemTest(WebDriverTestCase):
 

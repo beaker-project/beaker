@@ -431,7 +431,7 @@ class CommandQueueXmlRpcTest(XmlRpcTestCase):
 
     def test_purge_stale_running_commands(self):
         with session.begin():
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
             # Helper to build the commands
             def _make_command(lc=None, creation_date=None):
                 job = data_setup.create_job(distro_tree=distro_tree)
@@ -541,7 +541,7 @@ class TestPowerFailures(XmlRpcTestCase):
                                               lab_controller = self.lab_controller,
                                               status = SystemStatus.automated,
                                               shared = True)
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
             job = data_setup.create_job(distro_tree=distro_tree)
             job.recipesets[0].recipes[0]._host_requires = (u"""
                 <hostRequires>
@@ -579,7 +579,7 @@ class TestPowerFailures(XmlRpcTestCase):
             system = data_setup.create_system(
                     lab_controller=self.lab_controller,
                     status=SystemStatus.automated, shared=True)
-            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora')
+            distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20')
             job = data_setup.create_job(distro_tree=distro_tree)
             job.recipesets[0].recipes[0]._host_requires = (u"""
                 <hostRequires>

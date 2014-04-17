@@ -1372,6 +1372,7 @@ class SystemAccessPolicy(DeclarativeMappedObject):
                 for rule in self.rules)
 
     @grants.expression
+    @classmethod
     def grants(cls, user, permission):
         # need to avoid passing an empty list to in_
         clauses = [SystemAccessPolicyRule.user == user, SystemAccessPolicyRule.everybody]
@@ -1390,6 +1391,7 @@ class SystemAccessPolicy(DeclarativeMappedObject):
                 for rule in self.rules)
 
     @grants_everybody.expression
+    @classmethod
     def grants_everybody(cls, permission):
         return cls.rules.any(and_(SystemAccessPolicyRule.permission == permission,
                 SystemAccessPolicyRule.everybody))

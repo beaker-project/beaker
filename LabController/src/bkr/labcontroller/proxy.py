@@ -38,6 +38,7 @@ from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.log_storage import LogStorage
 import utils
 try:
+    #pylint: disable=E0611
     from subprocess import check_output
 except ImportError:
     from utils import check_output
@@ -703,7 +704,7 @@ class Proxy(ProxyHelper):
     def status_watchdog(self, task_id):
         """ Ask the scheduler how many seconds are left on a watchdog for this task
         """
-        logger.debug("status_watchdog %s %s", task_id)
+        logger.debug("status_watchdog %s", task_id)
         return self.hub.recipes.tasks.watchdog(task_id)
 
     def task_stop(self,
@@ -848,7 +849,7 @@ class ProxyHTTP(object):
     def _update_status(self, task_id, status, message):
         status = status.lower()
         if status not in ['running', 'completed', 'aborted']:
-            raise BadRequest('Unknown status %r' % req.form['status'])
+            raise BadRequest('Unknown status %r' % status)
         try:
             if status == 'running':
                 self.hub.recipes.tasks.start(task_id)

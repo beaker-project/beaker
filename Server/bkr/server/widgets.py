@@ -19,7 +19,7 @@ from itertools import chain
 from turbogears import widgets
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 SingleSelectField, CheckBox, 
-                                HiddenField, RemoteForm, LinkRemoteFunction, CheckBoxList, JSLink,
+                                HiddenField, RemoteForm, LinkRemoteFunction, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, DataGrid, RepeatingFormField,
                                 CompoundWidget, AjaxGrid, CSSLink,
@@ -107,7 +107,7 @@ class LocalJSLink(JSLink):
     """
     order = 10
     def update_params(self, d): 
-        super(JSLink, self).update_params(d)
+        super(LocalJSLink, self).update_params(d)
         d["link"] = url(self.name)
 
 
@@ -116,7 +116,7 @@ class LocalCSSLink(CSSLink):
     Link to local CSS files
     """
     def update_params(self, d):
-        super(CSSLink, self).update_params(d)
+        super(LocalCSSLink, self).update_params(d)
         d["link"] = self.name
 
 
@@ -504,7 +504,7 @@ class LabControllerDataGrid(myPaginateDataGrid):
 class SingleSelectFieldJSON(SingleSelectField):
     params = ['for_column']
     def __init__(self,*args,**kw):
-        super(SingleSelectField,self).__init__(*args,**kw)
+        super(SingleSelectFieldJSON, self).__init__(*args, **kw)
 
         if kw.has_key('for_column'):
             self.for_column = kw['for_column']
@@ -519,8 +519,6 @@ class SingleSelectFieldJSON(SingleSelectField):
 
 
 class TextFieldJSON(TextField):
-    def __init__(self,*args,**kw):
-        super(TextField,self).__init__(*args,**kw)
     def __json__(self):
         return {
                 'field_id' : self.field_id,             
@@ -1755,7 +1753,7 @@ class LoanWidget(RPC, TableForm, CompoundWidget):
     def __init__(self, *args, **kw):
         super(LoanWidget, self).__init__(*args, **kw)
         self.javascript.extend([LocalJSLink('bkr',
-            '/static/javascript/loan_v1.js'),
+            '/static/javascript/loan_v2.js'),
             LocalJSLink('bkr',
             '/static/javascript/jquery.timers-1.2.js')])
 

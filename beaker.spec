@@ -27,12 +27,12 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1 
 # but that is not usable for the RPM Version because it sorts higher than 
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 0.16.1
+%global upstream_version 0.16.2
 
 # Note: While some parts of this file use "%{name}, "beaker" is still
 # hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.16.1
+Version:        0.16.2
 Release:        1%{?dist}
 Summary:        Filesystem layout for Beaker
 Group:          Applications/Internet
@@ -55,6 +55,8 @@ BuildRequires:  make
 BuildRequires:  python-setuptools
 BuildRequires:  python-nose >= 0.10
 BuildRequires:  python-unittest2
+# pylint only understands namespace packages since 1.0
+BuildRequires:  pylint >= 1.0
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
 BuildRequires:  python-docutils >= 0.6
@@ -109,6 +111,11 @@ BuildRequires:  python-passlib
 BuildRequires:  systemd
 %endif
 
+%endif
+
+%if %{with labcontroller}
+# These LC dependencies are needed in build due to tests
+BuildRequires:  python-gevent >= 1.0
 %endif
 
 # As above, these client dependencies are needed in build because of sphinx

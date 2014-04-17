@@ -27,8 +27,6 @@ def url_exists(url):
         urllib2.urlopen(url)
     except urllib2.URLError:
         return False
-    except urllib2.HTTPError:
-        return False
     except IOError, e:
         # errno 21 is you tried to retrieve a directory.  Thats ok. We just
         # want to ensure the path is valid so far.
@@ -126,6 +124,8 @@ class Parser(object):
     url = None
     parser = None
     last_modified = 0.0
+    infofile = None # overriden in subclasses
+    discinfo = None
 
     def parse(self, url):
         self.url = url
@@ -135,8 +135,6 @@ class Parser(object):
             self.parser.readfp(f)
             f.close()
         except urllib2.URLError:
-            return False
-        except urllib2.HTTPError:
             return False
         except ConfigParser.MissingSectionHeaderError, e:
             raise BX('%s/%s is not parsable: %s' % (self.url,
@@ -149,8 +147,6 @@ class Parser(object):
                 self.last_modified = f.read().split("\n")[0]
                 f.close()
             except urllib2.URLError:
-                pass
-            except urllib2.HTTPError:
                 pass
         return True
 
@@ -211,7 +207,7 @@ class Importer(object):
             'importer' % self.__class__.__name__)
 
 
-class ComposeInfoBase(object):
+class ComposeInfoMixin(object):
     @classmethod
     def is_importer_for(cls, url, options=None):
         parser = Cparser()
@@ -245,7 +241,7 @@ class ComposeInfoBase(object):
                                            variants=list(set(variants)))
 
 
-class ComposeInfoLegacy(ComposeInfoBase, Importer):
+class ComposeInfoLegacy(ComposeInfoMixin, Importer):
     """
     [tree]
     arches = i386,x86_64,ia64,ppc64,s390,s390x
@@ -309,7 +305,7 @@ class ComposeInfoLegacy(ComposeInfoBase, Importer):
 
         return exit_status
 
-class ComposeInfo(ComposeInfoBase, Importer):
+class ComposeInfo(ComposeInfoMixin, Importer):
     """
 [product]
 family = RHEL
@@ -692,7 +688,7 @@ sources = Workstation/source/SRPMS
         return exit_status
 
 
-class TreeInfoBase(object):
+class TreeInfoMixin(object):
     """
     Base class for TreeInfo methods
     """
@@ -909,7 +905,7 @@ class TreeInfoBase(object):
                                            variants=variants)
 
 
-class TreeInfoLegacy(TreeInfoBase, Importer):
+class TreeInfoLegacy(TreeInfoMixin, Importer):
     """
     This version of .treeinfo importer has a workaround for missing
     images-$arch sections.
@@ -1031,7 +1027,7 @@ class TreeInfoLegacy(TreeInfoBase, Importer):
         return repos
 
 
-class TreeInfoRhel5(TreeInfoBase, Importer):
+class TreeInfoRhel5(TreeInfoMixin, Importer):
     """
 [general]
 family = Red Hat Enterprise Linux Server
@@ -1124,7 +1120,7 @@ mainimage = images/stage2.img
         return repos
 
 
-class TreeInfoFedora(TreeInfoBase, Importer):
+class TreeInfoFedora(TreeInfoMixin, Importer):
     """
 
     """
@@ -1298,7 +1294,7 @@ class TreeInfoFedoraArm(TreeInfoFedora, Importer):
                          )
         return images
 
-class TreeInfoRhel6(TreeInfoBase, Importer):
+class TreeInfoRhel6(TreeInfoMixin, Importer):
     """
 [addon-ScalableFileSystem]
 identity = ScalableFileSystem/ScalableFileSystem.cert
@@ -1421,7 +1417,7 @@ repository = LoadBalancer
         return repos
 
 
-class TreeInfoRHS(TreeInfoBase, Importer):
+class TreeInfoRHS(TreeInfoMixin, Importer):
     """
     Importer for Red Hat Storage
 
@@ -1506,7 +1502,7 @@ mainimage = images/install.img
         return repos
 
 
-class TreeInfoRhel7(TreeInfoBase, Importer):
+class TreeInfoRhel7(TreeInfoMixin, Importer):
 
     @classmethod
     def is_importer_for(cls, url, options=None):
@@ -1556,7 +1552,7 @@ class TreeInfoRhel7(TreeInfoBase, Importer):
         return self.parser.get('images-%s' % self.tree['arch'],'initrd')
 
 
-class TreeInfoRhel(TreeInfoBase, Importer):
+class TreeInfoRhel(TreeInfoMixin, Importer):
     """
 [addon-HighAvailability]
 id = HighAvailability
