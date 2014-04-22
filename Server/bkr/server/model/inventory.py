@@ -45,6 +45,7 @@ from .distrolibrary import (Arch, KernelType, OSMajor, OSVersion, Distro, Distro
         LabControllerDistroTree)
 
 try:
+    #pylint: disable=E0611
     from sqlalchemy.sql.expression import true # SQLAlchemy 0.8+
 except ImportError:
     from sqlalchemy.sql import text
@@ -385,7 +386,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 self.user == user)
 
     @visible_to_user.expression
-    def visible_to_user(cls, user):
+    def visible_to_user(cls, user): #pylint: disable=E0213
         if user.is_admin() or user.has_permission(u'secret_visible'):
             return true()
         return or_(SystemAccessPolicy.grants(user, SystemPermission.view),
@@ -399,7 +400,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 self.custom_access_policy.grants_everybody(SystemPermission.view))
 
     @visible_to_anonymous.expression
-    def visible_to_anonymous(cls):
+    def visible_to_anonymous(cls): #pylint: disable=E0213
         return SystemAccessPolicy.grants_everybody(SystemPermission.view)
 
     @hybrid_property
@@ -420,7 +421,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     for e in self.excluded_osversion))
 
     @compatible_with_distro_tree.expression
-    def compatible_with_distro_tree(cls, distro_tree):
+    def compatible_with_distro_tree(cls, distro_tree): #pylint: disable=E0213
         return and_(cls.arch.contains(distro_tree.arch),
                 not_(cls.excluded_osmajor.any(and_(
                     ExcludeOSMajor.osmajor == distro_tree.distro.osversion.osmajor,
@@ -554,7 +555,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 (self.lab_controller is None or not self.lab_controller.disabled))
 
     @is_free.expression
-    def is_free(cls, user):
+    def is_free(cls, user): #pylint: disable=E0213
         cls._ensure_user_is_authenticated(user)
         return and_(cls.user == None,
                 or_(cls.loaned == None, cls.loaned == user),
@@ -675,7 +676,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         return False
 
     @can_reserve.expression
-    def can_reserve(cls, user):
+    def can_reserve(cls, user): #pylint: disable=E0213
         cls._ensure_user_is_authenticated(user)
         return or_(SystemAccessPolicy.grants(user, SystemPermission.reserve),
                 cls.owner == user,
