@@ -36,7 +36,6 @@ from bkr.server.bexceptions import BX, BeakerException, StaleTaskStatusException
 from bkr.server.helpers import make_link, make_fake_link
 from bkr.server.hybrid import hybrid_method, hybrid_property
 from bkr.server.installopts import InstallOptions, global_install_options
-from bkr.server.needpropertyxml import apply_system_filter
 from bkr.server.util import absolute_url
 from .types import (UUID, MACAddress, TaskResult, TaskStatus, TaskPriority,
         ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus)
@@ -2553,6 +2552,8 @@ class MachineRecipe(Recipe):
         Returns a query of systems which are candidates to run this recipe.
         """
         systems = System.all(self.recipeset.job.owner)
+        # delayed import to avoid circular dependency
+        from bkr.server.needpropertyxml import apply_system_filter
         systems = apply_system_filter(self.host_requires, systems)
         systems = systems.filter(System.can_reserve(self.recipeset.job.owner))
         # XXX adjust this condition when we have force=""
@@ -2570,6 +2571,8 @@ class MachineRecipe(Recipe):
         would its candidate systems be?
         """
         systems = System.all(user)
+        # delayed import to avoid circular dependency
+        from bkr.server.needpropertyxml import apply_system_filter
         systems = apply_system_filter(
                 '<hostRequires><system_type value="%s"/></hostRequires>' % cls.systemtype,
                 systems)
