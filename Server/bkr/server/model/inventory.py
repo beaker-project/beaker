@@ -1373,8 +1373,7 @@ class SystemAccessPolicy(DeclarativeMappedObject):
                 for rule in self.rules)
 
     @grants.expression
-    @classmethod
-    def grants(cls, user, permission):
+    def grants(cls, user, permission): #pylint: disable=E0213
         # need to avoid passing an empty list to in_
         clauses = [SystemAccessPolicyRule.user == user, SystemAccessPolicyRule.everybody]
         if user.groups:
@@ -1392,8 +1391,7 @@ class SystemAccessPolicy(DeclarativeMappedObject):
                 for rule in self.rules)
 
     @grants_everybody.expression
-    @classmethod
-    def grants_everybody(cls, permission):
+    def grants_everybody(cls, permission): #pylint: disable=E0213
         return cls.rules.any(and_(SystemAccessPolicyRule.permission == permission,
                 SystemAccessPolicyRule.everybody))
 

@@ -21,7 +21,7 @@ class hybrid_method(object):
 
     def __get__(self, instance, owner):
         if instance is None:
-            return self.expr.__get__(None, owner)
+            return self.expr.__get__(owner, owner.__class__)
         else:
             return self.func.__get__(instance, owner)
 
