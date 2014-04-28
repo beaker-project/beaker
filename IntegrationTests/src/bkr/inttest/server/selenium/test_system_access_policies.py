@@ -197,6 +197,20 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         pane.find_element_by_link_text('test?123#123').click()
         b.find_element_by_xpath('//h1[text()="Group test?123#123"]')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1086506
+    def test_add_rule_for_nonexistent_user(self):
+        b = self.browser
+        login(b, user=self.system_owner.user_name, password='owner')
+        b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
+        b.find_element_by_link_text('Access Policy').click()
+
+        pane = b.find_element_by_id('access-policy')
+        pane.find_element_by_xpath('.//input[@placeholder="Username"]')\
+            .send_keys('this_user_does_not_exist\n')
+        self.find_checkbox('this_user_does_not_exist', 'Edit this policy').click()
+        pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
+        pane.find_element_by_xpath('.//span[@class="sync-status" and '
+            'contains(string(.), "No such user")]')
 
 class SystemAccessPolicyHTTPTest(unittest.TestCase):
     """

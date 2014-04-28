@@ -252,6 +252,9 @@ Beaker 0.16.2
   (Contributed by Dan Callaghan)
 * :issue:`1085238`: Beaker now displays an error message when importing a CSV
   file which contains no rows. (Contributed by Amit Saha)
+* :issue:`999391`: The :guilabel:`Loan Settings` widget on the system page now
+  displays descriptive error messages from the server rather than just 
+  indicating that the request failed. (Contributed by Matt Jia)
 * :issue:`952635`: Package names containing colons are now correctly passed
   through to the ``%packages`` section of the kickstart. (Contributed by Dan 
   Callaghan)
