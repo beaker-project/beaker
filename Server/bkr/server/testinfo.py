@@ -235,7 +235,10 @@ class Parser:
             'ppc64', 
             's390', 
             's390x', 
-            'i386'
+            'i386',
+            'aarch64',
+            'arm',
+            'armhfp',
             ]
         
         self.valid_priorities = [
