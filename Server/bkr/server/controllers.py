@@ -371,8 +371,10 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def mine(self, *args, **kw):
-        return self._systems(systems=System.mine(identity.current.user),
-                title=u'My Systems', *args, **kw)
+        systems = System.mine(identity.current.user).\
+                  filter(System.status != SystemStatus.removed)
+        return self._systems(systems=systems,
+                             title=u'My Systems', *args, **kw)
 
       
     @expose(template='bkr.server.templates.grid') 

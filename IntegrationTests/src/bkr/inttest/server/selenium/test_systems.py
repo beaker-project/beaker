@@ -17,7 +17,7 @@ from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.assertions import assert_sorted
 from bkr.server.model import Cpu, Key, Key_Value_String, System, SystemStatus
-from bkr.inttest.server.webdriver_utils import check_system_search_results
+from bkr.inttest.server.webdriver_utils import check_system_search_results, login
 
 def atom_xpath(expr):
     return lxml.etree.XPath(expr, namespaces={'atom': 'http://www.w3.org/2005/Atom'})
@@ -288,6 +288,22 @@ class SystemsBrowseTest(WebDriverTestCase):
         b.get(urljoin(get_server_base(),
                       'groups/systems?group_id={0}'.format(group.group_id)))
         b.find_element_by_xpath('//h1[text()="Systems in Group {0}"]'.format(group.group_name))
+        check_system_search_results(b, present=[system1], absent=[system2])
+        self.assertEqual(
+            b.find_element_by_class_name('item-count').text, 'Items found: 1')
+
+    def test_mine_systems(self):
+
+        b = self.browser
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            system1 = data_setup.create_system()
+            system2 = data_setup.create_system(status=SystemStatus.removed)
+            system1.loaned = user
+            system2.loaned = user
+
+        login(b, user=user.user_name, password='password')
+        b.get(urljoin(get_server_base(),'mine'))
         check_system_search_results(b, present=[system1], absent=[system2])
         self.assertEqual(
             b.find_element_by_class_name('item-count').text, 'Items found: 1')
