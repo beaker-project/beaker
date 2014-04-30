@@ -7,10 +7,13 @@
     <script type="text/javascript">
     window.beaker_url_prefix = ${tg.to_json(tg.url('/'))};
     </script>
+    <link py:for="css in tg_css" py:replace="css.display()" />
+    <link py:for="js in tg_js_head" py:replace="js.display()" />
     <meta py:replace="item[:]"/>
 </head>
 
 <body py:match="item.tag=='{http://www.w3.org/1999/xhtml}body'" py:attrs="item.items()">
+<div py:for="js in tg_js_bodytop" py:replace="js.display()" />
 
 <?python
 from bkr.server.model import device_classes
@@ -205,6 +208,8 @@ piwikTracker.enableLinkTracking();
 </script><noscript><p><img src="${tg.config('piwik.base_url')}piwik.php?idsite=${tg.config('piwik.site_id')}" style="border:0" alt="" /></p></noscript>
 <!-- End Piwik Tracking Code -->
 </span>
+
+<div py:for="js in tg_js_bodybottom" py:replace="js.display()" />
 </body>
 
 </html>
