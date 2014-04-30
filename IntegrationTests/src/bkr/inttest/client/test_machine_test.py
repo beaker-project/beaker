@@ -4,11 +4,11 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
+import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client
-from bkr.server.model import Job, Arch, ExcludeOSMajor, OSMajor
+from bkr.server.model import Job, Arch, ExcludeOSMajor, OSMajor, SystemStatus
 
 class MachineTestTest(unittest.TestCase):
 
@@ -24,6 +24,7 @@ class MachineTestTest(unittest.TestCase):
                 '--machine', self.system.fqdn, '--arch', 'i386',
                 '--family', self.distro.osversion.osmajor.osmajor])
         self.assert_(out.startswith('Submitted:'), out)
+
         with session.begin():
             new_job = Job.query.order_by(Job.id.desc()).first()
             self.assertEqual(new_job.whiteboard, u'Test '+ self.system.fqdn)
@@ -73,3 +74,20 @@ class MachineTestTest(unittest.TestCase):
             self.assert_(rhel3_x86_64 not in distro_trees, distro_trees)
             self.assert_(rhel4_i386 not in distro_trees, distro_trees)
             self.assert_(rhel4_x86_64 in distro_trees, distro_trees)
+
+    def test_ignore_system_status(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(lab_controller=lc,
+                                               status=SystemStatus.broken)
+            distro_tree = data_setup.create_distro_tree(osmajor=u'RedHatEnterpriseLinux6',
+                                                        lab_controllers=[lc],
+                                                        distro_tags=[u'STABLE'])
+        out = run_client(['bkr', 'machine-test', '--inventory',
+                          '--debug',
+                          '--machine', system.fqdn,
+                          '--arch', 'i386',
+                          '--ignore-system-status',
+                          '--family', distro_tree.distro.osversion.osmajor.osmajor])
+        self.assertIn('<hostRequires force="%s"/>' % system.fqdn,
+                      out)

@@ -16,45 +16,37 @@ class WorkflowTest(unittest.TestCase):
     def test_processPartitions(self):
         recipe = BeakerRecipe()
         recipe.addPartition(name='/mnt/block1',type='part', fs='ext3', size=1024)
-        xml = recipe.toxml(prettyxml=True)
-        self.assertEquals(xml.strip(), """
-<recipe whiteboard="">
-	<distroRequires>
-		<and/>
-	</distroRequires>
-	<hostRequires>
-		<and/>
-	</hostRequires>
-	<repos/>
-	<partitions>
-		<partition fs="ext3" name="/mnt/block1" size="1024" type="part"/>
-	</partitions>
-</recipe>
-        """.strip())
+        xml = recipe.toxml()
+        self.assertEquals(xml, '<recipe whiteboard="">'
+                          '<distroRequires>'
+                          '<and/>'
+                          '</distroRequires>'
+                          '<hostRequires/>'
+                          '<repos/>'
+                          '<partitions>'
+                          '<partition fs="ext3" name="/mnt/block1" size="1024" type="part"/>'
+                          '</partitions>'
+                          '</recipe>')
 
     def test_processTemplate_minimal_recipe(self):
         recipeTemplate = BeakerRecipe()
         recipe = self.command.processTemplate(recipeTemplate,
                 [{'name': '/example', 'arches': []}])
-        xml = recipe.toxml(prettyxml=True)
-        self.assertEquals(xml.strip(), """
-<recipe whiteboard="">
-	<distroRequires>
-		<and/>
-	</distroRequires>
-	<hostRequires>
-		<and/>
-	</hostRequires>
-	<repos/>
-	<partitions/>
-	<task name="/distribution/install" role="STANDALONE">
-		<params/>
-	</task>
-	<task name="/example" role="STANDALONE">
-		<params/>
-	</task>
-</recipe>
-            """.strip())
+        xml = recipe.toxml()
+        self.assertEquals(xml, '<recipe whiteboard="">'
+                          '<distroRequires>'
+                          '<and/>'
+                          '</distroRequires>'
+                          '<hostRequires/>'
+                          '<repos/>'
+                          '<partitions/>'
+                          '<task name="/distribution/install" role="STANDALONE">'
+                          '<params/>'
+                          '</task>'
+                          '<task name="/example" role="STANDALONE">'
+                          '<params/>'
+                          '</task>'
+                          '</recipe>')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=723789
     def test_processTemplate_does_not_produce_duplicates(self):
