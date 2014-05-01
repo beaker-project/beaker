@@ -302,7 +302,6 @@ class Root(RPCRoot):
 
         try:
             recipeset = RecipeSet.by_id(recipeset_id)
-            old_priority = recipeset.priority
         except NoResultFound as e:
             log.error('No rows returned for recipeset_id %s in change_priority_recipeset:%s' % (recipeset_id,e))
             return { 'success' : None, 'msg' : 'RecipeSet is not valid' }
@@ -316,9 +315,11 @@ class Root(RPCRoot):
         if priority not in recipeset.allowed_priorities(user):
             return {'success' : None, 'msg' : 'Insufficient privileges for that priority', 'current_priority' : recipeset.priority.value }
 
-        activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'Priority', recipeset.priority.value,priority.value)
+        old_priority = recipeset.priority.value if recipeset.priority else None
         recipeset.priority = priority
-        recipeset.activity.append(activity)
+        recipeset.record_activity(user=identity.current.user, service=u'WEBUI',
+                                  field=u'Priority', action=u'Changed', old=old_priority,
+                                  new=priority.value)
         return {'success' : True } 
 
     @expose(template='bkr.server.templates.grid')

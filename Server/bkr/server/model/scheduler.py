@@ -40,7 +40,7 @@ from bkr.server.util import absolute_url
 from .types import (UUID, MACAddress, TaskResult, TaskStatus, TaskPriority,
         ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus)
 from .base import DeclarativeMappedObject
-from .activity import Activity
+from .activity import Activity, ActivityMixin
 from .identity import User, Group
 from .lab import LabController
 from .distrolibrary import (OSMajor, OSVersion, Distro, DistroTree,
@@ -105,6 +105,18 @@ task_packages_custom_map = Table('task_packages_custom_map', DeclarativeMappedOb
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     mysql_engine='InnoDB',
 )
+
+
+class JobActivity(Activity):
+
+    __tablename__ = 'job_activity'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
+    job_id = Column(Integer, ForeignKey('job.id'), nullable=False)
+    __mapper_args__ = {'polymorphic_identity': u'job_activity'}
+
+    def object_name(self):
+        return "Job: %s" % self.object.id
 
 
 class Watchdog(DeclarativeMappedObject):
@@ -476,7 +488,7 @@ class TaskBase(object):
         return logs_to_return
 
 
-class Job(TaskBase, DeclarativeMappedObject):
+class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
     """
     Container to hold like recipe sets.
     """
@@ -523,6 +535,10 @@ class Job(TaskBase, DeclarativeMappedObject):
     ktasks = Column(Integer, default=0)
     recipesets = relationship('RecipeSet', backref='job')
     _job_ccs = relationship('JobCc', backref='job')
+
+    activity = relationship(JobActivity, backref='object',
+                            cascade='all, delete-orphan')
+    activity_type = JobActivity
 
     def __init__(self, ttasks=0, owner=None, whiteboard=None,
             retention_tag=None, product=None, group=None, submitter=None):
@@ -1382,7 +1398,7 @@ class RecipeSetResponse(DeclarativeMappedObject):
             results[elem.recipe_set_id] = elem.comment
         return results
 
-class RecipeSet(TaskBase, DeclarativeMappedObject):
+class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
     """
     A Collection of Recipes that must be executed at the same time.
     """
@@ -1418,6 +1434,8 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
     nacked = relationship(RecipeSetResponse, cascade='all, delete-orphan',
             uselist=False)
 
+    activity_type = RecipeSetActivity
+
     stop_types = ['abort','cancel']
 
     def __init__(self, ttasks=0, priority=None):
@@ -1438,12 +1456,17 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
         return sum([recipe.all_logs for recipe in self.recipes], [])
 
     def set_response(self, response):
+        old_response = None
         if self.nacked is None:
             self.nacked = RecipeSetResponse(type=response)
         else:
+            old_response = self.nacked.response
             self.nacked.response = Response.by_response(response)
+        self.record_activity(user=identity.current.user, service=u'XMLRPC',
+                             field=u'Ack/Nak', action='Changed',
+                             old=old_response, new=self.nacked.response)
 
-    def is_owner(self,user):
+    def is_owner(self, user):
         if self.owner == user:
             return True
         return False

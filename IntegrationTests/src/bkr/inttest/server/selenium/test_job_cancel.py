@@ -111,3 +111,34 @@ class Cancel(WebDriverTestCase):
         b.find_element_by_xpath("//input[@value='Yes']").click()
         self.assertTrue(is_text_present(b, "Successfully cancelled recipeset %s"
             % self.job.recipesets[0].id))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=995012
+    def test_record_job_cancel(self):
+        b = self.browser
+        login(b, self.user.user_name, self.password)
+        b.get(get_server_base() + 'jobs/%s' % self.job.id)
+        b.find_element_by_xpath('//div[contains(@class, "job-action-container")]//a[text()="Cancel"]').click()
+        b.find_element_by_xpath("//input[@value='Yes']").click()
+        self.assertTrue(is_text_present(b, "Successfully cancelled job %s"
+                        % self.job.id))
+        with session.begin():
+            self.assertEquals(self.job.activity[0].service, u'WEBUI')
+            self.assertEquals(self.job.activity[0].field_name, 'Status')
+            self.assertEquals(self.job.activity[0].object_name(), 'Job: %s' % self.job.id)
+            self.assertEquals(self.job.activity[0].action, u'Cancelled')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=995012
+    def test_record_recipeset_cancel(self):
+        b = self.browser
+        login(b, self.user.user_name, self.password)
+        b.get(get_server_base() + 'jobs/%s' % self.job.id)
+        b.find_element_by_xpath('//div[@class="recipeset"]//a[text()="Cancel"]').click()
+        b.find_element_by_xpath("//input[@value='Yes']").click()
+        self.assertTrue(is_text_present(b, "Successfully cancelled recipeset %s"
+                        % self.job.recipesets[0].id))
+        with session.begin():
+            self.assertEquals(self.job.recipesets[0].activity[0].service, u'WEBUI')
+            self.assertEquals(self.job.recipesets[0].activity[0].field_name, 'Status')
+            self.assertEquals(self.job.recipesets[0].activity[0].object_name(), 'RecipeSet: %s'
+                              % self.job.recipesets[0].id)
+            self.assertEquals(self.job.recipesets[0].activity[0].action, u'Cancelled')

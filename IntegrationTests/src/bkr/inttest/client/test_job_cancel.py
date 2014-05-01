@@ -4,7 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
+import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client, ClientError, \
@@ -47,6 +47,7 @@ class JobCancelTest(unittest.TestCase):
             fail('should raise')
         except ClientError, e:
             self.assert_('Invalid taskspec' in e.stderr_output)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=649608
     def test_cannot_cancel_other_peoples_job(self):
         with session.begin():
@@ -62,3 +63,12 @@ class JobCancelTest(unittest.TestCase):
             self.assert_('You don\'t have permission to cancel'
                     in e.stderr_output, e.stderr_output)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=995012
+    def test_record_job_cancel(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner)
+
+        run_client(['bkr', 'job-cancel', '--username', job_owner.user_name, '--password', 'owner', job.t_id])
+        self.assertEquals(job.activity[0].action, u'Cancelled')
+        self.assertEquals(job.activity[0].user, job_owner)

@@ -67,6 +67,9 @@ class RecipeSets(RPCRoot):
             flash(_(u"You don't have permission to cancel recipeset id %s" % id))
             redirect("/jobs/%s" % recipeset.job.id)
         recipeset.cancel(msg)
+        recipeset.record_activity(user=identity.current.user, service=u'WEBUI',
+                                  field=u'Status', action=u'Cancelled', old='',
+                                  new='')
         flash(_(u"Successfully cancelled recipeset %s" % id))
         redirect("/jobs/%s" % recipeset.job.id)
 

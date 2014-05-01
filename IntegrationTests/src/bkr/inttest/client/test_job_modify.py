@@ -72,7 +72,10 @@ class JobModifyTest(unittest.TestCase):
 
     def test_multiple_response_job(self):
         out = run_client(['bkr', 'job-modify', self.job.t_id, self.job_for_rs.t_id,  '--response', 'ack'])
-        self.assert_(out == 'Successfully modified jobs %s %s\n' % (self.job.t_id, self.job_for_rs.t_id))
+
+        self.assert_('Successfully modified jobs' in out and
+                     self.job.t_id in out and
+                     self.job_for_rs.t_id in out)
         j = TaskBase.get_by_t_id(self.job.t_id)
         for rs in j.recipesets:
             self.assert_('%s' % rs.nacked.response == 'ack')
@@ -92,12 +95,12 @@ class JobModifyTest(unittest.TestCase):
         rs = TaskBase.get_by_t_id(self.job.recipesets[0].t_id)
         self.assert_('%s' % rs.nacked.response == 'nak')
 
-    def test_multiple_response_job(self):
+    def test_multiple_response_recipeset(self):
         out = run_client(['bkr', 'job-modify', self.job.recipesets[0].t_id,
                           self.job_for_rs.recipesets[0].t_id,  '--response', 'ack'])
         self.assert_('Successfully modified jobs' in out and \
-            self.job_for_rs.recipesets[0].t_id in out and \
-            self.job.recipesets[0].t_id in out,)
+                     self.job_for_rs.recipesets[0].t_id in out and \
+                     self.job.recipesets[0].t_id in out,)
         rs = TaskBase.get_by_t_id(self.job.recipesets[0].t_id)
         self.assert_('%s' % rs.nacked.response == 'ack')
         rs = TaskBase.get_by_t_id(self.job_for_rs.recipesets[0].t_id)
@@ -110,3 +113,27 @@ class JobModifyTest(unittest.TestCase):
             fail('should raise')
         except ClientError, e:
             self.assert_('Invalid taskspec' in e.stderr_output)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=995012
+    def test_record_retention_tag(self):
+        with session.begin():
+            rt = data_setup.create_retention_tag()
+        out = run_client(['bkr', 'job-modify', self.job.t_id,  '--retention-tag', '%s' % rt.tag])
+        self.assertEquals(self.job.activity[0].action, u'Changed')
+        self.assertEquals(self.job.activity[0].field_name, 'Retention Tag')
+        self.assertEquals(self.job.activity[0].old_value, self.job.retention_tag.tag)
+        self.assertEquals(self.job.activity[0].new_value, rt.tag)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=995012
+    def test_record_ack_job(self):
+        out = run_client(['bkr', 'job-modify', self.job.t_id,  '--response', 'ack'])
+        self.assertEquals(self.job.recipesets[0].activity[0].action, u'Changed')
+        self.assertEquals(self.job.recipesets[0].activity[0].field_name, 'Ack/Nak')
+        self.assertEquals(self.job.recipesets[0].activity[0].new_value, 'ack')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=995012
+    def test_record_ack_rs(self):
+        out = run_client(['bkr', 'job-modify', self.job.recipesets[0].t_id,  '--response', 'ack'])
+        self.assertEquals(self.job.recipesets[0].activity[0].action, u'Changed')
+        self.assertEquals(self.job.recipesets[0].activity[0].field_name, 'Ack/Nak')
+        self.assertEquals(self.job.recipesets[0].activity[0].new_value, 'ack')

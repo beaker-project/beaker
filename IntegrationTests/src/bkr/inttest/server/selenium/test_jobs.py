@@ -6,7 +6,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
+import unittest2 as unittest
 import logging
 import time
 import re
@@ -143,6 +143,24 @@ class TestViewJob(WebDriverTestCase):
         recipe_order = [elem.text for elem in b.find_elements_by_xpath(
                 '//a[@class="recipe-id"]')]
         self.assertEquals(recipe_order, [host.t_id, guest.t_id])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=995012
+    def test_job_activities_view(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner)
+            job.record_activity(user=job_owner, service=u'test',
+                                field=u'test', action='change',
+                                old='old', new='new')
+        login(self.browser, user=job_owner.user_name, password=u'owner')
+        b = self.browser
+        b.get(get_server_base() + 'jobs/%s' % job.id)
+        b.find_element_by_link_text("Toggle Job history").click()
+        activity_row = b.find_element_by_xpath('//table[@id="job_history_datagrid"]/tbody/tr[1]')
+        activity_row.find_element_by_xpath('./td[2][text()="%s"]' % u'test')
+        activity_row.find_element_by_xpath('./td[4][text()="%s"]' % 'Job: %s' % job.id)
+        activity_row.find_element_by_xpath('./td[6][text()="%s"]' % u'change')
+
 
 class NewJobTestWD(WebDriverTestCase):
 
@@ -373,6 +391,7 @@ class NewJobTestWD(WebDriverTestCase):
         flash_text = b.find_element_by_class_name('flash').text
         self.assert_('Success!' in flash_text, flash_text)
         self.assertEqual(b.title, 'My Jobs')
+
 
 class NewJobTest(WebDriverTestCase):
 
@@ -708,6 +727,7 @@ class NewJobTest(WebDriverTestCase):
         flash_message = b.find_element_by_class_name('flash').text
         self.assert_(flash_message.startswith('Success!'), flash_message)
 
+
 class JobAttributeChangeTest(WebDriverTestCase):
 
     def setUp(self):
@@ -813,6 +833,40 @@ class JobAttributeChangeTest(WebDriverTestCase):
             .select_by_visible_text('scratch')
         b.find_element_by_xpath('//button[text()="Clear product"]').click()
         b.find_element_by_xpath('//div[text()="Tag has been updated"]')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=995012
+    def test_record_retention_tag_change(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner,
+                                        retention_tag=u'scratch')
+        login(self.browser, user=job_owner.user_name, password=u'owner')
+        self.check_can_change_retention_tag(job, '60days')
+        with session.begin():
+            self.assertEquals(job.activity[0].service, u'WEBUI')
+            self.assertEquals(job.activity[0].field_name, 'Retention Tag')
+            self.assertEquals(job.activity[0].object_name(), 'Job: %s' % job.id)
+            self.assertEquals(job.activity[0].old_value, u'scratch')
+            self.assertEquals(job.activity[0].new_value, u'60days')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=995012
+    def test_record_priority_change(self):
+        with session.begin():
+            job_owner = data_setup.create_user(password=u'owner')
+            job = data_setup.create_job(owner=job_owner)
+        login(self.browser, user=job_owner.user_name, password=u'owner')
+        b = self.browser
+        b.get(get_server_base() + 'jobs/%s' % job.id)
+        Select(b.find_element_by_id('priority_recipeset_%s' % job.recipesets[0].id))\
+            .select_by_visible_text('Low')
+        b.find_element_by_xpath('//msg[text()="Priority has been updated"]')
+        with session.begin():
+            self.assertEquals(job.recipesets[0].activity[0].service, u'WEBUI')
+            self.assertEquals(job.recipesets[0].activity[0].field_name, 'Priority')
+            self.assertEquals(job.recipesets[0].activity[0].object_name(), 'RecipeSet: %s' % job.recipesets[0].id)
+            self.assertEquals(job.recipesets[0].activity[0].old_value, u'Normal')
+            self.assertEquals(job.recipesets[0].activity[0].new_value, u'Low')
+
 
 class CloneJobTest(WebDriverTestCase):
 
