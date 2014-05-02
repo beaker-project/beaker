@@ -75,10 +75,6 @@ BuildRequires:  pkgconfig(systemd)
 
 %if %{with server}
 BuildRequires:  python-kid
-BuildRequires:  python-webassets
-BuildRequires:  /usr/bin/lessc
-BuildRequires:  /usr/bin/cssmin
-BuildRequires:  /usr/bin/uglifyjs
 # These runtime dependencies are needed at build time as well, because
 # the unit tests and Sphinx autodoc import the server code as part of the
 # build process.
@@ -102,6 +98,7 @@ BuildRequires:  python-netaddr
 BuildRequires:  ovirt-engine-sdk
 BuildRequires:  python-itsdangerous
 BuildRequires:  python-decorator
+BuildRequires:  python-webassets
 BuildRequires:  python-flask
 BuildRequires:  python-markdown
 BuildRequires:  python-passlib
@@ -190,6 +187,9 @@ Requires:       python-decorator
 Requires:       python-flask
 Requires:       python-markdown
 Requires:       python-webassets
+Requires:       /usr/bin/lessc
+Requires:       /usr/bin/cssmin
+Requires:       /usr/bin/uglifyjs
 Requires:       python-passlib
 %if %{with_systemd}
 Requires:       systemd-units
@@ -471,6 +471,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %{_datadir}/bkr/server
 %attr(0660,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
 %dir %{_localstatedir}/log/%{name}
+%dir %{_localstatedir}/cache/%{name}
+%attr(-,apache,root) %dir %{_localstatedir}/cache/%{name}/assets
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos

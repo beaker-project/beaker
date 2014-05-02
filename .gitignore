@@ -6,14 +6,10 @@ rpm-build
 *.egg-info
 *.bz2
 Harness/build
-Server/assets/.webassets-cache/
-Server/assets/.webassets-manifest
-Server/assets/generated/
+Server/assets-cache/
 Server/build
 Server/build.out
 Server/devdata.sqlite
-Server/bkr/server/static/.webassets-cache/
-Server/bkr/server/static/webassets-external/
 Common/build
 Client/build
 Client/build.out

@@ -6,6 +6,7 @@
 
 import os
 import webassets
+from webassets.bundle import get_all_bundle_files
 from webassets.filter.jst import JST
 import threading
 from turbogears import config
@@ -23,14 +24,19 @@ class YCSSMin(ExternalTool):
 _env = None
 _env_lock = threading.Lock()
 
-def _create_env(**kwargs):
-    env = webassets.Environment(url='/assets', manifest='file', **kwargs)
+def _create_env(source_dir, output_dir, **kwargs):
+    # some pieces of webassets assume the directories are absolute
+    source_dir = os.path.abspath(source_dir)
+    output_dir = os.path.abspath(output_dir)
+    env = webassets.Environment(directory=output_dir, url='/assets/generated',
+            manifest='cache', **kwargs)
+    env.append_path(source_dir, url='/assets')
     env.config['UGLIFYJS_EXTRA_ARGS'] = ['--mangle', '--compress']
     env.register('css',
             'style.less',
             filters=['less', 'cssrewrite', YCSSMin()],
-            output='generated/beaker-%(version)s.css',
-            depends=['*.less', 'bootstrap/less/*.less'])
+            output='beaker-%(version)s.css',
+            depends=['*.less', 'bootstrap/less/*.less', 'font-awesome/less/*.less'])
     env.register('js',
             # third-party
             'bootstrap/js/bootstrap-transition.js',
@@ -49,23 +55,23 @@ def _create_env(**kwargs):
                 'jst/*/*.html',
                 'jst/*.html',
                 filters=[JST(template_function='_.template')],
-                output='generated/beaker-jst-%(version)s.js'),
+                output='beaker-jst-%(version)s.js'),
             'local-datetime.js',
             'link-tabs-to-anchor.js',
             'beaker-typeaheads.js',
             'recipe-tasks.js',
             'access-policy.js',
             filters=['uglifyjs'],
-            output='generated/beaker-%(version)s.js')
+            output='beaker-%(version)s.js')
     return env
 
 def _create_runtime_env():
-    directory = config.get('basepath.assets',
-            # default location is at the base of our source tree
-            os.path.join(os.path.dirname(__file__), '..', '..', 'assets'))
+    source_dir = config.get('basepath.assets')
+    output_dir = config.get('basepath.assets_cache')
     debug = config.get('assets.debug')
     auto_build = config.get('assets.auto_build')
-    return _create_env(directory=directory, debug=debug, auto_build=auto_build)
+    return _create_env(source_dir=source_dir, output_dir=output_dir,
+            debug=debug, auto_build=auto_build)
 
 def get_assets_env():
     global _env
@@ -75,7 +81,39 @@ def get_assets_env():
                 _env = _create_runtime_env()
     return _env
 
-def build_assets(directory):
-    env = _create_env(directory=directory, debug=False, auto_build=False)
+def build_assets():
+    env = get_assets_env()
     for bundle in env:
-        bundle.build()
+        # force=True here is a workaround for the timestamp-based caching 
+        # behaviour in webassets. If the site.less symlink is changed to point 
+        # at a different source file, with a different mod time, webassets will 
+        # never notice if the mod time is still older than the mod time of the 
+        # output file (which it normally would be).
+        # The timestamp-based updater is still useful when auto_build=True is 
+        # used during development though.
+        bundle.build(force=True)
+
+def list_asset_sources(source_dir):
+    """
+    Returns a list of paths (relative to the given source_dir) of all asset 
+    sources files defined in the assets environment.
+    """
+    # This is called during package build, so we create a new env specially to 
+    # refer to the given source dir.
+    # We aren't going to produce any generated files so output_dir is unused.
+    source_dir = os.path.abspath(source_dir)
+    env = _create_env(source_dir=source_dir, output_dir='/unused',
+            debug=False, auto_build=False)
+    paths = []
+    for bundle in env:
+        for path in get_all_bundle_files(bundle, env):
+            paths.append(os.path.relpath(path, source_dir))
+    # font-awesome is currently not managed by webassets because webassets 
+    # breaks on non-UTF8 input files
+    paths.extend([
+        'font-awesome/font/fontawesome-webfont.eot',
+        'font-awesome/font/fontawesome-webfont.svg',
+        'font-awesome/font/fontawesome-webfont.ttf',
+        'font-awesome/font/fontawesome-webfont.woff',
+    ])
+    return paths

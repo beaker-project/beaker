@@ -15,7 +15,7 @@ from setuptools.command.install import install as _install
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'Common'))
 sys.path.insert(1, os.path.dirname(__file__))
-from bkr.server.assets import build_assets
+from bkr.server import assets
 
 description = (
   "Beaker is a system for full stack software integration testing "
@@ -54,9 +54,6 @@ class Build(_build, object):
     # These are set in finalize_options()
     substitutions = {'@DATADIR@': None, '@LOCALEDIR@': None}
     subRE = re.compile('(' + '|'.join(substitutions.keys()) + ')+')
-    sub_commands = _build.sub_commands + [
-        ('build_assets', None),
-    ]
 
     def initialize_options(self):
         self.install_data = None
@@ -137,23 +134,6 @@ class build_py_and_kid(build_py):
             else:
                 log.debug("skipping byte-compilation of %s", kid_file)
 
-class BuildAssets(Command):
-    description = 'build web assets'
-    user_options = []
-
-    def initialize_options(self):
-        self.build_base = None
-
-    def finalize_options(self):
-        self.set_undefined_options('build', ('build_base', 'build_base'))
-        self.source_dir = 'assets'
-        self.build_dir = os.path.join(self.build_base, 'assets')
-
-    def run(self):
-        self.copy_tree(self.source_dir, self.build_dir)
-        log.info('building assets in %s', self.build_dir)
-        build_assets(self.build_dir)
-
 class Install(_install):
     sub_commands = _install.sub_commands + [
         ('install_assets', None),
@@ -164,25 +144,19 @@ class InstallAssets(Command):
     user_options = []
 
     def initialize_options(self):
-        self.build_base = None
         self.install_data = None
 
     def finalize_options(self):
-        self.set_undefined_options('install',
-                ('build_base', 'build_base'),
-                ('install_data', 'install_data'))
-        self.build_dir = os.path.join(self.build_base, 'assets')
+        self.set_undefined_options('install', ('install_data', 'install_data'))
         self.install_dir = os.path.join(self.install_data, 'bkr/server/assets')
+        self.source_dir = 'assets'
 
     def run(self):
-        manifest_name = '.webassets-manifest'
-        self.mkpath(self.install_dir, mode=0755)
-        self.copy_file(
-                os.path.join(self.build_dir, manifest_name),
-                os.path.join(self.install_dir, manifest_name))
-        self.copy_tree(
-                os.path.join(self.build_dir, 'generated'),
-                os.path.join(self.install_dir, 'generated'))
+        for filename in assets.list_asset_sources(self.source_dir):
+            source_path = os.path.join(self.source_dir, filename)
+            dest_path = os.path.join(self.install_dir, filename)
+            self.mkpath(os.path.dirname(dest_path), mode=0755)
+            self.copy_file(source_path, dest_path)
 
 
 def find_data_recursive(dest_dir, src_dir, exclude=frozenset()):
@@ -203,6 +177,7 @@ data_files = \
     ("/etc/logrotate.d", ["logrotate.d/beaker"]),
     ("/usr/share/bkr", filter(os.path.isfile, glob.glob("apache/*.wsgi"))),
     ("/var/log/beaker", []),
+    ("/var/cache/beaker/assets", []),
     ("/var/www/beaker/logs", []),
     ("/var/www/beaker/rpms", []),
     ("/var/www/beaker/repos", []),
@@ -232,7 +207,6 @@ setup(
     cmdclass = {
         'build': Build,
         'build_py': build_py_and_kid,
-        'build_assets': BuildAssets,
         'install': Install,
         'install_assets': InstallAssets,
     },
