@@ -1,0 +1,61 @@
+Theming the web interface
+=========================
+
+You can apply custom styles and markup to Beaker's web interface, for example 
+to make it match a common look-and-feel for your organization, or to add extra 
+links to site-specific resources.
+
+Adding custom Less rules
+------------------------
+
+Beaker uses the `Less <http://lesscss.org/>`_ preprocessor to generate CSS. You 
+can define a site-specific Less source file, in order to add extra styles or to 
+re-define variables used by Beaker's styles. Create a new ``.less`` file in 
+:file:`/usr/share/bkr/server/assets` containing your custom rules, and then 
+update the :file:`site.less` symlink to point to your Less source file. By 
+default this symlink points to :file:`/dev/null`.
+
+For example, to add a custom background image to Beaker's footer:
+
+.. code-block:: css
+
+   footer {
+       padding-left: 120px;
+       background-image: url('my-logo.svg');
+       background-repeat: no-repeat;
+       background-size: 110px auto;
+   }
+
+For more information about Less language syntax, refer to the `Less language 
+documentation <http://lesscss.org/features/>`_.
+
+Injecting custom markup
+-----------------------
+
+To inject markup into every page of Beaker's web interface, configure a custom 
+site template in :file:`/etc/beaker/server.cfg`::
+
+    tg.sitetemplate = "my_package.my_sitetemplate"
+
+.. highlight:: xml
+
+The site template must be a Kid template, available on the system Python path 
+(for the above example it would be 
+:file:`/usr/lib/python2.{x}/site-packages/my_package/my_sitetemplate.kid`). The 
+template should contain a root element as follows::
+
+    <html xmlns="http://www.w3.org/1999/xhtml"
+          xmlns:py="http://purl.org/kid/ns#">
+    </html>
+
+Inside the root element, define one or more ``py:match`` directives to match 
+and replace markup. For example, to add an extra link to Beaker's 
+:guilabel:`Help` menu::
+
+    <ul py:match="item.get('id') == 'help-menu'" py:attrs="item.items()">
+        <li py:replace="item[:]"/>
+        <li><a href="https://example.com/beaker">Internal Docs</a></li>
+    </ul>
+
+For more information about Kid template syntax, refer to the `Kid documentation 
+<http://web.archive.org/web/20100108030733/http://www.kid-templating.org/language.html>`_.
