@@ -141,6 +141,26 @@ class AddUser(WebDriverTestCase):
         b.find_element_by_xpath('//form[@id=\'User\']').submit()
         is_text_present(b, '%s saved' % valid_user_3)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=997830
+    def test_whitespace_only_values_are_not_accepted(self):
+        # Whitespace-only values also count as empty, because we strip
+        b = self.browser
+        b.get(get_server_base() + 'users')
+        b.find_element_by_link_text('Add').click()
+        b.find_element_by_name('user_name').send_keys(' \t\v')
+        b.find_element_by_name('display_name').send_keys(' \t\v')
+        b.find_element_by_name('email_address').send_keys(' \t\v')
+        b.find_element_by_tag_name('form').submit()
+        self.assertEquals(b.find_element_by_xpath(
+                '//input[@name="user_name"]/following-sibling::span').text,
+                'Please enter a value')
+        self.assertEquals(b.find_element_by_xpath(
+                '//input[@name="display_name"]/following-sibling::span').text,
+                'Please enter a value')
+        self.assertEquals(b.find_element_by_xpath(
+                '//input[@name="email_address"]/following-sibling::span').text,
+                'Please enter an email address')
+
     def test_adduser(self):
         user_1_name = data_setup.unique_name('anonymous%s')
         user_1_email = data_setup.unique_name('anonymous%s@my.com')
