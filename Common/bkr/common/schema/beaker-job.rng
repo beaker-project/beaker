@@ -216,6 +216,22 @@ the Free Software Foundation; either version 2 of the License, or
         </a:documentation>
         <zeroOrMore><ref name="distroreq"/></zeroOrMore>
       </element>
+      <optional>
+      <element name="reservesys">
+        <a:documentation xml:lang="en">
+           If this element is specified, the system will be reserved
+           at the end of the recipe when all tasks have completed execution.
+        </a:documentation>
+        <optional>
+          <attribute name="duration">
+            <a:documentation xml:lang="en">
+              Reserve for the specified duration in seconds. If not
+              specified, this defaults to 86400 seconds or 24 hours.
+            </a:documentation>
+          </attribute>
+        </optional>
+      </element>
+      </optional>
       <element name="hostRequires">
         <a:documentation xml:lang="en">
           This element is a container for expressing constraints on the

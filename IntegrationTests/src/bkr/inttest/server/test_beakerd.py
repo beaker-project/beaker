@@ -11,11 +11,12 @@ import threading
 import shutil
 import pkg_resources
 import bkr
+
 from bkr.server.model import TaskStatus, Job, System, User, \
         Group, SystemStatus, SystemActivity, Recipe, Cpu, LabController, \
-        Provision, TaskPriority, RecipeSet, RecipeTaskResult, Task, SystemPermission, \
-        MachineRecipe, GuestRecipe, LabControllerDistroTree, DistroTree
-import sqlalchemy.orm
+        Provision, TaskPriority, RecipeSet, RecipeTaskResult, Task, SystemPermission,\
+        MachineRecipe, GuestRecipe, LabControllerDistroTree, DistroTree, \
+        TaskResult
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import not_
 from turbogears.database import session, get_engine
@@ -26,6 +27,7 @@ from bkr.inttest.assertions import assert_datetime_within, \
         assert_durations_not_overlapping
 from bkr.server.tools import beakerd
 from bkr.server.jobs import Jobs
+from bkr.inttest.assertions import assert_datetime_within
 
 # We capture the sent mail to avoid error spam in the logs rather than to
 # check anything in particular
@@ -1612,6 +1614,60 @@ class TestBeakerd(unittest.TestCase):
             job = Job.query.get(job2.id)
             self.assertEqual(job.status, TaskStatus.processed)
 
+    def test_recipe_state_reserved(self):
+        with session.begin():
+            recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/install')] * 2,
+                reservesys=True, 
+                reservesys_duration=3600,
+            )
+            job = data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_tasks_finished(job.recipesets[0].recipes[0])
+            job._mark_dirty()
+            job_id = job.id
+
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.reserved)
+            assert_datetime_within(job.recipesets[0].recipes[0].watchdog.kill_time,
+                                   tolerance=datetime.timedelta(seconds=10),
+                                   reference=datetime.datetime.utcnow() +  \
+                                   datetime.timedelta(seconds=3600))
+
+        # return the reservation
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertFalse(job.is_dirty)
+            job.recipesets[0].recipes[0].return_reservation()
+            self.assertTrue(job.is_dirty)
+
+        beakerd.update_dirty_jobs()
+
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.completed)
+            self.assertEqual(job.status,
+                             TaskStatus.completed)
+
+    def test_recipe_is_not_reserved_when_no_systems_match(self):
+
+        with session.begin():
+            recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/install')] * 2,
+                reservesys=True)
+            recipe._host_requires = (
+                '<hostRequires><hostname op="=" value="Ineverexisted.fqdn"/></hostRequires>')
+            job = data_setup.create_job_for_recipes([recipe])
+
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.status, TaskStatus.aborted)
+
 class FakeMetrics():
     def __init__(self):
         self.calls = []
@@ -1637,7 +1693,7 @@ class TestBeakerdMetrics(unittest.TestCase):
         running = Recipe.query.filter(not_(Recipe.status.in_(
                 [s for s in TaskStatus if s.finished])))
         for recipe in running:
-            recipe.cancel()
+            recipe._abort_cancel(TaskStatus.cancelled)
             recipe.recipeset.job.update_status()
 
     def tearDown(self):
@@ -1706,6 +1762,7 @@ class TestBeakerdMetrics(unittest.TestCase):
             'gauges.recipes_processed',
             'gauges.recipes_new',
             'gauges.recipes_queued',
+            'gauges.recipes_reserved',
         ]
         categories = [
             'all',

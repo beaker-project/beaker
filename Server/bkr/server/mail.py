@@ -177,3 +177,47 @@ def group_membership_notify(user, group, agent, action):
                   headers=[('X-Beaker-Notification', 'group-membership'),
                            ('X-Beaker-Group', group.group_name),
                            ('X-Beaker-Group-Action',action)])
+
+def reservesys_notify(recipe, system):
+    """ Send a system reservation notification to 
+    job owner, and to job CC list if any. """
+
+    job = recipe.recipeset.job
+    owner = job.owner.email_address
+    sender = config.get('beaker_email')
+    if not sender:
+        log.warning("beaker_email not defined in app.cfg; unable to send mail")
+        return
+    send_mail(sender=sender, to=owner, cc=job.cc,
+              subject='[Beaker System Reservation] System: %s' % system,
+              body= u'''
+**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
+                 This System is reserved by %s.
+
+ To return this system early, you can click on 'Release System' against this recipe
+ from the Web UI. Ensure you have your logs off the system before returning to 
+ Beaker.
+
+ For ssh, kvm, serial and power control operations please look here:
+  %s
+
+ For the default root password, see:
+ %s
+
+      Beaker Test information:
+                         HOSTNAME=%s
+                            JOBID=%s
+                         RECIPEID=%s
+                           DISTRO=%s
+                     ARCHITECTURE=%s
+
+      Job Whiteboard: %s
+
+      Recipe Whiteboard: %s
+**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
+''' % (owner, absolute_url('/view/%s' % system),
+       absolute_url('/prefs'),
+       system, job.id, recipe.id, recipe.distro_tree,
+       recipe.distro_tree.arch, job.whiteboard, recipe.whiteboard),
+              headers=[('X-Beaker-Notification', 'system-reservation'),
+                       ('X-Beaker-Job-ID', job.id)])

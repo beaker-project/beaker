@@ -26,7 +26,7 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
-        RecipeTask, RecipeTaskResult, DeclarativeMappedObject, OSVersion
+        RecipeTask, RecipeTaskResult, DeclarativeMappedObject, OSVersion, RecipeReservationRequest
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
@@ -1241,6 +1241,26 @@ class RecipeTest(unittest.TestCase):
         xml = job.recipesets[0].recipes[0].to_xml(clone=True).toxml()
         self.assertIn(host_requires.format(system.fqdn), xml)
 
+    def test_recipe_reservesys_clone(self):
+        system = data_setup.create_system()
+        system.status = SystemStatus.broken
+        job = data_setup.create_job()
+        recipe1 = data_setup.create_recipe(
+            task_list=[Task.by_name(u'/distribution/install')] * 2,
+            reservesys=True)
+        recipe2 = data_setup.create_recipe(
+            task_list=[Task.by_name(u'/distribution/install')] * 2,
+            reservesys=True,
+            reservesys_duration=3600)
+
+        job = data_setup.create_job_for_recipes([recipe1, recipe2])
+        xml = job.recipesets[0].recipes[0].to_xml(clone=True).toxml()
+        reservation_string = '<reservesys duration="86400"/>'
+        self.assertIn(reservation_string, xml)
+        xml = job.recipesets[0].recipes[1].to_xml(clone=True).toxml()
+        reservation_string = '<reservesys duration="3600"/>'
+        self.assertIn(reservation_string, xml)
+
 class CheckDynamicVirtTest(unittest.TestCase):
 
     def setUp(self):
@@ -1342,11 +1362,12 @@ class MachineRecipeTest(unittest.TestCase):
         for recipe in recipes:
             recipe.recipeset.job.update_status()
         return {u'new': len(recipes)-4,  u'processed': 1, u'queued': 1,
-                u'scheduled': 1, u'waiting': 0, u'running': 0}
+                u'scheduled': 1, u'waiting': 0, u'running': 0, u'reserved': 0}
 
     def test_get_queue_stats(self):
         expected_stats = {u'new': 0,  u'processed': 0, u'queued': 0,
-                          u'scheduled': 0, u'waiting': 0, u'running': 0}
+                          u'scheduled': 0, u'waiting': 0, u'running': 0, 
+                          u'reserved': 0}
         whiteboard = u'test_get_queue_stats'
         def _get_queue_stats():
             cls = MachineRecipe
@@ -1363,7 +1384,9 @@ class MachineRecipeTest(unittest.TestCase):
     def test_get_queue_stats_by_arch(self):
         expected_arches = u's390x x86_64 ppc'.split()
         default_stats = {u'new': 0,  u'processed': 0, u'queued': 0,
-                         u'scheduled': 0, u'waiting': 0, u'running': 0}
+                         u'scheduled': 0, u'waiting': 0, u'running': 0, 
+                         u'reserved':0}
+
         expected_stats = dict((arch, default_stats.copy())
                                      for arch in expected_arches)
         whiteboard = u'test_get_queue_stats_by_arch'

@@ -421,3 +421,36 @@ class JobSchemaTest(SchemaTestBase):
             </job>
             ''',
             'Element hostRequires has extra content: disk')
+
+    def test_job_with_reservesys(self):
+        self.assert_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <reservesys/>
+                        <distroRequires/>
+                        <hostRequires>
+                            <device op="=" driver="e1000e" />
+                        </hostRequires>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+
+    def test_job_with_reservesys_duration(self):
+        self.assert_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <reservesys duration="9999"/>
+                        <distroRequires/>
+                        <hostRequires>
+                            <device op="=" driver="e1000e" />
+                        </hostRequires>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+

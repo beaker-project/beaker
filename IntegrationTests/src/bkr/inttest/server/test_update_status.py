@@ -13,7 +13,7 @@ from bkr.server.jobxml import XmlJob
 from bkr.server.bexceptions import BX, StaleTaskStatusException
 from bkr.inttest import data_setup, fix_beakerd_repodata_perms
 from bkr.server.model import TaskStatus, TaskResult, Watchdog, RecipeSet, Distro, \
-        Job, Recipe, System, SystemResource
+        Job, Recipe, System, SystemResource, RecipeTaskResult, Task
 from bkr.server.tools import beakerd
 
 def watchdogs_for_job(job):
@@ -200,6 +200,132 @@ class TestUpdateStatus(unittest.TestCase):
 
         # No watchdog's should exist when the job is complete
         self.assertEquals(len(watchdogs_for_job(job)), 0)
+
+class TestUpdateStatusReserved(unittest.TestCase):
+
+    def test_recipe_running_then_cancelled(self):
+        """ This tests the case where the recipe is running, has a valid
+        reservation request, but is cancelled before it's completed.
+        """
+        with session.begin():
+            recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/install')],
+                reservesys=True)
+            job = data_setup.create_job_for_recipes([recipe])
+            job_id = job.id
+            data_setup.mark_recipe_running(recipe)
+            job._mark_dirty()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.running)
+            job.recipesets[0].cancel()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.cancelled)
+
+    def test_recipe_running_then_watchdog_expired(self):
+        """ This tests the case where the recipe is running, has a valid
+        reservation request, but the watchdog expires before it's
+        completed.
+        """
+        with session.begin():
+            recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/install')],
+                reservesys=True)
+            job = data_setup.create_job_for_recipes([recipe])
+            job_id = job.id
+            data_setup.mark_recipe_tasks_finished(recipe,
+                                                  task_status=TaskStatus.aborted)
+            job.recipesets[0].recipes[0].abort()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.reserved)
+            job.recipesets[0].recipes[0].return_reservation()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                              TaskStatus.aborted)
+
+    def test_reserved_then_watchdog_expired(self):
+        """ This tests the case where the external
+        watchdog expires when the recipe is in Reserved state
+        """
+        with session.begin():
+            recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/install')],
+                reservesys=True)
+            job = data_setup.create_job_for_recipes([recipe])
+            job_id = job.id
+            data_setup.mark_recipe_tasks_finished(recipe)
+            job._mark_dirty()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                         TaskStatus.reserved)
+            job.recipesets[0].recipes[0].abort()
+            job._update_status()
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.completed)
+
+    def test_reserved_then_job_cancelled(self):
+        """ This tests the case where the recipe is Reserved
+        but the job is cancelled
+        """
+        with session.begin():
+            recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/install')],
+                reservesys=True)
+            job = data_setup.create_job_for_recipes([recipe])
+            job_id = job.id
+            data_setup.mark_recipe_tasks_finished(recipe)
+            job._mark_dirty()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.reserved)
+            job.cancel()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.completed)
+
+    def test_task_aborted_return_reservation(self):
+        """ This tests the case where the task was aborted, then
+        the recipe goes to Reserved state and then finally the reservation
+        is returned
+        """
+        with session.begin():
+            recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/install')],
+                reservesys=True)
+            job = data_setup.create_job_for_recipes([recipe])
+            job_id = job.id
+            data_setup.mark_recipe_tasks_finished(recipe, result=TaskResult.warn,
+                                                  task_status=TaskStatus.aborted)
+            job._mark_dirty()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.reserved)
+            job.recipesets[0].recipes[0].return_reservation()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.by_id(job_id)
+            self.assertEqual(job.recipesets[0].recipes[0].status,
+                             TaskStatus.aborted)
 
 class ConcurrentUpdateTest(unittest.TestCase):
 
@@ -396,7 +522,7 @@ class RecoveryTest(unittest.TestCase):
         # recipe is cancelled but system has still been assigned
         recipe = data_setup.create_recipe()
         data_setup.create_job_for_recipes([recipe])
-        recipe.cancel()
+        recipe._abort_cancel(TaskStatus.cancelled)
         recipe.recipeset.job.update_status()
         system = data_setup.create_system()
         recipe.resource = SystemResource(system=system)

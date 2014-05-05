@@ -24,7 +24,7 @@ from bkr.server.model import LabController, User, Group, UserGroup, Distro, Dist
         DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
         LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, \
         GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
-        SystemPermission, DistroTreeImage, ImageType, KernelType
+        SystemPermission, DistroTreeImage, ImageType, KernelType, RecipeReservationRequest
 
 log = logging.getLogger(__name__)
 
@@ -368,6 +368,10 @@ def create_recipe(distro_tree=None, task_list=None,
     recipe.role = role
     recipe.distro_requires = recipe.distro_tree.to_xml().toxml()
 
+    if kwargs.get('reservesys', False):
+        duration=kwargs.get('reservesys_duration', 86400)
+        recipe.reservation_request = RecipeReservationRequest(duration)
+
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
             rt = RecipeTask.from_task(t)
@@ -430,13 +434,35 @@ def create_job(num_recipes=1, num_guestrecipes=0, whiteboard=None,
     return create_job_for_recipes(recipes + guestrecipes,
             whiteboard=whiteboard, **kwargs)
 
+def create_running_job(**kwargs):
+    job = create_job(**kwargs)
+    mark_job_running(job, **kwargs)
+    return job
+
 def create_completed_job(**kwargs):
     job = create_job(**kwargs)
     mark_job_complete(job, **kwargs)
     return job
 
 def mark_recipe_complete(recipe, result=TaskResult.pass_,
-        finish_time=None, only=False, server_log=False, **kwargs):
+                         task_status=TaskStatus.completed,
+                         finish_time=None, only=False,
+                         server_log=False, **kwargs):
+
+    mark_recipe_tasks_finished(recipe, result=result,
+                               task_status=task_status,
+                               finish_time=finish_time,
+                               only=only,
+                               server_log=server_log,
+                               **kwargs)
+    recipe.recipeset.job.update_status()
+    log.debug('Marked %s as complete with result %s', recipe.t_id, result)
+
+def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
+                               task_status=TaskStatus.completed,
+                               finish_time=None, only=False,
+                               server_log=False, **kwargs):
+
     # we accept result=None to mean: don't add any results to recipetasks
     assert result is None or result in TaskResult
     finish_time = finish_time or datetime.datetime.utcnow()
@@ -475,9 +501,7 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
             recipe_task.results.append(rtr)
         recipe_task.logs = [rt_log()]
         recipe_task.finish_time = finish_time
-        recipe_task._change_status(TaskStatus.completed)
-    recipe.recipeset.job.update_status()
-    log.debug('Marked %s as complete with result %s', recipe.t_id, result)
+        recipe_task._change_status(task_status)
 
 def mark_job_complete(job, finish_time=None, only=False, **kwargs):
     if not only:
@@ -572,7 +596,7 @@ def playback_task_results(task, xmltask):
     if xmltask.status == u'Aborted':
         task.abort()
     elif xmltask.status == u'Cancelled':
-        task.cancel()
+        task._abort_cancel(TaskStatus.cancelled)
     else:
         task.stop()
 

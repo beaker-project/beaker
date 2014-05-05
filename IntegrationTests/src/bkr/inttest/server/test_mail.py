@@ -4,12 +4,12 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import sys
 import email
 import re
 import unittest
 from turbogears.database import session
 from bkr.server.model import Arch
+from bkr.server.util import absolute_url
 from bkr.inttest import data_setup, mail_capture, get_server_base
 import bkr.server.mail
 
@@ -60,6 +60,71 @@ class BrokenSystemNotificationTest(unittest.TestCase):
                 'Power address: pdu2.home-one\n'
                 'Power id: 42'
                 % get_server_base())
+
+class SystemReservationNotificationTest(unittest.TestCase):
+
+    def setUp(self):
+        self.mail_capture = mail_capture.MailCaptureThread()
+        self.mail_capture.start()
+
+    def tearDown(self):
+        self.mail_capture.stop()
+
+    def test_system_reserved_notification(self):
+        with session.begin():
+            owner = data_setup.create_user()
+            job = data_setup.create_running_job(owner=owner)
+
+        system = job.recipesets[0].recipes[0].resource.fqdn
+        with session.begin():
+            bkr.server.mail.reservesys_notify(job.recipesets[0].recipes[0], system)
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        self.assertEqual(rcpts, [owner.email_address])
+        msg = email.message_from_string(raw_msg)
+        self.assertEqual(msg['To'], owner.email_address)
+        self.assertEqual(msg['Subject'],
+                '[Beaker System Reservation] System: %s' % system)
+        self.assertEqual(msg['X-Beaker-Notification'], 'system-reservation')
+
+        recipe = job.recipesets[0].recipes[0]
+        system = recipe.resource.fqdn
+        owner = job.owner.email_address
+        expected_mail_body = u"""
+**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **
+                 This System is reserved by %s.
+
+ To return this system early, you can click on 'Release System' against this recipe
+ from the Web UI. Ensure you have your logs off the system before returning to 
+ Beaker.
+
+ For ssh, kvm, serial and power control operations please look here:
+  %s
+
+ For the default root password, see:
+ %s
+
+      Beaker Test information:
+                         HOSTNAME=%s
+                            JOBID=%s
+                         RECIPEID=%s
+                           DISTRO=%s
+                     ARCHITECTURE=%s
+
+      Job Whiteboard: %s
+
+      Recipe Whiteboard: %s
+**  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **  **""" \
+        % (owner,
+           absolute_url('/view/%s' % system),
+           absolute_url('/prefs'),
+           system, job.id,
+           recipe.id, recipe.distro_tree,
+           recipe.distro_tree.arch,
+           job.whiteboard,
+           recipe.whiteboard)
+        actual_mail_body = msg.get_payload(decode=True)
+        self.assertEqual(actual_mail_body, expected_mail_body)
 
 class JobCompletionNotificationTest(unittest.TestCase):
 

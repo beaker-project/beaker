@@ -33,7 +33,7 @@ from bkr.server.model import (Job, RecipeSet, RetentionTag, TaskBase,
                               RecipeKSAppend, Task, Product, GuestRecipe,
                               RecipeTask, RecipeTaskParam, RecipeSetResponse,
                               Response, StaleTaskStatusException,
-                              RecipeSetActivity, System)
+                              RecipeSetActivity, System, RecipeReservationRequest)
 
 from bkr.common.bexceptions import BeakerException, BX
 
@@ -595,6 +595,8 @@ class Jobs(RPCRoot):
         recipe.kernel_options = xmlrecipe.kernel_options
         recipe.kernel_options_post = xmlrecipe.kernel_options_post
         recipe.role = xmlrecipe.role
+        if xmlrecipe.reservesys:
+            recipe.reservation_request = RecipeReservationRequest(xmlrecipe.reservesys.duration)
         custom_packages = set()
         for xmlpackage in xmlrecipe.packages():
             package = TaskPackage.lazy_create(package='%s' % xmlpackage.name)
