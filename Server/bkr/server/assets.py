@@ -108,6 +108,8 @@ def list_asset_sources(source_dir):
     for bundle in env:
         for path in get_all_bundle_files(bundle, env):
             paths.append(os.path.relpath(path, source_dir))
+    # site.less should be skipped because it's a symlink
+    paths.remove('site.less')
     # font-awesome is currently not managed by webassets because webassets 
     # breaks on non-UTF8 input files
     paths.extend([

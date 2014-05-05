@@ -352,6 +352,10 @@ chown root:root %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 # Restart rsyslog so that it notices the config which we ship
 /sbin/service rsyslog condrestart >/dev/null 2>&1 || :
+# Create symlink for site.less (this is ghosted so that other packages can overwrite it)
+if [ ! -f %{_datadir}/bkr/server/assets/site.less ] ; then
+    ln -s /dev/null %{_datadir}/bkr/server/assets/site.less || :
+fi
 %endif
 
 %if %{with labcontroller}
@@ -469,6 +473,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_datadir}/bkr
 %attr(-,apache,root) %{_datadir}/bkr/beaker-server.wsgi
 %attr(-,apache,root) %{_datadir}/bkr/server
+%ghost %attr(0777,root,root) %{_datadir}/bkr/server/assets/site.less
 %attr(0660,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
 %dir %{_localstatedir}/log/%{name}
 %dir %{_localstatedir}/cache/%{name}
