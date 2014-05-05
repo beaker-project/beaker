@@ -5,11 +5,11 @@
 # (at your option) any later version.
 
 import re
-import unittest
+import unittest2 as unittest
 import lxml.etree
 from turbogears.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client
+from bkr.inttest.client import run_client, ClientError
 
 
 class TaskDetailsTest(unittest.TestCase):
@@ -118,3 +118,10 @@ class TaskDetailsTest(unittest.TestCase):
 
         task_elem = lxml.etree.fromstring(re.sub(task.name, '', out, count=1))
         self.assert_(task_elem.get('nda') == None)
+
+    def test_details_nonexistent_task(self):
+        try:
+            run_client(['bkr', 'task-details', 'idontexist'])
+            self.fail('Must fail or die')
+        except ClientError, e:
+            self.assertIn('No such task: idontexist', e.stderr_output)

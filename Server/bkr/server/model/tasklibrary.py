@@ -22,7 +22,7 @@ from bkr.common.helpers import (AtomicFileReplacement, Flock,
                                 makedirs_ignore, unlink_ignore)
 from bkr.server import identity, testinfo
 from bkr.server.bexceptions import BX
-from bkr.server.util import absolute_url, run_createrepo
+from bkr.server.util import absolute_url, run_createrepo, convert_db_lookup_error
 from .base import DeclarativeMappedObject
 from .identity import User
 from .distrolibrary import Arch, OSMajor
@@ -334,17 +334,19 @@ class Task(DeclarativeMappedObject):
 
     @classmethod
     def by_name(cls, name, valid=None):
-        query = cls.query.filter(Task.name==name)
-        if valid is not None:
-            query = query.filter(Task.valid==bool(valid))
-        return query.one()
+        with convert_db_lookup_error('No such task: %s' % name):
+            query = cls.query.filter(cls.name == name)
+            if valid is not None:
+                query = query.filter(Task.valid==bool(valid))
+            return query.one()
 
     @classmethod
     def by_id(cls, id, valid=None):
-        query = cls.query.filter(Task.id==id)
-        if valid is not None:
-            query = query.filter(Task.valid==bool(valid))
-        return query.one()
+        with convert_db_lookup_error('No such task with ID: %s' % id):
+            query = cls.query.filter(Task.id==id)
+            if valid is not None:
+                query = query.filter(Task.valid==bool(valid))
+            return query.one()
 
     @classmethod
     def by_type(cls, type, query=None):
