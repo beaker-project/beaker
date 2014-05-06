@@ -1,4 +1,6 @@
 
+# vim: set fileencoding=utf-8 :
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -139,6 +141,26 @@ class AddUser(WebDriverTestCase):
         b.find_element_by_xpath('//form[@id=\'User\']').submit()
         is_text_present(b, '%s saved' % valid_user_3)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=997830
+    def test_whitespace_only_values_are_not_accepted(self):
+        # Whitespace-only values also count as empty, because we strip
+        b = self.browser
+        b.get(get_server_base() + 'users')
+        b.find_element_by_link_text('Add').click()
+        b.find_element_by_name('user_name').send_keys(' \t\v')
+        b.find_element_by_name('display_name').send_keys(' \t\v')
+        b.find_element_by_name('email_address').send_keys(' \t\v')
+        b.find_element_by_tag_name('form').submit()
+        self.assertEquals(b.find_element_by_xpath(
+                '//input[@name="user_name"]/following-sibling::span').text,
+                'Please enter a value')
+        self.assertEquals(b.find_element_by_xpath(
+                '//input[@name="display_name"]/following-sibling::span').text,
+                'Please enter a value')
+        self.assertEquals(b.find_element_by_xpath(
+                '//input[@name="email_address"]/following-sibling::span').text,
+                'Please enter an email address')
+
     def test_adduser(self):
         user_1_name = data_setup.unique_name('anonymous%s')
         user_1_email = data_setup.unique_name('anonymous%s@my.com')
@@ -180,6 +202,30 @@ class AddUser(WebDriverTestCase):
         #Test that user 2 is listed as part of users
         self.failUnless(is_text_present(b, user_2_name))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1086505
+    def test_non_ascii_username_and_display_name(self):
+        user_name = u'ломоносов'
+        display_name = u'Михаил Ломоносов'
+        email = 'lomonosov@example.ru'
+        b = self.browser
+        b.get(get_server_base())
+        click_menu_item(b, 'Admin', 'Accounts')
+        b.find_element_by_link_text('Add').click()
+        b.find_element_by_name('user_name').send_keys(user_name)
+        b.find_element_by_name('display_name').send_keys(display_name)
+        b.find_element_by_name('email_address').send_keys(email)
+        b.find_element_by_tag_name('form').submit()
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                '%s saved' % display_name)
+
+        # Test that autocomplete and search work as well
+        b.find_element_by_name('user.text').send_keys(u'ломо')
+        b.find_element_by_xpath(u'//span[@id="autoCompleteResultsSearch_user"]'
+                u'//td[string(.)="ломоносов"]')
+        b.find_element_by_name('user.text').send_keys(u'носов')
+        b.find_element_by_xpath('//button[text()="Search"]').click()
+        b.find_element_by_xpath(u'//table/tbody/tr[1]'
+                u'/td[normalize-space(string(.))="ломоносов"]')
 
     def test_disable(self):
         user_pass = 'password'

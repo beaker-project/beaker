@@ -161,7 +161,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
         autocreate = get('identity.soldapprovider.autocreate', False)
         # Presence of '/' indicates a Kerberos service principal.
         if not user and ldapenabled and autocreate and '/' not in user_name:
-            filter = ldap.filter.filter_format('(uid=%s)', [user_name])
+            filter = ldap.filter.filter_format('(uid=%s)', [user_name.encode('utf8')])
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,
@@ -185,7 +185,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
         ldap_users = []
         ldapenabled = get('identity.ldap.enabled', False)
         if ldapenabled and find_ldap_users is True:
-            filter = ldap.filter.filter_format('(uid=%s*)', [username])
+            filter = ldap.filter.filter_format('(uid=%s*)', [username.encode('utf8')])
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,
