@@ -50,6 +50,41 @@ class UniqueUserName(FormValidator):
             raise Invalid('Login name is not unique', form_fields,
                 state, error_dict=error)
 
+class LabControllerFormValidator(FormValidator):
+
+    __unpackargs__ = ('*', 'field_names')
+    messages = {
+        'fqdn_not_unique': 'FQDN is not unique',
+    }
+
+    def validate_python(self, form_fields, state):
+        lc_id = form_fields.get('id', None)
+        fqdn = form_fields['fqdn']
+
+        try:
+            existing_lc_with_fqdn = LabController.by_name(fqdn)
+        except NoResultFound:
+            existing_lc_with_fqdn = None
+
+        if not lc_id:
+            labcontroller = None
+            luser = None
+        else:
+            labcontroller = LabController.by_id(lc_id)
+            luser = labcontroller.user
+
+        errors = {}
+        if not labcontroller and existing_lc_with_fqdn:
+            # New LC using duplicate FQDN
+            errors['fqdn'] = self.message('fqdn_not_unique', state)
+        elif (labcontroller and existing_lc_with_fqdn and
+                labcontroller != existing_lc_with_fqdn):
+            # Existing LC changing FQDN to a duplicate one
+            errors['fqdn'] = self.message('fqdn_not_unique', state)
+        if errors:
+            raise Invalid('Validation failed', form_fields,
+                    state, error_dict=errors)
+
 class CheckRecipeValid(TgFancyValidator):
 
     def _to_python(self, value, state):

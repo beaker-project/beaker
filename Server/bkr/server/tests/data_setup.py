@@ -76,7 +76,8 @@ def create_labcontroller(fqdn=None, user=None):
         lc = LabController.by_name(fqdn)  
     except NoResultFound:
         if user is None:
-            user = User(user_name='host/%s' % fqdn)
+            user = User(user_name=u'host/%s' % fqdn,
+                    email_address=u'root@%s' % fqdn)
         lc = LabController(fqdn=fqdn)
         lc.user = user
         session.add(lc)

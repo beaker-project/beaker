@@ -29,7 +29,8 @@ class LabControllerViewTest(WebDriverTestCase):
     def tearDown(self):
         self.browser.quit()
 
-    def _add_lc(self, b, lc_name, lc_email):
+    def _add_lc(self, lc_name, lc_email):
+        b = self.browser
         b.get(get_server_base() + 'labcontrollers')
         b.find_element_by_link_text('Add').click()
         b.find_element_by_name('fqdn').send_keys(lc_name)
@@ -41,7 +42,7 @@ class LabControllerViewTest(WebDriverTestCase):
         b = self.browser
         lc_name = data_setup.unique_name('lc%s.com')
         lc_email = data_setup.unique_name('me@my%s.com')
-        self._add_lc(b, lc_name, lc_email)
+        self._add_lc(lc_name, lc_email)
         self.assert_('%s saved' % lc_name in
             b.find_element_by_css_selector('.flash').text)
 
@@ -67,11 +68,35 @@ class LabControllerViewTest(WebDriverTestCase):
             object_='LabController: %s' % lc_name, via='WEBUI',
             property_='Disabled', action='Changed', new_value='False'))
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=998374
+    def test_cannot_add_lc_with_duplicate_fqdn(self):
+        with session.begin():
+            existing_lc = data_setup.create_labcontroller()
+        self._add_lc(existing_lc.fqdn, existing_lc.user.email_address)
+        b = self.browser
+        self.assertEquals(b.find_element_by_xpath(
+                '//input[@name="fqdn"]/following-sibling::span').text,
+                'FQDN is not unique')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=998374
+    def test_cannot_change_fqdn_to_duplicate(self):
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            other_lc = data_setup.create_labcontroller()
+        b = self.browser
+        b.get(get_server_base() + 'labcontrollers/edit?id=%s' % lc.id)
+        b.find_element_by_name('fqdn').clear()
+        b.find_element_by_name('fqdn').send_keys(other_lc.fqdn)
+        b.find_element_by_id('form').submit()
+        self.assertEquals(b.find_element_by_xpath(
+                '//input[@name="fqdn"]/following-sibling::span').text,
+                'FQDN is not unique')
+
     def test_lab_controller_remove(self):
         b = self.browser
         lc_name = data_setup.unique_name('lc%s.com')
         lc_email = data_setup.unique_name('me@my%s.com')
-        self._add_lc(b, lc_name, lc_email)
+        self._add_lc(lc_name, lc_email)
         with session.begin():
             sys = data_setup.create_system()
             sys.lab_controller = LabController.by_name(lc_name)
