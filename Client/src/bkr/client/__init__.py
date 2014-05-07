@@ -606,6 +606,16 @@ class BeakerRecipeBase(BeakerBase):
 
     def addBaseRequires(self, *args, **kwargs):
         """ Add base requires """
+
+        # if machine is specified, ignore any other host
+        # selection criteria
+        if kwargs.get('machine', None):
+            for opt in ['hostrequire', 'keyvalue', 'random', 'systype']:
+                if kwargs.get(opt, None):
+                    kwargs.pop(opt)
+                    sys.stderr.write('Warning: Ignoring --%s'
+                                     ' because --machine was specified\n' % opt)
+
         distro = kwargs.get("distro", None)
         family = kwargs.get("family", None)
         variant = kwargs.get("variant", None)

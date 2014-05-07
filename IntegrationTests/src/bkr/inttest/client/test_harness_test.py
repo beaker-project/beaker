@@ -31,9 +31,6 @@ class HarnessTest(unittest.TestCase):
                           '--prettyxml',
                           '--family', self.distro.osversion.osmajor.osmajor,
                           '--machine', 'test.system',
-                          '--hostrequire', 'hostlabcontroller=testlc.labcontroller',
                       ])
-        self.assertIn('<hostlabcontroller op="=" value="testlc.labcontroller"/>',
-                      out)
         self.assertIn('<hostname op="=" value="test.system"/>',
                       out)
