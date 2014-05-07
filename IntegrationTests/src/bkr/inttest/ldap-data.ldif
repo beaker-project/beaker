@@ -72,6 +72,23 @@ gidNumber: 15552
 homeDirectory: /home/asaha
 mail: asaha@example.invalid
 
+dn: uid=bz1095010,ou=users,dc=example,dc=invalid
+objectClass: top
+objectClass: person
+objectClass: organizationalperson
+objectClass: inetorgperson
+objectClass: posixAccount
+cn: Test Account for bz1095010
+givenName: Test
+sn: Account for bz1095010
+uid: bz1095010_user
+uidNumber: 15553
+gidNumber: 15553
+homeDirectory: /home/bz1095010
+mail: bz1095010@example.invalid
+# slappasswd -s password
+userPassword: {SSHA}6NdtGTtF0ZPPWAW5Ivd3N0az8jYlRChl
+
 dn: cn=my_ldap_group,ou=groups,dc=example,dc=invalid
 objectClass: top
 objectClass: posixGroup

@@ -61,14 +61,6 @@ class AddUser(WebDriverTestCase):
         b.find_element_by_name('user_name').clear()
         b.find_element_by_name('user_name').send_keys(existing_name)
 
-        # Test with duplicate email
-        b.find_element_by_name('email_address').clear()
-        b.find_element_by_name('email_address').send_keys(existing_email2)
-        b.find_element_by_xpath('//form[@id=\'User\']').submit()
-        self.assert_(b.find_element_by_xpath('//form[@id=\'User\'] \
-            //input[@name=\'email_address\']/following-sibling::span').text == \
-                'Email address is not unique')
-
         # Verify our exiting details submit ok
         b.find_element_by_name('email_address').clear()
         b.find_element_by_name('email_address').send_keys(existing_email)
@@ -122,24 +114,6 @@ class AddUser(WebDriverTestCase):
         b.find_element_by_name('user_name').send_keys(valid_user_2)
         b.find_element_by_id('User').submit()
         is_text_present(b, '%s saved' % valid_user_2)
-
-        # Check our custom email address validator
-        b.get(get_server_base() + 'users')
-        b.find_element_by_link_text('Add').click()
-        valid_user_3 = data_setup.unique_name('user%s')
-        b.find_element_by_name('user_name').send_keys(valid_user_3)
-        b.find_element_by_name('display_name').send_keys(valid_user_3)
-        b.find_element_by_name('email_address').send_keys(existing_email)
-        b.find_element_by_xpath('//form[@id=\'User\']').submit()
-        self.assert_(b.find_element_by_xpath('//form[@id=\'User\'] \
-            //input[@name=\'email_address\']/following-sibling::span').text == \
-                'Email address is not unique')
-
-        # Enter valid email to ensure recovery
-        valid_email = data_setup.unique_name('me%s@my.com')
-        b.find_element_by_name('email_address').send_keys(valid_email)
-        b.find_element_by_xpath('//form[@id=\'User\']').submit()
-        is_text_present(b, '%s saved' % valid_user_3)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=997830
     def test_whitespace_only_values_are_not_accepted(self):

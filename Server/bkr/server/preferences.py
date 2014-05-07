@@ -6,7 +6,7 @@
 
 import cherrypy
 from datetime import datetime
-from turbogears import widgets, expose, \
+from turbogears import widgets, expose, validators, \
 	error_handler, validate, flash, redirect, url
 from turbogears.database import session
 from sqlalchemy.exc import InvalidRequestError
@@ -34,7 +34,7 @@ class Preferences(RPCRoot):
                                       label='Root Password Expiry',
                                       attrs={'disabled': True})
     email = widgets.TextField(name='email_address', label='Email Address',
-                                   validator=beaker_validators.CheckUniqueEmail())
+                                   validator=validators.Email())
     prefs_form   = HorizontalForm(
         'UserPrefs',
         fields = [email, beaker_password, root_password, rootpw_expiry],
@@ -192,7 +192,7 @@ class Preferences(RPCRoot):
             changes.append("Email address changed")
             identity.current.user.email_address = email
 
-        if identity.current.user.root_password and not root_password:
+        if identity.current.user._root_password and not root_password:
             identity.current.user.root_password = None
             changes.append("Test host root password cleared")
         elif root_password and root_password != \
@@ -210,7 +210,7 @@ class Preferences(RPCRoot):
     #XMLRPC method for updating user preferences
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    @validate(validators=dict(email_address=beaker_validators.CheckUniqueEmail()))
+    @validate(validators=dict(email_address=validators.Email()))
     def update(self, email_address=None, tg_errors=None):
         """
         Update user preferences

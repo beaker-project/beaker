@@ -16,6 +16,7 @@ try:
     import krbV
 except ImportError:
     krbV = None
+from bkr.server.model import User
 from bkr.inttest import data_setup, with_transaction, get_server_base
 from bkr.inttest.server.selenium import WebDriverTestCase, XmlRpcTestCase
 from bkr.inttest.server.webdriver_utils import login
@@ -116,6 +117,25 @@ class LoginTest(WebDriverTestCase):
             session.refresh(self.user)
             self.assert_(self.user._password.startswith('$pbkdf2-sha512$'),
                     self.user._password)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1095010
+    def test_ldap_login_with_existing_email_address(self):
+        # Logging in with an LDAP account would fail when there was another 
+        # existing account with the same e-mail address, since Beaker's 
+        # database schema was enforcing uniqueness.
+        # 'bz1095010_user' is defined in bkr/inttest/ldap-data.ldif 
+        # with this e-mail address:
+        email = u'bz1095010@example.invalid'
+        with session.begin():
+            data_setup.create_user(user_name=u'bz1095010_other',
+                    email_address=email)
+        b = self.browser
+        login(b, u'bz1095010_user', u'password')
+        b.find_element_by_xpath('//title[text()="Systems"]')
+        with session.begin():
+            newly_created_user = User.by_user_name(u'bz1095010_user')
+            self.assert_(newly_created_user is not None,
+                    'bz1095010_user should have been created from LDAP')
 
 class XmlRpcLoginTest(XmlRpcTestCase):
 

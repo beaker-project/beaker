@@ -114,11 +114,13 @@ class UserPrefs(WebDriverTestCase):
         b = self.browser
 
         # Try and use the same email as an existing user
+        # (This used to be forbidden, now it is allowed.)
         e = b.find_element_by_name("email_address")
         e.clear()
         e.send_keys(self.user2.email_address)
         b.find_element_by_id('UserPrefs').submit()
-        self.assert_(is_text_present(b, 'Email address is not unique'))
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'Email address changed')
 
         # Check invalid email
         self.browser.get(get_server_base() + 'prefs')
@@ -126,7 +128,9 @@ class UserPrefs(WebDriverTestCase):
         e.clear()
         e.send_keys('InvalidEmailAddress')
         b.find_element_by_id('UserPrefs').submit()
-        self.assert_(is_text_present(b, 'An email address must contain a single @'))
+        error_msg = b.find_element_by_css_selector(
+                '#UserPrefs .help-block.error').text
+        self.assertEquals(error_msg, 'An email address must contain a single @')
 
         # Check new unused  and valid email
         self.browser.get(get_server_base() + 'prefs')
@@ -134,7 +138,8 @@ class UserPrefs(WebDriverTestCase):
         e.clear()
         e.send_keys('%s@domain.com' % data_setup.unique_name('dude%s'))
         b.find_element_by_id('UserPrefs').submit()
-        self.assert_(is_text_present(b, 'Email address changed'))
+        self.assertEquals(b.find_element_by_class_name('flash').text,
+                'Email address changed')
 
     def test_set_plaintext_password(self):
         b = self.browser

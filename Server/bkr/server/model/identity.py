@@ -76,7 +76,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     user_id = Column(Integer, primary_key=True)
     user_name = Column(Unicode(255), unique=True)
-    email_address = Column(Unicode(255), unique=True)
+    email_address = Column(Unicode(255))
     display_name = Column(Unicode(255))
     _password = Column('password', UnicodeText, nullable=True, default=None)
     _root_password = Column('root_password', String(255), nullable=True, default=None)
@@ -124,15 +124,6 @@ class User(DeclarativeMappedObject, ActivityMixin):
         """Return True if we can delegate jobs on behalf of user"""
         return SubmissionDelegate.query.filter_by(delegate_id=self.user_id,
             user_id=user.user_id).first() is not None
-
-    def by_email_address(cls, email):
-        """
-        A class method that can be used to search users
-        based on their email addresses since it is unique.
-        """
-        return cls.query.filter_by(email_address=email).one()
-
-    by_email_address = classmethod(by_email_address)
 
     def email_link(self):
         a = Element('a', {'href': 'mailto:%s' % self.email_address})
