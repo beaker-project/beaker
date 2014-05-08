@@ -100,9 +100,11 @@ def list_asset_sources(source_dir):
     """
     # This is called during package build, so we create a new env specially to 
     # refer to the given source dir.
-    # We aren't going to produce any generated files so output_dir is unused.
+    # We aren't going to produce any generated files so output_dir is unused 
+    # and cache can be discarded.
     source_dir = os.path.abspath(source_dir)
     env = _create_env(source_dir=source_dir, output_dir='/unused',
+            cache='/tmp/beaker-build-assets-cache',
             debug=False, auto_build=False)
     paths = []
     for bundle in env:
