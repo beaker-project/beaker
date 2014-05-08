@@ -69,7 +69,8 @@ class LabControllerViewTest(WebDriverTestCase):
             property_='Disabled', action='Changed', new_value='False'))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=998374
-    def test_cannot_add_lc_with_duplicate_fqdn(self):
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1064710
+    def test_cannot_add_duplicate_lc(self):
         with session.begin():
             existing_lc = data_setup.create_labcontroller()
         self._add_lc(existing_lc.fqdn, existing_lc.user.email_address)
@@ -77,6 +78,9 @@ class LabControllerViewTest(WebDriverTestCase):
         self.assertEquals(b.find_element_by_xpath(
                 '//input[@name="fqdn"]/following-sibling::span').text,
                 'FQDN is not unique')
+        self.assertEquals(b.find_element_by_xpath(
+                '//input[@name="lusername"]/following-sibling::span').text,
+                'Username is in use by a different lab controller')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=998374
     def test_cannot_change_fqdn_to_duplicate(self):
@@ -91,6 +95,23 @@ class LabControllerViewTest(WebDriverTestCase):
         self.assertEquals(b.find_element_by_xpath(
                 '//input[@name="fqdn"]/following-sibling::span').text,
                 'FQDN is not unique')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1064710
+    def test_cannot_change_username_to_duplicate(self):
+        # Changing an LC's username to an existing user account is okay, but 
+        # you can't change it to a user account that is already being used by 
+        # another LC.
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            other_lc = data_setup.create_labcontroller()
+        b = self.browser
+        b.get(get_server_base() + 'labcontrollers/edit?id=%s' % lc.id)
+        b.find_element_by_name('lusername').clear()
+        b.find_element_by_name('lusername').send_keys(other_lc.user.user_name)
+        b.find_element_by_id('form').submit()
+        self.assertEquals(b.find_element_by_xpath(
+                '//input[@name="lusername"]/following-sibling::span').text,
+                'Username is in use by a different lab controller')
 
     def test_lab_controller_remove(self):
         b = self.browser

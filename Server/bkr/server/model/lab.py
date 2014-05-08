@@ -31,7 +31,8 @@ class LabController(DeclarativeMappedObject, ActivityMixin):
     fqdn = Column(Unicode(255), unique=True)
     disabled = Column(Boolean, nullable=False, default=False)
     removed = Column(DateTime, nullable=True, default=None)
-    user_id = Column(Integer, ForeignKey('tg_user.user_id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('tg_user.user_id'),
+            nullable=False, unique=True)
     user = relationship(User, backref=backref('lab_controller', uselist=False))
     write_activity = relationship(LabControllerActivity, lazy='noload')
     activity = relationship(LabControllerActivity, backref='object',
