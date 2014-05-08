@@ -109,6 +109,16 @@ class WorkflowSimpleTest(unittest.TestCase):
                 '--task', self.task.name])
         self.assertIn('<hostlabcontroller op="=" value="lab.example.com"/>', out)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1014693
+    def test_hostrequire_raw_xml(self):
+        out = run_client(['bkr', 'workflow-simple',
+                '--dryrun', '--prettyxml',
+                '--hostrequire', '<device vendor_id="8086"/>',
+                '--arch', self.distro_tree.arch.arch,
+                '--family', self.distro.osversion.osmajor.osmajor,
+                '--task', self.task.name])
+        self.assertIn('<device vendor_id="8086"/>', out)
+
     def test_repo(self):
         first_url = 'http://repo1.example.invalid'
         second_url = 'ftp://repo2.example.invalid'
