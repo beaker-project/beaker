@@ -327,6 +327,11 @@ DESTDIR=%{buildroot} make \
     %{?with_inttests:WITH_INTTESTS=1} \
     install
 
+%if %{with server}
+# Newer RPM fails if site.less doesn't exist, even though it's marked %ghost 
+# and therefore is not included in the RPM. Seems like an RPM bug...
+ln -s /dev/null %{buildroot}%{_datadir}/bkr/server/assets/site.less
+%endif
 
 %check
 make \
