@@ -14,10 +14,6 @@ class NoChangeException(BeakerException):
     """This is raised when we want to signal we are doing a NOP"""
     pass
 
-class VMCreationFailedException(BeakerException):
-    pass
-
-
 class StaleTaskStatusException(ValueError):
     """
     Raised when attempting to update the status of a task which was changed 

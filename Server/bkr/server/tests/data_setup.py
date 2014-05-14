@@ -9,11 +9,11 @@ import re
 import os
 import time
 import datetime
+import uuid
 import itertools
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session
-from bkr.server import dynamic_virt
 from bkr.server.model import LabController, User, Group, UserGroup, Distro, DistroTree, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
@@ -24,7 +24,7 @@ from bkr.server.model import LabController, User, Group, UserGroup, Distro, Dist
         DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
         LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, \
         GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
-        SystemPermission
+        SystemPermission, DistroTreeImage, ImageType, KernelType
 
 log = logging.getLogger(__name__)
 
@@ -82,6 +82,10 @@ def create_labcontroller(fqdn=None, user=None):
         lc.user = user
         session.add(lc)
         user.groups.append(Group.by_name(u'lab_controller'))
+        # Need to ensure it is inserted now, since we aren't using lazy_create 
+        # here so a subsequent call to create_labcontroller could try and 
+        # create the same LC again.
+        session.flush()
         return lc
     log.debug('labcontroller %s already exists' % fqdn)
     return lc
@@ -99,6 +103,9 @@ def create_user(user_name=None, password=None, display_name=None,
     user.email_address = email_address
     if password:
         user.password = password
+    user.openstack_username = user_name
+    user.openstack_password = u'dummy_openstack_password_for_%s' % user_name
+    user.openstack_tenant_name = u'Dummy Tenant for %s' % user_name
     log.debug('Created user %r', user)
     return user
 
@@ -192,6 +199,14 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
         distro.osversion.arches.append(distro_tree.arch)
     distro_tree.repos.append(DistroTreeRepo(repo_id=variant,
             repo_type=u'variant', path=u''))
+    DistroTreeImage.lazy_create(distro_tree=distro_tree,
+            image_type=ImageType.kernel,
+            kernel_type=KernelType.by_name(u'default'),
+            path=u'pxeboot/vmlinuz')
+    DistroTreeImage.lazy_create(distro_tree=distro_tree,
+            image_type=ImageType.initrd,
+            kernel_type=KernelType.by_name(u'default'),
+            path=u'pxeboot/initrd')
     existing_urls = [lc_distro_tree.url for lc_distro_tree in distro_tree.lab_controller_assocs]
     # make it available in all lab controllers
     for lc in (lab_controllers or LabController.query):
@@ -486,13 +501,10 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
     if not recipe.resource:
         if isinstance(recipe, MachineRecipe):
             if virt:
-                recipe.resource = VirtResource(
-                        system_name=u'testdata_recipe_%s' % recipe.id)
                 if not lab_controller:
                     lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
+                recipe.resource = VirtResource(uuid.uuid4(), lab_controller)
                 recipe.recipeset.lab_controller = lab_controller
-                with dynamic_virt.VirtManager() as manager:
-                    recipe.resource.allocate(manager, [lab_controller])
             else:
                 if not system:
                     if not lab_controller:

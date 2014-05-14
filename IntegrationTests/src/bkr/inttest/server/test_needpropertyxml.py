@@ -5,6 +5,7 @@
 # (at your option) any later version.
 
 import datetime
+from collections import namedtuple
 import unittest2 as unittest
 from bkr.server.model import session, System, SystemType, SystemStatus, Cpu, \
         Arch, Numa, Key, Key_Value_String, Key_Value_Int, Disk
@@ -864,3 +865,342 @@ class SystemFilteringTest(unittest.TestCase):
             """,
             present=[system_a, system_ab, system_b],
             absent=[system_0])
+
+FakeFlavor = namedtuple('FakeFlavor', ['disk', 'ram', 'vcpus'])
+
+class OpenstackFlavorFilteringTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+        self.lc = data_setup.create_labcontroller()
+
+    def tearDown(self):
+        session.commit()
+
+    def check_filter(self, filterxml, lab_controller=None, present=[], absent=[]):
+        if lab_controller is None:
+            lab_controller = self.lc
+        matched_flavors = XmlHost.from_string(filterxml)\
+            .filter_openstack_flavors(present + absent, lab_controller)
+        self.assertItemsEqual(present, matched_flavors)
+
+    def test_flavors_with_no_disk_are_always_excluded(self):
+        # We always unconditionally exclude flavors with 0 disk because they 
+        # cannot have an OS installed onto them.
+        no_disk = FakeFlavor(disk=0, ram=256, vcpus=1)
+        some_disk = FakeFlavor(disk=10, ram=512, vcpus=1)
+        self.check_filter('<hostRequires/>',
+                present=[some_disk], absent=[no_disk])
+
+    def test_all_flavors_excluded_by_default(self):
+        # There are a lot of host requirements which can never be satisfied by 
+        # an OpenStack instance, so the default behaviour is to return no 
+        # matching flavors. Testing <serial/> here as a representative example.
+        self.check_filter("""
+            <hostRequires>
+                <system><serial value="123" /></system>
+            </hostRequires>
+            """,
+            present=[], absent=[FakeFlavor(disk=10, ram=512, vcpus=1)])
+
+    def test_labcontroller(self):
+        flavors = [FakeFlavor(disk=10, ram=512, vcpus=1)]
+        self.check_filter("""
+            <hostRequires>
+                <labcontroller value="%s"/>
+            </hostRequires>
+            """ % self.lc.fqdn,
+            present=flavors, absent=[])
+        self.check_filter("""
+            <hostRequires>
+                <labcontroller op="!=" value="%s"/>
+            </hostRequires>
+            """ % self.lc.fqdn,
+            present=[], absent=flavors)
+
+    def test_hypervisor(self):
+        flavors = [FakeFlavor(disk=10, ram=512, vcpus=1)]
+        self.check_filter("""
+            <hostRequires>
+                <hypervisor value="KVM"/>
+            </hostRequires>
+            """,
+            present=flavors, absent=[])
+        self.check_filter("""
+            <hostRequires>
+                <hypervisor op="!=" value="KVM"/>
+            </hostRequires>
+            """,
+            present=[], absent=flavors)
+        self.check_filter("""
+            <hostRequires>
+                <hypervisor value=""/>
+            </hostRequires>
+            """,
+            present=[], absent=flavors)
+
+    def test_system_type(self):
+        flavors = [FakeFlavor(disk=10, ram=512, vcpus=1)]
+        self.check_filter("""
+            <hostRequires>
+                <system_type value="Machine" />
+            </hostRequires>
+            """,
+            present=flavors, absent=[])
+        self.check_filter("""
+            <hostRequires>
+                <system_type value="Prototype" />
+            </hostRequires>
+            """,
+            present=[], absent=flavors)
+
+    def test_memory(self):
+        small_flavor = FakeFlavor(disk=10, ram=512, vcpus=1)
+        large_flavor = FakeFlavor(disk=20, ram=2048, vcpus=2)
+        self.check_filter("""
+            <hostRequires>
+                <memory op="&gt;" value="1000" />
+            </hostRequires>
+            """,
+            present=[large_flavor], absent=[small_flavor])
+
+    def test_cpu_processors(self):
+        small_flavor = FakeFlavor(disk=10, ram=512, vcpus=1)
+        large_flavor = FakeFlavor(disk=20, ram=2048, vcpus=2)
+        self.check_filter("""
+            <hostRequires>
+                <cpu><processors op="&gt;" value="1" /></cpu>
+            </hostRequires>
+            """,
+            present=[large_flavor], absent=[small_flavor])
+
+    def test_cpu_cores(self):
+        small_flavor = FakeFlavor(disk=10, ram=512, vcpus=1)
+        large_flavor = FakeFlavor(disk=20, ram=2048, vcpus=2)
+        self.check_filter("""
+            <hostRequires>
+                <cpu><cores op="&gt;" value="1" /></cpu>
+            </hostRequires>
+            """,
+            present=[large_flavor], absent=[small_flavor])
+
+    def test_disk_size(self):
+        small_flavor = FakeFlavor(disk=10, ram=512, vcpus=1)
+        large_flavor = FakeFlavor(disk=20, ram=2048, vcpus=2)
+        self.check_filter("""
+            <hostRequires>
+                <disk><size op="&gt;" value="15" /></disk>
+            </hostRequires>
+            """,
+            present=[large_flavor], absent=[small_flavor])
+
+    def test_disk_model(self):
+        # All other disk criteria aside from size cannot be satisfied by a VM.
+        flavors = [FakeFlavor(disk=10, ram=512, vcpus=1)]
+        self.check_filter("""
+            <hostRequires>
+                <disk><model value="Oceanfence Velocipenguin" /></disk>
+            </hostRequires>
+            """,
+            present=[], absent=flavors)
+
+    def test_system_arch(self):
+        flavors = [FakeFlavor(disk=10, ram=512, vcpus=1)]
+        self.check_filter("""
+            <hostRequires>
+                <system><arch value="x86_64"/></system>
+            </hostRequires>
+            """,
+            present=flavors, absent=[])
+        self.check_filter("""
+            <hostRequires>
+                <system><arch value="i386"/></system>
+            </hostRequires>
+            """,
+            present=flavors, absent=[])
+        self.check_filter("""
+            <hostRequires>
+                <system><arch value="ia64"/></system>
+            </hostRequires>
+            """,
+            present=[], absent=flavors)
+
+    def test_or(self):
+        small_flavor = FakeFlavor(disk=10, ram=512, vcpus=1)
+        medium_flavor = FakeFlavor(disk=15, ram=1024, vcpus=1)
+        large_flavor = FakeFlavor(disk=20, ram=2048, vcpus=2)
+        self.check_filter("""
+            <hostRequires>
+                <or>
+                    <memory value="512" />
+                    <memory value="2048" />
+                </or>
+            </hostRequires>
+            """,
+            present=[small_flavor, large_flavor], absent=[medium_flavor])
+
+    def test_and(self):
+        small_flavor = FakeFlavor(disk=10, ram=512, vcpus=1)
+        medium_flavor = FakeFlavor(disk=15, ram=1024, vcpus=1)
+        large_flavor = FakeFlavor(disk=20, ram=2048, vcpus=2)
+        self.check_filter("""
+            <hostRequires>
+                <and>
+                    <cpu><cores value="1" /></cpu>
+                    <memory value="512" />
+                </and>
+            </hostRequires>
+            """,
+            present=[small_flavor], absent=[medium_flavor, large_flavor])
+
+class VirtualisabilityTestCase(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    def check_filter(self, filterxml, virtualisable_expected):
+        result = XmlHost.from_string(filterxml).virtualisable()
+        self.assertEquals(result, virtualisable_expected)
+
+    def test_not_virtualisable_by_default(self):
+        # There are a lot of host requirements which can never be satisfied by 
+        # an OpenStack instance, so the default behaviour is to return False. 
+        # Testing <serial/> here as a representative example.
+        self.check_filter("""
+            <hostRequires>
+                <system><serial value="123" /></system>
+            </hostRequires>
+            """,
+            False)
+
+    def test_labcontroller(self):
+        # <labcontroller/> can match, if it is the LC which OpenStack is 
+        # associated with
+        self.check_filter("""
+            <hostRequires>
+                <labcontroller value="anything"/>
+            </hostRequires>
+            """,
+            True)
+
+    def test_hypervisor(self):
+        self.check_filter("""
+            <hostRequires>
+                <hypervisor value="KVM"/>
+            </hostRequires>
+            """,
+            True)
+        self.check_filter("""
+            <hostRequires>
+                <hypervisor op="!=" value="KVM"/>
+            </hostRequires>
+            """,
+            False)
+        self.check_filter("""
+            <hostRequires>
+                <hypervisor value=""/>
+            </hostRequires>
+            """,
+            False)
+
+    def test_system_type(self):
+        self.check_filter("""
+            <hostRequires>
+                <system_type value="Machine" />
+            </hostRequires>
+            """,
+            True)
+        self.check_filter("""
+            <hostRequires>
+                <system_type value="Prototype" />
+            </hostRequires>
+            """,
+            False)
+
+    def test_memory(self):
+        # <memory/> can match depending on the flavors available in OpenStack
+        self.check_filter("""
+            <hostRequires>
+                <memory op="&gt;" value="1000" />
+            </hostRequires>
+            """,
+            True)
+
+    def test_cpu_processors(self):
+        # <processors/> can match depending on the flavors available in OpenStack
+        self.check_filter("""
+            <hostRequires>
+                <cpu><processors op="&gt;" value="1" /></cpu>
+            </hostRequires>
+            """,
+            True)
+
+    def test_cpu_cores(self):
+        # <cores/> can match depending on the flavors available in OpenStack
+        self.check_filter("""
+            <hostRequires>
+                <cpu><cores op="&gt;" value="1" /></cpu>
+            </hostRequires>
+            """,
+            True)
+
+    def test_disk(self):
+        self.check_filter("""
+            <hostRequires>
+                <disk><size op="&gt;" value="15" /></disk>
+            </hostRequires>
+            """,
+            True)
+        self.check_filter("""
+            <hostRequires>
+                <disk><model value="Oceanfence Velocipenguin" /></disk>
+            </hostRequires>
+            """,
+            False)
+
+    def test_system_arch(self):
+        self.check_filter("""
+            <hostRequires>
+                <system><arch value="x86_64"/></system>
+            </hostRequires>
+            """,
+            True)
+        self.check_filter("""
+            <hostRequires>
+                <system><arch value="i386"/></system>
+            </hostRequires>
+            """,
+            True)
+        self.check_filter("""
+            <hostRequires>
+                <system><arch value="ia64"/></system>
+            </hostRequires>
+            """,
+            False)
+
+    def test_or(self):
+        # <disk/> cannot match but <memory/> can, therefore True
+        self.check_filter("""
+            <hostRequires>
+                <or>
+                    <memory value="512" />
+                    <disk><model value="Oceanfence Velocipenguin" /></disk>
+                </or>
+            </hostRequires>
+            """,
+            True)
+
+    def test_and(self):
+        # <memory/> can match but <disk/> cannot, therefore False
+        self.check_filter("""
+            <hostRequires>
+                <and>
+                    <memory value="512" />
+                    <disk><model value="Oceanfence Velocipenguin" /></disk>
+                </and>
+            </hostRequires>
+            """,
+            False)

@@ -4,26 +4,25 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
+import unittest2 as unittest
 import pkg_resources
 import datetime
 from decimal import Decimal
 from turbogears.database import session
 from bkr.server import dynamic_virt
 from bkr.server.model import System, RecipeTask, Cpu, SystemStatus, \
-    SystemActivity, TaskPriority, RecipeSetActivity
-from bkr.inttest import data_setup, DummyVirtManager
+    SystemActivity, TaskPriority, RecipeSetActivity, VirtResource
+from bkr.inttest import data_setup
 
 class ReportingQueryTest(unittest.TestCase):
 
     def setUp(self):
-        self.orig_VirtManager = dynamic_virt.VirtManager
-        dynamic_virt.VirtManager = DummyVirtManager
         session.begin()
-
-    def tearDown(self):
-        dynamic_virt.VirtManager = self.orig_VirtManager
-        session.rollback()
+        self.addCleanup(session.rollback)
+        # Other tests could have also created VirtResources, we hack them up so 
+        # they don't interfere with the min/max/avg we are expecting here.
+        for resource in VirtResource.query:
+            resource.recipe.start_time = None
 
     def execute_reporting_query(self, name):
         sql = pkg_resources.resource_string('bkr.server', 'reporting-queries/%s.sql' % name)
@@ -58,7 +57,7 @@ class ReportingQueryTest(unittest.TestCase):
 
         rows = self.execute_reporting_query('wait-duration-by-resource')
         all_rows = rows.fetchall()
-        virt_rows = [row for row in all_rows if row.fqdn == 'All oVirt']
+        virt_rows = [row for row in all_rows if row.fqdn == 'All OpenStack']
         system_rows = [row for row in all_rows if row.fqdn in (system_recipe.resource.fqdn, system_recipe2.resource.fqdn)]
 
         self.assertEquals(len(virt_rows), 1, virt_rows)
@@ -105,7 +104,7 @@ class ReportingQueryTest(unittest.TestCase):
         rows = self.execute_reporting_query('install-duration-by-resource')
         all_rows = rows.fetchall()
         guest_rows = [row for row in all_rows if row.fqdn == 'All Guest']
-        virt_rows = [row for row in all_rows if row.fqdn == 'All oVirt']
+        virt_rows = [row for row in all_rows if row.fqdn == 'All OpenStack']
         system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
 
         self.assertEquals(len(virt_rows), 1, virt_rows)
@@ -129,7 +128,7 @@ class ReportingQueryTest(unittest.TestCase):
         rows = self.execute_reporting_query('install-failure-count-by-resource')
         all_rows = [row for row in rows]
         guest_rows = [row for row in all_rows if row.fqdn == 'All Guest']
-        virt_rows = [row for row in all_rows if row.fqdn == 'All oVirt']
+        virt_rows = [row for row in all_rows if row.fqdn == 'All OpenStack']
         existing_failed_guests = guest_rows[0].failed_recipes
         existing_failed_virt = virt_rows[0].failed_recipes
 
@@ -163,7 +162,7 @@ class ReportingQueryTest(unittest.TestCase):
         rows = self.execute_reporting_query('install-failure-count-by-resource')
         all_rows = [row for row in rows]
         guest_rows = [row for row in all_rows if row.fqdn == 'All Guest']
-        virt_rows = [row for row in all_rows if row.fqdn == 'All oVirt']
+        virt_rows = [row for row in all_rows if row.fqdn == 'All OpenStack']
         system_rows = [row for row in all_rows if row.fqdn == system_recipe.resource.fqdn]
 
         self.assertEquals(len(virt_rows), 1, virt_rows)

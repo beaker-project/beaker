@@ -95,7 +95,7 @@ BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  cracklib-python
 BuildRequires:  rpm-python
 BuildRequires:  python-netaddr
-BuildRequires:  ovirt-engine-sdk
+BuildRequires:  python-novaclient
 BuildRequires:  python-itsdangerous
 BuildRequires:  python-decorator
 BuildRequires:  python-webassets
@@ -181,7 +181,7 @@ Requires:       python-jinja2
 Requires:       python-netaddr
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
-Requires:       ovirt-engine-sdk
+Requires:       python-novaclient
 Requires:       python-itsdangerous
 Requires:       python-decorator
 Requires:       python-flask

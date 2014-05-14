@@ -2179,27 +2179,6 @@ httpd
         k = recipe.rendered_kickstart.kickstart
         self.assertIn('%packages --ignoremissing\nsome::weird::package\n', k)
 
-    def test_postreboot_for_rhev_guests(self):
-        recipe = self.provision_recipe('''
-            <job>
-                <whiteboard/>
-                <recipeSet>
-                    <recipe>
-                        <distroRequires>
-                            <distro_name op="=" value="RHEL-6.2" />
-                            <distro_variant op="=" value="Server" />
-                            <distro_arch op="=" value="x86_64" />
-                        </distroRequires>
-                        <hostRequires/>
-                        <task name="/distribution/install" />
-                    </recipe>
-                </recipeSet>
-            </job>
-            ''', virt=True)
-        k = recipe.rendered_kickstart.kickstart
-        self.assert_(('curl http://lab.test-kickstart.invalid:8000/postreboot/%s'
-                % recipe.id) in k.splitlines(), k)
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=865680
     def test_linkdelay(self):
         recipe = self.provision_recipe('''

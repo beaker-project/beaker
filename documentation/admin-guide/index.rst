@@ -36,7 +36,7 @@ Contents
    power-commands
    panic-detection
    theming
-   ovirt
+   openstack
    graphite
    reporting-queries
    how-do-i

@@ -2,7 +2,7 @@
 -- The wait time is the time between the recipe_set queue time and
 -- the recipe start time.
 
-(SELECT 'All oVirt' AS fqdn,
+(SELECT 'All OpenStack' AS fqdn,
         AVG(y.time_diff) AS avg_wait_hours,
         MIN(y.time_diff) AS min_wait_hours,
         MAX(y.time_diff) AS max_wait_hours FROM

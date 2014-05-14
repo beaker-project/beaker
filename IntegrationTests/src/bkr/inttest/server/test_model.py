@@ -15,7 +15,7 @@ import email
 import inspect
 from turbogears.database import session
 from bkr.server.installopts import InstallOptions
-from bkr.server import model, dynamic_virt, identity
+from bkr.server import model, identity
 from bkr.server.app import app
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
@@ -30,7 +30,7 @@ from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
 import netaddr
-from bkr.inttest import data_setup, DummyVirtManager
+from bkr.inttest import data_setup
 from nose.plugins.skip import SkipTest
 import turbogears
 import os
@@ -1428,8 +1428,6 @@ class GuestRecipeTest(unittest.TestCase):
 class MACAddressAllocationTest(unittest.TestCase):
 
     def setUp(self):
-        self.orig_VirtManager = dynamic_virt.VirtManager
-        dynamic_virt.VirtManager = DummyVirtManager
         session.begin()
         # Other tests might have left behind running recipes using MAC
         # addresses, let's cancel them all
@@ -1440,7 +1438,6 @@ class MACAddressAllocationTest(unittest.TestCase):
             rs.job.update_status()
 
     def tearDown(self):
-        dynamic_virt.VirtManager = self.orig_VirtManager
         session.rollback()
 
     def test_lowest_free_mac_none_in_use(self):
@@ -1463,24 +1460,6 @@ class MACAddressAllocationTest(unittest.TestCase):
         second_job = data_setup.create_job(num_guestrecipes=1)
         data_setup.mark_job_running(second_job)
         self.assertEquals(second_job.recipesets[0].recipes[0].guests[0].resource.mac_address,
-                    netaddr.EUI('52:54:00:00:00:01'))
-        self.assertEquals(RecipeResource._lowest_free_mac(),
-                    netaddr.EUI('52:54:00:00:00:02'))
-        first_job.cancel()
-        first_job.update_status()
-        self.assertEquals(RecipeResource._lowest_free_mac(),
-                    netaddr.EUI('52:54:00:00:00:00'))
-
-    def test_virt_and_guest_resources(self):
-        # One GuestResource ...
-        first_job = data_setup.create_job(num_guestrecipes=1)
-        data_setup.mark_job_running(first_job)
-        self.assertEquals(first_job.recipesets[0].recipes[0].guests[0].resource.mac_address,
-                    netaddr.EUI('52:54:00:00:00:00'))
-        # ... and one VirtResource
-        second_job = data_setup.create_job()
-        data_setup.mark_recipe_running(second_job.recipesets[0].recipes[0], virt=True)
-        self.assertEquals(second_job.recipesets[0].recipes[0].resource.mac_address,
                     netaddr.EUI('52:54:00:00:00:01'))
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:02'))

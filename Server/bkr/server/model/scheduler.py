@@ -2318,10 +2318,10 @@ class Recipe(TaskBase, DeclarativeMappedObject):
                     field_name=u'Distro Tree', old_value=u'',
                     new_value=unicode(self.distro_tree)))
         elif isinstance(self.resource, VirtResource):
-            with dynamic_virt.VirtManager() as manager:
-                manager.start_install(self.resource.system_name,
-                        self.distro_tree, install_options.kernel_options_str,
-                        self.resource.lab_controller)
+            self.resource.kernel_options = install_options.kernel_options_str
+            manager = dynamic_virt.VirtManager(self.recipeset.job.owner)
+            manager.start_vm(self.resource.instance_id)
+            self.resource.rebooted = datetime.utcnow()
             self.tasks[0].start()
 
     def cleanup(self):
@@ -2516,7 +2516,12 @@ class MachineRecipe(Recipe):
         """
         Decide whether this recipe can be run as a virt guest
         """
-        # oVirt is i386/x86_64 only
+        # The job owner needs to have supplied their OpenStack credentials
+        if (not self.recipeset.job.owner.openstack_username
+                or not self.recipeset.job.owner.openstack_password
+                or not self.recipeset.job.owner.openstack_tenant_name):
+            return RecipeVirtStatus.skipped
+        # OpenStack is i386/x86_64 only
         if self.distro_tree.arch.arch not in [u'i386', u'x86_64']:
             return RecipeVirtStatus.precluded
         # Can't run VMs in a VM
@@ -2525,12 +2530,11 @@ class MachineRecipe(Recipe):
         # Multihost testing won't work (for now!)
         if len(self.recipeset.recipes) > 1:
             return RecipeVirtStatus.precluded
-        # Check we can translate any host requirements into VM params
+        # Check for any host requirements which cannot be virtualised
         # Delayed import to avoid circular dependency
-        from bkr.server.needpropertyxml import vm_params, NotVirtualisable
-        try:
-            vm_params(self.host_requires)
-        except NotVirtualisable:
+        from bkr.server.needpropertyxml import XmlHost
+        host_filter = XmlHost.from_string(self.host_requires)
+        if not host_filter.virtualisable():
             return RecipeVirtStatus.precluded
         # Checks all passed, so dynamic virt should be attempted
         return RecipeVirtStatus.possible
@@ -3279,13 +3283,9 @@ class RecipeResource(DeclarativeMappedObject):
     def _lowest_free_mac():
         base_addr = netaddr.EUI(get('beaker.base_mac_addr', '52:54:00:00:00:00'))
         session.flush()
-        # These subqueries gives all MAC addresses in use right now
+        # This subquery gives all MAC addresses in use right now
         guest_mac_query = session.query(GuestResource.mac_address.label('mac_address'))\
                 .filter(GuestResource.mac_address != None)\
-                .join(RecipeResource.recipe).join(Recipe.recipeset)\
-                .filter(not_(RecipeSet.status.in_([s for s in TaskStatus if s.finished])))
-        virt_mac_query = session.query(VirtResource.mac_address.label('mac_address'))\
-                .filter(VirtResource.mac_address != None)\
                 .join(RecipeResource.recipe).join(Recipe.recipeset)\
                 .filter(not_(RecipeSet.status.in_([s for s in TaskStatus if s.finished])))
         # This trickery finds "gaps" of unused MAC addresses by filtering for MAC
@@ -3293,9 +3293,9 @@ class RecipeResource(DeclarativeMappedObject):
         # We union with base address - 1 to find any gap at the start.
         # Note that this relies on the MACAddress type being represented as
         # BIGINT in the database, which lets us do arithmetic on it.
-        left_side = union(guest_mac_query, virt_mac_query,
+        left_side = union(guest_mac_query,
                 select([int(base_addr) - 1])).alias('left_side')
-        right_side = union(guest_mac_query, virt_mac_query).alias('right_side')
+        right_side = guest_mac_query.subquery()
         free_addr = session.scalar(select([left_side.c.mac_address + 1],
                 from_obj=left_side.outerjoin(right_side,
                     onclause=left_side.c.mac_address + 1 == right_side.c.mac_address))\
@@ -3366,57 +3366,53 @@ class SystemResource(RecipeResource):
 
 class VirtResource(RecipeResource):
     """
-    For a MachineRecipe which is running on a virtual guest managed by 
-    a hypervisor attached to Beaker.
+    For a MachineRecipe which is running on an OpenStack instance.
     """
 
     __tablename__ = 'virt_resource'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('recipe_resource.id',
             name='virt_resource_id_fk'), primary_key=True)
-    system_name = Column(Unicode(2048), nullable=False)
+    # OpenStack treats these ids as opaque strings, but we rely on them being 
+    # 128-bit numbers because we use the SMBIOS UUID field in our iPXE hackery. 
+    # So we store it as an actual UUID, not an opaque string.
+    instance_id = Column(UUID, nullable=False)
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
             name='virt_resource_lab_controller_id_fk'))
     lab_controller = relationship(LabController)
-    mac_address = Column(MACAddress(), index=True, default=None)
+    kernel_options = Column(Unicode(2048))
     __mapper_args__ = {'polymorphic_identity': ResourceType.virt}
 
-    def __init__(self, system_name):
+    @classmethod
+    def by_instance_id(cls, instance_id):
+        if isinstance(instance_id, basestring):
+            instance_id = uuid.UUID(instance_id)
+        return cls.query.filter(cls.instance_id == instance_id).one()
+
+    def __init__(self, instance_id, lab_controller):
         super(VirtResource, self).__init__()
-        self.system_name = system_name
+        if isinstance(instance_id, basestring):
+            instance_id = uuid.UUID(instance_id)
+        self.instance_id = instance_id
+        self.lab_controller = lab_controller
 
     @property
     def link(self):
         return self.fqdn # just text, not a link
 
     def install_options(self, distro_tree):
-        # 'postreboot' is added as a hack for RHEV guests: they do not reboot
-        # properly when the installation finishes, see RHBZ#751854
         return global_install_options()\
-                .combined_with(distro_tree.install_options())\
-                .combined_with(InstallOptions({'postreboot': None}, {}, {}))
-
-    def allocate(self, manager, lab_controllers):
-        self.mac_address = self._lowest_free_mac()
-        log.debug('Creating vm with MAC address %s for recipe %s',
-                self.mac_address, self.recipe.id)
-
-        virtio_possible = True
-        if self.recipe.distro_tree.distro.osversion.osmajor.osmajor == "RedHatEnterpriseLinux3":
-            virtio_possible = False
-
-        self.lab_controller = manager.create_vm(self.system_name,
-                lab_controllers, self.mac_address, virtio_possible)
+                .combined_with(distro_tree.install_options())
 
     def release(self):
         try:
             log.debug('Releasing vm %s for recipe %s',
-                    self.system_name, self.recipe.id)
-            with dynamic_virt.VirtManager() as manager:
-                manager.destroy_vm(self.system_name)
+                    self.instance_id, self.recipe.id)
+            manager = dynamic_virt.VirtManager(self.recipe.recipeset.job.owner)
+            manager.destroy_vm(self.instance_id)
         except Exception:
             log.exception('Failed to destroy vm %s, leaked!',
-                    self.system_name)
+                    self.instance_id)
             # suppress exception, nothing more we can do now
 
 

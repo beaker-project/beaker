@@ -17,7 +17,7 @@ import os
 import random
 from bkr.log import log_to_stream, log_to_syslog
 from bkr.server import needpropertyxml, utilisation, metrics, dynamic_virt
-from bkr.server.bexceptions import BX, VMCreationFailedException, \
+from bkr.server.bexceptions import BX, \
     StaleTaskStatusException, InsufficientSystemPermissions, \
     StaleSystemUserException
 from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
@@ -26,6 +26,7 @@ from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
         VirtResource, SystemResource, GuestResource, Arch,
         SystemAccessPolicy, SystemPermission, ConfigItem)
 from bkr.server.model.scheduler import machine_guest_map
+from bkr.server.needpropertyxml import XmlHost
 from bkr.server.util import load_config, log_traceback
 from bkr.server.recipetasks import RecipeTasks
 from turbogears.database import session
@@ -73,7 +74,7 @@ def get_parser():
     return parser
 
 def _virt_enabled():
-    return config.get('ovirt.enabled', False)
+    return bool(config.get('openstack.identity_api_url'))
 
 def _virt_possible(recipe):
     return _virt_enabled() and recipe.virt_status == RecipeVirtStatus.possible
@@ -574,8 +575,6 @@ def schedule_queued_recipe(recipe_id, guest_recipe_id=None):
                 recipe.id, guestrecipe.id)
 
 def provision_virt_recipes(*args):
-    # We limit to labs where the tree is available by NFS because RHEV needs to 
-    # use autofs to grab the images. See VirtManager.start_install.
     recipes = MachineRecipe.query\
             .join(Recipe.recipeset).join(RecipeSet.job)\
             .filter(Job.dirty_version == Job.clean_version)\
@@ -585,78 +584,72 @@ def provision_virt_recipes(*args):
             .filter(LabController.disabled == False)\
             .filter(or_(RecipeSet.lab_controller == None,
                 RecipeSet.lab_controller_id == LabController.id))\
-            .filter(LabControllerDistroTree.url.like(u'nfs://%'))\
             .order_by(RecipeSet.priority.desc(), Recipe.id.asc())
     if not recipes.count():
         return False
     log.debug("Entering provision_virt_recipes")
     for recipe_id, in recipes.values(Recipe.id.distinct()):
-        system_name = None
         session.begin()
         try:
-            system_name = u'%srecipe_%s' % (
-                    ConfigItem.by_name(u'guest_name_prefix').current_value(u'beaker_'),
-                    recipe_id)
-            provision_virt_recipe(system_name, recipe_id)
+            provision_virt_recipe(recipe_id)
             session.commit()
-        except needpropertyxml.NotVirtualisable:
-            session.rollback()
-            session.begin()
-            recipe = Recipe.by_id(recipe_id)
-            recipe.virt_status = RecipeVirtStatus.precluded
-            session.commit()
-        except VMCreationFailedException:
-            session.rollback()
-            session.begin()
-            recipe = Recipe.by_id(recipe_id)
-            recipe.virt_status = RecipeVirtStatus.skipped
-            session.commit()
-        except Exception, e: # This will get ovirt RequestErrors from recipe.provision()
+        except Exception, e:
             log.exception('Error in provision_virt_recipe(%s)', recipe_id)
             session.rollback()
-            try:
-                # Don't leak the vm if it was created
-                if system_name:
-                    with dynamic_virt.VirtManager() as manager:
-                        manager.destroy_vm(system_name)
-                # As an added precaution, let's try and avoid this recipe in future
-                session.begin()
+            # As an added precaution, let's try and avoid this recipe in future
+            with session.begin():
                 recipe = Recipe.by_id(recipe_id)
                 recipe.virt_status = RecipeVirtStatus.failed
-                session.commit()
-            except Exception:
-                log.exception('Exception in exception handler :-(')
         finally:
             session.close()
     log.debug("Exiting provision_virt_recipes")
     return True
 
-def provision_virt_recipe(system_name, recipe_id):
+def provision_virt_recipe(recipe_id):
     recipe = Recipe.by_id(recipe_id)
-    recipe.createRepo()
-    # Figure out the "data centers" where we can run the recipe
-    if recipe.recipeset.lab_controller:
-        # First recipe of a recipeSet determines the lab_controller
-        lab_controllers = [recipe.recipeset.lab_controller]
-    else:
-        # NB the same criteria are also expressed above
-        lab_controllers = LabController.query.filter_by(disabled=False, removed=None)
-        lab_controllers = needpropertyxml.apply_lab_controller_filter(
-                recipe.host_requires, lab_controllers)
-
-    lab_controllers = [lc for lc in lab_controllers.all()
-            if recipe.distro_tree.url_in_lab(lc, 'nfs')]
-    recipe.systems = []
-    recipe.watchdog = Watchdog()
-    recipe.resource = VirtResource(system_name=system_name)
-    with dynamic_virt.VirtManager() as manager:
-        recipe.resource.allocate(manager, lab_controllers)
-    recipe.recipeset.lab_controller = recipe.resource.lab_controller
-    recipe.schedule()
-    log.info("recipe ID %s moved from Queued to Scheduled by provision_virt_recipe" % recipe.id)
-    recipe.waiting()
-    recipe.provision()
-    log.info("recipe ID %s moved from Scheduled to Waiting by provision_virt_recipe" % recipe.id)
+    manager = dynamic_virt.VirtManager(recipe.recipeset.job.owner)
+    available_flavors = manager.available_flavors()
+    # We want them in order of smallest to largest, so that we can pick the
+    # smallest flavor that satisfies the recipe's requirements. Sorting by RAM
+    # is a decent approximation.
+    available_flavors = sorted(available_flavors, key=lambda flavor: flavor.ram)
+    possible_flavors = XmlHost.from_string(recipe.host_requires)\
+        .filter_openstack_flavors(available_flavors, manager.lab_controller)
+    if not possible_flavors:
+        log.debug('No OpenStack flavors matched recipe %s, marking precluded',
+                recipe.id)
+        recipe.virt_status = RecipeVirtStatus.precluded
+        return
+    flavor = possible_flavors[0]
+    vm_name = '%srecipe-%s' % (
+            ConfigItem.by_name(u'guest_name_prefix').current_value(u'beaker-'),
+            recipe.id)
+    # FIXME can we control use of virtio?
+    #virtio_possible = True
+    #if self.recipe.distro_tree.distro.osversion.osmajor.osmajor == "RedHatEnterpriseLinux3":
+    #    virtio_possible = False
+    instance_id = manager.create_vm(vm_name, flavor)
+    try:
+        recipe.createRepo()
+        recipe.systems = []
+        recipe.watchdog = Watchdog()
+        recipe.resource = VirtResource(instance_id, manager.lab_controller)
+        recipe.recipeset.lab_controller = manager.lab_controller
+        recipe.virt_status = RecipeVirtStatus.succeeded
+        recipe.schedule()
+        log.info("recipe ID %s moved from Queued to Scheduled by provision_virt_recipe" % recipe.id)
+        recipe.waiting()
+        recipe.provision()
+        log.info("recipe ID %s moved from Scheduled to Waiting by provision_virt_recipe" % recipe.id)
+    except:
+        exc_type, exc_value, exc_tb = sys.exc_info()
+        try:
+            manager.destroy_vm(instance_id)
+        except Exception:
+            log.exception('Failed to clean up instance %s '
+                    'during provision_virt_recipe, leaked!', instance_id)
+            # suppress this exception so the original one is not masked
+        raise exc_type, exc_value, exc_tb
 
 def provision_scheduled_recipesets(*args):
     """
@@ -769,12 +762,13 @@ def metrics_loop(*args, **kwargs):
 def _main_recipes():
     work_done = update_dirty_jobs()
     work_done |= abort_dead_recipes()
-    if _virt_enabled():
-        work_done |= provision_virt_recipes()
     work_done |= update_dirty_jobs()
     work_done |= process_new_recipes()
     work_done |= update_dirty_jobs()
     work_done |= queue_processed_recipesets()
+    if _virt_enabled():
+        work_done |= update_dirty_jobs()
+        work_done |= provision_virt_recipes()
     work_done |= update_dirty_jobs()
     work_done |= schedule_queued_recipes()
     work_done |= update_dirty_jobs()

@@ -61,19 +61,3 @@ class LabController(DeclarativeMappedObject, ActivityMixin):
         if valid:
             all = cls.query.filter_by(removed=None)
         return [(lc.id, lc.fqdn) for lc in all]
-
-class LabControllerDataCenter(DeclarativeMappedObject):
-    """
-    A mapping from a lab controller to an oVirt data center.
-    """
-    __tablename__ = 'lab_controller_data_center'
-    __table_args__ = {'mysql_engine': 'InnoDB'}
-
-    id = Column(Integer, autoincrement=True,
-            nullable=False, primary_key=True)
-    lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
-            name='lab_controller_data_center_lab_controller_id_fk'),
-            nullable=False)
-    lab_controller = relationship(LabController, backref='data_centers')
-    data_center = Column(Unicode(255), nullable=False)
-    storage_domain = Column(Unicode(255))

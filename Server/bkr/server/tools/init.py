@@ -175,9 +175,7 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         # name, description, numeric
         (u'root_password', u'Plaintext root password for provisioned systems', False),
         (u'root_password_validity', u"Maximum number of days a user's root password is valid for", True),
-        (u'default_guest_memory', u"Default memory (MB) for dynamic guest provisioning", True),
-        (u'default_guest_disk_size', u"Default disk size (GB) for dynamic guest provisioning", True),
-        (u'guest_name_prefix', u'Prefix for names of dynamic guests in oVirt', False),
+        (u'guest_name_prefix', u'Prefix for names of dynamic guests in OpenStack', False),
     ]
     for name, description, numeric in config_items:
         ConfigItem.lazy_create(name=name, description=description, numeric=numeric)
