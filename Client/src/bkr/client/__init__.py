@@ -683,10 +683,13 @@ class BeakerRecipeBase(BeakerBase):
             mykeyvalue.setAttribute('value', '%s' % value)
             self.addHostRequires(mykeyvalue)
         for require in requires:
-            key, op, value = p2.split(require,3)
-            myrequire = self.doc.createElement('%s' % key)
-            myrequire.setAttribute('op', '%s' % op)
-            myrequire.setAttribute('value', '%s' % value)
+            if require.lstrip().startswith('<'):
+                myrequire = xml.dom.minidom.parseString(require).documentElement
+            else:
+                key, op, value = p2.split(require,3)
+                myrequire = self.doc.createElement('%s' % key)
+                myrequire.setAttribute('op', '%s' % op)
+                myrequire.setAttribute('value', '%s' % value)
             self.addHostRequires(myrequire)
         
         if random:
