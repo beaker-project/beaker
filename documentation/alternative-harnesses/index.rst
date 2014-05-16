@@ -79,6 +79,12 @@ the request body must be given as HTML form data
    the requested recipe element. Note that guest recipes will be nested within
    a partially populated ``<recipe/>``.
 
+.. http:get:: /recipes/(recipe_id)/watchdog
+
+   Returns the number of seconds remaining on the watchdog timer for a recipe.
+
+   The response is a JSON object with a key *seconds*.
+
 .. http:post:: /recipes/(recipe_id)/watchdog
 
    Extends the watchdog for a recipe.

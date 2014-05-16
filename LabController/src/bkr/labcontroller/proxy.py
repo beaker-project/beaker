@@ -882,6 +882,12 @@ class ProxyHTTP(object):
         return Response(status=200, response=json.dumps(updated),
                 content_type='application/json')
 
+    def get_watchdog(self, req, recipe_id):
+        seconds = self.hub.recipes.watchdog(recipe_id)
+        return Response(status=200,
+                response=json.dumps({'seconds': seconds}),
+                content_type='application/json')
+
     def post_watchdog(self, req, recipe_id):
         if 'seconds' not in req.form:
             raise BadRequest('Missing "seconds" parameter')

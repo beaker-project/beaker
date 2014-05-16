@@ -165,6 +165,14 @@ class Recipes(RPCRoot):
         return recipe.extend(kill_time)
 
     @cherrypy.expose
+    def watchdog(self, recipe_id):
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        return recipe.status_watchdog()
+
+    @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def stop(self, recipe_id, stop_type, msg=None):
         """

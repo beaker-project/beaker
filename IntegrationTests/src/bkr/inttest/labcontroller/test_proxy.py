@@ -17,6 +17,7 @@ import urlparse
 import requests
 import time
 from nose.plugins.skip import SkipTest
+from bkr.common.helpers import total_seconds
 from bkr.server.model import session, TaskResult, TaskStatus, LogRecipe, \
         LogRecipeTask, LogRecipeTaskResult, RecipeTask
 from bkr.labcontroller.proxy import ProxyHelper
@@ -418,7 +419,7 @@ class RecipeStatusTest(LabControllerTestCase):
                     u'fooed the bar up')
 
 
-class ExtendWatchdogTest(LabControllerTestCase):
+class WatchdogTest(LabControllerTestCase):
 
     def setUp(self):
         with session.begin():
@@ -434,6 +435,15 @@ class ExtendWatchdogTest(LabControllerTestCase):
             assert_datetime_within(self.recipe.watchdog.kill_time,
                     tolerance=datetime.timedelta(seconds=10),
                     reference=datetime.datetime.utcnow() + datetime.timedelta(seconds=600))
+
+    def test_GET_watchdog(self):
+        with session.begin():
+            self.recipe.extend(100)
+        watchdog_url = '%srecipes/%s/watchdog' % (self.get_proxy_url(),
+                self.recipe.id)
+        response = requests.get(watchdog_url)
+        response.raise_for_status()
+        self.assertAlmostEquals(response.json()['seconds'], 100, delta=5)
 
     def test_POST_watchdog(self):
         watchdog_url = '%srecipes/%s/watchdog' % (self.get_proxy_url(),

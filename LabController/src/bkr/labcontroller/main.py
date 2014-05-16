@@ -66,6 +66,8 @@ class WSGIApplication(object):
             # harness API:
             Rule('/recipes/<recipe_id>/', methods=['GET'],
                     endpoint=(self.proxy_http, 'get_recipe')),
+            Rule('/recipes/<recipe_id>/watchdog', methods=['GET'],
+                    endpoint=(self.proxy_http, 'get_watchdog')),
             Rule('/recipes/<recipe_id>/watchdog', methods=['POST'],
                     endpoint=(self.proxy_http, 'post_watchdog')),
             Rule('/recipes/<recipe_id>/status', methods=['POST'],
