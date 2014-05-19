@@ -365,8 +365,7 @@ class Tasks(RPCRoot):
 
         search_bar = SearchBar(name='tasksearch',
                            label=_(u'Task Search'),
-                           table = search_utility.Task.search.create_search_table(),
-                           complete_data=search_utility.Task.search.create_complete_search_table(),
+                           table = search_utility.Task.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_task"),
                            )
         return dict(title="Task Library",

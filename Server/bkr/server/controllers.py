@@ -482,14 +482,8 @@ class Root(RPCRoot):
                                                    'display':'none',
                                                    'pos' : 2,
                                                    'callback':url('/get_operators_keyvalue') }],
-                               table=su.System.search.create_search_table(\
+                               table=su.System.search.create_complete_search_table(\
                                     [{su.System:{'exclude':exclude_fields}},
-                                    {su.Cpu:{'all':[]}},
-                                    {su.Device:{'all':[]}},
-                                    {su.Disk:{'all':[]}},
-                                    {su.Key:{'all':[]}}]),
-                               complete_data = su.System.search.create_complete_search_table(\
-                                   [{su.System:{'exclude':exclude_fields}},
                                     {su.Cpu:{'all':[]}},
                                     {su.Device:{'all':[]}},
                                     {su.Disk:{'all':[]}},

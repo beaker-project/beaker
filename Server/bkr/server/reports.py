@@ -75,8 +75,7 @@ class Reports(RPCRoot):
 
         search_bar = SearchBar(name='reservesearch',
                                label=_(u'Reserve Search'),
-                               table = search_utility.SystemReserve.search.create_search_table(),
-                               complete_data=search_utility.SystemReserve.search.create_complete_search_table(),
+                               table = search_utility.SystemReserve.search.create_complete_search_table(),
                                search_controller=url("./get_search_options_reserve"),
                                )
         reservations = [system.open_reservation for system in reserves]

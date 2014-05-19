@@ -721,23 +721,22 @@ class SearchBar(RepeatingFormField):
     simplesearch = None
 
     def __init__(self, table, search_controller=None, extra_selects=None,
-        extra_inputs=None, extra_hiddens=None, enable_custom_columns=False,
-        complete_data=None, *args, **kw):
-
+            extra_inputs=None, extra_hiddens=None, enable_custom_columns=False,
+            *args, **kw):
         super(SearchBar,self).__init__(*args, **kw)
         self.enable_custom_columns = enable_custom_columns
         self.search_controller=search_controller
         self.repetitions = 1
         self.extra_hiddens = extra_hiddens
         self.default_result_columns = {}
-        table_field = SingleSelectFieldJSON(name="table", options=table, validator=validators.NotEmpty()) 
+        table_field = SingleSelectFieldJSON(name="table", options=table.keys(), validator=validators.NotEmpty()) 
         operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
         value_field = TextFieldJSON(name="value")
 
         self.fields = [table_field, operation_field, value_field]
         new_selects = []
         self.extra_callbacks = {} 
-        self.search_object = jsonify.encode(complete_data)
+        self.search_object = jsonify.encode(table)
             
         if extra_selects is not None: 
             new_class = [] 
@@ -1320,8 +1319,7 @@ class SystemHistory(CompoundWidget):
 
         self.search_bar = SearchBar(name='historysearch',
                            label=_(u'History Search'),    
-                           table = search_utility.History.search.create_search_table(),
-                           complete_data = search_utility.History.search.create_complete_search_table(),
+                           table = search_utility.History.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_history"), 
                            )
 
