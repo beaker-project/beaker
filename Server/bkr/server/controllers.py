@@ -429,7 +429,7 @@ class Root(RPCRoot):
         for search in kw['systemsearch']: 
 	        #clsinfo = System.get_dict()[search['table']] #Need to change this
             class_field_list = search['table'].split('/')
-            cls_ref = su.System.search.translate_name(class_field_list[0])
+            cls_ref = su.System.search.translate_name_to_class(class_field_list[0])
             col = class_field_list[1]              
             #If value id False or True, let's convert them to
             if class_field_list[0] != 'Key':
@@ -553,7 +553,7 @@ class Root(RPCRoot):
             use_custom_columns = False
             for column in columns:
                 table,col = column.split('/')
-                if sys_search.translate_name(table) is not su.System:
+                if sys_search.translate_name_to_class(table) is not su.System:
                     use_custom_columns = True
                     break
             sys_search.add_columns_desc(columns)

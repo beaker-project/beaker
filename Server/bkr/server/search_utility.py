@@ -510,17 +510,31 @@ class Search(object):
            return
 
     @classmethod
-    def translate_name(cls,display_name):
-        """ 
-        translate_name() get's a reference to the class from it's display name 
-        """
-        try:
-            class_ref = cls.class_external_mapping[display_name]
-        except KeyError:
-            log.error('Class %s does not have a mapping to display_name %s' % (cls.__name__,display_name))
-            raise
+    def translate_class_to_name(cls, class_ref):
+        """Translate the class ref into the text that is used in the 'Table' column"""
+        if hasattr(class_ref, 'display_name'):
+            return class_ref.display_name
         else:
-           return class_ref
+            return class_ref.__name__
+
+    @classmethod
+    def translate_name_to_class(cls, display_name):
+        """Translate the text in the 'Table' column to the internal class"""
+        class_ref = None
+        # First check if any SystemObject has a 'display_name'
+        # attribute that matches, otherwise check against the class
+        # name
+        for system_object_class in SystemObject.__subclasses__():
+            if hasattr(system_object_class, 'display_name') and \
+                system_object_class.display_name == display_name:
+                class_ref = system_object_class
+                break
+        if class_ref is None:
+            for system_object_class in SystemObject.__subclasses__():
+                if system_object_class.__name__ == display_name:
+                    class_ref = system_object_class
+                    break
+        return class_ref
 
     @classmethod
     def split_class_field(cls,class_field):
@@ -603,7 +617,6 @@ class HistorySearch(Search):
     search_table = []   
 
 class SystemSearch(Search): 
-    class_external_mapping = {}
     search_table = []
     column_table = [] 
     def __init__(self,systems=None):
@@ -716,7 +729,7 @@ class SystemSearch(Search):
         if result_columns is not None:
             for elem in result_columns:
                 (display_name,col) = self.split_class_field(elem)
-                cls_ref = self.translate_name(display_name)
+                cls_ref = self.translate_name_to_class(display_name)
                 mycolumn = cls_ref.create_column(col)
                 # If they are System columns we won't need to explicitly add
                 # them to the query, as they are already returned in
@@ -764,10 +777,10 @@ class SystemSearch(Search):
         if lookup_table != None:
            lookup_table = []       
         for i in options:
-            for obj,v in i.iteritems():
-                display_name = cls.create_mapping(obj)
+            for class_ref ,v in i.iteritems():
+                display_name = cls.translate_class_to_name(class_ref)
                 for rule,v1 in v.iteritems():  
-                    searchable = obj.get_searchable()
+                    searchable = class_ref.get_searchable()
                     if rule == 'all':
                         for item in searchable: 
                             lookup_table.append('%s/%s' % (display_name,item))  
@@ -783,30 +796,6 @@ class SystemSearch(Search):
         lookup_table.sort()
         return lookup_table
 
-    @classmethod
-    def create_mapping(cls,obj):
-        display_name = getattr(obj,'display_name',None)
-        if display_name != None:
-            display_name = obj.display_name
-                  
-            #If the display name is already mapped to this class
-            if cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is obj: 
-                #this class is already mapped, all good
-                pass 
-            elif cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is not obj:                   
-                log.debug("Display name %s is already in use. Will try and use %s as display name for class %s" % (display_name, obj.__name__,obj.__name__))
-                display_name = obj.__name__             
-        else:
-            display_name = obj.__name__
-              
-        #We have our final display name, if it still exists in the mapping
-        #there isn't much we can do, and we don't want to overwrite it. 
-        if cls.class_external_mapping.has_key(display_name) and cls.class_external_mapping.get(display_name) is not obj: 
-            log.error("Display name %s cannot be set for %s" % (display_name,obj.__name__))               
-        else: 
-            cls.class_external_mapping[display_name] = obj
-        return display_name
-
     @classmethod 
     def field_type(cls,class_field): 
        """ 
@@ -816,7 +805,7 @@ class SystemSearch(Search):
        display_name = returned_class_field[0]
        field = returned_class_field[1]        
       
-       class_ref = cls.translate_name(display_name)
+       class_ref = cls.translate_name_to_class(display_name)
        field_type = class_ref.get_field_type(field)  
        
        if field_type:
@@ -852,7 +841,7 @@ class SystemSearch(Search):
         returned_class_field = cls.split_class_field(class_field) 
         display_name = returned_class_field[0]
         field = returned_class_field[1]        
-        class_ref = cls.translate_name(display_name)
+        class_ref = cls.translate_name_to_class(display_name)
         
         try:
             field_type = class_ref.get_field_type(field) 
@@ -866,7 +855,7 @@ class SystemSearch(Search):
         else:
             return dict(operators = class_ref.search_operators(field_type), values = vals)
 
-class SystemObject:
+class SystemObject(object):
 
     @classmethod
     def create_column(cls, column, *args, **kw):
