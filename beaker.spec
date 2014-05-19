@@ -95,7 +95,13 @@ BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  cracklib-python
 BuildRequires:  rpm-python
 BuildRequires:  python-netaddr
+BuildRequires:  python-keystoneclient
 BuildRequires:  python-novaclient
+BuildRequires:  python-glanceclient
+BuildRequires:  ipxe-bootimgs
+BuildRequires:  syslinux
+BuildRequires:  dosfstools
+BuildRequires:  mtools
 BuildRequires:  python-itsdangerous
 BuildRequires:  python-decorator
 BuildRequires:  python-webassets
@@ -181,7 +187,13 @@ Requires:       python-jinja2
 Requires:       python-netaddr
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
+Requires:       python-keystoneclient
 Requires:       python-novaclient
+Requires:       python-glanceclient
+Requires:       ipxe-bootimgs
+Requires:       syslinux
+Requires:       dosfstools
+Requires:       mtools
 Requires:       python-itsdangerous
 Requires:       python-decorator
 Requires:       python-flask
@@ -460,6 +472,8 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-sync-tasks
 %{_bindir}/beaker-refresh-ldap
 %{_bindir}/beaker-create-kickstart
+%{_bindir}/beaker-create-ipxe-image
+%{_mandir}/man1/beaker-create-ipxe-image.1.gz
 %{_mandir}/man1/beaker-create-kickstart.1.gz
 
 %if %{with_systemd}
@@ -487,6 +501,12 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
 %attr(-,apache,root) %dir %{_localstatedir}/lib/%{name}
+%else
+# If we're not building the -server subpackage we need to tell RPM to ignore 
+# the server man pages. They will always be present because the docs build 
+# always installs them all.
+%exclude %{_mandir}/man1/beaker-create-ipxe-image.1.gz
+%exclude %{_mandir}/man1/beaker-create-kickstart.1.gz
 %endif
 
 %if %{with inttests}
@@ -511,8 +531,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_mandir}/man1/bkr-*.1.gz
 %if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
 %{_datadir}/bash-completion
-# Server isn't packaged on RHEL7, so tell rpm to ignore this file
-%exclude %{_mandir}/man1/beaker-create-kickstart.1.gz
 %else
 %{_sysconfdir}/bash_completion.d
 %endif

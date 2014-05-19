@@ -246,6 +246,7 @@ setup(
             'log-delete = bkr.server.tools.log_delete:legacy_main',
             'beaker-log-delete = bkr.server.tools.log_delete:main',
             'beaker-check = bkr.server.tools.check_beaker:main',
+            'beaker-create-ipxe-image = bkr.server.tools.ipxe_image:main',
             'beaker-refresh-ldap = bkr.server.tools.refresh_ldap:main',
             'beaker-repo-update = bkr.server.tools.repo_update:main',
             'beaker-sync-tasks = bkr.server.tools.sync_tasks:main',

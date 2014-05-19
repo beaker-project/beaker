@@ -35,6 +35,12 @@ manually::
     INSERT INTO openstack_region (lab_controller_id)
     SELECT id FROM lab_controller WHERE fqdn = 'lab.example.com';
 
+In order to boot distro installers on OpenStack instances, Beaker relies on 
+a special image containing the iPXE network boot loader, which then loads its 
+boot configuration from the Beaker server. The 
+:program:`beaker-create-ipxe-image` tool creates and uploads a suitable image 
+to Glance. You must run this tool once after defining an OpenStack region.
+
 The name for each virtual machine is constructed from the ``guest_name_prefix`` 
 setting (see :ref:`admin-configuration`) combined with the recipe ID. If you 
 have configured multiple Beaker instances to use the same OpenStack instance, 

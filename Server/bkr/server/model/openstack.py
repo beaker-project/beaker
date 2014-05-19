@@ -5,7 +5,7 @@
 # (at your option) any later version.
 
 from sqlalchemy.schema import Column, ForeignKey
-from sqlalchemy.types import Integer
+from sqlalchemy.types import Integer, Unicode
 from sqlalchemy.orm import relationship
 from bkr.server.model.base import DeclarativeMappedObject
 from bkr.server.model.lab import LabController
@@ -22,3 +22,5 @@ class OpenStackRegion(DeclarativeMappedObject):
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
             name='openstack_region_lab_controller_id_fk'), nullable=False)
     lab_controller = relationship(LabController, backref='openstack_regions')
+    # NULL ipxe_image_id means not uploaded yet
+    ipxe_image_id = Column(Unicode(2048))

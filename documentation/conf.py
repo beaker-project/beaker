@@ -30,6 +30,9 @@ man_pages = [
         [u'Petr Splichal <psplicha@redhat.com>'], 1),
     ('admin-guide/man/beaker-create-kickstart', 'beaker-create-kickstart', 'Generate Anaconda kickstarts',
         [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1),
+    ('admin-guide/man/beaker-create-ipxe-image', 'beaker-create-ipxe-image',
+        'Generate and upload iPXE boot image to Glance',
+        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1),
 ]
 man_show_urls = True
 
