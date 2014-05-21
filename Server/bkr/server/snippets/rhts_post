@@ -1,24 +1,5 @@
 set -x
-# Check in with Beaker Server, let it know our hostname, and
-# record our install time.
-REPORTED_FQDN=$(hostname -f)
-{# Note that the last string comparison relies on bash prefix matching, not globbing #}
-if [[ -z "$REPORTED_FQDN" || $REPORTED_FQDN == localhost || $REPORTED_FQDN == localhost.* ]] ; then
-    # hostname -f is the most future-proof approach, but it isn't always reliable
-    if [ -f /etc/hostname ] ; then
-        # Preferred fallback if the OS is recent enough to provide it
-        REPORTED_FQDN=$(cat /etc/hostname)
-    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
-        # Last resort fallback to try to report something sensible
-        REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
-    fi
-fi
-{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
-wget -O - http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$REPORTED_FQDN
-{% else %}
-curl http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$REPORTED_FQDN
-{% endif %}
-
+{% snippet 'install_done' %}
 {% snippet 'clear_netboot' %}
 {% if recipe %}
 echo {{ recipe.id }} > /root/RECIPE.TXT

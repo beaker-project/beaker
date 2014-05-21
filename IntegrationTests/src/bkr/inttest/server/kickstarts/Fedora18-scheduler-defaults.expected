@@ -78,19 +78,28 @@ python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstar
 set -x
 # Check in with Beaker Server, let it know our hostname, and
 # record our install time.
-REPORTED_FQDN=$(hostname -f)
-if [[ -z "$REPORTED_FQDN" || $REPORTED_FQDN == localhost || $REPORTED_FQDN == localhost.* ]] ; then
-    # hostname -f is the most future-proof approach, but it isn't always reliable
-    if [ -f /etc/hostname ] ; then
-        # Preferred fallback if the OS is recent enough to provide it
-        REPORTED_FQDN=$(cat /etc/hostname)
-    elif grep -q ^HOSTNAME= /etc/sysconfig/network ; then
-        # Last resort fallback to try to report something sensible
-        REPORTED_FQDN=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
-    fi
-fi
-curl http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN
 
+# We will try a number of different places to figure out the system's FQDN.
+# In all cases we will only accept a real FQDN (no "localhost", and must have
+# a domain portion). DNS is our preferred source, otherwise the installer
+# should have stored a hostname in /etc based on the kickstart or DHCP info.
+# As a last resort we will use the system's first IP address.
+function find_fqdn() {
+    local fqdn=
+    # hostname -f is the most future-proof approach, but it isn't always reliable
+    fqdn=$(hostname -f)
+    if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
+    # Preferred fallback if the OS is recent enough to provide it
+    fqdn=$(cat /etc/hostname)
+    if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
+    # Red Hat-based systems prior to systemd will have this
+    fqdn=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
+    if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
+    # Getting desperate... pick the first local IP address
+    hostname -I | cut -d' ' -f1
+}
+REPORTED_FQDN=$(find_fqdn)
+curl http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN
 curl http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
 echo @RECIPEID@ > /root/RECIPE.TXT
 
