@@ -595,7 +595,7 @@ def ipxe_script(uuid):
                 % distro_tree.id)
     kernel_url = urlparse.urljoin(distro_tree_url, kernel.path)
     initrd_url = urlparse.urljoin(distro_tree_url, initrd.path)
-    kernel_options = resource.kernel_options
+    kernel_options = resource.kernel_options + ' netboot_method=ipxe'
     return ('#!ipxe\nkernel %s %s\ninitrd %s\nboot\n'
             % (kernel_url, kernel_options, initrd_url),
             200, [('Content-Type', 'text/plain')])

@@ -359,7 +359,7 @@ class IpxeScriptHTTPTest(unittest.TestCase):
                 'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
         response.raise_for_status()
         self.assertEquals(response.text, """#!ipxe
-kernel http://example.com/ipxe-test/F20/x86_64/os/pxeboot/vmlinuz ks=%s noverifyssl
+kernel http://example.com/ipxe-test/F20/x86_64/os/pxeboot/vmlinuz ks=%s noverifyssl netboot_method=ipxe
 initrd http://example.com/ipxe-test/F20/x86_64/os/pxeboot/initrd
 boot
 """ % recipe.rendered_kickstart.link)
