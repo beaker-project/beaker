@@ -84,14 +84,7 @@ def get_assets_env():
 def build_assets():
     env = get_assets_env()
     for bundle in env:
-        # force=True here is a workaround for the timestamp-based caching 
-        # behaviour in webassets. If the site.less symlink is changed to point 
-        # at a different source file, with a different mod time, webassets will 
-        # never notice if the mod time is still older than the mod time of the 
-        # output file (which it normally would be).
-        # The timestamp-based updater is still useful when auto_build=True is 
-        # used during development though.
-        bundle.build(force=True)
+        bundle.build()
 
 def list_asset_sources(source_dir):
     """
