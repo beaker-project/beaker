@@ -53,6 +53,6 @@ class TaskactionsTest(XmlRpcTestCase):
             recipe = job.recipesets[0].recipes[0]
             self.assertEquals(recipe.resource, None)
         self.assertEquals(self.server.taskactions.task_info(
-                recipe.t_id)['worker'], {})
+                recipe.t_id)['worker'], None)
         self.assertEquals(self.server.taskactions.task_info(
-                recipe.tasks[0].t_id)['worker'], {})
+                recipe.tasks[0].t_id)['worker'], None)

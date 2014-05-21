@@ -2291,9 +2291,10 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         """
         Method for exporting Recipe status for TaskWatcher
         """
-        worker = {}
         if self.resource:
-            worker['name'] = self.resource.fqdn
+            worker = {'name': self.resource.fqdn}
+        else:
+            worker = None
         return dict(
                     id              = "R:%s" % self.id,
                     worker          = worker,
@@ -2871,9 +2872,10 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         """
         Method for exporting Task status for TaskWatcher
         """
-        worker = {}
         if self.recipe.resource:
-            worker['name'] = self.recipe.resource.fqdn
+            worker = {'name': self.recipe.resource.fqdn}
+        else:
+            worker = None
         return dict(
                     id              = "T:%s" % self.id,
                     worker          = worker,
