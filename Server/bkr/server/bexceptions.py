@@ -48,3 +48,10 @@ class InsufficientSystemPermissions(BX):
 
     """
     pass
+
+class DatabaseLookupError(LookupError):
+    """
+    Raised when attempting to look up a database entity
+    which does not exist
+    """
+    pass
