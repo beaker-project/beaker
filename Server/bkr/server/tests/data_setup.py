@@ -476,8 +476,6 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
         recipe_task.logs = [rt_log()]
         recipe_task.finish_time = finish_time
         recipe_task._change_status(TaskStatus.completed)
-    recipe.resource.install_done = finish_time
-    recipe.resource.postinstall_done = finish_time
     recipe.recipeset.job.update_status()
     log.debug('Marked %s as complete with result %s', recipe.t_id, result)
 
@@ -485,6 +483,7 @@ def mark_job_complete(job, finish_time=None, only=False, **kwargs):
     if not only:
         for recipe in job.all_recipes:
             mark_recipe_running(recipe, **kwargs)
+            mark_recipe_installation_finished(recipe, **kwargs)
     for recipe in job.all_recipes:
         mark_recipe_complete(recipe, finish_time=finish_time, only=True, **kwargs)
         if finish_time:
@@ -542,7 +541,12 @@ def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
     recipe.recipeset.job.update_status()
     log.debug('Started %s', recipe.tasks[0].t_id)
 
-def mark_recipe_installation_finished(recipe):
+def mark_recipe_installation_finished(recipe, fqdn=None, **kwargs):
+    if not recipe.resource.fqdn:
+        # system reports its FQDN to Beaker in kickstart %post
+        if fqdn is None:
+            fqdn = '%s-for-recipe-%s' % (recipe.resource.__class__.__name__, recipe.id)
+        recipe.resource.fqdn = fqdn
     recipe.resource.install_finished = datetime.datetime.utcnow()
     recipe.resource.postinstall_finished = datetime.datetime.utcnow()
     recipe.recipeset.job.update_status()

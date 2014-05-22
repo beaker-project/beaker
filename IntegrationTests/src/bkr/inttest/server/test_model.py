@@ -13,6 +13,7 @@ import pkg_resources
 import lxml.etree
 import email
 import inspect
+import kid
 from turbogears.database import session
 from bkr.server.installopts import InstallOptions
 from bkr.server import model, identity
@@ -35,6 +36,9 @@ from nose.plugins.skip import SkipTest
 import turbogears
 import os
 import yum
+
+def serialize_kid_element(elem):
+    return kid.XHTMLSerializer().serialize(kid.ElementStream(elem), fragment=True)
 
 class SchemaSanityTest(unittest.TestCase):
 
@@ -1497,6 +1501,34 @@ class MACAddressAllocationTest(unittest.TestCase):
         job.update_status()
         self.assertEquals(RecipeResource._lowest_free_mac(),
                 netaddr.EUI('52:54:00:00:00:00'))
+
+class VirtResourceTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+        self.addCleanup(session.rollback)
+
+    def test_link(self):
+        recipe = data_setup.create_recipe()
+        data_setup.create_job_for_recipes([recipe])
+        data_setup.mark_recipe_running(recipe, virt=True)
+        # when recipe first starts we don't have an fqdn
+        expected_hyperlink = ('<a href="http://openstack.example.invalid/'
+                'dashboard/project/instances/{0}/">{0}</a>'
+                .format(recipe.resource.instance_id))
+        self.assertEquals(serialize_kid_element(recipe.resource.link),
+                '<span>(OpenStack instance {0})</span>'.format(expected_hyperlink))
+        # when installation finishes, we have an fqdn
+        data_setup.mark_recipe_installation_finished(recipe,
+                fqdn=u'my-openstack-instance')
+        self.assertEquals(serialize_kid_element(recipe.resource.link),
+                '<span>my-openstack-instance (OpenStack instance {0})</span>'
+                .format(expected_hyperlink))
+        # after the recipe completes, we don't link to the deleted instance
+        data_setup.mark_recipe_complete(recipe, only=True)
+        self.assertEquals(serialize_kid_element(recipe.resource.link),
+                '<span>my-openstack-instance (OpenStack instance {0})</span>'
+                .format(recipe.resource.instance_id))
 
 class LogRecipeTest(unittest.TestCase):
 

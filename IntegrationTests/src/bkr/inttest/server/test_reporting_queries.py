@@ -11,7 +11,8 @@ from decimal import Decimal
 from turbogears.database import session
 from bkr.server import dynamic_virt
 from bkr.server.model import System, RecipeTask, Cpu, SystemStatus, \
-    SystemActivity, TaskPriority, RecipeSetActivity, VirtResource
+    SystemActivity, TaskPriority, RecipeSetActivity, VirtResource, \
+    GuestResource
 from bkr.inttest import data_setup
 
 class ReportingQueryTest(unittest.TestCase):
@@ -19,10 +20,18 @@ class ReportingQueryTest(unittest.TestCase):
     def setUp(self):
         session.begin()
         self.addCleanup(session.rollback)
-        # Other tests could have also created VirtResources, we hack them up so 
-        # they don't interfere with the min/max/avg we are expecting here.
+        # Other tests could have also created VirtResources and GuestResources, 
+        # we hack them up so they don't interfere with the min/max/avg we are 
+        # expecting here.
         for resource in VirtResource.query:
             resource.recipe.start_time = None
+            resource.install_started = None
+            resource.install_finished = None
+        for resource in GuestResource.query:
+            resource.recipe.start_time = None
+            resource.install_started = None
+            resource.install_finished = None
+        session.flush()
 
     def execute_reporting_query(self, name):
         sql = pkg_resources.resource_string('bkr.server', 'reporting-queries/%s.sql' % name)

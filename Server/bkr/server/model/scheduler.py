@@ -3398,7 +3398,21 @@ class VirtResource(RecipeResource):
 
     @property
     def link(self):
-        return self.fqdn # just text, not a link
+        span = Element('span')
+        span.text = u''
+        if self.fqdn:
+            span.text += self.fqdn + u' '
+        span.text += u'(OpenStack instance '
+        # don't hyperlink it if the instance is deleted
+        if self.recipe.is_finished():
+            span.text += unicode(self.instance_id) + u')'
+        else:
+            url = urlparse.urljoin(get('openstack.dashboard_url'),
+                    'project/instances/%s/' % self.instance_id)
+            a = make_link(url=url, text=unicode(self.instance_id))
+            a.tail = u')'
+            span.append(a)
+        return span
 
     def install_options(self, distro_tree):
         return global_install_options()\

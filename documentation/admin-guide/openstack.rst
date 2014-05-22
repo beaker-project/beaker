@@ -22,10 +22,11 @@ pool for that recipe. Recipes with hardware requirements in
 excluded from this process.
 
 To enable OpenStack integration, configure the Identity API (Keystone) endpoint
-in :file:`/etc/beaker/server.cfg`::
+and dashboard (Horizon) URL in :file:`/etc/beaker/server.cfg`::
 
     # Use OpenStack for running recipes on dynamically created guests.
     openstack.identity_api_url = 'https://openstack.example.com:5000/v2.0'
+    openstack.dashboard_url = 'https://openstack.example.com/dashboard/'
 
 Currently Beaker does not support multiple OpenStack regions. Beaker expects 
 a single row to exist in the ``openstack_region`` table, referencing the lab 
