@@ -87,7 +87,10 @@ class Machine_Test(BeakerWorkflow):
         self.parser.remove_option("--family")
         self.parser.remove_option("--clients")
         self.parser.remove_option("--servers")
+        self.parser.remove_option("--hostrequire")
         self.parser.remove_option("--keyvalue")
+        self.parser.remove_option("--systype")
+        self.parser.remove_option("--random")
         self.parser.remove_option("--distro")
         # Re-add option Family with append options
         self.parser.add_option(
