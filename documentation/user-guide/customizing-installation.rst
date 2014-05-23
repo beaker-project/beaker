@@ -37,6 +37,27 @@ the effective install options for each recipe.
    Describe syntax of the options, rules for parsing/unparsing, and how 
    combining/overriding works.
 
+.. _kernel-options:
+
+Kernel options
+~~~~~~~~~~~~~~
+
+Most kernel options are passed as-is on the kernel command line when the 
+installer is booted.
+Refer to the distro documentation for details about kernel options supported by 
+the installer.
+
+The following kernel options are treated specially by Beaker:
+
+``initrd=<tftp path>``
+    Extra initrd/initramfs image to load, in addition to the initrd image for 
+    the distro installer. Use this to apply updates to the installer image, or 
+    to supply additional drivers for installation.
+
+    If the boot loader supports multiple initrd images, Beaker extracts the 
+    ``initrd=`` option from the kernel command line and appends it to the boot 
+    loader configuration.
+
 .. _kickstart-metadata:
 
 Kickstart metadata
