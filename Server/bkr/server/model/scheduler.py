@@ -21,7 +21,7 @@ import netaddr
 from kid import Element
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, DateTime, Boolean, UnicodeText, String, Numeric)
-from sqlalchemy.sql import select, union, and_, or_, not_, func, literal
+from sqlalchemy.sql import select, union, and_, or_, not_, func, literal, exists
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, backref, object_mapper,
         dynamic_loader, validates)
@@ -152,25 +152,31 @@ class Watchdog(DeclarativeMappedObject):
         this behaviour. In particular, the host recipe in virt testing will 
         finish while its guests are still running, but we want to keep 
         monitoring the host's console log in case of a panic.
+
+        XXX Note that queries returned by this method do not function correctly
+        when Recipe/RecipeSet/Job are joined via a 'chain of joins'. The mapped
+        collections need to be joined in seperate and succesive calls to join().
+        This appears to be a bug in sqlalchemy 0.6.8, but is no longer an issue
+        in 0.8.3 (and perhaps versions in between, although currently untested).
         """
-        select_recipe_set_id = session.query(RecipeSet.id). \
-            join(Recipe).join(Watchdog).group_by(RecipeSet.id)
+
         if status == 'active':
-            watchdog_clause = func.max(Watchdog.kill_time) > datetime.utcnow()
+            watchdog_clause = Watchdog.kill_time > datetime.utcnow()
         elif status =='expired':
-            watchdog_clause = func.max(Watchdog.kill_time) < datetime.utcnow()
+            watchdog_clause = Watchdog.kill_time < datetime.utcnow()
         else:
             return None
+        any_recipe_has_matching_watchdog = exists(select([1],
+            from_obj=Recipe.__table__.join(Watchdog.__table__)). \
+            where(Recipe.recipe_set_id == RecipeSet.id).where(watchdog_clause). \
+            correlate(RecipeSet.__table__))
 
-        recipe_set_in_watchdog = RecipeSet.id.in_(
-            select_recipe_set_id.having(watchdog_clause))
-
-        if labcontroller is None:
-            my_filter = and_(Watchdog.kill_time != None, recipe_set_in_watchdog)
-        else:
-            my_filter = and_(RecipeSet.lab_controller==labcontroller,
-                Watchdog.kill_time != None, recipe_set_in_watchdog)
-        return cls.query.join(Watchdog.recipe, Recipe.recipeset).filter(my_filter)
+        watchdog_query = cls.query.join(Watchdog.recipe).join(Recipe.recipeset).filter(
+            and_(Watchdog.kill_time != None, any_recipe_has_matching_watchdog))
+        if labcontroller is not None:
+            watchdog_query = watchdog_query.filter(
+                RecipeSet.lab_controller==labcontroller)
+        return watchdog_query
 
 
 class Log(object):
