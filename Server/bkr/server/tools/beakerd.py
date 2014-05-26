@@ -628,12 +628,12 @@ def provision_virt_recipe(recipe_id):
     #virtio_possible = True
     #if self.recipe.distro_tree.distro.osversion.osmajor.osmajor == "RedHatEnterpriseLinux3":
     #    virtio_possible = False
-    instance_id = manager.create_vm(vm_name, flavor)
+    instance_id, ip_address = manager.create_vm(vm_name, flavor)
     try:
         recipe.createRepo()
         recipe.systems = []
         recipe.watchdog = Watchdog()
-        recipe.resource = VirtResource(instance_id, manager.lab_controller)
+        recipe.resource = VirtResource(instance_id, ip_address, manager.lab_controller)
         recipe.recipeset.lab_controller = manager.lab_controller
         recipe.virt_status = RecipeVirtStatus.succeeded
         recipe.schedule()
