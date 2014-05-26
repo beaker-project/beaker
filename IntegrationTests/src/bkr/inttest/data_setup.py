@@ -14,6 +14,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session
 from bkr.server import dynamic_virt
+from bkr.server.bexceptions import DatabaseLookupError
 from bkr.server.model import LabController, User, Group, UserGroup, Distro, DistroTree, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
@@ -181,16 +182,16 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
         if distro_name is None:
             distro = create_distro(osmajor=osmajor, tags=distro_tags)
         else:
-            distro = Distro.by_name(distro_name)
-            if not distro:
+            try:
+                distro = Distro.by_name(distro_name)
+            except DatabaseLookupError:
                 distro = create_distro(name=distro_name)
     distro_tree = DistroTree.lazy_create(distro=distro,
             arch=Arch.by_name(arch), variant=variant)
-    session.add(distro_tree)
     if distro_tree.arch not in distro.osversion.arches:
         distro.osversion.arches.append(distro_tree.arch)
-    distro_tree.repos.append(DistroTreeRepo(repo_id=variant,
-            repo_type=u'variant', path=u''))
+    DistroTreeRepo.lazy_create(distro_tree=distro_tree,
+            repo_id=variant, repo_type=u'variant', path=u'')
     existing_urls = [lc_distro_tree.url for lc_distro_tree in distro_tree.lab_controller_assocs]
     # make it available in all lab controllers
     for lc in (lab_controllers or LabController.query):

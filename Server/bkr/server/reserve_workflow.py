@@ -15,6 +15,7 @@ from bkr.server.model import (Distro, Job, System, Arch, OSMajor, DistroTag,
                               LabController, LabControllerDistroTree)
 from bkr.server.jobs import Jobs as JobController
 from bkr.common.bexceptions import BX
+from bkr.server.bexceptions import DatabaseLookupError
 
 import logging
 log = logging.getLogger(__name__)
@@ -146,7 +147,7 @@ class ReserveWorkflow:
             return []
         try:
             distro = Distro.by_name(distro)
-        except NoResultFound:
+        except DatabaseLookupError:
             return []
         trees = distro.dyn_trees.join(DistroTree.arch)\
                 .order_by(DistroTree.variant, Arch.arch)

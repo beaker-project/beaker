@@ -99,10 +99,7 @@ class Tasks(RPCRoot):
            Changed 'install_name' to 'distro_name' in the *filter* argument.
         """
         if filter.get('distro_name'):
-            try:
-                distro = Distro.by_name(filter['distro_name'])
-            except NoResultFound:
-                raise BX(_(u'Invalid Distro: %s') % filter['distro_name'])
+            distro = Distro.by_name(filter['distro_name'])
             tasks = distro.tasks()
         elif 'osmajor' in filter and filter['osmajor']:
             try:

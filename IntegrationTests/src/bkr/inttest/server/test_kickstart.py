@@ -78,7 +78,7 @@ class KickstartTest(unittest.TestCase):
             cls.rhel58server = data_setup.create_distro(name=u'RHEL5-Server-U8',
                 osmajor=u'RedHatEnterpriseLinuxServer5', osminor=u'8')
             cls.rhel58server_x86_64 = data_setup.create_distro_tree(
-                distro=cls.rhel58server, variant=None, arch=u'x86_64',
+                distro=cls.rhel58server, variant=u'', arch=u'x86_64',
                 lab_controllers=[cls.lab_controller],
                 urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-5-Server/U8/x86_64/os/',
                       u'nfs://lab.test-kickstart.invalid:/distros/RHEL-5-Server/U8/x86_64/os/'])
@@ -95,7 +95,7 @@ class KickstartTest(unittest.TestCase):
                     path=u'../debug'),
             ]
             cls.rhel58server_ia64 = data_setup.create_distro_tree(
-                distro=cls.rhel58server, variant=None, arch=u'ia64',
+                distro=cls.rhel58server, variant=u'', arch=u'ia64',
                 lab_controllers=[cls.lab_controller],
                 urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-5-Server/U8/ia64/os/',
                       u'nfs://lab.test-kickstart.invalid:/distros/RHEL-5-Server/U8/ia64/os/'])

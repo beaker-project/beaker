@@ -4,10 +4,10 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
+import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup
-from bkr.inttest.client import run_client
+from bkr.inttest.client import run_client, ClientError
 
 class TaskListTest(unittest.TestCase):
 
@@ -59,3 +59,23 @@ class TaskListTest(unittest.TestCase):
     def test_nonexistent_package(self):
         out = run_client(['bkr', 'task-list', '--package', 'notexist'])
         self.assertEquals(out, '')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1073280
+    def test_by_distro(self):
+        with session.begin():
+            distro = data_setup.create_distro(osmajor=u'RedHatEnterpriseLinux6')
+            included = data_setup.create_task()
+            excluded = data_setup.create_task(
+                    exclude_osmajor=[u'RedHatEnterpriseLinux6'])
+        out = run_client(['bkr', 'task-list', '--distro', distro.name])
+        task_names = out.splitlines()
+        self.assertIn(included.name, task_names)
+        self.assertNotIn(excluded.name, task_names)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1073280
+    def test_nonexistent_distro(self):
+        try:
+            run_client(['bkr', 'task-list', '--distro', 'notexist'])
+            self.fail('should raise')
+        except ClientError as e:
+            self.assertIn('No such distro: notexist', e.stderr_output)
