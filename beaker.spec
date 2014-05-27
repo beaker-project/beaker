@@ -463,7 +463,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{python2_sitelib}/bkr.server-*-nspkg.pth
 %{python2_sitelib}/bkr.server-*.egg-info/
 %{_bindir}/beaker-init
-%{_bindir}/nag-mail
+%{_bindir}/beaker-usage-reminder
 %{_bindir}/beaker-log-delete
 %{_bindir}/log-delete
 %{_bindir}/beaker-check
@@ -475,6 +475,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-create-ipxe-image
 %{_mandir}/man1/beaker-create-ipxe-image.1.gz
 %{_mandir}/man1/beaker-create-kickstart.1.gz
+%{_mandir}/man1/beaker-usage-reminder.1.gz
 
 %if %{with_systemd}
 %{_unitdir}/beakerd.service
@@ -507,6 +508,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 # always installs them all.
 %exclude %{_mandir}/man1/beaker-create-ipxe-image.1.gz
 %exclude %{_mandir}/man1/beaker-create-kickstart.1.gz
+%exclude %{_mandir}/man1/beaker-usage-reminder.1.gz
 %endif
 
 %if %{with inttests}

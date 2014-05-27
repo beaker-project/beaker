@@ -657,3 +657,10 @@ def create_device(device_class=None, **kwargs):
     if device_class is not None:
         kwargs['device_class_id'] = create_device_class(device_class).id
     return Device.lazy_create(**kwargs)
+
+def create_recipe_reservation(user, task_name=u'/distribution/reservesys', kill_time=0):
+    recipe = create_recipe(task_name=task_name)
+    create_job_for_recipes([recipe], owner=user)
+    mark_recipe_running(recipe)
+    recipe.extend(kill_time)
+    return recipe

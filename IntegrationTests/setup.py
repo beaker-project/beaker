@@ -21,6 +21,7 @@ setup(
         'client/workflow_kickstart.cfg.tmpl',
         'labcontroller/install-failure-logs/*',
         'server/kickstarts/*',
+        'server/mail-templates/*',
         'server/motd.xml',
         'server/selenium/*.csv',
         'server/selenium/invalid-task_file',

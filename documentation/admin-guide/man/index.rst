@@ -6,3 +6,4 @@ Administrative command reference
 
    beaker-create-ipxe-image
    beaker-create-kickstart
+   beaker-usage-reminder
