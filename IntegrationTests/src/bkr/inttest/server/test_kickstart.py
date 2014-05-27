@@ -1999,6 +1999,31 @@ network --bootproto=static --device=00:11:22:33:44:55 --ip=192.168.99.1 --netmas
 network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netmask=255.255.255.0
 ''' in k, k)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=920470
+    def test_dhcp_networks(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="dhcp_networks=00:11:22:33:44:55;66:77:88:99:aa:bb">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('''
+network --bootproto=dhcp
+network --bootproto=dhcp --device=00:11:22:33:44:55
+network --bootproto=dhcp --device=66:77:88:99:aa:bb
+''' in k, k)
+
     def test_highbank(self):
         system = data_setup.create_system(arch=u'armhfp', status=u'Automated',
                 lab_controller=self.lab_controller, kernel_type=u'highbank')

@@ -97,6 +97,14 @@ correspond to the similarly-named kickstart option.
     If specified, Beah will function in IPv4 only mode even if IPv6
     connectivity is possible.
 
+``dhcp_networks=<device>[;<device>...]``
+    Configure additional network devices to start on boot with DHCP activation. 
+    The device should be given as a kernel device name (for example, ``em1``) 
+    or MAC address.
+
+    Note that the network device used for installation is always set to start 
+    on boot with DHCP activation.
+
 ``ethdevices=<module>[,<module>...]``
     Comma-separated list of network modules to be loaded during installation.
 
@@ -183,6 +191,15 @@ correspond to the similarly-named kickstart option.
 ``skipx``
     Do not configure X on the installed system. This is needed for headless 
     systems which lack graphics support.
+
+``static_networks=<device>,<ipv4_address>[;...]``
+    Configure one or more network devices to start on boot with static IPv4 
+    addresses. The device should be given as a kernel device name (for example, 
+    ``em1``) or MAC address. The IPv4 address should be given with its netmask 
+    in CIDR notation (for example, ``192.168.99.1/24``).
+
+    Note that the network device used for installation is always set to start 
+    on boot with DHCP activation.
 
 ``timezone=<tzname>``
     Time zone to use. Default is ``America/New_York`` unless overridden by the 
