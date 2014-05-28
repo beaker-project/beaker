@@ -111,9 +111,10 @@ class TaskActions(RPCRoot):
             raise BX(_("You don't have permission to %s %s" % (stop_type,
                                                                taskid)))
         kwargs = dict(msg = msg)
-
+        task.record_activity(user=identity.current.user, service=u'XMLRPC',
+                             field=u'Status', action=u'Cancelled', old='', new='')
         try:
-            return getattr(task,stop_type)(**kwargs)
+            return getattr(task, stop_type)(**kwargs)
         except StaleTaskStatusException:
             raise BX(_(u"Could not cancel job id %s. Please try later" % task_id))
 

@@ -14,10 +14,6 @@ class NoChangeException(BeakerException):
     """This is raised when we want to signal we are doing a NOP"""
     pass
 
-class VMCreationFailedException(BeakerException):
-    pass
-
-
 class StaleTaskStatusException(ValueError):
     """
     Raised when attempting to update the status of a task which was changed 
@@ -46,5 +42,12 @@ class InsufficientSystemPermissions(BX):
     Raised when systems permissions available to a
     user are not sufficient.
 
+    """
+    pass
+
+class DatabaseLookupError(LookupError):
+    """
+    Raised when attempting to look up a database entity
+    which does not exist
     """
     pass

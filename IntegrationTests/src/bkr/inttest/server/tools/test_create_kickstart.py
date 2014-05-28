@@ -204,10 +204,11 @@ class CreateKickstartTest(unittest.TestCase):
             system1 = data_setup.create_system(lab_controller=lc,
                 arch=u'x86_64')
             i386_distro = self._create_i386_distro(lc)
-            io = OSMajorInstallOptions.lazy_create(osmajor_id=
-                i386_distro.osversion.osmajor.id,
+            osmajor = i386_distro.osversion.osmajor
+            io = OSMajorInstallOptions.lazy_create(osmajor_id=osmajor.id,
                 arch_id=Arch.by_name('i386').id)
             io.ks_meta = 'lang=en_UK.UTF-8'
+            session.expire(osmajor, ['install_options_by_arch'])
         recipe = self._create_recipe(system1)
         distro_tree_id = i386_distro.trees[0].id
         kickstart = self._run_create_kickstart(['--recipe-id', str(recipe.id),

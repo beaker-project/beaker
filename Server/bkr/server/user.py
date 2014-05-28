@@ -29,13 +29,11 @@ from bkr.server.model import User, Job, System, SystemActivity, TaskStatus
 
 class UserFormSchema(validators.Schema):
     user_id = validators.Int()
-    user_name = validators.String(not_empty=True)
-    display_name = validators.String(not_empty=True)
+    user_name = validators.UnicodeString(not_empty=True, strip=True)
+    display_name = validators.UnicodeString(not_empty=True, strip=True)
     disabled = validators.StringBool(if_empty=False)
-    email_address = validators.Email(not_empty=True)
-    chained_validators = [beaker_validators.UniqueFormEmail('user_id',
-                            'email_address'),
-                          beaker_validators.UniqueUserName('user_id',
+    email_address = validators.Email(not_empty=True, strip=True)
+    chained_validators = [beaker_validators.UniqueUserName('user_id',
                             'user_name')]
 
 

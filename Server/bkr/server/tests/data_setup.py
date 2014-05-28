@@ -9,11 +9,11 @@ import re
 import os
 import time
 import datetime
+import uuid
 import itertools
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session
-from bkr.server import dynamic_virt
 from bkr.server.model import LabController, User, Group, UserGroup, Distro, DistroTree, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
@@ -24,7 +24,7 @@ from bkr.server.model import LabController, User, Group, UserGroup, Distro, Dist
         DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
         LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, \
         GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
-        SystemPermission
+        SystemPermission, DistroTreeImage, ImageType, KernelType
 
 log = logging.getLogger(__name__)
 
@@ -76,11 +76,16 @@ def create_labcontroller(fqdn=None, user=None):
         lc = LabController.by_name(fqdn)  
     except NoResultFound:
         if user is None:
-            user = User(user_name='host/%s' % fqdn)
+            user = User(user_name=u'host/%s' % fqdn,
+                    email_address=u'root@%s' % fqdn)
         lc = LabController(fqdn=fqdn)
         lc.user = user
         session.add(lc)
         user.groups.append(Group.by_name(u'lab_controller'))
+        # Need to ensure it is inserted now, since we aren't using lazy_create 
+        # here so a subsequent call to create_labcontroller could try and 
+        # create the same LC again.
+        session.flush()
         return lc
     log.debug('labcontroller %s already exists' % fqdn)
     return lc
@@ -98,6 +103,9 @@ def create_user(user_name=None, password=None, display_name=None,
     user.email_address = email_address
     if password:
         user.password = password
+    user.openstack_username = user_name
+    user.openstack_password = u'dummy_openstack_password_for_%s' % user_name
+    user.openstack_tenant_name = u'Dummy Tenant for %s' % user_name
     log.debug('Created user %r', user)
     return user
 
@@ -191,9 +199,19 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
         distro.osversion.arches.append(distro_tree.arch)
     distro_tree.repos.append(DistroTreeRepo(repo_id=variant,
             repo_type=u'variant', path=u''))
+    DistroTreeImage.lazy_create(distro_tree=distro_tree,
+            image_type=ImageType.kernel,
+            kernel_type=KernelType.by_name(u'default'),
+            path=u'pxeboot/vmlinuz')
+    DistroTreeImage.lazy_create(distro_tree=distro_tree,
+            image_type=ImageType.initrd,
+            kernel_type=KernelType.by_name(u'default'),
+            path=u'pxeboot/initrd')
     existing_urls = [lc_distro_tree.url for lc_distro_tree in distro_tree.lab_controller_assocs]
-    # make it available in all lab controllers
-    for lc in (lab_controllers or LabController.query):
+    # make it available in all lab controllers by default
+    if lab_controllers is None:
+        lab_controllers = LabController.query
+    for lc in lab_controllers:
         default_urls = [u'%s://%s%s/distros/%s/%s/%s/os/' % (scheme, lc.fqdn,
                 scheme == 'nfs' and ':' or '',
                 distro_tree.distro.name, distro_tree.variant,
@@ -426,7 +444,8 @@ def create_completed_job(**kwargs):
 
 def mark_recipe_complete(recipe, result=TaskResult.pass_,
         finish_time=None, only=False, server_log=False, **kwargs):
-    assert result in TaskResult
+    # we accept result=None to mean: don't add any results to recipetasks
+    assert result is None or result in TaskResult
     finish_time = finish_time or datetime.datetime.utcnow()
     if not only:
         mark_recipe_running(recipe, **kwargs)
@@ -457,14 +476,13 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
                 path=u'/', filename=u'result.txt')
 
     for recipe_task in recipe.tasks:
-        rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
-        rtr.logs = [rtr_log()]
+        if result is not None:
+            rtr = RecipeTaskResult(recipetask=recipe_task, result=result)
+            rtr.logs = [rtr_log()]
+            recipe_task.results.append(rtr)
         recipe_task.logs = [rt_log()]
         recipe_task.finish_time = finish_time
         recipe_task._change_status(TaskStatus.completed)
-        recipe_task.results.append(rtr)
-    recipe.resource.install_done = finish_time
-    recipe.resource.postinstall_done = finish_time
     recipe.recipeset.job.update_status()
     log.debug('Marked %s as complete with result %s', recipe.t_id, result)
 
@@ -472,6 +490,7 @@ def mark_job_complete(job, finish_time=None, only=False, **kwargs):
     if not only:
         for recipe in job.all_recipes:
             mark_recipe_running(recipe, **kwargs)
+            mark_recipe_installation_finished(recipe, **kwargs)
     for recipe in job.all_recipes:
         mark_recipe_complete(recipe, finish_time=finish_time, only=True, **kwargs)
         if finish_time:
@@ -488,13 +507,12 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
     if not recipe.resource:
         if isinstance(recipe, MachineRecipe):
             if virt:
-                recipe.resource = VirtResource(
-                        system_name=u'testdata_recipe_%s' % recipe.id)
                 if not lab_controller:
                     lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
+                recipe.resource = VirtResource(uuid.uuid4(),
+                        u'recipe-%s.openstack.invalid' % recipe.id,
+                        lab_controller)
                 recipe.recipeset.lab_controller = lab_controller
-                with dynamic_virt.VirtManager() as manager:
-                    recipe.resource.allocate(manager, [lab_controller])
             else:
                 if not system:
                     if not lab_controller:
@@ -532,7 +550,12 @@ def mark_recipe_running(recipe, fqdn=None, only=False, **kwargs):
     recipe.recipeset.job.update_status()
     log.debug('Started %s', recipe.tasks[0].t_id)
 
-def mark_recipe_installation_finished(recipe):
+def mark_recipe_installation_finished(recipe, fqdn=None, **kwargs):
+    if not recipe.resource.fqdn:
+        # system reports its FQDN to Beaker in kickstart %post
+        if fqdn is None:
+            fqdn = '%s-for-recipe-%s' % (recipe.resource.__class__.__name__, recipe.id)
+        recipe.resource.fqdn = fqdn
     recipe.resource.install_finished = datetime.datetime.utcnow()
     recipe.resource.postinstall_finished = datetime.datetime.utcnow()
     recipe.recipeset.job.update_status()

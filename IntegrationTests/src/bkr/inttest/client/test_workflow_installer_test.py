@@ -21,7 +21,20 @@ class WorkflowInstallerTest(unittest.TestCase):
             '--arch', distro_tree.arch.arch,
             '--template', self.template_file_name,
             '--debug',
-            '--verbose',
             '--task', self.task.name])
         self.assertIn('key --skip', out)
         self.assertIn('Submitted:', out)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1078610
+    def test_dryrun(self):
+        with session.begin():
+            distro = data_setup.create_distro(tags=[u'STABLE'])
+            distro_tree = data_setup.create_distro_tree(distro=distro)
+        out = run_client(['bkr', 'workflow-installer-test',
+                          '--family', distro.osversion.osmajor.osmajor,
+                          '--arch', distro_tree.arch.arch,
+                          '--template', self.template_file_name,
+                          '--task',
+                          self.task.name,
+                          '--dryrun'])
+        self.assertEquals('', out)

@@ -140,7 +140,12 @@ window.SystemAccessPolicyView = Backbone.View.extend({
     add_group_row: function (group) {
         var row = $('<tr/>');
         row.data('group', group);
-        $('<td/>').text(group).appendTo(row);
+        var td = $('<td/>');
+        td.appendTo(row);
+        $('<a>',{
+            text: group,
+            href: beaker_url_prefix + 'groups/edit?group_name=' + encodeURIComponent(group)
+        }).appendTo(td);
         _.each(this.model.get('access_policy').get('possible_permissions'),
             function (permission) {
                 var checkbox = $('<input type="checkbox"/>')

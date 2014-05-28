@@ -16,7 +16,7 @@ bkr machine-test: Generate Beaker job to test a system
 Synopsis
 --------
 
-:program:`bkr machine-test` :option:`--machine` <fqdn> [--inventory] [*workflow options*] [*options*]
+:program:`bkr machine-test` :option:`--machine` <fqdn> [--inventory] [--ignore-system-status] [*workflow options*] [*options*]
 
 Description
 -----------
@@ -25,6 +25,10 @@ Generates a Beaker job to test the system identified by <fqdn>.
 
 Options
 -------
+
+.. option:: --ignore-system-status
+
+   Test the system irrespective of its status (Automated, Manual or Broken)
 
 .. option:: --inventory
 
@@ -52,6 +56,12 @@ task::
             --family RedHatEnterpriseLinuxServer5 \\
             --family RedHatEnterpriseLinux6
 
+Attempt to run the inventory task on faultysystem.example.invalid even
+though it is marked as Broken::
+
+   bkr machine-test --ignore-system-status --inventory \\
+            --machine=faultysystem.example.invalid
+
 See also
 --------
 
@@ -77,7 +87,10 @@ class Machine_Test(BeakerWorkflow):
         self.parser.remove_option("--family")
         self.parser.remove_option("--clients")
         self.parser.remove_option("--servers")
+        self.parser.remove_option("--hostrequire")
         self.parser.remove_option("--keyvalue")
+        self.parser.remove_option("--systype")
+        self.parser.remove_option("--random")
         self.parser.remove_option("--distro")
         # Re-add option Family with append options
         self.parser.add_option(
@@ -92,6 +105,13 @@ class Machine_Test(BeakerWorkflow):
             default=False,
             help="Run Inventory task as well"
         )
+        self.parser.add_option(
+            "--ignore-system-status",
+            action="store_true",
+            default=False,
+            help="Test machine irrespective of its status"
+        )
+
         self.parser.usage = "%%prog %s [options] --machine=FQDN" % self.normalized_name
 
     def run(self, *args, **kwargs):

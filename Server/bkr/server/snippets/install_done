@@ -1,0 +1,31 @@
+{% if recipe %}
+# Check in with Beaker Server, let it know our hostname, and
+# record our install time.
+
+# We will try a number of different places to figure out the system's FQDN.
+# In all cases we will only accept a real FQDN (no "localhost", and must have
+# a domain portion). DNS is our preferred source, otherwise the installer
+# should have stored a hostname in /etc based on the kickstart or DHCP info.
+# As a last resort we will use the system's first IP address.
+{# Note that * used in [[ ]] is bash pattern matching, not globbing. #}
+function find_fqdn() {
+    local fqdn=
+    # hostname -f is the most future-proof approach, but it isn't always reliable
+    fqdn=$(hostname -f)
+    if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
+    # Preferred fallback if the OS is recent enough to provide it
+    fqdn=$(cat /etc/hostname)
+    if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
+    # Red Hat-based systems prior to systemd will have this
+    fqdn=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
+    if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
+    # Getting desperate... pick the first local IP address
+    hostname -I | cut -d' ' -f1
+}
+REPORTED_FQDN=$(find_fqdn)
+{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
+wget -O - http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$REPORTED_FQDN
+{% else %}
+curl http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$REPORTED_FQDN
+{% endif %}
+{% endif %}

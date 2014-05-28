@@ -124,12 +124,6 @@ class BeakerWorkflow(BeakerCommand):
             help="Print generated job XML",
         )
         self.parser.add_option(
-            "--verbose",
-            default=False,
-            action="store_true",
-            help="Print informative messages to stdout"
-        )
-        self.parser.add_option(
             "--pretty-xml", "--prettyxml",
             action="callback", 
             callback=prettyxml,
@@ -598,20 +592,70 @@ class BeakerRecipeBase(BeakerBase):
     def __init__(self, *args, **kwargs):
         self.node.setAttribute('whiteboard','')
         andDistroRequires = self.doc.createElement('and')
-        andHostRequires = self.doc.createElement('and')
+
         partitions = self.doc.createElement('partitions')
         distroRequires = self.doc.createElement('distroRequires')
         hostRequires = self.doc.createElement('hostRequires')
         repos = self.doc.createElement('repos')
         distroRequires.appendChild(andDistroRequires)
-        hostRequires.appendChild(andHostRequires)
         self.node.appendChild(distroRequires)
         self.node.appendChild(hostRequires)
         self.node.appendChild(repos)
         self.node.appendChild(partitions)
 
+    def _addBaseHostRequires(self, **kwargs):
+        """ Add hostRequires """
+
+        hostRequires = self.node.getElementsByTagName('hostRequires')[0]
+        machine = kwargs.get("machine", None)
+        if machine:
+            # if machine is specified, emit a warning message that any
+            # other host selection criteria is ignored
+            for opt in ['hostrequire', 'keyvalue', 'random', 'systype']:
+                if kwargs.get(opt, None):
+                    sys.stderr.write('Warning: Ignoring --%s'
+                                     ' because --machine was specified\n' % opt)
+            if kwargs.get('ignore_system_status', False):
+                hostRequires.setAttribute("force", "%s" % kwargs.get('machine'))
+            else:
+                hostMachine = self.doc.createElement('hostname')
+                hostMachine.setAttribute('op', '=')
+                hostMachine.setAttribute('value', '%s' % machine)
+                self.addHostRequires(hostMachine)
+        else:
+            systype = kwargs.get("systype", None)
+            keyvalues = kwargs.get("keyvalue", [])
+            requires = kwargs.get("hostrequire", [])
+            random = kwargs.get("random", False)
+            if systype:
+                systemType = self.doc.createElement('system_type')
+                systemType.setAttribute('op', '=')
+                systemType.setAttribute('value', '%s' % systype)
+                self.addHostRequires(systemType)
+            p2 = re.compile(r'([\!=<>]+|&gt;|&lt;)')
+            for keyvalue in keyvalues:
+                key, op, value = p2.split(keyvalue,3)
+                mykeyvalue = self.doc.createElement('key_value')
+                mykeyvalue.setAttribute('key', '%s' % key)
+                mykeyvalue.setAttribute('op', '%s' % op)
+                mykeyvalue.setAttribute('value', '%s' % value)
+                self.addHostRequires(mykeyvalue)
+            for require in requires:
+                if require.lstrip().startswith('<'):
+                    myrequire = xml.dom.minidom.parseString(require).documentElement
+                else:
+                    key, op, value = p2.split(require,3)
+                    myrequire = self.doc.createElement('%s' % key)
+                    myrequire.setAttribute('op', '%s' % op)
+                    myrequire.setAttribute('value', '%s' % value)
+                self.addHostRequires(myrequire)
+            if random:
+                self.addAutopick(random)
+
     def addBaseRequires(self, *args, **kwargs):
         """ Add base requires """
+
+        self._addBaseHostRequires(**kwargs)
         distro = kwargs.get("distro", None)
         family = kwargs.get("family", None)
         variant = kwargs.get("variant", None)
@@ -621,13 +665,8 @@ class BeakerRecipeBase(BeakerBase):
         kernel_options = kwargs.get("kernel_options", '')
         kernel_options_post = kwargs.get("kernel_options_post", '')
         tags = kwargs.get("tag", []) or ['STABLE']
-        systype = kwargs.get("systype", None)
-        machine = kwargs.get("machine", None)
-        keyvalues = kwargs.get("keyvalue", [])
-        requires = kwargs.get("hostrequire", [])
         repos = kwargs.get("repo", [])
         postrepos = kwargs.get("repo_post", [])
-        random = kwargs.get("random", False)
         ignore_panic = kwargs.get("ignore_panic", False)
         if distro:
             distroName = self.doc.createElement('distro_name')
@@ -651,10 +690,6 @@ class BeakerRecipeBase(BeakerBase):
             distroVariant.setAttribute('value', '%s' % variant)
             self.addDistroRequires(distroVariant)
         if method:
-            distroMethod = self.doc.createElement('distro_method')
-            distroMethod.setAttribute('op', '=')
-            distroMethod.setAttribute('value', 'nfs')
-            self.addDistroRequires(distroMethod)
             ks_metas.append("method=%s" % method)
         if ks_meta:
             ks_metas.append(ks_meta)
@@ -670,33 +705,6 @@ class BeakerRecipeBase(BeakerBase):
             self.addRepo(myrepo)
         if postrepos:
             self.addPostRepo(postrepos)
-        if systype:
-            systemType = self.doc.createElement('system_type')
-            systemType.setAttribute('op', '=')
-            systemType.setAttribute('value', '%s' % systype)
-            self.addHostRequires(systemType)
-        if machine:
-            hostMachine = self.doc.createElement('hostname')
-            hostMachine.setAttribute('op', '=')
-            hostMachine.setAttribute('value', '%s' % machine)
-            self.addHostRequires(hostMachine)
-        p2 = re.compile(r'([\!=<>]+|&gt;|&lt;)')
-        for keyvalue in keyvalues:
-            key, op, value = p2.split(keyvalue,3)
-            mykeyvalue = self.doc.createElement('key_value')
-            mykeyvalue.setAttribute('key', '%s' % key)
-            mykeyvalue.setAttribute('op', '%s' % op)
-            mykeyvalue.setAttribute('value', '%s' % value)
-            self.addHostRequires(mykeyvalue)
-        for require in requires:
-            key, op, value = p2.split(require,3)
-            myrequire = self.doc.createElement('%s' % key)
-            myrequire.setAttribute('op', '%s' % op)
-            myrequire.setAttribute('value', '%s' % value)
-            self.addHostRequires(myrequire)
-        
-        if random:
-            self.addAutopick(random)
         if ignore_panic:
             self.add_ignore_panic()
 
@@ -845,9 +853,11 @@ EOF
     andDistroRequires = property(get_andDistroRequires)
 
     def get_andHostRequires(self):
-        return self.node\
-                .getElementsByTagName('hostRequires')[0]\
-                .getElementsByTagName('and')[0]
+        hostRequires = self.node.getElementsByTagName('hostRequires')[0]
+        if not hostRequires.getElementsByTagName('and'):
+            andHostRequires = self.doc.createElement('and')
+            hostRequires.appendChild(andHostRequires)
+        return hostRequires.getElementsByTagName('and')[0]
     andHostRequires = property(get_andHostRequires)
 
     def get_repos(self):

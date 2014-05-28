@@ -11,18 +11,13 @@ import bkr
 import bkr.server.stdvars
 import bkr.server.search_utility as su
 from bkr.server.model import (TaskBase, Device, System, SystemGroup,
-                              SystemActivity, Key, OSMajor, DistroTree,
-                              Arch, TaskPriority, Group, GroupActivity,
-                              RecipeSet, RecipeSetActivity, User,
-                              LabInfo, ReleaseAction,
-                              LabController, Hypervisor, KernelType,
-                              SystemType, Distro, Note, Job,
-                              InstallOptions, ExcludeOSMajor,
-                              ExcludeOSVersion, OSVersion,
-                              Provision, ProvisionFamily,
-                              ProvisionFamilyUpdate, SystemStatus,
-                              Key_Value_Int, Key_Value_String,
-                              SystemAccessPolicy, SystemPermission, DistroTag)
+        SystemActivity, Key, OSMajor, DistroTree, Arch, TaskPriority,
+        Group, GroupActivity, RecipeSet, RecipeSetActivity, User, LabInfo,
+        ReleaseAction, LabController, Hypervisor, KernelType,
+        SystemType, Distro, Note, Job, InstallOptions, ExcludeOSMajor,
+        ExcludeOSVersion, OSVersion, Provision, ProvisionFamily,
+        ProvisionFamilyUpdate, SystemStatus, Key_Value_Int, Key_Value_String,
+        SystemAccessPolicy, SystemPermission, MachineRecipe, DistroTag)
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
@@ -63,7 +58,8 @@ from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
 from tg_expanding_form_widget.tg_expanding_form_widget import ExpandingForm
 from bkr.server.helpers import make_link
-from bkr.server import needpropertyxml, metrics, identity
+from bkr.server import metrics, identity
+from bkr.server.needpropertyxml import XmlHost
 from decimal import Decimal
 import bkr.server.recipes
 import bkr.server.rdf
@@ -267,7 +263,6 @@ class Root(RPCRoot):
 
         try:
             recipeset = RecipeSet.by_id(recipeset_id)
-            old_priority = recipeset.priority
         except NoResultFound as e:
             log.error('No rows returned for recipeset_id %s in change_priority_recipeset:%s' % (recipeset_id,e))
             return { 'success' : None, 'msg' : 'RecipeSet is not valid' }
@@ -281,9 +276,11 @@ class Root(RPCRoot):
         if priority not in recipeset.allowed_priorities(user):
             return {'success' : None, 'msg' : 'Insufficient privileges for that priority', 'current_priority' : recipeset.priority.value }
 
-        activity = RecipeSetActivity(identity.current.user, 'WEBUI', 'Changed', 'Priority', recipeset.priority.value,priority.value)
+        old_priority = recipeset.priority.value if recipeset.priority else None
         recipeset.priority = priority
-        recipeset.activity.append(activity)
+        recipeset.record_activity(user=identity.current.user, service=u'WEBUI',
+                                  field=u'Priority', action=u'Changed', old=old_priority,
+                                  new=priority.value)
         return {'success' : True } 
 
     @expose(template='bkr.server.templates.grid')
@@ -301,7 +298,10 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def available(self, *args, **kw):
-        return self._systems(systems=System.available(identity.current.user),
+        query = System.all(identity.current.user)\
+                .filter(System.can_reserve(identity.current.user))\
+                .filter(System.status.in_([SystemStatus.automated, SystemStatus.manual]))
+        return self._systems(systems=query,
                 title=u'Available Systems', *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
@@ -310,7 +310,11 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def free(self, *args, **kw): 
-        return self._systems(systems=System.free(identity.current.user),
+        query = System.all(identity.current.user)\
+                .filter(System.can_reserve(identity.current.user))\
+                .filter(System.status.in_([SystemStatus.automated, SystemStatus.manual]))\
+                .filter(System.is_free(identity.current.user))
+        return self._systems(systems=query,
                 title=u'Free Systems', *args, **kw)
 
     @expose(template='bkr.server.templates.grid')
@@ -318,8 +322,9 @@ class Root(RPCRoot):
             content_type='application/atom+xml', accept_format='application/atom+xml')
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def removed(self, *args, **kw): 
-        return  self._systems(systems=System.all().
-                              filter(System.status == SystemStatus.removed),
+        query = System.all(identity.current.user)\
+                .filter(System.status == SystemStatus.removed)
+        return  self._systems(systems=query,
                               title=u'Removed Systems', exclude_status=True, 
                               *args, **kw)
 
@@ -329,8 +334,10 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list', default_order='fqdn', limit=20, max_limit=None)
     def mine(self, *args, **kw):
-        return self._systems(systems=System.mine(identity.current.user),
-                title=u'My Systems', *args, **kw)
+        systems = System.mine(identity.current.user).\
+                  filter(System.status != SystemStatus.removed)
+        return self._systems(systems=systems,
+                             title=u'My Systems', *args, **kw)
 
       
     @expose(template='bkr.server.templates.grid') 
@@ -345,16 +352,16 @@ class Root(RPCRoot):
                 redirect(url('/reserveworkflow/', **kw))
         else:
             distro_tree = None
-        query = System.available_for_schedule(user=identity.current.user)\
-                .filter(System.type == SystemType.machine)
-        if distro_tree:
-            query = distro_tree.systems(systems=query)
+        # XXX add force here when we support it
+        query = MachineRecipe.hypothetical_candidate_systems(
+                identity.current.user, distro_tree)\
+                .order_by(None)
         warn = None
         if query.count() < 1:
             warn = u'No Systems compatible with %s' % distro_tree
         def reserve_link(x):
             href = url('/reserveworkflow/', system=x.fqdn, **kw)
-            if x.is_free():
+            if x.is_free(identity.current.user):
                 label = 'Reserve Now'
             else:
                 label = 'Queue Reservation'
@@ -382,7 +389,7 @@ class Root(RPCRoot):
         for search in kw['systemsearch']: 
 	        #clsinfo = System.get_dict()[search['table']] #Need to change this
             class_field_list = search['table'].split('/')
-            cls_ref = su.System.search.translate_name(class_field_list[0])
+            cls_ref = su.System.search.translate_name_to_class(class_field_list[0])
             col = class_field_list[1]              
             #If value id False or True, let's convert them to
             if class_field_list[0] != 'Key':
@@ -435,14 +442,8 @@ class Root(RPCRoot):
                                                    'display':'none',
                                                    'pos' : 2,
                                                    'callback':url('/get_operators_keyvalue') }],
-                               table=su.System.search.create_search_table(\
+                               table=su.System.search.create_complete_search_table(\
                                     [{su.System:{'exclude':exclude_fields}},
-                                    {su.Cpu:{'all':[]}},
-                                    {su.Device:{'all':[]}},
-                                    {su.Disk:{'all':[]}},
-                                    {su.Key:{'all':[]}}]),
-                               complete_data = su.System.search.create_complete_search_table(\
-                                   [{su.System:{'exclude':exclude_fields}},
                                     {su.Cpu:{'all':[]}},
                                     {su.Device:{'all':[]}},
                                     {su.Disk:{'all':[]}},
@@ -485,7 +486,7 @@ class Root(RPCRoot):
 
         if kw.get('xmlsearch'):
             try:
-                systems = needpropertyxml.apply_system_filter('<and>%s</and>' % kw['xmlsearch'], systems)
+                systems = XmlHost.from_string('<and>%s</and>' % kw['xmlsearch']).apply_filter(systems)
             except ValueError,e:
                 response.status = 400
                 return e.message
@@ -506,7 +507,7 @@ class Root(RPCRoot):
             use_custom_columns = False
             for column in columns:
                 table,col = column.split('/')
-                if sys_search.translate_name(table) is not su.System:
+                if sys_search.translate_name_to_class(table) is not su.System:
                     use_custom_columns = True
                     break
             sys_search.add_columns_desc(columns)
@@ -1049,10 +1050,9 @@ class Root(RPCRoot):
         redirect("/view/%s" % system.fqdn)
 
     @cherrypy.expose
-    # Testing auth via xmlrpc
-    #@identity.require(identity.in_group("admin"))
-    def lab_controllers(self, *args):
-        return [lc.fqdn for lc in LabController.query]
+    def lab_controllers(self):
+        query = LabController.query.filter(LabController.removed == None)
+        return [lc.fqdn for lc in query]
 
     @cherrypy.expose
     def legacypush(self, fqdn=None, inventory=None):

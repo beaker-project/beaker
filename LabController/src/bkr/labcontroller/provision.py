@@ -235,6 +235,9 @@ def main_loop(poller=None, conf=None):
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
 
+    logger.debug('Copying default boot loader images')
+    netboot.copy_default_loader_images()
+
     logger.debug('Clearing old running commands')
     poller.clear_running_commands(u'Stale command cleared on startup')
 

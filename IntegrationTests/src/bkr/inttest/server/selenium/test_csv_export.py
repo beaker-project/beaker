@@ -173,3 +173,13 @@ class CSVExportTest(WebDriverTestCase):
         csv_rows = [row for row in csv.DictReader(csv_request)
                     if row['fqdn'] == system.fqdn]
         self.assertNotIn('id', csv_rows[0].keys())
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1085047
+    def test_secret_column_is_not_present(self):
+        with session.begin():
+            system = data_setup.create_system()
+        login(self.browser)
+        csv_request = self.get_csv('system')
+        csv_rows = [row for row in csv.DictReader(csv_request)
+                    if row['fqdn'] == system.fqdn]
+        self.assertNotIn('secret', csv_rows[0].keys())

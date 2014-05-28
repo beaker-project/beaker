@@ -7,12 +7,13 @@
 from kid import Element, XML
 import turbogears
 
-def make_link(url, text, **kwargs):
+def make_link(url, text, elem_class=None, **kwargs):
     # make an <a> element
     a = Element('a', href=turbogears.url(url))
     a.text = text
-    if kwargs.get('elem_class', None):
-        a.attrib['class']=kwargs.get('elem_class')
+    if elem_class:
+        a.attrib['class'] = elem_class
+    a.attrib.update(kwargs)
     return a
 
 def make_edit_link(name, id):

@@ -8,7 +8,9 @@ import unittest
 import pkg_resources
 import lxml.etree
 
-class SchemaTest:
+class SchemaTestBase(unittest.TestCase):
+
+    schema_doc = None # filled by setUpClass
 
     def assert_valid(self, xml):
         schema = lxml.etree.RelaxNG(self.schema_doc)
@@ -20,7 +22,7 @@ class SchemaTest:
         messages = [str(e.message) for e in schema.error_log]
         self.assert_(error_message in messages, messages)
 
-class TaskSchemaTest(unittest.TestCase, SchemaTest):
+class TaskSchemaTest(SchemaTestBase):
 
     @classmethod
     def setUpClass(cls):
@@ -80,7 +82,7 @@ class TaskSchemaTest(unittest.TestCase, SchemaTest):
            ''')
 
 
-class JobSchemaTest(unittest.TestCase, SchemaTest):
+class JobSchemaTest(SchemaTestBase):
 
     @classmethod
     def setupClass(cls):
@@ -157,8 +159,7 @@ class JobSchemaTest(unittest.TestCase, SchemaTest):
                     </recipe>
                 </recipeSet>
             </job>
-            ''',
-            'Element last_inventoried failed to validate attributes')
+        ''', 'Element hostRequires has extra content: system')
 
     def test_recipe_elements_in_different_order(self):
         self.assert_valid('''
@@ -265,7 +266,60 @@ class JobSchemaTest(unittest.TestCase, SchemaTest):
                 </recipeSet>
             </job>
             ''',
-            'Expecting an element hostRequires, got nothing')
+            'Invalid sequence in interleave')
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=851354
+    def test_force_system(self):
+
+        # force and hostRequires are mutually exclusive
+        self.assert_not_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5"/>
+                        </distroRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                        <hostRequires force="test1.system.fqdn">
+                        <system> <name op="=" value="test1.system.fqdn"/> </system>
+                        </hostRequires>
+
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', 'Invalid attribute force for element hostRequires')
+
+        # <hostRequires><system>..</system></hostRequires>
+        self.assert_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5"/>
+                        </distroRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                        <hostRequires>
+                        <system> <name op="=" value="test1.system.fqdn"/> </system>
+                        </hostRequires>
+
+                    </recipe>
+                </recipeSet>
+            </job>''')
+
+        # test <hostRequires force='..' </hostRequires>
+        self.assert_valid('''
+            <job>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5"/>
+                        </distroRequires>
+                        <task name="/distribution/install" role="STANDALONE"/>
+                        <hostRequires force='test1.system.fqdn'/>
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
 
     def test_device(self):
         self.assert_valid('''
@@ -366,4 +420,4 @@ class JobSchemaTest(unittest.TestCase, SchemaTest):
                 </recipeSet>
             </job>
             ''',
-            'Invalid attribute units for element size')
+            'Element hostRequires has extra content: disk')

@@ -64,7 +64,7 @@ unsupported_hardware
 {% endif %}
 
 %packages --ignoremissing
-{% if packages is defined %}
+{% if recipe or packages is defined %}
 {% snippet 'rhts_packages' %}
 {% endif %}
 {% snippet 'packages' %}

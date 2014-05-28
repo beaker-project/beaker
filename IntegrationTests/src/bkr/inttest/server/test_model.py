@@ -13,9 +13,11 @@ import pkg_resources
 import lxml.etree
 import email
 import inspect
+import kid
 from turbogears.database import session
 from bkr.server.installopts import InstallOptions
-from bkr.server import model, dynamic_virt
+from bkr.server import model, identity
+from bkr.server.app import app
 from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         SystemType, Job, JobCc, Key, Key_Value_Int, Key_Value_String, \
         Cpu, Numa, Provision, Arch, DistroTree, \
@@ -24,16 +26,20 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
-        RecipeTask, RecipeTaskResult, DeclarativeMappedObject, ReleaseAction
+        RecipeTask, RecipeTaskResult, DeclarativeMappedObject, OSVersion, \
+        ReleaseAction
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
 import netaddr
-from bkr.inttest import data_setup, DummyVirtManager
+from bkr.inttest import data_setup
 from nose.plugins.skip import SkipTest
 import turbogears
 import os
 import yum
+
+def serialize_kid_element(elem):
+    return kid.XHTMLSerializer().serialize(kid.ElementStream(elem), fragment=True)
 
 class SchemaSanityTest(unittest.TestCase):
 
@@ -46,6 +52,18 @@ class SchemaSanityTest(unittest.TestCase):
                     'SELECT engine FROM information_schema.tables '
                     'WHERE table_schema = DATABASE() AND table_name = %s',
                     table), 'InnoDB')
+
+class ModelInitializationTest(unittest.TestCase):
+
+    # We are testing the database creation done by bkr.server.tools.init. 
+    # However do not actually invoke that here, because it would be too 
+    # complicated to set up properly. Instead we just test the initialization 
+    # that was done by bkr.inttest.setup_package for this test run.
+
+    def test_admin_user_owns_admin_group(self):
+        admin_user = User.by_user_name(data_setup.ADMIN_USER)
+        admin_group = Group.by_name(u'admin')
+        self.assertTrue(admin_group.has_owner(admin_user))
 
 class ActivityMixinTest(unittest.TestCase):
 
@@ -184,6 +202,113 @@ class TestSystem(unittest.TestCase):
         self.assertNotIn(tree_excluded.distro, distros)
         self.assertNotIn(tree_not_in_lab.distro, distros)
         self.assertIn(tree_in_lab.distro, distros)
+
+class SystemFilterMethodsTest(unittest.TestCase):
+    """
+    Test cases for the hybrid methods/properties used to build system queries.
+    """
+
+    def setUp(self):
+        session.begin()
+        self.addCleanup(session.rollback)
+
+    def check_hybrid(self, base_query, func, included, excluded):
+        session.flush()
+        query = base_query.filter(func(System))
+        if included:
+            # check that the query matches all included systems
+            self.assertItemsEqual(included,
+                    query.filter(System.id.in_([s.id for s in included])).all())
+            # check that the method returns true for all included systems
+            for system in included:
+                self.assertTrue(func(system))
+        if excluded:
+            # check that the query matches no excluded systems
+            self.assertItemsEqual([],
+                    query.filter(System.id.in_([s.id for s in excluded])).all())
+            # check that the method returns false for all excluded systems
+            for system in excluded:
+                self.assertFalse(func(system))
+
+    def test_visible_to_anonymous(self):
+        private = data_setup.create_system(private=True)
+        public = data_setup.create_system(private=False)
+        self.check_hybrid(
+                System.query.outerjoin(System.custom_access_policy),
+                lambda s: s.visible_to_anonymous,
+                included=[public], excluded=[private])
+
+    def test_visible_to_user(self):
+        private = data_setup.create_system(private=True)
+        public = data_setup.create_system(private=False)
+        self.check_hybrid(
+                System.query.outerjoin(System.custom_access_policy),
+                lambda s: s.visible_to_user(private.owner),
+                included=[public, private], excluded=[])
+        other_user = data_setup.create_user()
+        self.check_hybrid(
+                System.query.outerjoin(System.custom_access_policy),
+                lambda s: s.visible_to_user(other_user),
+                included=[public], excluded=[private])
+
+    def test_is_free(self):
+        lc = data_setup.create_labcontroller()
+        disabled_lc = data_setup.create_labcontroller()
+        disabled_lc.disabled = True
+        user = data_setup.create_user()
+        reserved = data_setup.create_system(lab_controller=lc)
+        reserved.user = user
+        reserved_by_other = data_setup.create_system(lab_controller=lc)
+        reserved_by_other.user = data_setup.create_user()
+        loaned = data_setup.create_system(lab_controller=lc)
+        loaned.loaned = user
+        loaned_to_other = data_setup.create_system(lab_controller=lc)
+        loaned_to_other.loaned = data_setup.create_user()
+        attached_to_disabled_lc = data_setup.create_system(
+                lab_controller=disabled_lc)
+        not_reserved_not_loaned = data_setup.create_system(lab_controller=lc)
+        self.check_hybrid(System.all(user),
+                lambda s: s.is_free(user),
+                included=[not_reserved_not_loaned, loaned],
+                excluded=[reserved, reserved_by_other, loaned_to_other,
+                          attached_to_disabled_lc])
+
+    def test_compatible_with_distro_tree(self):
+        distro_tree = data_setup.create_distro_tree(arch=u'x86_64')
+        wrong_arch = data_setup.create_system(arch=u'i386')
+        osmajor_excluded = data_setup.create_system(arch=u'x86_64',
+                exclude_osmajor=[distro_tree.distro.osversion.osmajor])
+        osversion_excluded = data_setup.create_system(arch=u'x86_64',
+                exclude_osversion=[distro_tree.distro.osversion])
+        compatible = data_setup.create_system(arch=u'x86_64')
+        self.check_hybrid(System.query,
+                lambda s: s.compatible_with_distro_tree(distro_tree),
+                included=[compatible],
+                excluded=[wrong_arch, osmajor_excluded, osversion_excluded])
+
+    def test_in_lab_with_distro_tree(self):
+        lc = data_setup.create_labcontroller()
+        distro_tree = data_setup.create_distro_tree(lab_controllers=[lc])
+        in_lab = data_setup.create_system(lab_controller=lc)
+        in_wrong_lab = data_setup.create_system(
+                lab_controller=data_setup.create_labcontroller())
+        in_no_lab = data_setup.create_system()
+        in_no_lab.lab_controller = None
+        self.check_hybrid(System.all(data_setup.create_user()),
+                lambda s: s.in_lab_with_distro_tree(distro_tree),
+                included=[in_lab], excluded=[in_wrong_lab, in_no_lab])
+
+    def test_can_reserve(self):
+        user = data_setup.create_user()
+        owned = data_setup.create_system(owner=user)
+        loaned = data_setup.create_system()
+        loaned.loaned = user
+        shared = data_setup.create_system(shared=True)
+        not_shared = data_setup.create_system(shared=False)
+        self.check_hybrid(System.all(user),
+                lambda s: s.can_reserve(user),
+                included=[owned, loaned, shared],
+                excluded=[not_shared])
 
 class TestSystemKeyValue(unittest.TestCase):
 
@@ -690,7 +815,7 @@ class TestJob(unittest.TestCase):
         data_setup.mark_job_complete(job)
         job.update_status()
         self.check_progress_bar(job.progress_bar,
-                                33.333, 0, 66.667, 0)
+                                0, 33.333, 0, 66.667, 0)
 
     def test_progress_bar_sums_to_100_pass4_warn1_fail1(self):
         recipe = data_setup.create_recipe(
@@ -705,7 +830,21 @@ class TestJob(unittest.TestCase):
         data_setup.mark_job_complete(job)
         job.update_status()
         self.check_progress_bar(job.progress_bar,
-                                66.667, 16.667, 16.667, 0)
+                                0, 66.667, 16.667, 16.667, 0)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1072192
+    def test_progress_bar_includes_completed_task_with_no_results(self):
+        recipe = data_setup.create_recipe(
+                task_list=[Task.by_name(u'/distribution/reservesys')] * 3)
+        job = data_setup.create_job_for_recipes([recipe])
+        recipe.tasks[0].pass_(u'/', 0, u'')
+        recipe.tasks[1].pass_(u'/', 0, u'')
+        # third task will be "New" due to no results recorded
+        data_setup.mark_job_complete(job, result=None)
+        self.assertEquals(recipe.tasks[2].result, TaskResult.new)
+        job.update_status()
+        self.check_progress_bar(job.progress_bar,
+                                33.333, 66.667, 0, 0, 0)
 
 
 class DistroTreeByFilterTest(unittest.TestCase):
@@ -855,40 +994,6 @@ class DistroTreeTest(unittest.TestCase):
     def tearDown(self):
         session.commit()
 
-    def test_all_systems_obeys_osmajor_exclusions(self):
-        included_system = data_setup.create_system(arch=u'i386',
-                lab_controller=self.lc)
-        excluded_system = data_setup.create_system(arch=u'i386',
-                lab_controller=self.lc,
-                exclude_osmajor=[self.distro_tree.distro.osversion.osmajor])
-        excluded_system.arch.append(Arch.by_name(u'x86_64'))
-        session.flush()
-        systems = self.distro_tree.all_systems().all()
-        self.assert_(included_system in systems and
-                excluded_system not in systems, systems)
-
-    def test_all_systems_obeys_osversion_exclusions(self):
-        included_system = data_setup.create_system(arch=u'i386',
-                lab_controller=self.lc)
-        excluded_system = data_setup.create_system(arch=u'i386',
-                lab_controller=self.lc,
-                exclude_osversion=[self.distro_tree.distro.osversion])
-        excluded_system.arch.append(Arch.by_name(u'x86_64'))
-        session.flush()
-        systems = self.distro_tree.all_systems().all()
-        self.assert_(included_system in systems and
-                excluded_system not in systems, systems)
-
-    def test_all_systems_matches_arch(self):
-        included_system = data_setup.create_system(arch=u'i386',
-                lab_controller=self.lc)
-        excluded_system = data_setup.create_system(arch=u'ppc64',
-                lab_controller=self.lc)
-        session.flush()
-        systems = self.distro_tree.all_systems().all()
-        self.assert_(included_system in systems and
-                excluded_system not in systems, systems)
-
     def test_url_in_lab(self):
         self.distro_tree.lab_controller_assocs[:] = [
             LabControllerDistroTree(lab_controller=self.lc, url=u'ftp://unimportant'),
@@ -916,1174 +1021,6 @@ class DistroTreeTest(unittest.TestCase):
                 scheme=['http', 'nfs']), None)
         self.assertRaises(ValueError, lambda: self.distro_tree.url_in_lab(
                 self.lc, scheme=['http', 'nfs'], required=True))
-
-class DistroTreeSystemsFilterTest(unittest.TestCase):
-
-    def setUp(self):
-        session.begin()
-        self.lc = data_setup.create_labcontroller()
-        self.distro_tree = data_setup.create_distro_tree(arch=u'i386')
-        self.user = data_setup.create_user()
-        session.flush()
-
-    def tearDown(self):
-        session.commit()
-
-    def check_systems(self, present, absent, systems):
-        for system in present:
-            self.assert_(system in systems)
-
-        for system in absent:
-            self.assert_(system not in systems)
-
-    # test cases for <group/> are in bkr.server.test.test_group_xml
-
-    def test_autoprov(self):
-        no_power = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        no_power.power = None
-        no_lab = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=None)
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <auto_prov value="True" />
-            </hostRequires>
-            """).all()
-        self.assert_(no_power not in systems)
-        self.assert_(no_lab not in systems)
-        self.assert_(included in systems)
-
-    def test_system_type(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, type=SystemType.prototype)
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><type op="==" value="Machine" /></system>
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        # Deprecated system_type
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system_type op="==" value="Machine" />
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_system_status(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.manual)
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.automated)
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><status op="==" value="Automated" /></system>
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_system_lender(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.manual,
-                lender=u'my excluded lender')
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.automated,
-                lender=u'my included lender')
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><lender op="like" value="%included%" /></system>
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_system_model(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.manual,
-                model=u'grover')
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.automated,
-                model=u'elmo')
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><model op="=" value="elmo" /></system>
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_system_vendor(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.manual,
-                vendor=u'apple')
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.automated,
-                vendor=u'mango')
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><vendor op="!=" value="apple" /></system>
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system key="vendor" op="!=" value="apple" />
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_system_owner(self):
-        owner1 = data_setup.create_user()
-        owner2 = data_setup.create_user()
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.manual,
-                owner=owner1)
-        excluded.user = owner2
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.automated,
-                owner=owner2)
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><owner op="=" value="%s" /></system>
-            </hostRequires>
-            """ % owner2.user_name).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_system_user(self):
-        user1 = data_setup.create_user()
-        user2 = data_setup.create_user()
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.manual,
-                owner=user2)
-        excluded.user=user1
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.automated)
-        included.user=user2
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system>
-                 <user op="=" value="%s" />
-                 <owner op="!=" value="%s" />
-                </system>
-            </hostRequires>
-            """ % (user2.user_name, user2.user_name)).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    #https://bugzilla.redhat.com/show_bug.cgi?id=955868
-    def test_system_added(self):
-
-        # date times
-        today = datetime.date.today()
-        time_now = datetime.datetime.combine(today, datetime.time(0, 0))
-        time_delta1 = datetime.datetime.combine(today, datetime.time(0, 30))
-        time_tomorrow = time_now + datetime.timedelta(days=2)
-
-        # today date
-        date_today = time_now.date().isoformat()
-        date_tomorrow = time_tomorrow.date().isoformat()
-
-        sys_today1 = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, date_added=time_now)
-        sys_today2 = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, date_added=time_delta1)
-        sys_tomorrow = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, date_added=time_tomorrow)
-
-        session.flush()
-
-        # on a date
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><added op="=" value="%s" /></system>
-            </hostRequires>
-            """% date_today).all()
-
-        self.assert_(sys_today1 in systems)
-        self.assert_(sys_today2 in systems)
-        self.assert_(sys_tomorrow not in systems)
-
-        # not on a date
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><added op="!=" value="%s" /></system>
-            </hostRequires>
-            """% date_today).all()
-
-        self.assert_(sys_today1 not in systems)
-        self.assert_(sys_today2 not in systems)
-        self.assert_(sys_tomorrow in systems)
-
-        # after a date
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><added op="&gt;" value="%s" /></system>
-            </hostRequires>
-            """% date_today).all()
-
-        self.assert_(sys_tomorrow in systems)
-        self.assert_(sys_today1 not in systems)
-        self.assert_(sys_today2 not in systems)
-
-        # before a date
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><added op="&lt;" value="%s" /></system>
-            </hostRequires>
-            """% date_tomorrow).all()
-
-        self.assert_(sys_tomorrow not in systems)
-        self.assert_(sys_today1 in systems)
-        self.assert_(sys_today2 in systems)
-
-
-        # on a date time
-        try:
-            systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><added op="=" value="%s" /></system>
-            </hostRequires>
-            """% time_now).all()
-            self.fail('Fail or Die')
-        except ValueError,e:
-            self.assert_('Invalid date format' in str(e), e)
-
-    # https://bugzillaOA.redhat.com/show_bug.cgi?id=949777
-    def test_system_inventory_filter(self):
-
-        # date times
-        today = datetime.date.today()
-        time_now = datetime.datetime.combine(today, datetime.time(0, 0))
-        time_delta1 = datetime.datetime.combine(today, datetime.time(0, 30))
-        time_tomorrow = time_now + datetime.timedelta(days=1)
-        time_dayafter = time_now + datetime.timedelta(days=2)
-
-        # dates
-        date_today = time_now.date().isoformat()
-        date_tomorrow = time_tomorrow.date().isoformat()
-        date_dayafter = time_dayafter.date().isoformat()
-
-        not_inv = data_setup.create_system()
-        inv1 = data_setup.create_system()
-        inv1.date_lastcheckin = time_now
-        inv2 = data_setup.create_system()
-        inv2.date_lastcheckin = time_delta1
-        inv3 = data_setup.create_system()
-        inv3.date_lastcheckin = time_tomorrow
-
-        session.flush()
-
-        # not inventoried
-        systems = self.distro_tree.systems_filter(self.user, """
-                <hostRequires>
-                    <system> <last_inventoried op="=" value="" /> </system>
-                </hostRequires>
-                """).all()
-
-        self.check_systems(present=[not_inv],
-                           absent=[inv1,inv2,inv3],
-                           systems=systems)
-        # inventoried
-        systems = self.distro_tree.systems_filter(self.user, """
-                <hostRequires>
-                    <system> <last_inventoried op="!=" value="" /> </system>
-                </hostRequires>
-                """).all()
-
-        self.check_systems(present=[inv1,inv2,inv3],
-                           absent=[not_inv],
-                           systems=systems)
-
-        # on a particular day
-        systems = self.distro_tree.systems_filter(self.user, """
-                <hostRequires>
-                    <system> <last_inventoried op="=" value="%s" /> </system>
-                </hostRequires>
-                """ %date_today).all()
-
-        self.check_systems(present=[inv1,inv2],
-                           absent=[not_inv, inv3],
-                           systems=systems)
-
-        # on a particular day on which no machines have been inventoried
-        systems = self.distro_tree.systems_filter(self.user, """
-                <hostRequires>
-                    <system> <last_inventoried op="=" value="%s" /> </system>
-                </hostRequires>
-                """ %date_dayafter).all()
-
-        self.assertEquals(len(systems),0)
-
-        # not on a particular day
-        systems = self.distro_tree.systems_filter(self.user, """
-                <hostRequires>
-                    <system> <last_inventoried op="!=" value="%s" /> </system>
-                </hostRequires>
-                """ %date_today).all()
-
-        self.check_systems(present=[inv3],
-                           absent=[not_inv,inv1,inv2],
-                           systems=systems)
-
-        # after a particular day
-        systems = self.distro_tree.systems_filter(self.user, """
-                <hostRequires>
-                    <system> <last_inventoried op="&gt;" value="%s" /> </system>
-                </hostRequires>
-                """ %date_today).all()
-
-        self.check_systems(present=[inv3],
-                           absent=[not_inv, inv1, inv2],
-                           systems=systems)
-
-        # Invalid date with &gt;
-        try:
-            systems = self.distro_tree.systems_filter(self.user, """
-                <hostRequires>
-                    <system> <last_inventoried op="&gt;" value="foo-bar-baz f:b:z" /> </system>
-                </hostRequires>
-                """).all()
-            self.fail('Must Fail or Die')
-        except ValueError, e:
-            self.assert_('Invalid date format' in str(e), e)
-
-        # Invalid date format with =
-        try:
-            systems = self.distro_tree.systems_filter(self.user, """
-                <hostRequires>
-                    <system> <last_inventoried op="=" value="2013-10-10 00:00:10" /> </system>
-                </hostRequires>
-                """).all()
-            self.fail('Must Fail or Die')
-        except ValueError, e:
-            self.assert_('Invalid date format' in str(e), e)
-
-    def test_system_loaned(self):
-        user1 = data_setup.create_user()
-        user2 = data_setup.create_user()
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.manual,
-                loaned=user1, owner=user2)
-        excluded.user = user2
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.automated,
-                loaned=user2)
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system>
-                 <loaned op="=" value="%s" />
-                 <owner op="!=" value="%s" />
-                </system>
-            </hostRequires>
-            """ % (user2.user_name, user2.user_name)).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_system_location(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.manual,
-                location=u'singletary')
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.automated,
-                location=u'rayburn')
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><location op="=" value="rayburn" /></system>
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_system_serial(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.manual,
-                serial=u'0u812')
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.automated,
-                serial=u'2112')
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><serial op="=" value="2112" /></system>
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_system_powertype(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.manual)
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, status=SystemStatus.automated)
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><powertype op="=" value="%s" /></system>
-            </hostRequires>
-            """ % included.power.power_type.name).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_hostname(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <hostname op="==" value="%s" />
-            </hostRequires>
-            """ % included.fqdn).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><name op="==" value="%s" /></system>
-            </hostRequires>
-            """ % included.fqdn).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_memory(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, memory=128)
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, memory=1024)
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <memory op="&gt;=" value="256" />
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_cpu_processors(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True)
-        excluded.lab_controller = self.lc
-        excluded.cpu = Cpu(processors=1, cores=1, family=21,
-                           model=2, sockets=1, speed=1400.0, stepping=0,
-                           vendor=u'AuthenticAMD',
-                           model_name=u'AMD Opteron(tm) Processor 6386 SE ')
-        included = data_setup.create_system(arch=u'i386', shared=True)
-        included.cpu = Cpu(processors=4, cores=2, family=10,
-                           model=4, sockets=2, speed=2000.0, stepping=1,
-                           vendor=u'GenuineIntel',
-                           model_name=u'Intel(R) Xeon(R) CPU E5-4650 0 @ 2.70GHz')
-        included.lab_controller = self.lc
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <and>
-                    <cpu_count op="=" value="4" />
-                </and>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                    <cpu><processors op="=" value="4" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <and>
-                    <cpu><processors op="&gt;" value="2" /></cpu>
-                    <cpu><processors op="&lt;" value="5" /></cpu>
-                </and>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <and>
-                    <cpu_count op="&gt;" value="2" />
-                    <cpu_count op="&lt;" value="5" />
-                </and>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_cpu_cores(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True)
-        excluded.lab_controller = self.lc
-        excluded.cpu = Cpu(processors=1, cores=1, family=21,
-                           model=2, sockets=1, speed=1400.0, stepping=0,
-                           vendor=u'AuthenticAMD',
-                           model_name=u'AMD Opteron(tm) Processor 6386 SE ')
-        included = data_setup.create_system(arch=u'i386', shared=True)
-        included.cpu = Cpu(processors=4, cores=2, family=10,
-                           model=4, sockets=2, speed=2000.0, stepping=1,
-                           vendor=u'GenuineIntel',
-                           model_name=u'Intel(R) Xeon(R) CPU E5-4650 0 @ 2.70GHz')
-        included.lab_controller = self.lc
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <cpu><cores op="&gt;" value="1" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_cpu_family(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True)
-        excluded.lab_controller = self.lc
-        excluded.cpu = Cpu(processors=1, cores=1, family=21,
-                           model=2, sockets=1, speed=1400.0, stepping=0,
-                           vendor=u'AuthenticAMD',
-                           model_name=u'AMD Opteron(tm) Processor 6386 SE ')
-        included = data_setup.create_system(arch=u'i386', shared=True)
-        included.cpu = Cpu(processors=4, cores=2, family=10,
-                           model=4, sockets=2, speed=2000.0, stepping=1,
-                           vendor=u'GenuineIntel',
-                           model_name=u'Intel(R) Xeon(R) CPU E5-4650 0 @ 2.70GHz')
-        included.lab_controller = self.lc
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <cpu><family op="=" value="10" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_cpu_model(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True)
-        excluded.lab_controller = self.lc
-        excluded.cpu = Cpu(processors=1, cores=1, family=21,
-                           model=2, sockets=1, speed=1400.0, stepping=0,
-                           vendor=u'AuthenticAMD',
-                           model_name=u'AMD Opteron(tm) Processor 6386 SE ')
-        included = data_setup.create_system(arch=u'i386', shared=True)
-        included.cpu = Cpu(processors=4, cores=2, family=10,
-                           model=4, sockets=2, speed=2000.0, stepping=1,
-                           vendor=u'GenuineIntel',
-                           model_name=u'Intel(R) Xeon(R) CPU E5-4650 0 @ 2.70GHz')
-        included.lab_controller = self.lc
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <cpu><model op="=" value="4" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_cpu_sockets(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True)
-        excluded.lab_controller = self.lc
-        excluded.cpu = Cpu(processors=1, cores=1, family=21,
-                           model=2, sockets=1, speed=1400.0, stepping=0,
-                           vendor=u'AuthenticAMD',
-                           model_name=u'AMD Opteron(tm) Processor 6386 SE ')
-        included = data_setup.create_system(arch=u'i386', shared=True)
-        included.cpu = Cpu(processors=4, cores=2, family=10,
-                           model=4, sockets=2, speed=2000.0, stepping=1,
-                           vendor=u'GenuineIntel',
-                           model_name=u'Intel(R) Xeon(R) CPU E5-4650 0 @ 2.70GHz')
-        included.lab_controller = self.lc
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <cpu><sockets op="&gt;=" value="2" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_cpu_speed(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True)
-        excluded.lab_controller = self.lc
-        excluded.cpu = Cpu(processors=1, cores=1, family=21,
-                           model=2, sockets=1, speed=1400.0, stepping=0,
-                           vendor=u'AuthenticAMD',
-                           model_name=u'AMD Opteron(tm) Processor 6386 SE ')
-        included = data_setup.create_system(arch=u'i386', shared=True)
-        included.cpu = Cpu(processors=4, cores=2, family=10,
-                           model=4, sockets=2, speed=2000.0, stepping=1,
-                           vendor=u'GenuineIntel',
-                           model_name=u'Intel(R) Xeon(R) CPU E5-4650 0 @ 2.70GHz')
-        included.lab_controller = self.lc
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <cpu><speed op="&gt;=" value="1500.0" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_cpu_stepping(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True)
-        excluded.lab_controller = self.lc
-        excluded.cpu = Cpu(processors=1, cores=1, family=21,
-                           model=2, sockets=1, speed=1400.0, stepping=0,
-                           vendor=u'AuthenticAMD',
-                           model_name=u'AMD Opteron(tm) Processor 6386 SE ')
-        included = data_setup.create_system(arch=u'i386', shared=True)
-        included.cpu = Cpu(processors=4, cores=2, family=10,
-                           model=4, sockets=2, speed=2000.0, stepping=1,
-                           vendor=u'GenuineIntel',
-                           model_name=u'Intel(R) Xeon(R) CPU E5-4650 0 @ 2.70GHz')
-        included.lab_controller = self.lc
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <cpu><stepping op="&gt;=" value="1" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_cpu_vendor(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True)
-        excluded.lab_controller = self.lc
-        excluded.cpu = Cpu(processors=1, cores=1, family=21,
-                           model=2, sockets=1, speed=1400.0, stepping=0,
-                           vendor=u'AuthenticAMD',
-                           model_name=u'AMD Opteron(tm) Processor 6386 SE ')
-        included = data_setup.create_system(arch=u'i386', shared=True)
-        included.cpu = Cpu(processors=4, cores=2, family=10,
-                           model=4, sockets=2, speed=2000.0, stepping=1,
-                           vendor=u'GenuineIntel',
-                           model_name=u'Intel(R) Xeon(R) CPU E5-4650 0 @ 2.70GHz')
-        included.lab_controller = self.lc
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <cpu><vendor op="like" value="%Intel" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_cpu_model(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True)
-        excluded.lab_controller = self.lc
-        excluded.cpu = Cpu(processors=1, cores=1, family=21,
-                           model=2, sockets=1, speed=1400.0, stepping=0,
-                           vendor=u'AuthenticAMD',
-                           model_name=u'AMD Opteron(tm) Processor 6386 SE ')
-        included = data_setup.create_system(arch=u'i386', shared=True)
-        included.cpu = Cpu(processors=4, cores=2, family=10,
-                           model=4, sockets=2, speed=2000.0, stepping=1,
-                           vendor=u'GenuineIntel',
-                           model_name=u'Intel(R) Xeon(R) CPU E5-4650 0 @ 2.70GHz')
-        included.lab_controller = self.lc
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <cpu><model_name op="like" value="%Xeon%" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_cpu_hyper(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True)
-        excluded.lab_controller = self.lc
-        excluded.cpu = Cpu(processors=1, cores=1, family=21,
-                           model=2, sockets=1, speed=1400.0, stepping=0,
-                           vendor=u'AuthenticAMD',
-                           model_name=u'AMD Opteron(tm) Processor 6386 SE ')
-        included = data_setup.create_system(arch=u'i386', shared=True)
-        included.cpu = Cpu(processors=4, cores=2, family=10,
-                           model=4, sockets=2, speed=2000.0, stepping=1,
-                           vendor=u'GenuineIntel',
-                           model_name=u'Intel(R) Xeon(R) CPU E5-4650 0 @ 2.70GHz')
-        included.lab_controller = self.lc
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <cpu><hyper value="true" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_cpu_flags(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        excluded.cpu = Cpu(processors=1, flags=[u'ssse3', 'pae'])
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        included.cpu = Cpu(processors=1, flags=[u'ssse3', 'vmx'])
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <cpu><flag value="vmx" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <cpu><flag op="!=" value="pae" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <cpu><flag op="like" value="%vmx%" /></cpu>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_or_lab_controller(self):
-        lc1 = data_setup.create_labcontroller(fqdn=u'lab1')
-        lc2 = data_setup.create_labcontroller(fqdn=u'lab2')
-        lc3 = data_setup.create_labcontroller(fqdn=u'lab3')
-        distro_tree = data_setup.create_distro_tree()
-        included = data_setup.create_system(arch=u'i386', shared=True)
-        included.lab_controller = lc1
-        excluded = data_setup.create_system(arch=u'i386', shared=True)
-        excluded.lab_controller = lc3
-        session.flush()
-        systems = list(distro_tree.systems_filter(self.user, """
-               <hostRequires>
-                <or>
-                 <hostlabcontroller op="=" value="lab1"/>
-                 <hostlabcontroller op="=" value="lab2"/>
-                </or>
-               </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        systems = list(distro_tree.systems_filter(self.user, """
-               <hostRequires>
-                <or>
-                 <labcontroller op="=" value="lab1"/>
-                 <labcontroller op="=" value="lab2"/>
-                </or>
-               </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=831448
-    def test_hostlabcontroller_notequal(self):
-        desirable_lc = data_setup.create_labcontroller()
-        undesirable_lc = data_setup.create_labcontroller()
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=desirable_lc)
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=undesirable_lc)
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-                <hostRequires>
-                    <hostlabcontroller op="!=" value="%s" />
-                </hostRequires>
-                """ % undesirable_lc.fqdn))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        systems = list(self.distro_tree.systems_filter(self.user, """
-                <hostRequires>
-                    <labcontroller op="!=" value="%s" />
-                </hostRequires>
-                """ % undesirable_lc.fqdn))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_arch_equal(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        included.arch.append(Arch.by_name(u'x86_64'))
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <arch op="=" value="x86_64" />
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><arch op="=" value="x86_64" /></system>
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_arch_notequal(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        excluded.arch.append(Arch.by_name(u'x86_64'))
-        included = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        session.flush()
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <arch op="!=" value="x86_64" />
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        systems = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system><arch op="!=" value="x86_64" /></system>
-            </hostRequires>
-            """).all()
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_numa_node_count(self):
-        excluded = data_setup.create_system(arch=u'i386', shared=True)
-        excluded.lab_controller = self.lc
-        excluded.numa = Numa(nodes=1)
-        included = data_setup.create_system(arch=u'i386', shared=True)
-        included.numa = Numa(nodes=64)
-        included.lab_controller = self.lc
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <and>
-                    <numa_node_count op=">=" value="32" />
-                </and>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <system>
-                    <numanodes op=">=" value="32" />
-                </system>
-            </hostRequires>
-            """))
-        self.assert_(excluded not in systems)
-        self.assert_(included in systems)
-
-    def test_key_equal(self):
-        module_key = Key.by_name(u'MODULE')
-        with_cciss = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        with_cciss.key_values_string.extend([
-                Key_Value_String(module_key, u'cciss'),
-                Key_Value_String(module_key, u'kvm')])
-        without_cciss = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        without_cciss.key_values_string.extend([
-                Key_Value_String(module_key, u'ida'),
-                Key_Value_String(module_key, u'kvm')])
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <key_value key="MODULE" op="==" value="cciss"/>
-            </hostRequires>
-            """))
-        self.assert_(with_cciss in systems)
-        self.assert_(without_cciss not in systems)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=679879
-    def test_key_notequal(self):
-        module_key = Key.by_name(u'MODULE')
-        with_cciss = data_setup.create_system(arch=u'i386', shared=True)
-        with_cciss.lab_controller = self.lc
-        with_cciss.key_values_string.extend([
-                Key_Value_String(module_key, u'cciss'),
-                Key_Value_String(module_key, u'kvm')])
-        without_cciss = data_setup.create_system(arch=u'i386', shared=True)
-        without_cciss.lab_controller = self.lc
-        without_cciss.key_values_string.extend([
-                Key_Value_String(module_key, u'ida'),
-                Key_Value_String(module_key, u'kvm')])
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <and>
-                    <key_value key="MODULE" op="!=" value="cciss"/>
-                </and>
-            </hostRequires>
-            """))
-        self.assert_(with_cciss not in systems)
-        self.assert_(without_cciss in systems)
-
-    def test_key_present(self):
-        module_key = Key.by_name(u'MODULE')
-        with_module = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        with_module.key_values_string.extend([
-                Key_Value_String(module_key, u'cciss'),
-                Key_Value_String(module_key, u'kvm')])
-        without_module = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <key_value key="MODULE" op="==" />
-            </hostRequires>
-            """))
-        self.assert_(with_module in systems)
-        self.assert_(without_module not in systems)
-
-    def test_key_absent(self):
-        module_key = Key.by_name(u'MODULE')
-        with_module = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        with_module.key_values_string.extend([
-                Key_Value_String(module_key, u'cciss'),
-                Key_Value_String(module_key, u'kvm')])
-        without_module = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <key_value key="MODULE" op="!=" />
-            </hostRequires>
-            """))
-        self.assert_(with_module not in systems)
-        self.assert_(without_module in systems)
-        # ... or using <not/> is a saner way to do it:
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <not><key_value key="MODULE" /></not>
-            </hostRequires>
-            """))
-        self.assert_(with_module not in systems)
-        self.assert_(without_module in systems)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=729156
-    def test_keyvalue_does_not_cause_duplicate_rows(self):
-        system = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        disk_key = Key.by_name(u'DISK')
-        system.key_values_int.extend([
-                Key_Value_Int(disk_key, 30718),
-                Key_Value_Int(disk_key, 140011),
-                Key_Value_Int(disk_key, 1048570)])
-        session.flush()
-        query = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <and>
-                    <system><name op="=" value="%s" /></system>
-                    <key_value key="DISK" op="&gt;" value="9000" />
-                </and>
-            </hostRequires>
-            """ % system.fqdn)
-        self.assertEquals(len(query.all()), 1)
-        # with the bug this count comes out as 3 instead of 1,
-        # which doesn't sound so bad...
-        # but when it's 926127 instead of 278, that's bad
-        self.assertEquals(query.count(), 1)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=824050
-    def test_multiple_nonexistent_keys(self):
-        query = self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <and>
-                    <key_value key="NOTEXIST1" op="=" value="asdf"/>
-                    <key_value key="NOTEXIST2" op="=" value="asdf"/>
-                </and>
-            </hostRequires>
-            """)
-        query.all() # don't care about the results, just that it doesn't break
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=714974
-    def test_hypervisor(self):
-        baremetal = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, hypervisor=None)
-        kvm = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, hypervisor=u'KVM')
-        xen = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc, hypervisor=u'Xen')
-        session.flush()
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                    <system><hypervisor op="=" value="KVM" /></system>
-            </hostRequires>
-            """))
-        self.assert_(baremetal not in systems)
-        self.assert_(kvm in systems)
-        self.assert_(xen not in systems)
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <and>
-                    <hypervisor op="=" value="KVM" />
-                </and>
-            </hostRequires>
-            """))
-        self.assert_(baremetal not in systems)
-        self.assert_(kvm in systems)
-        self.assert_(xen not in systems)
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                    <system><hypervisor op="=" value="" /></system>
-            </hostRequires>
-            """))
-        self.assert_(baremetal in systems)
-        self.assert_(kvm not in systems)
-        self.assert_(xen not in systems)
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <and>
-                    <hypervisor op="=" value="" />
-                </and>
-            </hostRequires>
-            """))
-        self.assert_(baremetal in systems)
-        self.assert_(kvm not in systems)
-        self.assert_(xen not in systems)
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires/>
-            """))
-        self.assert_(baremetal in systems)
-        self.assert_(kvm in systems)
-        self.assert_(xen in systems)
-        # https://bugzilla.redhat.com/show_bug.cgi?id=886816
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <hypervisor op="!=" value="KVM" />
-            </hostRequires>
-            """))
-        self.assert_(baremetal in systems)
-        self.assert_(kvm not in systems)
-        self.assert_(xen in systems)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=731615
-    def test_filtering_by_device(self):
-        network_class = data_setup.create_device_class(u'NETWORK')
-        with_e1000 = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        with_e1000.devices.append(data_setup.create_device(
-                device_class_id=network_class.id,
-                vendor_id=u'8086', device_id=u'107c',
-                subsys_vendor_id=u'8086', subsys_device_id=u'1376',
-                bus=u'pci', driver=u'e1000',
-                description=u'82541PI Gigabit Ethernet Controller'))
-        with_tg3 = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        with_tg3.devices.append(data_setup.create_device(
-                device_class_id=network_class.id,
-                vendor_id=u'14e4', device_id=u'1645',
-                subsys_vendor_id=u'10a9', subsys_device_id=u'8010',
-                bus=u'pci', driver=u'tg3',
-                description=u'NetXtreme BCM5701 Gigabit Ethernet'))
-        session.flush()
-
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <device op="=" driver="e1000" />
-            </hostRequires>
-            """))
-        self.assert_(with_e1000 in systems)
-        self.assert_(with_tg3 not in systems)
-
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <device op="like" description="82541PI%" />
-            </hostRequires>
-            """))
-        self.assert_(with_e1000 in systems)
-        self.assert_(with_tg3 not in systems)
-
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <device op="=" type="network" vendor_id="8086" />
-            </hostRequires>
-            """))
-        self.assert_(with_e1000 in systems)
-        self.assert_(with_tg3 not in systems)
-
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <device op="=" vendor_id="14E4" device_id="1645" />
-            </hostRequires>
-            """))
-        self.assert_(with_e1000 not in systems)
-        self.assert_(with_tg3 in systems)
-
-        # this filter does nothing, but at least it shouldn't explode
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <device op="=" />
-            </hostRequires>
-            """))
-        self.assert_(with_e1000 in systems)
-        self.assert_(with_tg3 in systems)
-
-    # https://bugzilla.redhat.com/show_bug.cgi?id=766919
-    def test_filtering_by_disk(self):
-        small_disk = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        small_disk.disks[:] = [Disk(size=8000000000,
-                sector_size=512, phys_sector_size=512)]
-        big_disk = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        big_disk.disks[:] = [Disk(size=2000000000000,
-                sector_size=4096, phys_sector_size=4096)]
-        two_disks = data_setup.create_system(arch=u'i386', shared=True,
-                lab_controller=self.lc)
-        two_disks.disks[:] = [
-                Disk(size=500000000000, sector_size=512, phys_sector_size=512),
-                Disk(size=8000000000, sector_size=4096, phys_sector_size=4096)]
-        session.flush()
-
-        # criteria inside the same <disk/> element apply to a single disk
-        # and are AND'ed by default
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <disk>
-                    <size op="&gt;" value="10" units="GB" />
-                    <phys_sector_size op="=" value="4" units="KiB" />
-                </disk>
-            </hostRequires>
-            """))
-        self.assert_(small_disk not in systems)
-        self.assert_(big_disk in systems)
-        self.assert_(two_disks not in systems)
-
-        # separate <disk/> elements can match separate disks
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <disk><size op="&gt;" value="10" units="GB" /></disk>
-                <disk><phys_sector_size op="=" value="4" units="KiB" /></disk>
-            </hostRequires>
-            """))
-        self.assert_(small_disk not in systems)
-        self.assert_(big_disk in systems)
-        self.assert_(two_disks in systems)
-
-        # <not/> combined with a negative filter can be used to filter against 
-        # all disks (e.g. "give me systems with only 512-byte-sector disks")
-        systems = list(self.distro_tree.systems_filter(self.user, """
-            <hostRequires>
-                <not><disk><sector_size op="!=" value="512" /></disk></not>
-            </hostRequires>
-            """))
-        self.assert_(small_disk in systems)
-        self.assert_(big_disk not in systems)
-        self.assert_(two_disks not in systems)
 
 class OSMajorTest(unittest.TestCase):
 
@@ -2329,6 +1266,16 @@ class RecipeTest(unittest.TestCase):
         task = root.find('recipeSet/recipe/task')
         self.assertEquals(len(task), 0, '<task/> should have no children')
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=851354
+    def test_hostrequires_force_clone_success(self):
+        system = data_setup.create_system()
+        system.status = SystemStatus.broken
+        job = data_setup.create_job()
+
+        host_requires = '<hostRequires force="{0}"/>'
+        job.recipesets[0].recipes[0]._host_requires = host_requires.format(system.fqdn)
+        xml = job.recipesets[0].recipes[0].to_xml(clone=True).toxml()
+        self.assertIn(host_requires.format(system.fqdn), xml)
 
 class CheckDynamicVirtTest(unittest.TestCase):
 
@@ -2521,8 +1468,6 @@ class GuestRecipeTest(unittest.TestCase):
 class MACAddressAllocationTest(unittest.TestCase):
 
     def setUp(self):
-        self.orig_VirtManager = dynamic_virt.VirtManager
-        dynamic_virt.VirtManager = DummyVirtManager
         session.begin()
         # Other tests might have left behind running recipes using MAC
         # addresses, let's cancel them all
@@ -2533,7 +1478,6 @@ class MACAddressAllocationTest(unittest.TestCase):
             rs.job.update_status()
 
     def tearDown(self):
-        dynamic_virt.VirtManager = self.orig_VirtManager
         session.rollback()
 
     def test_lowest_free_mac_none_in_use(self):
@@ -2556,24 +1500,6 @@ class MACAddressAllocationTest(unittest.TestCase):
         second_job = data_setup.create_job(num_guestrecipes=1)
         data_setup.mark_job_running(second_job)
         self.assertEquals(second_job.recipesets[0].recipes[0].guests[0].resource.mac_address,
-                    netaddr.EUI('52:54:00:00:00:01'))
-        self.assertEquals(RecipeResource._lowest_free_mac(),
-                    netaddr.EUI('52:54:00:00:00:02'))
-        first_job.cancel()
-        first_job.update_status()
-        self.assertEquals(RecipeResource._lowest_free_mac(),
-                    netaddr.EUI('52:54:00:00:00:00'))
-
-    def test_virt_and_guest_resources(self):
-        # One GuestResource ...
-        first_job = data_setup.create_job(num_guestrecipes=1)
-        data_setup.mark_job_running(first_job)
-        self.assertEquals(first_job.recipesets[0].recipes[0].guests[0].resource.mac_address,
-                    netaddr.EUI('52:54:00:00:00:00'))
-        # ... and one VirtResource
-        second_job = data_setup.create_job()
-        data_setup.mark_recipe_running(second_job.recipesets[0].recipes[0], virt=True)
-        self.assertEquals(second_job.recipesets[0].recipes[0].resource.mac_address,
                     netaddr.EUI('52:54:00:00:00:01'))
         self.assertEquals(RecipeResource._lowest_free_mac(),
                     netaddr.EUI('52:54:00:00:00:02'))
@@ -2611,6 +1537,29 @@ class MACAddressAllocationTest(unittest.TestCase):
         job.update_status()
         self.assertEquals(RecipeResource._lowest_free_mac(),
                 netaddr.EUI('52:54:00:00:00:00'))
+
+class VirtResourceTest(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+        self.addCleanup(session.rollback)
+
+    def test_link(self):
+        recipe = data_setup.create_recipe()
+        data_setup.create_job_for_recipes([recipe])
+        data_setup.mark_recipe_running(recipe, virt=True)
+        recipe.resource.fqdn = u'my-openstack-instance'
+        expected_hyperlink = ('<a href="http://openstack.example.invalid/'
+                'dashboard/project/instances/{0}/">{0}</a>'
+                .format(recipe.resource.instance_id))
+        self.assertEquals(serialize_kid_element(recipe.resource.link),
+                '<span>my-openstack-instance (OpenStack instance {0})</span>'
+                .format(expected_hyperlink))
+        # after the recipe completes, we don't link to the deleted instance
+        data_setup.mark_recipe_complete(recipe, only=True)
+        self.assertEquals(serialize_kid_element(recipe.resource.link),
+                '<span>my-openstack-instance (OpenStack instance {0})</span>'
+                .format(recipe.resource.instance_id))
 
 class LogRecipeTest(unittest.TestCase):
 

@@ -111,6 +111,9 @@ class UnsupportedMediaType415(PlainTextHTTPException):
     """
     code = 415
 
+class ServiceUnavailable503(PlainTextHTTPException):
+    code = 503
+
 @contextlib.contextmanager
 def convert_internal_errors():
     """Context manager to convert Python exceptions to HTTP errors"""

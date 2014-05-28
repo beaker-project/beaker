@@ -1,4 +1,3 @@
-#!/usr/bin/python
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -272,6 +271,3 @@ class ReserveSystem(WebDriverTestCase):
         b = self.browser
         go_to_reserve_systems(b, self.distro_tree)
         check_system_search_results(b, absent=[group_system])
-
-if __name__ == "__main__":
-    unittest.main()

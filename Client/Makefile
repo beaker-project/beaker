@@ -21,3 +21,6 @@ clean:
 .PHONY: check
 check:
 	./run-tests.sh
+	env PYTHONPATH=../Common:src$${PYTHONPATH:+:$$PYTHONPATH} \
+	    pylint --disable=W --report=no --rcfile=../Misc/pylint-errors.cfg \
+	    bkr.client

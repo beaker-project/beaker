@@ -10,14 +10,17 @@ import unittest
 import logging
 from urlparse import urljoin
 from urllib import urlencode, urlopen
+import uuid
 import lxml.etree
 from turbogears.database import session
-
+import requests
 from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest import data_setup, get_server_base, with_transaction
+from bkr.inttest import data_setup, get_server_base, with_transaction, \
+        DummyVirtManager
 from bkr.inttest.assertions import assert_sorted
+from bkr.server import dynamic_virt
 from bkr.server.model import Cpu, Key, Key_Value_String, System, SystemStatus
-from bkr.inttest.server.webdriver_utils import check_system_search_results
+from bkr.inttest.server.webdriver_utils import check_system_search_results, login
 
 def atom_xpath(expr):
     return lxml.etree.XPath(expr, namespaces={'atom': 'http://www.w3.org/2005/Atom'})
@@ -291,3 +294,72 @@ class SystemsBrowseTest(WebDriverTestCase):
         check_system_search_results(b, present=[system1], absent=[system2])
         self.assertEqual(
             b.find_element_by_class_name('item-count').text, 'Items found: 1')
+
+    def test_mine_systems(self):
+
+        b = self.browser
+        with session.begin():
+            user = data_setup.create_user(password='password')
+            system1 = data_setup.create_system()
+            system2 = data_setup.create_system(status=SystemStatus.removed)
+            system1.loaned = user
+            system2.loaned = user
+
+        login(b, user=user.user_name, password='password')
+        b.get(urljoin(get_server_base(),'mine'))
+        check_system_search_results(b, present=[system1], absent=[system2])
+        self.assertEqual(
+            b.find_element_by_class_name('item-count').text, 'Items found: 1')
+
+class IpxeScriptHTTPTest(unittest.TestCase):
+
+    def setUp(self):
+        with session.begin():
+            self.lc = data_setup.create_labcontroller()
+        self.orig_VirtManager = dynamic_virt.VirtManager
+        dynamic_virt.VirtManager = DummyVirtManager
+        DummyVirtManager.lab_controller = self.lc
+
+    def tearDown(self):
+        DummyVirtManager.lab_controller = None
+        dynamic_virt.VirtManager = self.orig_VirtManager
+
+    def test_unknown_uuid(self):
+        response = requests.get(get_server_base() +
+                'systems/by-uuid/%s/ipxe-script' % uuid.uuid4())
+        self.assertEquals(response.status_code, 404)
+
+    def test_invalid_uuid(self):
+        response = requests.get(get_server_base() +
+                'systems/by-uuid/blerg/ipxe-script')
+        self.assertEquals(response.status_code, 404)
+
+    def test_recipe_not_provisioned_yet(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_running(recipe, virt=True)
+            # VM is created but recipe.provision() hasn't been called yet
+        response = requests.get(get_server_base() +
+                'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
+        self.assertEquals(response.status_code, 503)
+
+    def test_recipe_provisioned(self):
+        with session.begin():
+            distro_tree = data_setup.create_distro_tree(
+                    arch=u'x86_64', osmajor=u'Fedora20',
+                    lab_controllers=[self.lc],
+                    urls=[u'http://example.com/ipxe-test/F20/x86_64/os/'])
+            recipe = data_setup.create_recipe(distro_tree=distro_tree)
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_waiting(recipe, virt=True,
+                    lab_controller=self.lc)
+            recipe.provision()
+        response = requests.get(get_server_base() +
+                'systems/by-uuid/%s/ipxe-script' % recipe.resource.instance_id)
+        response.raise_for_status()
+        self.assertEquals(response.text, """#!ipxe
+kernel http://example.com/ipxe-test/F20/x86_64/os/pxeboot/vmlinuz ks=%s noverifyssl netboot_method=ipxe
+initrd http://example.com/ipxe-test/F20/x86_64/os/pxeboot/initrd
+boot
+""" % recipe.rendered_kickstart.link)

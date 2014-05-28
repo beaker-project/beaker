@@ -11,6 +11,7 @@ from bkr.server.widgets import myPaginateDataGrid, TasksWidget, TaskSearchForm, 
         SearchBar, TaskActionWidget, HorizontalForm
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
+from bkr.server.bexceptions import DatabaseLookupError
 from bkr.common.helpers import siphon
 from bkr.common.bexceptions import BX
 from sqlalchemy import or_, and_
@@ -365,8 +366,7 @@ class Tasks(RPCRoot):
 
         search_bar = SearchBar(name='tasksearch',
                            label=_(u'Task Search'),
-                           table = search_utility.Task.search.create_search_table(),
-                           complete_data=search_utility.Task.search.create_complete_search_table(),
+                           table = search_utility.Task.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_task"),
                            )
         return dict(title="Task Library",
@@ -395,13 +395,10 @@ class Tasks(RPCRoot):
                 #Would rather not redirect but do_search expects task_id in URL
                 #This is the simplest way of dealing with it
                 redirect("/tasks/%s" % task.id)
-        except InvalidRequestError:
-            if using_task_id:
-                err_msg = u'Invalid task_id %s' % args[0]
-            else:
-                err_msg =  u'Invalid task /%s' % '/'.join(args)
-            flash(_(err_msg))
+        except DatabaseLookupError as e:
+            flash(unicode(e))
             redirect("/tasks")
+
         return dict(task=task,
                     form = self.task_form,
                     value = dict(task_id = task.id),

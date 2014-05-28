@@ -6,7 +6,7 @@
 
 import cracklib
 from turbogears.validators import FormValidator, Invalid, TgFancyValidator, \
-        Email, UnicodeString
+        UnicodeString
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
 from bkr.server.model import System, Recipe, User, LabController, RetentionTag
@@ -50,59 +50,25 @@ class UniqueUserName(FormValidator):
             raise Invalid('Login name is not unique', form_fields,
                 state, error_dict=error)
 
-
-class UniqueFormEmail(FormValidator):
-
-    """
-    This FormValidator is designed to be used with the user form that
-    is used by administrators to add new and modify existing users.
-    This is not to be used in forms where users modify their
-    own email.
-    """
+class LabControllerFormValidator(FormValidator):
 
     __unpackargs__ = ('*', 'field_names')
-    messages = {'not_unique' : 'Email address is not unique' }
-
-    def validate_python(self, form_fields, state):
-        user_id = form_fields.get('user_id')
-        email_address = form_fields['email_address']
-        try:
-            if not user_id: # New user
-                try:
-                    User.by_email_address(email_address)
-                except NoResultFound:
-                    pass
-                else:
-                    raise ValueError
-            else:
-                _check_user_email(email_address, user_id)
-        except ValueError:
-            error = {'email_address' : self.message('not_unique', state)}
-            raise Invalid('Email address is not unique', form_fields,
-                state, error_dict=error)
-
-class UniqueLabControllerEmail(FormValidator):
-
-
-    __unpackargs__ = ('*', 'field_names')
-    messages = {'not_unique' : 'Email address is not unique' }
+    messages = {
+        'fqdn_not_unique': 'FQDN is not unique',
+        'username_in_use': 'Username is in use by a different lab controller',
+    }
 
     def validate_python(self, form_fields, state):
         lc_id = form_fields.get('id', None)
-        email_address = form_fields['email']
-        user_name = form_fields['lusername']
+        fqdn = form_fields['fqdn']
+        lusername = form_fields['lusername']
 
         try:
-            User.by_email_address(email_address)
+            existing_lc_with_fqdn = LabController.by_name(fqdn)
         except NoResultFound:
-            email_is_used = False
-        else:
-            email_is_used = True
+            existing_lc_with_fqdn = None
 
-        if User.by_user_name(user_name):
-            new_user = False
-        else:
-            new_user = True
+        existing_user_with_lusername = User.by_user_name(lusername)
 
         if not lc_id:
             labcontroller = None
@@ -111,34 +77,26 @@ class UniqueLabControllerEmail(FormValidator):
             labcontroller = LabController.by_id(lc_id)
             luser = labcontroller.user
 
-        try:
-            if not labcontroller and email_is_used: # New LC using dupe email
-                raise ValueError
-            if new_user and email_is_used: #New user using dupe email
-                raise ValueError
-            if luser:
-                _check_user_email(email_address, luser.user_id)
-        except ValueError:
-            error = {'email' : self.message('not_unique', state)}
-            raise Invalid('Email address is not unique', form_fields,
-                state, error_dict=error)
-
-
-class CheckUniqueEmail(Email):
-
-    """
-    This is used to validate the email address of the currently logged in user
-    Do not use as an admin validitating other users emails
-    """
-
-    def _to_python(self, value, state):
-        super(CheckUniqueEmail, self)._to_python(value,state)
-        user_id = identity.current.user.user_id
-        try:
-            _check_user_email(value, user_id)
-        except ValueError:
-            raise Invalid('Email address is not unique', value, state)
-        return value
+        errors = {}
+        if not labcontroller and existing_lc_with_fqdn:
+            # New LC using duplicate FQDN
+            errors['fqdn'] = self.message('fqdn_not_unique', state)
+        elif (labcontroller and existing_lc_with_fqdn and
+                labcontroller != existing_lc_with_fqdn):
+            # Existing LC changing FQDN to a duplicate one
+            errors['fqdn'] = self.message('fqdn_not_unique', state)
+        if (not luser and existing_user_with_lusername and
+                existing_user_with_lusername.lab_controller):
+            # New LC using username that is already in use
+            errors['lusername'] = self.message('username_in_use', state)
+        if (luser and existing_user_with_lusername and
+                luser != existing_user_with_lusername and
+                existing_user_with_lusername.lab_controller):
+            # Existing LC changing username to one that is already in use
+            errors['lusername'] = self.message('username_in_use', state)
+        if errors:
+            raise Invalid('Validation failed', form_fields,
+                    state, error_dict=errors)
 
 class CheckRecipeValid(TgFancyValidator):
 
@@ -159,17 +117,6 @@ class CheckSystemValid(TgFancyValidator):
             raise Invalid('Invalid system', value, state)
         return system
 
-
-def _check_user_email(email_address, user_id):
-    try:
-        user_by_email = User.by_email_address(email_address)
-    except NoResultFound: # Email not being used
-        pass
-    else:
-        #raise ValueError
-        user_by_id = User.by_id(user_id)
-        if user_by_id != user_by_email: # An existing email that is not theirs
-            raise ValueError
 
 class SSHPubKey(TgFancyValidator):
 

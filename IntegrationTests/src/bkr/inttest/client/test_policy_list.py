@@ -71,6 +71,27 @@ class PolicyListTest(unittest.TestCase):
         except ClientError as e:
             self.assertIn('System not found', e.stderr_output)
 
+    def test_private_system(self):
+        with session.begin():
+            owner = data_setup.create_user(password=u'owner')
+            system = data_setup.create_system(private=True, owner=owner)
+            other_user = data_setup.create_user(password=u'other')
+        owner_client_config = create_client_config(
+                username=owner.user_name, password=u'owner')
+        other_client_config = create_client_config(
+                username=other_user.user_name, password=u'other')
+        # owner should be able to see their own system
+        out = run_client(['bkr', 'policy-list', system.fqdn],
+                config=owner_client_config)
+        self.assertNotEqual('', out)
+        # to an unprivileged user the system should appear not to exist
+        try:
+            run_client(['bkr', 'policy-list', system.fqdn],
+                    config=other_client_config)
+            self.fail('Should fail')
+        except ClientError as e:
+            self.assertIn('System not found', e.stderr_output)
+
     def test_list_policy_filter_mine(self):
 
         with session.begin():

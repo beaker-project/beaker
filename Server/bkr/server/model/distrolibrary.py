@@ -20,7 +20,7 @@ from bkr.server.helpers import make_link
 from bkr.server.installopts import InstallOptions
 from .sql import ConditionalInsert
 from .base import DeclarativeMappedObject
-from .types import ImageType
+from .types import ImageType, SystemStatus
 from .activity import Activity
 from .lab import LabController
 
@@ -495,19 +495,6 @@ class DistroTree(DeclarativeMappedObject):
         distro_requires.appendChild(xmland)
         return distro_requires
 
-    def systems_filter(self, user, filter, only_in_lab=False):
-        # Delayed import to avoid circular dependency
-        from . import System
-        from bkr.server.needpropertyxml import apply_system_filter
-        systems = System.query
-        systems = apply_system_filter(filter, systems)
-        systems = self.all_systems(user, systems)
-        if only_in_lab:
-            systems = systems.join(System.lab_controller)\
-                    .filter(LabController._distro_trees.any(
-                    LabControllerDistroTree.distro_tree == self))
-        return systems
-
     def tasks(self):
         """
         List of tasks that support this distro
@@ -519,43 +506,6 @@ class DistroTree(DeclarativeMappedObject):
                     TaskExcludeArch.arch == self.arch)))\
                 .filter(not_(Task.excluded_osmajor.any(
                     TaskExcludeOSMajor.osmajor == self.distro.osversion.osmajor)))
-
-    def systems(self, user=None, systems=None):
-        """
-        List of systems that support this distro
-        Limit to only lab controllers which have the distro.
-        Limit to what is available to user if user passed in.
-        """
-        # Delayed import to avoid circular dependency
-        from . import System
-        return self.all_systems(user=user, systems=systems)\
-                .join(System.lab_controller)\
-                .filter(LabController._distro_trees.any(
-                    LabControllerDistroTree.distro_tree == self))
-
-    def all_systems(self, user=None, systems=None):
-        """
-        List of systems that support this distro tree.
-        Will return all possible systems even if the tree is not on the lab controller yet.
-        Limit to what is available to user if user passed in.
-        """
-        # Delayed import to avoid circular dependency
-        from . import System, ExcludeOSMajor, ExcludeOSVersion
-        if user:
-            systems = System.available_for_schedule(user, systems=systems)
-            systems = System.scheduler_ordering(user, query=systems)
-        elif not systems:
-            systems = System.query
-
-        return systems.filter(and_(
-                System.arch.contains(self.arch),
-                not_(System.excluded_osmajor.any(and_(
-                        ExcludeOSMajor.osmajor == self.distro.osversion.osmajor,
-                        ExcludeOSMajor.arch == self.arch))),
-                not_(System.excluded_osversion.any(and_(
-                        ExcludeOSVersion.osversion == self.distro.osversion,
-                        ExcludeOSVersion.arch == self.arch))),
-                ))
 
     @property
     def link(self):

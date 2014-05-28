@@ -298,19 +298,26 @@ be run on specific architectures, systems with specific hardware installed,
 virtual machines running on particular hypervisors, etc.
 
 
-System loans and manual provisioning
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System loans, manual and forced provisioning
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Large Beaker installations are likely to include esoteric hardware that may
 not be available elsewhere within an organisation.
+
+Beaker provides a "loan" mechanism, where systems may be temporarily
+made available to specific users for their exclusive use, regardless of
+whether or not the user would normally have access to that system.
 
 Systems may be placed in "manual" mode, which means users can provision a
 distro directly without worrying about interference from the automated
 scheduler.
 
-Beaker also provides a "loan" mechanism, where systems may be temporarily
-made available to specific users for their exclusive use, regardless of
-whether or not the user would normally have access to that system.
+Capability for "forced provisioning" a system is also available via
+the ``force`` attribute of the ``<hostRequires/>`` element (See
+:ref:`forced system provisioning<forced-system>`). An example of why
+this capability is useful is that it allows running
+diagnostic jobs on systems marked as ``broken`` before they are
+considered ready for use again.
 
 
 Dynamic virtualization

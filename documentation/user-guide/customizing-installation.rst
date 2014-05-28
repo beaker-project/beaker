@@ -37,6 +37,37 @@ the effective install options for each recipe.
    Describe syntax of the options, rules for parsing/unparsing, and how 
    combining/overriding works.
 
+.. _kernel-options:
+
+Kernel options
+~~~~~~~~~~~~~~
+
+Most kernel options are passed as-is on the kernel command line when the 
+installer is booted.
+Refer to the distro documentation for details about kernel options supported by 
+the installer.
+
+The following kernel options are treated specially by Beaker:
+
+``initrd=<tftp path>``
+    Extra initrd/initramfs image to load, in addition to the initrd image for 
+    the distro installer. Use this to apply updates to the installer image, or 
+    to supply additional drivers for installation.
+
+    If the boot loader supports multiple initrd images, Beaker extracts the 
+    ``initrd=`` option from the kernel command line and appends it to the boot 
+    loader configuration.
+
+``devicetree=<tftp path>``
+    Alternate device tree binary to load. Use this to supply a different device 
+    tree binary than the one built into the kernel.
+
+    If the boot loader supports passing a device tree to the kernel (currently 
+    only GRUB for AArch64), Beaker extracts the ``devicetree=`` option from the 
+    kernel command line and appends it to the boot loader configuration.
+
+.. _kickstart-metadata:
+
 Kickstart metadata
 ~~~~~~~~~~~~~~~~~~
 
@@ -61,6 +92,10 @@ correspond to the similarly-named kickstart option.
     as ``beah-0.6.48``). The default is ``beah`` which installs the latest 
     version from the harness repos. This variable has no effect when using 
     alternative harnesses.
+
+``beah_no_ipv6``
+    If specified, Beah will function in IPv4 only mode even if IPv6
+    connectivity is possible.
 
 ``ethdevices=<module>[,<module>...]``
     Comma-separated list of network modules to be loaded during installation.
@@ -120,6 +155,15 @@ correspond to the similarly-named kickstart option.
 ``no_clock_sync``
     Omits additional packages and scripts which ensure the system clock is 
     synchronized after installation.
+
+``packages=<package>:<package>``
+    Colon-separated list of package names to be installed during provisioning. 
+    If this variable is set, it replaces any packages defined by default in the 
+    kickstart templates. It also replaces any packages requested by the recipe, 
+    including task requirements.
+
+    In a recipe, considering using the ``<package/>`` element instead. This 
+    augments the package list instead of replacing it completely.
 
 ``password=<encrypted>``
     Root password to use. Must be encrypted in the conventional 

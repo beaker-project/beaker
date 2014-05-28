@@ -14,6 +14,7 @@ import time
 import threading
 import subprocess
 import shutil
+import uuid
 import tempfile
 import re
 from StringIO import StringIO
@@ -24,6 +25,7 @@ import turbogears
 from turbogears.database import session
 from bkr.server.controllers import Root
 from bkr.server.util import load_config
+from bkr.server.tests import data_setup
 from bkr.log import log_to_stream
 
 # hack to make turbogears.testutil not do dumb stuff at import time
@@ -62,15 +64,15 @@ def with_transaction(func):
     return _decorated
 
 class DummyVirtManager(object):
-    def __enter__(self):
-        return self
-    def __exit__(self, exc_type, exc_value, exc_tb):
+    def __init__(self, user):
         pass
-    def create_vm(self, name, lab_controllers, mac_address, virtio_possible):
+    def available_flavors(self):
+        return []
+    def create_vm(self, name, flavor):
+        return uuid.uuid4()
+    def start_vm(self, instance_id):
         pass
-    def destroy_vm(self, name):
-        pass
-    def start_install(self, name, distro_tree, kernel_options, lab_controller):
+    def destroy_vm(self, instance_id):
         pass
 
 def fix_beakerd_repodata_perms():

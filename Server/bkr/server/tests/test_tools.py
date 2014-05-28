@@ -14,6 +14,7 @@ import time
 from shutil import copy, rmtree
 from tempfile import mkdtemp
 from turbogears.database import session, get_engine
+from bkr.server.tools import ipxe_image
 from bkr.server.tools.log_delete import legacy_main
 from bkr.server.tools.repo_update import update_repos
 from bkr.server.model import OSMajor
@@ -117,3 +118,19 @@ class RepoUpdate(unittest.TestCase):
         time.sleep(0.001)
         update_repos('file://%s/' % remote_harness_dir, local_harness_dir)
         self.assertEquals(os.path.getmtime(repodata_dir), mtime)
+
+class IpxeImageTest(unittest.TestCase):
+
+    def list_msdos_filesystem(self, image_filename):
+        mdir = subprocess.Popen(['mdir', '-i', image_filename, '-/', '-b', '::'],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = mdir.communicate()
+        if mdir.returncode != 0:
+            raise RuntimeError('mdir failed: %s' % err)
+        return out.splitlines()
+
+    def test_image_generation(self):
+        f = ipxe_image.generate_image()
+        self.assertItemsEqual(
+                self.list_msdos_filesystem(f.name),
+                ['::/syslinux.cfg', '::/ipxe.lkrn'])

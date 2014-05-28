@@ -10,7 +10,7 @@ from sqlalchemy.sql import and_
 from sqlalchemy.orm import class_mapper, relationship, dynamic_loader
 from turbogears.database import session
 from bkr.server.bexceptions import BeakerException, BX, \
-        VMCreationFailedException, StaleTaskStatusException, \
+        StaleTaskStatusException, \
         InsufficientSystemPermissions, StaleSystemUserException, \
         StaleCommandStatusException, NoChangeException
 from bkr.server.installopts import InstallOptions
@@ -41,7 +41,8 @@ from .scheduler import (Watchdog, TaskBase, Job, RecipeSet, Recipe,
         LogRecipe, LogRecipeTask, LogRecipeTaskResult, JobCc, RecipeResource,
         SystemResource, GuestResource, VirtResource, Response, RetentionTag,
         Product, RenderedKickstart, RecipeSetActivity, RecipeRepo,
-        RecipeKSAppend, RecipeTaskParam, RecipeSetResponse)
+        RecipeKSAppend, RecipeTaskParam, RecipeSetResponse, JobActivity)
+from .openstack import OpenStackRegion
 
 class ExternalReport(DeclarativeMappedObject):
 

@@ -19,7 +19,7 @@ from itertools import chain
 from turbogears import widgets
 from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 SingleSelectField, CheckBox, 
-                                HiddenField, RemoteForm, LinkRemoteFunction, CheckBoxList, JSLink,
+                                HiddenField, RemoteForm, LinkRemoteFunction, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid, DataGrid, RepeatingFormField,
                                 CompoundWidget, AjaxGrid, CSSLink,
@@ -31,7 +31,7 @@ from bkr.server import model, search_utility, identity
 from bkr.server.assets import get_assets_env
 from bkr.server.bexceptions import BeakerException
 from bkr.server.helpers import make_link
-from bkr.server.validators import UniqueLabControllerEmail
+from bkr.server.validators import LabControllerFormValidator
 from bkr.server.util import VALID_FQDN_REGEX
 import logging
 log = logging.getLogger(__name__)
@@ -107,7 +107,7 @@ class LocalJSLink(JSLink):
     """
     order = 10
     def update_params(self, d): 
-        super(JSLink, self).update_params(d)
+        super(LocalJSLink, self).update_params(d)
         d["link"] = url(self.name)
 
 
@@ -116,7 +116,7 @@ class LocalCSSLink(CSSLink):
     Link to local CSS files
     """
     def update_params(self, d):
-        super(CSSLink, self).update_params(d)
+        super(LocalCSSLink, self).update_params(d)
         d["link"] = self.name
 
 
@@ -451,7 +451,7 @@ class LabControllerDataGrid(myPaginateDataGrid):
 class SingleSelectFieldJSON(SingleSelectField):
     params = ['for_column']
     def __init__(self,*args,**kw):
-        super(SingleSelectField,self).__init__(*args,**kw)
+        super(SingleSelectFieldJSON, self).__init__(*args, **kw)
 
         if kw.has_key('for_column'):
             self.for_column = kw['for_column']
@@ -466,8 +466,6 @@ class SingleSelectFieldJSON(SingleSelectField):
 
 
 class TextFieldJSON(TextField):
-    def __init__(self,*args,**kw):
-        super(TextField,self).__init__(*args,**kw)
     def __json__(self):
         return {
                 'field_id' : self.field_id,             
@@ -478,7 +476,7 @@ class LabControllerFormSchema(validators.Schema):
     fqdn = validators.UnicodeString(not_empty=True, max=256, strip=True)
     lusername = validators.UnicodeString(not_empty=True)
     email = validators.Email(not_empty=True)
-    chained_validators = [UniqueLabControllerEmail('id', 'email', 'lusername')]
+    chained_validators = [LabControllerFormValidator('id', 'fqdn', 'lusername', 'email')]
 
 
 class LabControllerForm(HorizontalForm):
@@ -670,23 +668,22 @@ class SearchBar(RepeatingFormField):
     simplesearch = None
 
     def __init__(self, table, search_controller=None, extra_selects=None,
-        extra_inputs=None, extra_hiddens=None, enable_custom_columns=False,
-        complete_data=None, *args, **kw):
-
+            extra_inputs=None, extra_hiddens=None, enable_custom_columns=False,
+            *args, **kw):
         super(SearchBar,self).__init__(*args, **kw)
         self.enable_custom_columns = enable_custom_columns
         self.search_controller=search_controller
         self.repetitions = 1
         self.extra_hiddens = extra_hiddens
         self.default_result_columns = {}
-        table_field = SingleSelectFieldJSON(name="table", options=table, validator=validators.NotEmpty()) 
+        table_field = SingleSelectFieldJSON(name="table", options=table.keys(), validator=validators.NotEmpty()) 
         operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
         value_field = TextFieldJSON(name="value")
 
         self.fields = [table_field, operation_field, value_field]
         new_selects = []
         self.extra_callbacks = {} 
-        self.search_object = jsonify.encode(complete_data)
+        self.search_object = jsonify.encode(table)
             
         if extra_selects is not None: 
             new_class = [] 

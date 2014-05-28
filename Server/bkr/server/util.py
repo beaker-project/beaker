@@ -18,11 +18,14 @@ import subprocess
 from collections import namedtuple
 from sqlalchemy import create_engine
 from sqlalchemy.orm import create_session
+from sqlalchemy.orm.exc import NoResultFound
 import turbogears
 from turbogears import config, url
 from turbogears.database import get_engine
 import socket
 import re
+import contextlib
+from bkr.server.bexceptions import DatabaseLookupError
 
 log = logging.getLogger(__name__)
 
@@ -206,3 +209,14 @@ VALID_FQDN_REGEX = (r"^(?=.{1,255}$)[0-9A-Za-z]"
 regex_compiled = re.compile(VALID_FQDN_REGEX)
 def is_valid_fqdn(fqdn):
     return regex_compiled.search(fqdn)
+
+
+@contextlib.contextmanager
+def convert_db_lookup_error(msg):
+    """Context manager to handle SQLA's NoResultFound and report
+       a custom error message
+    """
+    try:
+        yield
+    except NoResultFound:
+        raise DatabaseLookupError(msg)

@@ -35,7 +35,8 @@ Contents
    kickstarts
    power-commands
    panic-detection
-   ovirt
+   theming
+   openstack
    graphite
    reporting-queries
    how-do-i

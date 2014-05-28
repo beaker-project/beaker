@@ -207,8 +207,7 @@ class Distros(RPCRoot):
 
         search_bar = SearchBar(name='distrosearch',
                            label=_(u'Distro Search'),    
-                           table=search_utility.Distro.search.create_search_table(), 
-                           complete_data = search_utility.Distro.search.create_complete_search_table(),
+                           table=search_utility.Distro.search.create_complete_search_table(), 
                            search_controller=url("/get_search_options_distros"), 
                            extra_hiddens=hidden_fields,
                            date_picker=['created']

@@ -44,6 +44,14 @@ from .lab import LabController
 from .distrolibrary import (Arch, KernelType, OSMajor, OSVersion, Distro, DistroTree,
         LabControllerDistroTree)
 
+try:
+    #pylint: disable=E0611
+    from sqlalchemy.sql.expression import true # SQLAlchemy 0.8+
+except ImportError:
+    from sqlalchemy.sql import text
+    def true():
+        return text('TRUE')
+
 log = logging.getLogger(__name__)
 
 xmldoc = xml.dom.minidom.Document()
@@ -474,7 +482,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_hardware'] = self.can_edit(u)
             data['can_change_power'] = self.can_edit(u)
             data['can_power'] = self.can_power(u)
-            data['can_take'] = self.is_free() and self.can_reserve_manually(u)
+            data['can_take'] = self.is_free(u) and self.can_reserve_manually(u)
             data['can_return'] = (self.open_reservation is not None
                     and self.open_reservation.type != 'recipe'
                     and self.can_unreserve(u))
@@ -502,85 +510,85 @@ class System(DeclarativeMappedObject, ActivityMixin):
         return data
 
     @classmethod
-    def all(cls, user=None, system=None):
+    def all(cls, user):
         """
-        Only systems that the current user has permission to see
-
+        Returns a query of systems which the given user is allowed to see.
+        If user is None, only includes systems which anonymous users are
+        allowed to see.
         """
-        if system is None:
-            system = cls.query
-        return cls.permissable_systems(query=system, user=user)
-
-    @classmethod
-    def permissable_systems(cls, query, user=None, *arg, **kw):
-
         if user is None:
-            try:
-                user = identity.current.user
-            except AttributeError:
-                user = None
-
-        if user:
-            if not user.is_admin() and \
-               not user.has_permission(u'secret_visible'):
-                query = query.outerjoin(System.custom_access_policy).filter(
-                            or_(SystemAccessPolicy.grants(user, SystemPermission.view),
-                                System.owner == user,
-                                System.loaned == user,
-                                System.user == user))
+            clause = cls.visible_to_anonymous
         else:
-            query = query.outerjoin(System.custom_access_policy).filter(
-                    SystemAccessPolicy.grants_everybody(SystemPermission.view))
+            clause = cls.visible_to_user(user)
+        return cls.query.outerjoin(System.lab_controller)\
+                .outerjoin(System.custom_access_policy)\
+                .filter(clause)
 
-        return query
+    @hybrid_method
+    def visible_to_user(self, user):
+        if user.is_admin() or user.has_permission(u'secret_visible'):
+            return True
+        return ((self.custom_access_policy and
+                 self.custom_access_policy.grants(user, SystemPermission.view)) or
+                self.owner == user or
+                self.loaned == user or
+                self.user == user)
 
+    @visible_to_user.expression
+    def visible_to_user(cls, user): #pylint: disable=E0213
+        if user.is_admin() or user.has_permission(u'secret_visible'):
+            return true()
+        return or_(SystemAccessPolicy.grants(user, SystemPermission.view),
+                cls.owner == user,
+                cls.loaned == user,
+                cls.user == user)
 
-    @classmethod
-    def free(cls, user, systems=None):
-        """
-        Builds on available.  Only systems with no users, and not Loaned.
-        """
-        return System.available(user,systems).\
-            filter(and_(System.user==None, or_(System.loaned==None, System.loaned==user))). \
-            join(System.lab_controller).filter(LabController.disabled==False)
+    @hybrid_property
+    def visible_to_anonymous(self):
+        return (self.custom_access_policy and
+                self.custom_access_policy.grants_everybody(SystemPermission.view))
 
-    @classmethod
-    def available_for_schedule(cls, user, systems=None):
-        """
-        Will return systems that are available to user for scheduling
-        """
-        return cls._available(user, systems=systems, system_status=SystemStatus.automated)
+    @visible_to_anonymous.expression
+    def visible_to_anonymous(cls): #pylint: disable=E0213
+        return SystemAccessPolicy.grants_everybody(SystemPermission.view)
 
-    @classmethod
-    def _available(self, user, system_status=None, systems=None):
-        """
-        Builds on all.  Only systems which this user has permission to reserve.
-        Can take varying system_status' as args as well
-        """
-
-        query = System.all(user, system=systems)
-        if system_status is None:
-            query = query.filter(or_(System.status==SystemStatus.automated,
-                    System.status==SystemStatus.manual))
-        elif isinstance(system_status, list):
-            query = query.filter(or_(*[System.status==k for k in system_status]))
+    @hybrid_property
+    def visible_to_current_user(self):
+        if identity.current.anonymous:
+            return self.visible_to_anonymous
         else:
-            query = query.filter(System.status==system_status)
+            return self.visible_to_user(identity.current.user)
 
-        # these filter conditions correspond to can_reserve
-        query = query.outerjoin(System.custom_access_policy).filter(or_(
-                System.owner == user,
-                System.loaned == user,
-                SystemAccessPolicy.grants(user, SystemPermission.reserve)))
-        return query
+    @hybrid_method
+    def compatible_with_distro_tree(self, distro_tree):
+        return (distro_tree.arch in self.arch and
+                not any(e.osmajor == distro_tree.distro.osversion.osmajor
+                    and e.arch == distro_tree.arch
+                    for e in self.excluded_osmajor) and
+                not any(e.osversion == distro_tree.distro.osversion
+                    and e.arch == distro_tree.arch
+                    for e in self.excluded_osversion))
 
+    @compatible_with_distro_tree.expression
+    def compatible_with_distro_tree(cls, distro_tree): #pylint: disable=E0213
+        return and_(cls.arch.contains(distro_tree.arch),
+                not_(cls.excluded_osmajor.any(and_(
+                    ExcludeOSMajor.osmajor == distro_tree.distro.osversion.osmajor,
+                    ExcludeOSMajor.arch == distro_tree.arch))),
+                not_(System.excluded_osversion.any(and_(
+                    ExcludeOSVersion.osversion == distro_tree.distro.osversion,
+                    ExcludeOSVersion.arch == distro_tree.arch))))
 
-    @classmethod
-    def available(cls, user, systems=None):
-        """
-        Will return systems that are available to user
-        """
-        return cls._available(user, systems=systems)
+    @hybrid_method
+    def in_lab_with_distro_tree(self, distro_tree):
+        return (self.lab_controller is not None and
+                distro_tree.url_in_lab(self.lab_controller) is not None)
+
+    @in_lab_with_distro_tree.expression
+    def in_lab_with_distro_tree(self, distro_tree):
+        # we assume System.lab_controller was joined, System.all() does that
+        return LabController._distro_trees.any(LabControllerDistroTree
+                .distro_tree == distro_tree)
 
     @classmethod
     def scheduler_ordering(cls, user, query):
@@ -622,28 +630,6 @@ class System(DeclarativeMappedObject, ActivityMixin):
     @classmethod
     def by_id(cls, id, user):
         return System.all(user).filter(System.id == id).one()
-
-    @classmethod
-    def by_group(cls,group_id,*args,**kw):
-        return System.query.join(SystemGroup,Group).filter(Group.group_id == group_id)
-
-    @classmethod
-    def by_type(cls,type,user=None,systems=None):
-        if systems:
-            query = systems
-        else:
-            if user:
-                query = System.all(user)
-            else:
-                query = System.all()
-        return query.filter(System.type == type)
-
-    @classmethod
-    def by_arch(cls,arch,query=None):
-        if query:
-            return query.filter(System.arch.any(Arch.arch == arch))
-        else:
-            return System.query.filter(System.arch.any(Arch.arch == arch))
 
     def has_manual_reservation(self, user):
         """Does the specified user currently have a manual reservation?"""
@@ -711,18 +697,22 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     result = result.combined_with(pfu_opts)
         return result
 
-    def is_free(self):
-        try:
-            user = identity.current.user
-        except Exception:
-            user = None
+    @hybrid_method
+    def is_free(self, user):
+        self._ensure_user_is_authenticated(user)
+        return (self.user is None and
+                (self.loaned is None or self.loaned == user) and
+                (self.lab_controller is None or not self.lab_controller.disabled))
 
-        if not self.user and (not self.loaned or self.loaned == user):
-            return True
-        else:
-            return False
+    @is_free.expression
+    def is_free(cls, user): #pylint: disable=E0213
+        cls._ensure_user_is_authenticated(user)
+        return and_(cls.user == None,
+                or_(cls.loaned == None, cls.loaned == user),
+                or_(LabController.disabled == None, LabController.disabled == False))
 
-    def _ensure_user_is_authenticated(self, user):
+    @staticmethod
+    def _ensure_user_is_authenticated(user):
         if user is None:
             raise RuntimeError("Cannot check permissions for an "
                                "unauthenticated user.")
@@ -811,6 +801,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         # Loan admins can return anyone's loan
         return self.can_lend(user)
 
+    @hybrid_method
     def can_reserve(self, user):
         """
         Does the given user have permission to reserve this system?
@@ -833,6 +824,13 @@ class System(DeclarativeMappedObject, ActivityMixin):
         # grant themselves the appropriate permissions first (or loan the
         # system to themselves)
         return False
+
+    @can_reserve.expression
+    def can_reserve(cls, user): #pylint: disable=E0213
+        cls._ensure_user_is_authenticated(user)
+        return or_(SystemAccessPolicy.grants(user, SystemPermission.reserve),
+                cls.owner == user,
+                cls.loaned == user)
 
     def can_reserve_manually(self, user):
         """
@@ -1571,7 +1569,7 @@ class SystemAccessPolicy(DeclarativeMappedObject):
                 for rule in self.rules)
 
     @grants.expression
-    def grants(cls, user, permission):
+    def grants(cls, user, permission): #pylint: disable=E0213
         # need to avoid passing an empty list to in_
         clauses = [SystemAccessPolicyRule.user == user, SystemAccessPolicyRule.everybody]
         if user.groups:
@@ -1589,7 +1587,7 @@ class SystemAccessPolicy(DeclarativeMappedObject):
                 for rule in self.rules)
 
     @grants_everybody.expression
-    def grants_everybody(cls, permission):
+    def grants_everybody(cls, permission): #pylint: disable=E0213
         return cls.rules.any(and_(SystemAccessPolicyRule.permission == permission,
                 SystemAccessPolicyRule.everybody))
 
@@ -1633,10 +1631,12 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
     # If both are NULL, the rule applies to everyone.
     user_id = Column(Integer, ForeignKey('tg_user.user_id',
             name='system_access_policy_rule_user_id_fk'))
-    user = relationship(User)
+    user = relationship(User, backref=backref('system_access_policy_rules',
+                                              cascade='all, delete, delete-orphan'))
     group_id = Column(Integer, ForeignKey('tg_group.group_id',
             name='system_access_policy_rule_group_id_fk'))
-    group = relationship(Group)
+    group = relationship(Group, backref=backref('system_access_policy_rules',
+                                                cascade='all, delete, delete-orphan'))
     permission = Column(SystemPermission.db_type())
 
     def __repr__(self):

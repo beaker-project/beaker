@@ -239,13 +239,23 @@ class Groups(AdminPage):
         return Root()._systems(systems, title, group_id = group_id,**kw)
 
     @expose(template='bkr.server.templates.group_form')
-    def edit(self, group_id, **kw):
+    def edit(self, group_id=None, group_name=None, **kw):
         # Not just for editing, also provides a read-only view
-        try:
-            group = Group.by_id(group_id)
-        except NoResultFound:
-            log.exception('Group id %s is not a valid group id' % group_id)
-            flash(_(u'Need a valid group to search on'))
+        if group_id is not None:
+            try:
+                group = Group.by_id(group_id)
+            except NoResultFound:
+                log.exception('Group id %s is not a valid group id' % group_id)
+                flash(_(u'Need a valid group to search on'))
+                redirect('../groups/mine')
+        elif group_name is not None:
+            try:
+                group = Group.by_name(group_name)
+            except NoResultFound:
+                log.exception('Group name %s is not a valid group name' % group_name)
+                flash(_(u'Need a valid group to search on'))
+                redirect('../groups/mine')
+        else:
             redirect('../groups/mine')
 
         usergrid = self.show_members(group)
@@ -732,7 +742,7 @@ class Groups(AdminPage):
             response.status = 403
             return ['Invalid Group Id']
 
-        systems = System.all().filter(System.groups.contains(group)). \
+        systems = System.all(identity.current.user).filter(System.groups.contains(group)). \
                   filter(System.status != SystemStatus.removed)
 
         return [(system.id, system.fqdn) for system in systems]

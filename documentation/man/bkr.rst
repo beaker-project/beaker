@@ -154,7 +154,16 @@ Options for selecting system(s):
 
 .. option:: --hostrequire "<tag> <operator> <value>"
 
-   Additional <hostRequires/> for job (example: ``labcontroller=lab.example.com``).
+   Additional ``<hostRequires/>`` for the job. For example, 
+   ``labcontroller=lab.example.com`` would become ``<labcontroller op="=" 
+   value="lab.example.com"/>`` in the job XML.
+
+   For more advanced filtering (for example using ``<device/>``) you can also 
+   pass raw XML directly to this option. Any value starting with ``<`` is 
+   parsed as XML and inserted directly into ``<hostRequires/>``.
+
+   See :ref:`job-xml` for more information about the ``<hostRequires/>`` 
+   element.
 
 .. option:: --keyvalue "<name> <operator> <value>"
 

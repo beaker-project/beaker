@@ -1,4 +1,3 @@
-#!/usr/bin/python
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -70,8 +69,6 @@ def date_filter(col, op, value):
 
     return clause
 
-class NotVirtualisable(ValueError): pass
-
 class ElementWrapper(object):
     # Operator translation table
     op_table = { '=' : '__eq__',
@@ -126,14 +123,26 @@ class ElementWrapper(object):
     # These are the default behaviours for each element.
     # Note that unrecognised elements become XmlAnd!
 
+    def apply_filter(self, query):
+        query, clause = self.filter(query)
+        if clause is not None:
+            query = query.filter(clause)
+        return query
+
     def filter(self, joins):
         return (joins, None)
 
-    def filter_lab(self):
-        return None
+    def filter_openstack_flavors(self, flavors, lab_controller):
+        return []
 
-    def vm_params(self):
-        raise NotVirtualisable()
+    def virtualisable(self):
+        """
+        In addition to the flavor filtering, we have this simple boolean check as 
+        an extra optimisation. This should return False if the host requirements 
+        could *never* be satisfied by a dynamic virt guest. That way we can bail 
+        out early and avoid going to OpenStack at all for this recipe.
+        """
+        return False
 
 
 class XmlAnd(ElementWrapper):
@@ -150,21 +159,18 @@ class XmlAnd(ElementWrapper):
             return (joins, None)
         return (joins, and_(*queries))
 
-    def filter_lab(self, query):
-        clauses = []
+    def filter_openstack_flavors(self, flavors, lab_controller):
+        result = set(flavors)
         for child in self:
-            clause = child.filter_lab()
-            if clause is not None:
-                clauses.append(clause)
-        if not clauses:
-            return None
-        return and_(*clauses)
+            child_result = child.filter_openstack_flavors(flavors, lab_controller)
+            result.intersection_update(child_result)
+        return list(result)
 
-    def vm_params(self):
-        d = {}
+    def virtualisable(self):
         for child in self:
-            d.update(child.vm_params())
-        return d
+            if not child.virtualisable():
+                return False
+        return True
 
 
 class XmlOr(ElementWrapper):
@@ -184,18 +190,18 @@ class XmlOr(ElementWrapper):
             return (joins, None)
         return (joins, or_(*queries))
 
-    def filter_lab(self, query):
-        clauses = []
+    def filter_openstack_flavors(self, flavors, lab_controller):
+        result = set()
         for child in self:
-            clause = child.filter_lab()
-            if clause is not None:
-                clauses.append(clause)
-        if not clauses:
-            return None
-        return or_(*clauses)
+            child_result = child.filter_openstack_flavors(flavors, lab_controller)
+            result.update(child_result)
+        return list(result)
 
-    def vm_params(self):
-        raise NotVirtualisable() # too hard!
+    def virtualisable(self):
+        for child in self:
+            if child.virtualisable():
+                return True
+        return False
 
 
 class XmlNot(ElementWrapper):
@@ -214,19 +220,6 @@ class XmlNot(ElementWrapper):
         if not queries:
             return (joins, None)
         return (joins, not_(and_(*queries)))
-
-    def filter_lab(self, query):
-        clauses = []
-        for child in self:
-            clause = child.filter_lab()
-            if clause is not None:
-                clauses.append(clause)
-        if not clauses:
-            return None
-        return not_(and_(*clauses))
-
-    def vm_params(self):
-        raise NotVirtualisable() # too hard!
 
 
 class XmlDistroArch(ElementWrapper):
@@ -404,15 +397,29 @@ class XmlHostLabController(ElementWrapper):
     op_table = { '=' : '__eq__',
                  '==' : '__eq__',
                  '!=' : '__ne__'}
-    def filter(self, joins):
-        return (joins.join(System.lab_controller), self.filter_lab())
 
-    def filter_lab(self):
+    def filter(self, joins):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', unicode, None)
+        query = None
+        if value:
+            joins = joins.join(System.lab_controller)
+            query = getattr(LabController.fqdn, op)(value)
+        return (joins, query)
+
+    def filter_openstack_flavors(self, flavors, lab_controller):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
         if not value:
-            return None
-        return getattr(LabController.fqdn, op)(value)
+            return []
+        matched = getattr(lab_controller.fqdn, op)(value)
+        if matched:
+            return flavors
+        else:
+            return []
+
+    def virtualisable(self):
+        return True
 
 class XmlDistroLabController(ElementWrapper):
     """
@@ -454,15 +461,21 @@ class XmlHypervisor(ElementWrapper):
             query = getattr(Hypervisor.hypervisor, op)(value)
         return (joins, query)
 
-    def vm_params(self):
-        # XXX 'KVM' is hardcoded here just because that is what RHEV/oVirt
-        # uses, but we should have a better solution
+    def filter_openstack_flavors(self, flavors, lab_controller):
+        if self._matches_kvm():
+            return flavors
+        else:
+            return []
+
+    def virtualisable(self):
+        return self._matches_kvm()
+
+    def _matches_kvm(self):
+        # XXX 'KVM' is hardcoded here assuming that is what OpenStack is using, 
+        # but we should have a better solution
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None) or None
-        if getattr(operator, op)('KVM', value):
-            return {}
-        else:
-            raise NotVirtualisable()
+        return getattr(operator, op)('KVM', value)
 
 class XmlSystemType(ElementWrapper):
     """
@@ -475,12 +488,18 @@ class XmlSystemType(ElementWrapper):
             query = System.type == value
         return (joins, query)
 
-    def vm_params(self):
-        value = self.get_xml_attr('value', unicode, None)
-        if value == 'Machine':
-            return {}
+    def filter_openstack_flavors(self, flavors, lab_controller):
+        if self._matches_machine():
+            return flavors
         else:
-            raise NotVirtualisable()
+            return []
+
+    def virtualisable(self):
+        return self._matches_machine()
+
+    def _matches_machine(self):
+        value = self.get_xml_attr('value', unicode, None)
+        return value == 'Machine'
 
 class XmlSystemStatus(ElementWrapper):
     """
@@ -601,9 +620,16 @@ class XmlMemory(ElementWrapper):
             query = getattr(System.memory, op)(value)
         return (joins, query)
 
-    def vm_params(self):
-        # XXX add some logic here
-        raise NotVirtualisable()
+    def filter_openstack_flavors(self, flavors, lab_controller):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        if value:
+            flavors = [flavor for flavor in flavors
+                    if getattr(operator, op)(flavor.ram, value)]
+        return flavors
+
+    def virtualisable(self):
+        return True
 
 class XmlSystemOwner(ElementWrapper):
     """
@@ -696,6 +722,19 @@ class XmlCpuProcessors(ElementWrapper):
             query = getattr(Cpu.processors, op)(value)
         return (joins, query)
 
+    def filter_openstack_flavors(self, flavors, lab_controller):
+        # We treat an OpenStack flavor with N vcpus as having N single-core 
+        # processors. Not sure how realistic that is but we have to pick 
+        # something...
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        if value:
+            flavors = [flavor for flavor in flavors
+                    if getattr(operator, op)(flavor.vcpus, value)]
+        return flavors
+
+    def virtualisable(self):
+        return True
 
 class XmlCpuCores(ElementWrapper):
     """
@@ -710,6 +749,16 @@ class XmlCpuCores(ElementWrapper):
             query = getattr(Cpu.cores, op)(value)
         return (joins, query)
 
+    def filter_openstack_flavors(self, flavors, lab_controller):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self.get_xml_attr('value', int, None)
+        if value:
+            flavors = [flavor for flavor in flavors
+                    if getattr(operator, op)(flavor.vcpus, value)]
+        return flavors
+
+    def virtualisable(self):
+        return True
 
 class XmlCpuFamily(ElementWrapper):
     """
@@ -875,14 +924,20 @@ class XmlArch(ElementWrapper):
                 query = not_(System.arch.contains(arch))
         return (joins, query)
 
-    def vm_params(self):
-        # XXX add some better logic here
+    def filter_openstack_flavors(self, flavors, lab_controllers):
+        if self._matches_x86():
+            return flavors
+        else:
+            return []
+
+    def virtualisable(self):
+        return self._matches_x86()
+
+    def _matches_x86(self):
         op = self.op_table[self.get_xml_attr('op', unicode, '==')]
         value = self.get_xml_attr('value', unicode, None)
-        if getattr(operator, op)('x86_64', value):
-            return {}
-        else:
-            raise NotVirtualisable()
+        return (getattr(operator, op)('x86_64', value) or
+                getattr(operator, op)('i386', value))
 
 class XmlNumaNodeCount(ElementWrapper):
     """
@@ -944,13 +999,30 @@ class XmlDiskModel(ElementWrapper):
         return None
 
 class XmlDiskSize(ElementWrapper):
-    def filter_disk(self):
-        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+
+    def _bytes_value(self):
         value = self.get_xml_attr('value', int, None)
         units = self.get_xml_attr('units', unicode, 'bytes')
         if value:
-            return getattr(Disk.size, op)(value * bytes_multiplier(units))
+            return value * bytes_multiplier(units)
+
+    def filter_disk(self):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self._bytes_value()
+        if value:
+            return getattr(Disk.size, op)(value)
         return None
+
+    def filter_openstack_flavors(self, flavors, lab_controller):
+        op = self.op_table[self.get_xml_attr('op', unicode, '==')]
+        value = self._bytes_value()
+        if value:
+            flavors = [flavor for flavor in flavors
+                    if getattr(operator, op)(flavor.disk, value)]
+        return flavors
+
+    def virtualisable(self):
+        return True
 
 class XmlDiskSectorSize(ElementWrapper):
     def filter_disk(self):
@@ -972,7 +1044,7 @@ class XmlDiskPhysSectorSize(ElementWrapper):
                     value * bytes_multiplier(units))
         return None
 
-class XmlDisk(ElementWrapper):
+class XmlDisk(XmlAnd):
     subclassDict = {
         'model': XmlDiskModel,
         'size': XmlDiskSize,
@@ -1059,6 +1131,18 @@ class XmlHost(XmlAnd):
                     'hypervisor': XmlHypervisor, #deprecated
                    }
 
+    @classmethod
+    def from_string(cls, xml_string):
+        return cls(etree.fromstring(xml_string))
+
+    # Physical Beaker systems are expected to have at least one disk of a sane
+    # size, so recipes will often not bother including a requirement on disk
+    # size. But OpenStack flavors can have no disk at all, so we filter those
+    # out here.
+    def filter_openstack_flavors(self, flavors, lab_controller):
+        result = super(XmlHost, self).filter_openstack_flavors(flavors, lab_controller)
+        return [flavor for flavor in result if flavor.disk > 0]
+
 class XmlDistro(XmlAnd):
     subclassDict = {
                     'and': XmlAnd,
@@ -1080,40 +1164,6 @@ class XmlDistro(XmlAnd):
                     'distrolabcontroller': XmlDistroLabController, #deprecated
                    }
 
-
-def apply_system_filter(filter, query):
-    if isinstance(filter, basestring):
-        filter = XmlHost(etree.fromstring(filter))
-    clauses = []
-    for child in filter:
-        if callable(getattr(child, 'filter', None)):
-            (query, clause) = child.filter(query)
-            if clause is not None:
-                clauses.append(clause)
-    if clauses:
-        query = query.filter(and_(*clauses))
-
-    return query
-
-def apply_lab_controller_filter(filter, query):
-    if isinstance(filter, basestring):
-        filter = XmlHost(etree.fromstring(filter))
-    clauses = []
-    for child in filter:
-        clause = child.filter_lab()
-        if clause is not None:
-            clauses.append(clause)
-    if clauses:
-        query = query.filter(and_(*clauses))
-    return query
-
-def vm_params(filter):
-    if isinstance(filter, basestring):
-        filter = XmlHost(etree.fromstring(filter))
-    params = {}
-    for child in filter:
-        params.update(child.vm_params())
-    return params
 
 def apply_distro_filter(filter, query):
     if isinstance(filter, basestring):

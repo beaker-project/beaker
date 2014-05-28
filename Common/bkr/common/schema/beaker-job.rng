@@ -221,7 +221,21 @@ the Free Software Foundation; either version 2 of the License, or
           This element is a container for expressing constraints on the
           system which will be selected to run this recipe.
         </a:documentation>
-        <zeroOrMore><ref name="hostreq"/></zeroOrMore>
+        <choice>
+          <attribute name="force">
+            <data type="string"/>
+            <a:documentation xml:lang="en">
+            Select a specific system by FQDN. This bypasses the
+            normal filtering mechanisms for selecting a system,
+            and always uses the named system regardless of its
+            current condition. No other filter criteria can be
+            specified when this attribute is used.
+            </a:documentation>
+          </attribute>
+          <zeroOrMore>
+            <ref name="hostreq"/>
+          </zeroOrMore>
+        </choice>
       </element>
       <optional>
         <ref name="partitions"/>

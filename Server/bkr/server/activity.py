@@ -49,10 +49,8 @@ class Activities(RPCRoot):
     def distrotree(self, **kw):
         activities = DistroTreeActivity.all()
         activity_search = search_utility.DistroTreeActivity.search
-        search_bar = SearchBar(activity_search.create_search_table(),
-                               name='activitysearch',
-                               complete_data=activity_search. \
-                                             create_complete_search_table(),)
+        search_bar = SearchBar(activity_search.create_complete_search_table(),
+                               name='activitysearch',)
         return self._activities_grid(activities, search_bar, 'distrotree',
             search_utility.DistroTreeActivity, title='Distro Tree Activity', **kw)
 
@@ -61,10 +59,8 @@ class Activities(RPCRoot):
     def labcontroller(self, **kw):
         activities = LabControllerActivity.all()
         activity_search = search_utility.LabControllerActivity.search
-        search_bar = SearchBar(activity_search.create_search_table(),
-                               name='activitysearch',
-                               complete_data = activity_search. \
-                                               create_complete_search_table(),)
+        search_bar = SearchBar(activity_search.create_complete_search_table(),
+                               name='activitysearch',)
         return self._activities_grid(activities, search_bar, 'labcontroller',
             search_utility.LabControllerActivity,
             title='Lab Controller Activity', **kw)
@@ -74,10 +70,8 @@ class Activities(RPCRoot):
     def group(self, **kw):
         activities = GroupActivity.all()
         activity_search = search_utility.GroupActivity.search
-        search_bar = SearchBar(activity_search.create_search_table(),
-                               name='activitysearch',
-                               complete_data = activity_search. \
-                                               create_complete_search_table(),)
+        search_bar = SearchBar(activity_search.create_complete_search_table(),
+                               name='activitysearch',)
         return self._activities_grid(activities, search_bar, 'group',
             search_utility.GroupActivity, title='Group Activity', **kw)
 
@@ -86,10 +80,8 @@ class Activities(RPCRoot):
     def system(self, **kw):
         activities = SystemActivity.all()
         activity_search = search_utility.SystemActivity.search
-        search_bar = SearchBar(activity_search.create_search_table(),
-                               name='activitysearch',
-                               complete_data = activity_search. \
-                                               create_complete_search_table(),)
+        search_bar = SearchBar(activity_search.create_complete_search_table(),
+                               name='activitysearch',)
         return self._activities_grid(activities, search_bar, 'system',
             search_utility.SystemActivity, title='System Activity', **kw)
 
@@ -98,10 +90,8 @@ class Activities(RPCRoot):
     def distro(self, **kw):
         activities = DistroActivity.all()
         activity_search = search_utility.DistroActivity.search
-        search_bar = SearchBar(activity_search.create_search_table(),
-                               name='activitysearch',
-                               complete_data = activity_search. \
-                                               create_complete_search_table(),)
+        search_bar = SearchBar(activity_search.create_complete_search_table(),
+                               name='activitysearch',)
         return self._activities_grid(activities, search_bar, 'distro',
             search_utility.DistroActivity, title='Distro Activity', **kw)
 
@@ -110,10 +100,8 @@ class Activities(RPCRoot):
     def index(self, **kw):
         activities = Activity.all()
         activity_search = search_utility.Activity.search
-        search_bar = SearchBar(activity_search.create_search_table(),
-                               name='activitysearch',
-                               complete_data = activity_search. \
-                                               create_complete_search_table(),)
+        search_bar = SearchBar(activity_search.create_complete_search_table(),
+                               name='activitysearch',)
         return self._activities_grid(activities, search_bar, '.',
             search_utility.Activity, **kw)
 

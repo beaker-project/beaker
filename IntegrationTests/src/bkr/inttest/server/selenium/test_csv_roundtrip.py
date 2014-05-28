@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # vim: set fileencoding=utf-8 :
 
 # This program is free software; you can redistribute it and/or modify
@@ -50,10 +49,9 @@ class CSVRoundtripTest(WebDriverTestCase):
     def test_system_export_reimport(self):
         login(self.browser)
         orig_date_modified = self.system.date_modified
-        self.import_csv(''.join([row for row in self.get_csv('system')]))
-        self.failUnless(is_text_present(self.browser, "No Errors"))
+        self.import_csv('\n'.join([row for row in self.get_csv('system')]))
+        self.assertEquals(self.browser.find_element_by_xpath(
+            '//table[@id="csv-import-log"]//td').text,
+                          "No Errors")
         session.refresh(self.system)
         self.assert_(orig_date_modified != self.system.date_modified)
-
-if __name__ == "__main__":
-    unittest.main()

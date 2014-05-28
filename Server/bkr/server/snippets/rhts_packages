@@ -1,7 +1,16 @@
 {#
 ## If packages variable is set add additional packages to this install
 ## packages=httpd:selinux:kernel
+## Add recipe packages only if not overriden by 'packages' variable.
 #}
-{% for package in packages|default('')|split(':') %}
+{% if packages is defined %}
+{% for package in packages|split(':') %}
 {{ package }}
 {% endfor %}
+{% else %}
+{% if recipe %}
+{% for recipe_package in recipe.packages %}
+{{ recipe_package.package }}
+{% endfor %}
+{% endif %}
+{% endif %}

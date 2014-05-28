@@ -9,7 +9,8 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login
 from bkr.inttest import data_setup, get_server_base
 from bkr.common.helpers import unlink_ignore
-import unittest, time, re, os, shutil, turbogears
+import unittest2 as unittest
+import time, re, os, shutil, turbogears
 import pkg_resources
 from turbogears.database import session
 from bkr.server.model import TaskPackage
@@ -36,8 +37,7 @@ class TestSubmitTask(WebDriverTestCase):
     def assert_task_upload_flash_OK(self, name):
         expected = '%s Added/Updated' % name
         actual = self.browser.find_element_by_class_name('flash').text
-        failure_msg = "%s not in %s" % (expected, actual)
-        self.assert_(expected in actual, failure_msg)
+        self.assertIn(expected, actual)
 
     def test_submit_task(self):
         test_package_name = '/distribution/beaker/task_test'
@@ -205,6 +205,16 @@ class TestSubmitTask(WebDriverTestCase):
         b.find_element_by_xpath('//button[text()="Upload"]').click()
         self.assertEquals(b.find_element_by_class_name('flash').text,
                           "No task RPM specified")
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1092758
+    def test_arm_related_arches_are_accepted(self):
+        b = self.browser
+        b.get(get_server_base() + 'tasks/new')
+        rpm_path = pkg_resources.resource_filename('bkr.inttest.server',
+                'task-rpms/tmp-distribution-beaker-arm-related-arches-1.0-0.noarch.rpm')
+        b.find_element_by_id('task_task_rpm').send_keys(rpm_path)
+        b.find_element_by_xpath('//button[text()="Upload"]').click()
+        self.assert_task_upload_flash_OK('/distribution/beaker/arm-related-arches')
 
 if __name__ == "__main__":
     unittest.main()

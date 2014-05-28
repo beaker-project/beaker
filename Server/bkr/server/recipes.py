@@ -14,7 +14,7 @@ from bkr.common.bexceptions import BX
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import RecipeWidget
 from bkr.server.widgets import SearchBar
-from bkr.server import search_utility, identity, dynamic_virt
+from bkr.server import search_utility, identity
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server.recipetasks import RecipeTasks
@@ -165,6 +165,14 @@ class Recipes(RPCRoot):
         return recipe.extend(kill_time)
 
     @cherrypy.expose
+    def watchdog(self, recipe_id):
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        return recipe.status_watchdog()
+
+    @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def stop(self, recipe_id, stop_type, msg=None):
         """
@@ -270,12 +278,6 @@ class Recipes(RPCRoot):
         if isinstance(recipe.resource, SystemResource):
             recipe.resource.system.action_power('reboot',
                     service=u'XMLRPC', delay=30)
-        elif isinstance(recipe.resource, VirtResource):
-            # XXX this should also be delayed 30 seconds but there is no way
-            with dynamic_virt.VirtManager() as manager:
-                vm = manager.api.vms.get(recipe.resource.system_name)
-                vm.stop()
-                vm.start()
         return True
 
     @cherrypy.expose
@@ -392,8 +394,7 @@ class Recipes(RPCRoot):
         search_bar = SearchBar(name='recipesearch',
                            label=_(u'Recipe Search'),    
                            simplesearch_label = 'Lookup ID',
-                           table = search_utility.Recipe.search.create_search_table(),
-                           complete_data = search_utility.Recipe.search.create_complete_search_table(),
+                           table = search_utility.Recipe.search.create_complete_search_table(),
                            search_controller=url("/get_search_options_recipe"), 
                            quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
         return dict(title="Recipes", 

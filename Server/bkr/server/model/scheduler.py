@@ -38,12 +38,13 @@ from bkr.server.hybrid import hybrid_method, hybrid_property
 from bkr.server.installopts import InstallOptions, global_install_options
 from bkr.server.util import absolute_url
 from .types import (UUID, MACAddress, TaskResult, TaskStatus, TaskPriority,
-        ResourceType, RecipeVirtStatus, SystemStatus, mac_unix_padded_dialect)
+        ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus)
 from .base import DeclarativeMappedObject
-from .activity import Activity
+from .activity import Activity, ActivityMixin
 from .identity import User, Group
 from .lab import LabController
-from .distrolibrary import OSMajor, OSVersion, Distro, DistroTree
+from .distrolibrary import (OSMajor, OSVersion, Distro, DistroTree,
+        LabControllerDistroTree)
 from .tasklibrary import Task, TaskPackage
 from .inventory import System, SystemActivity, Reservation
 
@@ -104,6 +105,18 @@ task_packages_custom_map = Table('task_packages_custom_map', DeclarativeMappedOb
         onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
     mysql_engine='InnoDB',
 )
+
+
+class JobActivity(Activity):
+
+    __tablename__ = 'job_activity'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+    id = Column(Integer, ForeignKey('activity.id'), primary_key=True)
+    job_id = Column(Integer, ForeignKey('job.id'), nullable=False)
+    __mapper_args__ = {'polymorphic_identity': u'job_activity'}
+
+    def object_name(self):
+        return "Job: %s" % self.object.id
 
 
 class Watchdog(DeclarativeMappedObject):
@@ -350,7 +363,7 @@ class TaskBase(object):
         _change_status will update the status if needed
         Returns True when status is changed
         """
-        current_status = self.status
+        current_status = self.status #pylint: disable=E0203
         if current_status != new_status:
             # Sanity check to make sure the status never goes backwards.
             if isinstance(self, (Recipe, RecipeTask)) and \
@@ -396,7 +409,7 @@ class TaskBase(object):
                                 TaskResult.fail,
                                 TaskResult.panic])
     @is_failed.expression
-    def is_failed(cls):
+    def is_failed(cls): #pylint: disable=E0213
         """
         Return SQL expression that is true if the task has failed
         """
@@ -420,8 +433,11 @@ class TaskBase(object):
         # to fill the bar reliably when all tasks are complete without needing
         # to fiddle directly with the width of any of the subelements
         fmt_style = 'width:%.3f%%'
-        pstyle = wstyle = fstyle = kstyle = fmt_style % 0
+        nstyle = pstyle = wstyle = fstyle = kstyle = fmt_style % 0
         completed = 0
+        if getattr(self, 'ntasks', None):
+            completed += self.ntasks
+            nstyle = fmt_style % (100.0 * self.ntasks / self.ttasks)
         if getattr(self, 'ptasks', None):
             completed += self.ptasks
             pstyle = fmt_style % (100.0 * self.ptasks / self.ttasks)
@@ -439,6 +455,7 @@ class TaskBase(object):
         percentCompleted = "%d%%" % int(100.0 * completed / self.ttasks)
         # Build the HTML
         div = Element('div', {'class': 'progress'})
+        div.append(Element('div', {'class': 'bar bar-default', 'style': nstyle}))
         div.append(Element('div', {'class': 'bar bar-success', 'style': pstyle}))
         div.append(Element('div', {'class': 'bar bar-warning', 'style': wstyle}))
         div.append(Element('div', {'class': 'bar bar-danger', 'style': fstyle}))
@@ -471,7 +488,7 @@ class TaskBase(object):
         return logs_to_return
 
 
-class Job(TaskBase, DeclarativeMappedObject):
+class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
     """
     Container to hold like recipe sets.
     """
@@ -506,6 +523,8 @@ class Job(TaskBase, DeclarativeMappedObject):
     to_delete = Column(DateTime, default=None, index=True)
     # Total tasks
     ttasks = Column(Integer, default=0)
+    # Total tasks completed with no result
+    ntasks = Column(Integer, default=0)
     # Total Passing tasks
     ptasks = Column(Integer, default=0)
     # Total Warning tasks
@@ -516,6 +535,10 @@ class Job(TaskBase, DeclarativeMappedObject):
     ktasks = Column(Integer, default=0)
     recipesets = relationship('RecipeSet', backref='job')
     _job_ccs = relationship('JobCc', backref='job')
+
+    activity = relationship(JobActivity, backref='object',
+                            cascade='all, delete-orphan')
+    activity_type = JobActivity
 
     def __init__(self, ttasks=0, owner=None, whiteboard=None,
             retention_tag=None, product=None, group=None, submitter=None):
@@ -745,15 +768,15 @@ class Job(TaskBase, DeclarativeMappedObject):
             if pick == 'fqdn':
                 system = kw.get('system')
                 # Some extra sanity checks, to help out the user
+                # XXX update this if/when force="" is used
                 if system.status != SystemStatus.automated:
                     raise BX(_(u'%s cannot be reserved through the scheduler' % system))
                 if not system.can_reserve(job.owner):
                     raise BX(_(u'You do not have access to reserve %s' % system))
-                if not distro_tree.url_in_lab(system.lab_controller):
+                if not system.in_lab_with_distro_tree(distro_tree):
                     raise BX(_(u'%s is not available on %s'
                             % (distro_tree, system.lab_controller)))
-                if not distro_tree.all_systems(systems=System.query.filter(
-                        System.id == system.id)).count():
+                if not system.compatible_with_distro_tree(distro_tree):
                     raise BX(_(u'%s does not support %s' % (system, distro_tree)))
                 # Inlcude the XML definition so that cloning this job will act as expected.
                 recipe.host_requires = system.to_xml().toxml()
@@ -1051,7 +1074,6 @@ class Job(TaskBase, DeclarativeMappedObject):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    #subtask_id_list = ["R:%s" % r.id for r in self.all_recipes]
                    )
 
     def all_recipes(self):
@@ -1081,6 +1103,7 @@ class Job(TaskBase, DeclarativeMappedObject):
         """
         Update number of passes, failures, warns, panics..
         """
+        self.ntasks = 0
         self.ptasks = 0
         self.wtasks = 0
         self.ftasks = 0
@@ -1089,6 +1112,7 @@ class Job(TaskBase, DeclarativeMappedObject):
         min_status = TaskStatus.max()
         for recipeset in self.recipesets:
             recipeset._update_status()
+            self.ntasks += recipeset.ntasks
             self.ptasks += recipeset.ptasks
             self.wtasks += recipeset.wtasks
             self.ftasks += recipeset.ftasks
@@ -1384,7 +1408,7 @@ class RecipeSetResponse(DeclarativeMappedObject):
             results[elem.recipe_set_id] = elem.comment
         return results
 
-class RecipeSet(TaskBase, DeclarativeMappedObject):
+class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
     """
     A Collection of Recipes that must be executed at the same time.
     """
@@ -1404,6 +1428,8 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
     lab_controller = relationship(LabController)
     # Total tasks
     ttasks = Column(Integer, default=0)
+    # Total tasks completed with no result
+    ntasks = Column(Integer, default=0)
     # Total Passing tasks
     ptasks = Column(Integer, default=0)
     # Total Warning tasks
@@ -1417,6 +1443,8 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
             order_by=[RecipeSetActivity.created.desc(), RecipeSetActivity.id.desc()])
     nacked = relationship(RecipeSetResponse, cascade='all, delete-orphan',
             uselist=False)
+
+    activity_type = RecipeSetActivity
 
     stop_types = ['abort','cancel']
 
@@ -1438,12 +1466,17 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
         return sum([recipe.all_logs for recipe in self.recipes], [])
 
     def set_response(self, response):
+        old_response = None
         if self.nacked is None:
             self.nacked = RecipeSetResponse(type=response)
         else:
+            old_response = self.nacked.response
             self.nacked.response = Response.by_response(response)
+        self.record_activity(user=identity.current.user, service=u'XMLRPC',
+                             field=u'Ack/Nak', action='Changed',
+                             old=old_response, new=self.nacked.response)
 
-    def is_owner(self,user):
+    def is_owner(self, user):
         if self.owner == user:
             return True
         return False
@@ -1565,6 +1598,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
         """
         Update number of passes, failures, warns, panics..
         """
+        self.ntasks = 0
         self.ptasks = 0
         self.wtasks = 0
         self.ftasks = 0
@@ -1573,6 +1607,7 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
         min_status = TaskStatus.max()
         for recipe in self.recipes:
             recipe._update_status()
+            self.ntasks += recipe.ntasks
             self.ptasks += recipe.ptasks
             self.wtasks += recipe.wtasks
             self.ftasks += recipe.ftasks
@@ -1625,7 +1660,6 @@ class RecipeSet(TaskBase, DeclarativeMappedObject):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    #subtask_id_list = ["R:%s" % r.id for r in self.recipes]
                    )
 
     def allowed_priorities(self,user):
@@ -1679,6 +1713,8 @@ class Recipe(TaskBase, DeclarativeMappedObject):
     type = Column(String(30), nullable=False)
     # Total tasks
     ttasks = Column(Integer, default=0)
+    # Total tasks completed with no result
+    ntasks = Column(Integer, default=0)
     # Total Passing tasks
     ptasks = Column(Integer, default=0)
     # Total Warning tasks
@@ -1826,7 +1862,6 @@ class Recipe(TaskBase, DeclarativeMappedObject):
 
     def generated_install_options(self):
         ks_meta = {
-            'packages': ':'.join(p.package for p in self.packages),
             'customrepos': [dict(repo_id=r.name, path=r.url) for r in self.repos],
             'taskrepo': '%s,%s' % self.task_repo(),
             'partitions': self.partitionsKSMeta,
@@ -1915,6 +1950,8 @@ class Recipe(TaskBase, DeclarativeMappedObject):
             recipe.appendChild(dr)
         hostRequires = xmldoc.createElement("hostRequires")
         for hr in hrs.getElementsByTagName("hostRequires"):
+            if hr.getAttribute('force'):
+                hostRequires.setAttribute("force", "%s" % hr.getAttribute('force'))
             for child in hr.childNodes[:]:
                 hostRequires.appendChild(child)
         recipe.appendChild(hostRequires)
@@ -1970,21 +2007,27 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         # If no system_type is specified then add defaults
         try:
             hrs = xml.dom.minidom.parseString(self._host_requires)
-        except TypeError:
+        except (TypeError, xml.parsers.expat.ExpatError):
             hrs = xmldoc.createElement("hostRequires")
-        except xml.parsers.expat.ExpatError:
-            hrs = xmldoc.createElement("hostRequires")
-        if not hrs.getElementsByTagName("system_type"):
-            hostRequires = xmldoc.createElement("hostRequires")
-            for hr in hrs.getElementsByTagName("hostRequires"):
-                for child in hr.childNodes[:]:
-                    hostRequires.appendChild(child)
-            system_type = xmldoc.createElement("system_type")
-            system_type.setAttribute("value", "%s" % self.systemtype)
-            hostRequires.appendChild(system_type)
-            return hostRequires.toxml()
-        else:
             return hrs.toxml()
+
+        force_fqdn = False
+        for child in hrs.childNodes:
+            if child.getAttribute('force'):
+                force_fqdn = True
+
+        if hrs.getElementsByTagName("system_type") or force_fqdn:
+            return hrs.toxml()
+
+        # Create a new hostRequires element with a default system_type
+        hostRequires = xmldoc.createElement("hostRequires")
+        for hr in hrs.getElementsByTagName("hostRequires"):
+            for child in hr.childNodes[:]:
+                hostRequires.appendChild(child)
+        system_type = xmldoc.createElement("system_type")
+        system_type.setAttribute("value", "%s" % self.systemtype)
+        hostRequires.appendChild(system_type)
+        return hostRequires.toxml()
 
     def _set_host_requires(self, value):
         self._host_requires = value
@@ -2124,6 +2167,7 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         """
         Update number of passes, failures, warns, panics..
         """
+        self.ntasks = 0
         self.ptasks = 0
         self.wtasks = 0
         self.ftasks = 0
@@ -2137,12 +2181,14 @@ class Recipe(TaskBase, DeclarativeMappedObject):
             if task.is_finished():
                 if task.result == TaskResult.pass_:
                     self.ptasks += 1
-                if task.result == TaskResult.warn:
+                elif task.result == TaskResult.warn:
                     self.wtasks += 1
-                if task.result == TaskResult.fail:
+                elif task.result == TaskResult.fail:
                     self.ftasks += 1
-                if task.result == TaskResult.panic:
+                elif task.result == TaskResult.panic:
                     self.ktasks += 1
+                else:
+                    self.ntasks += 1
             if task.status.severity < min_status.severity:
                 min_status = task.status
             if task.result.severity > max_result.severity:
@@ -2282,10 +2328,10 @@ class Recipe(TaskBase, DeclarativeMappedObject):
                     field_name=u'Distro Tree', old_value=u'',
                     new_value=unicode(self.distro_tree)))
         elif isinstance(self.resource, VirtResource):
-            with dynamic_virt.VirtManager() as manager:
-                manager.start_install(self.resource.system_name,
-                        self.distro_tree, install_options.kernel_options_str,
-                        self.resource.lab_controller)
+            self.resource.kernel_options = install_options.kernel_options_str
+            manager = dynamic_virt.VirtManager(self.recipeset.job.owner)
+            manager.start_vm(self.resource.instance_id)
+            self.resource.rebooted = datetime.utcnow()
             self.tasks[0].start()
 
     def cleanup(self):
@@ -2303,9 +2349,10 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         """
         Method for exporting Recipe status for TaskWatcher
         """
-        worker = {}
         if self.resource:
-            worker['name'] = self.resource.fqdn
+            worker = {'name': self.resource.fqdn}
+        else:
+            worker = None
         return dict(
                     id              = "R:%s" % self.id,
                     worker          = worker,
@@ -2315,9 +2362,6 @@ class Recipe(TaskBase, DeclarativeMappedObject):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-# Disable tasks status, TaskWatcher needs to do this differently.  its very resource intesive to make
-# so many xmlrpc calls.
-#                    subtask_id_list = ["T:%s" % t.id for t in self.tasks],
                    )
 
     def extend(self, kill_time):
@@ -2482,7 +2526,12 @@ class MachineRecipe(Recipe):
         """
         Decide whether this recipe can be run as a virt guest
         """
-        # oVirt is i386/x86_64 only
+        # The job owner needs to have supplied their OpenStack credentials
+        if (not self.recipeset.job.owner.openstack_username
+                or not self.recipeset.job.owner.openstack_password
+                or not self.recipeset.job.owner.openstack_tenant_name):
+            return RecipeVirtStatus.skipped
+        # OpenStack is i386/x86_64 only
         if self.distro_tree.arch.arch not in [u'i386', u'x86_64']:
             return RecipeVirtStatus.precluded
         # Can't run VMs in a VM
@@ -2491,12 +2540,11 @@ class MachineRecipe(Recipe):
         # Multihost testing won't work (for now!)
         if len(self.recipeset.recipes) > 1:
             return RecipeVirtStatus.precluded
-        # Check we can translate any host requirements into VM params
+        # Check for any host requirements which cannot be virtualised
         # Delayed import to avoid circular dependency
-        from bkr.server.needpropertyxml import vm_params, NotVirtualisable
-        try:
-            vm_params(self.host_requires)
-        except NotVirtualisable:
+        from bkr.server.needpropertyxml import XmlHost
+        host_filter = XmlHost.from_string(self.host_requires)
+        if not host_filter.virtualisable():
             return RecipeVirtStatus.precluded
         # Checks all passed, so dynamic virt should be attempted
         return RecipeVirtStatus.possible
@@ -2544,6 +2592,49 @@ class MachineRecipe(Recipe):
     t_id = property(t_id)
 
     distro_requires = property(_get_distro_requires, _set_distro_requires)
+
+    def candidate_systems(self, only_in_lab=True):
+        """
+        Returns a query of systems which are candidates to run this recipe.
+        """
+        systems = System.all(self.recipeset.job.owner)
+        # delayed import to avoid circular dependency
+        from bkr.server.needpropertyxml import XmlHost
+        host_filter = XmlHost.from_string(self.host_requires)
+        force_fqdn = host_filter.get_xml_attr('force', unicode, None)
+        if not force_fqdn:
+            systems = host_filter.apply_filter(systems). \
+                      filter(System.status == SystemStatus.automated)
+        else:
+            systems = systems.filter(System.fqdn == force_fqdn). \
+                      filter(System.status != SystemStatus.removed)
+
+        systems = systems.filter(System.can_reserve(self.recipeset.job.owner))
+        systems = systems.filter(System.compatible_with_distro_tree(self.distro_tree))
+        if only_in_lab:
+            systems = systems.filter(System.in_lab_with_distro_tree(self.distro_tree))
+        systems = System.scheduler_ordering(self.recipeset.job.owner, query=systems)
+        return systems
+
+    @classmethod
+    def hypothetical_candidate_systems(cls, user, distro_tree=None):
+        """
+        If a recipe were constructed according to the given arguments, what 
+        would its candidate systems be?
+        """
+        systems = System.all(user)
+        # delayed import to avoid circular dependency
+        from bkr.server.needpropertyxml import XmlHost
+        systems = XmlHost.from_string('<hostRequires><system_type value="%s"/></hostRequires>' %
+                                      cls.systemtype).apply_filter(systems)
+        systems = systems.filter(System.can_reserve(user))
+        # XXX adjust this condition when we have force=""
+        systems = systems.filter(System.status == SystemStatus.automated)
+        if distro_tree:
+            systems = systems.filter(System.compatible_with_distro_tree(distro_tree))
+            systems = systems.filter(System.in_lab_with_distro_tree(distro_tree))
+        systems = System.scheduler_ordering(user, query=systems)
+        return systems
 
 
 class RecipeTag(DeclarativeMappedObject):
@@ -2886,9 +2977,10 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
         """
         Method for exporting Task status for TaskWatcher
         """
-        worker = {}
         if self.recipe.resource:
-            worker['name'] = self.recipe.resource.fqdn
+            worker = {'name': self.recipe.resource.fqdn}
+        else:
+            worker = None
         return dict(
                     id              = "T:%s" % self.id,
                     worker          = worker,
@@ -2898,7 +2990,6 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
                     result          = "%s" % self.result,
                     is_finished     = self.is_finished(),
                     is_failed       = self.is_failed(),
-                    #subtask_id_list = ["TR:%s" % tr.id for tr in self.results]
                    )
 
     def no_value(self):
@@ -3203,13 +3294,9 @@ class RecipeResource(DeclarativeMappedObject):
     def _lowest_free_mac():
         base_addr = netaddr.EUI(get('beaker.base_mac_addr', '52:54:00:00:00:00'))
         session.flush()
-        # These subqueries gives all MAC addresses in use right now
+        # This subquery gives all MAC addresses in use right now
         guest_mac_query = session.query(GuestResource.mac_address.label('mac_address'))\
                 .filter(GuestResource.mac_address != None)\
-                .join(RecipeResource.recipe).join(Recipe.recipeset)\
-                .filter(not_(RecipeSet.status.in_([s for s in TaskStatus if s.finished])))
-        virt_mac_query = session.query(VirtResource.mac_address.label('mac_address'))\
-                .filter(VirtResource.mac_address != None)\
                 .join(RecipeResource.recipe).join(Recipe.recipeset)\
                 .filter(not_(RecipeSet.status.in_([s for s in TaskStatus if s.finished])))
         # This trickery finds "gaps" of unused MAC addresses by filtering for MAC
@@ -3217,9 +3304,9 @@ class RecipeResource(DeclarativeMappedObject):
         # We union with base address - 1 to find any gap at the start.
         # Note that this relies on the MACAddress type being represented as
         # BIGINT in the database, which lets us do arithmetic on it.
-        left_side = union(guest_mac_query, virt_mac_query,
+        left_side = union(guest_mac_query,
                 select([int(base_addr) - 1])).alias('left_side')
-        right_side = union(guest_mac_query, virt_mac_query).alias('right_side')
+        right_side = guest_mac_query.subquery()
         free_addr = session.scalar(select([left_side.c.mac_address + 1],
                 from_obj=left_side.outerjoin(right_side,
                     onclause=left_side.c.mac_address + 1 == right_side.c.mac_address))\
@@ -3290,57 +3377,68 @@ class SystemResource(RecipeResource):
 
 class VirtResource(RecipeResource):
     """
-    For a MachineRecipe which is running on a virtual guest managed by 
-    a hypervisor attached to Beaker.
+    For a MachineRecipe which is running on an OpenStack instance.
     """
 
     __tablename__ = 'virt_resource'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, ForeignKey('recipe_resource.id',
             name='virt_resource_id_fk'), primary_key=True)
-    system_name = Column(Unicode(2048), nullable=False)
+    # OpenStack treats these ids as opaque strings, but we rely on them being 
+    # 128-bit numbers because we use the SMBIOS UUID field in our iPXE hackery. 
+    # So we store it as an actual UUID, not an opaque string.
+    instance_id = Column(UUID, nullable=False)
     lab_controller_id = Column(Integer, ForeignKey('lab_controller.id',
             name='virt_resource_lab_controller_id_fk'))
     lab_controller = relationship(LabController)
-    mac_address = Column(MACAddress(), index=True, default=None)
+    kernel_options = Column(Unicode(2048))
     __mapper_args__ = {'polymorphic_identity': ResourceType.virt}
 
-    def __init__(self, system_name):
+    @classmethod
+    def by_instance_id(cls, instance_id):
+        if isinstance(instance_id, basestring):
+            instance_id = uuid.UUID(instance_id)
+        return cls.query.filter(cls.instance_id == instance_id).one()
+
+    def __init__(self, instance_id, fqdn, lab_controller):
         super(VirtResource, self).__init__()
-        self.system_name = system_name
+        if isinstance(instance_id, basestring):
+            instance_id = uuid.UUID(instance_id)
+        self.instance_id = instance_id
+        self.fqdn = fqdn
+        self.lab_controller = lab_controller
 
     @property
     def link(self):
-        return self.fqdn # just text, not a link
+        span = Element('span')
+        span.text = u''
+        if self.fqdn:
+            span.text += self.fqdn + u' '
+        span.text += u'(OpenStack instance '
+        # don't hyperlink it if the instance is deleted
+        if self.recipe.is_finished():
+            span.text += unicode(self.instance_id) + u')'
+        else:
+            url = urlparse.urljoin(get('openstack.dashboard_url'),
+                    'project/instances/%s/' % self.instance_id)
+            a = make_link(url=url, text=unicode(self.instance_id))
+            a.tail = u')'
+            span.append(a)
+        return span
 
     def install_options(self, distro_tree):
-        # 'postreboot' is added as a hack for RHEV guests: they do not reboot
-        # properly when the installation finishes, see RHBZ#751854
         return global_install_options()\
-                .combined_with(distro_tree.install_options())\
-                .combined_with(InstallOptions({'postreboot': None}, {}, {}))
-
-    def allocate(self, manager, lab_controllers):
-        self.mac_address = self._lowest_free_mac()
-        log.debug('Creating vm with MAC address %s for recipe %s',
-                self.mac_address, self.recipe.id)
-
-        virtio_possible = True
-        if self.recipe.distro_tree.distro.osversion.osmajor.osmajor == "RedHatEnterpriseLinux3":
-            virtio_possible = False
-
-        self.lab_controller = manager.create_vm(self.system_name,
-                lab_controllers, self.mac_address, virtio_possible)
+                .combined_with(distro_tree.install_options())
 
     def release(self):
         try:
             log.debug('Releasing vm %s for recipe %s',
-                    self.system_name, self.recipe.id)
-            with dynamic_virt.VirtManager() as manager:
-                manager.destroy_vm(self.system_name)
+                    self.instance_id, self.recipe.id)
+            manager = dynamic_virt.VirtManager(self.recipe.recipeset.job.owner)
+            manager.destroy_vm(self.instance_id)
         except Exception:
             log.exception('Failed to destroy vm %s, leaked!',
-                    self.system_name)
+                    self.instance_id)
             # suppress exception, nothing more we can do now
 
 

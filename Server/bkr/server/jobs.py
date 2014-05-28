@@ -18,6 +18,7 @@ from bkr.server.widgets import myPaginateDataGrid, \
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server import search_utility, identity, metrics
+from bkr.server.needpropertyxml import XmlHost
 from bkr.server.controller_utilities import _custom_status, _custom_result, \
     restrict_http_method
 import pkg_resources
@@ -32,7 +33,7 @@ from bkr.server.model import (Job, RecipeSet, RetentionTag, TaskBase,
                               RecipeKSAppend, Task, Product, GuestRecipe,
                               RecipeTask, RecipeTaskParam, RecipeSetResponse,
                               Response, StaleTaskStatusException,
-                              RecipeSetActivity)
+                              RecipeSetActivity, System)
 
 from bkr.common.bexceptions import BeakerException, BX
 
@@ -581,7 +582,7 @@ class Jobs(RPCRoot):
             raise BX(_('No distro tree matches Recipe: %s') % recipe.distro_requires)
         try:
             # try evaluating the host_requires, to make sure it's valid
-            recipe.distro_tree.systems_filter(user, recipe.host_requires)
+            systems = XmlHost.from_string(recipe.host_requires).apply_filter(System.query)
         except StandardError, e:
             raise BX(_('Error in hostRequires: %s' % e))
         recipe.whiteboard = xmlrecipe.whiteboard or None #'' -> NULL for DB
@@ -637,10 +638,15 @@ class Jobs(RPCRoot):
     @expose('json')
     def update_recipe_set_response(self,recipe_set_id,response_id):
         rs = RecipeSet.by_id(recipe_set_id)
+        old_response = None
         if rs.nacked is None:
             rs.nacked = RecipeSetResponse(response_id=response_id)
         else:
+            old_response = rs.nacked.response
             rs.nacked.response = Response.by_id(response_id)
+        rs.record_activity(user=identity.current.user, service=u'WEBUI',
+                           field=u'Ack/Nak', action=u'Changed', old=old_response,
+                           new=rs.nacked.response)
 
         return {'success' : 1, 'rs_id' : recipe_set_id }
 
@@ -660,15 +666,27 @@ class Jobs(RPCRoot):
             if retention_tag_name and product_name:
                 retention_tag = RetentionTag.by_name(retention_tag_name)
                 product = Product.by_name(product_name)
+                old_tag = job.retention_tag if job.retention_tag else None
                 result = Utility.update_retention_tag_and_product(job,
-                        retention_tag, product)
+                                                                  retention_tag, product)
+                job.record_activity(user=identity.current.user, service=u'XMLRPC',
+                                    field=u'Retention Tag', action='Changed',
+                                    old=old_tag.tag, new=retention_tag.tag)
             elif retention_tag_name and product_name == '':
                 retention_tag = RetentionTag.by_name(retention_tag_name)
+                old_tag = job.retention_tag if job.retention_tag else None
                 result = Utility.update_retention_tag_and_product(job,
-                        retention_tag, None)
+                                                                  retention_tag, None)
+                job.record_activity(user=identity.current.user, service=u'XMLRPC',
+                                    field=u'Retention Tag', action='Changed',
+                                    old=old_tag.tag, new=retention_tag.tag)
             elif retention_tag_name:
                 retention_tag = RetentionTag.by_name(retention_tag_name)
+                old_tag = job.retention_tag if job.retention_tag else None
                 result = Utility.update_retention_tag(job, retention_tag)
+                job.record_activity(user=identity.current.user, service=u'XMLRPC',
+                                    field=u'Retention Tag', action='Changed',
+                                    old=old_tag.tag, new=retention_tag.tag)
             elif product_name:
                 product = Product.by_name(product_name)
                 result = Utility.update_product(job, product)
@@ -712,7 +730,7 @@ class Jobs(RPCRoot):
             return {'comment' : comm, 'rs_id' : rs_id }
         else:
             return {'comment' : 'No comment', 'rs_id' : rs_id }
-    
+
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
     def stop(self, job_id, stop_type, msg=None):
@@ -734,7 +752,6 @@ class Jobs(RPCRoot):
         jobxml = Job.by_id(id).to_xml().toxml()
         return dict(xml=jobxml)
 
-    
     @expose(template='bkr.server.templates.grid')
     @paginate('list',default_order='-id', limit=50)
     def index(self,*args,**kw): 
@@ -809,8 +826,7 @@ class Jobs(RPCRoot):
         search_bar = SearchBar(name='jobsearch',
                            label=_(u'Job Search'),    
                            simplesearch_label = 'Lookup ID',
-                           table = search_utility.Job.search.create_search_table(without=('Owner')),
-                           complete_data = search_utility.Job.search.create_complete_search_table(),
+                           table = search_utility.Job.search.create_complete_search_table(without=('Owner')),
                            search_controller=url("/get_search_options_job"),
                            quick_searches = [('Status-is-Queued','Queued'),('Status-is-Running','Running'),('Status-is-Completed','Completed')])
                             
@@ -823,7 +839,6 @@ class Jobs(RPCRoot):
                     action=action,
                     options=search_options,
                     searchvalue=searchvalue)
-
 
     @identity.require(identity.not_anonymous())
     @expose()
@@ -848,6 +863,8 @@ class Jobs(RPCRoot):
             flash(_(u"Could not cancel job id %s. Please try later" % id))
             redirect(".")
         else:
+            job.record_activity(user=identity.current.user, service=u'WEBUI',
+                                field=u'Status', action=u'Cancelled', old='', new='')
             flash(_(u"Successfully cancelled job %s" % id))
             redirect('/jobs/mine')
 
@@ -874,7 +891,6 @@ class Jobs(RPCRoot):
                          confirm = 'really cancel job %s?' % id),
         )
 
-
     @identity.require(identity.not_anonymous())
     @expose(format='json')
     def update(self, id, **kw):
@@ -894,11 +910,19 @@ class Jobs(RPCRoot):
                 product = None
             else:
                 product = Product.by_id(kw['product'])
+            old_tag = job.retention_tag if job.retention_tag else None
             returns.update(Utility.update_retention_tag_and_product(job,
-                    retention_tag, product))
+                           retention_tag, product))
+            job.record_activity(user=identity.current.user, service=u'WEBUI',
+                                field=u'Retention Tag', action='Changed',
+                                old=old_tag.tag, new=retention_tag.tag)
         elif 'retentiontag' in kw:
             retention_tag = RetentionTag.by_id(kw['retentiontag'])
+            old_tag = job.retention_tag if job.retention_tag else None
             returns.update(Utility.update_retention_tag(job, retention_tag))
+            job.record_activity(user=identity.current.user, service=u'WEBUI',
+                                field=u'Retention Tag', action='Changed',
+                                old=old_tag.tag, new=retention_tag.tag)
         elif 'product' in kw:
             if int(kw['product']) == ProductWidget.product_deselected:
                 product = None
@@ -924,16 +948,18 @@ class Jobs(RPCRoot):
         recipe_set_history = [RecipeSetActivity.query.with_parent(elem,"activity") for elem in job.recipesets]
         recipe_set_data = []
         for query in recipe_set_history:
-            for d in query: 
-                recipe_set_data.append(d)   
- 
-        job_history_grid = BeakerDataGrid(fields= [
-                               BeakerDataGrid.Column(name='recipeset',
-                                                               getter=lambda x: make_link(url='#RS_%s' % x.recipeset_id,text ='RS:%s' % x.recipeset_id), 
-                                                               title='RecipeSet', options=dict(sortable=True)), 
+            for d in query:
+                recipe_set_data.append(d)
+
+        recipe_set_data += job.activity
+        recipe_set_data = sorted(recipe_set_data, key=lambda x: x.created, reverse=True)
+
+        job_history_grid = BeakerDataGrid(name='job_history_datagrid', fields= [
                                BeakerDataGrid.Column(name='user', getter= lambda x: x.user, title='User', options=dict(sortable=True)),
+                               BeakerDataGrid.Column(name='service', getter= lambda x: x.service, title='Via', options=dict(sortable=True)),
                                BeakerDataGrid.Column(name='created', title='Created', getter=lambda x: x.created, options = dict(sortable=True)),
-                               BeakerDataGrid.Column(name='field', getter=lambda x: x.field_name, title='Field Name', options=dict(sortable=True)),
+                               BeakerDataGrid.Column(name='object_name', getter=lambda x: x.object_name(), title='Object', options=dict(sortable=True)),
+                               BeakerDataGrid.Column(name='field_name', getter=lambda x: x.field_name, title='Field Name', options=dict(sortable=True)),
                                BeakerDataGrid.Column(name='action', getter=lambda x: x.action, title='Action', options=dict(sortable=True)),
                                BeakerDataGrid.Column(name='old_value', getter=lambda x: x.old_value, title='Old value', options=dict(sortable=True)),
                                BeakerDataGrid.Column(name='new_value', getter=lambda x: x.new_value, title='New value', options=dict(sortable=True)),])

@@ -222,7 +222,7 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
                     shared=True, lab_controller=self.lab_controller)
             system.release_action = ReleaseAction.reprovision
             system.reprovision_distro_tree = data_setup.create_distro_tree(
-                    osmajor=u'Fedora')
+                    osmajor=u'Fedora20')
             user = data_setup.create_user(password=u'password')
             system.reserve_manually(service=u'testdata', user=user)
         server = self.get_server()
@@ -349,7 +349,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
     @with_transaction
     def setUp(self):
         self.lab_controller = data_setup.create_labcontroller()
-        self.distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora',
+        self.distro_tree = data_setup.create_distro_tree(osmajor=u'Fedora20',
                 arch=u'i386', lab_controllers=[self.lab_controller])
         self.usable_system = data_setup.create_system(arch=u'i386',
                 owner=User.by_user_name(data_setup.ADMIN_USER),
@@ -461,7 +461,7 @@ class SystemProvisionXmlRpcTest(XmlRpcTestCase):
             self.server.systems.provision(self.usable_system.fqdn, self.distro_tree.id)
             self.fail('should raise')
         except xmlrpclib.Fault, e:
-            self.assert_('cannot be provisioned on system' in e.faultString)
+            self.assertIn('is not available in lab', e.faultString)
         with session.begin():
             self.assertEquals(self.usable_system.command_queue, [])
 

@@ -221,12 +221,6 @@ class Job_Submit(BeakerCommand):
         if not dryrun:
             print "Submitted: %s" % submitted_jobs
             if wait:
-                if self.conf.get('QPID_BUS') is True:
-                    if self.conf.get('AUTH_METHOD' != 'krbv'):
-                        print 'Cannot wait for task, Please set AUTH_METHOD to \'krbv\' when listening via message bus'
-                    else:
-                        is_failed |= watch_bus_tasks(0, submitted_jobs)
-                else:
-                    is_failed |= watch_tasks(self.hub, submitted_jobs)
+                is_failed |= watch_tasks(self.hub, submitted_jobs)
         sys.exit(is_failed)
 

@@ -76,11 +76,14 @@ class User(DeclarativeMappedObject, ActivityMixin):
     __table_args__ = {'mysql_engine': 'InnoDB'}
     user_id = Column(Integer, primary_key=True)
     user_name = Column(Unicode(255), unique=True)
-    email_address = Column(Unicode(255), unique=True)
+    email_address = Column(Unicode(255))
     display_name = Column(Unicode(255))
     _password = Column('password', UnicodeText, nullable=True, default=None)
     _root_password = Column('root_password', String(255), nullable=True, default=None)
     rootpw_changed = Column(DateTime, nullable=True, default=None)
+    openstack_username = Column(Unicode(255))
+    openstack_password = Column(Unicode(2048))
+    openstack_tenant_name = Column(Unicode(2048))
     created = Column(DateTime, default=datetime.utcnow)
     disabled = Column(Boolean, nullable=False, default=False)
     removed = Column(DateTime, nullable=True, default=None)
@@ -92,9 +95,6 @@ class User(DeclarativeMappedObject, ActivityMixin):
     config_values_string = relationship(ConfigValueString, backref='user')
     user_activity = relationship(UserActivity, backref='object',
             primaryjoin=user_id == UserActivity.user_id)
-
-    # XXX we probably shouldn't be doing this!
-    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
 
     activity_type = UserActivity
 
@@ -135,15 +135,6 @@ class User(DeclarativeMappedObject, ActivityMixin):
         return SubmissionDelegate.query.filter_by(delegate_id=self.user_id,
             user_id=user.user_id).first() is not None
 
-    def by_email_address(cls, email):
-        """
-        A class method that can be used to search users
-        based on their email addresses since it is unique.
-        """
-        return cls.query.filter_by(email_address=email).one()
-
-    by_email_address = classmethod(by_email_address)
-
     def email_link(self):
         a = Element('a', {'href': 'mailto:%s' % self.email_address})
         a.text = self.user_name
@@ -171,7 +162,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
         autocreate = get('identity.soldapprovider.autocreate', False)
         # Presence of '/' indicates a Kerberos service principal.
         if not user and ldapenabled and autocreate and '/' not in user_name:
-            filter = ldap.filter.filter_format('(uid=%s)', [user_name])
+            filter = ldap.filter.filter_format('(uid=%s)', [user_name.encode('utf8')])
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,
@@ -195,7 +186,7 @@ class User(DeclarativeMappedObject, ActivityMixin):
         ldap_users = []
         ldapenabled = get('identity.ldap.enabled', False)
         if ldapenabled and find_ldap_users is True:
-            filter = ldap.filter.filter_format('(uid=%s*)', [username])
+            filter = ldap.filter.filter_format('(uid=%s*)', [username.encode('utf8')])
             ldapcon = ldap.initialize(get('identity.soldapprovider.uri'))
             objects = ldapcon.search_st(get('identity.soldapprovider.basedn', ''),
                     ldap.SCOPE_SUBTREE, filter,

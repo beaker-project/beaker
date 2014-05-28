@@ -27,14 +27,12 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1 
 # but that is not usable for the RPM Version because it sorts higher than 
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 0.16.1
+%global upstream_version 0.16.2
 
-# Note: While some parts of this file use "%{name}, "beaker" is still
-# hardcoded in a lot of places, both here and in the source code
 Name:           beaker
-Version:        0.16.1
+Version:        0.16.2
 Release:        1%{?dist}
-Summary:        Filesystem layout for Beaker
+Summary:        Full-stack software and hardware integration testing system
 Group:          Applications/Internet
 License:        GPLv2+ and BSD
 URL:            http://beaker-project.org/
@@ -62,6 +60,8 @@ BuildRequires:  make
 BuildRequires:  python-setuptools
 BuildRequires:  python-nose >= 0.10
 BuildRequires:  python-unittest2
+# pylint only understands namespace packages since 1.0
+BuildRequires:  pylint >= 1.0
 BuildRequires:  python-setuptools-devel
 BuildRequires:  python2-devel
 BuildRequires:  python-docutils >= 0.6
@@ -82,10 +82,6 @@ BuildRequires:  pkgconfig(systemd)
 
 %if %{with server}
 BuildRequires:  python-kid
-BuildRequires:  python-webassets
-BuildRequires:  /usr/bin/lessc
-BuildRequires:  /usr/bin/cssmin
-BuildRequires:  /usr/bin/uglifyjs
 # These runtime dependencies are needed at build time as well, because
 # the unit tests and Sphinx autodoc import the server code as part of the
 # build process.
@@ -106,9 +102,16 @@ BuildRequires:  python-TurboMail >= 3.0
 BuildRequires:  cracklib-python
 BuildRequires:  rpm-python
 BuildRequires:  python-netaddr
-BuildRequires:  ovirt-engine-sdk
+BuildRequires:  python-keystoneclient
+BuildRequires:  python-novaclient
+BuildRequires:  python-glanceclient
+BuildRequires:  ipxe-bootimgs
+BuildRequires:  syslinux
+BuildRequires:  dosfstools
+BuildRequires:  mtools
 BuildRequires:  python-itsdangerous
 BuildRequires:  python-decorator
+BuildRequires:  python-webassets
 BuildRequires:  python-flask
 BuildRequires:  python-markdown
 BuildRequires:  python-passlib
@@ -118,18 +121,30 @@ BuildRequires:  systemd
 
 %endif
 
+%if %{with labcontroller}
+# These LC dependencies are needed in build due to tests
+BuildRequires:  python-gevent >= 1.0
+%endif
+
 # As above, these client dependencies are needed in build because of sphinx
 BuildRequires:  python-krbV
 BuildRequires:  python-lxml
 BuildRequires:  libxslt-python
 
 
+%package common
+Summary:        Common components for Beaker packages
+Group:          Applications/Internet
+Provides:       %{name} = %{version}-%{release}
+Obsoletes:      %{name} < 0.17.0-1
+
+
 %package client
-Summary:        Client component for talking to Beaker server
+Summary:        Command-line client for interacting with Beaker
 Group:          Applications/Internet
 Requires:       python
 Requires:       python-setuptools
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-common = %{version}-%{release}
 Requires:       python-krbV
 Requires:       python-lxml
 %if 0%{?rhel} >= 6 || 0%{?fedora}
@@ -148,7 +163,7 @@ Conflicts:      rhts-devel < 4.52
 
 %if %{with server}
 %package server
-Summary:       Server component of Beaker
+Summary:        Beaker scheduler and web interface
 Group:          Applications/Internet
 Requires:       TurboGears >= 1.1.3
 %if 0%{?rhel} == 6
@@ -170,7 +185,7 @@ Requires:       mod_wsgi
 Requires:       python-tgexpandingformwidget
 Requires:       httpd
 Requires:       python-krbV
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-common = %{version}-%{release}
 Requires:       python-TurboMail >= 3.0
 Requires:       createrepo
 Requires:       yum-utils
@@ -179,12 +194,21 @@ Requires:       python-jinja2
 Requires:       python-netaddr
 Requires:       python-requests >= 1.0
 Requires:       python-requests-kerberos
-Requires:       ovirt-engine-sdk
+Requires:       python-keystoneclient
+Requires:       python-novaclient
+Requires:       python-glanceclient
+Requires:       ipxe-bootimgs
+Requires:       syslinux
+Requires:       dosfstools
+Requires:       mtools
 Requires:       python-itsdangerous
 Requires:       python-decorator
 Requires:       python-flask
 Requires:       python-markdown
 Requires:       python-webassets
+Requires:       /usr/bin/lessc
+Requires:       /usr/bin/cssmin
+Requires:       /usr/bin/uglifyjs
 Requires:       python-passlib
 %if %{with_systemd}
 Requires:       systemd-units
@@ -199,7 +223,7 @@ Requires(postun):  systemd
 %package integration-tests
 Summary:        Integration tests for Beaker
 Group:          Applications/Internet
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-common = %{version}-%{release}
 Requires:       %{name}-server = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
@@ -219,14 +243,14 @@ Requires:       python-gunicorn
 
 %if %{with labcontroller}
 %package lab-controller
-Summary:        Lab Controller xmlrpc server
+Summary:        Daemons for controlling a Beaker lab
 Group:          Applications/Internet
-Provides:       beaker-redhat-support <= 0.19
-Obsoletes:      beaker-redhat-support <= 0.19
 Requires:       python
 Requires:       crontabs
 Requires:       httpd
-Requires:       cobbler >= 1.4
+%ifarch %{ix86} x86_64
+Requires:       syslinux
+%endif
 Requires:       yum-utils
 Requires:       fence-agents
 Requires:       ipmitool
@@ -234,7 +258,7 @@ Requires:       wsmancli
 Requires:       telnet
 Requires:       sudo
 Requires:       python-cpio
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-common = %{version}-%{release}
 Requires:       python-setuptools
 Requires:       python-xmltramp
 Requires:       python-krbV
@@ -250,29 +274,33 @@ Requires(postun):  systemd
 %endif
 
 %package lab-controller-addDistro
-Summary:        addDistro scripts for Lab Controller
+Summary:        Optional hooks for distro import on Beaker lab controllers
 Group:          Applications/Internet
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-common = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       %{name}-client = %{version}-%{release}
-Provides:       beaker-redhat-support-addDistro <= 0.19
-Obsoletes:      beaker-redhat-support-addDistro <= 0.19
 %endif
 
-
 %description
-Filesystem layout for beaker
+Beaker is a full stack software and hardware integration testing system, with 
+the ability to manage a globally distributed network of test labs.
 
+%description common
+Python modules which are used by other Beaker packages.
 
 %description client
-This is the command line interface used to interact with the Beaker Server.
-
+The bkr client is a command-line tool for interacting with Beaker servers. You 
+can use it to submit Beaker jobs, fetch results, and perform many other tasks.
 
 %if %{with server}
 %description server
-To Be Filled in - Server Side..
+This package provides the central server components for Beaker, which 
+consist of:
+* a Python web application, providing services to remote lab controllers as 
+  well as a web interface for Beaker users; 
+* the beakerd scheduling daemon, which schedules recipes on systems; and 
+* command-line tools for managing a Beaker installation.
 %endif
-
 
 %if %{with inttests}
 %description integration-tests
@@ -280,15 +308,21 @@ This package contains integration tests for Beaker, which require a running
 database and Beaker server.
 %endif
 
-
 %if %{with labcontroller}
 %description lab-controller
-This is the interface to link Medusa and Cobbler together. Mostly provides
-snippets and kickstarts.
+The lab controller daemons connect to a central Beaker server in order to 
+manage a local lab of test systems.
+
+The daemons and associated lab controller tools:
+* set up netboot configuration files
+* control power for test systems
+* collect logs and results from test runs
+* track distros available from the lab's local mirror
 
 %description lab-controller-addDistro
-addDistro.sh can be called after distros have been imported into beaker.
-Automatically launch jobs against newly imported distros.
+addDistro.sh can be called after distros have been imported into Beaker. You 
+can install this on your lab controller to automatically launch jobs against 
+newly imported distros.
 %endif
 
 %prep
@@ -319,6 +353,11 @@ DESTDIR=%{buildroot} make \
     %{?with_inttests:WITH_INTTESTS=1} \
     install
 
+%if %{with server}
+# Newer RPM fails if site.less doesn't exist, even though it's marked %ghost 
+# and therefore is not included in the RPM. Seems like an RPM bug...
+ln -s /dev/null %{buildroot}%{_datadir}/bkr/server/assets/site.less
+%endif
 
 %check
 make \
@@ -344,6 +383,10 @@ chown root:root %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 chmod go-w %{_localstatedir}/log/%{name}/*.log >/dev/null 2>&1 || :
 # Restart rsyslog so that it notices the config which we ship
 /sbin/service rsyslog condrestart >/dev/null 2>&1 || :
+# Create symlink for site.less (this is ghosted so that other packages can overwrite it)
+if [ ! -f %{_datadir}/bkr/server/assets/site.less ] ; then
+    ln -s /dev/null %{_datadir}/bkr/server/assets/site.less || :
+fi
 %endif
 
 %if %{with labcontroller}
@@ -415,7 +458,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %endif
 %endif
 
-%files
+%files common
 %defattr(-,root,root,-)
 %dir %{python2_sitelib}/bkr/
 %{python2_sitelib}/bkr/__init__.py*
@@ -428,12 +471,12 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with server}
 %files server
 %defattr(-,root,root,-)
-%dir %{_sysconfdir}/beaker
+%dir %{_sysconfdir}/%{name}
 %doc documentation/_build/text/whats-new/
 %{python2_sitelib}/bkr/server/
 %{python2_sitelib}/bkr.server-*-nspkg.pth
 %{python2_sitelib}/bkr.server-*.egg-info/
-%{_bindir}/%{name}-init
+%{_bindir}/beaker-init
 %{_bindir}/nag-mail
 %{_bindir}/beaker-log-delete
 %{_bindir}/log-delete
@@ -443,30 +486,41 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-sync-tasks
 %{_bindir}/beaker-refresh-ldap
 %{_bindir}/beaker-create-kickstart
+%{_bindir}/beaker-create-ipxe-image
+%{_mandir}/man1/beaker-create-ipxe-image.1.gz
 %{_mandir}/man1/beaker-create-kickstart.1.gz
 
 %if %{with_systemd}
 %{_unitdir}/beakerd.service
 %attr(0644,apache,apache) %{_tmpfilesdir}/beaker-server.conf
 %else
-%{_sysconfdir}/init.d/%{name}d
+%{_sysconfdir}/init.d/beakerd
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}
 %endif
 
 %config(noreplace) %{_sysconfdir}/cron.d/%{name}
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-server.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/beaker
-%attr(0755,root,root)%{_bindir}/%{name}d
-%config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-server.conf
+%attr(0755,root,root)%{_bindir}/beakerd
+%config(noreplace) %{_sysconfdir}/httpd/conf.d/beaker-server.conf
 %attr(-,apache,root) %dir %{_datadir}/bkr
-%attr(-,apache,root) %{_datadir}/bkr/%{name}-server.wsgi
+%attr(-,apache,root) %{_datadir}/bkr/beaker-server.wsgi
 %attr(-,apache,root) %{_datadir}/bkr/server
+%ghost %attr(0777,root,root) %{_datadir}/bkr/server/assets/site.less
 %attr(0660,apache,root) %config(noreplace) %{_sysconfdir}/%{name}/server.cfg
 %dir %{_localstatedir}/log/%{name}
+%dir %{_localstatedir}/cache/%{name}
+%attr(-,apache,root) %dir %{_localstatedir}/cache/%{name}/assets
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/logs
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/rpms
 %attr(-,apache,root) %dir %{_localstatedir}/www/%{name}/repos
 %attr(-,apache,root) %dir %{_localstatedir}/lib/%{name}
+%else
+# If we're not building the -server subpackage we need to tell RPM to ignore 
+# the server man pages. They will always be present because the docs build 
+# always installs them all.
+%exclude %{_mandir}/man1/beaker-create-ipxe-image.1.gz
+%exclude %{_mandir}/man1/beaker-create-kickstart.1.gz
 %endif
 
 %if %{with inttests}
@@ -479,7 +533,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 
 %files client
 %defattr(-,root,root,-)
-%dir %{_sysconfdir}/beaker
+%dir %{_sysconfdir}/%{name}
 %doc Client/client.conf.example
 %{python2_sitelib}/bkr/client/
 %{python2_sitelib}/bkr.client-*-nspkg.pth
@@ -491,8 +545,6 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_mandir}/man1/bkr-*.1.gz
 %if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
 %{_datadir}/bash-completion
-# Server isn't packaged on RHEL7, so tell rpm to ignore this file
-%exclude %{_mandir}/man1/beaker-create-kickstart.1.gz
 %else
 %{_sysconfdir}/bash_completion.d
 %endif
@@ -500,27 +552,27 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %if %{with labcontroller}
 %files lab-controller
 %defattr(-,root,root,-)
-%dir %{_sysconfdir}/beaker
-%config(noreplace) %{_sysconfdir}/beaker/labcontroller.conf
-%{_sysconfdir}/beaker/power-scripts/
-%{_sysconfdir}/beaker/install-failure-patterns/
+%dir %{_sysconfdir}/%{name}
+%config(noreplace) %{_sysconfdir}/%{name}/labcontroller.conf
+%{_sysconfdir}/%{name}/power-scripts/
+%{_sysconfdir}/%{name}/install-failure-patterns/
 %{python2_sitelib}/bkr/labcontroller/
 %{python2_sitelib}/bkr.labcontroller-*-nspkg.pth
 %{python2_sitelib}/bkr.labcontroller-*.egg-info/
-%{_bindir}/%{name}-proxy
-%{_bindir}/%{name}-watchdog
-%{_bindir}/%{name}-transfer
-%{_bindir}/%{name}-import
-%{_bindir}/%{name}-provision
-%{_bindir}/%{name}-pxemenu
-%{_bindir}/%{name}-expire-distros
-%{_bindir}/%{name}-clear-netboot
-%config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}-lab-controller.conf
+%{_bindir}/beaker-proxy
+%{_bindir}/beaker-watchdog
+%{_bindir}/beaker-transfer
+%{_bindir}/beaker-import
+%{_bindir}/beaker-provision
+%{_bindir}/beaker-pxemenu
+%{_bindir}/beaker-expire-distros
+%{_bindir}/beaker-clear-netboot
+%config(noreplace) %{_sysconfdir}/httpd/conf.d/beaker-lab-controller.conf
 %attr(-,apache,root) %dir %{_datadir}/bkr
 %attr(-,apache,root) %{_datadir}/bkr/lab-controller
 %config(noreplace) %{_sysconfdir}/cron.hourly/beaker_expire_distros
-%attr(-,apache,root) %dir %{_var}/www/beaker
-%attr(-,apache,root) %dir %{_var}/www/beaker/logs
+%attr(-,apache,root) %dir %{_var}/www/%{name}
+%attr(-,apache,root) %dir %{_var}/www/%{name}/logs
 %dir %{_localstatedir}/log/%{name}
 
 %if %{with_systemd}
@@ -530,21 +582,21 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_unitdir}/beaker-transfer.service
 %{_tmpfilesdir}/beaker-lab-controller.conf
 %else
-%{_sysconfdir}/init.d/%{name}-proxy
-%{_sysconfdir}/init.d/%{name}-watchdog
-%{_sysconfdir}/init.d/%{name}-transfer
-%{_sysconfdir}/init.d/%{name}-provision
+%{_sysconfdir}/init.d/beaker-proxy
+%{_sysconfdir}/init.d/beaker-watchdog
+%{_sysconfdir}/init.d/beaker-transfer
+%{_sysconfdir}/init.d/beaker-provision
 %attr(-,apache,root) %dir %{_localstatedir}/run/%{name}-lab-controller
 %endif
 
-%attr(0440,root,root) %config(noreplace) %{_sysconfdir}/sudoers.d/%{name}_proxy_clear_netboot
+%attr(0440,root,root) %config(noreplace) %{_sysconfdir}/sudoers.d/beaker_proxy_clear_netboot
 %config(noreplace) %{_sysconfdir}/rsyslog.d/beaker-lab-controller.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/beaker
 
 %files lab-controller-addDistro
 %defattr(-,root,root,-)
-%{_var}/lib/beaker/addDistro.sh
-%{_var}/lib/beaker/addDistro.d/*
+%{_var}/lib/%{name}/addDistro.sh
+%{_var}/lib/%{name}/addDistro.d/*
 %endif
 
 %changelog

@@ -1,4 +1,3 @@
-#!/usr/bin/python
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -381,7 +380,7 @@ MaxLengthSuggestedDesc = 50
 MaxLengthTestName = 50
 ReviewWidth = 22
 MakefileLineWidth = 17
-VimDictionary = "# vim: dict=/usr/share/beakerlib/dictionary.vim cpt=.,w,b,u,t,i,k"
+VimDictionary = "# vim: dict+=/usr/share/beakerlib/dictionary.vim cpt=.,w,b,u,t,i,k"
 BugzillaUrl = 'https://bugzilla.redhat.com/show_bug.cgi?id='
 BugzillaXmlrpc = 'https://bugzilla.redhat.com/xmlrpc.cgi'
 PreferencesDir = os.getenv('HOME') + "/.beaker_client"
@@ -1100,7 +1099,7 @@ class Inquisitor:
         self.description = None
         self.default()
 
-    def default(self, optpref):
+    def default(self, optpref=None):
         """ Initialize default option data """
         # nothing to do when options not supplied
         if not optpref: return

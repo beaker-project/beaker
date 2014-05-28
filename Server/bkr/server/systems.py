@@ -7,6 +7,7 @@
 import logging
 import xmlrpclib
 import datetime
+import urlparse
 from sqlalchemy import and_
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm.exc import NoResultFound
@@ -16,18 +17,20 @@ from bkr.server import identity, mail
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
 from bkr.server.model import System, SystemActivity, SystemStatus, DistroTree, \
         OSMajor, DistroTag, Arch, Distro, User, Group, SystemAccessPolicy, \
-        SystemPermission, SystemAccessPolicyRule, Hypervisor, Numa, \
-        LabController, KernelType, SystemType, CommandActivity, Power, \
-        PowerType, ReleaseAction
+        SystemPermission, SystemAccessPolicyRule, ImageType, KernelType, \
+        VirtResource, Hypervisor, Numa, LabController, SystemType, \
+        CommandActivity, Power, PowerType, ReleaseAction
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
 from bkr.server.flask_util import BadRequest400, Unauthorised401, \
-        Conflict409, Forbidden403, NotFound404, MethodNotAllowed405, \
+        Forbidden403, NotFound404, MethodNotAllowed405, \
+        Conflict409, ServiceUnavailable503, \
         convert_internal_errors, auth_required, read_json_request, \
         json_collection
 from turbogears.database import session
 import cherrypy
+from bkr.server.cherrypy_util import PlainTextHTTPException
 
 log = logging.getLogger(__name__)
 
@@ -194,9 +197,14 @@ class SystemsController(controllers.Controller):
         distro_tree = DistroTree.by_id(distro_tree_id)
 
         # sanity check: does the distro tree apply to this system?
-        if distro_tree.systems().filter(System.id == system.id).count() < 1:
+        if not system.compatible_with_distro_tree(distro_tree):
             raise BX(_(u'Distro tree %s cannot be provisioned on %s')
                     % (distro_tree, system.fqdn))
+        if not system.lab_controller:
+            raise BX(_(u'System is not attached to a lab controller'))
+        if not distro_tree.url_in_lab(system.lab_controller):
+            raise BX(_(u'Distro tree %s is not available in lab %s')
+                    % (distro_tree, system.lab_controller))
 
         if identity.current.user.rootpw_expired:
             raise BX(_('Your root password has expired, please change or clear it in order to submit jobs.'))
@@ -746,10 +754,12 @@ def save_system_access_policy(fqdn):
         policy.rules.remove(old_rule)
     for rule in data['rules']:
         if 'id' not in rule:
-            try:
-                user = User.by_user_name(rule['user']) if rule['user'] else None
-            except NoResultFound:
-                raise BadRequest400('No such user %r' % rule['user'])
+            if rule['user']:
+                user = User.by_user_name(rule['user'])
+                if user is None:
+                    raise BadRequest400('No such user %r' % rule['user'])
+            else:
+                user = None
             try:
                 group = Group.by_name(rule['group']) if rule['group'] else None
             except NoResultFound:
@@ -956,6 +966,38 @@ def get_system_activity(fqdn):
     query = query.outerjoin(SystemActivity.user)\
             .options(contains_eager(SystemActivity.user))
     return query
+
+# This is part of the iPXE-based installation support for OpenStack instances.
+@app.route('/systems/by-uuid/<uuid>/ipxe-script')
+def ipxe_script(uuid):
+    try:
+        resource = VirtResource.by_instance_id(uuid)
+    except (NoResultFound, ValueError):
+        raise NotFound404('Instance is not known to Beaker')
+    if resource.kernel_options is None:
+        # recipe.provision() hasn't been called yet
+        # We need to handle this case because the VM is created and boots up 
+        # *before* we generate the kickstart etc
+        raise ServiceUnavailable503('Recipe has not been provisioned yet')
+    distro_tree = resource.recipe.distro_tree
+    distro_tree_url = distro_tree.url_in_lab(resource.lab_controller,
+            scheme=['http', 'ftp'])
+    kernel = distro_tree.image_by_type(ImageType.kernel,
+            KernelType.by_name(u'default'))
+    if not kernel:
+        raise BadRequest400('Kernel image not found for distro tree %s'
+                % distro_tree.id)
+    initrd = resource.recipe.distro_tree.image_by_type(ImageType.initrd,
+            KernelType.by_name(u'default'))
+    if not initrd:
+        raise BadRequest400('Initrd image not found for distro tree %s'
+                % distro_tree.id)
+    kernel_url = urlparse.urljoin(distro_tree_url, kernel.path)
+    initrd_url = urlparse.urljoin(distro_tree_url, initrd.path)
+    kernel_options = resource.kernel_options + ' netboot_method=ipxe'
+    return ('#!ipxe\nkernel %s %s\ninitrd %s\nboot\n'
+            % (kernel_url, kernel_options, initrd_url),
+            200, [('Content-Type', 'text/plain')])
 
 # for sphinx
 systems = SystemsController

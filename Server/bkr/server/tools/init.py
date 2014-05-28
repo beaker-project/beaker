@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+
 # -*- coding: utf-8 -*-
 
 # This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@ from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.log import log_to_stream
 from bkr.server.model import (User, Group, Permission, Hypervisor, KernelType,
-        Arch, PowerType, Key, Response, RetentionTag, ConfigItem)
+        Arch, PowerType, Key, Response, RetentionTag, ConfigItem, UserGroup)
 from bkr.server.util import load_config
 from turbogears.database import session
 from os.path import dirname, exists, join
@@ -59,7 +59,7 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
                 user.display_name = user_display_name.decode('utf8')
             if user_email_address:
                 user.email_address = user_email_address.decode('utf8')
-            admin.users.append(user)
+            admin.user_group_assocs.append(UserGroup(user=user, is_owner=True))
         else:
             print "Password must be provided with username"
     elif len(admin.users) == 0:
@@ -175,9 +175,7 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
         # name, description, numeric
         (u'root_password', u'Plaintext root password for provisioned systems', False),
         (u'root_password_validity', u"Maximum number of days a user's root password is valid for", True),
-        (u'default_guest_memory', u"Default memory (MB) for dynamic guest provisioning", True),
-        (u'default_guest_disk_size', u"Default disk size (GB) for dynamic guest provisioning", True),
-        (u'guest_name_prefix', u'Prefix for names of dynamic guests in oVirt', False),
+        (u'guest_name_prefix', u'Prefix for names of dynamic guests in OpenStack', False),
     ]
     for name, description, numeric in config_items:
         ConfigItem.lazy_create(name=name, description=description, numeric=numeric)

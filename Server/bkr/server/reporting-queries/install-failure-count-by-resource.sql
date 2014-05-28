@@ -8,7 +8,7 @@
 -- against 'install_started'.
 
 (SELECT
-   'All oVirt' AS fqdn,
+   'All OpenStack' AS fqdn,
     COUNT(vr.id) AS failed_recipes
 FROM
     recipe_resource AS rr

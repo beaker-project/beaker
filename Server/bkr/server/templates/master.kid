@@ -7,6 +7,8 @@
     <script type="text/javascript">
     window.beaker_url_prefix = ${tg.to_json(tg.url('/'))};
     </script>
+    <link py:for="css in tg_css" py:replace="css.display()" />
+    <link py:for="js in tg_js_head" py:replace="js.display()" />
     <script type="text/javascript" py:if="tg.identity.user">
     window.beaker_current_user = new User(${tg.to_json(tg.identity.user)});
     </script>
@@ -14,6 +16,7 @@
 </head>
 
 <body py:match="item.tag=='{http://www.w3.org/1999/xhtml}body'" py:attrs="item.items()">
+<div py:for="js in tg_js_bodytop" py:replace="js.display()" />
 
 <?python
 from bkr.server.model import device_classes
@@ -22,7 +25,7 @@ from bkr.server.reports import Reports
 <nav class="navbar navbar-static-top">
     <div class="navbar-inner">
         <a class="brand" href="${tg.url('/')}">Beaker</a>
-        <ul class="nav">
+        <ul id="nav-left" class="nav">
             <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                     Systems
@@ -120,7 +123,7 @@ from bkr.server.reports import Reports
                 </ul>
             </li>
         </ul>
-        <ul class="nav pull-right">
+        <ul id="nav-right" class="nav pull-right">
             <li py:if="not tg.identity.anonymous" class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                     Hello<span class="navbar-wide-viewport-only">, ${tg.identity.user}</span>
@@ -134,6 +137,7 @@ from bkr.server.reports import Reports
                     <li><a href="${tg.url('/jobs/mygroups')}">My Group Jobs</a></li>
                     <li><a href="${tg.url('/recipes/mine')}">My Recipes</a></li>
                     <li><a href="${tg.url('/groups/mine')}">My Groups</a></li>
+                    <li><a href="${tg.url('/logout')}">Log out</a></li>
                 </ul>
             </li>
             <li py:if="not tg.identity.anonymous" class="navbar-wide-viewport-only">
@@ -141,7 +145,15 @@ from bkr.server.reports import Reports
             </li>
             <li py:if="tg.identity.anonymous"><a href="${tg.url('/login')}">Log in</a>
             </li>
-            <li py:if="not tg.identity.anonymous"><a href="${tg.url('/logout')}">Log out</a>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                Help
+                <b class="caret"></b>
+              </a>
+              <ul class="dropdown-menu" id="help-menu">
+                <li><a href="${tg.config('beaker.documentation_link')}">Documentation</a></li>
+                <li><a href="${tg.config('beaker.bz_create_link')}">Report a Bug</a></li>
+              </ul>
             </li>
         </ul>
     </div>
@@ -164,15 +176,11 @@ from bkr.server.reports import Reports
 
     <div py:replace="[item.text]+item[:]"/>
 
-    <footer>
-        <ul class="inline">
-            <li>Version ${tg.beaker_version()}</li>
-            <li><a href="${tg.config('beaker.bz_create_link')}">Report Bug</a></li>
-            <li><a href="${tg.config('beaker.documentation_link')}">Documentation</a></li>
-        </ul>
-    </footer>
-
 </div>
+
+<footer>
+  <p><a href="https://beaker-project.org/">Beaker</a> ${tg.beaker_version()}</p>
+</footer>
 
 <span py:if="tg.config('piwik.base_url') and tg.config('piwik.site_id')" py:strip="True">
 <!--! This is a modified version of the Piwik tracking code that uses DOM
@@ -203,6 +211,8 @@ piwikTracker.enableLinkTracking();
 </script><noscript><p><img src="${tg.config('piwik.base_url')}piwik.php?idsite=${tg.config('piwik.site_id')}" style="border:0" alt="" /></p></noscript>
 <!-- End Piwik Tracking Code -->
 </span>
+
+<div py:for="js in tg_js_bodybottom" py:replace="js.display()" />
 </body>
 
 </html>

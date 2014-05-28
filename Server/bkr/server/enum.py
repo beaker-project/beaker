@@ -54,7 +54,7 @@ class EnumMeta(type):
             cls._symbols.append(sym)
             cls._symbols_by_value[value] = sym
             setattr(cls, name, sym)
-        return type.__init__(cls, classname, bases, dict_)
+        type.__init__(cls, classname, bases, dict_)
 
     def __iter__(cls):
         return iter(cls._symbols)

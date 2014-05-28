@@ -20,6 +20,7 @@ Description
 -----------
 
 Prints to stdout a list of all the lab controllers attached to Beaker.
+Lab controllers which have been removed are not included in the list.
 
 Options
 -------

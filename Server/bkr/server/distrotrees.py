@@ -69,9 +69,8 @@ class DistroTrees(RPCRoot):
 
         search_bar = SearchBar(name='search',
                 label=_(u'Distro Tree Search'),
-                table=search_utility.DistroTree.search.create_search_table(),
+                table=search_utility.DistroTree.search.create_complete_search_table(),
                 search_controller=None,
-                complete_data=search_utility.DistroTree.search.create_complete_search_table(),
                 date_picker=['created'],
                 )
 

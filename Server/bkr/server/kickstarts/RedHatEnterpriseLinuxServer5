@@ -59,11 +59,7 @@ install
 {% snippet 'system' %}
 
 %packages --resolvedeps --ignoremissing
-{#
-## If packages variable is set add additional packages to this install
-## packages=httpd:selinux:kernel
-#}
-{% if packages %}
+{% if recipe or packages is defined %}
 {% snippet 'rhts_packages' %}
 {% else %}
 @development-tools

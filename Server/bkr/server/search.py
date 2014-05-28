@@ -11,16 +11,8 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea,
                                 HiddenField, RemoteForm, CheckBoxList, JSLink,
                                 Widget, TableForm, FormField, CompoundFormField,
                                 static, PaginateDataGrid)
-from bkr.server.widgets import AutoCompleteField
+from bkr.server.widgets import AutoCompleteField, LocalJSLink
 
-
-class LocalJSLink(JSLink):
-    """
-    Link to local Javascript files
-    """
-    def update_params(self, d):
-        super(JSLink, self).update_params(d)
-        d["link"] = url(self.name)
 
 class Search(CompoundFormField):
     """Dynmaically modifies power arguments based on Power Type Selection"""

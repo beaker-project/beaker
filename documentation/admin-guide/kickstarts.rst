@@ -64,6 +64,11 @@ useful when implementing custom templates and snippets:
     Instructs the lab controller to remove the current netboot configuration
     for this system.
 
+``install_done``
+    Checks in with the lab controller to indicate that installation is complete 
+    (post-installation scripts are now proceeding) and to report the FQDN of 
+    the newly installed system.
+
 ``linkdelay``
     Handles the ``linkdelay`` ks_meta variable.
 

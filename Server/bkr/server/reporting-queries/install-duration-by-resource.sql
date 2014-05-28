@@ -26,7 +26,7 @@ FROM
 UNION
 
 (SELECT
-    'All oVirt' AS fqdn,
+    'All OpenStack' AS fqdn,
     AVG(TIMESTAMPDIFF(SECOND, rr.install_started, rr.install_finished)) / 60 / 60 AS avg_install_hours,
     MIN(TIMESTAMPDIFF(SECOND, rr.install_started, rr.install_finished)) / 60 / 60 AS min_install_hours,
     MAX(TIMESTAMPDIFF(SECOND, rr.install_started, rr.install_finished)) / 60 / 60 AS max_install_hours

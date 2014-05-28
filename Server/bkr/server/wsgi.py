@@ -32,7 +32,7 @@ import cherrypy
 import cherrypy._cpwsgi
 from cherrypy.filters.basefilter import BaseFilter
 from flask import Flask
-from bkr.server import identity
+from bkr.server import identity, assets
 from bkr.server.app import app
 
 log = logging.getLogger(__name__)
@@ -82,6 +82,10 @@ def init():
         import resource
         resource.setrlimit(resource.RLIMIT_AS, (config.get('rlimit_as'),
                                                 config.get('rlimit_as')))
+
+    # Build assets. If assets.auto_build is True in the config, this will also
+    # happen on page request. Otherwise, it only happens once at startup here.
+    assets.build_assets()
 
     # workaround for TGMochiKit initialisation
     # https://sourceforge.net/p/turbogears1/tickets/34/
