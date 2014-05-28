@@ -17,6 +17,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears.database import session
 from bkr.server import identity
 from bkr.server.helpers import make_link
+from bkr.server.util import convert_db_lookup_error
 from bkr.server.installopts import InstallOptions
 from .sql import ConditionalInsert
 from .base import DeclarativeMappedObject
@@ -334,7 +335,8 @@ class Distro(DeclarativeMappedObject):
 
     @classmethod
     def by_name(cls, name):
-        return cls.query.filter_by(name=name).first()
+        with convert_db_lookup_error('No such distro: %s' % name):
+            return cls.query.filter_by(name=name).one()
 
     @classmethod
     def by_id(cls, id):
@@ -367,6 +369,15 @@ class Distro(DeclarativeMappedObject):
                 distro_tag_map,
                 {distro_tag_map.c.distro_id: self.id,
                  distro_tag_map.c.distro_tag_id: tagobj.id}))
+
+    def tasks(self):
+        """
+        Returns a query of Tasks which support this distro.
+        """
+        # Delayed import to avoid circular dependency
+        from . import Task, TaskExcludeOSMajor
+        return Task.query.filter(not_(Task.excluded_osmajor.any(
+                TaskExcludeOSMajor.osmajor == self.osversion.osmajor)))
 
 class DistroTree(DeclarativeMappedObject):
 
@@ -440,18 +451,6 @@ class DistroTree(DeclarativeMappedObject):
             xmland.appendChild(require)
         distro_requires.appendChild(xmland)
         return distro_requires
-
-    def tasks(self):
-        """
-        List of tasks that support this distro
-        """
-        # Delayed import to avoid circular dependency
-        from . import Task, TaskExcludeArch, TaskExcludeOSMajor
-        return Task.query\
-                .filter(not_(Task.excluded_arch.any(
-                    TaskExcludeArch.arch == self.arch)))\
-                .filter(not_(Task.excluded_osmajor.any(
-                    TaskExcludeOSMajor.osmajor == self.distro.osversion.osmajor)))
 
     @property
     def link(self):
