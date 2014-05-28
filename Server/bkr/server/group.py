@@ -27,6 +27,8 @@ from bkr.server import mail, identity
 from bkr.server.model import (Group, Permission, System, User, UserGroup,
                               Activity, GroupActivity, SystemActivity, 
                               SystemStatus)
+from bkr.server.util import convert_db_lookup_error
+from bkr.server.bexceptions import DatabaseLookupError
 
 import logging
 log = logging.getLogger(__name__)
@@ -400,7 +402,12 @@ class Groups(AdminPage):
     @error_handler(edit)
     @identity.require(identity.not_anonymous())
     def save_system(self, **kw):
-        system = System.by_fqdn(kw['system']['text'],identity.current.user)
+        try:
+            with convert_db_lookup_error('No such system: %s' % kw['system']['text']):
+                system = System.by_fqdn(kw['system']['text'],identity.current.user)
+        except DatabaseLookupError, e:
+            flash(unicode(e))
+            redirect("./edit?group_id=%s" % kw['group_id'])
         # A system owner can add their system to a group, but a group owner 
         # *cannot* add an arbitrary system to their group because that would 
         # grant them extra privileges over it.
