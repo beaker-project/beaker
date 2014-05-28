@@ -25,7 +25,7 @@ from bkr.server.kickstart import generate_kickstart
 from bkr.server.app import app
 from bkr.server.flask_util import BadRequest400, Unauthorised401, \
         Forbidden403, NotFound404, MethodNotAllowed405, \
-        Conflict409, ServiceUnavailable503, \
+        Conflict409, UnsupportedMediaType415, ServiceUnavailable503, \
         convert_internal_errors, auth_required, read_json_request, \
         json_collection
 from turbogears.database import session
@@ -936,7 +936,7 @@ def system_command(fqdn):
     else:
         raise UnsupportedMediaType415
     if action == 'reboot':
-        raise BadRequest('"reboot" is not a valid power command, '
+        raise BadRequest400('"reboot" is not a valid power command, '
                 'send "off" followed by "on" instead')
     elif action in ['on', 'off', 'interrupt']:
         if not system.power:

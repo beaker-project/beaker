@@ -7,6 +7,7 @@
 from sqlalchemy import (Column, ForeignKey, Integer, Unicode, Boolean,
         DateTime)
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm.exc import NoResultFound
 from turbogears.database import session
 from .base import DeclarativeMappedObject
 from .activity import Activity, ActivityMixin

@@ -13,6 +13,7 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Integer,
 from sqlalchemy.sql import select, exists, and_, or_, not_
 from sqlalchemy.orm import relationship, backref, dynamic_loader
 from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears.database import session
 from bkr.server import identity
