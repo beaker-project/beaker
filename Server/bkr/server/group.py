@@ -152,7 +152,7 @@ class Groups(AdminPage):
     def remove_group_permission(self, group_id, permission_id):
         try:
             group = Group.by_id(group_id)
-        except NoResultFound:
+        except DatabaseLookupError:
             log.exception('Group id %s is not a valid Group to remove' % group_id)
             return ['0']
 
@@ -228,7 +228,7 @@ class Groups(AdminPage):
     def systems(self,group_id=None,*args,**kw):
         try:
             group = Group.by_id(group_id)
-        except NoResultFound:
+        except DatabaseLookupError:
             log.exception('Group id %s is not a valid group id' % group_id)
             flash(_(u'Need a valid group to search on'))
             redirect('../groups/mine')
@@ -246,7 +246,7 @@ class Groups(AdminPage):
         if group_id is not None:
             try:
                 group = Group.by_id(group_id)
-            except NoResultFound:
+            except DatabaseLookupError:
                 log.exception('Group id %s is not a valid group id' % group_id)
                 flash(_(u'Need a valid group to search on'))
                 redirect('../groups/mine')
@@ -366,7 +366,7 @@ class Groups(AdminPage):
 
         try:
             group = Group.by_id(group_id)
-        except NoResultFound:
+        except DatabaseLookupError:
             flash( _(u"Group %s does not exist." % group_id) )
             redirect('mine')
 
@@ -710,7 +710,11 @@ class Groups(AdminPage):
     @expose()
     @restrict_http_method('post')
     def remove(self, **kw):
-        group = Group.by_id(kw['group_id'])
+        try:
+            group = Group.by_id(kw['group_id'])
+        except DatabaseLookupError:
+            flash(unicode('Invalid group or already removed'))
+            redirect('../groups/mine')
 
         if not group.can_edit(identity.current.user):
             flash(_(u'You are not an owner of group %s' % group))
@@ -732,7 +736,7 @@ class Groups(AdminPage):
     def get_group_users(self, group_id=None, *args, **kw):
         try:
             group = Group.by_id(group_id)
-        except NoResultFound:
+        except DatabaseLookupError:
             log.exception('Group id %s is not a valid group id' % group_id)
             response.status = 403
             return ['Invalid Group Id']
@@ -744,7 +748,7 @@ class Groups(AdminPage):
     def get_group_systems(self, group_id=None, *args, **kw):
         try:
             group = Group.by_id(group_id)
-        except NoResultFound:
+        except DatabaseLookupError:
             log.exception('Group id %s is not a valid group id' % group_id)
             response.status = 403
             return ['Invalid Group Id']
