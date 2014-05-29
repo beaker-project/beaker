@@ -36,7 +36,8 @@ def _create_env(source_dir, output_dir, **kwargs):
             'style.less',
             filters=['less', 'cssrewrite', YCSSMin()],
             output='beaker-%(version)s.css',
-            depends=['*.less', 'bootstrap/less/*.less', 'font-awesome/less/*.less'])
+            depends=['*.less', 'bootstrap/less/*.less', 'font-awesome/less/*.less',
+                'bootstrap-select/bootstrap-select.css'])
     env.register('js',
             # third-party
             'bootstrap/js/bootstrap-transition.js',
