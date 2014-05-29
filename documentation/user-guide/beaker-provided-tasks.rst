@@ -35,78 +35,9 @@ the data in these files can often be used to determine the cause.
 The ``/distribution/reservesys`` task reserves a system for a specific
 time frame to aid post-test analysis. You would usually append this
 task in your recipe so that the system is available for you to login
-after the other tasks have been run (otherwise, the system is returned
-to Beaker).
-
-The task's behavior can be configured using a number of parameters
-(similar to any other Beaker task):
-
-- :envvar:`RESERVE_IF_FAIL`: If this parameter is defined then the
-  result of the recipe is checked. The system is reserved, *only* if the
-  recipe did not pass. If it passed, this "test" is reported back to
-  Beaker as a pass and the next task in the recipe (if any) begins
-  execution. The parameter should be defined as: ``<param
-  name="RESERVE_IF_FAIL" value= "True" />`` (While *any* non-empty string
-  will have the same effect, using the string ``"True"`` is strongly
-  recommended). If you want to reserve the system irrespective of the
-  result of the test, do not specify this variable at all.
-
-- :envvar:`RESERVETIME`: Using this parameter, you can define the duration
-  (in seconds) for which you want to reserve the system up to a maximum
-  of 356400 seconds (99 hours). If this variable is not defined, the
-  default reservation is for 86400 seconds (24 hours) (Also, see
-  :ref:`return-early-extend-time` below).
-
-For example, to define both these parameters when you specify the task
-in your job description, you would use the following::
-
-    <task name="/distribution/reservesys" role="STANDALONE">
-      <params>
-        <param name="RESERVE_IF_FAIL" value="True" />
-        <param name="RESERVETIME" value="172800" />
-      </params>
-    </task>
-
-.. note::
-
-   Due to an `unfortunate race condition
-   <https://bugzilla.redhat.com/show_bug.cgi?id=989294>`__,
-   conditional reservation may be unreliable if the immediately preceding
-   task is the only one that fails in the recipe. Inserting
-   :ref:`dummy-task` prior to this task may help if
-   the problem of failing to reserve the system occurs regularly.
-
-
-Notification
-~~~~~~~~~~~~
-
-Depending on whether you set the :envvar:`RESERVE_IF_FAIL` parameter appropriately
-and its implications (as described), once the system has been
-reserved, you will receive an email with the subject "[Beaker Machine
-Reserved] test-system.example.com" and other information. This is a
-notification that the system has now been reserved and you can connect
-to it (using an SSH client, either using the username and password or
-your public key).
-
-The notification email is sent from the test system. This implies that
-in case of a problem in network connectivity between your email server
-and the test system, the notification email will not be received.
-
-
-.. _return-early-extend-time:
-
-Returning early and extending reservation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The email also includes information about returning the system
-early or extending your reservation time. To return the system early,
-execute :program:`return2beaker.sh` from your terminal (after you have
-logged in to the system).
-
-To extend the reservation time, execute :program:`extendtesttime.sh`
-and enter the desired extension to the reservation (relative to the current
-time).
-
+after the other tasks have been run, but before the system is
+returned to Beaker. :ref:`system-reserve` describes system reservation
+in detail.
 
 .. _inventory-task:
 

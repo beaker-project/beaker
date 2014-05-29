@@ -29,6 +29,7 @@ Contents
    interface
    systems/index
    job-design
+   system-reservation
    workflow
    writing-tasks
    beaker-provided-tasks

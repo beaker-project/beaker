@@ -6,6 +6,8 @@
 # (at your option) any later version.
 
 """
+.. _bkr-watchdog-extend:
+
 bkr watchdog-extend: Extend Beaker watchdog time
 ================================================
 

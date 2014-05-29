@@ -5,6 +5,8 @@
 # (at your option) any later version.
 
 """
+.. _bkr-system-release:
+
 bkr system-release: Release a reserved Beaker system
 ====================================================
 

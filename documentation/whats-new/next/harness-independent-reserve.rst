@@ -12,7 +12,11 @@ this new mechanism reserves the system for the specified duration even
 if the recipe execution is aborted by the external watchdog timer or
 due to a kernel panic or installation failure.
 
-Database upgrade:
+A new section, :ref:`system-reserve` has been added to the user guide
+describing both these methods for reserving a system after testing. 
+
+Database changes
+~~~~~~~~~~~~~~~~
 
 Run ``beaker-init`` to create the table ``recipe_reservation``. 
 
