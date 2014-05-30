@@ -1538,10 +1538,15 @@ class VirtResourceTest(unittest.TestCase):
         recipe = data_setup.create_recipe()
         data_setup.create_job_for_recipes([recipe])
         data_setup.mark_recipe_running(recipe, virt=True)
-        recipe.resource.fqdn = u'my-openstack-instance'
+        # when recipe first starts we don't have an fqdn
         expected_hyperlink = ('<a href="http://openstack.example.invalid/'
                 'dashboard/project/instances/{0}/">{0}</a>'
                 .format(recipe.resource.instance_id))
+        self.assertEquals(serialize_kid_element(recipe.resource.link),
+                '<span>(OpenStack instance {0})</span>'.format(expected_hyperlink))
+        # when installation finishes, we have an fqdn
+        data_setup.mark_recipe_installation_finished(recipe,
+                fqdn=u'my-openstack-instance')
         self.assertEquals(serialize_kid_element(recipe.resource.link),
                 '<span>my-openstack-instance (OpenStack instance {0})</span>'
                 .format(expected_hyperlink))
