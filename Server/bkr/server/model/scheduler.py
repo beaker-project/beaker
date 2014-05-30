@@ -3422,12 +3422,11 @@ class VirtResource(RecipeResource):
             instance_id = uuid.UUID(instance_id)
         return cls.query.filter(cls.instance_id == instance_id).one()
 
-    def __init__(self, instance_id, fqdn, lab_controller):
+    def __init__(self, instance_id, lab_controller):
         super(VirtResource, self).__init__()
         if isinstance(instance_id, basestring):
             instance_id = uuid.UUID(instance_id)
         self.instance_id = instance_id
-        self.fqdn = fqdn
         self.lab_controller = lab_controller
 
     @property

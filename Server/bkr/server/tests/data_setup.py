@@ -527,9 +527,7 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
             if virt:
                 if not lab_controller:
                     lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
-                recipe.resource = VirtResource(uuid.uuid4(),
-                        u'recipe-%s.openstack.invalid' % recipe.id,
-                        lab_controller)
+                recipe.resource = VirtResource(uuid.uuid4(), lab_controller)
                 recipe.recipeset.lab_controller = lab_controller
             else:
                 if not system:
