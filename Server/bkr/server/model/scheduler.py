@@ -1953,12 +1953,6 @@ class Recipe(TaskBase, DeclarativeMappedObject):
             for child in hr.childNodes[:]:
                 hostRequires.appendChild(child)
         recipe.appendChild(hostRequires)
-
-        if self.reservation_request:
-            reservesys = xmldoc.createElement("reservesys")
-            reservesys.setAttribute('duration', unicode(self.reservation_request.duration))
-            recipe.appendChild(reservesys)
-
         prs = xml.dom.minidom.parseString(self.partitions)
         partitions = xmldoc.createElement("partitions")
         for pr in prs.getElementsByTagName("partitions"):
@@ -1967,6 +1961,10 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         recipe.appendChild(partitions)
         for t in self.tasks:
             recipe.appendChild(t.to_xml(clone))
+        if self.reservation_request:
+            reservesys = xmldoc.createElement("reservesys")
+            reservesys.setAttribute('duration', unicode(self.reservation_request.duration))
+            recipe.appendChild(reservesys)
         if not from_recipeset and not from_machine:
             recipe = self._add_to_job_element(recipe, clone)
         return recipe

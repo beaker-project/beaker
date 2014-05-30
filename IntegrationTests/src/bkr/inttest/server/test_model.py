@@ -1252,13 +1252,16 @@ class RecipeTest(unittest.TestCase):
             task_list=[Task.by_name(u'/distribution/install')] * 2,
             reservesys=True,
             reservesys_duration=3600)
-
         job = data_setup.create_job_for_recipes([recipe1, recipe2])
         xml = job.recipesets[0].recipes[0].to_xml(clone=True).toxml()
-        reservation_string = '<reservesys duration="86400"/>'
+        reservation_string = '<task name="/distribution/install" role="STANDALONE"/>' +  \
+                             '<task name="/distribution/install" role="STANDALONE"/>' + \
+                             '<reservesys duration="86400"/>'
         self.assertIn(reservation_string, xml)
         xml = job.recipesets[0].recipes[1].to_xml(clone=True).toxml()
-        reservation_string = '<reservesys duration="3600"/>'
+        reservation_string = '<task name="/distribution/install" role="STANDALONE"/>' +  \
+                             '<task name="/distribution/install" role="STANDALONE"/>' + \
+                             '<reservesys duration="3600"/>'
         self.assertIn(reservation_string, xml)
 
 class CheckDynamicVirtTest(unittest.TestCase):
