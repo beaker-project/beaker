@@ -141,6 +141,26 @@ class TaskLibraryTest(unittest.TestCase):
         finally:
             rmtree(basepath)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1101402
+    def test_update_repo_cleans_stale_dot_repodata(self):
+        # createrepo_c refuses to run if .repodata exists
+        update({'beaker.createrepo_command': 'createrepo_c'})
+        basepath = self.tasklibrary.rpmspath
+        self._create_clean_dir(basepath)
+        self.addCleanup(rmtree, basepath)
+        os.mkdir(os.path.join(basepath, '.repodata'))
+        self.tasklibrary.update_repo()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1101402
+    def test_update_repo_cleans_stale_dot_olddata(self):
+        # createrepo refuses to run if .olddata exists
+        update({'beaker.createrepo_command': 'createrepo'})
+        basepath = self.tasklibrary.rpmspath
+        self._create_clean_dir(basepath)
+        self.addCleanup(rmtree, basepath)
+        os.mkdir(os.path.join(basepath, '.olddata'))
+        self.tasklibrary.update_repo()
+
     def test_unlink_rpm(self):
         basepath = self.tasklibrary.rpmspath
         self._create_clean_dir(basepath)
