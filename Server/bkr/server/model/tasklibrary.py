@@ -107,6 +107,15 @@ class TaskLibrary(object):
 
     def _update_locked_repo(self):
         # Internal call that assumes the flock is already held
+        # If the createrepo command crashes for some reason it may leave behind 
+        # its work directories. createrepo refuses to run if .olddata exists, 
+        # createrepo_c refuses to run if .repodata exists.
+        workdirs = [os.path.join(self.rpmspath, dirname) for dirname in
+                ['.repodata', '.olddata']]
+        for workdir in workdirs:
+            if os.path.exists(workdir):
+                log.warn('Removing stale createrepo directory %s', workdir)
+                shutil.rmtree(workdir, ignore_errors=True)
         # Removed --baseurl, if upgrading you will need to manually
         # delete repodata directory before this will work correctly.
         command, returncode, out, err = run_createrepo(
@@ -116,8 +125,13 @@ class TaskLibrary(object):
         if err:
             log.warn("stderr from %s: %s", command, err)
         if returncode != 0:
-            raise RuntimeError('Createrepo failed.\nreturncode:%s cmd:%s err:%s'
-                % (returncode, command, err))
+            if returncode < 0:
+                msg = '%s killed with signal %s' % (command, -returncode)
+            else:
+                msg = '%s failed with exit status %s' % (command, returncode)
+            if err:
+                msg = '%s\n%s' % (msg, err)
+            raise RuntimeError(msg)
 
     def update_repo(self):
         """Update the task library yum repo metadata"""
