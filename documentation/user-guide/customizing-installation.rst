@@ -177,6 +177,13 @@ correspond to the similarly-named kickstart option.
     Root password to use. Must be encrypted in the conventional 
     :manpage:`crypt(3)` format.
 
+``remote_post=<url>``
+    Specify a URL to a script to be executed post-install. The script must specify a
+    interpreter using the ``#!`` line if not a bash script. This is especially useful
+    for systems set to Manual mode. If you are scheduling a job, a
+    simpler alternative is to embed a ``%post`` scriptlet directly in your
+    job XML using the ``<ks_append/>`` element.
+
 ``rootfstype``
     Filesystem type for the root filesystem. Default is to allow the installer 
     to choose.
