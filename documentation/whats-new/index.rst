@@ -33,16 +33,35 @@ being upgraded to a new version.
 
        release-1.0/*
 
-Unreleased changes
-------------------
+.. uncomment for develop
 
-The following changes will appear in the next Beaker release.
+    Unreleased changes
+    ------------------
+
+    The following changes will appear in the next Beaker release.
+
+    .. toctree::
+       :maxdepth: 2
+       :glob:
+
+       next/*
+
+
+Beaker 0.17
+-----------
+
+Beaker 0.17 includes two new scheduler features: the capability to schedule 
+recipes on systems even when their condition is Manual or Broken, and 
+a harness-independent mechanism for reserving systems at the end of their 
+recipe.
+This release also brings support for theming Beaker's web UI, and experimental 
+integration with OpenStack for dynamically created VMs.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   next/*
+   release-0.17
+   upgrade-0.17
 
 
 Beaker 0.16
