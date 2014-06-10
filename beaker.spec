@@ -35,9 +35,9 @@ Release:        1%{?dist}
 Summary:        Full-stack software and hardware integration testing system
 Group:          Applications/Internet
 License:        GPLv2+ and BSD
-URL:            http://beaker-project.org/
+URL:            https://beaker-project.org/
 
-Source0:        http://beaker-project.org/releases/%{name}-%{upstream_version}.tar.gz
+Source0:        https://beaker-project.org/releases/%{name}-%{upstream_version}.tar.gz
 # Third-party JS/CSS libraries which are built into Beaker's generated JS/CSS
 # (these are submodules in Beaker's git tree, the commit hashes here should
 # correspond to the submodule commits)
