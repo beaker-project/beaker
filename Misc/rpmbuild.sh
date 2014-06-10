@@ -21,10 +21,10 @@ commitcount=$(git rev-list "$tag..HEAD" | wc -l)
 commitsha=$(git rev-parse --short HEAD)
 if [ "$commitcount" -gt 0 ] ; then
     # git builds count as a pre-release of the next version
-    rel="${version##*.}"
-    rpmver="${version%.*}.$((${rel:0:1} + 1))${rel:1}"
+    version="${version%%[a-z]*}" # strip non-numeric suffixes like "rc1"
+    rpmver="${version%.*}.$((${version##*.} + 1))"
     rpmrel="0.git.${commitcount}.${commitsha}"
-    version="${version%.*}.$((${rel:0:1} + 1))${rel:1}.git.${commitcount}.${commitsha}"
+    version="${version%.*}.$((${version##*.} + 1)).git.${commitcount}.${commitsha}"
 fi
 
 workdir="$(mktemp -d)"
