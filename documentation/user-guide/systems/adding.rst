@@ -30,35 +30,8 @@ available in your lab.
 The DHCP configuration must also include suitable netboot options for the 
 system. Typically DHCP option 66 ("TFTP server") is set to the address of the 
 lab controller and option 67 ("bootfile") is set to ``pxelinux.0`` or some 
-other boot loader image served by the lab controller.
-
-Boot loader image
------------------
-
-Some commonly used network boot loaders are listed below.
-
-==================================== ====================== =========
-System type                          Filename               Project
-==================================== ====================== =========
-x86-based systems with BIOS firmware :file:`pxelinux.0`     Syslinux_
-x86-based systems with EFI firmware  :file:`grub/grub.efi`  GRUB_
-IA64 systems                         :file:`elilo-ia64.efi` ELILO_
-PowerPC systems                      :file:`yaboot`         Yaboot_
-==================================== ====================== =========
-
-.. _Syslinux: http://www.syslinux.org/
-.. _GRUB: http://www.gnu.org/software/grub/
-.. _ELILO: http://elilo.sourceforge.net/
-.. _Yaboot: http://yaboot.ozlabs.org/
-
-If Syslinux is installed on the lab controller, :program:`beaker-provision` 
-will populate :file:`pxelinux.0` on startup by copying it from the system-wide 
-installation. Otherwise, the Beaker administrator must manually add the 
-necessary boot loader images to the TFTP root directory.
-
-The Cobbler project provides `pre-compiled binaries of common boot loaders 
-<https://github.com/cobbler/cobbler.github.com/tree/master/loaders>`__. Many 
-Linux distributions also package these boot loaders.
+other boot loader image served by the lab controller (see 
+:ref:`boot-loader-images`).
 
 Power control
 -------------

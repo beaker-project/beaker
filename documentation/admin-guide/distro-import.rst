@@ -47,6 +47,8 @@ more specific jobs that you might find useful.
 .. note:: The ``updateDistro`` script assumes that the Beaker client is 
    correctly configured on the lab controller. See :ref:`installing-bkr-client`.
 
+.. _pxe-menu:
+
 Generating a PXE menu
 ---------------------
 

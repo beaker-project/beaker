@@ -30,6 +30,7 @@ Contents
    installation
    upgrading
    config-files
+   tftp
    distro-import
    interface
    kickstarts
