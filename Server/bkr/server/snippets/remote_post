@@ -5,6 +5,4 @@ wget --tries 20 -O remote_script {{ url }} && chmod +x remote_script && ./remote
 {% else %}
 curl --retry 20 -o remote_script {{ url }} && chmod +x remote_script && ./remote_script
 {% endif %}
-#https://bugzilla.redhat.com/show_bug.cgi?id=1107915
-exit 0
 {% endif %}
