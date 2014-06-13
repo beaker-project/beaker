@@ -99,7 +99,6 @@ chrony
 {% snippet 'rhts_post' %}
 {% snippet 'Fedora_post' %}
 {% snippet 'system_post' %}
-{% snippet 'remote_post' %}
 %end
 
 {{ ks_appends|join('\n') }}

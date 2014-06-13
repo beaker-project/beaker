@@ -90,7 +90,6 @@ unsupported_hardware
 {% if recipe.systemtype == 'Virtual' %}
 {% snippet 'virt_console_post' %}
 {% endif %}
-{% snippet 'remote_post' %}
 %end
 
 {{ ks_appends|join('\n') }}

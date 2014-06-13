@@ -105,7 +105,6 @@ xkeyboard-config
 {% snippet 'rhts_post' %}
 {% snippet 'RedHatEnterpriseLinuxServer5_post' %}
 {% snippet 'system_post' %}
-{% snippet 'remote_post' %}
 
 {{ ks_appends|join('\n') }}
 {% snippet 'post_s390_reboot' %}

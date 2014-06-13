@@ -146,6 +146,7 @@ useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82
 {% snippet 'mvebu' %}
 {% endif %}
 {% if recipe %}
+{% snippet 'remote_post' %}
 # Check in with Beaker Server, record our postinstall time.
 {% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
 wget -O - http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}

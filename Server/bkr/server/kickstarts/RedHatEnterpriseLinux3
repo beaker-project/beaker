@@ -79,7 +79,6 @@ PATH=/usr/bin:$PATH
 {% snippet 'rhts_post' %}
 {% snippet 'RedHatEnterpriseLinux3_post' %}
 {% snippet 'system_post' %}
-{% snippet 'remote_post' %}
 ) 2>&1 | /usr/bin/tee /dev/console
 
 {{ ks_appends|join('\n') }}
