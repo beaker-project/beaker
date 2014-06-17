@@ -154,15 +154,9 @@ def configure_aarch64(fqdn, kernel_options):
     """
     Creates PXE bootloader files for aarch64 Linux
 
-    <get_tftp_root()>/pxelinux/grub.cfg-<pxe_basename(fqdn)>
-
-    Also ensures <fqdn>.efi is symlinked to bootaa64.efi
-
-    Specify filename "pxelinux/<fqdn>.efi"; in your dhcpd.conf file
-    We remove this when the install is done.  This allows efi
-    to fall through to the next boot entry.
+    <get_tftp_root()>/aarch64/grub.cfg-<pxe_basename(fqdn)>
     """
-    pxe_base = os.path.join(get_tftp_root(), 'pxelinux')
+    pxe_base = os.path.join(get_tftp_root(), 'aarch64')
     makedirs_ignore(pxe_base, mode=0755)
     devicetree, kernel_options = extract_arg('devicetree=', kernel_options)
     if devicetree:
@@ -178,18 +172,17 @@ def configure_aarch64(fqdn, kernel_options):
     logger.debug('Writing aarch64 config for %s as %s', fqdn, basename)
     with atomically_replaced_file(os.path.join(pxe_base, basename)) as f:
         f.write(config)
-    atomic_symlink('bootaa64.efi', os.path.join(pxe_base, "%s.efi" % fqdn))
+    # We also ensure a default config exists that exits
+    write_ignore(os.path.join(pxe_base, 'grub.cfg'), 'exit\n')
 
 def clear_aarch64(fqdn):
     """
     Removes PXE bootloader file created by configure_aarch64
     """
-    pxe_base = os.path.join(get_tftp_root(), 'pxelinux')
+    pxe_base = os.path.join(get_tftp_root(), 'aarch64')
     basename = "grub.cfg-%s" % pxe_basename(fqdn)
     logger.debug('Removing aarch64 config for %s as %s', fqdn, basename)
-    unlink_ignore(os.path.join(pxe_base, "%s.efi" % fqdn))
     unlink_ignore(os.path.join(pxe_base, basename))
-    # XXX Should we save a default config, the way we do for non-aarch64 PXE?
 
 
 ### Bootloader config: PXE Linux for ARM
