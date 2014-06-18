@@ -15,7 +15,7 @@ bkr system-release: Release a reserved Beaker system
 Synopsis
 --------
 
-:program:`bkr system-release` [*options*] <fqdn>
+:program:`bkr system-release` [*options*] <fqdn>...
 
 Description
 -----------
@@ -47,6 +47,10 @@ it::
     # do some work on the system
     bkr system-release system1.example.invalid
 
+Release more than one system::
+
+    bkr system-release system1.example.invalid system2.example.invalid
+
 See also
 --------
 
@@ -60,12 +64,9 @@ class System_Release(BeakerCommand):
     enabled = True
 
     def options(self):
-        self.parser.usage = "%%prog %s [options] <fqdn>" % self.normalized_name
+        self.parser.usage = "%%prog %s [options] <fqdn>..." % self.normalized_name
 
     def run(self, *args, **kwargs):
-        if len(args) != 1:
-            self.parser.error('Exactly one system fqdn must be given')
-        fqdn = args[0]
-
         self.set_hub(**kwargs)
-        self.hub.systems.release(fqdn)
+        for fqdn in args:
+            self.hub.systems.release(fqdn)
