@@ -63,7 +63,7 @@ class RPCRoot(controllers.Controller):
         except Invalid, e:
              session.rollback()
              response = xmlrpclib.dumps(xmlrpclib.Fault(1, str(e)))
-        except:
+        except Exception:
             session.rollback()
             log.exception('Error handling XML-RPC method')
             # Some other error; send back some error info
