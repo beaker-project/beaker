@@ -61,32 +61,14 @@ title ${distro_name} ${variant} ${arch}
     initrd /distrotrees/${distro_tree_id}/initrd
 ''')
 
-def main():
-    parser = OptionParser(description='''Writes a netboot menu to the TFTP root
-directory, containing distros from Beaker. Supports menu.c32 from SYSLINUX
-(for PXE systems) and the EFI GRUB boot menu (for EFI systems).''')
-    parser.add_option('--tag', metavar='TAG', action='append', dest='tags',
-            help='Only include distros tagged with TAG')
-    parser.add_option('--xml-filter', metavar='XML',
-            help='Only include distro trees which match the given '
-            'XML filter criteria, as in <distroRequires/>')
-    parser.add_option('--tftp-root', metavar='DIR',
-            default='/var/lib/tftpboot',
-            help='Path to TFTP root directory [default: %default]')
-    parser.add_option('-q', '--quiet', action='store_true',
-            help='Suppress informational output')
-    (opts, args) = parser.parse_args()
-
-    if opts.quiet:
-        os.dup2(os.open('/dev/null', os.O_WRONLY), 1)
-
+def write_menus(tftp_root, tags, xml_filter):
     # The order of steps for cleaning images is important,
     # to avoid races and to avoid deleting stuff we shouldn't:
     # first read the directory,
     # then fetch the list of trees,
     # and then remove any which aren't in the list.
     try:
-        existing_tree_ids = os.listdir(os.path.join(opts.tftp_root, 'distrotrees'))
+        existing_tree_ids = os.listdir(os.path.join(tftp_root, 'distrotrees'))
     except OSError, e:
         if e.errno != errno.ENOENT:
             raise
@@ -95,23 +77,23 @@ directory, containing distros from Beaker. Supports menu.c32 from SYSLINUX
     proxy = xmlrpclib.ServerProxy('http://localhost:8000', allow_none=True)
     distrotrees = proxy.get_distro_trees({
         'arch': ['x86_64', 'i386'],
-        'tags': opts.tags,
-        'xml': opts.xml_filter,
+        'tags': tags,
+        'xml': xml_filter,
     })
 
     obsolete_tree_ids = set(existing_tree_ids).difference(
             str(dt['distro_tree_id']) for dt in distrotrees)
     print 'Removing images for %s obsolete distro trees' % len(obsolete_tree_ids)
     for obs in obsolete_tree_ids:
-        shutil.rmtree(os.path.join(opts.tftp_root, 'distrotrees', obs), ignore_errors=True)
+        shutil.rmtree(os.path.join(tftp_root, 'distrotrees', obs), ignore_errors=True)
 
     print 'Generating menu for %s distro trees' % len(distrotrees)
     osmajors = _group_distro_trees(distrotrees)
-    makedirs_ignore(os.path.join(opts.tftp_root, 'pxelinux.cfg'), mode=0755)
-    pxe_menu = atomically_replaced_file(os.path.join(opts.tftp_root, 'pxelinux.cfg', 'beaker_menu'))
-    makedirs_ignore(os.path.join(opts.tftp_root, 'grub'), mode=0755)
-    atomic_symlink('../distrotrees', os.path.join(opts.tftp_root, 'grub', 'distrotrees'))
-    efi_menu = atomically_replaced_file(os.path.join(opts.tftp_root, 'grub', 'efidefault'))
+    makedirs_ignore(os.path.join(tftp_root, 'pxelinux.cfg'), mode=0755)
+    pxe_menu = atomically_replaced_file(os.path.join(tftp_root, 'pxelinux.cfg', 'beaker_menu'))
+    makedirs_ignore(os.path.join(tftp_root, 'grub'), mode=0755)
+    atomic_symlink('../distrotrees', os.path.join(tftp_root, 'grub', 'distrotrees'))
+    efi_menu = atomically_replaced_file(os.path.join(tftp_root, 'grub', 'efidefault'))
     with contextlib.nested(pxe_menu, efi_menu) as (pxe_menu, efi_menu):
         pxe_menu.write('''default menu
 prompt 0
@@ -139,7 +121,7 @@ menu title %s
                 for distro_tree in distro_trees:
                     url = _get_url(distro_tree['available'])
                     try:
-                        _get_images(opts.tftp_root, distro_tree['distro_tree_id'],
+                        _get_images(tftp_root, distro_tree['distro_tree_id'],
                                 url, distro_tree['images'])
                     except IOError, e:
                         sys.stderr.write('Error fetching images for distro tree %s: %s\n' %
@@ -156,6 +138,26 @@ menu end
             pxe_menu.write('''
 menu end
 ''')
+
+def main():
+    parser = OptionParser(description='''Writes a netboot menu to the TFTP root
+directory, containing distros from Beaker.''')
+    parser.add_option('--tag', metavar='TAG', action='append', dest='tags',
+            help='Only include distros tagged with TAG')
+    parser.add_option('--xml-filter', metavar='XML',
+            help='Only include distro trees which match the given '
+            'XML filter criteria, as in <distroRequires/>')
+    parser.add_option('--tftp-root', metavar='DIR',
+            default='/var/lib/tftpboot',
+            help='Path to TFTP root directory [default: %default]')
+    parser.add_option('-q', '--quiet', action='store_true',
+            help='Suppress informational output')
+    (opts, args) = parser.parse_args()
+    if args:
+        parser.error('This command does not accept any arguments')
+    if opts.quiet:
+        os.dup2(os.open('/dev/null', os.O_WRONLY), 1)
+    write_menus(opts.tftp_root, opts.tags, opts.xml_filter)
     return 0
 
 if __name__ == '__main__':

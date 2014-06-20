@@ -175,8 +175,8 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
     if not name:
         name = unique_name(u'%s.%s-%%s' % (osmajor, osminor))
     distro = Distro.lazy_create(name=name, osversion=osversion)
-    if tags:
-        distro.tags.extend(tags)
+    for tag in (tags or []):
+        distro.add_tag(tag)
     log.debug('Created distro %r', distro)
     harness_dir = os.path.join(turbogears.config.get('basepath.harness'), distro.osversion.osmajor.osmajor)
     if not os.path.exists(harness_dir):
@@ -184,18 +184,13 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
     return distro
 
 def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux6',
-        distro_tags=None, arch=u'i386', variant=u'Server', lab_controllers=None,
-        urls=None):
+        osminor=u'9', distro_tags=None, arch=u'i386', variant=u'Server',
+        lab_controllers=None, urls=None):
     if distro is None:
-        if distro_name is None:
-            distro = create_distro(osmajor=osmajor, tags=distro_tags)
-        else:
-            try:
-                distro = Distro.by_name(distro_name)
-            except DatabaseLookupError:
-                distro = create_distro(name=distro_name)
+        distro = create_distro(name=distro_name, osmajor=osmajor, osminor=osminor,
+                tags=distro_tags)
     distro_tree = DistroTree.lazy_create(distro=distro,
-            arch=Arch.by_name(arch), variant=variant)
+            arch=Arch.lazy_create(arch=arch), variant=variant)
     if distro_tree.arch not in distro.osversion.arches:
         distro.osversion.arches.append(distro_tree.arch)
     DistroTreeRepo.lazy_create(distro_tree=distro_tree,

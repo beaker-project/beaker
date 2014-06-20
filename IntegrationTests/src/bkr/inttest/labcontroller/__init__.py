@@ -34,16 +34,20 @@ def daemons_running_externally():
 
 class LabControllerTestCase(unittest.TestCase):
 
-    def get_lc_fqdn(self):
+    @staticmethod
+    def get_lc_fqdn():
         return lc_fqdn
 
-    def get_lc(self):
-        return LabController.by_name(self.get_lc_fqdn())
+    @staticmethod
+    def get_lc():
+        return LabController.by_name(lc_fqdn)
 
-    def get_proxy_url(self):
+    @staticmethod
+    def get_proxy_url():
         return 'http://%s:8000/' % lc_fqdn
 
-    def get_log_base_url(self):
+    @staticmethod
+    def get_log_base_url():
         protocol = get_conf().get('URL_SCHEME', 'http')
         server_name = get_conf().get_url_domain()
         return '%s://%s' % (protocol, server_name)
