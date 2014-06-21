@@ -30,6 +30,15 @@ from bkr.server.bexceptions import DatabaseLookupError
 log = logging.getLogger(__name__)
 
 _config_loaded = None
+
+def load_config_or_exit(configfile=None):
+    try:
+        load_config(configfile=configfile)
+    except Exception as e:
+        sys.stderr.write('Failed to read server configuration. %s.\n'
+                         'Hint: run this command as root\n' % e)
+        sys.exit(1)
+
 def load_config(configfile=None):
     """ Loads Beaker's configuration and configures logging. """
     setupdir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))

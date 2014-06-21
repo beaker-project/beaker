@@ -25,7 +25,7 @@ import keystoneclient.v2_0.client
 import glanceclient
 from turbogears import config
 from bkr.log import log_to_stream
-from bkr.server.util import load_config, absolute_url
+from bkr.server.util import load_config_or_exit, absolute_url
 from bkr.server.model import session, OpenStackRegion
 
 log = logging.getLogger(__name__)
@@ -89,8 +89,7 @@ def main():
     parser.add_option('--os-tenant-name', help='OpenStack tenant name')
     parser.set_defaults(debug=False, upload=True)
     options, args = parser.parse_args()
-
-    load_config(options.config_file)
+    load_config_or_exit(options.config_file)
     log_to_stream(sys.stderr, level=logging.DEBUG if options.debug else logging.WARNING)
 
     if options.upload:

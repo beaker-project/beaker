@@ -16,7 +16,7 @@ from sqlalchemy.sql import and_
 from sqlalchemy.orm import contains_eager, joinedload
 from bkr.log import log_to_stream
 from bkr.server.model import System, Reservation
-from bkr.server.util import load_config
+from bkr.server.util import load_config_or_exit
 from turbogears import config
 from turbogears.database import get_engine
 from turbomail.control import interface
@@ -56,7 +56,7 @@ def main():
     reservation_type = opts.reservation_type.decode(sys.stdin.encoding or 'utf8')
     testing   = opts.testing
     configfile = opts.configfile
-    load_config(configfile)
+    load_config_or_exit(configfile)
     log_to_stream(sys.stderr)
     interface.start(config)
     get_engine()

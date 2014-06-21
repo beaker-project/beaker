@@ -12,7 +12,7 @@ __requires__ = ['CherryPy < 3.0']
 
 from bkr.log import log_to_stream
 from bkr.server.model import OSMajor
-from bkr.server.util import load_config, run_createrepo
+from bkr.server.util import load_config_or_exit, run_createrepo
 from optparse import OptionParser
 from turbogears.config import get
 import os
@@ -129,7 +129,7 @@ def main():
     # The base URL is always a directory with a trailing slash
     if not baseurl.endswith('/'):
         baseurl += '/'
-    load_config(configfile)
+    load_config_or_exit(configfile)
     log_to_stream(sys.stderr, level=logging.DEBUG if opts.debug else logging.WARNING)
     if opts.basepath:
         basepath = opts.basepath

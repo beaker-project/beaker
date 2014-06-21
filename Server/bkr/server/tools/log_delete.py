@@ -21,7 +21,7 @@ from bkr.common import __version__
 from bkr.log import log_to_stream
 from optparse import OptionParser
 from bkr.server.model import Job
-from bkr.server.util import load_config
+from bkr.server.util import load_config_or_exit
 from turbogears.database import session
 import logging
 
@@ -73,7 +73,8 @@ def main(argv=None):
         help='Set a limit on the number of jobs whose logs will be deleted')
     parser.set_defaults(verbose=False, debug=False, dry_run=False)
     options, args = parser.parse_args(argv)
-    load_config(options.config)
+    load_config_or_exit(options.config)
+
     # urllib3 installs a NullHandler, we can just remove it and let the messages propagate
     logging.getLogger('requests.packages.urllib3').handlers[:] = []
     log_to_stream(sys.stderr, level=logging.DEBUG if options.debug else logging.WARNING)

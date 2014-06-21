@@ -10,7 +10,7 @@ from turbogears.database import session
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.common import __version__
 from bkr.server.model import DistroTree, System, User, Recipe
-from bkr.server.util import load_config
+from bkr.server.util import load_config_or_exit
 from bkr.server.installopts import InstallOptions
 from bkr.server.kickstart import generate_kickstart, template_env, add_to_template_searchpath
 
@@ -49,7 +49,7 @@ def main(*args):
         elif not options.system:
             parser.error('Must specify a system when not specifying a recipe')
 
-    load_config()
+    load_config_or_exit()
     with session.begin():
         user = User.by_user_name(options.user)
         ks_appends = None
