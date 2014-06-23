@@ -29,3 +29,11 @@ available for viewing and deleting as they would be on the archive server.
 Ensure that the HTTP server on the lab controller is configured to allow the
 same level of access to the log files as is afforded the archive server.
 
+The Apache configuration included with Beaker for serving logs from the lab 
+controller includes this section, to ensure that log files are not 
+misinterpreted as binary files. Apply the same configuration to the archive 
+server::
+
+    <Files "*.log">
+        ForceType text/plain
+    </Files>
