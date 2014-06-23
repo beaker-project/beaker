@@ -49,27 +49,27 @@ more specific jobs that you might find useful.
 
 .. _pxe-menu:
 
-Generating a PXE menu
----------------------
+Generating a boot menu
+----------------------
 
 Beaker includes a command, ``beaker-pxemenu``, which can be run on the lab 
-controller to generate a PXELINUX-compatible boot menu listing the distros in 
-Beaker. Users in the lab can then perform manual installations by selecting 
-a distro from the menu. The menu is written to ``pxelinux.cfg/beaker_menu`` in 
-the TFTP root directory.
+controller to generate a boot menu containing the distros in Beaker. Users in 
+the lab can then perform manual installations by selecting a distro from the 
+menu. Boot menus are generated for ``menu.c32`` (PXELINUX), EFI GRUB, and 
+64-bit ARM.
 
 You can limit the menu to only contain distros tagged in Beaker with a
 certain tag, by passing the ``--tag`` option to ``beaker-pxemenu``. By
 default, all distros which are available in the lab are included in the
-PXE menu.
+menu.
 
 .. note:: If you have configured a non-default TFTP root directory in 
    ``/etc/beaker/labcontroller.conf``, be sure to pass that same directory in 
    the ``--tftp-root`` option to ``beaker-pxemenu``.
 
-If using the PXE menu, you should configure ``pxelinux.cfg/default`` to
-boot from local disk by default, with an option to load the menu. For
-example::
+If you are using a boot menu, you should edit the PXELINUX default 
+configuration :file:`pxelinux.cfg/default` to boot from local disk by default, 
+with an option to load the menu. For example::
 
     default local
     prompt 1
@@ -86,6 +86,19 @@ example::
     label menu
         kernel menu.c32
         append pxelinux.cfg/beaker_menu
+
+Similarly, you should edit the default configuration for 64-bit ARM 
+:file:`aarch64/grub.cfg` to exit after a timeout, with an option to load the 
+menu. For example::
+
+    set default="Exit PXE"
+    set timeout=10
+    menuentry "Exit PXE" {
+        exit
+    }
+    menuentry "Install distro from Beaker" {
+        configfile aarch64/beaker_menu.cfg
+    }
 
 If your site imports distros into Beaker infrequently, you may prefer to
 run ``beaker-pxemenu`` after importing new distros. Otherwise, you can

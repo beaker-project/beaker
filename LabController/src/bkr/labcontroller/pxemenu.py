@@ -61,6 +61,13 @@ title ${distro_name} ${variant} ${arch}
     initrd /distrotrees/${distro_tree_id}/initrd
 ''')
 
+aarch64_menu_entry_template = string.Template('''
+menuentry "${distro_name} ${variant} ${arch}" {
+    linux /distrotrees/${distro_tree_id}/kernel method=${url} repo=${url}
+    initrd /distrotrees/${distro_tree_id}/initrd
+}
+''')
+
 def write_menus(tftp_root, tags, xml_filter):
     # The order of steps for cleaning images is important,
     # to avoid races and to avoid deleting stuff we shouldn't:
@@ -75,20 +82,26 @@ def write_menus(tftp_root, tags, xml_filter):
         existing_tree_ids = []
 
     proxy = xmlrpclib.ServerProxy('http://localhost:8000', allow_none=True)
-    distrotrees = proxy.get_distro_trees({
+    x86_distrotrees = proxy.get_distro_trees({
         'arch': ['x86_64', 'i386'],
         'tags': tags,
         'xml': xml_filter,
     })
+    aarch64_distrotrees = proxy.get_distro_trees({
+        'arch': ['aarch64'],
+        'tags': tags,
+        'xml': xml_filter,
+    })
 
-    obsolete_tree_ids = set(existing_tree_ids).difference(
-            str(dt['distro_tree_id']) for dt in distrotrees)
+    current_tree_ids = set(str(dt['distro_tree_id'])
+            for dt in x86_distrotrees + aarch64_distrotrees)
+    obsolete_tree_ids = set(existing_tree_ids).difference(current_tree_ids)
     print 'Removing images for %s obsolete distro trees' % len(obsolete_tree_ids)
     for obs in obsolete_tree_ids:
         shutil.rmtree(os.path.join(tftp_root, 'distrotrees', obs), ignore_errors=True)
 
-    print 'Generating menu for %s distro trees' % len(distrotrees)
-    osmajors = _group_distro_trees(distrotrees)
+    print 'Generating PXELINUX and EFI GRUB menus for %s distro trees' % len(x86_distrotrees)
+    osmajors = _group_distro_trees(x86_distrotrees)
     makedirs_ignore(os.path.join(tftp_root, 'pxelinux.cfg'), mode=0755)
     pxe_menu = atomically_replaced_file(os.path.join(tftp_root, 'pxelinux.cfg', 'beaker_menu'))
     makedirs_ignore(os.path.join(tftp_root, 'grub'), mode=0755)
@@ -138,6 +151,40 @@ menu end
             pxe_menu.write('''
 menu end
 ''')
+
+    if aarch64_distrotrees:
+        print 'Generating aarch64 menu for %s distro trees' % len(aarch64_distrotrees)
+        osmajors = _group_distro_trees(aarch64_distrotrees)
+        makedirs_ignore(os.path.join(tftp_root, 'aarch64'), mode=0755)
+        aarch64_menu = atomically_replaced_file(os.path.join(tftp_root, 'aarch64', 'beaker_menu.cfg'))
+        with aarch64_menu as aarch64_menu:
+            aarch64_menu.write('''set default="Exit PXE"
+set timeout=60
+menuentry "Exit PXE" {
+    exit
+}
+''')
+
+            for osmajor, osversions in sorted(osmajors.iteritems(), reverse=True):
+                print 'Writing submenu %s' % osmajor
+                aarch64_menu.write('\nsubmenu "%s" {\n' % osmajor)
+                for osversion, distro_trees in sorted(osversions.iteritems(), reverse=True):
+                    print 'Writing submenu %s -> %s' % (osmajor, osversion)
+                    aarch64_menu.write('\nsubmenu "%s" {\n' % osversion)
+                    for distro_tree in distro_trees:
+                        url = _get_url(distro_tree['available'])
+                        try:
+                            _get_images(tftp_root, distro_tree['distro_tree_id'],
+                                    url, distro_tree['images'])
+                        except IOError, e:
+                            sys.stderr.write('Error fetching images for distro tree %s: %s\n' %
+                                    (distro_tree['distro_tree_id'], e))
+                        else:
+                            print 'Writing menu entry for distro tree %s' % distro_tree['distro_tree_id']
+                            aarch64_menu.write(aarch64_menu_entry_template.substitute(
+                                    distro_tree, url=url))
+                    aarch64_menu.write('\n}\n')
+                aarch64_menu.write('\n}\n')
 
 def main():
     parser = OptionParser(description='''Writes a netboot menu to the TFTP root
