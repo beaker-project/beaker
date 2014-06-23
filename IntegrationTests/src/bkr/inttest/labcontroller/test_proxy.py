@@ -917,6 +917,23 @@ class LogUploadTest(LabControllerTestCase):
                 open(os.path.join(local_log_dir, 'empty-log'), 'r').read(),
                 '')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1003454
+    def test_large_xmlrpc_request_is_rejected(self):
+        s = xmlrpclib.ServerProxy(self.get_proxy_url())
+        try:
+            s.task_upload_file(123, 'debug', '.task_beah_raw', 4096, '', 1024,
+                    'a' * (1024 * 1024 * 10 + 1))
+            self.fail('should raise')
+        except xmlrpclib.ProtocolError as e:
+            self.assertEquals(e.errcode, 413)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1003454
+    def test_large_PUT_request_is_rejected(self):
+        upload_url = '%srecipes/%s/logs/asdf' % (self.get_proxy_url(),
+                self.recipe.id)
+        response = requests.put(upload_url, data='a' * (1024 * 1024 * 10 + 1))
+        self.assertEquals(response.status_code, 413)
+
 class LogIndexTest(LabControllerTestCase):
 
     def setUp(self):

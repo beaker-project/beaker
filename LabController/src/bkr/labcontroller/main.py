@@ -46,6 +46,9 @@ class XMLRPCDispatcher(SimpleXMLRPCDispatcher, XMLRPCDocGenerator):
         logger.debug('Time: %s %s %s', datetime.utcnow() - start, str(method), str(params)[0:50])
         return result
 
+class LimitedRequest(Request):
+    max_content_length = 10 * 1024 * 1024 # 10MB
+
 class WSGIApplication(object):
 
     def __init__(self, proxy):
@@ -95,30 +98,31 @@ class WSGIApplication(object):
                     endpoint=(self.proxy_http, 'do_result_log')),
         ])
 
-    @Request.application
+    @LimitedRequest.application
     def __call__(self, req):
-        if req.path in ('/', '/RPC2', '/server'):
-            if req.method == 'POST':
-                # XML-RPC
-                if req.content_type != 'text/xml':
-                    return BadRequest('XML-RPC requests must be text/xml')
-                result = self.xmlrpc_dispatcher._marshaled_dispatch(req.data)
-                return Response(response=result, content_type='text/xml')
-            elif req.method in ('GET', 'HEAD'):
-                # XML-RPC docs
-                return Response(
-                        response=self.xmlrpc_dispatcher.generate_html_documentation(),
-                        content_type='text/html')
-            else:
-                return MethodNotAllowed()
         try:
-            (obj, attr), args = self.url_map.bind_to_environ(req.environ).match()
-            if obj is self.proxy:
-                # pseudo-XML-RPC
-                result = getattr(obj, attr)(**args)
-                return Response(response=repr(result), content_type='text/plain')
+            if req.path in ('/', '/RPC2', '/server'):
+                if req.method == 'POST':
+                    # XML-RPC
+                    if req.content_type != 'text/xml':
+                        return BadRequest('XML-RPC requests must be text/xml')
+                    result = self.xmlrpc_dispatcher._marshaled_dispatch(req.data)
+                    return Response(response=result, content_type='text/xml')
+                elif req.method in ('GET', 'HEAD'):
+                    # XML-RPC docs
+                    return Response(
+                            response=self.xmlrpc_dispatcher.generate_html_documentation(),
+                            content_type='text/html')
+                else:
+                    return MethodNotAllowed()
             else:
-                return getattr(obj, attr)(req, **args)
+                (obj, attr), args = self.url_map.bind_to_environ(req.environ).match()
+                if obj is self.proxy:
+                    # pseudo-XML-RPC
+                    result = getattr(obj, attr)(**args)
+                    return Response(response=repr(result), content_type='text/plain')
+                else:
+                    return getattr(obj, attr)(req, **args)
         except HTTPException, e:
             return e
 
