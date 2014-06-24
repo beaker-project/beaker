@@ -11,7 +11,8 @@ import xmltramp
 import crypt
 from bkr.server import dynamic_virt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
-        CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch
+        CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch, \
+        Key, Key_Value_String
 from bkr.server.kickstart import template_env, generate_kickstart
 from bkr.server.jobs import Jobs
 from bkr.server.jobxml import XmlJob
@@ -2339,6 +2340,35 @@ part /mnt/testarea1 --size=10240 --fstype btrfs
 part /mnt/testarea2 --size=10240 --fstype btrfs
 ''',
                      recipe.rendered_kickstart.kickstart)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1088761
+    def test_x86_efi_partition(self):
+        efi_system = data_setup.create_system(arch=u'x86_64',
+                status=u'Automated', lab_controller=self.lab_controller)
+        efi_system.key_values_string.append(Key_Value_String(
+                key=Key.by_name(u'NETBOOT_METHOD'), key_value=u'efigrub'))
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="ext4" name="mnt" size="10" />
+                        </partitions>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', efi_system)
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('\npart /boot/efi --fstype vfat ', ks)
+        self.assertNotIn('\npart /boot ', ks)
 
     def test_anamon(self):
         # Test that we can override the anamon URL

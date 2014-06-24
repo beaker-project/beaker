@@ -21,6 +21,16 @@ part None --fstype 'PPC PReP Boot' --size 8
 part /boot --size 200 --recommended --asprimary
 {%- if fstype %} --fstype {{ fstype }}{% endif %}
 {%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
+{% elif distro_tree is arch('i386', 'x86_64') %}
+{% if system and system.has_efi %}
+{# x86 EFI #}
+part /boot/efi --fstype vfat --size 200 --recommended
+{% else %}
+{# x86 BIOS #}
+part /boot --size 200 --recommended --asprimary
+{%- if fstype %} --fstype {{ fstype }}{% endif %}
+{%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
+{% endif %}
 {% else %}
 part /boot --size 200 --recommended --asprimary
 {%- if fstype %} --fstype {{ fstype }}{% endif %}

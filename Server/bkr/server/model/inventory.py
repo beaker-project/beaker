@@ -547,6 +547,23 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     result = result.combined_with(pfu_opts)
         return result
 
+    @property
+    def has_efi(self):
+        """
+        Only relevant for x86 systems. Returns True if the system has EFI 
+        firmware, False if the system has BIOS-compatible firmware (or EFI 
+        firmware running in BIOS-compatible mode, which is effectively the same 
+        thing from software's point of view).
+
+        When no information is available we return False by default, since 
+        BIOS-based systems are currently much more common.
+        """
+        # Currently we just examine NETBOOT_METHOD which is a hack,
+        # this bug is about doing something better:
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1112439
+        return any(kv.key.key_name == u'NETBOOT_METHOD' and kv.key_value == u'efigrub'
+                for kv in self.key_values_string)
+
     @hybrid_method
     def is_free(self, user):
         self._ensure_user_is_authenticated(user)
