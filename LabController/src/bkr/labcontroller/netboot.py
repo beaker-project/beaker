@@ -110,12 +110,13 @@ def fetch_images(distro_tree_id, kernel_url, initrd_url, fqdn):
             raise
     # No luck there, so try something else...
 
+    timeout = get_conf().get('IMAGE_FETCH_TIMEOUT')
     logger.debug('Fetching kernel %s for %s', kernel_url, fqdn)
     with atomically_replaced_file(os.path.join(images_dir, 'kernel')) as dest:
-        siphon(urllib2.urlopen(kernel_url), dest)
+        siphon(urllib2.urlopen(kernel_url, timeout=timeout), dest)
     logger.debug('Fetching initrd %s for %s', initrd_url, fqdn)
     with atomically_replaced_file(os.path.join(images_dir, 'initrd')) as dest:
-        siphon(urllib2.urlopen(initrd_url), dest)
+        siphon(urllib2.urlopen(initrd_url, timeout=timeout), dest)
 
 def have_images(fqdn):
     return os.path.exists(os.path.join(get_tftp_root(), 'images', fqdn))

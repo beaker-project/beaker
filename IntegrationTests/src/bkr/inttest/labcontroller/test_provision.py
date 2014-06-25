@@ -4,13 +4,15 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import sys
 import time
 import logging
+import pkg_resources
 from turbogears.database import session
 from nose.plugins.skip import SkipTest
 from bkr.server.model import LabController, PowerType, CommandStatus
 from bkr.labcontroller.config import get_conf
-from bkr.inttest import data_setup
+from bkr.inttest import data_setup, Process
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.labcontroller import LabControllerTestCase, processes, \
         daemons_running_externally
@@ -18,12 +20,13 @@ from bkr.server.model import System, User
 
 log = logging.getLogger(__name__)
 
-def wait_for_commands_completed(system, timeout):
-    def _commands_completed():
+def wait_for_commands_to_finish(system, timeout):
+    def _commands_finished():
         with session.begin():
             session.expire_all()
-            return system.command_queue[0].status == CommandStatus.completed
-    wait_for_condition(_commands_completed, timeout=timeout)
+            return system.command_queue[0].status in \
+                    (CommandStatus.completed, CommandStatus.failed)
+    wait_for_condition(_commands_finished, timeout=timeout)
 
 def assert_command_is_delayed(command, min_delay, timeout):
     """
@@ -98,7 +101,7 @@ class PowerTest(LabControllerTestCase):
                 system.power.power_id = u'' # make power script not sleep
                 system.power.delay_until = None
                 system.action_power(action=u'off', service=u'testdata')
-            wait_for_commands_completed(system, timeout=10)
+            wait_for_commands_to_finish(system, timeout=10)
         finally:
             provision_output = provision_process.finish_output_capture()
         self.assertIn('Entering quiescent period, delaying 1 seconds for '
@@ -110,7 +113,7 @@ class PowerTest(LabControllerTestCase):
                 system = System.by_id(system.id, User.by_user_name('admin'))
                 system.power.power_quiescent_period = 10
                 system.action_power(action=u'on', service=u'testdata')
-            wait_for_commands_completed(system, timeout=15)
+            wait_for_commands_to_finish(system, timeout=15)
         finally:
             provision_output = provision_process.finish_output_capture()
         self.assertIn('Entering quiescent period', provision_output)
@@ -131,7 +134,7 @@ class PowerTest(LabControllerTestCase):
                 system.power.power_id = u'' # make power script not sleep
                 system.power.delay_until = None
                 system.action_power(action=u'off', service=u'testdata')
-            wait_for_commands_completed(system, timeout=10)
+            wait_for_commands_to_finish(system, timeout=10)
         finally:
             provision_output = provision_process.finish_output_capture()
         self.assertIn('Entering quiescent period, delaying 1 seconds for '
@@ -143,7 +146,7 @@ class PowerTest(LabControllerTestCase):
             with session.begin():
                 system = System.by_id(system.id, User.by_user_name('admin'))
                 system.action_power(action=u'off', service=u'testdata')
-            wait_for_commands_completed(system, timeout=10)
+            wait_for_commands_to_finish(system, timeout=10)
         finally:
             provision_output = provision_process.finish_output_capture()
         self.assertNotIn('Entering queiscent period', provision_output)
@@ -166,7 +169,7 @@ class PowerTest(LabControllerTestCase):
             system.action_power(action=u'off', service=u'testdata')
             system.action_power(action=u'off', service=u'testdata')
             system.action_power(action=u'off', service=u'testdata')
-        wait_for_commands_completed(system, timeout=5 * power_sleep)
+        wait_for_commands_to_finish(system, timeout=5 * power_sleep)
         with session.begin():
             session.expire_all()
             self.assertEquals(system.command_queue[0].status, CommandStatus.completed)
@@ -191,7 +194,7 @@ class PowerTest(LabControllerTestCase):
                 system.power.power_id = u'' # make power script not sleep
                 system.power.power_passwd = None
                 system.action_power(action=u'off', service=u'testdata')
-            wait_for_commands_completed(system, timeout=2 * get_conf().get('SLEEP_TIME'))
+            wait_for_commands_to_finish(system, timeout=2 * get_conf().get('SLEEP_TIME'))
         finally:
             provision_output = provision_process.finish_output_capture()
         # The None type is passed in from the db. Later in the code it is converted
@@ -211,9 +214,41 @@ class PowerTest(LabControllerTestCase):
                 system.power.power_id = u'' # make power script not sleep
                 system.power.power_passwd = u'dontleakmebro'
                 system.action_power(action=u'off', service=u'testdata')
-            wait_for_commands_completed(system, timeout=2 * get_conf().get('SLEEP_TIME'))
+            wait_for_commands_to_finish(system, timeout=2 * get_conf().get('SLEEP_TIME'))
         finally:
             provision_output = provision_process.finish_output_capture()
         self.assert_('Handling command' in provision_output, provision_output)
         self.assert_('Launching power script' in provision_output, provision_output)
         self.assert_(system.power.power_passwd not in provision_output, provision_output)
+
+class ConfigureNetbootTest(LabControllerTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.distro_server = Process('http_server.py', args=[sys.executable,
+                    pkg_resources.resource_filename('bkr.inttest', 'http_server.py'),
+                    '--base', '/notexist'],
+                listen_port=19998)
+        cls.distro_server.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.distro_server.stop()
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1094553
+    def test_timeout_is_enforced_for_fetching_images(self):
+        with session.begin():
+            lc = self.get_lc()
+            system = data_setup.create_system(arch=u'x86_64', lab_controller=lc)
+            distro_tree = data_setup.create_distro_tree(arch=u'x86_64',
+                    lab_controllers=[lc],
+                    # /slow/600 means the response will be delayed 10 minutes
+                    urls=['http://localhost:19998/slow/600/'])
+            system.configure_netboot(distro_tree=distro_tree,
+                    kernel_options=u'', service=u'testdata')
+        wait_for_commands_to_finish(system, timeout=(2 * get_conf().get('SLEEP_TIME')
+                + get_conf().get('IMAGE_FETCH_TIMEOUT')))
+        self.assertEquals(system.command_queue[0].action, u'configure_netboot')
+        self.assertEquals(system.command_queue[0].status, CommandStatus.failed)
+        self.assertEquals(system.command_queue[0].new_value,
+                u'URLError: <urlopen error timed out>')

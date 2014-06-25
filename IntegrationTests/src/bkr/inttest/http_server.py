@@ -13,10 +13,18 @@ It also treats the following paths specially:
 
 /redirect/<status>/<path>
     Responds with a <status> redirect to <path>.
+
+/error/<status>[/...]
+    Responds with a <status> error. Extra path information is ignored.
+
+/slow/<delay>[/...]
+    Waits <delay> seconds and then responds with a dummy response body. Extra 
+    path information is ignored.
 """
 
 import os, os.path
 import re
+import time
 import shutil
 import urlparse
 import wsgiref.util, wsgiref.simple_server
@@ -36,6 +44,15 @@ class Application(object):
         if m:
             start_response('%s Redirected' % m.group(1), [('Location',
                     wsgiref.util.application_uri(environ) + m.group(2))])
+            return []
+        m = re.match(r'/error/(\d+)(/?.*)$', path_info)
+        if m:
+            start_response('%s Error' % m.group(1), [])
+            return []
+        m = re.match(r'/slow/(\d+)(/?.*)$', path_info)
+        if m:
+            time.sleep(int(m.group(1)))
+            start_response('204 No Content', [])
             return []
         localpath = os.path.join(self.basepath, path_info.lstrip('/'))
         if os.path.isdir(localpath) and not environ['PATH_INFO'].endswith('/'):
