@@ -5,6 +5,7 @@
 # (at your option) any later version.
 
 import unittest2 as unittest
+import pkg_resources
 import datetime
 import os
 import errno
@@ -176,10 +177,10 @@ class RemoteLogDeletionTest(unittest.TestCase):
         else:
             self.logs_dir = tempfile.mkdtemp(prefix='beaker-test-log-delete')
             self.recipe_logs_dir = os.path.join(self.logs_dir, 'recipe')
-            self.archive_server = Process('archive_server.py',
-                    args=['python', os.path.join(os.path.dirname(__file__), '..', '..', 'archive_server.py'),
-                          '--base', self.logs_dir],
-                listen_port=19998)
+            self.archive_server = Process('http_server.py', args=[sys.executable,
+                        pkg_resources.resource_filename('bkr.inttest', 'http_server.py'),
+                        '--base', self.logs_dir, '--writable'],
+                    listen_port=19998)
             self.archive_server.start()
             self.log_server = 'localhost:19998'
             self.log_server_url = 'http://%s' % self.log_server

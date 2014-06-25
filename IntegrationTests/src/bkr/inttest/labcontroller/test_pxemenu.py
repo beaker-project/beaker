@@ -24,8 +24,9 @@ class PxemenuTest(LabControllerTestCase):
         open(os.path.join(cls.distro_dir, 'pxeboot/vmlinuz'), 'w').write('lol')
         open(os.path.join(cls.distro_dir, 'pxeboot/initrd'), 'w').write('lol')
         cls.distro_server = Process('http_server.py', args=[sys.executable,
-                    pkg_resources.resource_filename('bkr.inttest', 'http_server.py')],
-                listen_port=19998, exec_dir=cls.distro_dir)
+                    pkg_resources.resource_filename('bkr.inttest', 'http_server.py'),
+                    '--base', cls.distro_dir],
+                listen_port=19998)
         cls.distro_server.start()
         cls.tftp_dir = tempfile.mkdtemp()
 
