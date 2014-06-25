@@ -32,6 +32,8 @@ class Menu(WebDriverTestCase):
         b.find_element_by_xpath('//title[text()="Available Systems"]')
         click_menu_item(b, 'Systems', 'Free')
         b.find_element_by_xpath('//title[text()="Free Systems"]')
+        click_menu_item(b, 'Systems', 'Reserve')
+        b.find_element_by_xpath('//title[text()="Reserve Workflow"]')
         click_menu_item(b, 'Devices', 'All')
         b.find_element_by_xpath('//title[text()="Devices"]')
         click_menu_item(b, 'Devices', 'IDE')
