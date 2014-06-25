@@ -21,6 +21,7 @@ commitcount=$(git rev-list "$tag..HEAD" | wc -l)
 commitsha=$(git rev-parse --short HEAD)
 if [ "$commitcount" -gt 0 ] ; then
     # git builds count as a pre-release of the next version
+    version="${version%%[a-z]*}" # strip non-numeric suffixes like "rc1"
     rpmver="${version%.*}.$((${version##*.} + 1))"
     rpmrel="0.git.${commitcount}.${commitsha}"
     version="${version%.*}.$((${version##*.} + 1)).git.${commitcount}.${commitsha}"

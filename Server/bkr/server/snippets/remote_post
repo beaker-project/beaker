@@ -1,0 +1,8 @@
+{% if remote_post is defined %}
+{% set url = remote_post|shell_quoted %}
+{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
+wget --tries 20 -O remote_script {{ url }} && chmod +x remote_script && ./remote_script
+{% else %}
+curl --retry 20 -o remote_script {{ url }} && chmod +x remote_script && ./remote_script
+{% endif %}
+{% endif %}

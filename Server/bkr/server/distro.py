@@ -18,6 +18,7 @@ from bkr.server.helpers import make_link
 from bkr.server.controller_utilities import restrict_http_method
 from bkr.server import search_utility, identity
 from bkr.common.bexceptions import BX
+from bkr.server.bexceptions import DatabaseLookupError
 
 from bkr.server.model import (OSMajor, OSVersion, Distro, DistroTree,
                              DistroTag, DistroActivity)
@@ -69,7 +70,7 @@ class Distros(RPCRoot):
         """
         try:
             osmajor = '%s' % Distro.by_name(distro).osversion.osmajor
-        except AttributeError:
+        except DatabaseLookupError:
             raise BX(_('Invalid Distro: %s' % distro))
         return osmajor
 
@@ -83,7 +84,7 @@ class Distros(RPCRoot):
             # look up distro
             try:
                 arches = [arch.arch for arch in Distro.by_name(filter['distro']).osversion.arches]
-            except AttributeError:
+            except DatabaseLookupError:
                 raise BX(_('Invalid Distro: %s' % filter['distro']))
         elif 'osmajor' in filter:
             # look up osmajor

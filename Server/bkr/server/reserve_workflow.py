@@ -13,6 +13,7 @@ from bkr.server.flask_util import BadRequest400, \
         convert_internal_errors, auth_required
 from bkr.server.model import (Distro, Job, System, Arch, OSMajor, DistroTag,
         SystemType, OSVersion, DistroTree, LabController, MachineRecipe)
+from bkr.server.bexceptions import DatabaseLookupError
 
 import logging
 log = logging.getLogger(__name__)
@@ -123,8 +124,9 @@ class ReserveWorkflow:
         """
         if not distro:
             return []
-        distro = Distro.by_name(distro)
-        if not distro:
+        try:
+            distro = Distro.by_name(distro)
+        except DatabaseLookupError:
             return []
         trees = distro.dyn_trees.join(DistroTree.arch)\
                 .filter(DistroTree.lab_controller_assocs.any())\

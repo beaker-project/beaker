@@ -43,6 +43,33 @@ class TestGroups(WebDriverTestCase):
             b.find_element_by_class_name('flash').text,
             '%s deleted' % self.group.display_name)
 
+    def test_group_remove_on_different_pages(self):
+        b1 = self.browser
+        b2 = self.get_browser()
+        login(b1)
+        login(b2)
+        b1.get(get_server_base() + 'groups/')
+        b1.find_element_by_xpath("//input[@name='group.text']").clear()
+        b1.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
+        b1.find_element_by_id('Search').submit()
+
+        b2.get(get_server_base() + 'groups/')
+        b2.find_element_by_xpath("//input[@name='group.text']").clear()
+        b2.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
+        b2.find_element_by_id('Search').submit()
+
+        delete_and_confirm(b1, "//tr[td/a[normalize-space(text())='%s']]" %
+            self.group.group_name, delete_text='Remove')
+        self.assertEqual(
+            b1.find_element_by_class_name('flash').text,
+            '%s deleted' % self.group.display_name)
+
+        delete_and_confirm(b2, "//tr[td/a[normalize-space(text())='%s']]" %
+            self.group.group_name, delete_text='Remove')
+        self.assertEqual(
+            b2.find_element_by_class_name('flash').text,
+            'Invalid group or already removed')
+
     #https://bugzilla.redhat.com/show_bug.cgi?id=968843
     def test_group_has_submitted_job_remove(self):
         with session.begin():

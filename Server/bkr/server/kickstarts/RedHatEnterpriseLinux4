@@ -89,6 +89,7 @@ lvm2
 {% snippet 'RedHatEnterpriseLinux4_post' %}
 {% snippet 'system_post' %}
 
+
 {{ ks_appends|join('\n') }}
 {% snippet 'post_s390_reboot' %}
 {% snippet 'postreboot' %}

@@ -51,11 +51,10 @@ class VirtManager(object):
         log.info('Created %r', instance)
         try:
             self._wait_for_build(instance)
-            fip = self._assign_floating_ip(instance)
             # would be nice if nova let us build an instance without starting it
             instance.stop()
             self._wait_for_stop(instance)
-            return (uuid.UUID(instance.id), fip.ip)
+            return uuid.UUID(instance.id)
         except:
             exc_type, exc_value, exc_tb = sys.exc_info()
             try:
@@ -88,15 +87,8 @@ class VirtManager(object):
             raise RuntimeError('%r failed to stop, status %s'
                     % (instance, instance.status))
 
-    def _assign_floating_ip(self, instance):
-        fip = self.nova.floating_ips.create()
-        instance.add_floating_ip(fip)
-        return fip
-
     def start_vm(self, instance_id):
         self.nova.servers.start(instance_id)
 
     def destroy_vm(self, instance_id):
-        for fip in self.nova.floating_ips.findall(instance_id=instance_id):
-            fip.delete()
         self.nova.servers.delete(instance_id)

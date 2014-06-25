@@ -421,25 +421,24 @@ class Aarch64Test(NetBootTestCase):
     def test_configure_then_clear(self):
         netboot.configure_aarch64(TEST_FQDN,
                 'console=ttyS0,115200 ks=http://lol/')
-        grub_config_path = os.path.join(self.tftp_root, 'pxelinux', 'grub.cfg-7F0000FF')
+        grub_config_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg-7F0000FF')
+        grub_default_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg')
         self.assertEquals(open(grub_config_path).read(), """\
   linux  ../images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/
   initrd ../images/fqdn.example.invalid/initrd
   
   boot
 """)
-        grub_symlink_path = os.path.join(self.tftp_root, 'pxelinux', 'fqdn.example.invalid.efi')
-        self.assertEquals(os.readlink(grub_symlink_path), 'bootaa64.efi')
+        self.assertEquals(open(grub_default_path).read(), 'exit\n')
 
         netboot.clear_aarch64(TEST_FQDN)
         self.assertFalse(os.path.exists(grub_config_path))
-        self.assertFalse(os.path.exists(grub_symlink_path))
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1100008
     def test_alternate_devicetree(self):
         netboot.configure_aarch64(TEST_FQDN,
                 'devicetree=custom.dtb ks=http://lol/')
-        grub_config_path = os.path.join(self.tftp_root, 'pxelinux', 'grub.cfg-7F0000FF')
+        grub_config_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg-7F0000FF')
         self.assertEquals(open(grub_config_path).read(), """\
   linux  ../images/fqdn.example.invalid/kernel ks=http://lol/
   initrd ../images/fqdn.example.invalid/initrd

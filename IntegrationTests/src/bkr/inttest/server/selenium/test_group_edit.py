@@ -757,3 +757,13 @@ class GroupSystemTest(WebDriverTestCase):
         with session.begin():
             session.expire_all()
             self.assert_(system not in self.group.systems)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=967684
+    def test_add_non_existent_system_to_group(self):
+        b = self.browser
+        login(b)
+        b.get(get_server_base() + 'groups/edit?group_id=%s' % self.group.group_id)
+        b.find_element_by_id('GroupSystem_system_text').send_keys('idontexist.invalid')
+        b.find_element_by_xpath('//form[@id="GroupSystem"]').submit()
+        self.assertEquals('No such system: idontexist.invalid', 
+                          b.find_element_by_class_name('flash').text)

@@ -26,8 +26,7 @@ class TestJobsController(unittest.TestCase):
         group = data_setup.create_group(group_name='somegroup')
         self.user.groups.append(group)
         testutil.set_identity_user(self.user)
-        if not Distro.by_name(u'BlueShoeLinux5-5'):
-            data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
+        data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
         data_setup.create_product(product_name=u'the_product')
 
     def tearDown(self):

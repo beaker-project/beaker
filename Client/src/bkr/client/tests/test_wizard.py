@@ -69,3 +69,14 @@ class LicenseTests(unittest.TestCase):
         self.license.data = "GPLvX"
         includes = (EXPECTED_OTHER_HEADER, "This is GPLvX license text.")
         self.check_license_text(includes, ())
+
+
+class ArchitecturesTest(unittest.TestCase):
+
+    def setUp(self):
+        self.options = wizard.Options([], load_user_prefs=False)
+        self.archs = wizard.Architectures(self.options)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1095079
+    def test_contain_aarch64(self):
+        self.assertIn('aarch64', self.archs.list)

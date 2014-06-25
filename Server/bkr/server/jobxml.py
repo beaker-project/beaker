@@ -180,6 +180,11 @@ class XmlRecipe(ElementWrapper):
                 return XmlWatchdog(self.wrappedEl['watchdog'])
             else:
                 return None
+        elif attrname == 'reservesys':
+            if hasattr(self.wrappedEl, 'reservesys'):
+                return XmlReservesys(self.wrappedEl['reservesys'])
+            else:
+                return None
         else: raise AttributeError, attrname
 
 
@@ -243,6 +248,12 @@ class XmlWatchdog(ElementWrapper):
             return self.get_xml_attr('trigger', unicode, u'None')
         elif attrname == 'extend':
             return self.get_xml_attr('extend', int, 0)
+        else: raise AttributeError, attrname
+
+class XmlReservesys(ElementWrapper):
+    def __getattr__(self, attrname):
+        if attrname == 'duration':
+            return self.get_xml_attr('duration', int, 86400)
         else: raise AttributeError, attrname
 
 class XmlPackage(ElementWrapper):

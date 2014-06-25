@@ -10,6 +10,7 @@
    <td>
     <span py:if="recipe.is_dirty" class="statusDirty">Updating…</span>
     <span py:if="not recipe.is_dirty" class="status${recipe.status}">${recipe.status}</span>
+    <span py:if="recipe.status == recipe_status_reserved" class="reservation_duration"> (${recipe.time_remaining} remaining)</span>
    </td>
    <th>Result</th>
    <td class="result${recipe.result}">${recipe.result}</td>

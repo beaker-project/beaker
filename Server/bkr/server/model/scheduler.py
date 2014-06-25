@@ -21,7 +21,7 @@ import netaddr
 from kid import Element
 from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
         Integer, Unicode, DateTime, Boolean, UnicodeText, String, Numeric)
-from sqlalchemy.sql import select, union, and_, or_, not_, func, literal
+from sqlalchemy.sql import select, union, and_, or_, not_, func, literal, exists
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, backref, object_mapper,
         dynamic_loader, validates)
@@ -38,7 +38,7 @@ from bkr.server.hybrid import hybrid_method, hybrid_property
 from bkr.server.installopts import InstallOptions, global_install_options
 from bkr.server.util import absolute_url
 from .types import (UUID, MACAddress, TaskResult, TaskStatus, TaskPriority,
-        ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus)
+                    ResourceType, RecipeVirtStatus, mac_unix_padded_dialect, SystemStatus)
 from .base import DeclarativeMappedObject
 from .activity import Activity, ActivityMixin
 from .identity import User, Group
@@ -152,25 +152,31 @@ class Watchdog(DeclarativeMappedObject):
         this behaviour. In particular, the host recipe in virt testing will 
         finish while its guests are still running, but we want to keep 
         monitoring the host's console log in case of a panic.
+
+        XXX Note that queries returned by this method do not function correctly
+        when Recipe/RecipeSet/Job are joined via a 'chain of joins'. The mapped
+        collections need to be joined in seperate and succesive calls to join().
+        This appears to be a bug in sqlalchemy 0.6.8, but is no longer an issue
+        in 0.8.3 (and perhaps versions in between, although currently untested).
         """
-        select_recipe_set_id = session.query(RecipeSet.id). \
-            join(Recipe).join(Watchdog).group_by(RecipeSet.id)
+
         if status == 'active':
-            watchdog_clause = func.max(Watchdog.kill_time) > datetime.utcnow()
+            watchdog_clause = Watchdog.kill_time > datetime.utcnow()
         elif status =='expired':
-            watchdog_clause = func.max(Watchdog.kill_time) < datetime.utcnow()
+            watchdog_clause = Watchdog.kill_time < datetime.utcnow()
         else:
             return None
+        any_recipe_has_matching_watchdog = exists(select([1],
+            from_obj=Recipe.__table__.join(Watchdog.__table__)). \
+            where(Recipe.recipe_set_id == RecipeSet.id).where(watchdog_clause). \
+            correlate(RecipeSet.__table__))
 
-        recipe_set_in_watchdog = RecipeSet.id.in_(
-            select_recipe_set_id.having(watchdog_clause))
-
-        if labcontroller is None:
-            my_filter = and_(Watchdog.kill_time != None, recipe_set_in_watchdog)
-        else:
-            my_filter = and_(RecipeSet.lab_controller==labcontroller,
-                Watchdog.kill_time != None, recipe_set_in_watchdog)
-        return cls.query.join(Watchdog.recipe, Recipe.recipeset).filter(my_filter)
+        watchdog_query = cls.query.join(Watchdog.recipe).join(Recipe.recipeset).filter(
+            and_(Watchdog.kill_time != None, any_recipe_has_matching_watchdog))
+        if labcontroller is not None:
+            watchdog_query = watchdog_query.filter(
+                RecipeSet.lab_controller==labcontroller)
+        return watchdog_query
 
 
 class Log(object):
@@ -1041,13 +1047,10 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     def cancel(self, msg=None):
         """
-        Method to cancel all unfinished tasks in this job.
+        Method to cancel all unfinished recipes in this job.
         """
-        for recipeset in self.recipesets:
-            for recipe in recipeset.recipes:
-                for task in recipe.tasks:
-                    if not task.is_finished():
-                        task._abort_cancel(TaskStatus.cancelled, msg)
+        for recipe in self.all_recipes:
+            recipe._abort_cancel(TaskStatus.cancelled, msg)
         self._mark_dirty()
 
     def abort(self, msg=None):
@@ -1572,22 +1575,18 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
 
     def cancel(self, msg=None):
         """
-        Method to cancel all unfinished tasks in this recipe set.
+        Method to cancel all unfinished recipes in this recipe set.
         """
         for recipe in self.recipes:
-            for task in recipe.tasks:
-                if not task.is_finished():
-                    task._abort_cancel(TaskStatus.cancelled, msg)
+            recipe._abort_cancel(TaskStatus.cancelled, msg)
         self.job._mark_dirty()
 
     def abort(self, msg=None):
         """
-        Method to abort all unfinished tasks in this recipe set.
+        Method to abort all unfinished recipes in this recipe set.
         """
         for recipe in self.recipes:
-            for task in recipe.tasks:
-                if not task.is_finished():
-                    task._abort_cancel(TaskStatus.aborted, msg)
+            recipe._abort_cancel(TaskStatus.aborted, msg)
         self.job._mark_dirty()
 
     @property
@@ -1682,6 +1681,20 @@ class RecipeSet(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return url("/jobs/clone?recipeset_id=%s" % self.id)
 
 
+class RecipeReservationRequest(DeclarativeMappedObject):
+    """
+    Contains a recipe's reservation request if any
+    """
+    __tablename__ = 'recipe_reservation'
+    __table_args__ = {'mysql_engine': 'InnoDB'}
+
+    id = Column(Integer, primary_key=True)
+    recipe_id = Column(Integer, ForeignKey('recipe.id'), nullable=False)
+    duration = Column(Integer, default=86400, nullable=False)
+
+    def __init__(self, duration=86400):
+        self.duration = duration
+
 class Recipe(TaskBase, DeclarativeMappedObject):
     """
     Contains requires for host selection and distro selection.
@@ -1702,6 +1715,7 @@ class Recipe(TaskBase, DeclarativeMappedObject):
             default=TaskResult.new, index=True)
     status = Column(TaskStatus.db_type(), nullable=False,
             default=TaskStatus.new, index=True)
+    reservation_request = relationship(RecipeReservationRequest, uselist=False)
     start_time = Column(DateTime)
     finish_time = Column(DateTime)
     _host_requires = Column(UnicodeText())
@@ -1963,6 +1977,10 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         recipe.appendChild(partitions)
         for t in self.tasks:
             recipe.appendChild(t.to_xml(clone))
+        if self.reservation_request:
+            reservesys = xmldoc.createElement("reservesys")
+            reservesys.setAttribute('duration', unicode(self.reservation_request.duration))
+            recipe.appendChild(reservesys)
         if not from_recipeset and not from_machine:
             recipe = self._add_to_job_element(recipe, clone)
         return recipe
@@ -2141,22 +2159,41 @@ class Recipe(TaskBase, DeclarativeMappedObject):
         # purely as an optimisation
         self._change_status(TaskStatus.waiting)
 
-    def cancel(self, msg=None):
+    def _time_remaining(self):
+        duration = None
+        if self.watchdog and self.watchdog.kill_time:
+            delta = self.watchdog.kill_time - datetime.utcnow().replace(microsecond=0)
+            duration = delta
+        return duration
+    time_remaining = property(_time_remaining)
+
+    def return_reservation_link(self):
+        """ return link to return the reservation for this recipe
         """
-        Method to cancel all unfinished tasks in this recipe.
+        return url("/recipes/return_reservation?recipe_id=%s" % self.id)
+
+    def return_reservation(self):
+        self.extend(0)
+        self.recipeset.job._mark_dirty()
+
+    def _abort_cancel(self, status, msg=None):
         """
+        Method to abort/cancel all unfinished tasks in this recipe.
+        """
+        # This ensures that the recipe does not stay Reserved when it is already
+        # Reserved and the watchdog expires (for abort) or, is cancelled 
+        # (user initiated)
+        if self.watchdog:
+            self.extend(0)
         for task in self.tasks:
             if not task.is_finished():
-                task._abort_cancel(TaskStatus.cancelled, msg)
-        self.recipeset.job._mark_dirty()
+                task._abort_cancel(status, msg)
 
     def abort(self, msg=None):
         """
         Method to abort all unfinished tasks in this recipe.
         """
-        for task in self.tasks:
-            if not task.is_finished():
-                task._abort_cancel(TaskStatus.aborted, msg)
+        self._abort_cancel(TaskStatus.aborted, msg)
         self.recipeset.job._mark_dirty()
 
     @property
@@ -2195,6 +2232,16 @@ class Recipe(TaskBase, DeclarativeMappedObject):
                 max_result = task.result
         if self.status.finished and not min_status.finished:
             min_status = self._fix_zombie_tasks()
+
+        if min_status.finished and min_status != TaskStatus.cancelled:
+            if self.status == TaskStatus.running and self.reservation_request:
+                min_status = TaskStatus.reserved
+                self.extend(self.reservation_request.duration)
+                mail.reservesys_notify(self, self.resource.fqdn)
+                log.debug('%s moved to Reserved', self.t_id)
+            elif self.status == TaskStatus.reserved and self.status_watchdog() > 0:
+                min_status = TaskStatus.reserved
+
         status_changed = self._change_status(min_status)
         self.result = max_result
 
@@ -2444,7 +2491,6 @@ class Recipe(TaskBase, DeclarativeMappedObject):
     @property
     def first_task(self):
         return self.dyn_tasks.order_by(RecipeTask.id).first()
-
 
 class GuestRecipe(Recipe):
 
@@ -2900,13 +2946,6 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
     def owner(self):
         return self.recipe.recipeset.job.owner
     owner = property(owner)
-
-    def cancel(self, msg=None):
-        """
-        Cancel this task
-        """
-        self._abort_cancel(TaskStatus.cancelled, msg)
-        self.recipe.recipeset.job._mark_dirty()
 
     def abort(self, msg=None):
         """
@@ -3400,12 +3439,11 @@ class VirtResource(RecipeResource):
             instance_id = uuid.UUID(instance_id)
         return cls.query.filter(cls.instance_id == instance_id).one()
 
-    def __init__(self, instance_id, fqdn, lab_controller):
+    def __init__(self, instance_id, lab_controller):
         super(VirtResource, self).__init__()
         if isinstance(instance_id, basestring):
             instance_id = uuid.UUID(instance_id)
         self.instance_id = instance_id
-        self.fqdn = fqdn
         self.lab_controller = lab_controller
 
     @property

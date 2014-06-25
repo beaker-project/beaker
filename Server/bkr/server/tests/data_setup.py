@@ -14,6 +14,7 @@ import itertools
 from sqlalchemy.orm.exc import NoResultFound
 import turbogears.config, turbogears.database
 from turbogears.database import session
+from bkr.server.bexceptions import DatabaseLookupError
 from bkr.server.model import LabController, User, Group, UserGroup, Distro, DistroTree, Arch, \
         OSMajor, OSVersion, SystemActivity, Task, MachineRecipe, System, \
         SystemType, SystemStatus, Recipe, RecipeTask, RecipeTaskResult, \
@@ -24,7 +25,7 @@ from bkr.server.model import LabController, User, Group, UserGroup, Distro, Dist
         DeviceClass, DistroTreeRepo, TaskPackage, KernelType, \
         LogRecipeTaskResult, TaskType, SystemResource, GuestRecipe, \
         GuestResource, VirtResource, SystemStatusDuration, SystemAccessPolicy, \
-        SystemPermission, DistroTreeImage, ImageType, KernelType
+        SystemPermission, DistroTreeImage, ImageType, KernelType, RecipeReservationRequest
 
 log = logging.getLogger(__name__)
 
@@ -174,8 +175,8 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
     if not name:
         name = unique_name(u'%s.%s-%%s' % (osmajor, osminor))
     distro = Distro.lazy_create(name=name, osversion=osversion)
-    if tags:
-        distro.tags.extend(tags)
+    for tag in (tags or []):
+        distro.add_tag(tag)
     log.debug('Created distro %r', distro)
     harness_dir = os.path.join(turbogears.config.get('basepath.harness'), distro.osversion.osmajor.osmajor)
     if not os.path.exists(harness_dir):
@@ -183,22 +184,17 @@ def create_distro(name=None, osmajor=u'DansAwesomeLinux6', osminor=u'9',
     return distro
 
 def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux6',
-        distro_tags=None, arch=u'i386', variant=u'Server', lab_controllers=None,
-        urls=None):
+        osminor=u'9', distro_tags=None, arch=u'i386', variant=u'Server',
+        lab_controllers=None, urls=None):
     if distro is None:
-        if distro_name is None:
-            distro = create_distro(osmajor=osmajor, tags=distro_tags)
-        else:
-            distro = Distro.by_name(distro_name)
-            if not distro:
-                distro = create_distro(name=distro_name)
+        distro = create_distro(name=distro_name, osmajor=osmajor, osminor=osminor,
+                tags=distro_tags)
     distro_tree = DistroTree.lazy_create(distro=distro,
-            arch=Arch.by_name(arch), variant=variant)
-    session.add(distro_tree)
+            arch=Arch.lazy_create(arch=arch), variant=variant)
     if distro_tree.arch not in distro.osversion.arches:
         distro.osversion.arches.append(distro_tree.arch)
-    distro_tree.repos.append(DistroTreeRepo(repo_id=variant,
-            repo_type=u'variant', path=u''))
+    DistroTreeRepo.lazy_create(distro_tree=distro_tree,
+            repo_id=variant, repo_type=u'variant', path=u'')
     DistroTreeImage.lazy_create(distro_tree=distro_tree,
             image_type=ImageType.kernel,
             kernel_type=KernelType.by_name(u'default'),
@@ -370,6 +366,10 @@ def create_recipe(distro_tree=None, task_list=None,
     recipe.role = role
     recipe.distro_requires = recipe.distro_tree.to_xml().toxml()
 
+    if kwargs.get('reservesys', False):
+        duration=kwargs.get('reservesys_duration', 86400)
+        recipe.reservation_request = RecipeReservationRequest(duration)
+
     if task_list: #don't specify a task_list and a task_name...
         for t in task_list:
             rt = RecipeTask.from_task(t)
@@ -443,7 +443,24 @@ def create_completed_job(**kwargs):
     return job
 
 def mark_recipe_complete(recipe, result=TaskResult.pass_,
-        finish_time=None, only=False, server_log=False, **kwargs):
+                         task_status=TaskStatus.completed,
+                         finish_time=None, only=False,
+                         server_log=False, **kwargs):
+
+    mark_recipe_tasks_finished(recipe, result=result,
+                               task_status=task_status,
+                               finish_time=finish_time,
+                               only=only,
+                               server_log=server_log,
+                               **kwargs)
+    recipe.recipeset.job.update_status()
+    log.debug('Marked %s as complete with result %s', recipe.t_id, result)
+
+def mark_recipe_tasks_finished(recipe, result=TaskResult.pass_,
+                               task_status=TaskStatus.completed,
+                               finish_time=None, only=False,
+                               server_log=False, **kwargs):
+
     # we accept result=None to mean: don't add any results to recipetasks
     assert result is None or result in TaskResult
     finish_time = finish_time or datetime.datetime.utcnow()
@@ -482,9 +499,7 @@ def mark_recipe_complete(recipe, result=TaskResult.pass_,
             recipe_task.results.append(rtr)
         recipe_task.logs = [rt_log()]
         recipe_task.finish_time = finish_time
-        recipe_task._change_status(TaskStatus.completed)
-    recipe.recipeset.job.update_status()
-    log.debug('Marked %s as complete with result %s', recipe.t_id, result)
+        recipe_task._change_status(task_status)
 
 def mark_job_complete(job, finish_time=None, only=False, **kwargs):
     if not only:
@@ -509,9 +524,7 @@ def mark_recipe_waiting(recipe, start_time=None, system=None,
             if virt:
                 if not lab_controller:
                     lab_controller = create_labcontroller(fqdn=u'dummylab.example.invalid')
-                recipe.resource = VirtResource(uuid.uuid4(),
-                        u'recipe-%s.openstack.invalid' % recipe.id,
-                        lab_controller)
+                recipe.resource = VirtResource(uuid.uuid4(), lab_controller)
                 recipe.recipeset.lab_controller = lab_controller
             else:
                 if not system:
@@ -579,7 +592,7 @@ def playback_task_results(task, xmltask):
     if xmltask.status == u'Aborted':
         task.abort()
     elif xmltask.status == u'Cancelled':
-        task.cancel()
+        task._abort_cancel(TaskStatus.cancelled)
     else:
         task.stop()
 

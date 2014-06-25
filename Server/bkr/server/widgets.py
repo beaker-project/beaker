@@ -28,6 +28,7 @@ from turbogears.widgets import (Form, TextField, SubmitButton, TextArea, Label,
                                 PasswordField)
 
 from bkr.server import model, search_utility, identity
+from bkr.server.model import TaskStatus
 from bkr.server.assets import get_assets_env
 from bkr.server.bexceptions import BeakerException
 from bkr.server.helpers import make_link
@@ -1183,7 +1184,7 @@ class RecipeActionWidget(CompoundWidget):
     css =  [LocalCSSLink('bkr', '/static/css/smoothness/jquery-ui.css')]
     problem_form = ReportProblemForm()
     report_problem_options = {}
-    params = ['report_problem_options']
+    params = ['report_problem_options', 'recipe_status_reserved']
     member_widgets = ['problem_form']
 
     def __init__(self, *args, **kw):
@@ -1196,11 +1197,14 @@ class RecipeActionWidget(CompoundWidget):
                 'action' : '../system_action/report_system_problem'}
         return super(RecipeActionWidget,self).display(task, **params)
 
+    def update_params(self, d):
+        super(RecipeActionWidget, self).update_params(d)
+        d['recipe_status_reserved'] = TaskStatus.reserved
 
 class RecipeWidget(CompoundWidget):
     css = []
     template = "bkr.server.templates.recipe_widget"
-    params = ['recipe', 'recipe_systems']
+    params = ['recipe', 'recipe_systems', 'recipe_status_reserved']
     member_widgets = ['action_widget']
     action_widget = RecipeActionWidget()
 
@@ -1208,7 +1212,8 @@ class RecipeWidget(CompoundWidget):
         super(RecipeWidget, self).update_params(d)
         d['recipe_systems'] = \
             make_link(url('../recipes/systems?recipe_id=%d' % d['recipe'].id),
-            d['recipe'].dyn_systems.count())
+                      d['recipe'].dyn_systems.count())
+        d['recipe_status_reserved'] = TaskStatus.reserved
 
 class ProductWidget(SingleSelectField, RPC):
     javascript = [LocalJSLink('bkr', '/static/javascript/job_product.js')]

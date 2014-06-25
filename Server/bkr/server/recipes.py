@@ -35,14 +35,13 @@ log = logging.getLogger(__name__)
 class Recipes(RPCRoot):
     # For XMLRPC methods in this class.
     exposed = True
-    hidden_id = widgets.HiddenField(name='id')
-    confirm = widgets.Label(name='confirm', default="Are you sure you want to cancel?")
-    message = widgets.TextArea(name='msg', label=_(u'Reason?'), help_text=_(u'Optional'))
 
-    cancel_form = widgets.TableForm(
-        'cancel_recipe',
-        fields = [hidden_id, message, confirm],
-        action = 'really_cancel',
+    hidden_id = widgets.HiddenField(name='id')
+    confirm = widgets.Label(name='confirm', default="Are you sure you want to release the system?")
+    return_reservation_form = widgets.TableForm(
+        'end_recipe_reservation',
+        fields = [hidden_id, confirm],
+        action = './really_return_reservation',
         submit_text = _(u'Yes')
     )
 
@@ -258,6 +257,35 @@ class Recipes(RPCRoot):
             log.info("Configured FQDN (%s) != reported FQDN (%s) in R:%s" %
                      (configured, fqdn, recipe_id))
         return configured
+
+    @identity.require(identity.not_anonymous())
+    @expose()
+    def really_return_reservation(self, id, msg=None):
+        try:
+            recipe = Recipe.by_id(id)
+        except InvalidRequestError:
+            raise BX(_("Invalid Recipe ID %s" % id))
+        recipe.return_reservation()
+
+        flash(_(u"Successfully released reserved system for %s" % recipe.t_id))
+        redirect('/jobs/mine')
+
+    @expose(template="bkr.server.templates.form")
+    @identity.require(identity.not_anonymous())
+    def return_reservation(self, recipe_id=None):
+        """
+        End recipe reservation
+        """
+        if not recipe_id:
+            raise BX(_("No recipe id provided!"))
+
+        return dict(
+            title = 'Release reserved system for Recipe %s' % recipe_id,
+            form = self.return_reservation_form,
+            action = './really_return_reservation',
+            options = {},
+            value = dict(id=recipe_id),
+        )
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

@@ -356,3 +356,26 @@ class TestRecipeView(WebDriverTestCase):
                     % recipe.id).click()
             self.check_task_hidden(recipe, failed)
             self.check_task_not_loaded(recipe, incomplete)
+
+    def test_return_system_reservation(self):
+        b = self.browser
+        with session.begin():
+            recipe = data_setup.create_recipe(
+                task_list=[data_setup.create_task()],
+                reservesys=True,
+                reservesys_duration=1800,
+            )
+            job = data_setup.create_job_for_recipes([recipe], owner=self.user)
+            data_setup.mark_recipe_tasks_finished(job.recipesets[0].recipes[0])
+            job.update_status()
+
+        self.go_to_recipe_view(recipe)
+        b.find_element_by_xpath('//span[@class="statusReserved"]')
+        duration = b.find_element_by_xpath('//span[@class="reservation_duration"]').text
+        self.assertRegexpMatches(duration, r'(0:\d\d:\d\d remaining)')
+        b.find_element_by_link_text('Release System').click()
+        b.find_element_by_xpath('//h1[text()="Release reserved system for Recipe %s"]' % recipe.id) 
+        b.find_element_by_xpath('//form[@id="end_recipe_reservation"]//input[@type="submit"]').click()
+        flash_text = b.find_element_by_class_name('flash').text
+        self.assertEquals('Successfully released reserved system for %s' % recipe.t_id, 
+                          flash_text)

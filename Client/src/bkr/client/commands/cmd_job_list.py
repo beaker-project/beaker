@@ -43,15 +43,15 @@ Options
 
    Limit to jobs which were testing the product identified by <cpeid>.
 
-.. option:: owner <username>
+.. option:: --owner <username>
 
    Limit to jobs which are owned by the user identified by <username>.
 
-.. option:: whiteboard <string>
+.. option:: --whiteboard <string>
 
    Limit to jobs whose whiteboard contains <string>
 
-.. option:: mine
+.. option:: --mine
 
    Presence of --mine is equivalent to including own username in --owner
 
@@ -213,6 +213,9 @@ class Job_List(BeakerCommand):
         if complete_days is None and tag is None and family is None and product is None\
                 and owner is None and mine is None and whiteboard is None:
             self.parser.error('Please pass either the completeDays time delta, a tag, product, family, or owner')
+
+        if args:
+            self.parser.error('This command does not accept any arguments')
 
         self.set_hub(**kwargs)
         if mine:

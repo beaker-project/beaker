@@ -22,6 +22,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears.config import get
 from turbogears.database import session
 from bkr.server.bexceptions import BX, NoChangeException
+from bkr.server.util import convert_db_lookup_error
 from .base import DeclarativeMappedObject
 from .activity import Activity, ActivityMixin
 from .config import ConfigItem, ConfigValueInt, ConfigValueString
@@ -379,7 +380,8 @@ class Group(DeclarativeMappedObject, ActivityMixin):
 
     @classmethod
     def by_id(cls, id):
-        return cls.query.filter_by(group_id=id).one()
+        with convert_db_lookup_error('No group with ID: %s' % id):
+            return cls.query.filter_by(group_id=id).one()
 
     def __unicode__(self):
         return self.display_name

@@ -27,6 +27,8 @@ from bkr.server import mail, identity
 from bkr.server.model import (Group, Permission, System, User, UserGroup,
                               Activity, GroupActivity, SystemActivity, 
                               SystemStatus)
+from bkr.server.util import convert_db_lookup_error
+from bkr.server.bexceptions import DatabaseLookupError
 
 import logging
 log = logging.getLogger(__name__)
@@ -150,7 +152,7 @@ class Groups(AdminPage):
     def remove_group_permission(self, group_id, permission_id):
         try:
             group = Group.by_id(group_id)
-        except NoResultFound:
+        except DatabaseLookupError:
             log.exception('Group id %s is not a valid Group to remove' % group_id)
             return ['0']
 
@@ -226,7 +228,7 @@ class Groups(AdminPage):
     def systems(self,group_id=None,*args,**kw):
         try:
             group = Group.by_id(group_id)
-        except NoResultFound:
+        except DatabaseLookupError:
             log.exception('Group id %s is not a valid group id' % group_id)
             flash(_(u'Need a valid group to search on'))
             redirect('../groups/mine')
@@ -244,7 +246,7 @@ class Groups(AdminPage):
         if group_id is not None:
             try:
                 group = Group.by_id(group_id)
-            except NoResultFound:
+            except DatabaseLookupError:
                 log.exception('Group id %s is not a valid group id' % group_id)
                 flash(_(u'Need a valid group to search on'))
                 redirect('../groups/mine')
@@ -364,7 +366,7 @@ class Groups(AdminPage):
 
         try:
             group = Group.by_id(group_id)
-        except NoResultFound:
+        except DatabaseLookupError:
             flash( _(u"Group %s does not exist." % group_id) )
             redirect('mine')
 
@@ -400,7 +402,12 @@ class Groups(AdminPage):
     @error_handler(edit)
     @identity.require(identity.not_anonymous())
     def save_system(self, **kw):
-        system = System.by_fqdn(kw['system']['text'],identity.current.user)
+        try:
+            with convert_db_lookup_error('No such system: %s' % kw['system']['text']):
+                system = System.by_fqdn(kw['system']['text'],identity.current.user)
+        except DatabaseLookupError, e:
+            flash(unicode(e))
+            redirect("./edit?group_id=%s" % kw['group_id'])
         # A system owner can add their system to a group, but a group owner 
         # *cannot* add an arbitrary system to their group because that would 
         # grant them extra privileges over it.
@@ -703,7 +710,11 @@ class Groups(AdminPage):
     @expose()
     @restrict_http_method('post')
     def remove(self, **kw):
-        group = Group.by_id(kw['group_id'])
+        try:
+            group = Group.by_id(kw['group_id'])
+        except DatabaseLookupError:
+            flash(unicode('Invalid group or already removed'))
+            redirect('../groups/mine')
 
         if not group.can_edit(identity.current.user):
             flash(_(u'You are not an owner of group %s' % group))
@@ -725,7 +736,7 @@ class Groups(AdminPage):
     def get_group_users(self, group_id=None, *args, **kw):
         try:
             group = Group.by_id(group_id)
-        except NoResultFound:
+        except DatabaseLookupError:
             log.exception('Group id %s is not a valid group id' % group_id)
             response.status = 403
             return ['Invalid Group Id']
@@ -737,7 +748,7 @@ class Groups(AdminPage):
     def get_group_systems(self, group_id=None, *args, **kw):
         try:
             group = Group.by_id(group_id)
-        except NoResultFound:
+        except DatabaseLookupError:
             log.exception('Group id %s is not a valid group id' % group_id)
             response.status = 403
             return ['Invalid Group Id']

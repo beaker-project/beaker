@@ -23,7 +23,7 @@ class Watchdogs(RPCRoot):
     @paginate('list', limit=50, max_limit=None)
     def index(self, *args, **kw):
         query = Watchdog.by_status(status=u'active')\
-                .join(Watchdog.recipe, Recipe.recipeset, RecipeSet.job)\
+                .join(Watchdog.recipe).join(Recipe.recipeset).join(RecipeSet.job)\
                 .order_by(Job.id)\
                 .options(
                     joinedload_all(Watchdog.recipe, Recipe.recipeset, RecipeSet.job),

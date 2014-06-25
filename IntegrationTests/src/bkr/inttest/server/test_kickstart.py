@@ -11,7 +11,8 @@ import xmltramp
 import crypt
 from bkr.server import dynamic_virt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
-        CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch
+        CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch, \
+        Key, Key_Value_String
 from bkr.server.kickstart import template_env, generate_kickstart
 from bkr.server.jobs import Jobs
 from bkr.server.jobxml import XmlJob
@@ -78,7 +79,7 @@ class KickstartTest(unittest.TestCase):
             cls.rhel58server = data_setup.create_distro(name=u'RHEL5-Server-U8',
                 osmajor=u'RedHatEnterpriseLinuxServer5', osminor=u'8')
             cls.rhel58server_x86_64 = data_setup.create_distro_tree(
-                distro=cls.rhel58server, variant=None, arch=u'x86_64',
+                distro=cls.rhel58server, variant=u'', arch=u'x86_64',
                 lab_controllers=[cls.lab_controller],
                 urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-5-Server/U8/x86_64/os/',
                       u'nfs://lab.test-kickstart.invalid:/distros/RHEL-5-Server/U8/x86_64/os/'])
@@ -95,7 +96,7 @@ class KickstartTest(unittest.TestCase):
                     path=u'../debug'),
             ]
             cls.rhel58server_ia64 = data_setup.create_distro_tree(
-                distro=cls.rhel58server, variant=None, arch=u'ia64',
+                distro=cls.rhel58server, variant=u'', arch=u'ia64',
                 lab_controllers=[cls.lab_controller],
                 urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-5-Server/U8/ia64/os/',
                       u'nfs://lab.test-kickstart.invalid:/distros/RHEL-5-Server/U8/ia64/os/'])
@@ -1999,6 +2000,31 @@ network --bootproto=static --device=00:11:22:33:44:55 --ip=192.168.99.1 --netmas
 network --bootproto=static --device=66:77:88:99:aa:bb --ip=192.168.100.1 --netmask=255.255.255.0
 ''' in k, k)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=920470
+    def test_dhcp_networks(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="dhcp_networks=00:11:22:33:44:55;66:77:88:99:aa:bb">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        k = recipe.rendered_kickstart.kickstart
+        self.assert_('''
+network --bootproto=dhcp
+network --bootproto=dhcp --device=00:11:22:33:44:55
+network --bootproto=dhcp --device=66:77:88:99:aa:bb
+''' in k, k)
+
     def test_highbank(self):
         system = data_setup.create_system(arch=u'armhfp', status=u'Automated',
                 lab_controller=self.lab_controller, kernel_type=u'highbank')
@@ -2315,6 +2341,35 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
 ''',
                      recipe.rendered_kickstart.kickstart)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1088761
+    def test_x86_efi_partition(self):
+        efi_system = data_setup.create_system(arch=u'x86_64',
+                status=u'Automated', lab_controller=self.lab_controller)
+        efi_system.key_values_string.append(Key_Value_String(
+                key=Key.by_name(u'NETBOOT_METHOD'), key_value=u'efigrub'))
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="ext4" name="mnt" size="10" />
+                        </partitions>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', efi_system)
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('\npart /boot/efi --fstype vfat ', ks)
+        self.assertNotIn('\npart /boot ', ks)
+
     def test_anamon(self):
         # Test that we can override the anamon URL
         recipe_xml = '''
@@ -2405,3 +2460,48 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
             </job>''')
         ks = recipe.rendered_kickstart.kickstart
         self.assertEquals(ks.count('IPV6_DISABLED=True\n'), 2)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1099231
+    def test_remote_post(self):
+
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="remote_post=http://path/to/myscript">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL5-Server-U8" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('wget --tries 20 -O remote_script http://path/to/myscript '
+                      '&& chmod +x remote_script && ./remote_script',
+                      ks)
+
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="remote_post='http://path/to/~scriptsdir/myscript'">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn("curl --retry 20 -o remote_script 'http://path/to/~scriptsdir/myscript' "
+                      "&& chmod +x remote_script && ./remote_script",
+                      ks)
