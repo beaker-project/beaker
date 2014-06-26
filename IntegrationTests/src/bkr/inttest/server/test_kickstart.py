@@ -249,6 +249,7 @@ class KickstartTest(unittest.TestCase):
         recipe.provision()
         for guest in recipe.guests:
             guest.provision()
+        data_setup.mark_job_complete(job, only=True)
         return recipe
 
     def test_rhel3_defaults(self):
@@ -2367,7 +2368,31 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
             </job>
             ''', efi_system)
         ks = recipe.rendered_kickstart.kickstart
-        self.assertIn('\npart /boot/efi --fstype vfat ', ks)
+        self.assertIn('\npart /boot/efi --fstype vfat --size 200 --recommended\n', ks)
+        self.assertNotIn('\npart /boot ', ks)
+        # also check when combined with ondisk
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="ondisk=vdb">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="ext4" name="mnt" size="10" />
+                        </partitions>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', efi_system)
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('\npart /boot/efi --fstype vfat --size 200 '
+                '--recommended --ondisk=vdb\n', ks)
         self.assertNotIn('\npart /boot ', ks)
 
     def test_anamon(self):

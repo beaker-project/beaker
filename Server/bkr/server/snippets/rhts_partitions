@@ -25,6 +25,7 @@ part /boot --size 200 --recommended --asprimary
 {% if system and system.has_efi %}
 {# x86 EFI #}
 part /boot/efi --fstype vfat --size 200 --recommended
+{%- if ondisk %} --ondisk={{ ondisk }}{% endif %}
 {% else %}
 {# x86 BIOS #}
 part /boot --size 200 --recommended --asprimary
