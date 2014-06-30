@@ -19,6 +19,7 @@ setup(
         '*.xml',
         '*.ldif',
         'client/workflow_kickstart.cfg.tmpl',
+        'client/.beaker_client/*',
         'labcontroller/install-failure-logs/*',
         'server/kickstarts/*',
         'server/mail-templates/*',

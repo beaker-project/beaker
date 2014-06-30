@@ -48,17 +48,19 @@ dev_client_command = os.path.join(os.path.dirname(__file__),
                                   '..', '..', '..', '..', 'run-client.sh')
 client_command = os.environ.get('BEAKER_CLIENT_COMMAND', dev_client_command)
 
-def start_client(args, config=None, **kwargs):
+def start_client(args, config=None, env=None, extra_env=None, **kwargs):
     if config is None:
         global default_client_config
         config = default_client_config
     log.debug('Starting client %r as %r with BEAKER_CLIENT_CONF=%s',
             client_command, args, config.name)
+    env = dict(env or os.environ)
+    env.update(extra_env or {})
+    env['PYTHONUNBUFFERED'] = '1'
+    env['BEAKER_CLIENT_CONF'] = config.name
     return subprocess.Popen(args, executable=client_command,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            env=dict(os.environ.items() +
-                [('PYTHONUNBUFFERED', '1'),
-                 ('BEAKER_CLIENT_CONF', config.name)]),
+            env=env,
             **kwargs)
 
 def run_client(args, config=None, input=None, **kwargs):

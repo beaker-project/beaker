@@ -19,6 +19,9 @@ setup(
     packages=find_packages('src'),
     package_dir = {'':'src'},
 
+    package_data = {
+        'bkr.client': ['host-filters/*']
+        },
     namespace_packages = ['bkr'],
 
     data_files = [

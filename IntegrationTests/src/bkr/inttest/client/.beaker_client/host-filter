@@ -1,0 +1,1 @@
+INTEL__FAM15_CELERON			<cpu><and><family op="=" value="15"/><model_name op="like" value="%Intel%" /><model_name op="like" value="%MyCeleron%" /></and></cpu>
