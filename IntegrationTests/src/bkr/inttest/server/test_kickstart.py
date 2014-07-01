@@ -2642,3 +2642,68 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
             </job>''', virt=True)
         ks = recipe.rendered_kickstart.kickstart
         self.assertNotIn('export RHTS_OPTION_COMPATIBLE=\n', ks)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1131388
+    def test_contained_harness(self):
+        # default
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="contained_harness selinux=--disabled">
+                        <repos> <repo name="restraint" url="http://my/repo/"/> </repos>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+
+        compare_expected('Fedora18-harness-contained', recipe.id,
+                         recipe.rendered_kickstart.kickstart)
+
+        # Specify a custom image URL, harness entrypoint
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="contained_harness contained_harness_entrypoint=/usr/bin/mybinary harness_docker_base_image=docker-registry.mysys.com/fedora:latest selinux=--disabled">
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        compare_expected('Fedora18-harness-contained-custom', recipe.id,
+                         recipe.rendered_kickstart.kickstart)
+
+        # Fedora rawhide host docker package name
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="contained_harness selinux=--disabled">
+                        <repos> <repo name="restraint" url="http://my/repo/"/> </repos>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-rawhide" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', self.system)
+        self.assertNotIn('\ndocker-io\n',
+                      recipe.rendered_kickstart.kickstart)
+        self.assertIn('\ndocker\n',
+                      recipe.rendered_kickstart.kickstart)
+

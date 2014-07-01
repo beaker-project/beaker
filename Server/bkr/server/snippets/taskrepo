@@ -1,0 +1,8 @@
+{% set reponame, repourl = taskrepo.split(',', 1) %}
+cat <<"EOF" >/etc/yum.repos.d/{{ reponame }}.repo
+[{{ reponame }}]
+name={{ reponame }}
+baseurl={{ repourl }}
+enabled=1
+gpgcheck=0
+EOF

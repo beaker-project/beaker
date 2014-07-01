@@ -76,21 +76,14 @@ fetch {{ yum }} http://{{ lab_controller.fqdn }}/beaker/{{ yum }}
 popd
 {% endif %}
 
+{% if taskrepo and contained_harness is not defined%}
 #Add Task Repo
-{% if taskrepo %}
-{% set reponame, repourl = taskrepo.split(',', 1) %}
-cat <<"EOF" >/etc/yum.repos.d/{{ reponame }}.repo
-[{{ reponame }}]
-name={{ reponame }}
-baseurl={{ repourl }}
-enabled=1
-gpgcheck=0
-EOF
+{% snippet 'taskrepo' %}
 {% endif %}
 
 
+{% if harnessrepo and contained_harness is not defined%}
 # Add Harness Repo
-{% if harnessrepo %}
 {% set reponame, repourl = harnessrepo.split(',', 1) %}
 cat <<"EOF" >/etc/yum.repos.d/{{ reponame }}.repo
 [{{ reponame }}]
@@ -104,15 +97,19 @@ EOF
 # Add distro and custom Repos
 {{ snippet('print_repos') }}
 
+{% if recipe %}
+{% if contained_harness is defined%}
+{% snippet 'docker_harness' %}
+{% else %}
 # fill the yum cache and redirect output to /dev/null
 # This speeds up yum because of a bug where it will update stdout too often.
 # http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
 yum check-update > /dev/null 2>&1 || true
-{% if recipe %}
 {% if harness|default('beah') == 'beah' %}
 {% snippet 'beah' %}
 {% else %}
 {% snippet 'harness' %}
+{% endif %}
 {% endif %}
 {% endif %}
 

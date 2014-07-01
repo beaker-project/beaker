@@ -1,19 +1,13 @@
-nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-6.2/Server/x86_64/os/
-#url --url=nfs://lab.test-kickstart.invalid:/distros/RHEL-6.2/Server/x86_64/os/
+nfs --server lab.test-kickstart.invalid --dir /distros/F-18/GOLD/Fedora/x86_64/os/
+#url --url=nfs://lab.test-kickstart.invalid:/distros/F-18/GOLD/Fedora/x86_64/os/
 
 # System bootloader configuration
 bootloader --location=mbr
-cmdline
+text
 # no specific network configuration
 
-repo --name=beaker-HighAvailability --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/HighAvailability
-repo --name=beaker-LoadBalancer --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/LoadBalancer
-repo --name=beaker-optional-x86_64-os --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/os
-repo --name=beaker-ResilientStorage --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ResilientStorage
-repo --name=beaker-ScalableFileSystem --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ScalableFileSystem
-repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/debug
-repo --name=beaker-optional-x86_64-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/debug
-repo --name=beaker-Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/Server
+repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f18&arch=x86_64
+repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/x86_64/debug
 
 firewall --disabled
 # Run the Setup Agent on first boot
@@ -27,7 +21,7 @@ reboot
 #Root password
 rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
 # SELinux configuration
-selinux --enforcing
+selinux --disabled
 
 
 # System timezone
@@ -39,12 +33,14 @@ zerombr
 clearpart --all --initlabel
 
 autopart
-# no snippet data for RedHatEnterpriseLinux6
-# no snippet data for RedHatEnterpriseLinux
+# no snippet data for Fedora18
+# no snippet data for Fedora
 # no snippet data for system
 
-%packages --ignoremissing --default
+%packages --ignoremissing
+docker-io
 # no snippet data for packages
+chrony
 %end
 
 
@@ -83,9 +79,13 @@ else
     }
 fi
 
+# Check in with Beaker Server
+fetch - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
 
-# no snippet data for RedHatEnterpriseLinux6_pre
-# no snippet data for RedHatEnterpriseLinux_pre
+fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon
+python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
+# no snippet data for Fedora18_pre
+# no snippet data for Fedora_pre
 # no snippet data for system_pre
 %end
 
@@ -123,7 +123,32 @@ else
     }
 fi
 
+# Check in with Beaker Server, let it know our hostname, and
+# record our install time.
+
+# We will try a number of different places to figure out the system's FQDN.
+# In all cases we will only accept a real FQDN (no "localhost", and must have
+# a domain portion). DNS is our preferred source, otherwise the installer
+# should have stored a hostname in /etc based on the kickstart or DHCP info.
+# As a last resort we will use the system's first IP address.
+function find_fqdn() {
+    local fqdn=
+    # hostname -f is the most future-proof approach, but it isn't always reliable
+    fqdn=$(hostname -f)
+    if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
+    # Preferred fallback if the OS is recent enough to provide it
+    fqdn=$(cat /etc/hostname)
+    if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
+    # Red Hat-based systems prior to systemd will have this
+    fqdn=$(grep ^HOSTNAME= /etc/sysconfig/network | cut -f2- -d=)
+    if [[ "$fqdn" == *.* && "$fqdn" != localhost.* ]] ; then echo "$fqdn" ; return ; fi
+    # Getting desperate... pick the first local IP address
+    hostname -I | cut -d' ' -f1
+}
+REPORTED_FQDN=$(find_fqdn)
+fetch - "http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN"
 fetch - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
+echo @RECIPEID@ > /root/RECIPE.TXT
 
 # If netboot_method= is found in /proc/cmdline record it to /root
 netboot_method=$(perl -n -e'/netboot_method=([^\s]+)/ && print $1' /proc/cmdline)
@@ -132,6 +157,23 @@ echo $netboot_method >/root/NETBOOT_METHOD.TXT
 fi
 
 # Enable post-install boot notification
+
+fetch /usr/local/sbin/anamon http://lab.test-kickstart.invalid/beaker/anamon
+fetch /etc/rc.d/init.d/anamon http://lab.test-kickstart.invalid/beaker/anamon.init
+
+chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+if selinuxenabled &>/dev/null ; then
+    restorecon /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
+fi
+
+chkconfig --add anamon
+
+cat << __EOT__ > /etc/sysconfig/anamon
+XMLRPC_URL="http://lab.test-kickstart.invalid:8000/RPC2"
+RECIPE_ID="@RECIPEID@"
+LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
+__EOT__
+
 if [ -f /etc/sysconfig/readahead ] ; then
     cat >>/etc/sysconfig/readahead <<EOF
 
@@ -146,10 +188,10 @@ EOF
 fi
 
 if [ -e /etc/sysconfig/ntpdate ] ; then
-    chkconfig ntpdate on
+    systemctl enable ntpdate
 fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
-    chkconfig ntpd on
+    systemctl enable ntpd
     GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
     if [ -z "$GOT_G" ]; then
@@ -164,9 +206,10 @@ if [ -e /etc/chrony.conf ] ; then
     # setting iburst should speed up initial sync
     # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
-    chkconfig ntpd off
-    chkconfig ntpdate off
-    chkconfig chronyd on
+    systemctl disable ntpd
+    systemctl disable ntpdate
+    systemctl enable chronyd
+    systemctl enable chrony-wait
 fi
 
 if efibootmgr &>/dev/null ; then
@@ -187,72 +230,76 @@ fi
 
 
 # Add distro and custom Repos
-cat <<"EOF" >/etc/yum.repos.d/beaker-HighAvailability.repo
-[beaker-HighAvailability]
-name=beaker-HighAvailability
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/HighAvailability
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-cat <<"EOF" >/etc/yum.repos.d/beaker-LoadBalancer.repo
-[beaker-LoadBalancer]
-name=beaker-LoadBalancer
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/LoadBalancer
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-cat <<"EOF" >/etc/yum.repos.d/beaker-optional-x86_64-os.repo
-[beaker-optional-x86_64-os]
-name=beaker-optional-x86_64-os
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/os
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-cat <<"EOF" >/etc/yum.repos.d/beaker-ResilientStorage.repo
-[beaker-ResilientStorage]
-name=beaker-ResilientStorage
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ResilientStorage
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-cat <<"EOF" >/etc/yum.repos.d/beaker-ScalableFileSystem.repo
-[beaker-ScalableFileSystem]
-name=beaker-ScalableFileSystem
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ScalableFileSystem
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
 cat <<"EOF" >/etc/yum.repos.d/beaker-debug.repo
 [beaker-debug]
 name=beaker-debug
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/debug
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-cat <<"EOF" >/etc/yum.repos.d/beaker-optional-x86_64-debug.repo
-[beaker-optional-x86_64-debug]
-name=beaker-optional-x86_64-debug
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/debug
-enabled=1
-gpgcheck=0
-skip_if_unavailable=1
-EOF
-cat <<"EOF" >/etc/yum.repos.d/beaker-Server.repo
-[beaker-Server]
-name=beaker-Server
-baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/Server
+baseurl=http://lab.test-kickstart.invalid/distros/F-18/GOLD/Fedora/x86_64/debug
 enabled=1
 gpgcheck=0
 skip_if_unavailable=1
 EOF
 
 
+# Create a file which will be read by the test harness
+# to communicate with Beaker (fetch recipe, report results, etc)
+cat <<"EOF" >/root/beaker-harness-env.sh
+export BEAKER_LAB_CONTROLLER_URL="http://lab.test-kickstart.invalid:8000/"
+export BEAKER_LAB_CONTROLLER=lab.test-kickstart.invalid
+export BEAKER_RECIPE_ID=@RECIPEID@
+export BEAKER_HUB_URL="@BEAKER@"
+EOF
+
+# Add "traditional" Beaker task repo so that tasks from the
+# central task repository can be executed as well.
+cat <<"EOF" >/etc/yum.repos.d/beaker-tasks.repo
+[beaker-tasks]
+name=beaker-tasks
+baseurl=@REPOS@@RECIPEID@
+enabled=1
+gpgcheck=0
+EOF
+cp /etc/yum.repos.d/beaker-tasks.repo /root/
+
+
+# Create the Dockerfile for the container
+cat << EOF > /root/Dockerfile
+
+FROM docker-registry.mysys.com/fedora:latest
+MAINTAINER Beaker Developers <beaker-devel@lists.fedoraproject.org>
+ADD beaker-tasks.repo /etc/yum.repos.d/
+ADD customrepos/ /etc/yum.repos.d/
+ADD beaker-harness-env.sh /etc/profile.d/beaker-harness-env.sh
+RUN yum -y update; yum clean all
+
+
+# Install the harness
+RUN yum -y install restraint restraint-rhts
+CMD /usr/bin/mybinary
+EOF
+
+cat << EOF > /etc/systemd/system/beaker-harness-docker.service
+[Unit]
+Description=Beaker test harness in a container
+After=network.target docker.service NetworkManager-wait-online.service
+
+[Service]
+Type=simple
+WorkingDirectory=/root
+ExecStartPre=/usr/bin/docker build -t beaker-harness .
+# Specify the local time and time zone to be the same as that on the host
+# See: https://github.com/docker/docker/issues/3359
+# Mount the host /mnt at /mnt so that the test data is preserved
+# post container exit
+ExecStart=/usr/bin/docker run --privileged -d -v /etc/localtime:/etc/localtime:ro -v /etc/timezone:/etc/timezone:ro -v /mnt:/mnt -t beaker-harness
+User=root
+Group=root
+TimeoutStartSec=0
+
+[Install]
+WantedBy=default.target
+EOF
+
+systemctl enable docker beaker-harness-docker
 
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test
@@ -281,10 +328,14 @@ setenv NFSSERVERS "RHEL3,rhel3-nfs.test-kickstart.invalid:/export/home RHEL4,rhe
 setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
-# no snippet data for RedHatEnterpriseLinux6_post
-# no snippet data for RedHatEnterpriseLinux_post
+# Check in with Beaker Server, record our postinstall time.
+fetch - http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
+# Disable rhts-compat for Fedora15/RHEL7 and newer.
+cat >> /etc/profile.d/task-overrides-rhts.sh <<END
+export RHTS_OPTION_COMPATIBLE=
+export RHTS_OPTION_COMPAT_SERVICE=
+END
+# no snippet data for Fedora18_post
+# no snippet data for Fedora_post
 # no snippet data for system_post
 %end
-
-
-
