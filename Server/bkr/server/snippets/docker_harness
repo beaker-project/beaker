@@ -1,0 +1,94 @@
+# Create a file which will be read by the test harness
+# to communicate with Beaker (fetch recipe, report results, etc)
+cat <<"EOF" >/root/beaker-harness-env.sh
+export BEAKER_LAB_CONTROLLER_URL="http://{{ lab_controller.fqdn }}:8000/"
+export BEAKER_LAB_CONTROLLER={{ lab_controller.fqdn }}
+export BEAKER_RECIPE_ID={{ recipe.id }}
+export BEAKER_HUB_URL="{{ absolute_url('/', labdomain=True) }}"
+EOF
+
+# Add "traditional" Beaker task repo so that tasks from the
+# central task repository can be executed as well.
+{% if taskrepo %}
+{% snippet 'taskrepo' %}
+{% endif %}
+cp /etc/yum.repos.d/beaker-tasks.repo /root/
+
+{% if customrepos %}
+# Add all custom repositories (defined using <repo/> elements)
+mkdir /root/customrepos
+{% for repo in customrepos %}
+cat <<"EOF" >/root/customrepos/{{ repo.repo_id }}.repo
+[{{ repo.repo_id }}]
+name={{ repo.repo_id }}
+baseurl={{ repo.path }}
+enabled=1
+gpgcheck=0
+skip_if_unavailable=1
+EOF
+{% endfor %}
+{% endif %}
+
+# Create the Dockerfile for the container
+cat << EOF > /root/Dockerfile
+{% if harness_docker_base_image is not defined %}
+{% set docker_registry="registry.hub.docker.com" %}
+{% set docker_image=distro.osversion.osmajor.name.lower() %}
+{% set docker_tag=distro.osversion.osmajor.number %}
+{% set harness_docker_base_image=docker_registry + "/" + docker_image + ":" + docker_tag %}
+{% endif %}
+
+FROM {{ harness_docker_base_image }}
+MAINTAINER Beaker Developers <beaker-devel@lists.fedoraproject.org>
+ADD beaker-tasks.repo /etc/yum.repos.d/
+ADD customrepos/ /etc/yum.repos.d/
+ADD beaker-harness-env.sh /etc/profile.d/beaker-harness-env.sh
+RUN yum -y update; yum clean all
+
+{% if contained_harness_entrypoint is not defined %}
+# We assume that if the contained harness entrypoint is not
+# defined, we are relying on systemd to start the harness
+# for us
+# Reference: http://developerblog.redhat.com/2014/05/05/running-systemd-within-docker-container/
+{# In case we have fakesystemd installed, remove it #}
+RUN yum -y remove fakesystemd || true
+RUN yum -y install systemd; \
+(cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ "\$i" == systemd-tmpfiles-setup.service ] || rm -f "\$i"; done); \
+rm -f /lib/systemd/system/multi-user.target.wants/*;\
+rm -f /etc/systemd/system/*.wants/*;\
+rm -f /lib/systemd/system/local-fs.target.wants/*; \
+rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
+rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
+rm -f /lib/systemd/system/basic.target.wants/*;\
+rm -f /lib/systemd/system/anaconda.target.wants/*;
+VOLUME [ "/sys/fs/cgroup" ]
+{% endif %}
+
+# Install the harness
+RUN yum -y install {{ harness|default('restraint restraint-rhts') }}
+CMD {{ contained_harness_entrypoint|default('["/usr/sbin/init"]') }}
+EOF
+
+cat << EOF > /etc/systemd/system/beaker-harness-docker.service
+[Unit]
+Description=Beaker test harness in a container
+After=network.target docker.service NetworkManager-wait-online.service
+
+[Service]
+Type=simple
+WorkingDirectory=/root
+ExecStartPre=/usr/bin/docker build -t beaker-harness .
+# Specify the local time and time zone to be the same as that on the host
+# See: https://github.com/docker/docker/issues/3359
+# Mount the host /mnt at /mnt so that the test data is preserved
+# post container exit
+ExecStart=/usr/bin/docker run --privileged -d -v /etc/localtime:/etc/localtime:ro -v /etc/timezone:/etc/timezone:ro -v /mnt:/mnt -t beaker-harness
+User=root
+Group=root
+TimeoutStartSec=0
+
+[Install]
+WantedBy=default.target
+EOF
+
+systemctl enable docker beaker-harness-docker

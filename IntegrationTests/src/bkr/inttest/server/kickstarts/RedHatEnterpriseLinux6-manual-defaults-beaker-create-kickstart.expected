@@ -183,10 +183,8 @@ if efibootmgr &>/dev/null ; then
 fi
 
 
-#Add Task Repo
 
 
-# Add Harness Repo
 
 # Add distro and custom Repos
 cat <<"EOF" >/etc/yum.repos.d/beaker-HighAvailability.repo
@@ -255,10 +253,6 @@ skip_if_unavailable=1
 EOF
 
 
-# fill the yum cache and redirect output to /dev/null
-# This speeds up yum because of a bug where it will update stdout too often.
-# http://lists.baseurl.org/pipermail/yum-devel/2011-December/008857.html
-yum check-update > /dev/null 2>&1 || true
 
 #Add test user account
 useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82Pc/OcytatTeI4ULNWOMJzvpCigWiL4xKP9PX4.' test

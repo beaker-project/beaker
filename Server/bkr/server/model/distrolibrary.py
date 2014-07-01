@@ -322,6 +322,9 @@ class OSMajor(DeclarativeMappedObject):
             ks_meta['mode'] = 'cmdline'
         if rhel in ('4', '5'):
             ks_meta['mode'] = ''
+        ks_meta['docker_package'] = 'docker'
+        if (fedora and fedora != 'rawhide' and int(fedora) < 22)  or (rhel and int(rhel) <= 6):
+            ks_meta['docker_package'] = 'docker-io'
         return InstallOptions(ks_meta, {}, {})
 
     def tasks(self):

@@ -105,6 +105,25 @@ correspond to the similarly-named kickstart option.
     Note that the network device used for installation is always set to start 
     on boot with DHCP activation.
 
+``contained_harness``
+    If specified, runs the test harness and hence the tasks in a Docker
+    container. The test harness to be run defaults to "restraint". A
+    different test harness can be specified using the ``harness``
+    variable. Also see ``contained_harness_entrypoint`` below.
+
+    The host distro and architecture must support Docker for this to
+    be possible.
+
+``contained_harness_entrypoint=<entrypoint>``
+    Specify how the harness should be started. This defaults to
+    "/usr/sbin/init" and expects "systemd" to be the process
+    manager. Alternatively, another binary can be specified. The entry
+    point must be in one of the forms understood by Docker's `CMD
+    instruction <http://docs.docker.com/reference/builder/#cmd>`__.
+
+    This is only required if the test harness is run in a Docker
+    container. See ``contained_harness`` above.
+
 ``ethdevices=<module>[,<module>...]``
     Comma-separated list of network modules to be loaded during installation.
 
@@ -121,6 +140,25 @@ correspond to the similarly-named kickstart option.
     this variable is set, the value will be passed to the ``--port`` option of 
     the ``serial`` command in the GRUB configuration. Refer to `serial in the 
     GRUB manual <http://www.gnu.org/software/grub/manual/grub.html#serial>`__.
+
+``harness=<alternative harness>``
+    Specify the test harness to use instead of the default test
+    harness, "beah". With the ``contained_harness`` variable
+    specified, this defaults to "restraint".
+
+    To learn more, see the :ref:`alternative-harnesses`.
+
+``harness_docker_base_image=<image>``
+    If specified, uses this docker image to build the Docker container
+    that the test runs in. The <image> is expected to be in a form usable in a Dockerfile's
+    `FROM <http://docs.docker.com/reference/builder/#from>`__
+    instruction. If ``contained_harness_entrypoint`` is not specified,
+    the distro should use "systemd" as the process manager.
+
+    If not specified, Beaker will attempt to build the container by
+    fetching the same image as that of the host distro from the Docker
+    public registry. Thus, if Fedora 20 is used on the host machine,
+    the image used will be: "registry.hub.docker.com/fedora:20".
 
 ``ignoredisk=<options``
     Passed directly to the ``ignoredisk`` kickstart command. Use this to select 
@@ -223,6 +261,12 @@ correspond to the similarly-named kickstart option.
 The following variables are used to test for installer or distro features. 
 Beaker populates these variables automatically by inspecting the distro name 
 and version. They can be overridden if necessary for custom distros.
+
+``docker_package``
+    The package name for Docker container engine is ``docker-io`` on
+    Fedora 20/21 and ``docker`` starting with Fedora rawhide (`bugzilla report
+    <https://bugzilla.redhat.com/show_bug.cgi?id=1043676>`__),
+    CentOS 7 and RHEL 7.
 
 ``end``
     Set to ``%end`` on distros which support it, or to the empty string on 
