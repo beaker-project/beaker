@@ -285,9 +285,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
     key_values_string = relationship('Key_Value_String', backref='system',
             cascade='all, delete, delete-orphan')
     activity = relationship(SystemActivity, backref='object', cascade='all, delete',
-            order_by=[SystemActivity.created.desc(), SystemActivity.id.desc()])
+            order_by=[SystemActivity.__table__.c.id.desc()])
     dyn_activity = dynamic_loader(SystemActivity,
-            order_by=[SystemActivity.created.desc(), SystemActivity.id.desc()])
+            order_by=[SystemActivity.__table__.c.id.desc()])
     command_queue = relationship(CommandActivity, backref='object',
             cascade='all, delete, delete-orphan',
             order_by=[CommandActivity.created.desc(), CommandActivity.id.desc()])

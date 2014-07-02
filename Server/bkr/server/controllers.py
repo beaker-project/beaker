@@ -861,7 +861,7 @@ class Root(RPCRoot):
         if 'activities_found' in histories_return:
             historical_data = histories_return['activities_found']
         else:
-            historical_data = system.activity[:150]
+            historical_data = system.dyn_activity
 
         if readonly:
             attrs = dict(readonly = 'True')
