@@ -2530,3 +2530,11 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
         self.assertIn("curl --retry 20 -o remote_script 'http://path/to/~scriptsdir/myscript' "
                       "&& chmod +x remote_script && ./remote_script",
                       ks)
+        # Manual provision
+        self.system.provisions[self.system.arch[0]] = Provision(arch=self.system.arch[0],
+                                                                ks_meta=u'remote_post=http://path/to/myscript')
+        tree = self.rhel62_server_x86_64
+        install_options = self.system.install_options(tree)
+        ks = generate_kickstart(install_options, tree, self.system, self.user).kickstart
+        self.assertIn("curl --retry 20 -o remote_script http://path/to/myscript "
+                      "&& chmod +x remote_script && ./remote_script", ks.splitlines())
