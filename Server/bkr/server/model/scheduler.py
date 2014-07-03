@@ -3455,6 +3455,7 @@ class VirtResource(RecipeResource):
 
     def install_options(self, distro_tree):
         return global_install_options()\
+                .combined_with(InstallOptions.from_strings('', u'console=ttyS0,115200n8 console=tty0', ''))\
                 .combined_with(distro_tree.install_options())
 
     def release(self):

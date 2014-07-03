@@ -231,6 +231,7 @@ Requires:       python-requests-kerberos
 Requires:       openldap-servers
 Requires:       python-unittest2
 Requires:       python-gunicorn
+Requires:       python-mock
 %endif
 
 

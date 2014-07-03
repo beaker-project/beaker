@@ -220,15 +220,19 @@ class ProxyHelper(object):
         """
         return self.hub.tasks.to_dict(task_name)
 
+    def get_console_log(self, recipe_id, length=None):
+        """
+        Get console log from the OpenStack instance
+        """
+        return self.hub.recipes.console_output(recipe_id, length)
 
-class ConsoleWatchFile(object):
+class ConsoleLogHelper(object):
     """
-    Helper class to watch console log files and upload them to Scheduler
+    Helper class to watch console log outputs and upload them to Scheduler
     """
     blocksize = 65536
 
-    def __init__(self, log, watchdog, proxy, panic):
-        self.log = log
+    def __init__(self, watchdog, proxy, panic):
         self.watchdog = watchdog
         self.proxy = proxy
         self.strip_ansi = re.compile("(\033\[[0-9;\?]*[ABCDHfsnuJKmhr])")
@@ -250,25 +254,7 @@ class ConsoleWatchFile(object):
         else:
             return 1
 
-    def update(self):
-        """
-        If the log exists and the file has grown then upload the new piece
-        """
-        try:
-            file = open(self.log, "r")
-        except (OSError, IOError), e:
-            if e.errno == errno.ENOENT:
-                return False # doesn't exist
-            else:
-                raise
-        try:
-            file.seek(self.where)
-            block = file.read(self.blocksize)
-            now = file.tell()
-        finally:
-            file.close()
-        if not block:
-            return False # nothing new has been read
+    def process_log(self, block):
         # Sanitize control characters
         # We can't just strip the ansi codes, that would change the size
         # of the file, so whatever we end up stripping needs to be replaced
@@ -307,6 +293,34 @@ class ConsoleWatchFile(object):
                 pass # someone has removed our log, discard the update
             else:
                 raise
+
+
+class ConsoleWatchFile(ConsoleLogHelper):
+
+    def __init__(self, log, watchdog, proxy, panic):
+        self.log = log
+        super(ConsoleWatchFile, self).__init__(watchdog, proxy, panic)
+
+    def update(self):
+        """
+        If the log exists and the file has grown then upload the new piece
+        """
+        try:
+            file = open(self.log, "r")
+        except (OSError, IOError), e:
+            if e.errno == errno.ENOENT:
+                return False # doesn't exist
+            else:
+                raise
+        try:
+            file.seek(self.where)
+            block = file.read(self.blocksize)
+            now = file.tell()
+        finally:
+            file.close()
+        if not block:
+            return False # nothing new has been read
+        self.process_log(block)
         self.where = now
         return True
 
@@ -319,6 +333,31 @@ class ConsoleWatchFile(object):
         else:
             f.truncate()
         self.where = 0
+
+
+class ConsoleWatchVirt(ConsoleLogHelper):
+    """
+    Watch console logs from virtual machines
+    """
+    def update(self):
+        output = self.proxy.get_console_log(self.watchdog['recipe_id'])
+        if len(output) >= 102400:
+            # If the console log is more than 100KB OpenStack only returns the *last* 100KB.
+            # https://bugs.launchpad.net/nova/+bug/1081436
+            # So we have to treat this chunk as if it were the entire file contents,
+            # since we don't know the actual byte position anymore.
+            block = output
+            now = len(block)
+            self.where = 0
+        else:
+            block = output[self.where:]
+            now = self.where + len(block)
+            if not block:
+                return False
+        self.process_log(block)
+        self.where = now
+        return True
+
 
 class PanicDetector(object):
 
@@ -559,9 +598,13 @@ class Monitor(ProxyHelper):
         self.hub = obj.hub
         self.log_storage = obj.log_storage
         logger.info("Initialize monitor for system: %s", self.watchdog['system'])
-        self.console_watch = ConsoleWatchFile(
-                "%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),
-                self.watchdog,self, self.conf["PANIC_REGEX"])
+        if(self.watchdog['is_virt_recipe']):
+            self.console_watch = ConsoleWatchVirt(
+                    self.watchdog, self, self.conf["PANIC_REGEX"])
+        else:
+            self.console_watch = ConsoleWatchFile(
+                    "%s/%s" % (self.conf["CONSOLE_LOGS"], self.watchdog["system"]),
+                    self.watchdog, self, self.conf["PANIC_REGEX"])
 
     def run(self):
         """ check the logs for new data to upload/or cp

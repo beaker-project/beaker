@@ -14,7 +14,7 @@ from bkr.common.bexceptions import BX
 from bkr.server.widgets import myPaginateDataGrid
 from bkr.server.widgets import RecipeWidget
 from bkr.server.widgets import SearchBar
-from bkr.server import search_utility, identity
+from bkr.server import search_utility, identity, dynamic_virt
 from bkr.server.xmlrpccontroller import RPCRoot
 from bkr.server.helpers import make_link
 from bkr.server.recipetasks import RecipeTasks
@@ -162,6 +162,18 @@ class Recipes(RPCRoot):
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
         return recipe.extend(kill_time)
+
+    @cherrypy.expose
+    def console_output(self, recipe_id, output_length=None, offset=None):
+        """
+        Get text console log output from OpenStack 
+        """
+        try:
+            recipe = Recipe.by_id(recipe_id)
+        except InvalidRequestError:
+            raise BX(_('Invalid recipe ID: %s' % recipe_id))
+        manager = dynamic_virt.VirtManager(recipe.recipeset.job.owner)
+        return manager.get_console_output(output_length)
 
     @cherrypy.expose
     def watchdog(self, recipe_id):
