@@ -694,7 +694,9 @@ class BeakerRecipeBase(BeakerBase):
                 if host_filter_expanded:
                     self.addHostRequires(xml.dom.minidom.parseString
                                          (host_filter_expanded).documentElement)
-
+                else:
+                    sys.stderr.write('Pre-defined host-filter does not exist: %s\n' % host_filter)
+                    sys.exit(1)
 
     def addBaseRequires(self, *args, **kwargs):
         """ Add base requires """

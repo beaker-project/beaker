@@ -114,11 +114,11 @@ class WorkflowSimpleTest(unittest.TestCase):
     #https://bugzilla.redhat.com/show_bug.cgi?id=1081390
     def test_hostfilter_preset(self):
         out = run_client(['bkr', 'workflow-simple',
-                '--dryrun', '--prettyxml',
-                '--host-filter', "INTEL__FAM15_CELERON",
-                '--arch', self.distro_tree.arch.arch,
-                '--family', self.distro.osversion.osmajor.osmajor,
-                '--task', self.task.name])
+                          '--dryrun', '--prettyxml',
+                          '--host-filter', "INTEL__FAM15_CELERON",
+                          '--arch', self.distro_tree.arch.arch,
+                          '--family', self.distro.osversion.osmajor.osmajor,
+                          '--task', self.task.name])
         self.assertIn('<model_name op="like" value="%Celeron%"/>', out)
 
         # with other host requires
@@ -143,6 +143,18 @@ class WorkflowSimpleTest(unittest.TestCase):
                           '--task', self.task.name], 
                          extra_env={'HOME':test_home})
         self.assertIn('<model_name op="like" value="%MyCeleron%"/>', out)
+
+        # Non-existent filter
+        try:
+            run_client(['bkr', 'workflow-simple',
+                        '--dryrun', '--prettyxml',
+                        '--host-filter', "awesomefilter",
+                        '--arch', self.distro_tree.arch.arch,
+                        '--family', self.distro.osversion.osmajor.osmajor,
+                        '--task', self.task.name])
+            self.fail('Must fail or die')
+        except ClientError as e:
+            self.assertIn('Pre-defined host-filter does not exist: awesomefilter', e.stderr_output)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1014693
     def test_hostrequire_raw_xml(self):
