@@ -283,7 +283,7 @@ Expiry Date              FQDN
         recipe = data_setup.create_recipe()
         recipe.systems[:] = [system]
         job = data_setup.create_job_for_recipes([recipe])
-        data_setup.mark_recipe_waiting(recipe, system=system)
+        data_setup.mark_job_queued(job)
         job.recipesets[0].queue_time = datetime.utcnow() - timedelta(hours=self.waiting_recipe_age)
         email_content = u"""
 The following systems have been allocated to you in %s for more than %s days and have other
