@@ -814,7 +814,7 @@ class Root(RPCRoot):
 
 
     @expose(template="bkr.server.templates.system")
-    @paginate('history_data',limit=30,default_order='-created')
+    @paginate('history_data',limit=30,default_order='-id')
     def _view_system_as_html(self, fqdn=None, **kw):
         if fqdn: 
             try:
@@ -861,7 +861,8 @@ class Root(RPCRoot):
         if 'activities_found' in histories_return:
             historical_data = histories_return['activities_found']
         else:
-            historical_data = system.dyn_activity
+            # data grid will apply its own ordering
+            historical_data = system.dyn_activity.order_by(None)
 
         if readonly:
             attrs = dict(readonly = 'True')
