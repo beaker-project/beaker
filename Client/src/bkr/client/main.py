@@ -45,6 +45,7 @@ def main():
     command_container = BeakerCommandContainer(conf=conf)
     formatter = IndentedHelpFormatter(max_help_position=60, width=120)
     parser = BeakerOptionParser(version=__version__,
+            conflict_handler='resolve',
             command_container=command_container,
             default_command="help", formatter=formatter)
 
