@@ -23,7 +23,7 @@ from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_system_search_results, \
         delete_and_confirm, logout, click_menu_item
 from selenium.webdriver.support.ui import Select
-from bkr.inttest.assertions import wait_for_condition
+from bkr.inttest.assertions import wait_for_condition, assert_sorted
 
 class SystemViewTestWD(WebDriverTestCase):
 
@@ -734,6 +734,33 @@ class SystemViewTestWD(WebDriverTestCase):
         self.assertFalse(b.find_element_by_xpath(
                 '//input[@name="excluded_families_subsection.i386" and @value="%s"]'
                 % self.distro_tree.distro.osversion_id).is_selected())
+
+    def test_can_sort_activity_grid(self):
+        with session.begin():
+            self.system.record_activity(service=u'testdata', field=u'status_reason',
+                    new=u'aaa')
+            self.system.record_activity(service=u'testdata', field=u'status_reason',
+                    new=u'bbb')
+            self.system.record_activity(service=u'testdata', field=u'status_reason',
+                    new=u'ccc')
+        b = self.browser
+        login(b)
+        self.go_to_system_view(self.system)
+        b.find_element_by_xpath('//ul[@class="nav nav-tabs"]//a[text()="History"]').click()
+        tab = b.find_element_by_id('history')
+        table = tab.find_element_by_xpath('.//table[@id="widget"]')
+        column = 7 # New Value
+        # by default the grid is sorted by id descending
+        cell_values = [table.find_element_by_xpath('tbody/tr[%d]/td[%d]'
+                % (row, column)).text for row in [1, 2, 3]]
+        self.assertEquals(cell_values, ['ccc', 'bbb', 'aaa'])
+        # sort by New Value column
+        table.find_element_by_xpath('thead/tr/th[%d]/a[text()="New Value"]' % column).click()
+        tab = b.find_element_by_id('history')
+        table = tab.find_element_by_xpath('.//table[@id="widget"]')
+        cell_values = [table.find_element_by_xpath('tbody/tr[%d]/td[%d]'
+                % (row, column)).text for row in [1, 2, 3]]
+        self.assertEquals(cell_values, ['aaa', 'bbb', 'ccc'])
 
 class SystemCcTest(WebDriverTestCase):
 
