@@ -607,6 +607,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return True
         return False
 
+    @hybrid_method
     def can_edit(self, user):
         """
         Does the given user have permission to edit details (inventory info, 
@@ -621,6 +622,14 @@ class System(DeclarativeMappedObject, ActivityMixin):
             self.custom_access_policy.grants(user, SystemPermission.edit_system)):
             return True
         return False
+
+    @can_edit.expression
+    def can_edit(cls, user): #pylint: disable=E0213
+        cls._ensure_user_is_authenticated(user)
+        if user.is_admin():
+            return true()
+        return or_(SystemAccessPolicy.grants(user, SystemPermission.edit_system),
+                cls.owner == user)
 
     def can_lend(self, user):
         """
