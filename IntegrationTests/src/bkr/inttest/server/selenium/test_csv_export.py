@@ -9,9 +9,9 @@
 from turbogears.database import session
 from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.selenium import WebDriverTestCase
-from bkr.inttest.server.webdriver_utils import login
+from bkr.inttest.server.webdriver_utils import login, logout
 from bkr.server.model import Provision, ProvisionFamily, ProvisionFamilyUpdate, \
-    ExcludeOSMajor
+    ExcludeOSMajor, SystemPermission
 import csv
 import requests
 
@@ -137,6 +137,45 @@ class CSVExportTest(WebDriverTestCase):
         csv_request = self.get_csv('system')
         self.assert_(not any(row['fqdn'] == secret_system.fqdn
                 for row in csv.DictReader(csv_request)))
+
+    def test_export_power(self):
+        with session.begin():
+            system = data_setup.create_system()
+            data_setup.configure_system_power(system, power_type=u'drac',
+                    address=u'100 East Davie Street', user=u'Shadowman',
+                    password=u'usethesource', power_id=u'666')
+        login(self.browser)
+        csv_request = self.get_csv('power')
+        row, = [row for row in csv.DictReader(csv_request)
+                if row['fqdn'] == system.fqdn]
+        self.assertEquals(row, {
+            'csv_type': 'power',
+            'fqdn': system.fqdn,
+            'power_type': 'drac',
+            'power_address': '100 East Davie Street',
+            'power_user': 'Shadowman',
+            'power_passwd': 'usethesource',
+            'power_id': '666',
+        })
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1116722
+    def test_export_power_does_not_leak_power_config(self):
+        with session.begin():
+            unprivileged_user = data_setup.create_user(password=u'asdf')
+            privileged_user = data_setup.create_user(password=u'asdf')
+            system = data_setup.create_system(shared=True)
+            system.custom_access_policy.add_rule(SystemPermission.edit_system,
+                    user=privileged_user)
+        b = self.browser
+        login(b, user=privileged_user.user_name, password=u'asdf')
+        csv_request = self.get_csv('power')
+        fqdns = [row['fqdn'] for row in csv.DictReader(csv_request)]
+        self.assertIn(system.fqdn, fqdns)
+        logout(b)
+        login(b, user=unprivileged_user.user_name, password=u'asdf')
+        csv_request = self.get_csv('power')
+        fqdns = [row['fqdn'] for row in csv.DictReader(csv_request)]
+        self.assertNotIn(system.fqdn, fqdns)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=785048
     def test_export_exclude_options(self):

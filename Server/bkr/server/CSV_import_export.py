@@ -529,7 +529,10 @@ class CSV_Power(CSV):
 
     @classmethod
     def query(cls):
-        for system in System.all(identity.current.user).join(System.power):
+        query = System.all(identity.current.user)\
+            .filter(System.can_edit(identity.current.user))\
+            .join(System.power)
+        for system in query:
             yield CSV_Power(system.power)
 
     def __init__(self, power):
