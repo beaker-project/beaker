@@ -1,3 +1,5 @@
+.. _beaker-usage-reminder:
+
 beaker-usage-reminder: Send Beaker usage reminder
 =================================================
 
