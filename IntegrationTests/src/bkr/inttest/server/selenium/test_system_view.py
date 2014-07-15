@@ -81,12 +81,9 @@ class SystemViewTestWD(WebDriverTestCase):
 
         # check the kernel install options field
         def provision_ks_meta_populated():
-            if b.find_element_by_xpath("//input[@id='provision_ks_meta']")\
-                    .get_attribute('value') == \
-                    u'key1=value1 key1=value2 key2=value key3':
-                return True
-
-
+            return (u'key1=value1 key1=value2 key2=value key3' in
+                    b.find_element_by_xpath("//input[@id='provision_ks_meta']")
+                     .get_attribute('value'))
 
         # check the kernel install options field
         def provision_koptions_populated():

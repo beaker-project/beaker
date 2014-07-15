@@ -518,6 +518,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         """
         osmajor = distro_tree.distro.osversion.osmajor
         result = global_install_options()
+        result = result.combined_with(osmajor.default_install_options())
         # arch=None means apply to all arches
         if None in osmajor.install_options_by_arch:
             op = osmajor.install_options_by_arch[None]

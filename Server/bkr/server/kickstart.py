@@ -181,25 +181,6 @@ def generate_kickstart(install_options, distro_tree, system, user,
         'job_whiteboard': job_whiteboard,
     }
 
-    # XXX find a better place to set this, perhaps from the kickstart templates
-    rhel_osmajor = ['RedHatEnterpriseLinux6', 'RedHatEnterpriseLinux7',
-                    'RedHatServerforARMDevelopmentPreview2']
-    if distro_tree.distro.osversion.osmajor.osmajor in rhel_osmajor \
-            or distro_tree.distro.osversion.osmajor.osmajor.startswith('Fedora'):
-        restricted_context['end'] = '%end'
-
-    # Is it F15+ or RHEL7+? (for systemd and others)
-    osmajor = distro_tree.distro.osversion.osmajor.osmajor
-    systemd = False
-    if osmajor.startswith('Fedora'):
-        if osmajor[6:] == 'rawhide' or int(osmajor[6:]) >= 15:
-            systemd = True
-    elif osmajor in ['RedHatEnterpriseLinux7',
-                     'RedHatServerforARMDevelopmentPreview2',
-                     'CentOS7']:
-        systemd = True
-    restricted_context['systemd'] = systemd
-
     restricted_context.update(install_options.ks_meta)
 
     # System templates and snippets have access to more useful stuff.

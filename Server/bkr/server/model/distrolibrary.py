@@ -193,10 +193,47 @@ class OSMajor(DeclarativeMappedObject):
 
     def _sort_key(self):
         # Separate out the trailing digits, so that Fedora9 sorts before Fedora10
-        name, version = re.match(r'(.*?)(\d*)$', self.osmajor.lower()).groups()
-        if version:
+        name, version = self._split()
+        if version == 'rawhide':
+            version = 999
+        elif version:
             version = int(version)
-        return (name, version)
+        return (name.lower(), version)
+
+    def _split(self):
+        return re.match(r'(.*?)(rawhide|\d*)$', self.osmajor).groups()
+
+    def default_install_options(self):
+        """
+        Returns the default install options supplied by Beaker (rather than the 
+        admin) based on some hardcoded OS major names.
+        This is where installer feature test variables are populated.
+        """
+        # We default to assuming all features are present, with features 
+        # conditionally turned off if needed. That way, unrecognised custom 
+        # distros will be assumed to support all features. The admin can 
+        # override these in OS major or distro install options if necessary.
+        ks_meta = {}
+        # Some convenience variables to make the name-based checks simpler:
+        name, version = self._split()
+        rhel, fedora = False, False
+        if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
+                'RedHatEnterpriseLinuxClient', 'RedHatEnterpriseLinuxServerGrid',
+                'CentOS'):
+            rhel = version
+        if name == 'Fedora':
+            fedora = version
+        # %end
+        ks_meta['end'] = '%end'
+        if rhel in ('3', '4', '5'):
+            ks_meta['end'] = ''
+        # systemd vs. SysV init
+        ks_meta['systemd'] = True
+        if rhel in ('3', '4', '5', '6') or \
+                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3') or \
+                (fedora and fedora != 'rawhide' and int(fedora) < 15):
+            ks_meta['systemd'] = False
+        return InstallOptions(ks_meta, {}, {})
 
     def tasks(self):
         """

@@ -211,3 +211,15 @@ correspond to the similarly-named kickstart option.
 ``timezone=<tzname>``
     Time zone to use. Default is ``America/New_York`` unless overridden by the 
     administrator.
+
+The following variables are used to test for installer or distro features. 
+Beaker populates these variables automatically by inspecting the distro name 
+and version. They can be overridden if necessary for custom distros.
+
+``end``
+    Set to ``%end`` on distros which support it, or to the empty string on 
+    older distros.
+
+``systemd``
+    Set to True on distros which use systemd, or to False on distros which use 
+    SysV init.
