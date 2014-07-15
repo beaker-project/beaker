@@ -182,9 +182,8 @@ RECIPE_ID="@RECIPEID@"
 LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
 __EOT__
 
-# readahead conflicts with auditd, see bug 561486 for detailed explanation.
-
-cat << EOF >>/etc/sysconfig/readahead
+if [ -f /etc/sysconfig/readahead ] ; then
+    cat >>/etc/sysconfig/readahead <<EOF
 
 # readahead conflicts with auditd, see bug 561486 for detailed explanation.
 #
@@ -193,8 +192,8 @@ cat << EOF >>/etc/sysconfig/readahead
 
 READAHEAD_COLLECT="no"
 READAHEAD_COLLECT_ON_RPM="no"
-
 EOF
+fi
 
 if [ -e /etc/sysconfig/ntpdate ] ; then
     chkconfig ntpdate on

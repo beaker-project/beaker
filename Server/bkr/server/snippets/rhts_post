@@ -15,9 +15,9 @@ fi
 
 # Enable post-install boot notification
 {% snippet 'post_anamon' %}
-{% if distro is osmajor('RedHatEnterpriseLinux6', 'RedHatEnterpriseLinuxGrid6') %}
+if [ -f /etc/sysconfig/readahead ] ; then
 {% snippet 'readahead_sysconfig' %}
-{% endif %}
+fi
 {% snippet 'linkdelay' %}
 
 {# We normally want to make sure the system time is accurate, in case 
@@ -140,6 +140,11 @@ useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82
 {% snippet 'beaker_env' %}
 {% snippet 'lab_env' %}
 {% snippet 'ssh_keys' %}
+{% if recipe.systemtype == 'Virtual' %}
+if [ -d /etc/init ] ; then
+{% snippet 'virt_console_post' %}
+fi
+{% endif %}
 {% if system and system.kernel_type.kernel_type == 'highbank' %}
 {% snippet 'highbank' %}
 {% endif %}

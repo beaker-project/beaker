@@ -1,4 +1,4 @@
-cat << EOF >/etc/init/ttyS0.conf
+    cat << EOF >/etc/init/ttyS0.conf
 # start ttyS0
 start on runlevel [2345]
 stop on runlevel [S016]
@@ -8,7 +8,7 @@ pre-start exec /sbin/securetty ttyS0
 exec /sbin/agetty /dev/ttyS0 115200 vt100-nav
 EOF
 
-cat << EOF >/etc/init/ttyS1.conf
+    cat << EOF >/etc/init/ttyS1.conf
 # start ttyS1
 start on runlevel [2345]
 stop on runlevel [S016]

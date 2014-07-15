@@ -658,16 +658,17 @@ class KickstartTest(unittest.TestCase):
             </job>''')
         guest = recipe.guests[0]
         ks = guest.rendered_kickstart.kickstart
-        self.assert_(r'''bootloader --location=mbr  --append="console=ttyS0,115200 console=ttyS1,115200"''' in ks.splitlines(), ks)
-        self.assert_('cat << EOF >/etc/init/ttyS0.conf\n'
+        self.assertIn(r'''bootloader --location=mbr  --append="console=ttyS0,115200 console=ttyS1,115200"''', ks.splitlines())
+        self.assertIn('if [ -d /etc/init ] ; then\n'
+            '    cat << EOF >/etc/init/ttyS0.conf\n'
             '# start ttyS0\nstart on runlevel [2345]\n'
             'stop on runlevel [S016]\ninstance ttyS0\n'
             'respawn\npre-start exec /sbin/securetty ttyS0\n'
             'exec /sbin/agetty /dev/ttyS0 115200 vt100-nav\nEOF\n'
-            '\ncat << EOF >/etc/init/ttyS1.conf\n'
+            '\n    cat << EOF >/etc/init/ttyS1.conf\n'
             '# start ttyS1\nstart on runlevel [2345]\nstop on runlevel [S016]\n'
             'instance ttyS1\nrespawn\npre-start exec /sbin/securetty ttyS1\n'
-            'exec /sbin/agetty /dev/ttyS1 115200 vt100-nav\nEOF\n' in ks, ks)
+            'exec /sbin/agetty /dev/ttyS1 115200 vt100-nav\nEOF\n', ks)
 
     def test_rhel6_autopart_type_ignored(self):
         recipe = self.provision_recipe('''

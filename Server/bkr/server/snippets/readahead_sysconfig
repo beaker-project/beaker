@@ -1,6 +1,4 @@
-# readahead conflicts with auditd, see bug 561486 for detailed explanation.
-
-cat << EOF >>/etc/sysconfig/readahead
+    cat >>/etc/sysconfig/readahead <<EOF
 
 # readahead conflicts with auditd, see bug 561486 for detailed explanation.
 #
@@ -9,6 +7,4 @@ cat << EOF >>/etc/sysconfig/readahead
 
 READAHEAD_COLLECT="no"
 READAHEAD_COLLECT_ON_RPM="no"
-
 EOF
-

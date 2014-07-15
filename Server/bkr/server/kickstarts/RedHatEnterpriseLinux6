@@ -87,9 +87,6 @@ unsupported_hardware
 {% snippet 'rhts_post' %}
 {% snippet 'RedHatEnterpriseLinux6_post' %}
 {% snippet 'system_post' %}
-{% if recipe.systemtype == 'Virtual' %}
-{% snippet 'virt_console_post' %}
-{% endif %}
 %end
 
 {{ ks_appends|join('\n') }}
