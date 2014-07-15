@@ -148,6 +148,7 @@ def kickstart_template(distro_tree):
     candidates = [
         'kickstarts/%s' % distro_tree.distro.osversion.osmajor.osmajor,
         'kickstarts/%s' % distro_tree.distro.osversion.osmajor.osmajor.rstrip(string.digits),
+        'kickstarts/default',
     ]
     for candidate in candidates:
         try:

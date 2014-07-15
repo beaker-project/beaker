@@ -5,6 +5,10 @@
 {% endfor  %}
 {% else %}
 {% snippet 'install_method' %}
+
+{% if manual is defined %}
+ignoredisk --interactive
+{% endif %}
 {% if manual is undefined %}
 {% if auth %}
 auth {{ auth }}
@@ -15,6 +19,12 @@ bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} 
 # Use text mode install
 {{ mode|default('text') }}
 {% snippet 'network' %}
+
+{% if distro.osversion.osmajor.name == 'Fedora' %}
+{% if no_updates_repos is undefined and distro.osversion.osmajor.number != 'rawhide' %}
+repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f{{ distro.osversion.osmajor.number }}&arch={{ distro_tree.arch.arch }}
+{% endif %}
+{% endif %}
 {% snippet 'print_anaconda_repos' %}
 
 {#
@@ -51,7 +61,8 @@ install
 
 {% snippet 'rhts_devices' %}
 {% snippet 'rhts_partitions' %}
-{% snippet 'RedHatEnterpriseLinux7' %}
+{% snippet distro.osversion.osmajor.osmajor %}
+{% snippet distro.osversion.osmajor.name %}
 {% snippet 'system' %}
 
 %packages --ignoremissing
@@ -74,14 +85,15 @@ chrony
 
 %pre --log=/dev/console
 {% snippet 'rhts_pre' %}
-{% snippet 'RedHatEnterpriseLinux7_pre' %}
+{% snippet (distro.osversion.osmajor.osmajor + '_pre') %}
+{% snippet (distro.osversion.osmajor.name + '_pre') %}
 {% snippet 'system_pre' %}
 %end
 
-
 %post --log=/dev/console
 {% snippet 'rhts_post' %}
-{% snippet 'RedHatEnterpriseLinux7_post' %}
+{% snippet (distro.osversion.osmajor.osmajor + '_post') %}
+{% snippet (distro.osversion.osmajor.name + '_post') %}
 {% snippet 'system_post' %}
 %end
 

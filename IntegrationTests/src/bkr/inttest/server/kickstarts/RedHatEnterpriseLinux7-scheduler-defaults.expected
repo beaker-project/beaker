@@ -1,9 +1,11 @@
 url --url=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/
+
 # System bootloader configuration
 bootloader --location=mbr
 # Use text mode install
 text
 # no specific network configuration
+
 repo --name=beaker-repos_addons_ScalableFileSystem --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/addons/ScalableFileSystem
 repo --name=beaker-repos_Workstation-optional --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation-optional/x86_64/os
 repo --name=beaker-repos_debug_Workstation --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/debuginfo
@@ -35,6 +37,7 @@ clearpart --all --initlabel
 
 autopart
 # no snippet data for RedHatEnterpriseLinux7
+# no snippet data for RedHatEnterpriseLinux
 # no snippet data for system
 
 %packages --ignoremissing
@@ -96,9 +99,9 @@ fetch - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
 fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon
 python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
 # no snippet data for RedHatEnterpriseLinux7_pre
+# no snippet data for RedHatEnterpriseLinux_pre
 # no snippet data for system_pre
 %end
-
 
 %post --log=/dev/console
 set -x
@@ -377,5 +380,6 @@ export RHTS_OPTION_COMPATIBLE=
 export RHTS_OPTION_COMPAT_SERVICE=
 END
 # no snippet data for RedHatEnterpriseLinux7_post
+# no snippet data for RedHatEnterpriseLinux_post
 # no snippet data for system_post
 %end

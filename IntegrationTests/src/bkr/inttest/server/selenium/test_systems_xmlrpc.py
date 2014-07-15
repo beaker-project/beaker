@@ -244,6 +244,8 @@ class ReleaseSystemXmlRpcTest(XmlRpcTestCase):
             system.release_action = ReleaseAction.reprovision
             system.reprovision_distro_tree = data_setup.create_distro_tree(
                     osmajor=u'BrokenDistro')
+            # tree has no URLs so cannot actually be provisioned
+            system.reprovision_distro_tree.lab_controller_assocs[:] = []
             user = data_setup.create_user(password=u'password')
             system.reserve_manually(service=u'testdata', user=user)
         server = self.get_server()

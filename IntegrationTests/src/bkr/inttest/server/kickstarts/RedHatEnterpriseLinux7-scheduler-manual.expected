@@ -1,5 +1,7 @@
 url --url=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/Workstation/x86_64/os/
 
+ignoredisk --interactive
+
 
 %pre --log=/dev/console
 set -x
@@ -34,9 +36,9 @@ fetch - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
 fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon
 python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
 # no snippet data for RedHatEnterpriseLinux7_pre
+# no snippet data for RedHatEnterpriseLinux_pre
 # no snippet data for system_pre
 %end
-
 
 %post --log=/dev/console
 set -x
@@ -315,5 +317,6 @@ export RHTS_OPTION_COMPATIBLE=
 export RHTS_OPTION_COMPAT_SERVICE=
 END
 # no snippet data for RedHatEnterpriseLinux7_post
+# no snippet data for RedHatEnterpriseLinux_post
 # no snippet data for system_post
 %end

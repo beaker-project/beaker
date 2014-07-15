@@ -203,6 +203,21 @@ class OSMajor(DeclarativeMappedObject):
     def _split(self):
         return re.match(r'(.*?)(rawhide|\d*)$', self.osmajor).groups()
 
+    @property
+    def name(self):
+        name, version = self._split()
+        return name
+
+    @property
+    def number(self):
+        """
+        Numeric portion of the OS major, e.g. 18 for Fedora18.
+        Note that this is not an int because it may be 'rawhide'!
+        """
+        # This property is called number to avoid confusion with OSVersion.
+        name, version = self._split()
+        return version
+
     def default_install_options(self):
         """
         Returns the default install options supplied by Beaker (rather than the 

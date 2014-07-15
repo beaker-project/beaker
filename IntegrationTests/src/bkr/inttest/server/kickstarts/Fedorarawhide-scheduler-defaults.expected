@@ -7,6 +7,7 @@ bootloader --location=mbr
 text
 # no specific network configuration
 
+repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/development/rawhide/x86_64/debug
 
 firewall --disabled
 # Run the Setup Agent on first boot
@@ -21,16 +22,18 @@ reboot
 rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
 # SELinux configuration
 selinux --enforcing
+
+
 # System timezone
 timezone America/New_York
 # Install OS instead of upgrade
 install
 
-repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/development/rawhide/x86_64/debug
 zerombr
 clearpart --all --initlabel
 
 autopart
+# no snippet data for Fedorarawhide
 # no snippet data for Fedora
 # no snippet data for system
 
@@ -54,8 +57,8 @@ sendmail
 unifdef
 vim-enhanced
 wget
-chrony
 # no snippet data for packages
+chrony
 %end
 
 
@@ -92,10 +95,10 @@ fetch - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
 
 fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon
 python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
+# no snippet data for Fedorarawhide_pre
 # no snippet data for Fedora_pre
 # no snippet data for system_pre
 %end
-
 
 %post --log=/dev/console
 set -x
@@ -341,6 +344,7 @@ cat >> /etc/profile.d/task-overrides-rhts.sh <<END
 export RHTS_OPTION_COMPATIBLE=
 export RHTS_OPTION_COMPAT_SERVICE=
 END
+# no snippet data for Fedorarawhide_post
 # no snippet data for Fedora_post
 # no snippet data for system_post
 %end

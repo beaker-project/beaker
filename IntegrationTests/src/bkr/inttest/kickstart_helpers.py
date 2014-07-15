@@ -111,7 +111,4 @@ EOF
 ''',
                     'snippets/per_system/packages/bz728410-system-with-packages':
                         'special-weird-driver-package\n',
-                    # delete this after bz1070597 is fixed
-                    'kickstarts/CustomRHEL7': pkg_resources.resource_string(
-                        'bkr.server', 'kickstarts/RedHatEnterpriseLinux7'),
                 })])

@@ -2105,27 +2105,6 @@ network --bootproto=dhcp --device=66:77:88:99:aa:bb
         self.assert_('# Install U-Boot boot.scr' in k.splitlines(), k)
         self.assert_('Yosemite Fedora' in k, k)
 
-    def test_f17_arm(self):
-        # Fedora 17 ARM had some special one-off hacks
-        recipe = self.provision_recipe('''
-            <job>
-                <whiteboard/>
-                <recipeSet>
-                    <recipe>
-                        <distroRequires>
-                            <distro_name op="=" value="Fedora-17" />
-                            <distro_arch op="=" value="armhfp" />
-                        </distroRequires>
-                        <hostRequires/>
-                        <task name="/distribution/install" />
-                    </recipe>
-                </recipeSet>
-            </job>
-            ''', self.system_armhfp)
-        k = recipe.rendered_kickstart.kickstart
-        self.assert_('http://dmarlin.fedorapeople.org/yum/f17/arm/os/Packages/' in k, k)
-        self.assert_('%packages --ignoremissing\nuboot-tools' in k, k)
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=728410
     def test_per_system_packages(self):
         system = data_setup.create_system(fqdn=u'bz728410-system-with-packages',
