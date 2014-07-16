@@ -220,9 +220,15 @@ and version. They can be overridden if necessary for custom distros.
     Set to ``%end`` on distros which support it, or to the empty string on 
     older distros.
 
-``systemd``
-    Set to True on distros which use systemd, or to False on distros which use 
-    SysV init.
+``has_autopart_type``
+    Indicates that the ``autopart`` kickstart command accepts a ``--type`` 
+    option.
+
+``has_repo_cost``
+    Indicates that the ``repo`` command accepts a ``--cost`` option.
+
+``has_systemd``
+    Indicates that the distro uses systemd rather than SysV init.
 
 ``yum``
     Unset, except on older distros which require the yum package to be fetched 

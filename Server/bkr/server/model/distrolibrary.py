@@ -227,11 +227,24 @@ class OSMajor(DeclarativeMappedObject):
         ks_meta['end'] = '%end'
         if rhel in ('3', '4', '5'):
             ks_meta['end'] = ''
+        # autopart --type
+        ks_meta['has_autopart_type'] = True
+        if rhel in ('3', '4', '5', '6') or \
+                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3') or \
+                (fedora and fedora != 'rawhide' and int(fedora) < 18):
+            del ks_meta['has_autopart_type']
+        # repo --cost
+        ks_meta['has_repo_cost'] = True
+        if rhel in ('3', '4', '5'):
+            del ks_meta['has_repo_cost']
         # systemd vs. SysV init
+        # (prefer has_systemd, we also set systemd=True|False for compatibility)
+        ks_meta['has_systemd'] = True
         ks_meta['systemd'] = True
         if rhel in ('3', '4', '5', '6') or \
                 self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3') or \
                 (fedora and fedora != 'rawhide' and int(fedora) < 15):
+            del ks_meta['has_systemd']
             ks_meta['systemd'] = False
         # yum
         if rhel == '3':

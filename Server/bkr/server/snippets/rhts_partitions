@@ -102,12 +102,7 @@ logvol /{{ partname }} --name={{ lvmname }} --vgname=TestVolume00{{ is_lvm }} --
 ## If autopart_type is specified and a compatible distro is being used
 ## use it.
 #}
-{% if distro.osversion.osmajor.osmajor.startswith('Fedora') %}
-{% set fedora_releasever = distro.osversion.osmajor.osmajor[6:] %}
-{% else %}
-{% set fedora_releasever = None %}
-{% endif %}
-{% if autopart_type and (fedora_releasever|int >= 18 or fedora_releasever == 'rawhide' or distro is osmajor('RedHatEnterpriseLinux7')) %}
+{% if autopart_type and has_autopart_type is defined %}
 autopart --type {{ autopart_type }}
 {% else %}
 autopart

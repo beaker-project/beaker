@@ -1,4 +1,4 @@
-{% if systemd %}
+{% if has_systemd is defined or systemd %}
 # Disable rhts-compat for Fedora15/RHEL7 and newer.
 cat >> /etc/profile.d/task-overrides-rhts.sh <<END
 export RHTS_OPTION_COMPATIBLE=
