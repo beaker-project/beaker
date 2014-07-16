@@ -223,3 +223,7 @@ and version. They can be overridden if necessary for custom distros.
 ``systemd``
     Set to True on distros which use systemd, or to False on distros which use 
     SysV init.
+
+``yum``
+    Unset, except on older distros which require the yum package to be fetched 
+    and installed.

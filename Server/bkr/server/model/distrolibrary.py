@@ -233,6 +233,11 @@ class OSMajor(DeclarativeMappedObject):
                 self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3') or \
                 (fedora and fedora != 'rawhide' and int(fedora) < 15):
             ks_meta['systemd'] = False
+        # yum
+        if rhel == '3':
+            ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL3.noarch.rpm'
+        elif rhel == '4':
+            ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL4.noarch.rpm'
         return InstallOptions(ks_meta, {}, {})
 
     def tasks(self):

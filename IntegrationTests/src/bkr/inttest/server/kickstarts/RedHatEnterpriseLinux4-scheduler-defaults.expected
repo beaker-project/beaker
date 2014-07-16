@@ -220,7 +220,6 @@ if efibootmgr &>/dev/null ; then
     echo "$os_boot_entry" >/root/EFI_BOOT_ENTRY.TXT
 fi
 
-
 # Install Yum
 pushd /root
 fetch yum-2.2.2-1.rhts.EL4.noarch.rpm http://lab.test-kickstart.invalid/beaker/yum-2.2.2-1.rhts.EL4.noarch.rpm

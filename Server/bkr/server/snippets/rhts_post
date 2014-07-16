@@ -79,14 +79,6 @@ fi
 
 {% snippet 'boot_order' %}
 
-{% if not yum %}
-{% if distro is osmajor('RedHatEnterpriseLinux3') %}
-{% set yum = 'yum-2.2.2-1.rhts.EL3.noarch.rpm' %}
-{% elif distro is osmajor('RedHatEnterpriseLinux4') %}
-{% set yum = 'yum-2.2.2-1.rhts.EL4.noarch.rpm' %}
-{% endif %}
-{% endif %}
-
 {% if yum %}
 # Install Yum
 pushd /root

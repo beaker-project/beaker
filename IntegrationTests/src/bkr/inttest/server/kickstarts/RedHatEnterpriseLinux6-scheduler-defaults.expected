@@ -234,7 +234,6 @@ if efibootmgr &>/dev/null ; then
 fi
 
 
-
 #Add Task Repo
 cat <<"EOF" >/etc/yum.repos.d/beaker-tasks.repo
 [beaker-tasks]
