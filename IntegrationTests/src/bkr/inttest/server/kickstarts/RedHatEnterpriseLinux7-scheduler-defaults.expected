@@ -2,7 +2,6 @@ url --url=http://lab.test-kickstart.invalid/distros/RHEL-7.0-20120314.0/compose/
 
 # System bootloader configuration
 bootloader --location=mbr
-# Use text mode install
 text
 # no specific network configuration
 

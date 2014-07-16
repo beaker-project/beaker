@@ -248,6 +248,17 @@ class OSMajor(DeclarativeMappedObject):
                 self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3') or \
                 (fedora and fedora != 'rawhide' and int(fedora) < 18):
             del ks_meta['has_autopart_type']
+        # chrony
+        ks_meta['has_chrony'] = True
+        if rhel in ('3', '4', '5', '6') or \
+                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3'):
+            del ks_meta['has_chrony']
+        # bootloader --leavebootorder
+        ks_meta['has_leavebootorder'] = True
+        if rhel in ('3', '4', '5', '6') or \
+                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3') or \
+                (fedora and fedora != 'rawhide' and int(fedora) < 18):
+            del ks_meta['has_leavebootorder']
         # repo --cost
         ks_meta['has_repo_cost'] = True
         if rhel in ('3', '4', '5'):
@@ -261,11 +272,21 @@ class OSMajor(DeclarativeMappedObject):
                 (fedora and fedora != 'rawhide' and int(fedora) < 15):
             del ks_meta['has_systemd']
             ks_meta['systemd'] = False
+        # unsupported_hardware
+        ks_meta['has_unsupported_hardware'] = True
+        if rhel in ('3', '4', '5'):
+            del ks_meta['has_unsupported_hardware']
         # yum
         if rhel == '3':
             ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL3.noarch.rpm'
         elif rhel == '4':
             ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL4.noarch.rpm'
+        # mode
+        if rhel == '6' or \
+                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3'):
+            ks_meta['mode'] = 'cmdline'
+        if rhel in ('4', '5'):
+            ks_meta['mode'] = ''
         return InstallOptions(ks_meta, {}, {})
 
     def tasks(self):

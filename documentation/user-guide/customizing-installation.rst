@@ -224,11 +224,21 @@ and version. They can be overridden if necessary for custom distros.
     Indicates that the ``autopart`` kickstart command accepts a ``--type`` 
     option.
 
+``has_chrony``
+    Indicates that chrony is available in the distro.
+
+``has_leavebootorder``
+    Indicates that the ``bootloader`` command accepts a ``--leavebootorder`` 
+    option.
+
 ``has_repo_cost``
     Indicates that the ``repo`` command accepts a ``--cost`` option.
 
 ``has_systemd``
     Indicates that the distro uses systemd rather than SysV init.
+
+``has_unsupported_hardware``
+    Indicates that the ``unsupported_hardware`` kickstart command is accepted.
 
 ``yum``
     Unset, except on older distros which require the yum package to be fetched 

@@ -3,7 +3,6 @@ nfs --server lab.test-kickstart.invalid --dir /distros/development/rawhide/x86_6
 
 # System bootloader configuration
 bootloader --location=mbr
-# Use text mode install
 text
 # no specific network configuration
 

@@ -14,9 +14,8 @@ ignoredisk --interactive
 auth {{ auth }}
 {% endif %}
 # System bootloader configuration
-bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}{% if distro_tree is arch('ppc', 'ppc64') %} --leavebootorder{% endif %}
+bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} --append="{{ kernel_options_post }}"{% endif %}{% if recipe.systemtype == 'Virtual' %}  --append="console=ttyS0,115200 console=ttyS1,115200"{% endif %}{% if distro_tree is arch('ppc', 'ppc64') and has_leavebootorder is defined %} --leavebootorder{% endif %}
 
-# Use text mode install
 {{ mode|default('text') }}
 {% snippet 'network' %}
 
@@ -64,17 +63,18 @@ install
 {% snippet distro.osversion.osmajor.osmajor %}
 {% snippet distro.osversion.osmajor.name %}
 {% snippet 'system' %}
+{% if unsupported_hardware is defined and has_unsupported_hardware is defined %}
+unsupported_hardware
+{% endif %}
 
 %packages --ignoremissing
-{% if recipe or packages is defined %}
-{% snippet 'rhts_packages' %}
+{%- if not recipe and packages is undefined %} --default
 {% else %}
-@development
-@desktop-platform-devel
-@server-platform-devel
+
+{% snippet 'rhts_packages' %}
 {% endif %}
 {% snippet 'packages' %}
-{% if no_clock_sync is undefined %}
+{% if no_clock_sync is undefined and has_chrony is defined %}
 chrony
 {% endif %}
 %end

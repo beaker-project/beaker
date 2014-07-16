@@ -1,8 +1,6 @@
 nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-6.2/Server/x86_64/os/
 #url --url=nfs://lab.test-kickstart.invalid:/distros/RHEL-6.2/Server/x86_64/os/
 
-key --skip
-
 ignoredisk --interactive
 
 
@@ -39,6 +37,7 @@ fetch - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
 fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon
 python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
 # no snippet data for RedHatEnterpriseLinux6_pre
+# no snippet data for RedHatEnterpriseLinux_pre
 # no snippet data for system_pre
 %end
 
@@ -341,6 +340,7 @@ EOF
 # Check in with Beaker Server, record our postinstall time.
 fetch - http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
 # no snippet data for RedHatEnterpriseLinux6_post
+# no snippet data for RedHatEnterpriseLinux_post
 # no snippet data for system_post
 %end
 
