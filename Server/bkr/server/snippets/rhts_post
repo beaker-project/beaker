@@ -53,9 +53,12 @@ if [ -e /etc/chrony.conf ] ; then
 {% if systemd %}
     systemctl disable ntpd
     systemctl disable ntpdate
+    systemctl enable chronyd
+    systemctl enable chrony-wait
 {% else %}
     chkconfig ntpd off
     chkconfig ntpdate off
+    chkconfig chronyd on
 {% endif %}
 fi
 {% endif %}

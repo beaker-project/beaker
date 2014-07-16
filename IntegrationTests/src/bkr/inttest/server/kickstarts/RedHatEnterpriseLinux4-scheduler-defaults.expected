@@ -141,6 +141,7 @@ if [ -e /etc/chrony.conf ] ; then
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
     chkconfig ntpd off
     chkconfig ntpdate off
+    chkconfig chronyd on
 fi
 
 

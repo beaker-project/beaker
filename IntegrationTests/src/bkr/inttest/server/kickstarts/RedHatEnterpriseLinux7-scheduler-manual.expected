@@ -88,6 +88,8 @@ if [ -e /etc/chrony.conf ] ; then
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
     systemctl disable ntpd
     systemctl disable ntpdate
+    systemctl enable chronyd
+    systemctl enable chrony-wait
 fi
 
 

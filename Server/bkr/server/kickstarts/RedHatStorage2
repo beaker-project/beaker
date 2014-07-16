@@ -18,7 +18,6 @@ bootloader --location=mbr{% if kernel_options_post %} --append="{{ kernel_option
 {{ mode|default('cmdline') }}
 
 {% snippet 'network' %}
-services --enabled=ntpd
 {#
 ## Firewall configuration
 ## firewall in kickstart metadata will enable the firewall

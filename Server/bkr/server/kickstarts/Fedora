@@ -16,9 +16,6 @@ bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} 
 # Use text mode install
 {{ mode|default('text') }}
 {% snippet 'network' %}
-{% if no_clock_sync is undefined %}
-services --enabled=chronyd,chrony-wait
-{% endif %}
 
 {% if distro.osversion.osmajor.osmajor.startswith('Fedora') %}
 {% set releasever = distro.osversion.osmajor.osmajor[6:] %}

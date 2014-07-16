@@ -15,9 +15,6 @@ bootloader --location={{ boot_loc|default("mbr") }}{% if kernel_options_post %} 
 # Use text mode install
 {{ mode|default('text') }}
 {% snippet 'network' %}
-{% if no_clock_sync is undefined %}
-services --enabled=chronyd,chrony-wait
-{% endif %}
 {% snippet 'print_anaconda_repos' %}
 
 {#

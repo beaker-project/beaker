@@ -6,7 +6,6 @@ bootloader --location=mbr
 # Use text mode install
 text
 # no specific network configuration
-services --enabled=chronyd,chrony-wait
 
 repo --name=fedora-updates --mirrorlist=https://mirrors.fedoraproject.org/metalink?repo=updates-released-f18&arch=x86_64
 
@@ -149,6 +148,8 @@ if [ -e /etc/chrony.conf ] ; then
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
     systemctl disable ntpd
     systemctl disable ntpdate
+    systemctl enable chronyd
+    systemctl enable chrony-wait
 fi
 
 
