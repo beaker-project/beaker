@@ -27,14 +27,14 @@ if [ -e /etc/sysconfig/ntpdate ] ; then
 {% if systemd %}
     systemctl enable ntpdate
 {% else %}
-    /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
+    chkconfig ntpdate on
 {% endif %}
 fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
 {% if systemd %}
     systemctl enable ntpd
 {% else %}
-    /sbin/chkconfig ntpd on >/dev/null 2>&1 || :
+    chkconfig ntpd on
 {% endif %}
     GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
@@ -54,8 +54,8 @@ if [ -e /etc/chrony.conf ] ; then
     systemctl disable ntpd
     systemctl disable ntpdate
 {% else %}
-    /sbin/chkconfig ntpd off >/dev/null 2>&1 || :
-    /sbin/chkconfig ntpdate off >/dev/null 2>&1 || :
+    chkconfig ntpd off
+    chkconfig ntpdate off
 {% endif %}
 fi
 {% endif %}

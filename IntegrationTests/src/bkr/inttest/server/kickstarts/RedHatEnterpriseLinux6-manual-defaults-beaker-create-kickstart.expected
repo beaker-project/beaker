@@ -82,10 +82,10 @@ READAHEAD_COLLECT_ON_RPM="no"
 EOF
 
 if [ -e /etc/sysconfig/ntpdate ] ; then
-    /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
+    chkconfig ntpdate on
 fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
-    /sbin/chkconfig ntpd on >/dev/null 2>&1 || :
+    chkconfig ntpd on
     GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
     if [ -z "$GOT_G" ]; then
@@ -100,8 +100,8 @@ if [ -e /etc/chrony.conf ] ; then
     # setting iburst should speed up initial sync
     # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
-    /sbin/chkconfig ntpd off >/dev/null 2>&1 || :
-    /sbin/chkconfig ntpdate off >/dev/null 2>&1 || :
+    chkconfig ntpd off
+    chkconfig ntpdate off
 fi
 
 
