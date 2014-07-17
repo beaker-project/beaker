@@ -1,7 +1,9 @@
 set -x
+{% snippet 'fetch_wrapper' %}
+
 {% if recipe %}
 # Check in with Beaker Server
-wget -O - http://{{ lab_controller.fqdn }}:8000/install_start/{{ recipe.id }}
+fetch - http://{{ lab_controller.fqdn }}:8000/install_start/{{ recipe.id }}
 {% endif %}
 
 {#

@@ -63,10 +63,35 @@ chrony
 
 %pre --log=/dev/console
 set -x
-# Check in with Beaker Server
-wget -O - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
+# Some distros have curl in their minimal install set, others have wget.
+# We define a wrapper function around the best available implementation
+# so that the rest of the script can use that for making HTTP requests.
+if command -v curl >/dev/null ; then
+    function fetch() {
+        curl --retry 20 --remote-time -o "$1" "$2"
+    }
+elif command -v wget >/dev/null ; then
+    # In Anaconda images wget is actually busybox
+    if wget --help | grep -q BusyBox ; then
+        function fetch() {
+            wget -O "$1" "$2"
+        }
+    else
+        function fetch() {
+            wget --tries 20 -O "$1" "$2"
+        }
+    fi
+else
+    echo "No HTTP client command available!"
+    function fetch() {
+        false
+    }
+fi
 
-wget -O /tmp/anamon 'http://lab.test-kickstart.invalid/beaker/anamon'
+# Check in with Beaker Server
+fetch - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
+
+fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon
 python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
 # no snippet data for Fedora_pre
 # no snippet data for system_pre
@@ -75,6 +100,31 @@ python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstar
 
 %post --log=/dev/console
 set -x
+# Some distros have curl in their minimal install set, others have wget.
+# We define a wrapper function around the best available implementation
+# so that the rest of the script can use that for making HTTP requests.
+if command -v curl >/dev/null ; then
+    function fetch() {
+        curl --retry 20 --remote-time -o "$1" "$2"
+    }
+elif command -v wget >/dev/null ; then
+    # In Anaconda images wget is actually busybox
+    if wget --help | grep -q BusyBox ; then
+        function fetch() {
+            wget -O "$1" "$2"
+        }
+    else
+        function fetch() {
+            wget --tries 20 -O "$1" "$2"
+        }
+    fi
+else
+    echo "No HTTP client command available!"
+    function fetch() {
+        false
+    }
+fi
+
 # Check in with Beaker Server, let it know our hostname, and
 # record our install time.
 
@@ -98,8 +148,8 @@ function find_fqdn() {
     hostname -I | cut -d' ' -f1
 }
 REPORTED_FQDN=$(find_fqdn)
-curl http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN
-curl http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
+fetch - "http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN"
+fetch - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
 echo @RECIPEID@ > /root/RECIPE.TXT
 
 # If netboot_method= is found in /proc/cmdline record it to /root
@@ -110,8 +160,8 @@ fi
 
 # Enable post-install boot notification
 
-curl -R "http://lab.test-kickstart.invalid/beaker/anamon" -o /usr/local/sbin/anamon
-curl -R "http://lab.test-kickstart.invalid/beaker/anamon.init" -o /etc/rc.d/init.d/anamon
+fetch /usr/local/sbin/anamon http://lab.test-kickstart.invalid/beaker/anamon
+fetch /etc/rc.d/init.d/anamon http://lab.test-kickstart.invalid/beaker/anamon.init
 
 chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
 if selinuxenabled &>/dev/null ; then
@@ -275,7 +325,7 @@ setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
 # Check in with Beaker Server, record our postinstall time.
-curl http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
+fetch - http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
 # Disable rhts-compat for Fedora15/RHEL7 and newer.
 cat >> /etc/profile.d/task-overrides-rhts.sh <<END
 export RHTS_OPTION_COMPATIBLE=

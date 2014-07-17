@@ -2520,7 +2520,6 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1099231
     def test_remote_post(self):
-
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
@@ -2536,39 +2535,18 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                 </recipeSet>
             </job>
             ''')
-
         ks = recipe.rendered_kickstart.kickstart
-        self.assertIn('wget --tries 20 -O remote_script http://path/to/myscript '
+        self.assertIn('fetch remote_script http://path/to/myscript '
                       '&& chmod +x remote_script && ./remote_script',
                       ks)
 
-        recipe = self.provision_recipe('''
-            <job>
-                <whiteboard/>
-                <recipeSet>
-                    <recipe ks_meta="remote_post='http://path/to/~scriptsdir/myscript'">
-                        <distroRequires>
-                            <distro_name op="=" value="RHEL-6.2" />
-                            <distro_variant op="=" value="Server" />
-                            <distro_arch op="=" value="x86_64" />
-                        </distroRequires>
-                        <hostRequires/>
-                        <task name="/distribution/install" />
-                    </recipe>
-                </recipeSet>
-            </job>
-            ''')
-        ks = recipe.rendered_kickstart.kickstart
-        self.assertIn("curl --retry 20 -o remote_script 'http://path/to/~scriptsdir/myscript' "
-                      "&& chmod +x remote_script && ./remote_script",
-                      ks)
         # Manual provision
         self.system.provisions[self.system.arch[0]] = Provision(arch=self.system.arch[0],
                                                                 ks_meta=u'remote_post=http://path/to/myscript')
         tree = self.rhel62_server_x86_64
         install_options = self.system.install_options(tree)
         ks = generate_kickstart(install_options, tree, self.system, self.user).kickstart
-        self.assertIn("curl --retry 20 -o remote_script http://path/to/myscript "
+        self.assertIn("fetch remote_script http://path/to/myscript "
                       "&& chmod +x remote_script && ./remote_script", ks.splitlines())
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1123700

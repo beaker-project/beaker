@@ -1,4 +1,6 @@
 set -x
+{% snippet 'fetch_wrapper' %}
+
 {% snippet 'install_done' %}
 {% snippet 'clear_netboot' %}
 {% if recipe %}
@@ -88,11 +90,7 @@ fi
 {% if yum %}
 # Install Yum
 pushd /root
-{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
-/usr/bin/wget -N http://{{ lab_controller.fqdn }}/beaker/{{ yum }}
-{% else %}
-curl -R http://{{ lab_controller.fqdn }}/beaker/{{ yum }} -o {{ yum }}
-{% endif %}
+fetch {{ yum }} http://{{ lab_controller.fqdn }}/beaker/{{ yum }}
 /bin/rpm -Uvh {{ yum }}
 popd
 {% endif %}
@@ -151,10 +149,6 @@ useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82
 {% snippet 'remote_post' %}
 {% if recipe %}
 # Check in with Beaker Server, record our postinstall time.
-{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
-wget -O - http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}
-{% else %}
-curl http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}
-{% endif %}
+fetch - http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}
 {% endif %}
 {% snippet 'disable_rhts_compat' %}
