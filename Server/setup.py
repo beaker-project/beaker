@@ -192,7 +192,6 @@ else:
         ('/etc/init.d', ['init.d/beakerd']),
         ('/var/run/beaker', []),
     ])
-
 setup(
     name="bkr.server",
     namespace_packages = ['bkr'],
@@ -224,6 +223,7 @@ setup(
         'bkr.server.config': ['*.cfg'],
         'bkr.server.templates': ['*.kid'],
         'bkr.server': ['kickstarts/*', 'snippets/*', 'reporting-queries/*', 'mail-templates/*'],
+        'bkr.server.alembic': ['versions/*.py', 'env.py'],
     },
     keywords=[
         'turbogears.app',

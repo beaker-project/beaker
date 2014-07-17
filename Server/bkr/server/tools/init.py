@@ -24,8 +24,10 @@ from os.path import dirname, exists, join
 from os import getcwd
 import turbogears
 from turbogears.database import metadata, get_engine
-
 from optparse import OptionParser
+from alembic import config as alembic_config
+from alembic import command as alembic_command
+from alembic import util as alembic_util
 
 __version__ = '0.1'
 __description__ = 'Command line tool for initializing Beaker DB'
@@ -202,17 +204,37 @@ def get_parser():
                       help="email address of Admin account")
     parser.add_option("-n", "--fullname", action="store", type="string",
                       dest="display_name", help="Full name of Admin account")
-
+    parser.add_option("--downgrade", type="string", metavar='REVISION_IDENTIFIER',
+                     help="Downgrade database to a previous version")
     return parser
+
+def do_alembic_command(config, cmd, *args, **kwargs):
+    try:
+        getattr(alembic_command, cmd)(config, *args, **kwargs)
+    except alembic_util.CommandError as e:
+        # alembic_util.err() will call sys.exit(-1) to exit
+        alembic_util.err(str(e))
 
 def main():
     parser = get_parser()
     opts, args = parser.parse_args()
     load_config_or_exit(opts.configfile)
     log_to_stream(sys.stderr)
-    init_db(user_name=opts.user_name, password=opts.password,
-            user_display_name=opts.display_name,
-            user_email_address=opts.email_address)
+    alembic_config_ = alembic_config.Config()
+    alembic_config_.set_main_option('script_location', 'bkr.server:alembic')
+    alembic_config_.set_main_option('sqlalchemy.url',
+                                   turbogears.config.get("sqlalchemy.dburi"))
+    if opts.downgrade:
+        do_alembic_command(alembic_config_, 'downgrade', opts.downgrade)
+    else:
+        # if database is empty then initialize it
+        if not get_engine().table_names():
+            init_db(user_name=opts.user_name, password=opts.password,
+                    user_display_name=opts.display_name, user_email_address=opts.email_address)
+            do_alembic_command(alembic_config_, 'stamp', 'head')
+        else:
+            # upgrade to the latest DB version
+            do_alembic_command(alembic_config_, 'upgrade', 'head')
 
 if __name__ == "__main__":
     main()

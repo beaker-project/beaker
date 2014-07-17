@@ -116,6 +116,7 @@ BuildRequires:  python-webassets
 BuildRequires:  python-flask
 BuildRequires:  python-markdown
 BuildRequires:  python-passlib
+BuildRequires:  python-alembic
 %if %{with_systemd}
 BuildRequires:  systemd
 %endif
@@ -211,6 +212,7 @@ Requires:       /usr/bin/lessc
 Requires:       /usr/bin/cssmin
 Requires:       /usr/bin/uglifyjs
 Requires:       python-passlib
+Requires:       python-alembic
 %if %{with_systemd}
 Requires:       systemd-units
 Requires(post): systemd

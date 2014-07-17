@@ -42,7 +42,19 @@ events in this case is:
 1. Stop Beaker daemons on the lab controllers.
 2. Stop Apache and beakerd on the Beaker server.
 3. Use Yum to upgrade all relevant packages.
-4. Apply database changes and perform any other steps in the release notes.
+4. Apply database changes.
+
+.. note::
+
+   Beaker is using alembic to manage database migrations.If your Beaker instance has
+   already been upgraded to 0.17, please apply the below changes::
+
+        CREATE TABLE IF NOT EXISTS alembic_version (
+            version_num VARCHAR(32) NOT NULL
+        );
+
+        INSERT INTO alembic_version VALUES('431e4e2ccbba')
+
 5. Start Apache and beakerd on the Beaker server.
 6. Extend all watchdogs using :program:`bkr watchdogs-extend`.
 7. Start Beaker daemons on the lab controllers.
