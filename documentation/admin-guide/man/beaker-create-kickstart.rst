@@ -15,7 +15,9 @@ Description
 
 ``beaker-create-kickstart`` is used to generate customised kickstarts. Its
 main purpose is for testing alternative templates, template variables, and
-kernel options. It needs root privileges to run.
+kernel options. It requires read access to the beaker server
+configuration and hence should be run as root or as another user with
+read access to the configuration file.
 
 The generated kickstart is based off of a combination of a running/completed
 recipe, system, and distro tree. It can then be further modified with any of

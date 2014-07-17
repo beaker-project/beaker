@@ -27,7 +27,7 @@ from bkr.server.model import (Job, RecipeSet, Recipe, MachineRecipe,
         SystemAccessPolicy, SystemPermission, ConfigItem)
 from bkr.server.model.scheduler import machine_guest_map
 from bkr.server.needpropertyxml import XmlHost
-from bkr.server.util import load_config, log_traceback
+from bkr.server.util import load_config_or_exit, log_traceback
 from bkr.server.recipetasks import RecipeTasks
 from turbogears.database import session
 from turbogears import config
@@ -833,7 +833,7 @@ def main():
     parser = get_parser()
     opts, args = parser.parse_args()
 
-    load_config(opts.configfile)
+    load_config_or_exit(opts.configfile)
 
     signal.signal(signal.SIGINT, sigterm_handler)
     signal.signal(signal.SIGTERM, sigterm_handler)

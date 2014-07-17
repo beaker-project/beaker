@@ -13,7 +13,7 @@ __requires__ = ['CherryPy < 3.0']
 import sys
 from bkr.log import log_to_stream
 from bkr.server.model import Product
-from bkr.server.util import load_config
+from bkr.server.util import load_config_or_exit
 from lxml import etree
 from optparse import OptionParser
 from turbogears.database import session
@@ -66,7 +66,7 @@ def main():
     opts,args = parser.parse_args()
     configfile = opts.configfile
     xml_file = opts.productfile
-    load_config(configfile)
+    load_config_or_exit(configfile)
     log_to_stream(sys.stderr)
     update_products(xml_file)
 

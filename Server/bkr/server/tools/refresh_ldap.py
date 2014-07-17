@@ -19,7 +19,7 @@ import ldap
 from turbogears import config
 from bkr.common import __version__
 from bkr.log import log_to_stream
-from bkr.server.util import load_config
+from bkr.server.util import load_config_or_exit
 from bkr.server.model import session, Group
 
 def refresh_ldap():
@@ -39,7 +39,7 @@ def main():
             help='Print debugging messages to stderr')
     parser.set_defaults(debug=False)
     options, args = parser.parse_args()
-    load_config(options.config)
+    load_config_or_exit(options.config)
     log_to_stream(sys.stderr, level=logging.DEBUG if options.debug else logging.WARNING)
 
     # beaker-server ships a cron job to run this command, so exit silently 
