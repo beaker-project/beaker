@@ -16,7 +16,7 @@ from sqlalchemy.sql import and_, or_, func
 from bkr.log import log_to_stream
 from bkr.server.model import User, System, Reservation, Recipe, \
     RecipeSet, Job, Watchdog, RecipeTask, Task, TaskStatus, RecipeResource
-from bkr.server.util import load_config
+from bkr.server.util import load_config_or_exit
 from turbogears import config
 from turbomail.control import interface
 from bkr.server import mail
@@ -116,7 +116,7 @@ class BeakerUsage(object):
 def main(*args):
     parser = get_parser()
     (options, args) = parser.parse_args(*args)
-    load_config(options.configfile)
+    load_config_or_exit(options.configfile)
     log_to_stream(sys.stderr)
     interface.start(config)
     reservation_expiry = options.reservation_expiry
