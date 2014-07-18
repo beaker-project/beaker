@@ -235,6 +235,27 @@ class ReportingQueryTest(unittest.TestCase):
         self.assertEquals(user_rows[1].arch, 'ppc64')
         self.assertEquals(user_rows[1].machine_hours, Decimal('3.0'))
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1117681
+    def test_machine_utilization(self):
+        system1 = data_setup.create_system()
+        system2 = data_setup.create_system()
+        system3 = data_setup.create_system()
+        data_setup.create_manual_reservation(system=system1,
+                                             start=datetime.datetime(2002, 6, 2, 22, 30, 0),
+                                             finish=datetime.datetime(2002, 6, 3, 22, 30, 0))
+        data_setup.create_manual_reservation(system=system2,
+                                             start=datetime.datetime(2002, 5, 2, 22, 30, 0))
+        data_setup.create_manual_reservation(system=system3,
+                                             start=datetime.datetime(2002, 5, 2, 22, 30, 0),
+                                             finish=datetime.datetime(2002, 5, 3, 22, 30, 0))
+        session.flush()
+        rows = [row for row in self.execute_reporting_query('machine-utilization')]
+        self.assertEquals(len(rows), 2, rows)
+        self.assertIn((system1.fqdn, Decimal('0.0333')), rows)
+        self.assertIn((system2.fqdn, Decimal('1.0000')), rows)
+        # system3 should not appear
+        self.assertNotIn(system3.fqdn, [row[0] for row in rows])
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=877272
     def test_task_durations(self):
         short_task = data_setup.create_task()
