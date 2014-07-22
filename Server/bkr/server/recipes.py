@@ -173,7 +173,7 @@ class Recipes(RPCRoot):
         except InvalidRequestError:
             raise BX(_('Invalid recipe ID: %s' % recipe_id))
         manager = dynamic_virt.VirtManager(recipe.recipeset.job.owner)
-        return manager.get_console_output(output_length)
+        return manager.get_console_output(recipe.resource.instance_id, output_length)
 
     @cherrypy.expose
     def watchdog(self, recipe_id):
