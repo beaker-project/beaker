@@ -159,24 +159,27 @@ class Watchdog(DeclarativeMappedObject):
         This appears to be a bug in sqlalchemy 0.6.8, but is no longer an issue
         in 0.8.3 (and perhaps versions in between, although currently untested).
         """
-
-        if status == 'active':
-            watchdog_clause = Watchdog.kill_time > datetime.utcnow()
-        elif status =='expired':
-            watchdog_clause = Watchdog.kill_time < datetime.utcnow()
-        else:
-            return None
-        any_recipe_has_matching_watchdog = exists(select([1],
-            from_obj=Recipe.__table__.join(Watchdog.__table__)). \
-            where(Recipe.recipe_set_id == RecipeSet.id).where(watchdog_clause). \
-            correlate(RecipeSet.__table__))
-
-        watchdog_query = cls.query.join(Watchdog.recipe).join(Recipe.recipeset).filter(
-            and_(Watchdog.kill_time != None, any_recipe_has_matching_watchdog))
+        any_recipe_has_active_watchdog = exists(select([1],
+                from_obj=Recipe.__table__.join(Watchdog.__table__))\
+                .where(Watchdog.kill_time > datetime.utcnow())\
+                .where(Recipe.recipe_set_id == RecipeSet.id)\
+                .correlate(RecipeSet.__table__))
+        watchdog_query = cls.query.join(Watchdog.recipe).join(Recipe.recipeset)\
+                .filter(Watchdog.kill_time != None)
         if labcontroller is not None:
             watchdog_query = watchdog_query.filter(
                 RecipeSet.lab_controller==labcontroller)
+        if status == 'active':
+            watchdog_query = watchdog_query.filter(any_recipe_has_active_watchdog)
+        elif status == 'expired':
+            watchdog_query = watchdog_query.filter(not_(any_recipe_has_active_watchdog))
+        else:
+            return None
         return watchdog_query
+
+    def __repr__(self):
+        return '%s(id=%r, kill_time=%r)' % (self.__class__.__name__,
+                self.id, self.kill_time)
 
 
 class Log(object):

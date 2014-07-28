@@ -946,6 +946,23 @@ class WatchdogTest(unittest.TestCase):
         self.assert_(r1.watchdog not in active_watchdogs)
         self.assert_(r2.watchdog in active_watchdogs)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1123249
+    def test_watchdog_is_not_expired_until_recipeset_is_expired(self):
+        job = data_setup.create_running_job(num_recipes=1, num_guestrecipes=1)
+        hostrecipe = job.recipesets[0].recipes[0]
+        guestrecipe = job.recipesets[0].recipes[0].guests[0]
+        data_setup.mark_recipe_complete(hostrecipe, only=True)
+        hostrecipe.extend(0)
+        self.assertLess(hostrecipe.watchdog.kill_time, datetime.datetime.utcnow())
+        self.assertGreater(guestrecipe.watchdog.kill_time, datetime.datetime.utcnow())
+        session.flush()
+        active_watchdogs = Watchdog.by_status(status=u'active').all()
+        self.assertIn(hostrecipe.watchdog, active_watchdogs)
+        self.assertIn(guestrecipe.watchdog, active_watchdogs)
+        expired_watchdogs = Watchdog.by_status(status=u'expired').all()
+        self.assertNotIn(hostrecipe.watchdog, expired_watchdogs)
+        self.assertNotIn(guestrecipe.watchdog, expired_watchdogs)
+
 
 class DistroTreeTest(unittest.TestCase):
 
