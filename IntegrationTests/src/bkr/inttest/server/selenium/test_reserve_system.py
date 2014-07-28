@@ -9,7 +9,7 @@ from bkr.inttest.server.webdriver_utils import login, logout, is_text_present, \
         search_for_system
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import Arch, ExcludeOSMajor, SystemType, \
-        LabControllerDistroTree, SystemPermission
+        LabControllerDistroTree, SystemPermission, Job
 from selenium.webdriver.support.ui import Select
 import unittest, time, re, os
 from turbogears.database import session
@@ -123,6 +123,28 @@ class ReserveWorkflow(WebDriverTestCase):
         self.assertEquals(b.find_element_by_id('form_distro').text,
                 '%s Server i386' % self.distro.name)
         self.assertEquals(b.title, 'Reserve Any System')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1122659
+    def test_only_reserves_machines(self):
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow')
+        Select(b.find_element_by_name('tag')).select_by_visible_text('None selected')
+        Select(b.find_element_by_name('osmajor'))\
+            .select_by_visible_text(self.distro.osversion.osmajor.osmajor)
+        Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
+        Select(b.find_element_by_name('distro_tree_id'))\
+            .select_by_visible_text('%s Server i386' % self.distro.name)
+        b.find_element_by_xpath('//button[normalize-space(text())="Auto pick system"]').click()
+        b.find_element_by_xpath('//button[normalize-space(text())="Queue Job"]').click()
+        flash_text = b.find_element_by_css_selector('.flash').text
+        self.assertIn('Success', flash_text)
+        job_id = re.match('Success! job id: (\d+)', flash_text).group(1)
+        with session.begin():
+            job = Job.by_id(job_id)
+            recipe = job.recipesets[0].recipes[0]
+            self.assertEquals(recipe.host_requires,
+                    u'<hostRequires><system_type value="Machine"/></hostRequires>')
 
 def go_to_reserve_systems(browser, distro_tree):
     browser.get(get_server_base() + 'reserve_system?distro_tree_id=%s' % distro_tree.id)

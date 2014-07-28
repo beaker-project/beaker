@@ -2015,30 +2015,18 @@ class Recipe(TaskBase, DeclarativeMappedObject):
     arch = property(_get_arch)
 
     def _get_host_requires(self):
-        # If no system_type is specified then add defaults
         try:
-            hrs = xml.dom.minidom.parseString(self._host_requires)
+            hrs = xml.dom.minidom.parseString(self._host_requires).documentElement
         except (TypeError, xml.parsers.expat.ExpatError):
-            hrs = xmldoc.createElement("hostRequires")
-            return hrs.toxml()
+            hrs = xmldoc.createElement('hostRequires')
 
-        force_fqdn = False
-        for child in hrs.childNodes:
-            if child.getAttribute('force'):
-                force_fqdn = True
+        # If no system_type is specified then add defaults
+        if not hrs.getElementsByTagName('system_type') and not hrs.getAttribute('force'):
+            system_type = xmldoc.createElement('system_type')
+            system_type.setAttribute('value', unicode(self.systemtype))
+            hrs.appendChild(system_type)
 
-        if hrs.getElementsByTagName("system_type") or force_fqdn:
-            return hrs.toxml()
-
-        # Create a new hostRequires element with a default system_type
-        hostRequires = xmldoc.createElement("hostRequires")
-        for hr in hrs.getElementsByTagName("hostRequires"):
-            for child in hr.childNodes[:]:
-                hostRequires.appendChild(child)
-        system_type = xmldoc.createElement("system_type")
-        system_type.setAttribute("value", "%s" % self.systemtype)
-        hostRequires.appendChild(system_type)
-        return hostRequires.toxml()
+        return hrs.toxml()
 
     def _set_host_requires(self, value):
         self._host_requires = value

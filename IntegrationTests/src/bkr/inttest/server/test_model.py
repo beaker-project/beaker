@@ -1281,6 +1281,34 @@ class RecipeTest(unittest.TestCase):
                              '<reservesys duration="3600"/>'
         self.assertIn(reservation_string, xml)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1122659
+    def test_systemtype_is_injected_into_hostrequires(self):
+        # recipe with no <hostRequires/> at all
+        recipe_empty_hr = data_setup.create_recipe()
+        self.assertEquals(recipe_empty_hr._host_requires, None)
+        self.assertEquals(recipe_empty_hr.host_requires,
+                u'<hostRequires><system_type value="Machine"/></hostRequires>')
+        # recipe with <hostRequires/> but not containing <system_type/>
+        recipe_other_hr = data_setup.create_recipe()
+        recipe_other_hr.host_requires = u'<hostRequires><hostname value="blorp"/></hostRequires>'
+        self.assertEquals(recipe_other_hr.host_requires,
+                u'<hostRequires>'
+                    u'<hostname value="blorp"/>'
+                    u'<system_type value="Machine"/>'
+                u'</hostRequires>')
+        # recipe with <hostRequires/> that already contains <system_type/>
+        recipe_systemtype_hr = data_setup.create_recipe()
+        recipe_systemtype_hr.host_requires = (
+                u'<hostRequires>'
+                    u'<hostname value="blorp"/>'
+                    u'<system_type value="Prototype"/>'
+                u'</hostRequires>')
+        self.assertEquals(recipe_systemtype_hr.host_requires,
+                u'<hostRequires>'
+                    u'<hostname value="blorp"/>'
+                    u'<system_type value="Prototype"/>'
+                u'</hostRequires>')
+
 class CheckDynamicVirtTest(unittest.TestCase):
 
     def setUp(self):
