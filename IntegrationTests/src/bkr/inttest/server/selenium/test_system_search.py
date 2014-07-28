@@ -10,6 +10,7 @@ from bkr.server.model import Numa, User, Key, Key_Value_String, Key_Value_Int, \
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, login, \
         search_for_system, wait_for_animation, check_system_search_results
+from bkr.inttest.assertions import assert_sorted
 from bkr.inttest import data_setup, with_transaction, get_server_base
 import unittest, time, re, os, datetime
 from turbogears.database import session
@@ -493,6 +494,21 @@ class Search(WebDriverTestCase):
         b.find_element_by_id('searchform').submit()
         check_system_search_results(b, present=[self.system_three],
                 absent=[self.system_one, self.system_two])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1120705
+    def test_searchbar_dropdowns_are_sorted(self):
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Show Search Options').click()
+        wait_for_animation(b, '#searchform')
+        table_options = b.find_element_by_name('systemsearch-0.table')\
+                .find_elements_by_tag_name('option')
+        assert_sorted([option.text for option in table_options])
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('Key/Value')
+        keyvalue_options = b.find_element_by_name('systemsearch-0.keyvalue')\
+                .find_elements_by_tag_name('option')
+        assert_sorted([option.text for option in keyvalue_options])
 
 class SystemVisibilityTest(WebDriverTestCase):
 
