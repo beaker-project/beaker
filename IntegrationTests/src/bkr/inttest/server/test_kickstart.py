@@ -12,7 +12,7 @@ import crypt
 from bkr.server import dynamic_virt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
         CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch, \
-        Key, Key_Value_String
+        Key, Key_Value_String, OSMajorInstallOptions
 from bkr.server.kickstart import template_env, generate_kickstart
 from bkr.server.jobs import Jobs
 from bkr.server.jobxml import XmlJob
@@ -2538,3 +2538,30 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
         ks = generate_kickstart(install_options, tree, self.system, self.user).kickstart
         self.assertIn("curl --retry 20 -o remote_script http://path/to/myscript "
                       "&& chmod +x remote_script && ./remote_script", ks.splitlines())
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1123700
+    def test_systemd(self):
+        distro_tree = data_setup.create_distro_tree(osmajor=u'CustomRHEL7',
+                variant=u'Server', arch=u'x86_64',
+                lab_controllers=[self.lab_controller])
+        osmajor = distro_tree.distro.osversion.osmajor
+        osmajor.install_options_by_arch[None] = OSMajorInstallOptions(ks_meta=u'systemd=True')
+        session.flush()
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_family op="=" value="CustomRHEL7" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''')
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('export RHTS_OPTION_COMPATIBLE=\n', ks)
