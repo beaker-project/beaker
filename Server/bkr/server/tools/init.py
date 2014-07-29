@@ -117,8 +117,8 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
 
     #Setup base Architectures
     if Arch.query.count() == 0:
-        for arch in [u'i386', u'x86_64', u'ia64', u'ppc', u'ppc64',
-                u's390', u's390x', u'armhfp']:
+        for arch in [u'i386', u'x86_64', u'ia64', u'ppc', u'ppc64', u'ppc64le',
+                     u's390', u's390x', u'armhfp', u'aarch64', u'arm']:
             session.add(Arch(arch))
 
     #Setup base power types
