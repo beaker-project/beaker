@@ -946,6 +946,23 @@ class WatchdogTest(unittest.TestCase):
         self.assert_(r1.watchdog not in active_watchdogs)
         self.assert_(r2.watchdog in active_watchdogs)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1123249
+    def test_watchdog_is_not_expired_until_recipeset_is_expired(self):
+        job = data_setup.create_running_job(num_recipes=1, num_guestrecipes=1)
+        hostrecipe = job.recipesets[0].recipes[0]
+        guestrecipe = job.recipesets[0].recipes[0].guests[0]
+        data_setup.mark_recipe_complete(hostrecipe, only=True)
+        hostrecipe.extend(0)
+        self.assertLess(hostrecipe.watchdog.kill_time, datetime.datetime.utcnow())
+        self.assertGreater(guestrecipe.watchdog.kill_time, datetime.datetime.utcnow())
+        session.flush()
+        active_watchdogs = Watchdog.by_status(status=u'active').all()
+        self.assertIn(hostrecipe.watchdog, active_watchdogs)
+        self.assertIn(guestrecipe.watchdog, active_watchdogs)
+        expired_watchdogs = Watchdog.by_status(status=u'expired').all()
+        self.assertNotIn(hostrecipe.watchdog, expired_watchdogs)
+        self.assertNotIn(guestrecipe.watchdog, expired_watchdogs)
+
 
 class DistroTreeTest(unittest.TestCase):
 
@@ -1263,6 +1280,34 @@ class RecipeTest(unittest.TestCase):
                              '<task name="/distribution/install" role="STANDALONE"/>' + \
                              '<reservesys duration="3600"/>'
         self.assertIn(reservation_string, xml)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1122659
+    def test_systemtype_is_injected_into_hostrequires(self):
+        # recipe with no <hostRequires/> at all
+        recipe_empty_hr = data_setup.create_recipe()
+        self.assertEquals(recipe_empty_hr._host_requires, None)
+        self.assertEquals(recipe_empty_hr.host_requires,
+                u'<hostRequires><system_type value="Machine"/></hostRequires>')
+        # recipe with <hostRequires/> but not containing <system_type/>
+        recipe_other_hr = data_setup.create_recipe()
+        recipe_other_hr.host_requires = u'<hostRequires><hostname value="blorp"/></hostRequires>'
+        self.assertEquals(recipe_other_hr.host_requires,
+                u'<hostRequires>'
+                    u'<hostname value="blorp"/>'
+                    u'<system_type value="Machine"/>'
+                u'</hostRequires>')
+        # recipe with <hostRequires/> that already contains <system_type/>
+        recipe_systemtype_hr = data_setup.create_recipe()
+        recipe_systemtype_hr.host_requires = (
+                u'<hostRequires>'
+                    u'<hostname value="blorp"/>'
+                    u'<system_type value="Prototype"/>'
+                u'</hostRequires>')
+        self.assertEquals(recipe_systemtype_hr.host_requires,
+                u'<hostRequires>'
+                    u'<hostname value="blorp"/>'
+                    u'<system_type value="Prototype"/>'
+                u'</hostRequires>')
 
 class CheckDynamicVirtTest(unittest.TestCase):
 

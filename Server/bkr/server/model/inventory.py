@@ -1835,7 +1835,7 @@ class Key(DeclarativeMappedObject):
         """
         This method's name is deceptive, it actually excludes "obsoleted" keys.
         """
-        all_keys = cls.query
+        all_keys = cls.query.order_by(Key.key_name)
         return [key.key_name for key in all_keys
                 if key.key_name not in cls.obsoleted_keys]
 

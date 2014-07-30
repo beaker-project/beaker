@@ -181,7 +181,6 @@ def generate_kickstart(install_options, distro_tree, system, user,
         'job_whiteboard': job_whiteboard,
     }
 
-    restricted_context.update(install_options.ks_meta)
     # XXX find a better place to set this, perhaps from the kickstart templates
     rhel_osmajor = ['RedHatEnterpriseLinux6', 'RedHatEnterpriseLinux7',
                     'RedHatServerforARMDevelopmentPreview2']
@@ -199,6 +198,9 @@ def generate_kickstart(install_options, distro_tree, system, user,
                      'RedHatServerforARMDevelopmentPreview2',
                      'CentOS7']:
         systemd = True
+    restricted_context['systemd'] = systemd
+
+    restricted_context.update(install_options.ks_meta)
 
     # System templates and snippets have access to more useful stuff.
     context = dict(restricted_context)
@@ -211,7 +213,6 @@ def generate_kickstart(install_options, distro_tree, system, user,
         'recipe': recipe,
         'config': config,
         'ks_appends': ks_appends or [],
-        'systemd' : systemd
     })
 
     snippet_locations = []

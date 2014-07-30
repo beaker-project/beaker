@@ -319,3 +319,23 @@ release, with the following fixes:
   by default, because of their very large size. The previous behaviour can be 
   restored by passing a non-empty value for the ``LIBVIRTD_DEBUG`` task 
   parameter. (Contributed by Dan Callaghan)
+
+Beaker 0.17.2
+~~~~~~~~~~~~~
+
+* :issue:`1123249`: Fixed a regression in the database query for expired
+  watchdogs which caused multi-host recipe sets to be aborted too early. 
+  Multi-host recipe sets are now correctly aborted only if the watchdog has 
+  expired for all recipes in the set. (Contributed by Dan Callaghan)
+* :issue:`1122659`: Fixed a regression in the logic which injects
+  ``<system_type value="Machine"/>`` into ``<hostRequires/>`` when no system 
+  type filter is explicitly given. As a result, Beaker now correctly restricts 
+  Reserve Workflow jobs to run on systems whose type is Machine. (Contributed 
+  by Dan Callaghan)
+* :issue:`1120705`: The :guilabel:`Table` and :guilabel:`Keyvalue` dropdowns
+  are now sorted alphabetically. (Contributed by Dan Callaghan)
+* :issue:`1123700`: Fixed template conditionals for the ``systemd`` variable so
+  that it takes effect when overridden in kickstart metadata. (Contributed by 
+  Dan Callaghan)
+
+.. not listing internal workflow bug :issue:`1121460`
