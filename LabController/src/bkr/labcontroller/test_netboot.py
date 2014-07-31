@@ -1,4 +1,3 @@
-
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -416,6 +415,25 @@ image=/images/fqdn.example.invalid/kernel
         yaboot_symlink_path = os.path.join(self.tftp_root, 'ppc', '7f0000ff')
         self.assertEquals(os.readlink(yaboot_symlink_path), '../yaboot')
 
+class Grub2PPC64Test(NetBootTestCase):
+
+    def test_configure_then_clear(self):
+        netboot.configure_ppc64(TEST_FQDN,
+                'console=ttyS0,115200 ks=http://lol/')
+        grub2_config_path = os.path.join(self.tftp_root, 'boot', 'grub2','grub.cfg-7F0000FF')
+        self.assertEquals(open(grub2_config_path).read(), """\
+linux  ../../images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/
+initrd ../../images/fqdn.example.invalid/initrd
+
+boot
+""")
+        grub2_symlink_path = os.path.join(self.tftp_root, 'ppc', '7f0000ff-grub2')
+        self.assertEquals(os.readlink(grub2_symlink_path), '../boot/grub2/powerpc-ieee1275/core.elf')
+
+        netboot.clear_ppc64(TEST_FQDN)
+        self.assert_(not os.path.exists(grub2_config_path))
+        self.assert_(not os.path.exists(grub2_symlink_path))
+
 class Aarch64Test(NetBootTestCase):
 
     def test_configure_then_clear(self):
@@ -424,10 +442,10 @@ class Aarch64Test(NetBootTestCase):
         grub_config_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg-7F0000FF')
         grub_default_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg')
         self.assertEquals(open(grub_config_path).read(), """\
-  linux  ../images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/
-  initrd ../images/fqdn.example.invalid/initrd
-  
-  boot
+linux  ../images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/
+initrd ../images/fqdn.example.invalid/initrd
+
+boot
 """)
         self.assertEquals(open(grub_default_path).read(), 'exit\n')
 
@@ -440,8 +458,8 @@ class Aarch64Test(NetBootTestCase):
                 'devicetree=custom.dtb ks=http://lol/')
         grub_config_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg-7F0000FF')
         self.assertEquals(open(grub_config_path).read(), """\
-  linux  ../images/fqdn.example.invalid/kernel ks=http://lol/
-  initrd ../images/fqdn.example.invalid/initrd
-  devicetree custom.dtb
-  boot
+linux  ../images/fqdn.example.invalid/kernel ks=http://lol/
+initrd ../images/fqdn.example.invalid/initrd
+devicetree custom.dtb
+boot
 """)
