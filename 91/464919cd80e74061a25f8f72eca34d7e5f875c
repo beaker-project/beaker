@@ -1,0 +1,7 @@
+Code-Review+2: Matt Jia <mjia@redhat.com>
+Verified+1: Dan Callaghan <dcallagh@redhat.com>
+Submitted-by: Dan Callaghan <dcallagh@redhat.com>
+Submitted-at: Mon, 04 Aug 2014 07:10:00 +0000
+Reviewed-on: http://gerrit.beaker-project.org/3216
+Project: beaker
+Branch: refs/heads/release-0.17
