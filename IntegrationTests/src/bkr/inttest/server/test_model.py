@@ -1049,6 +1049,19 @@ class UserTest(unittest.TestCase):
         except ValueError:
             pass
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1121748
+    def test_ldap_lookups_are_exact(self):
+        # ldap-data.ldif defines 'jgillard' but ' jgillard' should not exist.
+        self.assertEquals(User.by_user_name(u'jgillard').user_name, u'jgillard')
+        self.assertIsNone(User.by_user_name(u' jgillard'))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1121748
+    def test_rfc4518_whitespace_is_rejected_in_usernames(self):
+        self.assertRaises(ValueError, lambda: User(user_name=u'  leadingspace'))
+        self.assertRaises(ValueError, lambda: User(user_name=u'trailingspace  '))
+        self.assertRaises(ValueError, lambda: User(user_name=u'extra  space'))
+        self.assertRaises(ValueError, lambda: User(user_name=u'extra\t tab'))
+
 class GroupTest(unittest.TestCase):
 
     def setUp(self):
