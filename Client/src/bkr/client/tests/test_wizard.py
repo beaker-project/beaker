@@ -80,3 +80,8 @@ class ArchitecturesTest(unittest.TestCase):
     # https://bugzilla.redhat.com/show_bug.cgi?id=1095079
     def test_contain_aarch64(self):
         self.assertIn('aarch64', self.archs.list)
+
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1120487
+    def test_contain_ppc64le(self):
+        self.assertIn('ppc64le', self.archs.list)
+

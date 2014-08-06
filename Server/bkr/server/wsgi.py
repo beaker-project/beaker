@@ -24,6 +24,7 @@ import cherrypy._cpengine
 signal.signal = orig_signal_signal
 del orig_signal_signal
 
+import os
 import sys
 import logging
 from turbogears import config
@@ -116,13 +117,15 @@ def commit_or_rollback_session(response):
 @app.teardown_appcontext
 def close_session(exception=None):
     try:
-        if session.is_active:
-            log.warn('Session active when tearing down app context, rolling back')
-            session.rollback()
         session.close()
     except Exception, e:
-        # log and suppress
-        log.exception('Error closing session when tearing down app context')
+        # If session.close() fails the application is now totally useless: 
+        # the next request will fail to start a new transaction because we have 
+        # not closed the old one here. So we kill the entire process with 
+        # SIGABRT. The application container should spawn a fresh worker to 
+        # replace this one.
+        log.exception('Error closing session when tearing down app context, aborting')
+        os.abort()
 
 app.before_request(identity.check_authentication)
 app.after_request(identity.update_response)

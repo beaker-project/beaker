@@ -17,7 +17,8 @@ class SystemLoanTest(WebDriverTestCase):
     @with_transaction
     def setUp(self):
         self.browser = self.get_browser()
-        self.system = data_setup.create_system(shared=False)
+        self.owner = data_setup.create_user(password=u'password')
+        self.system = data_setup.create_system(owner=self.owner, shared=False)
 
     def tearDown(self):
         self.browser.quit()
@@ -228,4 +229,14 @@ class SystemLoanTest(WebDriverTestCase):
         loanee_name = "this_is_not_a_valid_user_name_for_any_test"
         self.change_loan(loanee_name)
         error = "user name %s is invalid" % loanee_name
+        self.verify_loan_error(400, error)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1121748
+    def test_cannot_lend_to_ldap_user_with_extra_whitespace(self):
+        b = self.browser
+        login(b, user=self.owner.user_name, password='password')
+        self.go_to_loan_page()
+        # jgillard is defined in ldap-data.ldif
+        self.change_loan(u' jgillard')
+        error = 'user name jgillard is invalid'
         self.verify_loan_error(400, error)

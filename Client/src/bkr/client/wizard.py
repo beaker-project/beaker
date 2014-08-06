@@ -1627,7 +1627,7 @@ class Architectures(MultipleChoice):
         self.question = "Architectures (choose one or more or \"all\")"
         self.description = "You can supply more values separated with space or comma\n"\
             "but they all must be from the list of possible values above."
-        self.list = "i386 x86_64 ia64 ppc ppc64 s390 s390x aarch64".split()
+        self.list = "i386 x86_64 ia64 ppc ppc64 ppc64le s390 s390x aarch64".split()
         self.sort = True
         self.common = False
         self.emptyListMeaning = "All"

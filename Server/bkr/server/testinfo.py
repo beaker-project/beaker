@@ -233,6 +233,7 @@ class Parser:
             'x86_64', 
             'ppc', 
             'ppc64', 
+            'ppc64le',
             's390', 
             's390x', 
             'i386',
