@@ -1668,6 +1668,46 @@ class TestBeakerd(unittest.TestCase):
             job = Job.query.get(job.id)
             self.assertEqual(job.status, TaskStatus.aborted)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1120052
+    def test_bz1120052(self):
+        # Due to the complexities of the not enough systems logic, the 
+        # triggering circumstances for this bug are quite intricate...
+        # LC has 3 systems: A, B, C
+        # RS has 4 recipes:
+        #     R0 -> [A]
+        #     R1 -> [B]
+        #     R2 -> [A, B]
+        #     R3 -> [A, B, C]
+        # The recipe set is aborted because R2 will have no candidates (they 
+        # will be removed in favour of R0 and R1).
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system_a = data_setup.create_system(lab_controller=lc)
+            system_b = data_setup.create_system(lab_controller=lc)
+            system_c = data_setup.create_system(lab_controller=lc)
+            job = data_setup.create_job(num_recipes=4)
+            job.recipesets[0].recipes[0]._host_requires = (
+                    '<hostRequires><hostname value="%s"/></hostRequires>'
+                    % system_a.fqdn)
+            job.recipesets[0].recipes[1]._host_requires = (
+                    '<hostRequires><hostname value="%s"/></hostRequires>'
+                    % system_b.fqdn)
+            job.recipesets[0].recipes[2]._host_requires = (
+                    '<hostRequires><or><hostname value="%s"/>'
+                    '<hostname value="%s"/></or></hostRequires>'
+                    % (system_a.fqdn, system_b.fqdn))
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        beakerd.queue_processed_recipesets()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEquals(job.recipesets[0].status, TaskStatus.aborted)
+            expected_msg = ('Recipe ID %s does not match any systems'
+                    % job.recipesets[0].recipes[2].id)
+            for recipe in job.all_recipes:
+                self.assertEquals(recipe.tasks[0].results[-1].log, expected_msg)
+
 class FakeMetrics():
     def __init__(self):
         self.calls = []
