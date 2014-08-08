@@ -31,6 +31,10 @@ in :manpage:`bkr(1)`.
 Options
 -------
 
+.. option:: --size
+
+   Print the file size (in bytes) alongside each log file URL.
+
 Common :program:`bkr` options are described in the :ref:`Options 
 <common-options>` section of :manpage:`bkr(1)`.
 
@@ -54,9 +58,7 @@ See also
 
 import sys
 from bkr.client import BeakerCommand
-from optparse import OptionValueError
-from bkr.client.task_watcher import *
-import libxml2
+import requests
 
 class Job_Logs(BeakerCommand):
     """Print URLs of recipe log files"""
@@ -64,14 +66,30 @@ class Job_Logs(BeakerCommand):
     requires_login = False
 
     def options(self):
+        self.parser.add_option('--size', action='store_true',
+                help='Print file size alongside each log file')
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
 
+    def _log_size(self, url):
+        response = self.requests_session.head(url)
+        if response.status_code in (404, 410):
+            return '<missing>'
+        elif response.status_code >= 400:
+            return '<error:%s>' % (response.status_code)
+        try:
+            return '%6d' % int(response.headers['Content-Length'])
+        except ValueError:
+            return '<invalid>'
 
     def run(self, *args, **kwargs):
         self.check_taskspec_args(args)
 
         self.set_hub(**kwargs)
+        self.requests_session = requests.Session()
         for task in args:
             logfiles = self.hub.taskactions.files(task)
             for log in logfiles:
-                print log['url']
+                if kwargs.get('size'):
+                    print self._log_size(log['url']), log['url']
+                else:
+                    print log['url']

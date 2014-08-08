@@ -62,11 +62,13 @@ class Application(object):
         if not os.path.exists(localpath):
             start_response('404 Not Found', [])
             return []
-        if environ['REQUEST_METHOD'] == 'GET':
-            start_response('200 OK', [])
+        if environ['REQUEST_METHOD'] in ('GET', 'HEAD'):
             if os.path.isdir(localpath):
-                return '\n'.join(os.listdir(localpath))
+                listing = '\n'.join(os.listdir(localpath))
+                start_response('200 OK', [('Content-Length', str(len(listing)))])
+                return [listing]
             else:
+                start_response('200 OK', [('Content-Length', str(os.path.getsize(localpath)))])
                 return wsgiref.util.FileWrapper(open(localpath, 'r'))
         elif environ['REQUEST_METHOD'] == 'DELETE' and self.writable:
             shutil.rmtree(localpath)
