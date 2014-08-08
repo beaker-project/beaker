@@ -116,6 +116,12 @@ correspond to the similarly-named kickstart option.
     Filesystem type for all filesystems. Default is to allow the installer to 
     choose.
 
+``grubport=<hexaddr>``
+    Hex address of the I/O port which GRUB should use for serial output. If 
+    this variable is set, the value will be passed to the ``--port`` option of 
+    the ``serial`` command in the GRUB configuration. Refer to `serial in the 
+    GRUB manual <http://www.gnu.org/software/grub/manual/grub.html#serial>`__.
+
 ``ignoredisk=<options``
     Passed directly to the ``ignoredisk`` kickstart command. Use this to select 
     or omit certain disks for the installation, for example 

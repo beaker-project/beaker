@@ -169,7 +169,6 @@ if [ -e /etc/chrony.conf ] ; then
     /sbin/chkconfig ntpdate off >/dev/null 2>&1 || :
 fi
 
-
 if efibootmgr &>/dev/null ; then
     # The installer should have added a new boot entry for the OS
     # at the top of the boot order. We move it to the end of the order
