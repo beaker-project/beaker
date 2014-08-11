@@ -152,7 +152,7 @@ def extract_arg(arg, kernel_options):
 def configure_grub2(fqdn, default_config_loc, rel_loc, 
                     config_file, kernel_options, devicetree=''):
     config = """\
-linux  %s/images/%s/kernel %s
+linux  %s/images/%s/kernel %s netboot_method=grub2
 initrd %s/images/%s/initrd
 %s
 boot

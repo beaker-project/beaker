@@ -422,7 +422,7 @@ class Grub2PPC64Test(NetBootTestCase):
                 'console=ttyS0,115200 ks=http://lol/')
         grub2_config_path = os.path.join(self.tftp_root, 'boot', 'grub2','grub.cfg-7F0000FF')
         self.assertEquals(open(grub2_config_path).read(), """\
-linux  ../../images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/
+linux  ../../images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=grub2
 initrd ../../images/fqdn.example.invalid/initrd
 
 boot
@@ -442,7 +442,7 @@ class Aarch64Test(NetBootTestCase):
         grub_config_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg-7F0000FF')
         grub_default_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg')
         self.assertEquals(open(grub_config_path).read(), """\
-linux  ../images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/
+linux  ../images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=grub2
 initrd ../images/fqdn.example.invalid/initrd
 
 boot
@@ -458,7 +458,7 @@ boot
                 'devicetree=custom.dtb ks=http://lol/')
         grub_config_path = os.path.join(self.tftp_root, 'aarch64', 'grub.cfg-7F0000FF')
         self.assertEquals(open(grub_config_path).read(), """\
-linux  ../images/fqdn.example.invalid/kernel ks=http://lol/
+linux  ../images/fqdn.example.invalid/kernel ks=http://lol/ netboot_method=grub2
 initrd ../images/fqdn.example.invalid/initrd
 devicetree custom.dtb
 boot
