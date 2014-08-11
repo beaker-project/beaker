@@ -339,3 +339,21 @@ Beaker 0.17.2
   Dan Callaghan)
 
 .. not listing internal workflow bug :issue:`1121460`
+
+Beaker 0.17.3
+~~~~~~~~~~~~~
+
+* :issue:`1113816`: Beaker now generates GRUB2 configuration files for
+  ppc64, in addition to Yaboot. This allows provisioning PowerPC systems where 
+  GRUB2 is the preferred boot loader. (Contributed by Amit Saha)
+* :issue:`1120487`: ``ppc64le`` is now accepted as a valid architecture in
+  :program:`beaker-wizard` and for task metadata. (Contributed by Amit Saha)
+* :issue:`1124756`: Fixed a regression preventing the cancellation of
+  individual tasks in a recipe. (Contributed by Matt Jia)
+* :issue:`1121748`: Fixed an issue with LDAP lookups containing whitespace,
+  which could result in erroneous duplicate user accounts being created. 
+  (Contributed by Dan Callaghan)
+* :issue:`1120439`: Fixed an issue in the web UI where an out-of-memory
+  condition during request handling could cause all subsequent requests to 
+  fail, due to the database connection being left in an invalid state. 
+  (Contributed by Dan Callaghan)
