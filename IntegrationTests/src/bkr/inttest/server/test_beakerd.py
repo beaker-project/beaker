@@ -1708,6 +1708,22 @@ class TestBeakerd(unittest.TestCase):
             for recipe in job.all_recipes:
                 self.assertEquals(recipe.tasks[0].results[-1].log, expected_msg)
 
+    def test_priority_is_bumped_when_recipe_matches_one_system(self):
+        with session.begin():
+            system = data_setup.create_system(lab_controller=self.lab_controller)
+            recipe = data_setup.create_recipe()
+            recipe._host_requires = (
+                    '<hostRequires><hostname op="=" value="%s"/></hostRequires>'
+                    % system.fqdn)
+            job = data_setup.create_job_for_recipes([recipe],
+                    priority=TaskPriority.low)
+        beakerd.process_new_recipes()
+        beakerd.update_dirty_jobs()
+        with session.begin():
+            job = Job.query.get(job.id)
+            self.assertEqual(job.status, TaskStatus.processed)
+            self.assertEqual(job.recipesets[0].priority, TaskPriority.medium)
+
 class FakeMetrics():
     def __init__(self):
         self.calls = []

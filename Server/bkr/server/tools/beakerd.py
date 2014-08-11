@@ -150,7 +150,7 @@ def process_new_recipe(recipe_id):
             recipe.systems.append(system)
 
     # If the recipe only matches one system then bump its priority.
-    if len(recipe.systems) == 1:
+    if config.get('beaker.priority_bumping_enabled', True) and len(recipe.systems) == 1:
         try:
             log.info("recipe ID %s matches one system, bumping priority" % recipe.id)
             recipe.recipeset.priority = TaskPriority.by_index(
