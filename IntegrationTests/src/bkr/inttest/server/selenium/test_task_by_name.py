@@ -17,9 +17,6 @@ class TaskByName(WebDriverTestCase):
             self.my_task = data_setup.create_task()
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_task_redirect(self):
         b = self.browser
         task_id = self.my_task.id

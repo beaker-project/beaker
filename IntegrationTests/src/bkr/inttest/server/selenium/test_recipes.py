@@ -20,7 +20,6 @@ class TestRecipesDataGrid(WebDriverTestCase):
 
     log = logging.getLogger(__name__ + '.TestRecipesIndex')
 
-    # tests in this class can safely share the same firefox session
     @classmethod
     def setUpClass(cls):
         # create a bunch of jobs
@@ -35,12 +34,9 @@ class TestRecipesDataGrid(WebDriverTestCase):
                     data_setup.create_job(owner=user, distro_tree=distro_tree)
                     data_setup.create_completed_job(owner=user, distro_tree=distro_tree)
 
-        cls.browser = cls.get_browser()
-        login(cls.browser, user=user.user_name, password='password')
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.browser.quit()
+    def setUp(self):
+        self.browser = self.get_browser()
+        login(self.browser, user=self.user.user_name, password='password')
 
     # see https://bugzilla.redhat.com/show_bug.cgi?id=629147
     def check_column_sort(self, column, sort_key=None):
@@ -102,9 +98,6 @@ class TestRecipeView(WebDriverTestCase):
 
         self.browser = self.get_browser()
         login(self.browser, user=user.user_name, password='password')
-
-    def tearDown(self):
-        self.browser.quit()
 
     def go_to_recipe_view(self, recipe):
         b = self.browser

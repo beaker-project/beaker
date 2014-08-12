@@ -13,9 +13,6 @@ class TestProduct(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_product_ordering(self):
         with session.begin():
             job = data_setup.create_job()

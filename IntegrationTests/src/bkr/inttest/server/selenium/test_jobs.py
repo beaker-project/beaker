@@ -26,9 +26,6 @@ class TestViewJob(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_group_job(self):
         with session.begin():
             user = data_setup.create_user()
@@ -170,9 +167,6 @@ class NewJobTestWD(WebDriverTestCase):
             self.user = data_setup.create_user(password=u'password')
             data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
             data_setup.create_product(product_name=u'the_product')
-
-    def tearDown(self):
-        self.browser.quit()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=949777
     def test_invalid_inventory_date_with_equal(self):
@@ -399,9 +393,6 @@ class NewJobTest(WebDriverTestCase):
         data_setup.create_distro_tree(distro_name=u'BlueShoeLinux5-5')
         data_setup.create_product(product_name=u'the_product')
         self.browser = self.get_browser()
-
-    def tearDown(self):
-        self.browser.quit()
 
     def test_warns_about_xsd_validation_errors(self):
         b = self.browser
@@ -731,9 +722,6 @@ class JobAttributeChangeTest(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def check_can_change_product(self, job, new_product):
         b = self.browser
         b.get(get_server_base() + 'jobs/%s' % job.id)
@@ -871,9 +859,6 @@ class CloneJobTest(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_cloning_recipeset_from_job_with_product(self):
         with session.begin():
             job = data_setup.create_job()
@@ -902,9 +887,6 @@ class TestJobsGrid(WebDriverTestCase):
 
     def setUp(self):
         self.browser = self.get_browser()
-
-    def tearDown(self):
-        self.browser.quit()
 
     def check_job_row(self, rownum, job_t_id, group):
         b = self.browser

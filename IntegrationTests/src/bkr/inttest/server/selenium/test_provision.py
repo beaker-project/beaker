@@ -85,9 +85,6 @@ class SystemManualProvisionInstallOptionsTest(WebDriverTestCase):
                           kernel_options=u'key1=value1 key1=value2 key1 key2=value key3')
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     #https://bugzilla.redhat.com/show_bug.cgi?id=886875
     def test_kernel_install_options_propagated_provision(self):
 

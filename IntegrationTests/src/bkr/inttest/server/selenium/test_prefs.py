@@ -26,9 +26,6 @@ class UserPrefs(WebDriverTestCase):
         self.hashed_password = '$1$NaCl$O34mAzBXtER6obhoIodu8.'
         self.simple_password = 's3cr3t'
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_adding_invalid_delegate(self):
         b = self.browser
         delegate_field = b.find_element_by_id('SubmissionDelegates_user_text')

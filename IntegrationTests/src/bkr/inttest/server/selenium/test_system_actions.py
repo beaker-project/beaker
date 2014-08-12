@@ -17,7 +17,6 @@ class SystemAction(WebDriverTestCase):
     @classmethod
     def setupClass(cls):
         with session.begin():
-            cls.browser = cls.get_browser()
             cls.owner_email_address = data_setup.unique_name(u'picard%s@starfleet.gov')
             cls.system_owner = data_setup.create_user(
                 email_address=cls.owner_email_address)
@@ -38,12 +37,8 @@ class SystemAction(WebDriverTestCase):
                 display_name=data_setup.unique_name('Crusher Lady%s'),
                 email_address=cls.reporter_email_address)
 
-    @classmethod
-    def teardownClass(cls):
-        cls.browser.quit()
-
     def setUp(self):
-        b = self.browser
+        b = self.browser = self.get_browser()
         try:
             login(b, user=self.problem_reporter.user_name, password='password')
         except NoSuchElementException:
@@ -51,9 +46,7 @@ class SystemAction(WebDriverTestCase):
 
         self.mail_capture = MailCaptureThread()
         self.mail_capture.start()
-
-    def tearDown(self):
-        self.mail_capture.stop()
+        self.addCleanup(self.mail_capture.stop)
 
     def _std_check_mail(self, sender, rcpts, raw_msg, notification, payload, subject,
         system=None, reporter=None):

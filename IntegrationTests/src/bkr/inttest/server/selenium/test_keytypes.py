@@ -13,9 +13,6 @@ class KeyTypesTest(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=1012404
     def test_add_key_type(self):
         new_key_name = u'AARDVARK'

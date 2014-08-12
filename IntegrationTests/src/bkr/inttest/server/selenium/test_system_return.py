@@ -20,9 +20,6 @@ class SystemReturnTestWD(WebDriverTestCase):
             data_setup.mark_recipe_running(self.recipe)
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_cannot_return_running_recipe(self):
         b = self.browser
         system = self.recipe.resource.system

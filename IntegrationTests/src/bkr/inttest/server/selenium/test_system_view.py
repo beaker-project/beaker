@@ -54,9 +54,6 @@ class SystemViewTestWD(WebDriverTestCase):
 
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=706150
     #https://bugzilla.redhat.com/show_bug.cgi?id=886875
     def test_kernel_install_options_propagated_view(self):
@@ -767,9 +764,6 @@ class SystemCcTest(WebDriverTestCase):
             self.system = data_setup.create_system(owner=user)
         self.browser = self.get_browser()
         login(self.browser, user=user.user_name, password='swordfish')
-
-    def tearDown(self):
-        self.browser.quit()
 
     def test_add_email_addresses(self):
         with session.begin():

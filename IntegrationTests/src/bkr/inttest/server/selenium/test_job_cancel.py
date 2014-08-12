@@ -21,9 +21,6 @@ class Cancel(WebDriverTestCase):
             self.job = data_setup.create_job(owner=self.user)
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_cancel_recipeset_group_job(self):
         b = self.browser
         with session.begin():

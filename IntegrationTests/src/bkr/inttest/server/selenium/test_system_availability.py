@@ -33,9 +33,6 @@ class SystemAvailabilityTest(WebDriverTestCase):
             self.distro_tree = data_setup.create_distro_tree(
                     lab_controllers=[self.lc])
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_anonymous(self):
         with session.begin():
             owner = data_setup.create_user(password=u'testing')

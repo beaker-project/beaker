@@ -103,8 +103,11 @@ _spawned_browsers = []
 
 class WebDriverTestCase(unittest.TestCase):
 
-    @classmethod
-    def get_browser(cls):
+    def get_browser(self):
+        """
+        Returns a new WebDriver browser instance. The browser will be cleaned 
+        up after the test case finishes.
+        """
         p = webdriver.FirefoxProfile()
         # clicking on element may be ignored if native events is enabled
         # https://bugzilla.redhat.com/show_bug.cgi?id=915695
@@ -112,6 +115,7 @@ class WebDriverTestCase(unittest.TestCase):
         p.native_events_enabled = False
         b = webdriver.Firefox(p)
         _spawned_browsers.append(b)
+        self.addCleanup(b.quit)
         b.implicitly_wait(10) # XXX is this really what we want???
         b.set_window_position(0, 0)
         b.set_window_size(1920, 1200)

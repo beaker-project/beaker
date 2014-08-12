@@ -24,9 +24,6 @@ class SystemCommandsTest(WebDriverTestCase):
             self.unprivileged = data_setup.create_user(password=u'unprivileged')
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def go_to_commands_tab(self, system):
         b = self.browser
         b.get(get_server_base() + 'view/%s' % system.fqdn)

@@ -20,9 +20,6 @@ class SystemLoanTest(WebDriverTestCase):
         self.owner = data_setup.create_user(password=u'password')
         self.system = data_setup.create_system(owner=self.owner, shared=False)
 
-    def tearDown(self):
-        self.browser.quit()
-
     def go_to_loan_page(self):
         b = self.browser
         b.get(get_server_base() + 'view/%s' % self.system.fqdn)

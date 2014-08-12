@@ -20,9 +20,6 @@ class CSVExportTest(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def get_csv(self, csv_type):
         b = self.browser
         b.get(get_server_base() + 'csv/')

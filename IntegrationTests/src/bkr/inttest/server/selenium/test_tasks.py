@@ -18,16 +18,14 @@ import turbogears as tg
 
 class TestSubmitTask(WebDriverTestCase):
 
-    @classmethod
-    def setupClass(cls):
+    def setUp(self):
         with session.begin():
-            cls.uploader = data_setup.create_user(password=u'upload')
-        cls.browser = cls.get_browser()
-        login(cls.browser, user=cls.uploader.user_name, password=u'upload')
+            self.uploader = data_setup.create_user(password=u'upload')
+        self.browser = self.get_browser()
+        login(self.browser, user=self.uploader.user_name, password=u'upload')
 
     @classmethod
     def teardownClass(cls):
-        cls.browser.quit()
         basepath = (turbogears.config.get('basepath.rpms'))
         # These may be missing if a test failed or wasn't run. We shouldn't
         # confuse matters further by complaining that they're missing.

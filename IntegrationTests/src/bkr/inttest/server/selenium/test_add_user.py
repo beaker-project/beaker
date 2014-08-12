@@ -20,9 +20,6 @@ class AddUser(WebDriverTestCase):
         self.browser = self.get_browser()
         login(self.browser)
 
-    def tearDown(self):
-        self.browser.quit()
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=1043390
     def test_filter_autocomplete_works(self):
         with session.begin():

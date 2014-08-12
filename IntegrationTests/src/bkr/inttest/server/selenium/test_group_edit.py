@@ -30,10 +30,7 @@ class TestGroupsWD(WebDriverTestCase):
 
         self.mail_capture = mail_capture.MailCaptureThread()
         self.mail_capture.start()
-
-    def tearDown(self):
-        self.mail_capture.stop()
-        self.browser.quit()
+        self.addCleanup(self.mail_capture.stop)
 
     def test_add_bad_permission(self):
         b = self.browser
@@ -686,9 +683,6 @@ class GroupSystemTest(WebDriverTestCase):
             self.group.user_group_assocs.append(
                     UserGroup(user=self.group_owner, is_owner=True))
         self.browser = self.get_browser()
-
-    def tearDown(self):
-        self.browser.quit()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=917745
     def test_add_system_to_group_twice(self):

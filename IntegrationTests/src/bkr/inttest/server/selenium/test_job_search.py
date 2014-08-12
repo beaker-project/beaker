@@ -13,20 +13,14 @@ from bkr.server.model import Product, RetentionTag
 
 class SearchJobsWD(WebDriverTestCase):
 
-
-    @classmethod
-    @with_transaction
-    def setUpClass(cls):
-        cls.running_job = data_setup.create_job()
-        cls.queued_job = data_setup.create_job()
-        cls.completed_job = data_setup.create_completed_job()
-        data_setup.mark_job_queued(cls.queued_job)
-        data_setup.mark_job_running(cls.running_job)
-        cls.browser = cls.get_browser()
-
-    @classmethod
-    def teardownClass(cls):
-        cls.browser.quit()
+    def setUp(self):
+        with session.begin():
+            self.running_job = data_setup.create_job()
+            self.queued_job = data_setup.create_job()
+            self.completed_job = data_setup.create_completed_job()
+            data_setup.mark_job_queued(self.queued_job)
+            data_setup.mark_job_running(self.running_job)
+        self.browser = self.get_browser()
 
     def test_search_group(self):
         with session.begin():

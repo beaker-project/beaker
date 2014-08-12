@@ -18,9 +18,6 @@ class AddSystem(WebDriverTestCase):
         self.condition_report = 'never being fixed'
         login(self.browser)
 
-    def tearDown(self):
-        self.browser.quit()
-
     # the default values are the same as that presented by the Web UI
     def add_system(self, fqdn='', lender='', serial='', status='Automated',
                    lab_controller='None', type='Laptop',

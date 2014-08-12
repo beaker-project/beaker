@@ -19,9 +19,6 @@ class JobAckTest(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def check_cannot_review(self):
         self.browser.find_element_by_xpath('.//*[@class="recipeset" and '
                 'not(.//div[contains(@class, "ackpanel")])]')

@@ -14,9 +14,6 @@ class AddGroup(WebDriverTestCase):
         self.group_name = 'd_group_d'
         self.group_display_name = 'd_group_d'
 
-    def tearDown(self):
-        self.browser.quit()
-                        
     def test_add_group(self):
         b = self.browser
         b.get(get_server_base())

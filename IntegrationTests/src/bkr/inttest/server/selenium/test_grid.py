@@ -27,9 +27,6 @@ class GridTest(WebDriverTestCase):
             self.system.command_queue.append(self.activity)
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def _get_paginators(self):
         b = self.browser
         paginators = b.find_elements_by_class_name('pagination')

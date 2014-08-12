@@ -135,17 +135,11 @@ class Search(WebDriverTestCase):
         check_distro_search_results(b, present=[self.distro_one],
                                     absent=[self.distro_two, self.distro_three])
 
-    def tearDown(self):
-        self.browser.quit()
-
 
 class SearchOptionsTest(WebDriverTestCase):
 
     def setUp(self):
         self.browser = self.get_browser()
-
-    def tearDown(self):
-        self.browser.quit()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=770109
     def test_search_options_are_maintained_after_submitting(self):

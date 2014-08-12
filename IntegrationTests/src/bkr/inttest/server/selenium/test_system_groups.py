@@ -25,9 +25,6 @@ class TestSystemGroups(WebDriverTestCase):
         self.browser = self.get_browser()
         login(self.browser, user=self.system_owner.user_name, password='password')
 
-    def tearDown(self):
-        self.browser.quit()
-
     def add_group_to_system(self, b, system=None, group=None):
         if not group:
             group = self.group

@@ -275,9 +275,6 @@ class SystemsBrowseTest(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_group_systems(self):
 
         b = self.browser

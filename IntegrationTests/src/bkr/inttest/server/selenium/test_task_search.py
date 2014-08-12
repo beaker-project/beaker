@@ -18,9 +18,6 @@ class ExecutedTasksTest(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def check_recipetask_present_in_results(self, recipetask):
         return self.browser.find_element_by_xpath("//div[@id='task_items']//"
                 "a[normalize-space(text())='%s']" % recipetask.t_id)
@@ -146,9 +143,6 @@ class Search(WebDriverTestCase):
             self.task_two = data_setup.create_task(name=u'/a/a/b', exclude_arch=[self.arch_one])
             self.task_three = data_setup.create_task(name=u'/a/a/c', exclude_osmajor=[self.osmajor_one])
         self.browser = self.get_browser()
-
-    def tearDown(self):
-        self.browser.quit()
 
     def test_arch_is(self):
         b = self.browser
