@@ -22,18 +22,21 @@ job on the beaker server to run this command at regular intervals (e.g. daily).
 Options
 -------
 
-.. option:: --reservation-expiry <reservation-expiry>
+.. option:: --reservation-expiry <hours>
 
-   Warn users about their reservations expiring in <hours> hours.
+   Warn users about their reservations expiring less than <hours> in the 
+   future. The default is 24.
 
-.. option:: --reservation-length <reservation-length> , --waiting-recipe-age <waiting-recipe-age>
+.. option:: --reservation-length <days>, --waiting-recipe-age <hours>
 
-   Report users about their systems which have been reserved for longer than <days> days and there
-   is at least one recipe waiting for longer than <hours> hours for those systems.
+   Remind users about their systems which have been reserved for longer than 
+   <days> and there is at least one recipe waiting for longer than <hours> for 
+   those systems. The defaults are 3 and 1 respectively.
 
-.. option:: --delayed-job-age <delayed-job-age>
+.. option:: --delayed-job-age <days>
 
-   Warn users about their jobs which have been queued for longer than <days> days.
+   Warn users about their jobs which have been queued for longer than <days>. 
+   The default is 14.
 
 Exit status
 -----------
@@ -43,7 +46,7 @@ Non-zero on error, otherwise zero.
 Examples
 --------
 
-To remind users who have expiring reservations in 48 hours::
+To remind users who have reservations expiring in 48 hours::
 
     beaker-usage-reminder --reservation-expiry 48
 
