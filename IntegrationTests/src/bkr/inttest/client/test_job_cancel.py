@@ -72,3 +72,9 @@ class JobCancelTest(unittest.TestCase):
         run_client(['bkr', 'job-cancel', '--username', job_owner.user_name, '--password', 'owner', job.t_id])
         self.assertEquals(job.activity[0].action, u'Cancelled')
         self.assertEquals(job.activity[0].user, job_owner)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1124756
+    def test_can_cancel_recipe_task(self):
+        t_id = self.job.recipesets[0].recipes[0].tasks[0].t_id
+        out = run_client(['bkr', 'job-cancel', t_id])
+        self.assertEquals('Cancelled %s\n' % t_id, out)

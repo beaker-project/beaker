@@ -2708,6 +2708,12 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
     result_types = ['pass_','warn','fail','panic', 'result_none']
     stop_types = ['stop','abort','cancel']
 
+    def record_activity(self, **kwds):
+        """
+        Will implement it in the future.
+        """
+        pass
+
     @classmethod
     def from_task(cls, task):
         """
@@ -2926,6 +2932,13 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
     def owner(self):
         return self.recipe.recipeset.job.owner
     owner = property(owner)
+
+    def cancel(self, msg=None):
+        """
+        Cancel this task
+        """
+        self._abort_cancel(TaskStatus.cancelled, msg)
+        self.recipe.recipeset.job._mark_dirty()
 
     def abort(self, msg=None):
         """

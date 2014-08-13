@@ -149,6 +149,22 @@ def extract_arg(arg, kernel_options):
     else:
         return (None, kernel_options)
 
+def configure_grub2(fqdn, default_config_loc, rel_loc, 
+                    config_file, kernel_options, devicetree=''):
+    config = """\
+linux  %s/images/%s/kernel %s netboot_method=grub2
+initrd %s/images/%s/initrd
+%s
+boot
+""" % (rel_loc, fqdn, kernel_options, rel_loc, fqdn, devicetree)
+    with atomically_replaced_file(config_file) as f:
+        f.write(config)
+    # We also ensure a default config exists that exits
+    write_ignore(os.path.join(default_config_loc, 'grub.cfg'), 'exit\n')
+
+def clear_grub2(config):
+    unlink_ignore(config)
+
 ### Bootloader config: PXE Linux for aarch64
 
 def configure_aarch64(fqdn, kernel_options):
@@ -165,16 +181,9 @@ def configure_aarch64(fqdn, kernel_options):
     else:
         devicetree = ''
     basename = "grub.cfg-%s" % pxe_basename(fqdn)
-    config = '''  linux  ../images/%s/kernel %s
-  initrd ../images/%s/initrd
-  %s
-  boot
-''' % (fqdn, kernel_options, fqdn, devicetree)
     logger.debug('Writing aarch64 config for %s as %s', fqdn, basename)
-    with atomically_replaced_file(os.path.join(pxe_base, basename)) as f:
-        f.write(config)
-    # We also ensure a default config exists that exits
-    write_ignore(os.path.join(pxe_base, 'grub.cfg'), 'exit\n')
+    grub_cfg_file = os.path.join(pxe_base, basename)
+    configure_grub2(fqdn, pxe_base, '..', grub_cfg_file, kernel_options, devicetree)
 
 def clear_aarch64(fqdn):
     """
@@ -183,7 +192,7 @@ def clear_aarch64(fqdn):
     pxe_base = os.path.join(get_tftp_root(), 'aarch64')
     basename = "grub.cfg-%s" % pxe_basename(fqdn)
     logger.debug('Removing aarch64 config for %s as %s', fqdn, basename)
-    unlink_ignore(os.path.join(pxe_base, basename))
+    clear_grub2(os.path.join(pxe_base, basename))
 
 
 ### Bootloader config: PXE Linux for ARM
@@ -459,6 +468,48 @@ def clear_yaboot(fqdn):
     logger.debug('Removing yaboot symlink for %s as %s', fqdn, basename)
     unlink_ignore(os.path.join(get_tftp_root(), 'ppc', basename))
 
+### Bootloader config for PPC64
+
+def configure_ppc64(fqdn, kernel_options):
+    """
+    Calls configure_grub2() to create the machine config files and symlink
+    to the grub2 boot loader:
+
+    <get_tftp_root()>/boot/grub2/grub.cfg-<pxe_basename(fqdn)>
+    <get_tftp_root()>/boot/grub2/grub.cfg
+    <get_tftp_root()>/ppc/<pxe_basename(fqdn).lower()-grub2> -> ../boot/grub2/powerpc-ieee1275/core.elf
+
+    """
+    grub2_conf_dir = os.path.join(get_tftp_root(), 'boot', 'grub2')
+    makedirs_ignore(grub2_conf_dir, mode=0755)
+    makedirs_ignore(os.path.join(grub2_conf_dir, 'powerpc-ieee1275'), mode=0755)
+    ppc_dir = os.path.join(get_tftp_root(), 'ppc')
+    makedirs_ignore(ppc_dir, mode=0755)
+
+    grub_cfg_file = os.path.join(grub2_conf_dir, "grub.cfg-%s" % pxe_basename(fqdn))
+    logger.debug('Writing grub2/ppc64 config for %s as %s', fqdn, grub_cfg_file)
+    configure_grub2(fqdn, grub2_conf_dir, "../..", grub_cfg_file, kernel_options)
+
+    grub2_symlink = '%s-grub2' % pxe_basename(fqdn).lower()
+    logger.debug('Creating grub2 symlink for %s as %s', fqdn, grub2_symlink)
+    atomic_symlink('../boot/grub2/powerpc-ieee1275/core.elf',
+                   os.path.join(ppc_dir, grub2_symlink))
+
+def clear_ppc64(fqdn):
+    """
+    Calls clear_grub2() to remove the machine config file and symlink to
+    the grub2 boot loader
+    """
+    grub2_conf_dir = os.path.join(get_tftp_root(), 'boot', 'grub2')
+    grub2_config = "grub.cfg-%s" % pxe_basename(fqdn)
+    logger.debug('Removing grub2/ppc64 config for %s as %s', fqdn, grub2_config)
+    clear_grub2(os.path.join(grub2_conf_dir, grub2_config))
+
+    unlink_ignore(os.path.join(grub2_conf_dir, grub2_config))
+    ppc_dir = os.path.join(get_tftp_root(), 'ppc')
+    grub2_symlink = '%s-grub2' % pxe_basename(fqdn).lower()
+    logger.debug('Removing grub2 symlink for %s as %s', fqdn, grub2_symlink)
+    unlink_ignore(os.path.join(ppc_dir, grub2_symlink))
 
 # Mass configuration
 
@@ -488,6 +539,8 @@ def add_bootloader(name, configure, clear, arches=None):
 add_bootloader("pxelinux", configure_pxelinux, clear_pxelinux)
 add_bootloader("efigrub", configure_efigrub, clear_efigrub)
 add_bootloader("yaboot", configure_yaboot, clear_yaboot)
+add_bootloader("grub2", configure_ppc64, clear_ppc64, 
+               set(["ppc64", "ppc64le"]))
 add_bootloader("elilo", configure_elilo, clear_elilo)
 add_bootloader("armlinux", configure_armlinux, clear_armlinux)
 add_bootloader("aarch64", configure_aarch64, clear_aarch64, set(["aarch64"]))
