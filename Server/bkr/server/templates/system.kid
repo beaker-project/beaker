@@ -8,9 +8,7 @@
  </head>
 
 <body>
-  <div class="page-header">
-    <h1>${value.fqdn}</h1>
-  </div>
+  <div class="page-header"><h1>${value.fqdn}</h1></div>
   ${form.display(method='get', action=action, value=value, options=options)}
   <ul class="nav nav-tabs">
     <li><a data-toggle="tab" href="#details">Details</a></li>
