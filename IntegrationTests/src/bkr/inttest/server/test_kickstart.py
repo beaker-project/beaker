@@ -115,6 +115,20 @@ class KickstartTest(unittest.TestCase):
 
             cls.rhel62 = create_rhel62()
             cls.rhel62_server_x86_64 = create_rhel62_server_x86_64(cls.rhel62, cls.lab_controller)
+            cls.rhel62_server_ppc64 = data_setup.create_distro_tree(
+                distro=cls.rhel62, variant=u'Server', arch=u'ppc64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/ppc64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/RHEL-6.2/Server/ppc64/os/'])
+            cls.rhel62_server_ppc64.repos[:] = [
+                DistroTreeRepo(repo_id=u'Server', repo_type=u'os', path=u'Server'),
+                DistroTreeRepo(repo_id=u'optional-ppc64-os', repo_type=u'addon',
+                    path=u'../../optional/ppc64/os'),
+                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug',
+                    path=u'../debug'),
+                DistroTreeRepo(repo_id=u'optional-ppc64-debug', repo_type=u'debug',
+                    path=u'../../optional/ppc64/debug'),
+            ]
             cls.rhel62_server_s390x = data_setup.create_distro_tree(
                 distro=cls.rhel62, variant=u'Server', arch=u's390x',
                 lab_controllers=[cls.lab_controller],
@@ -1129,6 +1143,24 @@ class KickstartTest(unittest.TestCase):
                 r'''bootloader --location=mbr --leavebootorder'''
                 in recipe.rendered_kickstart.kickstart.splitlines(),
                 recipe.rendered_kickstart.kickstart)
+        # --leavebootorder is only in RHEL7+ and F18+
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="ppc64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assertNotIn('--leavebootorder', recipe.rendered_kickstart.kickstart)
 
     def test_grubport(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
