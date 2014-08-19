@@ -206,7 +206,6 @@ if [ -e /etc/chrony.conf ] ; then
     chkconfig chronyd on
 fi
 
-
 if efibootmgr &>/dev/null ; then
     # The installer should have added a new boot entry for the OS
     # at the top of the boot order. We move it to the end of the order

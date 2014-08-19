@@ -150,7 +150,7 @@ def process_new_recipe(recipe_id):
             recipe.systems.append(system)
 
     # If the recipe only matches one system then bump its priority.
-    if len(recipe.systems) == 1:
+    if config.get('beaker.priority_bumping_enabled', True) and len(recipe.systems) == 1:
         try:
             log.info("recipe ID %s matches one system, bumping priority" % recipe.id)
             recipe.recipeset.priority = TaskPriority.by_index(
@@ -282,16 +282,22 @@ def queue_processed_recipeset(recipeset_id):
                 if system in recipe.systems:
                     log.debug("recipe: %s labController: %s Removing system %s" % (recipe.id, l_controller, system))
                     recipe.systems.remove(system)
-        if recipe.systems:
+    # Are we left with any recipes having no candidate systems?
+    dead_recipes = [recipe for recipe in recipeset.machine_recipes if not recipe.systems]
+    if dead_recipes:
+        # Set status to Aborted
+        log.debug('Not enough systems logic for %s left %s with no candidate systems',
+                recipeset.t_id, ', '.join(recipe.t_id for recipe in dead_recipes))
+        log.info('%s moved from Processed to Aborted' % recipeset.t_id)
+        recipeset.abort(u'Recipe ID %s does not match any systems'
+                % ', '.join(str(recipe.id) for recipe in dead_recipes))
+    else:
+        for recipe in recipeset.machine_recipes:
             # Set status to Queued
             log.info("recipe: %s moved from Processed to Queued" % recipe.id)
             recipe.queue()
             for guestrecipe in recipe.guests:
                 guestrecipe.queue()
-        else:
-            # Set status to Aborted
-            log.info("recipe ID %s moved from Processed to Aborted" % recipe.id)
-            recipe.recipeset.abort(u'Recipe ID %s does not match any systems' % recipe.id)
 
 def abort_dead_recipes(*args):
     filters = [not_(DistroTree.lab_controller_assocs.any())]
