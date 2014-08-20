@@ -26,14 +26,14 @@ fi
  #}
 {% if no_clock_sync is undefined %}
 if [ -e /etc/sysconfig/ntpdate ] ; then
-{% if has_systemd is defined or systemd %}
+{% if has_systemd is defined %}
     systemctl enable ntpdate
 {% else %}
     chkconfig ntpdate on
 {% endif %}
 fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
-{% if has_systemd is defined or systemd %}
+{% if has_systemd is defined %}
     systemctl enable ntpd
 {% else %}
     chkconfig ntpd on
@@ -52,7 +52,7 @@ if [ -e /etc/chrony.conf ] ; then
     # setting iburst should speed up initial sync
     # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
-{% if has_systemd is defined or systemd %}
+{% if has_systemd is defined %}
     systemctl disable ntpd
     systemctl disable ntpdate
     systemctl enable chronyd

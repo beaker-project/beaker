@@ -47,7 +47,7 @@ INTERFACE=
 
 EOF
 
-{% if has_systemd is defined or systemd %}
+{% if has_systemd is defined %}
 systemctl enable beah-srv
 systemctl enable beah-beaker-backend
 systemctl enable beah-fwd-backend
