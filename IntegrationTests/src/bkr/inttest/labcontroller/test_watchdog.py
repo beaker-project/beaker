@@ -13,28 +13,15 @@ from turbogears.database import session
 from bkr.common.helpers import makedirs_ignore
 from bkr.labcontroller.config import get_conf
 from bkr.labcontroller.proxy import ConsoleWatchFile, InstallFailureDetector, \
-        PanicDetector
+        PanicDetector, Watchdog, ProxyHelper
 from bkr.server.model import LogRecipe, TaskResult, TaskStatus
 from bkr.inttest import data_setup
 from bkr.inttest.assertions import wait_for_condition
 from bkr.inttest.labcontroller import LabControllerTestCase
+from mock import patch
 
-class WatchdogConsoleLogTest(LabControllerTestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        makedirs_ignore(get_conf().get('CONSOLE_LOGS'), 0755)
-
-    def setUp(self):
-        with session.begin():
-            self.system = data_setup.create_system(lab_controller=self.get_lc())
-            self.recipe = data_setup.create_recipe()
-            data_setup.create_job_for_recipes([self.recipe])
-            data_setup.mark_recipe_running(self.recipe, system=self.system)
-        self.console_log = os.path.join(get_conf().get('CONSOLE_LOGS'), self.system.fqdn)
-        self.cached_console_log = os.path.join(get_conf().get('CACHEPATH'), 'recipes',
-                str(self.recipe.id // 1000) + '+', str(self.recipe.id), 'console.log')
-
+class TestHelper(LabControllerTestCase):
     def assert_panic_detected(self, message):
         with session.begin():
             self.assertEquals(len(self.recipe.tasks[0].results), 1)
@@ -50,6 +37,23 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
 
     def check_cached_log_contents(self, expected):
         return open(self.cached_console_log, 'r').read() == expected
+
+
+class WatchdogConsoleLogTest(TestHelper):
+
+    @classmethod
+    def setUpClass(cls):
+        makedirs_ignore(get_conf().get('CONSOLE_LOGS'), 0755)
+
+    def setUp(self):
+        with session.begin():
+            self.system = data_setup.create_system(lab_controller=self.get_lc())
+            self.recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_running(self.recipe, system=self.system)
+        self.console_log = os.path.join(get_conf().get('CONSOLE_LOGS'), self.system.fqdn)
+        self.cached_console_log = os.path.join(get_conf().get('CACHEPATH'), 'recipes',
+                str(self.recipe.id // 1000) + '+', str(self.recipe.id), 'console.log')
 
     def test_stores_console_log(self):
         first_line = 'Here is the first line of the log file.\n'
@@ -209,6 +213,29 @@ class WatchdogConsoleLogTest(LabControllerTestCase):
         wait_for_condition(self.check_console_log_registered)
         wait_for_condition(lambda: self.check_cached_log_contents(line))
 
+
+class WatchdogVirtConsoleLogTest(TestHelper):
+    def setUp(self):
+        with session.begin():
+            self.watchdog = Watchdog()
+            self.recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([self.recipe])
+            data_setup.mark_recipe_running(self.recipe, virt=True, lab_controller=self.get_lc())
+            self.cached_console_log = os.path.join(get_conf().get('CACHEPATH'),
+                                                   'recipes',
+                                                   str(self.recipe.id // 1000) + '+',
+                                                   str(self.recipe.id), 'console.log')
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=950903
+    @patch.object(ProxyHelper, 'get_console_log')
+    def test_stores_virt_console_logs(self, test_get_console_log):
+        # set return value since we did not configure the OpenStack Identity APIs
+        test_get_console_log.return_value = 'foo'
+        active_watchdogs = self.watchdog.hub.recipes.tasks.watchdogs('active')
+        self.watchdog.active_watchdogs(active_watchdogs)
+        self.watchdog.run()
+        self.assert_(self.check_console_log_registered())
+        self.assert_(self.check_cached_log_contents('foo'))
 
 # These cases are really unit tests but they are here because I don't want to 
 # ship all these failure logs in the beaker-lab-controller package.

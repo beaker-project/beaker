@@ -396,7 +396,7 @@ def create_retention_tag(name=None, default=False, needs_product=False):
     return new_tag
 
 def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product=None,
-        retention_tag=None, group=None, submitter=None, **kwargs):
+        retention_tag=None, group=None, submitter=None, priority=None, **kwargs):
     if retention_tag is None:
         retention_tag = RetentionTag.by_tag(u'scratch') # Don't use default, unpredictable
     else:
@@ -411,8 +411,10 @@ def create_job_for_recipes(recipes, owner=None, whiteboard=None, cc=None,product
         submitter=submitter)
     if cc is not None:
         job.cc = cc
+    if priority is None:
+        priority = TaskPriority.default_priority()
     recipe_set = RecipeSet(ttasks=sum(r.ttasks for r in recipes),
-            priority=TaskPriority.default_priority())
+            priority=priority)
     recipe_set.recipes.extend(recipes)
     job.recipesets.append(recipe_set)
     session.add(job)
@@ -659,3 +661,10 @@ def create_device(device_class=None, **kwargs):
     if device_class is not None:
         kwargs['device_class_id'] = create_device_class(device_class).id
     return Device.lazy_create(**kwargs)
+
+def create_recipe_reservation(user, task_name=u'/distribution/reservesys', kill_time=0):
+    recipe = create_recipe(task_name=task_name)
+    create_job_for_recipes([recipe], owner=user)
+    mark_recipe_running(recipe)
+    recipe.extend(kill_time)
+    return recipe

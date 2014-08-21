@@ -12,7 +12,7 @@ import crypt
 from bkr.server import dynamic_virt
 from bkr.server.model import session, DistroTreeRepo, LabControllerDistroTree, \
         CommandActivity, Provision, SSHPubKey, ProvisionFamily, OSMajor, Arch, \
-        Key, Key_Value_String
+        Key, Key_Value_String, OSMajorInstallOptions
 from bkr.server.kickstart import template_env, generate_kickstart
 from bkr.server.jobs import Jobs
 from bkr.server.jobxml import XmlJob
@@ -115,6 +115,20 @@ class KickstartTest(unittest.TestCase):
 
             cls.rhel62 = create_rhel62()
             cls.rhel62_server_x86_64 = create_rhel62_server_x86_64(cls.rhel62, cls.lab_controller)
+            cls.rhel62_server_ppc64 = data_setup.create_distro_tree(
+                distro=cls.rhel62, variant=u'Server', arch=u'ppc64',
+                lab_controllers=[cls.lab_controller],
+                urls=[u'http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/ppc64/os/',
+                      u'nfs://lab.test-kickstart.invalid:/distros/RHEL-6.2/Server/ppc64/os/'])
+            cls.rhel62_server_ppc64.repos[:] = [
+                DistroTreeRepo(repo_id=u'Server', repo_type=u'os', path=u'Server'),
+                DistroTreeRepo(repo_id=u'optional-ppc64-os', repo_type=u'addon',
+                    path=u'../../optional/ppc64/os'),
+                DistroTreeRepo(repo_id=u'debug', repo_type=u'debug',
+                    path=u'../debug'),
+                DistroTreeRepo(repo_id=u'optional-ppc64-debug', repo_type=u'debug',
+                    path=u'../../optional/ppc64/debug'),
+            ]
             cls.rhel62_server_s390x = data_setup.create_distro_tree(
                 distro=cls.rhel62, variant=u'Server', arch=u's390x',
                 lab_controllers=[cls.lab_controller],
@@ -249,6 +263,7 @@ class KickstartTest(unittest.TestCase):
         recipe.provision()
         for guest in recipe.guests:
             guest.provision()
+        data_setup.mark_job_complete(job, only=True)
         return recipe
 
     def test_rhel3_defaults(self):
@@ -643,16 +658,17 @@ class KickstartTest(unittest.TestCase):
             </job>''')
         guest = recipe.guests[0]
         ks = guest.rendered_kickstart.kickstart
-        self.assert_(r'''bootloader --location=mbr  --append="console=ttyS0,115200 console=ttyS1,115200"''' in ks.splitlines(), ks)
-        self.assert_('cat << EOF >/etc/init/ttyS0.conf\n'
+        self.assertIn(r'''bootloader --location=mbr  --append="console=ttyS0,115200 console=ttyS1,115200"''', ks.splitlines())
+        self.assertIn('if [ -d /etc/init ] ; then\n'
+            '    cat << EOF >/etc/init/ttyS0.conf\n'
             '# start ttyS0\nstart on runlevel [2345]\n'
             'stop on runlevel [S016]\ninstance ttyS0\n'
             'respawn\npre-start exec /sbin/securetty ttyS0\n'
             'exec /sbin/agetty /dev/ttyS0 115200 vt100-nav\nEOF\n'
-            '\ncat << EOF >/etc/init/ttyS1.conf\n'
+            '\n    cat << EOF >/etc/init/ttyS1.conf\n'
             '# start ttyS1\nstart on runlevel [2345]\nstop on runlevel [S016]\n'
             'instance ttyS1\nrespawn\npre-start exec /sbin/securetty ttyS1\n'
-            'exec /sbin/agetty /dev/ttyS1 115200 vt100-nav\nEOF\n' in ks, ks)
+            'exec /sbin/agetty /dev/ttyS1 115200 vt100-nav\nEOF\n', ks)
 
     def test_rhel6_autopart_type_ignored(self):
         recipe = self.provision_recipe('''
@@ -1128,6 +1144,24 @@ class KickstartTest(unittest.TestCase):
                 r'''bootloader --location=mbr --leavebootorder'''
                 in recipe.rendered_kickstart.kickstart.splitlines(),
                 recipe.rendered_kickstart.kickstart)
+        # --leavebootorder is only in RHEL7+ and F18+
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="ppc64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', system)
+        self.assertNotIn('--leavebootorder', recipe.rendered_kickstart.kickstart)
 
     def test_grubport(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
@@ -1151,15 +1185,7 @@ class KickstartTest(unittest.TestCase):
                 </recipeSet>
             </job>
             ''', system)
-        self.assert_(
-                r'''    /bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)$/\1--port=0x02f8\2/' /boot/grub/grub.conf'''
-                in recipe.rendered_kickstart.kickstart.splitlines(),
-                recipe.rendered_kickstart.kickstart)
-
-        self.assert_(
-                r'''    /bin/sed -i '/^GRUB_SERIAL_COMMAND="serial/ {s/--unit=[0-9]\+//; s/"$/ --port=0x02f8"/}' /etc/default/grub'''
-                in recipe.rendered_kickstart.kickstart.splitlines(),
-                recipe.rendered_kickstart.kickstart)
+        self.assertIn('--port=0x02f8', recipe.rendered_kickstart.kickstart)
 
     def test_rhel5_devices(self):
         system = data_setup.create_system(arch=u'x86_64', status=u'Automated',
@@ -2071,27 +2097,6 @@ network --bootproto=dhcp --device=66:77:88:99:aa:bb
         self.assert_('# Install U-Boot boot.scr' in k.splitlines(), k)
         self.assert_('Yosemite Fedora' in k, k)
 
-    def test_f17_arm(self):
-        # Fedora 17 ARM had some special one-off hacks
-        recipe = self.provision_recipe('''
-            <job>
-                <whiteboard/>
-                <recipeSet>
-                    <recipe>
-                        <distroRequires>
-                            <distro_name op="=" value="Fedora-17" />
-                            <distro_arch op="=" value="armhfp" />
-                        </distroRequires>
-                        <hostRequires/>
-                        <task name="/distribution/install" />
-                    </recipe>
-                </recipeSet>
-            </job>
-            ''', self.system_armhfp)
-        k = recipe.rendered_kickstart.kickstart
-        self.assert_('http://dmarlin.fedorapeople.org/yum/f17/arm/os/Packages/' in k, k)
-        self.assert_('%packages --ignoremissing\nuboot-tools' in k, k)
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=728410
     def test_per_system_packages(self):
         system = data_setup.create_system(fqdn=u'bz728410-system-with-packages',
@@ -2367,7 +2372,31 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
             </job>
             ''', efi_system)
         ks = recipe.rendered_kickstart.kickstart
-        self.assertIn('\npart /boot/efi --fstype vfat ', ks)
+        self.assertIn('\npart /boot/efi --fstype vfat --size 200 --recommended\n', ks)
+        self.assertNotIn('\npart /boot ', ks)
+        # also check when combined with ondisk
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe ks_meta="ondisk=vdb">
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_variant op="=" value="Server" />
+                            <distro_arch op="=" value="x86_64" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <partitions>
+                            <partition fs="ext4" name="mnt" size="10" />
+                        </partitions>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            ''', efi_system)
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('\npart /boot/efi --fstype vfat --size 200 '
+                '--recommended --ondisk=vdb\n', ks)
         self.assertNotIn('\npart /boot ', ks)
 
     def test_anamon(self):
@@ -2463,7 +2492,6 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1099231
     def test_remote_post(self):
-
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
@@ -2479,19 +2507,35 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
                 </recipeSet>
             </job>
             ''')
-
         ks = recipe.rendered_kickstart.kickstart
-        self.assertIn('wget --tries 20 -O remote_script http://path/to/myscript '
+        self.assertIn('fetch remote_script http://path/to/myscript '
                       '&& chmod +x remote_script && ./remote_script',
                       ks)
 
+        # Manual provision
+        self.system.provisions[self.system.arch[0]] = Provision(arch=self.system.arch[0],
+                                                                ks_meta=u'remote_post=http://path/to/myscript')
+        tree = self.rhel62_server_x86_64
+        install_options = self.system.install_options(tree)
+        ks = generate_kickstart(install_options, tree, self.system, self.user).kickstart
+        self.assertIn("fetch remote_script http://path/to/myscript "
+                      "&& chmod +x remote_script && ./remote_script", ks.splitlines())
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1123700
+    def test_systemd(self):
+        distro_tree = data_setup.create_distro_tree(osmajor=u'CustomRHEL7',
+                variant=u'Server', arch=u'x86_64',
+                lab_controllers=[self.lab_controller])
+        osmajor = distro_tree.distro.osversion.osmajor
+        osmajor.install_options_by_arch[None] = OSMajorInstallOptions(ks_meta=u'systemd=True')
+        session.flush()
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
                 <recipeSet>
-                    <recipe ks_meta="remote_post='http://path/to/~scriptsdir/myscript'">
+                    <recipe>
                         <distroRequires>
-                            <distro_name op="=" value="RHEL-6.2" />
+                            <distro_family op="=" value="CustomRHEL7" />
                             <distro_variant op="=" value="Server" />
                             <distro_arch op="=" value="x86_64" />
                         </distroRequires>
@@ -2502,6 +2546,4 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
             </job>
             ''')
         ks = recipe.rendered_kickstart.kickstart
-        self.assertIn("curl --retry 20 -o remote_script 'http://path/to/~scriptsdir/myscript' "
-                      "&& chmod +x remote_script && ./remote_script",
-                      ks)
+        self.assertIn('export RHTS_OPTION_COMPATIBLE=\n', ks)

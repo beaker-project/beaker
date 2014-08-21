@@ -156,6 +156,26 @@ class ReserveWorkflow(WebDriverTestCase):
             self.assertEquals(reserve_task.params[0].name, 'RESERVETIME')
             self.assertEquals(reserve_task.params[0].value, '345600') # 4 days in seconds
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1122659
+    def test_only_reserves_machines(self):
+        login(self.browser)
+        b = self.browser
+        b.get(get_server_base() + 'reserveworkflow')
+        Select(b.find_element_by_name('tag')).select_by_visible_text('None selected')
+        Select(b.find_element_by_name('osmajor'))\
+            .select_by_visible_text(self.distro.osversion.osmajor.osmajor)
+        Select(b.find_element_by_name('distro')).select_by_visible_text(self.distro.name)
+        Select(b.find_element_by_name('distro_tree_id'))\
+            .select_by_visible_text('%s Server i386' % self.distro.name)
+        b.find_element_by_xpath('//button[normalize-space(text())="Submit job"]').click()
+        # should end up on the job page
+        job_id = b.find_element_by_xpath('//td[preceding-sibling::th/text()="Job ID"]/a').text
+        with session.begin():
+            job = TaskBase.get_by_t_id(job_id)
+            recipe = job.recipesets[0].recipes[0]
+            self.assertEquals(recipe.host_requires,
+                    u'<hostRequires><system_type value="Machine"/></hostRequires>')
+
 def go_to_reserve_systems(browser, distro_tree=None):
     b = browser
     b.get(get_server_base() + 'reserveworkflow/')

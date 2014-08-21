@@ -231,10 +231,98 @@ class OSMajor(DeclarativeMappedObject):
 
     def _sort_key(self):
         # Separate out the trailing digits, so that Fedora9 sorts before Fedora10
-        name, version = re.match(r'(.*?)(\d*)$', self.osmajor.lower()).groups()
-        if version:
+        name, version = self._split()
+        if version == 'rawhide':
+            version = 999
+        elif version:
             version = int(version)
-        return (name, version)
+        return (name.lower(), version)
+
+    def _split(self):
+        return re.match(r'(.*?)(rawhide|\d*)$', self.osmajor).groups()
+
+    @property
+    def name(self):
+        name, version = self._split()
+        return name
+
+    @property
+    def number(self):
+        """
+        Numeric portion of the OS major, e.g. 18 for Fedora18.
+        Note that this is not an int because it may be 'rawhide'!
+        """
+        # This property is called number to avoid confusion with OSVersion.
+        name, version = self._split()
+        return version
+
+    def default_install_options(self):
+        """
+        Returns the default install options supplied by Beaker (rather than the 
+        admin) based on some hardcoded OS major names.
+        This is where installer feature test variables are populated.
+        """
+        # We default to assuming all features are present, with features 
+        # conditionally turned off if needed. That way, unrecognised custom 
+        # distros will be assumed to support all features. The admin can 
+        # override these in OS major or distro install options if necessary.
+        ks_meta = {}
+        # Some convenience variables to make the name-based checks simpler:
+        name, version = self._split()
+        rhel, fedora = False, False
+        if name in ('RedHatEnterpriseLinux', 'RedHatEnterpriseLinuxServer',
+                'RedHatEnterpriseLinuxClient', 'RedHatEnterpriseLinuxServerGrid',
+                'CentOS'):
+            rhel = version
+        if name == 'Fedora':
+            fedora = version
+        # %end
+        ks_meta['end'] = '%end'
+        if rhel in ('3', '4', '5'):
+            ks_meta['end'] = ''
+        # autopart --type
+        ks_meta['has_autopart_type'] = True
+        if rhel in ('3', '4', '5', '6') or \
+                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3') or \
+                (fedora and fedora != 'rawhide' and int(fedora) < 18):
+            del ks_meta['has_autopart_type']
+        # chrony
+        ks_meta['has_chrony'] = True
+        if rhel in ('3', '4', '5', '6') or \
+                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3'):
+            del ks_meta['has_chrony']
+        # bootloader --leavebootorder
+        ks_meta['has_leavebootorder'] = True
+        if rhel in ('3', '4', '5', '6') or \
+                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3') or \
+                (fedora and fedora != 'rawhide' and int(fedora) < 18):
+            del ks_meta['has_leavebootorder']
+        # repo --cost
+        ks_meta['has_repo_cost'] = True
+        if rhel in ('3', '4', '5'):
+            del ks_meta['has_repo_cost']
+        # systemd vs. SysV init
+        ks_meta['has_systemd'] = True
+        if rhel in ('3', '4', '5', '6') or \
+                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3') or \
+                (fedora and fedora != 'rawhide' and int(fedora) < 15):
+            del ks_meta['has_systemd']
+        # unsupported_hardware
+        ks_meta['has_unsupported_hardware'] = True
+        if rhel in ('3', '4', '5'):
+            del ks_meta['has_unsupported_hardware']
+        # yum
+        if rhel == '3':
+            ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL3.noarch.rpm'
+        elif rhel == '4':
+            ks_meta['yum'] = 'yum-2.2.2-1.rhts.EL4.noarch.rpm'
+        # mode
+        if rhel == '6' or \
+                self.osmajor in ('RedHatStorage2', 'RedHatStorageSoftwareAppliance3'):
+            ks_meta['mode'] = 'cmdline'
+        if rhel in ('4', '5'):
+            ks_meta['mode'] = ''
+        return InstallOptions(ks_meta, {}, {})
 
     def tasks(self):
         """

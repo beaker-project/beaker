@@ -306,9 +306,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
     key_values_string = relationship('Key_Value_String', backref='system',
             cascade='all, delete, delete-orphan')
     activity = relationship(SystemActivity, backref='object', cascade='all, delete',
-            order_by=[SystemActivity.created.desc(), SystemActivity.id.desc()])
+            order_by=[SystemActivity.__table__.c.id.desc()])
     dyn_activity = dynamic_loader(SystemActivity,
-            order_by=[SystemActivity.created.desc(), SystemActivity.id.desc()])
+            order_by=[SystemActivity.__table__.c.id.desc()])
     command_queue = relationship(CommandActivity, backref='object',
             cascade='all, delete, delete-orphan',
             order_by=[CommandActivity.created.desc(), CommandActivity.id.desc()])
@@ -668,6 +668,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         """
         osmajor = distro_tree.distro.osversion.osmajor
         result = global_install_options()
+        result = result.combined_with(osmajor.default_install_options())
         # arch=None means apply to all arches
         if None in osmajor.install_options_by_arch:
             op = osmajor.install_options_by_arch[None]
@@ -757,6 +758,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return True
         return False
 
+    @hybrid_method
     def can_edit(self, user):
         """
         Does the given user have permission to edit details (inventory info, 
@@ -771,6 +773,14 @@ class System(DeclarativeMappedObject, ActivityMixin):
             self.custom_access_policy.grants(user, SystemPermission.edit_system)):
             return True
         return False
+
+    @can_edit.expression
+    def can_edit(cls, user): #pylint: disable=E0213
+        cls._ensure_user_is_authenticated(user)
+        if user.is_admin():
+            return true()
+        return or_(SystemAccessPolicy.grants(user, SystemPermission.edit_system),
+                cls.owner == user)
 
     def can_lend(self, user):
         """
@@ -2060,7 +2070,7 @@ class Key(DeclarativeMappedObject):
         """
         This method's name is deceptive, it actually excludes "obsoleted" keys.
         """
-        all_keys = cls.query
+        all_keys = cls.query.order_by(Key.key_name)
         return [key.key_name for key in all_keys
                 if key.key_name not in cls.obsoleted_keys]
 

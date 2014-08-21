@@ -92,3 +92,6 @@ class VirtManager(object):
 
     def destroy_vm(self, instance_id):
         self.nova.servers.delete(instance_id)
+
+    def get_console_output(self, instance_id, length):
+        return self.nova.servers.get_console_output(instance_id, length)

@@ -159,24 +159,27 @@ class Watchdog(DeclarativeMappedObject):
         This appears to be a bug in sqlalchemy 0.6.8, but is no longer an issue
         in 0.8.3 (and perhaps versions in between, although currently untested).
         """
-
-        if status == 'active':
-            watchdog_clause = Watchdog.kill_time > datetime.utcnow()
-        elif status =='expired':
-            watchdog_clause = Watchdog.kill_time < datetime.utcnow()
-        else:
-            return None
-        any_recipe_has_matching_watchdog = exists(select([1],
-            from_obj=Recipe.__table__.join(Watchdog.__table__)). \
-            where(Recipe.recipe_set_id == RecipeSet.id).where(watchdog_clause). \
-            correlate(RecipeSet.__table__))
-
-        watchdog_query = cls.query.join(Watchdog.recipe).join(Recipe.recipeset).filter(
-            and_(Watchdog.kill_time != None, any_recipe_has_matching_watchdog))
+        any_recipe_has_active_watchdog = exists(select([1],
+                from_obj=Recipe.__table__.join(Watchdog.__table__))\
+                .where(Watchdog.kill_time > datetime.utcnow())\
+                .where(Recipe.recipe_set_id == RecipeSet.id)\
+                .correlate(RecipeSet.__table__))
+        watchdog_query = cls.query.join(Watchdog.recipe).join(Recipe.recipeset)\
+                .filter(Watchdog.kill_time != None)
         if labcontroller is not None:
             watchdog_query = watchdog_query.filter(
                 RecipeSet.lab_controller==labcontroller)
+        if status == 'active':
+            watchdog_query = watchdog_query.filter(any_recipe_has_active_watchdog)
+        elif status == 'expired':
+            watchdog_query = watchdog_query.filter(not_(any_recipe_has_active_watchdog))
+        else:
+            return None
         return watchdog_query
+
+    def __repr__(self):
+        return '%s(id=%r, kill_time=%r)' % (self.__class__.__name__,
+                self.id, self.kill_time)
 
 
 class Log(object):
@@ -2022,30 +2025,18 @@ class Recipe(TaskBase, DeclarativeMappedObject):
     arch = property(_get_arch)
 
     def _get_host_requires(self):
-        # If no system_type is specified then add defaults
         try:
-            hrs = xml.dom.minidom.parseString(self._host_requires)
+            hrs = xml.dom.minidom.parseString(self._host_requires).documentElement
         except (TypeError, xml.parsers.expat.ExpatError):
-            hrs = xmldoc.createElement("hostRequires")
-            return hrs.toxml()
+            hrs = xmldoc.createElement('hostRequires')
 
-        force_fqdn = False
-        for child in hrs.childNodes:
-            if child.getAttribute('force'):
-                force_fqdn = True
+        # If no system_type is specified then add defaults
+        if not hrs.getElementsByTagName('system_type') and not hrs.getAttribute('force'):
+            system_type = xmldoc.createElement('system_type')
+            system_type.setAttribute('value', unicode(self.systemtype))
+            hrs.appendChild(system_type)
 
-        if hrs.getElementsByTagName("system_type") or force_fqdn:
-            return hrs.toxml()
-
-        # Create a new hostRequires element with a default system_type
-        hostRequires = xmldoc.createElement("hostRequires")
-        for hr in hrs.getElementsByTagName("hostRequires"):
-            for child in hr.childNodes[:]:
-                hostRequires.appendChild(child)
-        system_type = xmldoc.createElement("system_type")
-        system_type.setAttribute("value", "%s" % self.systemtype)
-        hostRequires.appendChild(system_type)
-        return hostRequires.toxml()
+        return hrs.toxml()
 
     def _set_host_requires(self, value):
         self._host_requires = value
@@ -2728,6 +2719,12 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
     result_types = ['pass_','warn','fail','panic', 'result_none']
     stop_types = ['stop','abort','cancel']
 
+    def record_activity(self, **kwds):
+        """
+        Will implement it in the future.
+        """
+        pass
+
     @classmethod
     def from_task(cls, task):
         """
@@ -2946,6 +2943,13 @@ class RecipeTask(TaskBase, DeclarativeMappedObject):
     def owner(self):
         return self.recipe.recipeset.job.owner
     owner = property(owner)
+
+    def cancel(self, msg=None):
+        """
+        Cancel this task
+        """
+        self._abort_cancel(TaskStatus.cancelled, msg)
+        self.recipe.recipeset.job._mark_dirty()
 
     def abort(self, msg=None):
         """
@@ -3466,6 +3470,7 @@ class VirtResource(RecipeResource):
 
     def install_options(self, distro_tree):
         return global_install_options()\
+                .combined_with(InstallOptions.from_strings('', u'console=tty0 console=ttyS0,115200n8', ''))\
                 .combined_with(distro_tree.install_options())
 
     def release(self):

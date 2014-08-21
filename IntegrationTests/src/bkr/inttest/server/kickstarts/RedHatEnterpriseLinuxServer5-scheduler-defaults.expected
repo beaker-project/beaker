@@ -61,16 +61,66 @@ wget
 
 %pre --log=/dev/console
 set -x
-# Check in with Beaker Server
-wget -O - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
+# Some distros have curl in their minimal install set, others have wget.
+# We define a wrapper function around the best available implementation
+# so that the rest of the script can use that for making HTTP requests.
+if command -v curl >/dev/null ; then
+    function fetch() {
+        curl --retry 20 --remote-time -o "$1" "$2"
+    }
+elif command -v wget >/dev/null ; then
+    # In Anaconda images wget is actually busybox
+    if wget --help | grep -q BusyBox ; then
+        function fetch() {
+            wget -O "$1" "$2"
+        }
+    else
+        function fetch() {
+            wget --tries 20 -O "$1" "$2"
+        }
+    fi
+else
+    echo "No HTTP client command available!"
+    function fetch() {
+        false
+    }
+fi
 
-wget -O /tmp/anamon 'http://lab.test-kickstart.invalid/beaker/anamon'
+# Check in with Beaker Server
+fetch - http://lab.test-kickstart.invalid:8000/install_start/@RECIPEID@
+
+fetch /tmp/anamon http://lab.test-kickstart.invalid/beaker/anamon
 python /tmp/anamon --recipe-id @RECIPEID@ --xmlrpc-url 'http://lab.test-kickstart.invalid:8000/RPC2'
 # no snippet data for RedHatEnterpriseLinuxServer5_pre
 # no snippet data for system_pre
 
 %post --log=/dev/console
 set -x
+# Some distros have curl in their minimal install set, others have wget.
+# We define a wrapper function around the best available implementation
+# so that the rest of the script can use that for making HTTP requests.
+if command -v curl >/dev/null ; then
+    function fetch() {
+        curl --retry 20 --remote-time -o "$1" "$2"
+    }
+elif command -v wget >/dev/null ; then
+    # In Anaconda images wget is actually busybox
+    if wget --help | grep -q BusyBox ; then
+        function fetch() {
+            wget -O "$1" "$2"
+        }
+    else
+        function fetch() {
+            wget --tries 20 -O "$1" "$2"
+        }
+    fi
+else
+    echo "No HTTP client command available!"
+    function fetch() {
+        false
+    }
+fi
+
 # Check in with Beaker Server, let it know our hostname, and
 # record our install time.
 
@@ -94,8 +144,8 @@ function find_fqdn() {
     hostname -I | cut -d' ' -f1
 }
 REPORTED_FQDN=$(find_fqdn)
-wget -O - http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN
-wget -O - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
+fetch - "http://lab.test-kickstart.invalid:8000/install_done/@RECIPEID@/$REPORTED_FQDN"
+fetch - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
 echo @RECIPEID@ > /root/RECIPE.TXT
 
 # If netboot_method= is found in /proc/cmdline record it to /root
@@ -106,8 +156,8 @@ fi
 
 # Enable post-install boot notification
 
-wget -O /usr/local/sbin/anamon "http://lab.test-kickstart.invalid/beaker/anamon"
-wget -O /etc/rc.d/init.d/anamon "http://lab.test-kickstart.invalid/beaker/anamon.init"
+fetch /usr/local/sbin/anamon http://lab.test-kickstart.invalid/beaker/anamon
+fetch /etc/rc.d/init.d/anamon http://lab.test-kickstart.invalid/beaker/anamon.init
 
 chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
 if selinuxenabled &>/dev/null ; then
@@ -122,12 +172,24 @@ RECIPE_ID="@RECIPEID@"
 LOGFILES="/var/log/boot.log /var/log/messages /var/log/dmesg"
 __EOT__
 
+if [ -f /etc/sysconfig/readahead ] ; then
+    cat >>/etc/sysconfig/readahead <<EOF
+
+# readahead conflicts with auditd, see bug 561486 for detailed explanation.
+#
+# Should a task need to change these settings, it must revert to this state
+# when test is done.
+
+READAHEAD_COLLECT="no"
+READAHEAD_COLLECT_ON_RPM="no"
+EOF
+fi
 
 if [ -e /etc/sysconfig/ntpdate ] ; then
-    /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
+    chkconfig ntpdate on
 fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
-    /sbin/chkconfig ntpd on >/dev/null 2>&1 || :
+    chkconfig ntpd on
     GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
     if [ -z "$GOT_G" ]; then
@@ -142,10 +204,10 @@ if [ -e /etc/chrony.conf ] ; then
     # setting iburst should speed up initial sync
     # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
-    /sbin/chkconfig ntpd off >/dev/null 2>&1 || :
-    /sbin/chkconfig ntpdate off >/dev/null 2>&1 || :
+    chkconfig ntpd off
+    chkconfig ntpdate off
+    chkconfig chronyd on
 fi
-
 
 if efibootmgr &>/dev/null ; then
     # The installer should have added a new boot entry for the OS
@@ -159,7 +221,6 @@ if efibootmgr &>/dev/null ; then
     # save the boot entry for later, so that rhts-reboot can set BootNext as well
     echo "$os_boot_entry" >/root/EFI_BOOT_ENTRY.TXT
 fi
-
 
 
 #Add Task Repo
@@ -305,7 +366,7 @@ setenv LOOKASIDE http://download.test-kickstart.invalid/lookaside/
 setenv BUILDURL http://download.test-kickstart.invalid
 EOF
 # Check in with Beaker Server, record our postinstall time.
-wget -O - http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
+fetch - http://lab.test-kickstart.invalid:8000/postinstall_done/@RECIPEID@
 # no snippet data for RedHatEnterpriseLinuxServer5_post
 # no snippet data for system_post
 

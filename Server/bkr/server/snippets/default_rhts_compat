@@ -1,4 +1,4 @@
-{% if not systemd %}
+{% if has_systemd is undefined %}
 
 # turn on rhts-compat by default (it will save us one reboot):
 chkconfig --add rhts-compat

@@ -121,7 +121,9 @@ restoring the UNIQUE constraint.
         DROP instance_id,
         DROP kernel_options;
 
-    ALTER TABLE lab_controller DROP KEY uc_user_id;
+    ALTER TABLE lab_controller
+        DROP KEY uc_user_id,
+        ADD KEY (user_id);
 
     ALTER TABLE job
         DROP ntasks,

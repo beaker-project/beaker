@@ -247,3 +247,113 @@ A number of bug fixes are also included in this release.
   a non-existent system to a group. (Contributed by Amit Saha)
 * :issue:`978225`: Beaker shows a more informative error when attempting to
   delete a group that has already been deleted. (Contributed by Amit Saha)
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 0.17 maintenance updates.
+
+Beaker 0.17.1
+~~~~~~~~~~~~~
+
+* :issue:`1116722`: CSV export no longer exposes system power configuration to
+  users who do not have permission to edit the system. (Contributed by Dan 
+  Callaghan)
+* :issue:`1084188`: The :program:`beaker-pxemenu` utility now generates a menu
+  for AArch64. (Contributed by Dan Callaghan)
+* :issue:`1099231`: A new :ref:`kickstart metadata variable
+  <kickstart-metadata>` ``remote_post`` was defined, to fetch and run a remote 
+  script during post-installation. (Contributed by Amit Saha)
+* :issue:`1103156`: The :program:`bkr system-release` command now accepts more
+  than one argument, and releases all of the given systems. (Contributed by 
+  Amit Saha)
+* :issue:`1088761`: When a recipe uses custom partitioning, Beaker now
+  correctly defines a :file:`/boot/efi` partition on x86 EFI systems which 
+  require it. (Contributed by Dan Callaghan)
+* :issue:`1003454`: The :program:`beaker-proxy` daemon now rejects incoming
+  requests larger than 10MB, to prevent exhausting available memory if a very 
+  large request is received. (Contributed by Dan Callaghan)
+* :issue:`1094553`: The :program:`beaker-provision` daemon now enforces
+  a configurable timeout (120 seconds by default) when fetching netboot images 
+  as part of the provisioning process. (Contributed by Dan Callaghan)
+* :issue:`1097094`: The :guilabel:`History` table on the system page now
+  permits paging through all available records, and avoids issuing inefficient 
+  SQL queries in a number of circumstances. (Contributed by Dan Callaghan)
+* :issue:`1079093`: The SQL queries used to poll for watchdogs are now more
+  efficient. (Contributed by Raymond Mancy)
+* :issue:`1095079`: ``aarch64`` is now recognized as a valid architecture by
+  :program:`beaker-wizard`. (Contributed by Matt Jia)
+* :issue:`1078965`: Netboot files for AArch64 are written to :file:`aarch64/`
+  instead of :file:`pxelinux/`. (Contributed by Dan Callaghan)
+* :issue:`1080285`: The documentation now covers in detail the :doc:`files and
+  directories in the TFTP root <../admin-guide/tftp>` which Beaker uses. 
+  (Contributed by Dan Callaghan)
+* :issue:`1111491`: Server commands now print a more helpful error message if
+  they cannot read the server configuration file. (Contributed by Amit Saha)
+* :issue:`1111508`: Added a new menu item :menuselection:`Systems --> Reserve`
+  linking to the reserve workflow. (Contributed by Dan Callaghan)
+* :issue:`1107788`: Fixed incorrectly displayed options in
+  :manpage:`bkr-job-list(1)`. (Contributed by Dan Callaghan)
+
+The Beah test harness was updated to version 0.7.6 in this release, with the 
+following fixes:
+
+* :issue:`908354`: Beah's internal task states are now updated correctly when
+  a task triggers :program:`rhts-reboot`, regardless of which order processes 
+  are killed during shutdown. This corrects an error where Beah would 
+  intermittently fail to run any tasks after rebooting. (Contributed by Amit 
+  Saha with assistance from Jan Stancek)
+* :issue:`1106381`: Fixed a syntax error in the systemd service unit for
+  ``beah-srv`` which caused service dependencies not to be registered. 
+  (Contributed by Jun'ichi NOMURA)
+* :issue:`1106405`: The :envvar:`HOSTNAME` environment variable is no longer
+  assumed to be set. (Contributed by Dan Callaghan)
+
+The ``/distribution/virt/install`` task was updated to version 4.0-83 in this 
+release, with the following fixes:
+
+* :issue:`1113666`: Fixed an error caused by extraneous output from
+  ``get_guest_info.py --kvm-num`` in case the HTTP request to the lab 
+  controller fails and is retried. (Contributed by Bill Peck)
+* :issue:`1117001`: Debug logs from libvirtd are no longer uploaded to Beaker
+  by default, because of their very large size. The previous behaviour can be 
+  restored by passing a non-empty value for the ``LIBVIRTD_DEBUG`` task 
+  parameter. (Contributed by Dan Callaghan)
+
+Beaker 0.17.2
+~~~~~~~~~~~~~
+
+* :issue:`1123249`: Fixed a regression in the database query for expired
+  watchdogs which caused multi-host recipe sets to be aborted too early. 
+  Multi-host recipe sets are now correctly aborted only if the watchdog has 
+  expired for all recipes in the set. (Contributed by Dan Callaghan)
+* :issue:`1122659`: Fixed a regression in the logic which injects
+  ``<system_type value="Machine"/>`` into ``<hostRequires/>`` when no system 
+  type filter is explicitly given. As a result, Beaker now correctly restricts 
+  Reserve Workflow jobs to run on systems whose type is Machine. (Contributed 
+  by Dan Callaghan)
+* :issue:`1120705`: The :guilabel:`Table` and :guilabel:`Keyvalue` dropdowns
+  are now sorted alphabetically. (Contributed by Dan Callaghan)
+* :issue:`1123700`: Fixed template conditionals for the ``systemd`` variable so
+  that it takes effect when overridden in kickstart metadata. (Contributed by 
+  Dan Callaghan)
+
+.. not listing internal workflow bug :issue:`1121460`
+
+Beaker 0.17.3
+~~~~~~~~~~~~~
+
+* :issue:`1113816`: Beaker now generates GRUB2 configuration files for
+  ppc64, in addition to Yaboot. This allows provisioning PowerPC systems where 
+  GRUB2 is the preferred boot loader. (Contributed by Amit Saha)
+* :issue:`1120487`: ``ppc64le`` is now accepted as a valid architecture in
+  :program:`beaker-wizard` and for task metadata. (Contributed by Amit Saha)
+* :issue:`1124756`: Fixed a regression preventing the cancellation of
+  individual tasks in a recipe. (Contributed by Matt Jia)
+* :issue:`1121748`: Fixed an issue with LDAP lookups containing whitespace,
+  which could result in erroneous duplicate user accounts being created. 
+  (Contributed by Dan Callaghan)
+* :issue:`1120439`: Fixed an issue in the web UI where an out-of-memory
+  condition during request handling could cause all subsequent requests to 
+  fail, due to the database connection being left in an invalid state. 
+  (Contributed by Dan Callaghan)

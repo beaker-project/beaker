@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import sys
 import os
 import unittest2 as unittest
 import subprocess
@@ -38,9 +39,10 @@ class DistroImportTest(unittest.TestCase):
 
     @classmethod
     def setupClass(cls):
-        cls.distro_server = Process('http_server.py',
-                args=['python', os.path.join(_current_dir, '..', 'http_server.py'),],
-                listen_port=19998, exec_dir=_compose_test_dir)
+        cls.distro_server = Process('http_server.py', [sys.executable,
+                    pkg_resources.resource_filename('bkr.inttest', 'http_server.py'),
+                    '--base',  _compose_test_dir],
+                listen_port=19998)
         cls.distro_server.start()
         cls.distro_url = 'http://localhost:19998/'
 

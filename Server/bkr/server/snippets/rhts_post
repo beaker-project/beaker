@@ -1,4 +1,6 @@
 set -x
+{% snippet 'fetch_wrapper' %}
+
 {% snippet 'install_done' %}
 {% snippet 'clear_netboot' %}
 {% if recipe %}
@@ -13,9 +15,9 @@ fi
 
 # Enable post-install boot notification
 {% snippet 'post_anamon' %}
-{% if distro is osmajor('RedHatEnterpriseLinux6', 'RedHatEnterpriseLinuxGrid6') %}
+if [ -f /etc/sysconfig/readahead ] ; then
 {% snippet 'readahead_sysconfig' %}
-{% endif %}
+fi
 {% snippet 'linkdelay' %}
 
 {# We normally want to make sure the system time is accurate, in case 
@@ -24,17 +26,17 @@ fi
  #}
 {% if no_clock_sync is undefined %}
 if [ -e /etc/sysconfig/ntpdate ] ; then
-{% if systemd == True  %}
+{% if has_systemd is defined %}
     systemctl enable ntpdate
 {% else %}
-    /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
+    chkconfig ntpdate on
 {% endif %}
 fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
-{% if systemd == True  %}
+{% if has_systemd is defined %}
     systemctl enable ntpd
 {% else %}
-    /sbin/chkconfig ntpd on >/dev/null 2>&1 || :
+    chkconfig ntpd on
 {% endif %}
     GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
@@ -50,46 +52,26 @@ if [ -e /etc/chrony.conf ] ; then
     # setting iburst should speed up initial sync
     # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
-{% if systemd == True %}
+{% if has_systemd is defined %}
     systemctl disable ntpd
     systemctl disable ntpdate
+    systemctl enable chronyd
+    systemctl enable chrony-wait
 {% else %}
-    /sbin/chkconfig ntpd off >/dev/null 2>&1 || :
-    /sbin/chkconfig ntpdate off >/dev/null 2>&1 || :
+    chkconfig ntpd off
+    chkconfig ntpdate off
+    chkconfig chronyd on
 {% endif %}
 fi
 {% endif %}
 
-{% if grubport %}
-{#
-#/bin/sed -i 's/^serial.*/serial --port={{ grubport }} --speed=115200/' /boot/grub/grub.conf
-#}
-if [ -e "/boot/grub/grub.conf" ]; then
-    /bin/sed -i 's/^\(serial.*\)--unit=\S\+\(.*\)$/\1--port={{ grubport }}\2/' /boot/grub/grub.conf
-elif [ -e "/etc/default/grub" ]; then
-    /bin/sed -i '/^GRUB_SERIAL_COMMAND="serial/ {s/--unit=[0-9]\+//; s/"$/ --port={{ grubport }}"/}' /etc/default/grub
-    /sbin/grub2-mkconfig -o /boot/grub2/grub.cfg
-fi
-{% endif %}
-
+{% snippet 'grubport' %}
 {% snippet 'boot_order' %}
-
-{% if not yum %}
-{% if distro is osmajor('RedHatEnterpriseLinux3') %}
-{% set yum = 'yum-2.2.2-1.rhts.EL3.noarch.rpm' %}
-{% elif distro is osmajor('RedHatEnterpriseLinux4') %}
-{% set yum = 'yum-2.2.2-1.rhts.EL4.noarch.rpm' %}
-{% endif %}
-{% endif %}
 
 {% if yum %}
 # Install Yum
 pushd /root
-{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
-/usr/bin/wget -N http://{{ lab_controller.fqdn }}/beaker/{{ yum }}
-{% else %}
-curl -R http://{{ lab_controller.fqdn }}/beaker/{{ yum }} -o {{ yum }}
-{% endif %}
+fetch {{ yum }} http://{{ lab_controller.fqdn }}/beaker/{{ yum }}
 /bin/rpm -Uvh {{ yum }}
 popd
 {% endif %}
@@ -139,19 +121,20 @@ useradd --password '$6$oIW3o2Mr$XbWZKaM7nA.cQqudfDJScupXOia5h1u517t6Htx/Q/MgXm82
 {% snippet 'beaker_env' %}
 {% snippet 'lab_env' %}
 {% snippet 'ssh_keys' %}
+{% if recipe.systemtype == 'Virtual' %}
+if [ -d /etc/init ] ; then
+{% snippet 'virt_console_post' %}
+fi
+{% endif %}
 {% if system and system.kernel_type.kernel_type == 'highbank' %}
 {% snippet 'highbank' %}
 {% endif %}
 {% if system and system.kernel_type.kernel_type == 'mvebu' %}
 {% snippet 'mvebu' %}
 {% endif %}
-{% if recipe %}
 {% snippet 'remote_post' %}
+{% if recipe %}
 # Check in with Beaker Server, record our postinstall time.
-{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
-wget -O - http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}
-{% else %}
-curl http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}
-{% endif %}
+fetch - http://{{ lab_controller.fqdn }}:8000/postinstall_done/{{ recipe.id }}
 {% endif %}
 {% snippet 'disable_rhts_compat' %}

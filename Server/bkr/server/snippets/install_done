@@ -23,9 +23,5 @@ function find_fqdn() {
     hostname -I | cut -d' ' -f1
 }
 REPORTED_FQDN=$(find_fqdn)
-{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
-wget -O - http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$REPORTED_FQDN
-{% else %}
-curl http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$REPORTED_FQDN
-{% endif %}
+fetch - "http://{{ lab_controller.fqdn }}:8000/install_done/{{ recipe.id }}/$REPORTED_FQDN"
 {% endif %}

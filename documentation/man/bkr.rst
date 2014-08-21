@@ -165,6 +165,30 @@ Options for selecting system(s):
    See :ref:`job-xml` for more information about the ``<hostRequires/>`` 
    element.
 
+.. option:: --host-filter <name>
+
+   Look up the pre-defined host filter with the given name,and
+   add the corresponding XML snippet to ``<hostRequires/>``.
+
+   You can use pre-defined host filters as a short-hand for complicated
+   or difficult to remember XML snippets.
+   Beaker includes many pre-defined filters for different types of
+   hardware. For example, pass ``--host-filter=INTEL__FAM15_CELERON``
+   to filter for hosts with an Intel Celeron CPU.
+
+   Filter definitions are read from the following configuration
+   files:
+
+   * :file:`/usr/lib/python2.{x}/site-packages/bkr/client/host-filters/*.conf`
+   * :file:`/etc/beaker/host-filters/*.conf`
+   * :file:`~/.beaker_client/host-filter`
+
+   Files within each directory are processed in lexicographical
+   order. The files contain one filter definition per line, consisting
+   of the filter name and the associated XML snippet separated by whitespace.
+   If the same filter name appears in multiple files, the last
+   definition overrides earlier definitions.
+
 .. option:: --keyvalue "<name> <operator> <value>"
 
    Run the job on system(s) which have the key <name> set to <value>

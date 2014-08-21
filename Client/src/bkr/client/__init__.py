@@ -12,6 +12,8 @@ import optparse
 from optparse import OptionGroup
 from bkr.client.command import Command
 from bkr.common.pyconfig import PyConfigParser
+import glob
+import pkg_resources
 
 config_file = os.environ.get("BEAKER_CLIENT_CONF", None)
 if not config_file:
@@ -30,6 +32,32 @@ if not config_file:
 conf = PyConfigParser()
 if config_file:
     conf.load_from_file(config_file)
+
+
+_host_filter_presets = None
+def host_filter_presets():
+    global _host_filter_presets
+    if _host_filter_presets is not None:
+        return _host_filter_presets
+
+    _host_filter_presets = {}
+    config_files = \
+                   sorted(glob.glob(pkg_resources.resource_filename('bkr.client', 'host-filters/*.conf'))) + \
+                   sorted(glob.glob('/etc/beaker/host-filters/*.conf'))
+    user_config_file = os.path.expanduser('~/.beaker_client/host-filter')
+    if os.path.exists(user_config_file):
+        config_files.append(user_config_file)
+    for f in config_files:
+        with open(f) as fobj:
+            for line in fobj:
+                matched = re.match('^(\w+)\s+(\S+.*)$', line)
+                if matched:
+                    preset, xml = matched.groups()
+                    _host_filter_presets[preset] = xml
+    if not _host_filter_presets:
+        sys.stderr.write("No presets found for the --host-filter option")
+        raise SystemExit(1)
+    return _host_filter_presets
 
 class BeakerCommand(Command):
     enabled = False
@@ -207,6 +235,12 @@ class BeakerWorkflow(BeakerCommand):
             default=False,
             action="store_true",
             help="Pick systems randomly (default is owned, in group, other)"
+        )
+        system_options.add_option(
+            "--host-filter",
+            metavar="NAME",
+            default=None,
+            help="Apply pre-defined host filter"
         )
         self.parser.add_option_group(system_options)
 
@@ -611,10 +645,11 @@ class BeakerRecipeBase(BeakerBase):
         if machine:
             # if machine is specified, emit a warning message that any
             # other host selection criteria is ignored
-            for opt in ['hostrequire', 'keyvalue', 'random', 'systype']:
+            for opt in ['hostrequire', 'keyvalue', 'random', 'systype', 
+                        'host_filter']:
                 if kwargs.get(opt, None):
                     sys.stderr.write('Warning: Ignoring --%s'
-                                     ' because --machine was specified\n' % opt)
+                                     ' because --machine was specified\n' % opt.replace('_', '-'))
             if kwargs.get('ignore_system_status', False):
                 hostRequires.setAttribute("force", "%s" % kwargs.get('machine'))
             else:
@@ -627,6 +662,7 @@ class BeakerRecipeBase(BeakerBase):
             keyvalues = kwargs.get("keyvalue", [])
             requires = kwargs.get("hostrequire", [])
             random = kwargs.get("random", False)
+            host_filter = kwargs.get('host_filter', None)
             if systype:
                 systemType = self.doc.createElement('system_type')
                 systemType.setAttribute('op', '=')
@@ -651,6 +687,16 @@ class BeakerRecipeBase(BeakerBase):
                 self.addHostRequires(myrequire)
             if random:
                 self.addAutopick(random)
+            if host_filter:
+                _host_filter_presets = host_filter_presets()
+                host_filter_expanded = _host_filter_presets.get \
+                                              (host_filter, None)
+                if host_filter_expanded:
+                    self.addHostRequires(xml.dom.minidom.parseString
+                                         (host_filter_expanded).documentElement)
+                else:
+                    sys.stderr.write('Pre-defined host-filter does not exist: %s\n' % host_filter)
+                    sys.exit(1)
 
     def addBaseRequires(self, *args, **kwargs):
         """ Add base requires """

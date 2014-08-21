@@ -24,8 +24,8 @@ class TestTaskLibrarySync(unittest.TestCase):
     @classmethod
     def setupClass(cls):
         cls.task_server = Process('http_server.py',
-                args=[sys.executable, _http_server,],
-                listen_port=19998, exec_dir=_sync_tasks_dir)
+                args=[sys.executable, _http_server, '--base', _sync_tasks_dir],
+                listen_port=19998)
         cls.task_server.start()
         cls.task_url = 'http://localhost:19998/'
 

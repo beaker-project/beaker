@@ -19,7 +19,6 @@ class DistroTreesVerifyTest(unittest.TestCase):
         for lca in list(self.distro_tree.lab_controller_assocs):
             if lca.lab_controller == self.dodgy_lc:
                 self.distro_tree.lab_controller_assocs.remove(lca)
-                session.expunge(lca)
 
     def test_verify_distro(self):
         output = run_client(['bkr', 'distro-trees-verify', '--name', self.distro_tree.distro.name])

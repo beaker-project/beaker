@@ -1,13 +1,8 @@
 {% if recipe %}
 {% set anamon_url = anamon|default('http://' + lab_controller.fqdn + '/beaker/anamon') %}
 
-{% if distro is osmajor('RedHatEnterpriseLinux3', 'RedHatEnterpriseLinux4', 'RedHatEnterpriseLinuxServer5', 'RedHatEnterpriseLinuxServerGrid5', 'RedHatEnterpriseLinuxClient5') %}
-wget -O /usr/local/sbin/anamon "{{ anamon_url }}"
-wget -O /etc/rc.d/init.d/anamon "{{ anamon_url }}.init"
-{% else %}
-curl -R "{{ anamon_url }}" -o /usr/local/sbin/anamon
-curl -R "{{ anamon_url }}.init" -o /etc/rc.d/init.d/anamon
-{% endif %}
+fetch /usr/local/sbin/anamon {{ anamon_url|shell_quoted }}
+fetch /etc/rc.d/init.d/anamon {{ (anamon_url + '.init')|shell_quoted }}
 
 chmod 755 /etc/rc.d/init.d/anamon /usr/local/sbin/anamon
 if selinuxenabled &>/dev/null ; then

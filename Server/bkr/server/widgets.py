@@ -677,7 +677,9 @@ class SearchBar(RepeatingFormField):
         self.repetitions = 1
         self.extra_hiddens = extra_hiddens
         self.default_result_columns = {}
-        table_field = SingleSelectFieldJSON(name="table", options=table.keys(), validator=validators.NotEmpty()) 
+        table_field = SingleSelectFieldJSON(name="table",
+                options=sorted(table.keys()),
+                validator=validators.NotEmpty())
         operation_field = SingleSelectFieldJSON(name="operation", options=[None], validator=validators.NotEmpty())
         value_field = TextFieldJSON(name="value")
 

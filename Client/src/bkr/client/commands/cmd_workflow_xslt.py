@@ -466,7 +466,8 @@ the defined XSLT template.  Returns and libxml2.xmlDoc containing the
 result of the XSLT processing"""
         if self.xsltfile is None:
             raise Exception('No XSLT file has been loaded (Have JobConfig::LoadXSLT() been called?)')
-        self.internalxml = self.__generate_internal_xml()
+        if self.internalxml is None:
+            self.internalxml = self.__generate_internal_xml()
         self.beakerxml = self.xslt.applyStylesheet(self.internalxml, None)
         return self.beakerxml
 
@@ -494,7 +495,7 @@ result of the XSLT processing"""
         """Returns the internal XML document as a libxml2.xmlDoc, used for the
 XSLT parsing.  This is most useful for debugging only"""
         if self.internalxml is None:
-            return self.__generate_internal_xml()
+            self.internalxml = self.__generate_internal_xml()
         return self.internalxml
 
 

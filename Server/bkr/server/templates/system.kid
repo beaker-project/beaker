@@ -45,9 +45,7 @@
  </head>
 
 <body>
-  <div class="page-header">
-    <h1>${value.fqdn}</h1>
-  </div>
+  <div class="page-header"><h1>${value.fqdn}</h1></div>
   <div class="system-quick-info"></div>
   <div class="row-fluid">
     <ul class="span3 nav nav-list system-nav">

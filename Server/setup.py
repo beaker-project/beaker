@@ -196,7 +196,7 @@ else:
 setup(
     name="bkr.server",
     namespace_packages = ['bkr'],
-    version='0.17.0',
+    version='0.17.3',
     # uncomment the following lines if you fill them out in release.py
     description=description,
     author=author,
@@ -223,7 +223,7 @@ setup(
         'bkr.server.tests': ['unit-test.cfg', '*.rpm'],
         'bkr.server.config': ['*.cfg'],
         'bkr.server.templates': ['*.kid'],
-        'bkr.server': ['kickstarts/*', 'snippets/*', 'reporting-queries/*'],
+        'bkr.server': ['kickstarts/*', 'snippets/*', 'reporting-queries/*', 'mail-templates/*'],
     },
     keywords=[
         'turbogears.app',
@@ -242,7 +242,7 @@ setup(
             'beaker-init = bkr.server.tools.init:main',
             'product-update = bkr.server.tools.product_update:main',
             'beakerd = bkr.server.tools.beakerd:main',
-            'nag-mail = bkr.server.tools.nag_email:main',
+            'beaker-usage-reminder = bkr.server.tools.usage_reminder:main',
             'log-delete = bkr.server.tools.log_delete:legacy_main',
             'beaker-log-delete = bkr.server.tools.log_delete:main',
             'beaker-check = bkr.server.tools.check_beaker:main',

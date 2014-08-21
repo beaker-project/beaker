@@ -12,15 +12,17 @@ def get_compose_layout():
 
 setup(
     name='bkr.inttest',
-    version='0.17.0',
+    version='0.17.3',
     packages=find_packages('src'),
     package_dir={'': 'src'},
     package_data={'': [
         '*.xml',
         '*.ldif',
         'client/workflow_kickstart.cfg.tmpl',
+        'client/.beaker_client/*',
         'labcontroller/install-failure-logs/*',
         'server/kickstarts/*',
+        'server/mail-templates/*',
         'server/motd.xml',
         'server/selenium/*.csv',
         'server/selenium/invalid-task_file',

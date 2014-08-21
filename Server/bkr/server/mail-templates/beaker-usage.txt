@@ -1,0 +1,37 @@
+=========
+[Beaker] Usage report for {{ user_name }} ({{ current_date }})
+=========
+
+Hi {{ user_name }},
+
+{% if expiring_reservations %}
+Your reservations of the following systems in {{ beaker_fqdn }} are going to expire within {{ reservation_expiry }} hours.
+If you wish to ensure you retain the contents of these systems, please extend your reservation.
+
+Expiry Date              FQDN
+{% for expiry_date, fqdn in expiring_reservations %}
+{{ "%-24s" % expiry_date.strftime('%Y-%m-%d %H:%M:%S') }} {{ fqdn }}
+{% endfor %}
+
+{% endif %}
+{% if open_reservations %}
+The following systems have been allocated to you in {{ beaker_fqdn }} for more than {{ reservation_length }} days and have other
+recipes queued for longer than {{ waiting_recipe_age }} hours. Please return them if you are no longer using them.
+
+Duration                 Waiting                  FQDN
+{% for duration, waiting_recipes, fqdn in open_reservations %}
+{{ "%-24s" % ('%d days' % duration if duration > 1 else '%d day' % duration) }} {{ "%-24s" % ('%d recipes' % waiting_recipes if waiting_recipes > 1 else '%d recipe' % waiting_recipes) }} {{ fqdn }}
+{% endfor %}
+
+{% endif %}
+{% if delayed_jobs %}
+The following jobs you submitted to {{ beaker_fqdn }} have been queued for more than {{ delayed_job_age }} days. Please cancel
+them if they are no longer relevant, or perhaps arrange a loan of an appropriate system or systems
+
+Start time               Delayed Job
+{% for start_time, job_url in delayed_jobs %}
+{{ "%-24s" % start_time.strftime('%Y-%m-%d %H:%M:%S') }} {{ job_url }}
+{% endfor %}
+
+{% endif %}
+=========

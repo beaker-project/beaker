@@ -18,7 +18,7 @@ import cherrypy
 
 from bkr.server.model import (RecipeTask, LogRecipeTask,
                               RecipeTaskResult, LogRecipeTaskResult,
-                              LabController, Watchdog)
+                              LabController, Watchdog, ResourceType)
 
 class RecipeTasks(RPCRoot):
     # For XMLRPC methods in this class.
@@ -94,7 +94,8 @@ class RecipeTasks(RPCRoot):
                 raise BX(_(u'Invalid lab controller: %s' % lc))
 
         return [dict(recipe_id = w.recipe.id,
-                        system = w.recipe.resource.fqdn) for w in Watchdog.by_status(labcontroller, status)]
+                     system = w.recipe.resource.fqdn,
+                     is_virt_recipe = (w.recipe.resource.type == ResourceType.virt)) for w in Watchdog.by_status(labcontroller, status)]
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())

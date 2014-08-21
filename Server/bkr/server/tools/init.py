@@ -18,7 +18,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from bkr.log import log_to_stream
 from bkr.server.model import (User, Group, Permission, Hypervisor, KernelType,
         Arch, PowerType, Key, Response, RetentionTag, ConfigItem, UserGroup)
-from bkr.server.util import load_config
+from bkr.server.util import load_config_or_exit
 from turbogears.database import session
 from os.path import dirname, exists, join
 from os import getcwd
@@ -117,8 +117,8 @@ def init_db(user_name=None, password=None, user_display_name=None, user_email_ad
 
     #Setup base Architectures
     if Arch.query.count() == 0:
-        for arch in [u'i386', u'x86_64', u'ia64', u'ppc', u'ppc64',
-                u's390', u's390x', u'armhfp']:
+        for arch in [u'i386', u'x86_64', u'ia64', u'ppc', u'ppc64', u'ppc64le',
+                     u's390', u's390x', u'armhfp', u'aarch64', u'arm']:
             session.add(Arch(arch))
 
     #Setup base power types
@@ -208,7 +208,7 @@ def get_parser():
 def main():
     parser = get_parser()
     opts, args = parser.parse_args()
-    load_config(opts.configfile)
+    load_config_or_exit(opts.configfile)
     log_to_stream(sys.stderr)
     init_db(user_name=opts.user_name, password=opts.password,
             user_display_name=opts.display_name,

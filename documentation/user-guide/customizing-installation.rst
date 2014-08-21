@@ -116,6 +116,12 @@ correspond to the similarly-named kickstart option.
     Filesystem type for all filesystems. Default is to allow the installer to 
     choose.
 
+``grubport=<hexaddr>``
+    Hex address of the I/O port which GRUB should use for serial output. If 
+    this variable is set, the value will be passed to the ``--port`` option of 
+    the ``serial`` command in the GRUB configuration. Refer to `serial in the 
+    GRUB manual <http://www.gnu.org/software/grub/manual/grub.html#serial>`__.
+
 ``ignoredisk=<options``
     Passed directly to the ``ignoredisk`` kickstart command. Use this to select 
     or omit certain disks for the installation, for example 
@@ -211,3 +217,35 @@ correspond to the similarly-named kickstart option.
 ``timezone=<tzname>``
     Time zone to use. Default is ``America/New_York`` unless overridden by the 
     administrator.
+
+The following variables are used to test for installer or distro features. 
+Beaker populates these variables automatically by inspecting the distro name 
+and version. They can be overridden if necessary for custom distros.
+
+``end``
+    Set to ``%end`` on distros which support it, or to the empty string on 
+    older distros.
+
+``has_autopart_type``
+    Indicates that the ``autopart`` kickstart command accepts a ``--type`` 
+    option.
+
+``has_chrony``
+    Indicates that chrony is available in the distro.
+
+``has_leavebootorder``
+    Indicates that the ``bootloader`` command accepts a ``--leavebootorder`` 
+    option.
+
+``has_repo_cost``
+    Indicates that the ``repo`` command accepts a ``--cost`` option.
+
+``has_systemd``
+    Indicates that the distro uses systemd rather than SysV init.
+
+``has_unsupported_hardware``
+    Indicates that the ``unsupported_hardware`` kickstart command is accepted.
+
+``yum``
+    Unset, except on older distros which require the yum package to be fetched 
+    and installed.

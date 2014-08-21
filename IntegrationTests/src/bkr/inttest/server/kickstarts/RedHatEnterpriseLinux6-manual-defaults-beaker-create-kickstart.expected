@@ -1,14 +1,23 @@
 nfs --server lab.test-kickstart.invalid --dir /distros/RHEL-6.2/Server/x86_64/os/
 #url --url=nfs://lab.test-kickstart.invalid:/distros/RHEL-6.2/Server/x86_64/os/
 
-key --skip
-
 # System bootloader configuration
 bootloader --location=mbr
 cmdline
-
 # no specific network configuration
+
+repo --name=beaker-HighAvailability --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/HighAvailability
+repo --name=beaker-LoadBalancer --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/LoadBalancer
+repo --name=beaker-optional-x86_64-os --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/os
+repo --name=beaker-ResilientStorage --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ResilientStorage
+repo --name=beaker-ScalableFileSystem --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ScalableFileSystem
+repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/debug
+repo --name=beaker-optional-x86_64-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/debug
+repo --name=beaker-Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/Server
+
 firewall --disabled
+# Run the Setup Agent on first boot
+firstboot --disable
 # System keyboard
 keyboard us
 # System language
@@ -20,45 +29,87 @@ rootpw --iscrypted $1$beaker$yMeLK4p1IVkFa80RyTkpE.
 # SELinux configuration
 selinux --enforcing
 
-# Configure the X Window System
-xconfig --startxonboot
 
 # System timezone
 timezone America/New_York
 # Install OS instead of upgrade
 install
 
-repo --name=beaker-HighAvailability --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/HighAvailability
-repo --name=beaker-LoadBalancer --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/LoadBalancer
-repo --name=beaker-optional-x86_64-os --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/os
-repo --name=beaker-ResilientStorage --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ResilientStorage
-repo --name=beaker-ScalableFileSystem --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/ScalableFileSystem
-repo --name=beaker-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/debug
-repo --name=beaker-optional-x86_64-debug --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/optional/x86_64/debug
-repo --name=beaker-Server --cost=100 --baseurl=http://lab.test-kickstart.invalid/distros/RHEL-6.2/Server/x86_64/os/Server
 zerombr
 clearpart --all --initlabel
 
 autopart
 # no snippet data for RedHatEnterpriseLinux6
+# no snippet data for RedHatEnterpriseLinux
 # no snippet data for system
-
 
 %packages --ignoremissing --default
 # no snippet data for packages
 %end
 
 
+
 %pre --log=/dev/console
 set -x
+# Some distros have curl in their minimal install set, others have wget.
+# We define a wrapper function around the best available implementation
+# so that the rest of the script can use that for making HTTP requests.
+if command -v curl >/dev/null ; then
+    function fetch() {
+        curl --retry 20 --remote-time -o "$1" "$2"
+    }
+elif command -v wget >/dev/null ; then
+    # In Anaconda images wget is actually busybox
+    if wget --help | grep -q BusyBox ; then
+        function fetch() {
+            wget -O "$1" "$2"
+        }
+    else
+        function fetch() {
+            wget --tries 20 -O "$1" "$2"
+        }
+    fi
+else
+    echo "No HTTP client command available!"
+    function fetch() {
+        false
+    }
+fi
+
 
 # no snippet data for RedHatEnterpriseLinux6_pre
+# no snippet data for RedHatEnterpriseLinux_pre
 # no snippet data for system_pre
 %end
 
 %post --log=/dev/console
 set -x
-curl http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
+# Some distros have curl in their minimal install set, others have wget.
+# We define a wrapper function around the best available implementation
+# so that the rest of the script can use that for making HTTP requests.
+if command -v curl >/dev/null ; then
+    function fetch() {
+        curl --retry 20 --remote-time -o "$1" "$2"
+    }
+elif command -v wget >/dev/null ; then
+    # In Anaconda images wget is actually busybox
+    if wget --help | grep -q BusyBox ; then
+        function fetch() {
+            wget -O "$1" "$2"
+        }
+    else
+        function fetch() {
+            wget --tries 20 -O "$1" "$2"
+        }
+    fi
+else
+    echo "No HTTP client command available!"
+    function fetch() {
+        false
+    }
+fi
+
+fetch - http://lab.test-kickstart.invalid:8000/nopxe/test01.test-kickstart.invalid
 
 # If netboot_method= is found in /proc/cmdline record it to /root
 netboot_method=$(perl -n -e'/netboot_method=([^\s]+)/ && print $1' /proc/cmdline)
@@ -67,9 +118,8 @@ echo $netboot_method >/root/NETBOOT_METHOD.TXT
 fi
 
 # Enable post-install boot notification
-# readahead conflicts with auditd, see bug 561486 for detailed explanation.
-
-cat << EOF >>/etc/sysconfig/readahead
+if [ -f /etc/sysconfig/readahead ] ; then
+    cat >>/etc/sysconfig/readahead <<EOF
 
 # readahead conflicts with auditd, see bug 561486 for detailed explanation.
 #
@@ -78,14 +128,14 @@ cat << EOF >>/etc/sysconfig/readahead
 
 READAHEAD_COLLECT="no"
 READAHEAD_COLLECT_ON_RPM="no"
-
 EOF
+fi
 
 if [ -e /etc/sysconfig/ntpdate ] ; then
-    /sbin/chkconfig ntpdate on >/dev/null 2>&1 || :
+    chkconfig ntpdate on
 fi
 if [ -e "/etc/sysconfig/ntpd" ]; then
-    /sbin/chkconfig ntpd on >/dev/null 2>&1 || :
+    chkconfig ntpd on
     GOT_G=$(/bin/cat /etc/sysconfig/ntpd | grep -E '^OPTIONS' | grep '\-g')
 
     if [ -z "$GOT_G" ]; then
@@ -100,10 +150,10 @@ if [ -e /etc/chrony.conf ] ; then
     # setting iburst should speed up initial sync
     # https://bugzilla.redhat.com/show_bug.cgi?id=787042#c12
     echo NTPSERVERARGS=iburst >>/etc/sysconfig/network
-    /sbin/chkconfig ntpd off >/dev/null 2>&1 || :
-    /sbin/chkconfig ntpdate off >/dev/null 2>&1 || :
+    chkconfig ntpd off
+    chkconfig ntpdate off
+    chkconfig chronyd on
 fi
-
 
 if efibootmgr &>/dev/null ; then
     # The installer should have added a new boot entry for the OS
@@ -117,7 +167,6 @@ if efibootmgr &>/dev/null ; then
     # save the boot entry for later, so that rhts-reboot can set BootNext as well
     echo "$os_boot_entry" >/root/EFI_BOOT_ENTRY.TXT
 fi
-
 
 
 #Add Task Repo
@@ -224,6 +273,7 @@ setenv LOOKASIDE
 setenv BUILDURL 
 EOF
 # no snippet data for RedHatEnterpriseLinux6_post
+# no snippet data for RedHatEnterpriseLinux_post
 # no snippet data for system_post
 %end
 

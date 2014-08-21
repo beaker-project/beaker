@@ -12,8 +12,13 @@ from turbogears import config
 import turbomail
 import logging
 from bkr.server.util import absolute_url
+from datetime import datetime
+from jinja2 import Environment, PackageLoader
+# configure Jinja2 to load email templates
+template_env = Environment(loader=PackageLoader('bkr.server', 'mail-templates'), trim_blocks=True)
 
 log = logging.getLogger(__name__)
+
 
 def send_mail(sender, to, subject, body, **kwargs):
     from turbomail import MailNotEnabledException
@@ -221,3 +226,17 @@ def reservesys_notify(recipe, system):
        recipe.distro_tree.arch, job.whiteboard, recipe.whiteboard),
               headers=[('X-Beaker-Notification', 'system-reservation'),
                        ('X-Beaker-Job-ID', job.id)])
+
+def send_usage_reminder(user, data={}, testing=False):
+    sender = config.get('beaker_email')
+    if not sender:
+        log.warning("beaker_email not defined in app.cfg; unable to send mail")
+        return
+    template = template_env.get_template('beaker-usage.txt')
+    recipient = user.email_address
+    subject = u'[Beaker] Usage report for %s (%s)' % (user.user_name, datetime.utcnow().strftime("%Y-%m-%d"))
+    body = template.render(data)
+    if testing:
+        print "From: %s\nTo: %s\nSubject: %s\nBody: %s\n\n" % (sender, recipient, subject, body)
+    else:
+        send_mail(sender=sender, to=recipient, subject=subject, body=body)

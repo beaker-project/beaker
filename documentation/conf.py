@@ -33,6 +33,9 @@ man_pages = [
     ('admin-guide/man/beaker-create-ipxe-image', 'beaker-create-ipxe-image',
         'Generate and upload iPXE boot image to Glance',
         [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1),
+    ('admin-guide/man/beaker-usage-reminder', 'beaker-usage-reminder',
+        'Send Beaker usage reminder',
+        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1),
 ]
 man_show_urls = True
 

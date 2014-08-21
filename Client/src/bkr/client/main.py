@@ -45,6 +45,7 @@ def main():
     command_container = BeakerCommandContainer(conf=conf)
     formatter = IndentedHelpFormatter(max_help_position=60, width=120)
     parser = BeakerOptionParser(version=__version__,
+            conflict_handler='resolve',
             command_container=command_container,
             default_command="help", formatter=formatter)
 
@@ -73,7 +74,7 @@ def main():
         return 1
     except maybe_http_error, e:
         sys.stderr.write('HTTP error: %s\n' % e)
-        content_type, _ = cgi.parse_header(e.response.headers['Content-Type'])
+        content_type, _ = cgi.parse_header(e.response.headers.get('Content-Type', ''))
         if content_type == 'text/plain':
             sys.stderr.write(e.response.content)
         return 1

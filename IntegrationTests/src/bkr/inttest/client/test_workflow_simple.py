@@ -6,7 +6,7 @@
 
 import os
 import unittest2 as unittest
-import subprocess
+import pkg_resources
 import re
 import textwrap
 from threading import Thread
@@ -111,6 +111,51 @@ class WorkflowSimpleTest(unittest.TestCase):
         self.assertIn('<hostlabcontroller op="=" value="lab.example.com"/>', out)
         self.assertIn('<system_type op="=" value="machine"/>', out)
 
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1081390
+    def test_hostfilter_preset(self):
+        out = run_client(['bkr', 'workflow-simple',
+                          '--dryrun', '--prettyxml',
+                          '--host-filter', "INTEL__FAM15_CELERON",
+                          '--arch', self.distro_tree.arch.arch,
+                          '--family', self.distro.osversion.osmajor.osmajor,
+                          '--task', self.task.name])
+        self.assertIn('<model_name op="like" value="%Celeron%"/>', out)
+
+        # with other host requires
+        out = run_client(['bkr', 'workflow-simple',
+                          '--dryrun', '--prettyxml',
+                          '--host-filter', "INTEL__FAM15_CELERON",
+                          '--hostrequire', 'hostlabcontroller=lab.example.com',
+                          '--arch', self.distro_tree.arch.arch,
+                          '--family', self.distro.osversion.osmajor.osmajor,
+                          '--task', self.task.name])
+        self.assertIn('<model_name op="like" value="%Celeron%"/>', out)
+        self.assertIn('<hostlabcontroller op="=" value="lab.example.com"/>', out)
+
+        # Override $HOME and check if the updated defintion is read
+        test_home = pkg_resources.resource_filename \
+                    ('bkr.inttest.client', '.')
+        out = run_client(['bkr', 'workflow-simple',
+                          '--dryrun', '--prettyxml',
+                          '--host-filter', "INTEL__FAM15_CELERON",
+                          '--arch', self.distro_tree.arch.arch,
+                          '--family', self.distro.osversion.osmajor.osmajor,
+                          '--task', self.task.name], 
+                         extra_env={'HOME':test_home})
+        self.assertIn('<model_name op="like" value="%MyCeleron%"/>', out)
+
+        # Non-existent filter
+        try:
+            run_client(['bkr', 'workflow-simple',
+                        '--dryrun', '--prettyxml',
+                        '--host-filter', "awesomefilter",
+                        '--arch', self.distro_tree.arch.arch,
+                        '--family', self.distro.osversion.osmajor.osmajor,
+                        '--task', self.task.name])
+            self.fail('Must fail or die')
+        except ClientError as e:
+            self.assertIn('Pre-defined host-filter does not exist: awesomefilter', e.stderr_output)
+
     # https://bugzilla.redhat.com/show_bug.cgi?id=1014693
     def test_hostrequire_raw_xml(self):
         out = run_client(['bkr', 'workflow-simple',
@@ -127,6 +172,7 @@ class WorkflowSimpleTest(unittest.TestCase):
                           '--dryrun', '--prettyxml',
                           '--hostrequire', 'hostlabcontroller=lab.example.com',
                           '--random',
+                          '--host-filter', 'my_awesome_filter',
                           '--machine', 'test.system',
                           '--arch', self.distro_tree.arch.arch,
                           '--family', self.distro.osversion.osmajor.osmajor,
@@ -137,6 +183,8 @@ class WorkflowSimpleTest(unittest.TestCase):
         self.assertIn('Warning: Ignoring --hostrequire because '
                       '--machine was specified', err.split('\n'))
         self.assertIn('Warning: Ignoring --random because '
+                      '--machine was specified', err.split('\n'))
+        self.assertIn('Warning: Ignoring --host-filter because '
                       '--machine was specified', err.split('\n'))
         self.assertNotIn('<hostlabcontroller op="=" value="lab.example.com"/>',
                          out)

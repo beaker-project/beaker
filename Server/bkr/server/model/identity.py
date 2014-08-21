@@ -16,7 +16,7 @@ from kid import Element
 import passlib.context
 from sqlalchemy import (Table, Column, ForeignKey, Integer, Unicode,
         UnicodeText, String, DateTime, Boolean, UniqueConstraint)
-from sqlalchemy.orm import mapper, relationship, backref
+from sqlalchemy.orm import mapper, relationship, backref, validates
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears.config import get
@@ -99,6 +99,18 @@ class User(DeclarativeMappedObject, ActivityMixin):
 
     activity_type = UserActivity
 
+    _unnormalized_username_pattern = re.compile(r'^\s|\s\s|\s$')
+    @validates('user_name')
+    def validate_user_name(self, key, value):
+        if not value:
+            raise ValueError('User must have a username')
+        # Reject username values which would be normalized into a different 
+        # value according to the LDAP normalization rules [RFC4518]. For 
+        # sanity we always enforce this, even if LDAP is not being used.
+        if self._unnormalized_username_pattern.search(value):
+            raise ValueError('Username %r contains unnormalized whitespace')
+        return value
+
     def __json__(self):
         return {
             'user_name': self.user_name,
@@ -174,10 +186,15 @@ class User(DeclarativeMappedObject, ActivityMixin):
             # need exact match
             elif(len(objects) > 1):
                 return None
+            attrs = objects[0][1]
+            # LDAP normalization rules means that we might have found a user 
+            # who doesn't actually match the username we were given.
+            if attrs['uid'][0].decode('utf8') != user_name:
+                return None
             user = User()
-            user.user_name = user_name
-            user.display_name = objects[0][1]['cn'][0].decode('utf8')
-            user.email_address = objects[0][1]['mail'][0].decode('utf8')
+            user.user_name = attrs['uid'][0].decode('utf8')
+            user.display_name = attrs['cn'][0].decode('utf8')
+            user.email_address = attrs['mail'][0].decode('utf8')
             session.add(user)
             session.flush()
         return user
