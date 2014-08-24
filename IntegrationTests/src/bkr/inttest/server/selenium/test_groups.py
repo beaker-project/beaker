@@ -38,7 +38,7 @@ class TestGroups(WebDriverTestCase):
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
         b.find_element_by_id('Search').submit()
         delete_and_confirm(b, "//tr[td/a[normalize-space(text())='%s']]" %
-            self.group.group_name, delete_text='Remove')
+            self.group.group_name, delete_text='Delete Group')
         self.assertEqual(
             b.find_element_by_class_name('flash').text,
             '%s deleted' % self.group.display_name)
@@ -59,13 +59,13 @@ class TestGroups(WebDriverTestCase):
         b2.find_element_by_id('Search').submit()
 
         delete_and_confirm(b1, "//tr[td/a[normalize-space(text())='%s']]" %
-            self.group.group_name, delete_text='Remove')
+            self.group.group_name, delete_text='Delete Group')
         self.assertEqual(
             b1.find_element_by_class_name('flash').text,
             '%s deleted' % self.group.display_name)
 
         delete_and_confirm(b2, "//tr[td/a[normalize-space(text())='%s']]" %
-            self.group.group_name, delete_text='Remove')
+            self.group.group_name, delete_text='Delete Group')
         self.assertEqual(
             b2.find_element_by_class_name('flash').text,
             'Invalid group or already removed')
@@ -81,7 +81,7 @@ class TestGroups(WebDriverTestCase):
         login(b, user=user.user_name, password='password')
         b.get(get_server_base() + 'groups/mine')
         delete_and_confirm(b, "//td[preceding-sibling::td/a[normalize-space(text())='%s']]/form" % \
-                               group.group_name, delete_text='Remove')
+                               group.group_name, delete_text='Delete Group')
 
         flash_text = b.find_element_by_class_name('flash').text
         self.assert_('Cannot delete a group which has associated jobs' in flash_text, flash_text)
@@ -110,7 +110,7 @@ class TestGroups(WebDriverTestCase):
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
         b.find_element_by_id('Search').submit()
-        self.assert_('Remove' in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
+        self.assert_('Delete' in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
                                                              % self.group.group_name).text)
         logout(b)
 
@@ -120,12 +120,12 @@ class TestGroups(WebDriverTestCase):
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(self.group.group_name)
         b.find_element_by_id('Search').submit()
-        self.assert_('Remove' not in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
+        self.assert_('Delete' not in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
                                                                  % self.group.group_name).text)
         b.find_element_by_xpath("//input[@name='group.text']").clear()
         b.find_element_by_xpath("//input[@name='group.text']").send_keys(group.group_name)
         b.find_element_by_id('Search').submit()
-        self.assert_('Remove' in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
+        self.assert_('Delete' in b.find_element_by_xpath("//tr[(td[1]/a[text()='%s'])]"
                                                                  % group.group_name).text)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1085703
@@ -151,7 +151,7 @@ class TestGroups(WebDriverTestCase):
         # delete the group
         b.get(get_server_base() + 'groups/mine')
         delete_and_confirm(b, "//tr[td/a[normalize-space(text())='%s']]" %
-                           group.group_name, delete_text='Remove')
+                           group.group_name, delete_text='Delete Group')
         self.assertEqual(
             b.find_element_by_class_name('flash').text,
             '%s deleted' % group.display_name)

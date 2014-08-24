@@ -526,7 +526,7 @@ class Groups(AdminPage):
                 if x.can_edit(identity.current.user):
                     return self.delete_link.display(dict(group_id=x.group_id),
                                              action=url('remove'),
-                                             action_text='Remove')
+                                             action_text='Delete Group')
                 else:
                     return ''
             except AttributeError:
