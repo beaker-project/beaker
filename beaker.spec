@@ -229,7 +229,6 @@ Requires:       %{name}-client = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       python-nose >= 0.10
 Requires:       selenium-python >= 2.12
-Requires:       java-openjdk >= 1:1.6.0
 Requires:       Xvfb
 Requires:       firefox
 Requires:       lsof

@@ -96,6 +96,14 @@ def check_job_search_results(browser, present=[], absent=[]):
         browser.find_element_by_xpath('//table[@id="widget" and '
                     './/td[1]/a/text()="%s"]' % job.t_id)
 
+def check_recipe_search_results(browser, present=[], absent=[]):
+    for recipe in absent:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                    'not(.//td[1]/a/text()="%s")]' % recipe.t_id)
+    for recipe in present:
+        browser.find_element_by_xpath('//table[@id="widget" and '
+                    './/td[1]/a/text()="%s"]' % recipe.t_id)
+
 def check_distro_search_results(browser, present=[], absent=[]):
     for distro in absent:
         browser.find_element_by_xpath('//table[@id="widget" and '

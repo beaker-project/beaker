@@ -14,7 +14,9 @@ import uuid
 import lxml.etree
 from turbogears.database import session
 import requests
-from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support.ui import Select
+from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction, \
         DummyVirtManager
 from bkr.inttest.assertions import assert_sorted
@@ -25,41 +27,36 @@ from bkr.inttest.server.webdriver_utils import check_system_search_results, logi
 def atom_xpath(expr):
     return lxml.etree.XPath(expr, namespaces={'atom': 'http://www.w3.org/2005/Atom'})
 
-class TestSystemsGrid(SeleniumTestCase):
+class TestSystemsGrid(WebDriverTestCase):
 
     @with_transaction
     def setUp(self):
         data_setup.create_system()
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-
-    def tearDown(self):
-        self.selenium.stop()
+        self.browser = self.get_browser()
 
     def test_atom_feed_link_is_present(self):
-        sel = self.selenium
-        sel.open('')
-        self.assertEqual(sel.get_xpath_count('/html/head/link[@rel="feed" '
-                'and @title="Atom feed" and contains(@href, "tg_format=atom")]'),
-                1)
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_xpath('/html/head/link[@rel="feed" '
+                'and @title="Atom feed" and contains(@href, "tg_format=atom")]')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=704082
     def test_show_all_columns_works(self):
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=Show Search Options')
-        sel.select('systemsearch_0_table', 'label=System/Name')
-        sel.click('customcolumns')
-        sel.click('selectall')
-        sel.submit('searchform')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'Systems')
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Show Search Options').click()
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('System/Name')
+        b.find_element_by_link_text('Toggle Result Columns').click()
+        b.find_element_by_link_text('Select All').click()
+        b.find_element_by_id('searchform').submit()
+        b.find_element_by_xpath('//title[text()="Systems"]')
         # check number of columns in the table
-        self.assertEqual(sel.get_xpath_count('//table[@id="widget"]//th'), 30)
+        ths = b.find_elements_by_xpath('//table[@id="widget"]//th')
+        self.assertEquals(len(ths), 30)
 
-class TestSystemGridSorting(SeleniumTestCase):
+class TestSystemsGridSorting(WebDriverTestCase):
 
-    # tests in this class can safely share the same firefox session
     @classmethod
     def setUpClass(cls):
         with session.begin():
@@ -75,100 +72,102 @@ class TestSystemGridSorting(SeleniumTestCase):
                             model=model, status=status, type=type)
                     system.user = data_setup.create_user()
                     system.cpu = Cpu(cores=cores)
-        cls.selenium = sel = cls.get_selenium()
-        sel.start()
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.selenium.stop()
+    def setUp(self):
+        self.browser = self.get_browser()
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=651418
 
-    def check_column_sort(self, column):
-        sel = self.selenium
-        sel.click('//table[@id="widget"]/thead//th[%d]//a[@href]' % column)
-        sel.wait_for_page_to_load('30000')
+    def check_column_sort(self, column_heading):
+        b = self.browser
+        column_headings = [th.text for th in
+                b.find_elements_by_xpath('//table[@id="widget"]/thead//th')]
+        self.assertIn(column_heading, column_headings)
+        column_index = column_headings.index(column_heading) + 1 # xpath indices are 1-based
+        b.find_element_by_xpath('//table[@id="widget"]/thead//th[%d]//a' % column_index).click()
 
         cell_values = []
         # Next page number
         # Assume our current page is 1
         next_page = 2
         while True:
-            row_count = int(sel.get_xpath_count('//table[@id="widget"]/tbody/tr/td[%d]' % column))
-            cell_values += [sel.get_text('//table[@id="widget"]/tbody/tr[%d]/td[%d]' % (row, column))
-                           for row in range(1, row_count + 1)]
+            cell_values.extend(cell.text for cell in
+                    b.find_elements_by_xpath('//table[@id="widget"]/tbody/tr/td[%d]' % column_index))
             # Keeping scrolling through pages until we have seen at least two distinct cell values
             # (so that we can see that it is really sorted)
             if len(set(cell_values)) > 1:
                 break
             try:
-                sel.click('//div[contains(@class, "pagination")]//ul/li/a[normalize-space(string())="%s"]' % next_page)
-            except Exception:
+                b.find_element_by_xpath('//div[contains(@class, "pagination")]'
+                        '//ul/li/a[normalize-space(string())="%s"]' % next_page).click()
+            except NoSuchElementException:
                 raise AssertionError('Tried all pages, but every cell had the same value!')
             next_page += 1
-            sel.wait_for_page_to_load('30000')
         assert_sorted(cell_values, key=lambda x: x.lower())
 
     # We test both ordinary listing (i.e. with no search query) as well as 
     # searching, because they go through substantially different code paths
 
     def go_to_listing(self):
-        self.selenium.open('')
+        self.browser.get(get_server_base())
 
     def go_to_search_results(self):
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=Show Search Options')
-        sel.select('systemsearch_0_table', 'CPU/Cores')
-        sel.select('systemsearch_0_operation', 'greater than')
-        sel.type('systemsearch_0_value', '1')
-        sel.click('link=Add')
-        sel.select('systemsearch_1_table', 'System/Name')
-        sel.select('systemsearch_1_operation', 'is not')
-        sel.type('systemsearch_1_value', 'bob')
-        sel.submit('id=searchform')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'Systems')
+        b = self.browser
+        b.get(get_server_base())
+        b.find_element_by_link_text('Show Search Options').click()
+        Select(b.find_element_by_name('systemsearch-0.table'))\
+            .select_by_visible_text('CPU/Cores')
+        Select(b.find_element_by_name('systemsearch-0.operation'))\
+            .select_by_visible_text('greater than')
+        b.find_element_by_name('systemsearch-0.value').send_keys('1')
+        b.find_element_by_link_text('Add').click()
+        Select(b.find_element_by_name('systemsearch-1.table'))\
+            .select_by_visible_text('System/Name')
+        Select(b.find_element_by_name('systemsearch-1.operation'))\
+            .select_by_visible_text('is not')
+        b.find_element_by_name('systemsearch-1.value').send_keys('bob')
+        b.find_element_by_id('searchform').submit()
+        b.find_element_by_xpath('//title[text()="Systems"]')
 
     def test_can_sort_listing_by_status(self):
         self.go_to_listing()
-        self.check_column_sort(2)
+        self.check_column_sort('Status')
 
     def test_can_sort_listing_by_vendor(self):
         self.go_to_listing()
-        self.check_column_sort(3)
+        self.check_column_sort('Vendor')
 
     def test_can_sort_listing_by_model(self):
         self.go_to_listing()
-        self.check_column_sort(4)
+        self.check_column_sort('Model')
 
     def test_can_sort_listing_by_user(self):
         self.go_to_listing()
-        self.check_column_sort(6)
+        self.check_column_sort('User')
 
     def test_can_sort_listing_by_type(self):
         self.go_to_listing()
-        self.check_column_sort(7)
+        self.check_column_sort('Type')
 
     def test_can_sort_search_results_by_vendor(self):
         self.go_to_search_results()
-        self.check_column_sort(2)
+        self.check_column_sort('Vendor')
 
     def test_can_sort_search_results_by_user(self):
         self.go_to_search_results()
-        self.check_column_sort(3)
+        self.check_column_sort('User')
 
     def test_can_sort_search_results_by_type(self):
         self.go_to_search_results()
-        self.check_column_sort(4)
+        self.check_column_sort('Type')
 
     def test_can_sort_search_results_by_status(self):
         self.go_to_search_results()
-        self.check_column_sort(5)
+        self.check_column_sort('Status')
 
     def test_can_sort_search_results_by_model(self):
         self.go_to_search_results()
-        self.check_column_sort(7)
+        self.check_column_sort('Model')
 
     # XXX also test with custom column selections
 

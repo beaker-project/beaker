@@ -9,9 +9,11 @@ import logging
 import time
 import tempfile
 from turbogears.database import session
+from selenium.webdriver.support.ui import Select
 from bkr.server.model import TaskResult
-from bkr.inttest.server.webdriver_utils import login, is_text_present, delete_and_confirm
-from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
+from bkr.inttest.server.webdriver_utils import login, is_text_present, \
+        delete_and_confirm, click_menu_item
+from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.server.model import Job, Response, RecipeSetResponse
 
@@ -193,7 +195,7 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
                 'tbody/tr/td[1][@class="task"]')]
         self.assertEquals(task_ids, [single_job_2.recipesets[0].recipes[0].tasks[0].t_id])
 
-class TestJobMatrix(SeleniumTestCase):
+class TestJobMatrix(WebDriverTestCase):
 
     @with_transaction
     def setUp(self):
@@ -212,102 +214,88 @@ class TestJobMatrix(SeleniumTestCase):
                 whiteboard=self.job_whiteboard, result=TaskResult.fail,
                 recipe_whiteboard=self.recipe_whiteboard,
                 distro_tree=data_setup.create_distro_tree(arch=u'x86_64'))
-        self.selenium = self.get_selenium()
-        self.selenium.start()
-
-    def tearDown(self):
-        self.selenium.stop()
+        self.browser = self.get_browser()
 
     def test_generate_by_whiteboard(self):
-        sel = self.selenium
-        sel.open('matrix')
-        sel.wait_for_page_to_load('30000')
-        sel.select('whiteboard', self.job_whiteboard)
-        sel.click('//select[@name="whiteboard"]//option[@value="%s"]'
-                % self.job_whiteboard)
-        sel.click('//button[@type="submit" and text()="Generate"]')
-        sel.wait_for_page_to_load('30000')
-        body = sel.get_text('//body')
-        self.assert_('Pass: 1' in body)
+        b = self.browser
+        b.get(get_server_base() + 'matrix/')
+        Select(b.find_element_by_name('whiteboard'))\
+            .select_by_visible_text(self.job_whiteboard)
+        b.find_element_by_xpath('//button[text()="Generate"]').click()
+        b.find_element_by_xpath('//table[@id="matrix_datagrid"]'
+                '//td[normalize-space(string(.))="Pass: 1"]')
         with session.begin():
             new_job = data_setup.create_completed_job(
                 whiteboard=self.job_whiteboard, result=TaskResult.pass_,
                 recipe_whiteboard=self.recipe_whiteboard)
-        sel.click('//button[@type="submit" and text()="Generate"]')
-        sel.wait_for_page_to_load('30000')
-        body_2 = sel.get_text('//body')
-        self.assert_('Pass: 2' in body_2)
+        b.find_element_by_xpath('//button[text()="Generate"]').click()
+        b.find_element_by_xpath('//table[@id="matrix_datagrid"]'
+                '//td[normalize-space(string(.))="Pass: 2"]')
 
         #Try with multiple whiteboards
         with session.begin():
             another_new_job = data_setup.create_completed_job(
                 whiteboard=self.job_whiteboard_2, result=TaskResult.pass_,
                 recipe_whiteboard=self.recipe_whiteboard)
-        sel.open('matrix')
-        sel.wait_for_page_to_load('30000')
-        sel.add_selection("whiteboard", "label=%s" % self.job_whiteboard)
-        sel.add_selection("whiteboard", "label=%s" % self.job_whiteboard_2)
-        sel.click('//button[@type="submit" and text()="Generate"]')
-        sel.wait_for_page_to_load('30000')
-        body = sel.get_text('//body')
-        self.assert_('Pass: 3' in body)
+        b.get(get_server_base() + 'matrix/')
+        whiteboard = Select(b.find_element_by_name('whiteboard'))
+        whiteboard.select_by_visible_text(self.job_whiteboard)
+        whiteboard.select_by_visible_text(self.job_whiteboard_2)
+        b.find_element_by_xpath('//button[text()="Generate"]').click()
+        b.find_element_by_xpath('//table[@id="matrix_datagrid"]'
+                '//td[normalize-space(string(.))="Pass: 3"]')
 
     def test_it(self):
-        sel = self.selenium
-        sel.open('')
-        sel.click('link=Matrix')
-        sel.wait_for_page_to_load('30000')
-        sel.type('remote_form_whiteboard_filter', self.job_whiteboard)
-        sel.click('//button[@type="submit" and text()="Generate"]')
-        sel.wait_for_page_to_load('30000')
-        # why are both .select and .click necessary?? weird
-        # Because there are two fields and we need to know from which we are
-        # generating our result
-        sel.select('whiteboard', 'label=%s' % self.job_whiteboard)
-        sel.click('//select[@name="whiteboard"]//option[@value="%s"]'
-                % self.job_whiteboard)
-        sel.click('//button[@type="submit" and text()="Generate"]')
-        sel.wait_for_page_to_load('30000')
+        b = self.browser
+        b.get(get_server_base())
+        click_menu_item(b, 'Reports', 'Matrix')
+        b.find_element_by_name('whiteboard_filter').send_keys(self.job_whiteboard)
+        b.find_element_by_xpath('//button[text()="Filter"]').click()
+        Select(b.find_element_by_name('whiteboard'))\
+            .select_by_visible_text(self.job_whiteboard)
+        b.find_element_by_xpath('//button[text()="Generate"]').click()
 
-        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[1]/th[1]"), 'Task')
-        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[1]/th[2]"),
-            'i386')
-        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[1]/th[3]"),
-            'ia64')
-        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[1]/th[4]"),
-            'x86_64')
+        thead = b.find_element_by_xpath(
+                '//div[@class="dataTables_scrollHeadInner"]/table[1]/thead')
+        self.assertEquals(thead.find_element_by_xpath('tr[1]/th[1]').text, 'Task')
+        self.assertEquals(thead.find_element_by_xpath('tr[1]/th[2]').text, 'i386')
+        self.assertEquals(thead.find_element_by_xpath('tr[1]/th[3]').text, 'ia64')
+        self.assertEquals(thead.find_element_by_xpath('tr[1]/th[4]').text, 'x86_64')
 
-        body = sel.get_text("//table[@id='matrix_datagrid']/tbody")
-        self.assert_('Pass: 1' in body)
-        self.assert_('Warn: 1' in body)
-        self.assert_('Fail: 1' in body)
+        tbody = b.find_element_by_xpath('//table[@id="matrix_datagrid"]/tbody')
+        tbody.find_element_by_xpath('.//td[normalize-space(string(.))="Pass: 1"]')
+        tbody.find_element_by_xpath('.//td[normalize-space(string(.))="Warn: 1"]')
+        tbody.find_element_by_xpath('.//td[normalize-space(string(.))="Fail: 1"]')
 
-        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[2]/th[2]"),
-            '%s' % self.recipe_whiteboard)
-        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[2]/th[3]"),
-            '%s' % self.recipe_whiteboard)
-        self.assertEqual(sel.get_text("//div[@class='dataTables_scrollHeadInner']/table[1]/thead/tr[2]/th[4]"),
-            '%s' % self.recipe_whiteboard)
-        sel.click('link=Pass: 1')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'Executed Tasks')
-        self.assertEqual(sel.get_value('whiteboard'), self.recipe_whiteboard)
-        self.assertEqual(sel.get_text('//table/tbody/tr[1]/td[1]'),
+        self.assertEquals(thead.find_element_by_xpath('tr[2]/th[2]').text,
+                self.recipe_whiteboard)
+        self.assertEquals(thead.find_element_by_xpath('tr[2]/th[3]').text,
+                self.recipe_whiteboard)
+        self.assertEquals(thead.find_element_by_xpath('tr[2]/th[4]').text,
+                self.recipe_whiteboard)
+
+        b.find_element_by_link_text('Pass: 1').click()
+        b.find_element_by_xpath('//title[text()="Executed Tasks"]')
+        self.assertEquals(b.find_element_by_name('whiteboard').get_attribute('value'),
+                self.recipe_whiteboard)
+        self.assertEquals(
+                b.find_element_by_xpath('//table/tbody/tr[1]/td[1]').text,
                 self.passed_job.recipesets[0].recipes[0].tasks[0].t_id)
-        sel.go_back()
-        sel.wait_for_page_to_load('30000')
-        sel.click('link=Warn: 1')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'Executed Tasks')
-        self.assertEqual(sel.get_value('whiteboard'), self.recipe_whiteboard)
-        self.assertEqual(sel.get_text('//table/tbody/tr[1]/td[1]'),
-                self.warned_job.recipesets[0].recipes[0].tasks[0].t_id)
-        sel.go_back()
-        sel.wait_for_page_to_load('30000')
+        b.back()
 
-        sel.click('link=Fail: 1')
-        sel.wait_for_page_to_load('30000')
-        self.assertEqual(sel.get_title(), 'Executed Tasks')
-        self.assertEqual(sel.get_value('whiteboard'), self.recipe_whiteboard)
-        self.assertEqual(sel.get_text('//table/tbody/tr[1]/td[1]'),
+        b.find_element_by_link_text('Warn: 1').click()
+        b.find_element_by_xpath('//title[text()="Executed Tasks"]')
+        self.assertEquals(b.find_element_by_name('whiteboard').get_attribute('value'),
+                self.recipe_whiteboard)
+        self.assertEquals(
+                b.find_element_by_xpath('//table/tbody/tr[1]/td[1]').text,
+                self.warned_job.recipesets[0].recipes[0].tasks[0].t_id)
+        b.back()
+
+        b.find_element_by_link_text('Fail: 1').click()
+        b.find_element_by_xpath('//title[text()="Executed Tasks"]')
+        self.assertEquals(b.find_element_by_name('whiteboard').get_attribute('value'),
+                self.recipe_whiteboard)
+        self.assertEquals(
+                b.find_element_by_xpath('//table/tbody/tr[1]/td[1]').text,
                 self.failed_job.recipesets[0].recipes[0].tasks[0].t_id)

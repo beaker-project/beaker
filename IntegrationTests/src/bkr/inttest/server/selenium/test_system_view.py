@@ -58,6 +58,14 @@ class SystemViewTestWD(WebDriverTestCase):
             b.find_element_by_xpath('//ul[contains(@class, "system-nav")]'
                     '//a[text()="%s"]' % tab).click()
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=647854
+    def test_manual_system_with_group_when_not_logged_in(self):
+        with session.begin():
+            system = data_setup.create_system(status=u'Manual')
+            group = data_setup.create_group()
+            data_setup.add_group_to_system(system, group)
+        self.go_to_system_view(system=system)
+
     def test_system_view_condition_report(self):
         b = self.browser
         login(b)

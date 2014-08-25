@@ -8,7 +8,7 @@ import email
 from turbogears.database import session
 from selenium.common.exceptions import NoSuchElementException
 from bkr.inttest.assertions import wait_for_condition
-from bkr.inttest.server.selenium import WebDriverTestCase, SeleniumTestCase
+from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import get_server_base, login, logout
 from bkr.inttest.mail_capture import MailCaptureThread
 from bkr.inttest import data_setup
@@ -126,7 +126,7 @@ class SystemAction(WebDriverTestCase):
         b.find_element_by_link_text('Report Problem with System').click()
         b.find_element_by_id('problem_description').send_keys('I broke it')
         b.find_element_by_xpath('//input[@value=\'Report\']').click()
-        SeleniumTestCase.wait_and_try(lambda: b.find_element_by_xpath('//div/span[text()=\'Success\']'))
+        b.find_element_by_xpath('//div/span[text()=\'Success\']')
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
 
         self.mail_capture.captured_mails[:] = []
@@ -134,7 +134,7 @@ class SystemAction(WebDriverTestCase):
         b.find_element_by_link_text('Report Problem with System').click()
         b.find_element_by_id('problem_description').send_keys('I broke it')
         b.find_element_by_xpath('//input[@value=\'Report\']').click()
-        SeleniumTestCase.wait_and_try(lambda: b.find_element_by_xpath('//div/span[text()=\'Success\']'))
+        b.find_element_by_xpath('//div/span[text()=\'Success\']')
         self.assertEqual(len(self.mail_capture.captured_mails), 1)
 
     def test_report_problem(self):
