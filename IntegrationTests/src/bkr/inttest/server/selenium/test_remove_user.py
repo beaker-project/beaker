@@ -19,9 +19,6 @@ class RemoveUser(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_remove_user(self):
         with session.begin():
             user = data_setup.create_user(user_name =

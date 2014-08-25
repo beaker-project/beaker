@@ -48,9 +48,6 @@ class ActivityTestWD(WebDriverTestCase):
                 old_value=u'asdf', new_value=u'omgwtfbbq'))
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_can_search_custom_service(self):
         with session.begin():
             self.distro_tree1.activity.append(DistroTreeActivity(

@@ -193,9 +193,6 @@ class TestJobMatrixWebDriver(WebDriverTestCase):
                 'tbody/tr/td[1][@class="task"]')]
         self.assertEquals(task_ids, [single_job_2.recipesets[0].recipes[0].tasks[0].t_id])
 
-    def tearDown(self):
-        b = self.browser.quit()
-
 class TestJobMatrix(SeleniumTestCase):
 
     @with_transaction

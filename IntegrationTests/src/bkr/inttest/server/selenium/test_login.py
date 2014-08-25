@@ -30,9 +30,6 @@ class LoginTest(WebDriverTestCase):
         self.user = data_setup.create_user(password=self.password)
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=660527
     def test_referer_redirect(self):
         with session.begin():

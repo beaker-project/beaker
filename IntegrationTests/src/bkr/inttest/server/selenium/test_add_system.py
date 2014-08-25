@@ -15,9 +15,6 @@ class AddSystem(WebDriverTestCase):
         self.browser = self.get_browser()
         login(self.browser)
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_add_system(self):
         fqdn = u'test-system-1'
         b = self.browser

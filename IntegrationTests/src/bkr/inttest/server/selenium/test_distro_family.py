@@ -12,9 +12,6 @@ class DistroFamily(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_search_is_not_there(self):
         b = self.browser
         b.get(get_server_base() + 'distrofamily/')

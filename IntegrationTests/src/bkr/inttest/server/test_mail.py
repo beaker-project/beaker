@@ -21,9 +21,7 @@ class BrokenSystemNotificationTest(unittest.TestCase):
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()
         self.mail_capture.start()
-
-    def tearDown(self):
-        self.mail_capture.stop()
+        self.addCleanup(self.mail_capture.stop)
 
     def test_broken_system_notification(self):
         with session.begin():
@@ -69,9 +67,7 @@ class SystemReservationNotificationTest(unittest.TestCase):
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()
         self.mail_capture.start()
-
-    def tearDown(self):
-        self.mail_capture.stop()
+        self.addCleanup(self.mail_capture.stop)
 
     def test_system_reserved_notification(self):
         with session.begin():
@@ -134,9 +130,7 @@ class JobCompletionNotificationTest(unittest.TestCase):
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()
         self.mail_capture.start()
-
-    def tearDown(self):
-        self.mail_capture.stop()
+        self.addCleanup(self.mail_capture.stop)
 
     def test_subject_format(self):
         with session.begin():
@@ -225,9 +219,7 @@ class GroupMembershipNotificationTest(unittest.TestCase):
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()
         self.mail_capture.start()
-
-    def tearDown(self):
-        self.mail_capture.stop()
+        self.addCleanup(self.mail_capture.stop)
 
     def test_actions(self):
 
@@ -260,14 +252,12 @@ class UsageReminderTest(unittest.TestCase):
     def setUp(self):
         self.mail_capture = mail_capture.MailCaptureThread()
         self.mail_capture.start()
+        self.addCleanup(self.mail_capture.stop)
         self.user = data_setup.create_user()
         self.reservation_expiry = 24
         self.reservation_length = 3
         self.waiting_recipe_age = 1
         self.delayed_job_age = 14
-
-    def tearDown(self):
-        self.mail_capture.stop()
 
     def _create_expiring_reservation(self):
         recipe = data_setup.create_recipe_reservation(self.user, u'/distribution/reservesys',

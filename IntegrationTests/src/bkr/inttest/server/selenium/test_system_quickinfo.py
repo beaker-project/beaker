@@ -13,9 +13,6 @@ class SystemQuickUsageTest(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def go_to_system_view(self, system):
         b = self.browser
         b.get(get_server_base() + 'view/%s' % system.fqdn)

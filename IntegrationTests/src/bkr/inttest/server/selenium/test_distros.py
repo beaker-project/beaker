@@ -24,9 +24,6 @@ class DistroViewTest(WebDriverTestCase):
         self.user = data_setup.create_user(password=u'distro')
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_can_add_tag_to_distro(self):
         b = self.browser
         login(b, data_setup.ADMIN_USER, data_setup.ADMIN_PASSWORD)

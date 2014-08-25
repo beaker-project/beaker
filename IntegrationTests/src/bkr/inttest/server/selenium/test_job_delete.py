@@ -25,9 +25,6 @@ class JobDeleteWD(WebDriverTestCase):
                 create_completed_job(owner=self.user)
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_submission_delegate_with_group(self):
         with session.begin():
             group = data_setup.create_group()

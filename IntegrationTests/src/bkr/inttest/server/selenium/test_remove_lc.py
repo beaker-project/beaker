@@ -22,9 +22,6 @@ class RemoveLabController(WebDriverTestCase):
         self.browser = self.get_browser()
         login(self.browser)
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_remove_and_add(self):
         b = self.browser
 

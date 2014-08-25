@@ -24,9 +24,6 @@ class CSVImportTest(WebDriverTestCase):
             self.system = data_setup.create_system()
             self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def import_csv(self, contents):
         b = self.browser
         b.get(get_server_base() + 'csv/csv_import')

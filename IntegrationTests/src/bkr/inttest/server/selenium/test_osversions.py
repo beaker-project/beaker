@@ -22,9 +22,6 @@ class OSVersionsTest(WebDriverTestCase):
         self.browser = self.get_browser()
         login(self.browser)
 
-    def tearDown(self):
-        self.browser.quit()
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=972397
     def test_sort_grid_doesnt_blow_up(self):
         b = self.browser

@@ -20,9 +20,6 @@ class ItemCount(WebDriverTestCase):
         system = data_setup.create_system(shared=True)
         system.activity.append(data_setup.create_system_activity())
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_itemcount(self):
         b = self.browser
         login(b)

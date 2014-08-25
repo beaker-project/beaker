@@ -14,9 +14,6 @@ class TestMOTD(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_motd(self):
         f = open(tg.config.get('beaker.motd'), 'rb')
         parser = etree.XMLParser(recover=True)

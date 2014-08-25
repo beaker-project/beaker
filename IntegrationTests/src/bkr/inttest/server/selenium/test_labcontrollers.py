@@ -26,9 +26,6 @@ class LabControllerViewTest(WebDriverTestCase):
         self.browser = self.get_browser()
         login(self.browser)
 
-    def tearDown(self):
-        self.browser.quit()
-
     def _add_lc(self, lc_name, lc_email):
         b = self.browser
         b.get(get_server_base() + 'labcontrollers')

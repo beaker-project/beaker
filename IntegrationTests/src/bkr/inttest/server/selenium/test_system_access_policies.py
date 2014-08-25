@@ -35,9 +35,6 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
             p.add_rule(permission=SystemPermission.reserve, everybody=True)
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def check_row_is_dirty(self, row):
         pane = self.browser.find_element_by_id('access-policy')
         # Is it better to check for a class or a specific appearance?

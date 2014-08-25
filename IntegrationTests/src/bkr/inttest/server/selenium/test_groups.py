@@ -27,9 +27,6 @@ class TestGroups(WebDriverTestCase):
         session.flush()
         self.browser = self.get_browser()
 
-    def teardown(self):
-        self.browser.quit()
-
     def test_group_remove(self):
         b = self.browser
         login(b)

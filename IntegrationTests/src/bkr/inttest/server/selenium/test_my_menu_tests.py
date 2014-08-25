@@ -13,9 +13,6 @@ class Menu(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_my_menu(self):
         b = self.browser
         login(b)

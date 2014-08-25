@@ -27,9 +27,6 @@ class DistroTreeViewTest(WebDriverTestCase):
             self.distro_tree.kernel_options_post = 'norhgb'
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=972397
     def test_sort_grid_doesnt_blow_up(self):
         b = self.browser
@@ -165,9 +162,6 @@ class DistroTreesFilterXmlRpcTest(XmlRpcTestCase):
         self.assertEquals(returned_ids, set(dt.id for dt in distro_trees_in))
 
 class DistroTreeSearch(WebDriverTestCase):
-
-    def tearDown(self):
-        self.browser.quit()
 
     @classmethod
     @with_transaction

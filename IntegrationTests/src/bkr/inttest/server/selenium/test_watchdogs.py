@@ -14,9 +14,6 @@ class WatchdogsTest(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_page_works(self):
         # make sure we have at least one watchdog to see
         with session.begin():

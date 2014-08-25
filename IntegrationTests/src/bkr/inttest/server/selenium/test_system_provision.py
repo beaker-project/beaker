@@ -23,9 +23,6 @@ class SystemProvisionTest(WebDriverTestCase):
                     osmajor=u'RedHatEnterpriseLinux6',
                     lab_controllers=[self.lc])
 
-    def tearDown(self):
-        self.browser.quit()
-
     def go_to_provision_tab(self, system):
         b = self.browser
         b.get(get_server_base() + 'view/%s' % system.fqdn)

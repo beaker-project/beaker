@@ -39,9 +39,6 @@ class SystemViewTestWD(WebDriverTestCase):
                     lab_controllers=[self.lab_controller])
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     # https://bugzilla.redhat.com/show_bug.cgi?id=987313
     def test_labinfo_not_visible_for_new_systems(self):
         b = self.browser

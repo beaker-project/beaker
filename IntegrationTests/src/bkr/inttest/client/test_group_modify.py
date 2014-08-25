@@ -34,9 +34,7 @@ class GroupModifyTest(unittest.TestCase):
 
         self.mail_capture = mail_capture.MailCaptureThread()
         self.mail_capture.start()
-
-    def tearDown(self):
-        self.mail_capture.stop()
+        self.addCleanup(self.mail_capture.stop)
 
     def check_notification(self, user, group, action):
         self.assertEqual(len(self.mail_capture.captured_mails), 1)

@@ -18,9 +18,8 @@ from urlparse import urljoin
 
 class SearchColumns(WebDriverTestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.browser = cls.get_browser()
+    def setUp(self):
+        self.browser = self.get_browser()
 
     def test_group_column(self):
         with session.begin():
@@ -124,19 +123,12 @@ class SearchColumns(WebDriverTestCase):
         columns = b.find_elements_by_xpath("//table[@id='widget']//th")
         self.assertGreater(len(columns), 7)
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.browser.quit()
-
-
 
 class Search(WebDriverTestCase):
 
     @classmethod
     @with_transaction
     def setUpClass(cls):
-        cls.browser = cls.get_browser()
-        login(cls.browser)
         cls.system_one_details = { 'fqdn' : u'a1',
                                     'type' : u'Machine',
                                     'arch' : u'i386',
@@ -199,9 +191,9 @@ class Search(WebDriverTestCase):
         cls.system_four.key_values_string.append(Key_Value_String(
             Key.by_name(u'CPUMODEL'), 'foocodename'))
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.browser.quit()
+    def setUp(self):
+        self.browser = self.get_browser()
+        login(self.browser)
 
     def test_multiple_cpu_flags(self):
         b = self.browser
@@ -517,9 +509,6 @@ class SystemVisibilityTest(WebDriverTestCase):
             self.user = data_setup.create_user(password=u'password')
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_secret_system_not_visible(self):
         with session.begin():
             secret_system = data_setup.create_system(shared=False, private=True)
@@ -564,9 +553,6 @@ class HypervisorSearchTest(WebDriverTestCase):
             self.phys = data_setup.create_system(loaned=self.user, hypervisor=None)
         self.browser = self.get_browser()
         login(self.browser, user=self.user.user_name, password=u'hypervisin')
-
-    def tearDown(self):
-        self.browser.quit()
 
     def test_search_hypervisor_is(self):
         b = self.browser
@@ -630,9 +616,6 @@ class DiskSearchTest(WebDriverTestCase):
             ]
         self.browser = self.get_browser()
         login(self.browser, user=self.user.user_name, password=u'diskin')
-
-    def tearDown(self):
-        self.browser.quit()
 
     def test_search_size_greater_than(self):
         b = self.browser
@@ -704,12 +687,9 @@ class InventoriedSearchTest(WebDriverTestCase):
             cls.inv4 = data_setup.create_system(loaned=cls.user)
             cls.inv4.date_lastcheckin = cls.time_yesterday
 
-        cls.browser = cls.get_browser()
-        login(cls.browser, user=cls.user.user_name, password='pass')
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.browser.quit()
+    def setUp(self):
+        self.browser = self.get_browser()
+        login(self.browser, user=self.user.user_name, password='pass')
 
     def test_uninventoried_search(self):
 

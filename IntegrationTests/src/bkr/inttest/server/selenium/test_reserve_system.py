@@ -33,9 +33,6 @@ class ReserveWorkflow(WebDriverTestCase):
 
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_default_tag_is_none_selected(self):
         b = self.browser
         login(b)
@@ -203,9 +200,6 @@ class ReserveSystem(WebDriverTestCase):
                     lab_controllers=[self.lc])
             self.system.lab_controller = self.lc
         self.browser = self.get_browser()
-
-    def tearDown(self):
-        self.browser.quit()
 
     def test_show_all_columns_work(self):
         pass_ ='password'

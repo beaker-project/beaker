@@ -17,9 +17,6 @@ class SystemReturnTestWD(WebDriverTestCase):
     def setUp(self):
         self.browser = self.get_browser()
 
-    def tearDown(self):
-        self.browser.quit()
-
     def test_cannot_return_running_recipe(self):
         with session.begin():
             recipe = data_setup.create_recipe()

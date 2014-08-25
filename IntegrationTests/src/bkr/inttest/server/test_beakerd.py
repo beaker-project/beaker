@@ -41,9 +41,9 @@ class TestBeakerd(unittest.TestCase):
         self.task_id, self.rpm_name = self.add_example_task()
         self.mail_capture = MailCaptureThread()
         self.mail_capture.start()
+        self.addCleanup(self.mail_capture.stop)
 
     def tearDown(self):
-        self.mail_capture.stop()
         self.disable_example_task(self.task_id)
 
     @classmethod
@@ -1737,6 +1737,7 @@ class TestBeakerdMetrics(unittest.TestCase):
         beakerd.metrics = FakeMetrics()
         self.mail_capture = MailCaptureThread()
         self.mail_capture.start()
+        self.addCleanup(self.mail_capture.stop)
         session.begin()
         try:
             # Other tests might have left behind systems and running recipes,
@@ -1758,7 +1759,6 @@ class TestBeakerdMetrics(unittest.TestCase):
 
     def tearDown(self):
         session.rollback()
-        self.mail_capture.stop()
         beakerd.metrics = self.original_metrics
 
     def test_system_count_metrics(self):

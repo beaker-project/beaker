@@ -17,9 +17,6 @@ class Menu(WebDriverTestCase):
         self.browser = self.get_browser()
         login(self.browser)
 
-    def tearDown(self):
-        self.browser.quit()
-       
     def test_menulist(self):
         b = self.browser
         b.get(get_server_base())
