@@ -64,11 +64,8 @@ versions are `published on the Beaker web site
 <http://beaker-project.org/yum/harness/>`__.
 
 To update your Beaker server's copy of the harness packages, run the 
-``beaker-repo-update`` command. You can pass the ``-b`` option to update from 
-an alternative URL. For example, to update your Beaker server with the latest 
-release candidate harness packages::
-
-    beaker-repo-update -b http://beaker-project.org/yum/harness-testing/
+:program:`beaker-repo-update` command. See :doc:`beaker-repo-update 
+<man/beaker-repo-update>` for more details.
 
 Downgrading
 -----------
