@@ -19,6 +19,9 @@ them to keep track of their Beaker systems usage.
 To ensure users get their reminders, beaker administrators can setup a cron
 job on the beaker server to run this command at regular intervals (e.g. daily).
 
+This command requires read access to the Beaker server configuration. Run it as 
+root or as another user with read access to the configuration file.
+
 Options
 -------
 
