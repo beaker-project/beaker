@@ -476,6 +476,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-create-ipxe-image
 %{_mandir}/man8/beaker-create-ipxe-image.8.gz
 %{_mandir}/man8/beaker-create-kickstart.8.gz
+%{_mandir}/man8/beaker-repo-update.8.gz
 %{_mandir}/man8/beaker-usage-reminder.8.gz
 
 %if %{with_systemd}
@@ -509,6 +510,7 @@ rm -rf %{_var}/lib/beaker/osversion_data
 # always installs them all.
 %exclude %{_mandir}/man8/beaker-create-ipxe-image.8.gz
 %exclude %{_mandir}/man8/beaker-create-kickstart.8.gz
+%exclude %{_mandir}/man8/beaker-repo-update.8.gz
 %exclude %{_mandir}/man8/beaker-usage-reminder.8.gz
 %endif
 
