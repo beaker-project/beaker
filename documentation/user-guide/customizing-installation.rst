@@ -218,6 +218,8 @@ correspond to the similarly-named kickstart option.
     Time zone to use. Default is ``America/New_York`` unless overridden by the 
     administrator.
 
+.. _kickstart-metadata-distro-features:
+
 The following variables are used to test for installer or distro features. 
 Beaker populates these variables automatically by inspecting the distro name 
 and version. They can be overridden if necessary for custom distros.
