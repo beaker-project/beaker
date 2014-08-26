@@ -181,7 +181,9 @@ class TaskLibraryTest(unittest.TestCase):
 
     def test_make_snapshot_repo(self):
         basepath = self.tasklibrary.rpmspath
-        recipe_repo_parent = mkdtemp()
+        recipe_repo_parent = os.path.join(
+                get('basepath.repos', '/var/www/beaker/repos'),
+                'test_make_snapshot_repo')
         self._create_clean_dir(basepath)
         try:
             rpm_file = pkg_resources.resource_filename('bkr.server.tests', \
