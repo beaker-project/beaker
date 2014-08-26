@@ -724,6 +724,11 @@ class Groups(AdminPage):
             flash(_(u'Cannot delete a group which has associated jobs'))
             redirect('../groups/mine')
 
+        # Record the access policy rules that will be removed
+        # before deleting the group
+        for rule in group.system_access_policy_rules:
+            rule.record_deletion()
+
         session.delete(group)
         activity = Activity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
         session.add(activity)

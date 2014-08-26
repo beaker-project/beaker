@@ -8,7 +8,7 @@ from bkr.server.model import session
 from bkr.inttest import data_setup, get_server_base, with_transaction
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_text_present, \
-    delete_and_confirm, logout
+    delete_and_confirm, logout, is_activity_row_present
 from bkr.server.model import session, SystemPermission, SystemAccessPolicy
 
 
@@ -129,6 +129,7 @@ class TestGroups(WebDriverTestCase):
                                                                  % group.group_name).text)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1085703
+    #https://bugzilla.redhat.com/show_bug.cgi?id=1132730
     def test_group_has_access_policy_rule_remove(self):
         with session.begin():
             user = data_setup.create_user(password='password')
@@ -139,14 +140,23 @@ class TestGroups(WebDriverTestCase):
             p = system.custom_access_policy
             p.add_rule(permission=SystemPermission.edit_system,
                        group=group)
+            p.add_rule(permission=SystemPermission.edit_policy,
+                       group=group)
 
         b = self.browser
         login(b, user=user.user_name, password='password')
 
         # check current rules
-        self.assertEquals(len(p.rules), 1)
+        self.assertEquals(len(p.rules), 2)
         self.assert_(p.rules[0].user is None)
         self.assertEquals(p.rules[0].group, group)
+        self.assert_(p.rules[1].user is None)
+        self.assertEquals(p.rules[1].group, group)
+
+
+        # save current rules for later use
+        access_policy_rule_1 = repr(p.rules[0])
+        access_policy_rule_2 = repr(p.rules[1])
 
         # delete the group
         b.get(get_server_base() + 'groups/mine')
@@ -159,3 +169,25 @@ class TestGroups(WebDriverTestCase):
         # check if the access policy rule has been removed
         session.refresh(p)
         self.assertEquals(len(p.rules), 0)
+
+        # Check whether the rules deleted have been recorded in the
+        # Activity table
+        b.get(get_server_base() + 'activity/')
+        b.find_element_by_link_text('Show Search Options').click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_table']/option[@value='Action']").click()
+        b.find_element_by_xpath("//select[@id='activitysearch_0_operation']/option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='activitysearch_0_value']").send_keys('Removed')
+        b.find_element_by_link_text('Add').click()
+
+        b.find_element_by_xpath("//select[@id='activitysearch_1_table']/option[@value='Property']").click()
+        b.find_element_by_xpath("//select[@id='activitysearch_1_operation']/option[@value='is']").click()
+        b.find_element_by_xpath("//input[@id='activitysearch_1_value']").send_keys('Access Policy Rule')
+        b.find_element_by_id('searchform').submit()
+        self.assert_(is_activity_row_present(b,via='WEBUI', action='Removed',
+                                             object_ = 'System: %s' % system.fqdn,
+                                             property_='Access Policy Rule',
+                                             old_value=access_policy_rule_1, new_value=''))
+        self.assert_(is_activity_row_present(b,via='WEBUI', action='Removed',
+                                             object_ = 'System: %s' % system.fqdn,
+                                             property_='Access Policy Rule',
+                                             old_value=access_policy_rule_2, new_value=''))
