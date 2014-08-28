@@ -33,16 +33,33 @@ being upgraded to a new version.
 
        release-1.0/*
 
-Unreleased changes
-------------------
+.. uncomment after 0.18
 
-The following changes will appear in the next Beaker release.
+    Unreleased changes
+    ------------------
+
+    The following changes will appear in the next Beaker release.
+
+    .. toctree::
+       :maxdepth: 2
+       :glob:
+
+       next/*
+
+
+Beaker 0.18
+-----------
+
+Beaker 0.18 brings improved usage reminder e-mails and a new workflow option 
+for pre-defined host filters. This release also includes a substantial 
+refactoring of Beaker's internal kickstart templates, to provide better support 
+for custom distros.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   next/*
+   release-0.18
+   upgrade-0.18
 
 
 Beaker 0.17

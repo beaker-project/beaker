@@ -37,6 +37,8 @@ compatible distro family::
 
     ln -s RedHatEnterpriseLinux6 /var/www/beaker/harness/MyCustomDistro6
 
+.. _distro-features:
+
 Install options for distro features
 -----------------------------------
 
