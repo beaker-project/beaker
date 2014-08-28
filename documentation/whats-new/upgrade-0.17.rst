@@ -104,7 +104,7 @@ statements.
             'Waiting', 'Running', 'Completed', 'Cancelled', 'Aborted', 
             'Reserved');
 
-To roll back, run the following SQL. If duplicate user e-mail addresses have 
+To roll back, run the following SQL. If duplicate user email addresses have 
 been entered since the upgrade, you must first manually adjust them before 
 restoring the UNIQUE constraint.
 

@@ -175,7 +175,7 @@ Beaker 0.14.1
 ~~~~~~~~~~~~~
 
 * :issue:`990408`: TurboMail is now started in beakerd, so that it does not 
-  fail to send notification e-mails
+  fail to send notification emails
 
 
 Beaker 0.14.2

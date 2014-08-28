@@ -50,7 +50,7 @@ being upgraded to a new version.
 Beaker 0.18
 -----------
 
-Beaker 0.18 brings improved usage reminder e-mails and a new workflow option 
+Beaker 0.18 brings improved usage reminder emails and a new workflow option 
 for pre-defined host filters. This release also includes a substantial 
 refactoring of Beaker's internal kickstart templates, to provide better support 
 for custom distros.

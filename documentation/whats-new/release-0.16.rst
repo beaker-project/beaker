@@ -104,7 +104,7 @@ Task updates
 ------------
 
 Version 3.4-4 of the ``/distribution/reservesys`` task has been released, with 
-one enhancement: the MOTD and notification e-mail now refer to the Beaker user 
+one enhancement: the MOTD and notification email now refer to the Beaker user 
 preferences page for the system root password, as a hint to new users. 
 (Contributed by Dan Callaghan in :issue:`950640`)
 
