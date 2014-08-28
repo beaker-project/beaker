@@ -1478,6 +1478,10 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
     def everybody(self):
         return (self.user == None) & (self.group == None)
 
+    def record_deletion(self, service=u'WEBUI'):
+        self.policy.system.record_activity(user=identity.current.user, service=service,
+                                           action=u'Removed',
+                                           field=u'Access Policy Rule', old=repr(self))
 
 class Provision(DeclarativeMappedObject):
 

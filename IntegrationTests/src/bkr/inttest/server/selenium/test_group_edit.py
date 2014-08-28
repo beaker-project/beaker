@@ -297,7 +297,7 @@ class TestGroupsWD(WebDriverTestCase):
         b = self.browser
         login(b, user=self.user.user_name, password='password')
         b.get(get_server_base() + 'groups/edit?group_id=%d' % self.group.group_id)
-        b.find_element_by_xpath('//table[@id="group_members_grid" and not(.//text()="Remove")]')
+        b.find_element_by_xpath('//table[@id="group_members_grid" and not(.//text()="Delete Group")]')
         b.find_element_by_xpath('//body[not(.//input)]')
 
     def test_add_user_to_owning_group(self):
