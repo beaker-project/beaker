@@ -69,7 +69,7 @@ if command -v curl >/dev/null ; then
     }
 elif command -v wget >/dev/null ; then
     # In Anaconda images wget is actually busybox
-    if wget --help | grep -q BusyBox ; then
+    if wget --help 2>&1 | grep -q BusyBox ; then
         function fetch() {
             wget -O "$1" "$2"
         }
@@ -107,7 +107,7 @@ if command -v curl >/dev/null ; then
     }
 elif command -v wget >/dev/null ; then
     # In Anaconda images wget is actually busybox
-    if wget --help | grep -q BusyBox ; then
+    if wget --help 2>&1 | grep -q BusyBox ; then
         function fetch() {
             wget -O "$1" "$2"
         }
