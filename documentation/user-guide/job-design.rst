@@ -8,6 +8,8 @@ particular use case into a suitably designed Beaker job. This means taking the
 business, technical and management requirements and solving these within the various
 levels of the job schema.
 
+.. _job-access-control:
+
 Access control for jobs
 -----------------------
 

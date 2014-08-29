@@ -3,6 +3,9 @@ Glossary
 
 .. glossary::
 
+   access policy
+       See :term:`system access policy`.
+
    Beaker server
        Comprised of two main parts, the web UI and the scheduler. The web
        UI is the main interface for Beaker users. The scheduler is
@@ -23,6 +26,17 @@ Glossary
    FQDN
        Fully qualified domain name.
 
+   group
+       A group of one or more Beaker users.
+
+   group job
+       A job associated with a :term:`group`. All group members are permitted 
+       to cancel or modify the job. Refer to :ref:`job-access-control`.
+
+   group owner
+       The Beaker user who is responsible for a group. Group owners have 
+       control over the group, including adding and removing members.
+
    guest recipe
 
        Guest recipes are used to run one or more recipe tasks in one
@@ -38,15 +52,28 @@ Glossary
        The highest unit of work in Beaker, it is a container for one or
        more recipe sets that are run independently of each other.
 
+   job owner
+       The Beaker user responsible for a job. By default this is the user who 
+       submitted the job, unless it was submitted by a :term:`submission 
+       delegate` on behalf of the job owner instead.
+
    lab controller
        Main conduit of communication between systems and the beaker server.
        Main responsibilities include provisioning of systems, monitoring of
        systems via the external watchdog, transfer of system logs,
        reporting of recipe task results, and importing distros.
 
+   loan recipient
+   loanee
+       The Beaker user to whom a system has been loaned. A loan grants 
+       exclusive use of a system. Refer to :ref:`loaning-systems`.
+
    quiescent period
        The 'quiescent period' is the minimum amount of time (in seconds)
        between power operations.
+
+   owner
+       See :term:`system owner`, :term:`job owner`, or :term:`group owner`.
 
    recipe set
        A recipe set is contained within a job and can contain one or more
@@ -63,10 +90,29 @@ Glossary
        of work in Beaker. A recipe task runs a specific task, the results
        of which are reported to the beaker server.
 
+   submission delegate
+       A Beaker user (often an automated service) which is permitted to submit 
+       jobs on behalf of other users. Refer to :ref:`Submission delegates 
+       <submission-delegates>`.
+
    system
        These make up Beaker's inventory, and are the systems on which
        recipes are run. They may not necesarily be a bare metal machine,
        but could be a guest on a hypervisor.
+
+   system access policy
+       A set of rules which grant permissions on the system to other users and 
+       groups in Beaker. Refer to :ref:`system-access-policies`.
+
+   system owner
+       The Beaker user responsible for maintaining a system. The system owner 
+       has complete control over their system. When someone reports a problem 
+       or requests a loan for the system, Beaker emails the request to the 
+       system owner (and the rest of the notify CC list) for their attention.
+
+   system user
+       The Beaker user who currently holds a reservation on a system (they are 
+       *using* it, hence the term).
 
    task
        A task is designed to be run on a system, for the purposes of
