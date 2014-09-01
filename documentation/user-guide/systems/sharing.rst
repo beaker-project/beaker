@@ -2,8 +2,9 @@ Sharing your system with others
 ===============================
 
 By default, when a new system is added to Beaker only the owner has access to 
-use it. There are a number of mechanisms which you can use to share your system 
-with other Beaker users.
+use it. You can use loans to temporarily grant another user exclusive access to 
+a system, or set access policy rules for fine-grained control over which Beaker 
+users can use or administer the system.
 
 .. _loaning-systems:
 
@@ -96,3 +97,18 @@ relevant permission.
 System reservations made through the automated scheduler can only be
 terminated by cancelling the relevant job rather than by returning the system
 directly through the web UI or command-line client.
+
+Notify CC list
+--------------
+
+Beaker sends e-mail notifications to the system owner when it detects a problem 
+with the system (see :doc:`broken-system-detection`) or when a user reports 
+a problem or requests a loan.
+
+You can add one or more e-mail addresses to the notify CC list for your system. 
+Any Beaker notifications about the system will also be sent to those addresses.
+
+The notify CC list does not itself grant any extra permissions over a system. 
+If someone else is helping maintain your system, you may also want to grant 
+them edit_system or loan_any permissions so that they can update your system as 
+needed.

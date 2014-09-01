@@ -87,19 +87,22 @@ connected, you can set ``ksdevice=link``. If more than one interface has
 a cable connected, you must nominate a specific interface to be used for 
 installation: ``ksdevice=00:11:22:33:44:55``.
 
-Testing your system's configuration
------------------------------------
+Next steps
+----------
 
-Try provisioning a system (see :ref:`provisioning-a-system`). 
+To test your system's configuration, try provisioning it (see 
+:ref:`provisioning-a-system`).
 You can watch the provisioning process through the console. Please, be patient. 
 The provisioning may take some time.
 
-Once the System has been added, you should :ref:`create a job
-<submitting-a-new-job>` to run the Beaker-provided :ref:`inventory-task` task
-on the machine.  The easiest way to do this is to use the ``machine-test``
-workflow to generate and submit an appropriate job definition::
+To populate your system's hardware details in Beaker, you should :ref:`create 
+a job <submitting-a-new-job>` to run the Beaker-provided :ref:`inventory-task` 
+task on the machine. The easiest way to do this is to use the :ref:`bkr 
+machine-test <bkr-machine-test>` command to generate and submit an appropriate 
+job definition::
 
     bkr machine-test --inventory --family=RedHatEnterpriseLinux6 \
          --arch=x86_64 --machine=<FQDN>
 
-Refer to :ref:`bkr-machine-test` for more details.
+Once your system is operational, you may want to use Beaker's :doc:`system 
+sharing features <sharing>` to let others use or administer your system.
