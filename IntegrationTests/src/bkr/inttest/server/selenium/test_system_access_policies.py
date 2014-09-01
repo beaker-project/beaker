@@ -236,8 +236,8 @@ class SystemAccessPolicyHTTPTest(unittest.TestCase):
         json = response.json()
         self.assertEquals(json['id'], self.policy.id)
         self.assertEquals([p['value'] for p in json['possible_permissions']],
-                ['view', 'edit_policy', 'edit_system', 'loan_any', 'loan_self',
-                 'control_system', 'reserve'])
+                ['view', 'view_power', 'edit_policy', 'edit_system',
+                 'loan_any', 'loan_self', 'control_system', 'reserve'])
         self.assertItemsEqual(json['rules'], [
             {'id': self.policy.rules[0].id, 'permission': 'view',
              'everybody': True, 'user': None, 'group': None},

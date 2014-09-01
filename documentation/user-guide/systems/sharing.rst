@@ -55,6 +55,11 @@ view           View                The user can view the system and find it in
                                    permitted to view the system, they cannot 
                                    interact with it in any way and any other 
                                    permissions granted to them have no effect.
+view_power     View power settings The user can view the system's power
+                                   settings. This is a separate permission, and 
+                                   is not granted to all users by default, so 
+                                   that system owners can avoid disclosing the 
+                                   power password for their system.
 edit_policy    Edit this policy    The user can edit the access policy to grant
                                    or revoke permissions, including adding new 
                                    users and groups to the policy. Users with

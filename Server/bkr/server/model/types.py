@@ -138,6 +138,7 @@ class SystemPermission(DeclEnum):
 
     symbols = [
         ('view',           u'view',           dict(label=_(u'View'))),
+        ('view_power',     u'view_power',     dict(label=_(u'View power settings'))),
         ('edit_policy',    u'edit_policy',    dict(label=_(u'Edit this policy'))),
         ('edit_system',    u'edit_system',    dict(label=_(u'Edit system details'))),
         ('loan_any',       u'loan_any',       dict(label=_(u'Loan to anyone'))),

@@ -26,20 +26,24 @@ window.SystemPowerSettingsView = Backbone.View.extend({
         if (!window.beaker_current_user) {
             this.$el.html('<div class="alert alert-info">You are not logged in.</div>');
             return;
-        } else if (!this.model.get('can_change_power')) {
+        } else if (!this.model.get('can_view_power')) {
             this.$el.html('<div class="alert alert-info">You do not have permission ' +
-                    'to edit power configuration for this system.</div>');
+                    'to view power configuration for this system.</div>');
             return;
         } else if (!this.model.get('lab_controller_id')) {
             this.$el.html('<div class="alert alert-info">System is not attached ' +
                     'to a lab controller.</div>');
             return;
         }
-        this.$el.html(this.template(this.model.attributes));
+        var readonly = !this.model.get('can_change_power');
+        this.$el.html(this.template(
+                _.extend({readonly: readonly}, this.model.attributes)));
         var model = this.model;
         this.$('input, select').each(function (i, elem) {
             if (elem.name != 'reprovision_distro_tree_id')
                 $(elem).val([model.get(elem.name)]);
+            if (readonly)
+                $(elem).prop('disabled', true);
         });
         if (model.get('reprovision_distro_tree')) {
             var dt = model.get('reprovision_distro_tree');

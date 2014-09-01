@@ -373,7 +373,7 @@ class SystemViewTestWD(WebDriverTestCase):
         self.go_to_system_view(tab='Power Settings')
         tab = b.find_element_by_id('power-settings')
         self.assertEquals(tab.find_element_by_class_name('alert-info').text,
-                'You do not have permission to edit power configuration '
+                'You do not have permission to view power configuration '
                 'for this system.')
         self.assertNotIn('midnight', tab.text)
 

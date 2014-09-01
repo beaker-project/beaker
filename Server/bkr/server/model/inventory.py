@@ -427,7 +427,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         }
         if self.lab_controller:
             data['lab_controller_id'] = self.lab_controller.id
-        if identity.current.user and self.can_edit(identity.current.user):
+        if identity.current.user and self.can_view_power(identity.current.user):
             if self.power:
                 data.update(self.power.__json__())
             else:
@@ -481,6 +481,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_type'] = self.can_edit(u)
             data['can_change_hardware'] = self.can_edit(u)
             data['can_change_power'] = self.can_edit(u)
+            data['can_view_power'] = self.can_view_power(u)
             data['can_power'] = self.can_power(u)
             data['can_take'] = self.is_free(u) and self.can_reserve_manually(u)
             data['can_return'] = (self.open_reservation is not None
@@ -500,6 +501,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             data['can_change_type'] = False
             data['can_change_hardware'] = False
             data['can_change_power'] = False
+            data['can_view_power'] = False
             data['can_power'] = False
             data['can_take'] = False
             data['can_return'] = False
@@ -781,6 +783,22 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return true()
         return or_(SystemAccessPolicy.grants(user, SystemPermission.edit_system),
                 cls.owner == user)
+
+    def can_view_power(self, user):
+        """
+        Does the given user have permission to view power settings for this 
+        system?
+        """
+        self._ensure_user_is_authenticated(user)
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.edit_system) or
+            self.custom_access_policy.grants(user, SystemPermission.view_power)):
+            return True
+        return False
 
     def can_lend(self, user):
         """
@@ -1664,7 +1682,7 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
             name='system_access_policy_rule_group_id_fk'))
     group = relationship(Group, backref=backref('system_access_policy_rules',
                                                 cascade='all, delete, delete-orphan'))
-    permission = Column(SystemPermission.db_type())
+    permission = Column(SystemPermission.db_type(), nullable=False)
 
     def __repr__(self):
         return '<grant %s to %s>' % (self.permission,
