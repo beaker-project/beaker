@@ -62,9 +62,16 @@ set -x
 # We define a wrapper function around the best available implementation
 # so that the rest of the script can use that for making HTTP requests.
 if command -v curl >/dev/null ; then
-    function fetch() {
-        curl --retry 20 --remote-time -o "$1" "$2"
-    }
+    # Older curl versions lack --retry
+    if curl --help 2>&1 | grep -q .*--retry ; then
+        function fetch() {
+            curl --retry 20 --remote-time -o "$1" "$2"
+        }
+    else
+        function fetch() {
+            curl --remote-time -o "$1" "$2"
+        }
+    fi
 elif command -v wget >/dev/null ; then
     # In Anaconda images wget is actually busybox
     if wget --help 2>&1 | grep -q BusyBox ; then
@@ -97,9 +104,16 @@ set -x
 # We define a wrapper function around the best available implementation
 # so that the rest of the script can use that for making HTTP requests.
 if command -v curl >/dev/null ; then
-    function fetch() {
-        curl --retry 20 --remote-time -o "$1" "$2"
-    }
+    # Older curl versions lack --retry
+    if curl --help 2>&1 | grep -q .*--retry ; then
+        function fetch() {
+            curl --retry 20 --remote-time -o "$1" "$2"
+        }
+    else
+        function fetch() {
+            curl --remote-time -o "$1" "$2"
+        }
+    fi
 elif command -v wget >/dev/null ; then
     # In Anaconda images wget is actually busybox
     if wget --help 2>&1 | grep -q BusyBox ; then
