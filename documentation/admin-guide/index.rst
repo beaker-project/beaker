@@ -36,6 +36,7 @@ Contents
    kickstarts
    power-commands
    panic-detection
+   watchdog-script
    theming
    openstack
    graphite
