@@ -705,8 +705,17 @@ class Jobs(RPCRoot):
 
     @cherrypy.expose
     @identity.require(identity.not_anonymous())
-    def set_response(self, job_t_id, response):
-        job = TaskBase.get_by_t_id(job_t_id)
+    def set_response(self, taskid, response):
+        """
+        Updates the response (ack/nak) for a recipe set, or for all recipe sets 
+        in a job. This is part of the results reviewing system.
+
+        :param taskid: see above
+        :type taskid: string
+        :param response: new response, either ``'ack'`` or ``'nak'``
+        :type response: string
+        """
+        job = TaskBase.get_by_t_id(taskid)
         if job.can_set_response(identity.current.user):
             job.set_response(response)
         else:
