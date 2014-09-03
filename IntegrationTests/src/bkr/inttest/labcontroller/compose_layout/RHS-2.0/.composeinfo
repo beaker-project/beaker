@@ -1,0 +1,9 @@
+[product]
+version = 2.0
+name = Red Hat Storage
+family = RHS
+
+[tree]
+arches = x86_64
+name = RHS-2.0-20120621.2
+

@@ -159,6 +159,18 @@ class Parser(object):
                     raise
         return default
 
+    def sections(self):
+        return self.parser.sections()
+
+    def has_option(self, section, option):
+        return self.parser.has_option(section, option)
+
+    def has_section_startswith(self, s):
+        for section in self.parser.sections():
+            if section.startswith(s):
+                return True
+        return False
+
     def __repr__(self):
         return '%s/%s' % (self.url, self.infofile)
 
@@ -1028,6 +1040,8 @@ class TreeInfoLegacy(TreeInfoMixin, Importer):
 
 
 class TreeInfoRhel5(TreeInfoMixin, Importer):
+    # Used in RHEL5 and all CentOS releases from 5 onwards.
+    # Has image locations but no repo info so we guess that.
     """
 [general]
 family = Red Hat Enterprise Linux Server
@@ -1060,10 +1074,13 @@ mainimage = images/stage2.img
         for e in cls.excluded:
             if parser.get(e['section'], e['key'], '') != '':
                 return False
-        if not (parser.get('general', 'family').startswith("Red Hat Enterprise Linux")\
-	   or parser.get('general', 'family').startswith("CentOS")):
+        if not parser.has_section_startswith('images-') or \
+                parser.has_option('general', 'repository') or \
+                parser.has_section_startswith('variant-') or \
+                parser.has_section_startswith('addon-'):
             return False
-        if int(parser.get('general', 'version').split('.')[0]) != 5:
+        # Fedora has a special case below, see TreeInfoFedora
+        if parser.get('general', 'family') == 'Fedora':
             return False
         return parser
 
@@ -1085,6 +1102,9 @@ mainimage = images/stage2.img
         ./VT
         ./Client
         ./Workstation
+
+        CentOS repos
+        .
         """
         # ppc64 arch uses ppc for the repos
         arch = self.tree['arch'].replace('ppc64','ppc')
@@ -1107,6 +1127,7 @@ mainimage = images/stage2.img
                       ('Workstation',
                        'addon',
                        'Workstation'),
+                      ('distro', 'distro', '.'),
                      ]
         repos = []
         for repo in repo_paths:
@@ -1121,6 +1142,8 @@ mainimage = images/stage2.img
 
 
 class TreeInfoFedora(TreeInfoMixin, Importer):
+    # This is basically the same as TreeInfoRHEL5 except that it hardcodes 
+    # 'Fedora' in the repoids.
     """
 
     """
@@ -1295,6 +1318,9 @@ class TreeInfoFedoraArm(TreeInfoFedora, Importer):
         return images
 
 class TreeInfoRhel6(TreeInfoMixin, Importer):
+    # Used in RHS2 and RHEL6.
+    # variant-* section has a repository key, and an addons key pointing at 
+    # addon-* sections.
     """
 [addon-ScalableFileSystem]
 identity = ScalableFileSystem/ScalableFileSystem.cert
@@ -1367,11 +1393,13 @@ repository = LoadBalancer
             return False
         if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
             return False
-        if not (parser.get('general', 'family').startswith("Red Hat Enterprise Linux")
-	   or parser.get('general', 'family').startswith("CentOS")):
+        if not (parser.has_section_startswith('images-') and
+                parser.has_section_startswith('variant-')):
             return False
-        if int(parser.get('general', 'version').split('.')[0]) != 6:
-            return False
+        for section in parser.sections():
+            if section.startswith('variant-') and \
+                    not parser.has_option(section, 'addons'):
+                return False
         return parser
 
     def get_kernel_path(self):
@@ -1417,92 +1445,10 @@ repository = LoadBalancer
         return repos
 
 
-class TreeInfoRHS(TreeInfoMixin, Importer):
-    """
-    Importer for Red Hat Storage
-
-[variant-RHS]
-addons = 
-identity = RHS/RHS.cert
-repository = RHS/repodata
-
-[images-x86_64]
-kernel = images/pxeboot/vmlinuz
-initrd = images/pxeboot/initrd.img
-boot.iso = images/boot.iso
-
-[general]
-family = Red Hat Storage
-timestamp = 1336067116.493109
-variant = RHS
-totaldiscs = 1
-version = 2.0
-discnum = 1
-packagedir = Packages
-variants = RHS
-arch = x86_64
-
-[images-xen]
-initrd = images/pxeboot/initrd.img
-kernel = images/pxeboot/vmlinuz
-
-[checksums]
-images/pxeboot/initrd.img = sha256:30525b91282dff3555b0e7203e10ac46e94dd6e925df95bc0b5442b91f592020
-images/efiboot.img = sha256:a89e750492dd419189eb82f513d3c18442d9b159fc237cbe1e9323e511f95186
-images/boot.iso = sha256:80a79342c790c58783e41323cfdae6118a1785693773cffe01e2594783da1f61
-images/pxeboot/vmlinuz = sha256:0d04f45518d65fd85e2c5884dc9c0254b399ed9623794738986c7dfd1ec27dd2
-images/install.img = sha256:d795444e92e27893aec8edf8f45fe39e7306b1ce8379dc9f1c3fb6c126c57e6b
-images/efidisk.img = sha256:4d74866a0fb0368cee92e6c0e7a52522eb9cded1d03e1427a4aa2c3a21c4d54f
-
-[stage2]
-mainimage = images/install.img
-
-    """
-    @classmethod
-    def is_importer_for(cls, url, options=None):
-        parser = Tparser()
-        if not parser.parse(url):
-            return False
-        for r in cls.required:
-            if parser.get(r['section'], r['key'], '') == '':
-                return False
-        for e in cls.excluded:
-            if parser.get(e['section'], e['key'], '') != '':
-                return False
-        if not (parser.get('general', 'family').startswith("Red Hat Storage")\
-	   or parser.get('general', 'family').startswith("CentOS")):
-            return False
-        return parser
-
-    def get_kernel_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'],'kernel')
-
-    def get_initrd_path(self):
-        return self.parser.get('images-%s' % self.tree['arch'],'initrd')
-
-    def find_repos(self):
-        """
-        using info from .treeinfo
-        """
-
-        repos = []
-        try:
-            repopath = self.parser.get('variant-%s' % self.tree['variant'],
-                                       'repository')
-            # remove the /repodata from the entry, this should not be there
-            repopath = repopath.replace('/repodata','')
-            repos.append(dict(
-                              repoid=str(self.tree['variant']),
-                              type='variant',
-                              path=repopath,
-                             )
-                        )
-        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError), e:
-            logging.debug('.treeinfo has no repository for variant %s, %s' % (self.parser.url,e))
-        return repos
-
-
 class TreeInfoRhel7(TreeInfoMixin, Importer):
+    # Used in RHEL7 GA.
+    # Main variant-* section has a repository and a variants key pointing at 
+    # addons (represented as additional variants).
 
     @classmethod
     def is_importer_for(cls, url, options=None):
@@ -1515,12 +1461,8 @@ class TreeInfoRhel7(TreeInfoMixin, Importer):
         for e in cls.excluded:
             if parser.get(e['section'], e['key'], '') != '':
                 return False
-        # XXX Can I use 'short' ?
-        if not (parser.get('product', 'short', '') == "RHEL"
-            and parser.get('product', 'version', '') == '7.0'):
-            return False
-        # Arm uses a different importer because of all the kernel types.
-        if parser.get('general', 'arch') in ['arm', 'armhfp']:
+        if parser.has_option('general', 'addons') or \
+                not parser.has_section_startswith('variant-'):
             return False
         return parser
 
@@ -1553,6 +1495,9 @@ class TreeInfoRhel7(TreeInfoMixin, Importer):
 
 
 class TreeInfoRhel(TreeInfoMixin, Importer):
+    # Only used in RHEL7 prior to GA?!?
+    # No variant-* sections, general has repository key, and addons key 
+    # pointing at addon-* sections.
     """
 [addon-HighAvailability]
 id = HighAvailability
@@ -1613,7 +1558,8 @@ kernel = images/pxeboot/vmlinuz
             return False
         if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
             return False
-        if not (parser.get('general', 'family').startswith(("Red Hat Enterprise Linux", "CentOS", "Red Hat Server"))):
+        if not parser.has_option('general', 'repository') or \
+                parser.has_section_startswith('variant-'):
             return False
         # Arm uses a different importer because of all the kernel types.
         if parser.get('general', 'arch') in ['arm', 'armhfp']:
@@ -1625,6 +1571,8 @@ kernel = images/pxeboot/vmlinuz
         using info from .treeinfo find addon repos
         """
         repos = []
+        repos.append(dict(repoid='distro', type='distro',
+                path=self.parser.get('general', 'repository')))
         try:
             addons = self.parser.get('general', 'addons')
             addons = addons and addons.split(',') or []
@@ -1709,8 +1657,8 @@ kernel = images/pxeboot/vmlinuz
             return False
         if parser.get('images-%s' % parser.get('general','arch'), 'initrd', '') == '':
             return False
-        if not (parser.get('general', 'family').startswith("Red Hat Enterprise Linux")\
-	   or parser.get('general', 'family').startswith("CentOS")):
+        if not parser.has_option('general', 'repository') or \
+                parser.has_section_startswith('variant-'):
             return False
         # Arm uses a different importer because of all the kernel types.
         if parser.get('general', 'arch') not in ['arm', 'armhfp']:

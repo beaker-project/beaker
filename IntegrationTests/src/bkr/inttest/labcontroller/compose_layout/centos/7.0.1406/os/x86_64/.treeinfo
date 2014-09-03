@@ -1,0 +1,31 @@
+[general]
+name = CentOS-7
+family = CentOS
+timestamp = 1404489568.06
+variant = 
+version = 7
+packagedir = 
+arch = x86_64
+
+[stage2]
+mainimage = LiveOS/squashfs.img
+
+[images-x86_64]
+kernel = images/pxeboot/vmlinuz
+initrd = images/pxeboot/initrd.img
+upgrade = images/pxeboot/upgrade.img
+boot.iso = images/boot.iso
+
+[images-xen]
+kernel = images/pxeboot/vmlinuz
+initrd = images/pxeboot/initrd.img
+upgrade = images/pxeboot/upgrade.img
+
+[checksums]
+LiveOS/squashfs.img = sha256:44af7ccda5b405ae7b7b09d464d6e934783bd587167490c0fc7e2ad4b53d67c0
+repodata/repomd.xml = sha256:25f915b01b9c7027bb3c8ac56ef49e112d44f0041ca2885b93f38d6bec55053b
+images/pxeboot/vmlinuz = sha256:871fab25198a4a1d51054ded0ad773868400e71fda6a6f713c218c33c14c03d1
+images/pxeboot/upgrade.img = sha256:3a34292d430e49d6fb167bb384988b31ba255ddbcd79bf108e21c2e689d6043d
+images/pxeboot/initrd.img = sha256:d54b5a52e4727eabf15b5720d889d375794610c7e321af417ea9c72b89b87a8d
+images/efiboot.img = sha256:3e600aaa471fcf044ead002d73fb841ef1af919ca78709ac5f76be457920dd75
+images/boot.iso = sha256:df6dfdd25ebf443ca3375188d0b4b7f92f4153dc910b17bccc886bd54a7b7c86

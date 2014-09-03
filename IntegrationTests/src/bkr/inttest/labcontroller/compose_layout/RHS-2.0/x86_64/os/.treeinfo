@@ -1,0 +1,36 @@
+[variant-RHS]
+addons = 
+identity = RHS/RHS.cert
+repository = RHS/repodata
+
+[images-x86_64]
+kernel = images/pxeboot/vmlinuz
+initrd = images/pxeboot/initrd.img
+boot.iso = images/boot.iso
+
+[general]
+family = Red Hat Storage
+timestamp = 1340281615.186246
+variant = RHS
+totaldiscs = 1
+version = 2.0
+discnum = 1
+packagedir = Packages
+variants = RHS
+arch = x86_64
+
+[images-xen]
+initrd = images/pxeboot/initrd.img
+kernel = images/pxeboot/vmlinuz
+
+[checksums]
+images/pxeboot/initrd.img = sha256:2633f9c594143a892201245d8894702fbf1f5eb9228244030d62d76cd34f0719
+images/efiboot.img = sha256:c61ab1b7a7cb010ac93f73bbe9ee891e7289ab4e2d1e2ebececdd3e7fea52366
+images/boot.iso = sha256:c09cca0bf7b81e38df01dada4fba39c9f433d4b1064f93e04b158acc178c7d4b
+images/pxeboot/vmlinuz = sha256:089fdebfc70a5c599b36f59a73fae46df770fdf5a38b1bd7f69110518240e604
+images/install.img = sha256:fb876babe2f068bcf6c1b4f383c601d06f1f87fb7c208d92e19c1c19815b8306
+images/efidisk.img = sha256:86df65e09f3e5374b74dc8a3961da92a05b5423bca87f667f9726481a00c19dc
+
+[stage2]
+mainimage = images/install.img
+

@@ -1,0 +1,22 @@
+[general]
+family = CentOS
+timestamp = 1381777520.0
+totaldiscs = 1
+version = 5.10
+discnum = 1
+packagedir = CentOS
+arch = i386
+
+[images-i386]
+kernel = images/pxeboot/vmlinuz
+initrd = images/pxeboot/initrd.img
+boot.iso = images/boot.iso
+diskboot.img = images/diskboot.img
+
+[images-xen]
+kernel = images/xen/vmlinuz
+initrd = images/xen/initrd.img
+
+[stage2]
+instimage = images/minstg2.img
+mainimage = images/stage2.img
