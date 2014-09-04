@@ -6,6 +6,11 @@ Glossary
    access policy
        See :term:`system access policy`.
 
+   ack
+       Short for "acknowledgment". When reviewing Beaker job results, this 
+       means that a result has been reviewed and is valid. See also 
+       :term:`nak`.
+
    Beaker server
        Comprised of two main parts, the web UI and the scheduler. The web
        UI is the main interface for Beaker users. The scheduler is
@@ -68,6 +73,11 @@ Glossary
        The Beaker user to whom a system has been loaned. A loan grants 
        exclusive use of a system. Refer to :ref:`loaning-systems`.
 
+   nak
+       Short for "negative acknowledgment". When reviewing Beaker job results, 
+       this means that a result has been reviewed but is waived. See also 
+       :term:`ack`, :term:`waiver`.
+
    quiescent period
        The 'quiescent period' is the minimum amount of time (in seconds)
        between power operations.
@@ -126,6 +136,11 @@ Glossary
        in which they need to run, executes them in order, reports the
        results backs to the server and uploads the logs to the lab
        controller.
+
+   waiver
+       An acknowledgment that a result is invalid and should be disregarded. 
+       Results can be waived by setting the response on the recipe set to 
+       :term:`nak`.
 
    workflow
        A workflow is used to describe job templates for running jobs of a
