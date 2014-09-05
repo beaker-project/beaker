@@ -3457,7 +3457,10 @@ class VirtResource(RecipeResource):
         return span
 
     def install_options(self, distro_tree):
+        # This needs to stay consistent with System.install_options
+        osmajor = distro_tree.distro.osversion.osmajor
         return global_install_options()\
+                .combined_with(osmajor.default_install_options())\
                 .combined_with(InstallOptions.from_strings('', u'console=tty0 console=ttyS0,115200n8', ''))\
                 .combined_with(distro_tree.install_options())
 
@@ -3495,8 +3498,11 @@ class GuestResource(RecipeResource):
         return self.fqdn # just text, not a link
 
     def install_options(self, distro_tree):
-        return global_install_options().combined_with(
-                distro_tree.install_options())
+        # This needs to stay consistent with System.install_options
+        osmajor = distro_tree.distro.osversion.osmajor
+        return global_install_options()\
+                .combined_with(osmajor.default_install_options())\
+                .combined_with(distro_tree.install_options())
 
     def allocate(self):
         self.mac_address = self._lowest_free_mac()

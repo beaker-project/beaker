@@ -2547,3 +2547,48 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
             ''')
         ks = recipe.rendered_kickstart.kickstart
         self.assertIn('export RHTS_OPTION_COMPATIBLE=\n', ks)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1138533
+    def test_guest_kickstarts_use_osmajor_install_options(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <guestrecipe>
+                            <distroRequires>
+                                <distro_name op="=" value="Fedora-18"/>
+                                <distro_arch op="=" value="x86_64" />
+                            </distroRequires>
+                            <hostRequires/>
+                            <task name="/distribution/install" />
+                        </guestrecipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>''')
+        guest = recipe.guests[0]
+        ks = guest.rendered_kickstart.kickstart
+        self.assertIn('export RHTS_OPTION_COMPATIBLE=\n', ks)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1138533
+    def test_dynamic_virt_kickstarts_use_osmajor_install_options(self):
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>''', virt=True)
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertIn('export RHTS_OPTION_COMPATIBLE=\n', ks)
