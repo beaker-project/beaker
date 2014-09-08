@@ -1135,6 +1135,19 @@ class XmlHost(XmlAnd):
     def from_string(cls, xml_string):
         return cls(etree.fromstring(xml_string))
 
+    @property
+    def force(self):
+        """
+        <hostRequires force="$FQDN"/> means to skip all normal host filtering 
+        and always use the named system.
+        """
+        return self.get_xml_attr('force', unicode, None)
+
+    def virtualisable(self):
+        if self.force:
+            return False
+        return super(XmlHost, self).virtualisable()
+
     # Physical Beaker systems are expected to have at least one disk of a sane
     # size, so recipes will often not bother including a requirement on disk
     # size. But OpenStack flavors can have no disk at all, so we filter those

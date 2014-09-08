@@ -860,9 +860,7 @@ def delete_system_access_policy_rules(fqdn):
     else:
         raise MethodNotAllowed405
     for rule in query:
-        system.record_activity(user=identity.current.user, service=u'HTTP',
-                field=u'Access Policy Rule', action=u'Removed',
-                old=repr(rule))
+        rule.record_deletion(service=u'HTTP')
         session.delete(rule)
     return '', 204
 

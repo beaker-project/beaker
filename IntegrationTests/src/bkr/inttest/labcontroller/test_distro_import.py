@@ -226,7 +226,8 @@ class DistroImportTest(unittest.TestCase):
                                     u'name': u'RHEL-7.0-20120711.2',
                                     u'osmajor': u'RedHatEnterpriseLinux7',
                                     u'osminor': u'0',
-                                    u'repos': [{u'path': u'addons/ScalableFileSystem',
+                                    u'repos': [{u'path': u'', u'repoid': u'distro', u'type': u'distro'},
+                                               {u'path': u'addons/ScalableFileSystem',
                                                 u'repoid': u'ScalableFileSystem',
                                                 u'type': u'addon'},
                                                {u'path': u'../../../Workstation-optional/x86_64/os',
@@ -258,7 +259,8 @@ class DistroImportTest(unittest.TestCase):
                                    u'name': u'RHEL-7.0-20120711.2',
                                    u'osmajor': u'RedHatEnterpriseLinux7',
                                    u'osminor': u'0',
-                                   u'repos': [{u'path': u'../../../Server-optional/s390x/os',
+                                   u'repos': [{u'path': u'', u'repoid': u'distro', u'type': u'distro'},
+                                              {u'path': u'../../../Server-optional/s390x/os',
                                                u'repoid': u'Server-optional',
                                                u'type': u'optional'},
                                               {u'path': u'../../../Server-optional/s390x/debuginfo/tree',
@@ -287,7 +289,8 @@ class DistroImportTest(unittest.TestCase):
                                      u'name': u'RHEL-7.0-20120711.2',
                                      u'osmajor': u'RedHatEnterpriseLinux7',
                                      u'osminor': u'0',
-                                     u'repos': [{u'path': u'../../../Server-optional/ppc64/os',
+                                     u'repos': [{u'path': u'', u'repoid': u'distro', u'type': u'distro'},
+                                                {u'path': u'../../../Server-optional/ppc64/os',
                                                  u'repoid': u'Server-optional',
                                                  u'type': u'optional'},
                                                 {u'path': u'../../../Server-optional/ppc64/debuginfo/tree',
@@ -756,6 +759,137 @@ class DistroImportTest(unittest.TestCase):
                                     u'urls': [u'http://localhost:19998/RHEL-6-Server-RHEV/6.4/6.4.1.1/'],
                                     u'variant': u'Server'}
 
+        self.x86_64_centos5 = {
+            u'osmajor': u'CentOS5',
+            u'osminor': u'10',
+            u'name': u'CentOS-5.10',
+            u'variant': u'',
+            u'tree_build_time': u'1381776735.2',
+            u'tags': [],
+            u'repos': [
+                {u'path': u'.', u'repoid': u'distro', u'type': u'distro'},
+            ],
+            u'images': [
+                {u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
+                {u'path': u'images/pxeboot/initrd.img', u'type': u'initrd'},
+            ],
+            u'arches': [],
+            u'urls': [u'http://localhost:19998/centos/5.10/os/x86_64/'],
+            u'arch': u'x86_64',
+            u'kernel_options': None,
+            u'kernel_options_post': None,
+            u'ks_meta': None,
+        }
+        self.i386_centos5 = {
+            u'osmajor': u'CentOS5',
+            u'osminor': u'10',
+            u'name': u'CentOS-5.10',
+            u'variant': u'',
+            u'tree_build_time': u'1381777520.0',
+            u'tags': [],
+            u'repos': [
+                {u'path': u'.', u'repoid': u'distro', u'type': u'distro'},
+            ],
+            u'images': [
+                {u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
+                {u'path': u'images/pxeboot/initrd.img', u'type': u'initrd'},
+            ],
+            u'arches': [],
+            u'urls': [u'http://localhost:19998/centos/5.10/os/i386/'],
+            u'arch': u'i386',
+            u'kernel_options': None,
+            u'kernel_options_post': None,
+            u'ks_meta': None,
+        }
+
+        self.x86_64_centos6 = {
+            u'osmajor': u'CentOS6',
+            u'osminor': u'5',
+            u'name': u'CentOS-6.5',
+            u'variant': u'',
+            u'tree_build_time': u'1385726532.68',
+            u'tags': [],
+            u'repos': [
+                {u'path': u'.', u'repoid': u'distro', u'type': u'distro'},
+            ],
+            u'images': [
+                {u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
+                {u'path': u'images/pxeboot/initrd.img', u'type': u'initrd'},
+            ],
+            u'arches': [],
+            u'urls': [u'http://localhost:19998/centos/6.5/os/x86_64/'],
+            u'arch': u'x86_64',
+            u'kernel_options': None,
+            u'kernel_options_post': None,
+            u'ks_meta': None,
+        }
+        self.i386_centos6 = {
+            u'osmajor': u'CentOS6',
+            u'osminor': u'5',
+            u'name': u'CentOS-6.5',
+            u'variant': u'',
+            u'tree_build_time': u'1385726461.69',
+            u'tags': [],
+            u'repos': [
+                {u'path': u'.', u'repoid': u'distro', u'type': u'distro'},
+            ],
+            u'images': [
+                {u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
+                {u'path': u'images/pxeboot/initrd.img', u'type': u'initrd'},
+            ],
+            u'arches': [],
+            u'urls': [u'http://localhost:19998/centos/6.5/os/i386/'],
+            u'arch': u'i386',
+            u'kernel_options': None,
+            u'kernel_options_post': None,
+            u'ks_meta': None,
+        }
+
+        self.x86_64_centos7 = {
+            u'osmajor': u'CentOS7',
+            u'osminor': u'0',
+            u'name': u'CentOS-7',
+            u'variant': u'',
+            u'tree_build_time': u'1404489568.06',
+            u'tags': [],
+            u'repos': [
+                {u'path': u'.', u'repoid': u'distro', u'type': u'distro'},
+            ],
+            u'images': [
+                {u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
+                {u'path': u'images/pxeboot/initrd.img', u'type': u'initrd'},
+            ],
+            u'arches': [],
+            u'urls': [u'http://localhost:19998/centos/7.0.1406/os/x86_64/'],
+            u'arch': u'x86_64',
+            u'kernel_options': None,
+            u'kernel_options_post': None,
+            u'ks_meta': None,
+        }
+
+        self.rhs2 = {
+            u'osmajor': u'RedHatStorage2',
+            u'osminor': u'0',
+            u'name': u'RHS-2.0-20120621.2',
+            u'variant': u'RHS',
+            u'tree_build_time': u'1340281615.186246',
+            u'tags': [],
+            u'repos': [
+                {u'path': u'RHS', u'repoid': u'RHS', u'type': u'variant'},
+                {u'path': u'../debug', u'repoid': u'debuginfo', u'type': u'debug'},
+            ],
+            u'images': [
+                {u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
+                {u'path': u'images/pxeboot/initrd.img', u'type': u'initrd'},
+            ],
+            u'arches': [],
+            u'urls': [u'http://localhost:19998/RHS-2.0/x86_64/os/'],
+            u'arch': u'x86_64',
+            u'kernel_options': None,
+            u'kernel_options_post': None,
+            u'ks_meta': None,
+        }
+
 
     def _run_import(self, import_args):
         p = subprocess.Popen(import_args,
@@ -773,6 +907,7 @@ class DistroImportTest(unittest.TestCase):
         trees, stderr = self._run_import(
                 ['python', _command, '--debug', '--json', '--dry-run']
                 + additional_import_args)
+        print stderr
         # check logging is working correctly
         self.assertIn('Dry Run only', stderr)
         self.assertIn('Attempting to import: ', stderr)
@@ -983,6 +1118,38 @@ class DistroImportTest(unittest.TestCase):
         trees = self.dry_run_import_trees(['%sFedora-rawhide/' % self.distro_url])
         self.assertItemsEqual(trees, [self.i386_fedora_rawhide,
                 self.x86_64_fedora_rawhide, self.armhfp_fedora_rawhide])
+
+    def test_centos5_tree_import_i386(self):
+        trees = self.dry_run_import_trees(['%scentos/5.10/os/i386' % self.distro_url])
+        self.assertItemsEqual(trees, [self.i386_centos5])
+
+    def test_centos5_tree_import_x86_64(self):
+        trees = self.dry_run_import_trees(['%scentos/5.10/os/x86_64' % self.distro_url])
+        self.assertItemsEqual(trees, [self.x86_64_centos5])
+
+    def test_centos6_tree_import_i386(self):
+        trees = self.dry_run_import_trees(['%scentos/6.5/os/i386' % self.distro_url])
+        self.assertItemsEqual(trees, [self.i386_centos6])
+
+    def test_centos6_tree_import_x86_64(self):
+        trees = self.dry_run_import_trees(['%scentos/6.5/os/x86_64' % self.distro_url])
+        self.assertItemsEqual(trees, [self.x86_64_centos6])
+
+    def test_centos7_tree_import_x86_64(self):
+        trees = self.dry_run_import_trees(['%scentos/7.0.1406/os/x86_64' % self.distro_url])
+        self.assertItemsEqual(trees, [self.x86_64_centos7])
+
+    def test_rhs2_compose_import(self):
+        trees = self.dry_run_import_trees(['%sRHS-2.0' % self.distro_url])
+        self.assertItemsEqual(trees, [self.rhs2])
+
+    def test_rhs2_tree_import(self):
+        trees = self.dry_run_import_trees(['%sRHS-2.0/x86_64/os' % self.distro_url])
+        # See https://bugzilla.redhat.com/show_bug.cgi?id=910243
+        # The following is actually a bug, but current behaviour
+        # if there is no 'name' in .treeinfo's [general] section
+        self.rhs2['name'] = u'RedHatStorage-2.0'
+        self.assertItemsEqual(trees, [self.rhs2])
 
     def test_selective_compose_import(self):
         trees = self.dry_run_import_trees(['--arch', 'i386',

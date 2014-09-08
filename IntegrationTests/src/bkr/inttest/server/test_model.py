@@ -1431,6 +1431,13 @@ class CheckDynamicVirtTest(unittest.TestCase):
             msg = "%s did not preclude virt" % arch
             self.assertVirtPrecluded(recipe, msg)
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1136144
+    def test_hostRequires_force_precludes_virt(self):
+        recipe = data_setup.create_recipe()
+        recipe.host_requires = u'<hostRequires force="somesystem.example.invalid"/>'
+        data_setup.create_job_for_recipes([recipe])
+        self.assertVirtPrecluded(recipe, 'force="" should preclude virt')
+
 
 class MachineRecipeTest(unittest.TestCase):
 

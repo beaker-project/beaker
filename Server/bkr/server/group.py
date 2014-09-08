@@ -526,7 +526,7 @@ class Groups(AdminPage):
                 if x.can_edit(identity.current.user):
                     return self.delete_link.display(dict(group_id=x.group_id),
                                              action=url('remove'),
-                                             action_text='Remove')
+                                             action_text='Delete Group')
                 else:
                     return ''
             except AttributeError:
@@ -723,6 +723,11 @@ class Groups(AdminPage):
         if group.jobs:
             flash(_(u'Cannot delete a group which has associated jobs'))
             redirect('../groups/mine')
+
+        # Record the access policy rules that will be removed
+        # before deleting the group
+        for rule in group.system_access_policy_rules:
+            rule.record_deletion()
 
         session.delete(group)
         activity = Activity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")

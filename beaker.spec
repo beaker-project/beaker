@@ -27,10 +27,10 @@
 # not representable in RPM. For example, a release candidate might be 0.15.0rc1 
 # but that is not usable for the RPM Version because it sorts higher than 
 # 0.15.0, so the RPM will have Version 0.15.0 and Release 0.rc1 in that case.
-%global upstream_version 0.17.3
+%global upstream_version 0.18.0
 
 Name:           beaker
-Version:        0.17.3
+Version:        0.18.0
 Release:        1%{?dist}
 Summary:        Full-stack software and hardware integration testing system
 Group:          Applications/Internet
@@ -487,9 +487,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 %{_bindir}/beaker-refresh-ldap
 %{_bindir}/beaker-create-kickstart
 %{_bindir}/beaker-create-ipxe-image
-%{_mandir}/man1/beaker-create-ipxe-image.1.gz
-%{_mandir}/man1/beaker-create-kickstart.1.gz
-%{_mandir}/man1/beaker-usage-reminder.1.gz
+%{_mandir}/man8/beaker-create-ipxe-image.8.gz
+%{_mandir}/man8/beaker-create-kickstart.8.gz
+%{_mandir}/man8/beaker-repo-update.8.gz
+%{_mandir}/man8/beaker-usage-reminder.8.gz
 
 %if %{with_systemd}
 %{_unitdir}/beakerd.service
@@ -520,9 +521,10 @@ rm -rf %{_var}/lib/beaker/osversion_data
 # If we're not building the -server subpackage we need to tell RPM to ignore 
 # the server man pages. They will always be present because the docs build 
 # always installs them all.
-%exclude %{_mandir}/man1/beaker-create-ipxe-image.1.gz
-%exclude %{_mandir}/man1/beaker-create-kickstart.1.gz
-%exclude %{_mandir}/man1/beaker-usage-reminder.1.gz
+%exclude %{_mandir}/man8/beaker-create-ipxe-image.8.gz
+%exclude %{_mandir}/man8/beaker-create-kickstart.8.gz
+%exclude %{_mandir}/man8/beaker-repo-update.8.gz
+%exclude %{_mandir}/man8/beaker-usage-reminder.8.gz
 %endif
 
 %if %{with inttests}

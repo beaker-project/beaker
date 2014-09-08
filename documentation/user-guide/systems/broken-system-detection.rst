@@ -6,7 +6,7 @@ Broken system detection
 
 The Beaker scheduler includes some heuristics to automatically set a system's 
 condition to Broken if the system appears to be unable to successfully run 
-recipes. The system owner is notified by e-mail so that they can take 
+recipes. The system owner is notified by email so that they can take 
 corrective action before setting the system's condition back to Automated.
 
 The feature is intended to prevent a misconfigured or faulty system from 

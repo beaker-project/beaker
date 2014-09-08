@@ -103,6 +103,8 @@ def update_repos(baseurl, basepath):
         # urlgrabber < 3.9.1 doesn't handle unicode urls
         osmajor = unicode(osmajor).encode('utf8')
         dest = "%s/%s" % (basepath,osmajor)
+        if os.path.islink(dest):
+            continue # skip symlinks
         syncer = RepoSyncer(urlparse.urljoin(baseurl, '%s/' % urllib.quote(osmajor)), dest)
         try:
             has_new_packages = syncer.sync()

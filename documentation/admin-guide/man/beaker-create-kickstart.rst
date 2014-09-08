@@ -15,13 +15,14 @@ Description
 
 ``beaker-create-kickstart`` is used to generate customised kickstarts. Its
 main purpose is for testing alternative templates, template variables, and
-kernel options. It requires read access to the beaker server
-configuration and hence should be run as root or as another user with
-read access to the configuration file.
+kernel options.
 
 The generated kickstart is based off of a combination of a running/completed
 recipe, system, and distro tree. It can then be further modified with any of
 the available options. The resulting kickstart will be printed to stdout.
+
+This command requires read access to the Beaker server configuration. Run it as 
+root or as another user with read access to the configuration file.
 
 
 Options

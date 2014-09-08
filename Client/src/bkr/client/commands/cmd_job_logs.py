@@ -58,7 +58,6 @@ See also
 
 import sys
 from bkr.client import BeakerCommand
-import requests
 
 class Job_Logs(BeakerCommand):
     """Print URLs of recipe log files"""
@@ -71,7 +70,7 @@ class Job_Logs(BeakerCommand):
         self.parser.usage = "%%prog %s [options] <taskspec>..." % self.normalized_name
 
     def _log_size(self, url):
-        response = self.requests_session.head(url)
+        response = self.session.head(url)
         if response.status_code in (404, 410):
             return '<missing>'
         elif response.status_code >= 400:
@@ -85,7 +84,7 @@ class Job_Logs(BeakerCommand):
         self.check_taskspec_args(args)
 
         self.set_hub(**kwargs)
-        self.requests_session = requests.Session()
+        self.session = self.requests_session()
         for task in args:
             logfiles = self.hub.taskactions.files(task)
             for log in logfiles:

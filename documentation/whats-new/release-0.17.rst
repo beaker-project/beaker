@@ -219,9 +219,9 @@ A number of bug fixes are also included in this release.
   a single user account. Previously the administrator could create such 
   a configuration, but it would cause errors when the lab controller daemons 
   authenticated to Beaker. (Contributed by Dan Callaghan)
-* :issue:`1095010`: Beaker no longer enforces uniqueness of user e-mail
+* :issue:`1095010`: Beaker no longer enforces uniqueness of user email
   addresses. This corrects an issue where Beaker would not allow an LDAP 
-  account to log in if another existing account had the same e-mail address. 
+  account to log in if another existing account had the same email address. 
   (Contributed by Dan Callaghan)
 * :issue:`997830`: Usernames consisting only of whitespace characters are no
   longer accepted. (Contributed by Dan Callaghan)

@@ -22,11 +22,54 @@ from the nearest mirror in each lab.
 You can check that the distros were added successfully by browsing the Distros 
 page (see :ref:`distros`).
 
-.. note:: The Beaker server stores a local copy of the harness packages under 
-   ``/var/www/beaker/harness``, arranged as one Yum repo for every distro 
-   family. The first time you import a new distro family you will need to run 
-   ``beaker-repo-update`` on the server to populate the harness repo for the 
-   new distro family.
+Fetching harness packages
+-------------------------
+
+The first time you import a new distro family you will need to run 
+:program:`beaker-repo-update` on the server to populate the harness repo for 
+the new distro family.
+See :doc:`beaker-repo-update <man/beaker-repo-update>` for more details.
+
+If the distro family is not currently supported by Beaker (for example, if it 
+is a derivative of Fedora or Red Hat Enterprise Linux with a different name) 
+you can instead create a symlink for the harness repo, pointing at an existing 
+compatible distro family::
+
+    ln -s RedHatEnterpriseLinux6 /var/www/beaker/harness/MyCustomDistro6
+
+.. _distro-features:
+
+Install options for distro features
+-----------------------------------
+
+Beaker uses a number of kickstart metadata variables to determine which 
+features are supported by the distro, in order to generate valid kickstarts and 
+scripts when provisioning.
+
+If the distro is supported by Beaker, the distro family will be recognised by 
+name and the correct install options will be automatically populated. In this 
+case you do not need to explicitly set them. Beaker will generate valid 
+kickstarts without any further intervention.
+
+However, if Beaker does not recognize the distro, it will be assumed to have 
+all the latest features (essentially equivalent to the latest Fedora release). 
+If necessary, you can use the :ref:`OS versions page <admin-os-versions>` to 
+set install options for the distro family.
+
+For example, if you import a custom distro based on Red Hat Enterprise Linux 6, 
+you should set the following kickstart metadata variables on your custom distro 
+family.
+This indicates that the distro does not use systemd or chrony, and that the 
+installer does not support ``autopart --type`` or ``bootloader 
+--leavebootorder``.
+
+::
+
+    !has_systemd !has_chrony !has_autopart_type !has_leavebootorder
+
+Refer to the documentation about :ref:`kickstart metadata  
+<kickstart-metadata-distro-features>` for a complete list of variables relating 
+to distro features.
 
 .. _stable-distro-tagging:
 

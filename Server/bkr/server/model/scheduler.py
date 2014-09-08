@@ -2638,12 +2638,11 @@ class MachineRecipe(Recipe):
         # delayed import to avoid circular dependency
         from bkr.server.needpropertyxml import XmlHost
         host_filter = XmlHost.from_string(self.host_requires)
-        force_fqdn = host_filter.get_xml_attr('force', unicode, None)
-        if not force_fqdn:
+        if not host_filter.force:
             systems = host_filter.apply_filter(systems). \
                       filter(System.status == SystemStatus.automated)
         else:
-            systems = systems.filter(System.fqdn == force_fqdn). \
+            systems = systems.filter(System.fqdn == host_filter.force). \
                       filter(System.status != SystemStatus.removed)
 
         systems = systems.filter(System.can_reserve(self.recipeset.job.owner))

@@ -29,13 +29,16 @@ man_pages = [
     ('man/beaker-wizard', 'beaker-wizard', 'Tool to ease the creation of a new Beaker task',
         [u'Petr Splichal <psplicha@redhat.com>'], 1),
     ('admin-guide/man/beaker-create-kickstart', 'beaker-create-kickstart', 'Generate Anaconda kickstarts',
-        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1),
+        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
     ('admin-guide/man/beaker-create-ipxe-image', 'beaker-create-ipxe-image',
         'Generate and upload iPXE boot image to Glance',
-        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1),
+        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
+    ('admin-guide/man/beaker-repo-update', 'beaker-repo-update',
+        'Update cached harness packages',
+        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
     ('admin-guide/man/beaker-usage-reminder', 'beaker-usage-reminder',
         'Send Beaker usage reminder',
-        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 1),
+        [u'The Beaker team <beaker-devel@lists.fedorahosted.org>'], 8),
 ]
 man_show_urls = True
 

@@ -189,7 +189,7 @@ Other enhancements
   :issue:`559332`.)
 
 - A new command, ``bkr update-prefs``, lets you update your user preferences in
-  Beaker. In this first release, it only supports updating your e-mail address. 
+  Beaker. In this first release, it only supports updating your email address. 
   (Contributed by Qixiang Wan in :issue:`832937`.)
 
 - The ``beaker-sync-tasks`` command is a new server side tool to sync the task

@@ -303,7 +303,7 @@ system as a user over SSH or on the console.
 
 .. envvar:: SUBMITTER
 
-   E-mail address of the Beaker user who submitted the current job.
+   Email address of the Beaker user who submitted the current job.
 
 .. envvar:: JOBID
             RECIPESETID
