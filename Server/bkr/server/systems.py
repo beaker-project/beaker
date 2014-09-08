@@ -898,8 +898,11 @@ def provision_system(fqdn):
     return 'Provisioned', 201
 
 @app.route('/systems/<fqdn>/commands/', methods=['GET'])
-@json_collection(sort_columns={
+@json_collection(columns={
     'user': User.user_name,
+    'user.user_name': User.user_name,
+    'user.email_address': User.email_address,
+    'user.display_name': User.display_name,
     'service': CommandActivity.service,
     'submitted': CommandActivity.created,
     'action': CommandActivity.action,
@@ -948,8 +951,11 @@ def system_command(fqdn):
     return jsonify(command.__json__())
 
 @app.route('/systems/<fqdn>/activity/', methods=['GET'])
-@json_collection(sort_columns={
+@json_collection(columns={
     'user': User.user_name,
+    'user.user_name': User.user_name,
+    'user.email_address': User.email_address,
+    'user.display_name': User.display_name,
     'service': SystemActivity.service,
     'created': SystemActivity.created,
     'field_name': SystemActivity.field_name,

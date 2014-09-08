@@ -700,6 +700,22 @@ class SystemViewTestWD(WebDriverTestCase):
                 % (row, column)).text for row in [1, 2, 3]]
         self.assertEquals(cell_values, ['aaa', 'bbb', 'ccc'])
 
+    def test_can_filter_activity_grid(self):
+        with session.begin():
+            self.system.record_activity(service=u'testdata', field=u'status_reason',
+                    new=u'Simon says')
+            self.system.record_activity(service=u'testdata', field=u'status_reason',
+                    new=u'Archer says')
+        b = self.browser
+        login(b)
+        self.go_to_system_view(self.system, tab=u'Activity')
+        tab = b.find_element_by_id('history')
+        tab.find_element_by_xpath('.//input[@type="search"]')\
+            .send_keys('"Simon says"\n')
+        tab.find_element_by_xpath('.//table[contains(@class, "table") and '
+                'not(.//td[7]/text()="Archer says") and '
+                './/td[7]/text()="Simon says"]')
+
     def test_add_cc(self):
         with session.begin():
             self.system.cc = []

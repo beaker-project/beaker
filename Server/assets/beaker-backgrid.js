@@ -49,6 +49,37 @@ window.BackgridDateTimeCell = Backgrid.Cell.extend({
     },
 });
 
+var BeakerBackgridFilter = Backbone.View.extend({
+    tagName: 'form',
+    className: 'grid-filter form-search',
+    template: JST['backgrid-filter'],
+    events: {
+        'submit': 'submit',
+        'keypress input': 'maybe_changed',
+        'change input': 'maybe_changed',
+        'input input': 'maybe_changed',
+    },
+    initialize: function () {
+        this.collection.queryParams['q'] = _.bind(this.val, this);
+    },
+    render: function () {
+        this.$el.html(this.template());
+        return this;
+    },
+    val: function () {
+        return this.$('input').val();
+    },
+    submit: function (evt) {
+        this.last_val = this.val();
+        this.collection.getFirstPage();
+        if (evt) evt.preventDefault();
+    },
+    maybe_changed: _.debounce(function () {
+        if (this.val() != this.last_val)
+            this.submit();
+    }, 500 /* ms */),
+});
+
 // Derived from: backgrid-paginator <http://github.com/wyuenho/backgrid-paginator>
 // Adjusted to match Beaker's convention for grid pagination controls
 var BeakerBackgridPaginator = Backbone.View.extend({
@@ -80,6 +111,9 @@ window.BeakerGrid = Backbone.View.extend({
             collection: collection,
             columns: options.columns,
         });
+        this.filter_control = new BeakerBackgridFilter({
+            collection: collection,
+        });
         this.top_paginator = new BeakerBackgridPaginator({
             collection: collection,
         });
@@ -94,6 +128,7 @@ window.BeakerGrid = Backbone.View.extend({
     },
     render: function () {
         this.$el.empty()
+            .append(this.filter_control.render().el)
             .append(this.top_paginator.render().el)
             .append(this.grid.render().el)
             .append(this.bottom_paginator.render().el);

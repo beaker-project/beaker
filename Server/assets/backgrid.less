@@ -61,3 +61,19 @@
 .backgrid-initial-loading-indicator {
     text-align: center;
 }
+
+.grid-filter {
+    float: left;
+    input.search-query {
+        width: 20em;
+        padding-left: 2*@baseFontSize;
+    }
+    &:before {
+        content: @search;
+        font-family: "FontAwesome";
+        opacity: 0.6;
+        position: absolute;
+        height: @baseLineHeight;
+        padding: 4px 10px; // matches default for <input/>
+    }
+}

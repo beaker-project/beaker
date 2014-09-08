@@ -14,8 +14,9 @@ from flask import request, jsonify, redirect
 from sqlalchemy.orm.exc import NoResultFound
 from bkr.server import identity
 from bkr.server.bexceptions import BX, InsufficientSystemPermissions
+from bkr.server.search_utility import lucene_to_sqlalchemy
 
-def json_collection(sort_columns=None, min_page_size=20, max_page_size=500,
+def json_collection(columns=None, min_page_size=20, max_page_size=500,
         default_page_size=20, force_paging_for_count=500):
     """
     Decorator factory for Flask request handlers which want to return 
@@ -27,22 +28,30 @@ def json_collection(sort_columns=None, min_page_size=20, max_page_size=500,
         page
             Return this page number within the collection. Pages are numbered 
             starting from 1.
+        q
+            Apply this filter to the collection, prior to pagination. Uses 
+            Lucene-compatible query syntax.
         sort_by
             Sort entities by this key, prior to pagination.
         order
             'asc' or 'desc' for ascending or descending sort respectively.
     """
-    sort_columns = sort_columns or {}
+    if columns is None:
+        columns = {}
     def decorator(func):
         @functools.wraps(func)
         def _json_collection_decorated(*args, **kwargs):
             result = {}
             query = func(*args, **kwargs)
+            if request.args.get('q') and columns:
+                query = query.filter(lucene_to_sqlalchemy(request.args['q'],
+                        search_columns=columns,
+                        default_columns=set(columns.values())))
             total_count = query.count()
             result['count'] = total_count
-            if request.args.get('sort_by') in sort_columns:
+            if request.args.get('sort_by') in columns:
                 result['sort_by'] = request.args['sort_by']
-                sort_column = sort_columns[request.args['sort_by']]
+                sort_column = columns[request.args['sort_by']]
                 if request.args.get('order') == 'desc':
                     result['order'] = 'desc'
                     sort_criterion = sort_column.desc()
