@@ -97,6 +97,11 @@ See :ref:`kickstart-metadata`.
 Other new features and enhancements
 -----------------------------------
 
+When Beaker's experimental :ref:`OpenStack integration <openstack>` integration 
+is enabled, the :program:`beaker-watchdog` daemon now captures and stores the 
+serial console log for recipes running on dynamic VMs. (Contributed by Matt Jia 
+in :issue:`950903`.)
+
 The :program:`bkr job-logs` command has a new option :option:`--size <bkr 
 job-logs --size>` to print the size of each log file in the listing. 
 (Contributed by Dan Callaghan in :issue:`1128048`.)
