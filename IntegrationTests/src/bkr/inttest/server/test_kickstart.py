@@ -2549,7 +2549,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
         self.assertIn('export RHTS_OPTION_COMPATIBLE=\n', ks)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1138533
-    def test_guest_kickstarts_use_osmajor_install_options(self):
+    def test_guest_kickstarts_use_osmajor_default_install_options(self):
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
@@ -2576,7 +2576,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
         self.assertIn('export RHTS_OPTION_COMPATIBLE=\n', ks)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1138533
-    def test_dynamic_virt_kickstarts_use_osmajor_install_options(self):
+    def test_dynamic_virt_kickstarts_use_osmajor_default_install_options(self):
         recipe = self.provision_recipe('''
             <job>
                 <whiteboard/>
@@ -2592,3 +2592,54 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
             </job>''', virt=True)
         ks = recipe.rendered_kickstart.kickstart
         self.assertIn('export RHTS_OPTION_COMPATIBLE=\n', ks)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1139951
+    def test_guest_kickstarts_use_osmajor_custom_install_options(self):
+        osmajor = OSMajor.by_name(u'Fedora18')
+        osmajor.install_options_by_arch[None] = OSMajorInstallOptions(
+                ks_meta=u'!has_systemd')
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <guestrecipe>
+                            <distroRequires>
+                                <distro_name op="=" value="Fedora-18"/>
+                                <distro_arch op="=" value="x86_64" />
+                            </distroRequires>
+                            <hostRequires/>
+                            <task name="/distribution/install" />
+                        </guestrecipe>
+                        <distroRequires>
+                            <distro_name op="=" value="RHEL-6.2" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>''')
+        guest = recipe.guests[0]
+        ks = guest.rendered_kickstart.kickstart
+        self.assertNotIn('export RHTS_OPTION_COMPATIBLE=\n', ks)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1139951
+    def test_dynamic_virt_kickstarts_use_osmajor_custom_install_options(self):
+        osmajor = OSMajor.by_name(u'Fedora18')
+        osmajor.install_options_by_arch[None] = OSMajorInstallOptions(
+                ks_meta=u'!has_systemd')
+        recipe = self.provision_recipe('''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="Fedora-18" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>''', virt=True)
+        ks = recipe.rendered_kickstart.kickstart
+        self.assertNotIn('export RHTS_OPTION_COMPATIBLE=\n', ks)
