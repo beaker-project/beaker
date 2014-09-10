@@ -160,3 +160,30 @@ A number of bug fixes are also included in this release.
 * :issue:`1121763`: The markup on the system page has been adjusted to make it
   easier to copy the system FQDN from the page header. (Contributed by Matt 
   Jia)
+
+
+Maintenance updates
+-------------------
+
+The following fixes have been included in Beaker 0.18 maintenance updates.
+
+Beaker 0.18.1
+~~~~~~~~~~~~~
+
+* :issue:`1138533`: Fixed a regression in kickstart generation, where the
+  distro feature variables were not being correctly populated for guest recipes 
+  and recipes running on OpenStack. (Contributed by Dan Callaghan)
+* :issue:`1139951`: OS major install options are now also correctly obeyed by
+  guest recipes and recipes running on OpenStack. (Contributed by Dan 
+  Callaghan)
+* :issue:`1070575`: The :program:`beaker-import` command can now correctly
+  import all CentOS releases, as well as any other distros which have 
+  compatible :file:`.composeinfo` or :file:`.treeinfo` files, regardless of 
+  their product name. (Contributed by Dan Callaghan)
+* :issue:`1136144`: Recipes with ``<hostRequires force=""/>`` were being
+  incorrectly dispatched to OpenStack (if configured). These recipes are now 
+  limited to run only on the named system in Beaker's inventory. (Contributed 
+  by Dan Callaghan)
+* :issue:`1127509`, :issue:`1129020`: Expanded the documentation for job result
+  waivers (ack/nak) and external watchdog scripts. (Contributed by Dan 
+  Callaghan)
