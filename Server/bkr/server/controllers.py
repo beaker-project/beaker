@@ -66,6 +66,7 @@ import bkr.server.recipes
 import bkr.server.rdf
 import kid
 import cherrypy
+from itertools import chain
 import re
 import os
 import pkg_resources
@@ -291,7 +292,7 @@ class Root(RPCRoot):
             distro_tree = DistroTree.by_id(distro_tree_id)
         except NoResultFound:
             return dict(ks_meta=None)
-        install_options = system.install_options(distro_tree)
+        install_options = system.manual_provision_install_options(distro_tree)
         return install_options.as_strings()
 
     @expose(format='json')
@@ -1557,8 +1558,9 @@ class Root(RPCRoot):
 
         try:
             from bkr.server.kickstart import generate_kickstart
-            install_options = system.install_options(distro_tree).combined_with(
-                    InstallOptions.from_strings(ks_meta, koptions, koptions_post))
+            install_options = system.manual_provision_install_options(distro_tree)\
+                .combined_with(InstallOptions.from_strings(
+                        ks_meta, koptions, koptions_post))
             if 'ks' not in install_options.kernel_options:
                 kickstart = generate_kickstart(install_options,
                         distro_tree=distro_tree, system=system, user=user)

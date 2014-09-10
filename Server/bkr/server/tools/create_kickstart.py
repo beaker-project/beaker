@@ -4,6 +4,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+from itertools import chain
 import sys
 import optparse
 from turbogears.database import session
@@ -11,7 +12,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from bkr.common import __version__
 from bkr.server.model import DistroTree, System, User, Recipe
 from bkr.server.util import load_config_or_exit
-from bkr.server.installopts import InstallOptions
+from bkr.server.installopts import InstallOptions, global_install_options
 from bkr.server.kickstart import generate_kickstart, template_env, add_to_template_searchpath
 
 __description__ = 'Creates an Anaconda kickstart file'
@@ -71,8 +72,8 @@ def main(*args):
                 raise RuntimeError("System '%s' does not exist" % fqdn)
 
             if distro_tree and not options.recipe_id:
-                install_options = system.install_options(distro_tree).combined_with(
-                    InstallOptions.from_strings(ks_meta, None, koptions_post))
+                install_options = system.manual_provision_install_options(distro_tree)\
+                    .combined_with(InstallOptions.from_strings(ks_meta, None, koptions_post))
 
         if options.recipe_id:
             try:
@@ -87,13 +88,14 @@ def main(*args):
             if not distro_tree:
                 distro_tree = recipe.distro_tree
 
-            install_options = system.install_options(distro_tree)\
-                                             .combined_with(recipe.generated_install_options())\
-                                             .combined_with(InstallOptions.from_strings(recipe.ks_meta,
-                                                                                        recipe.kernel_options, 
-                                                                                        recipe.kernel_options_post))\
-                                             .combined_with(InstallOptions.from_strings(ks_meta, None,
-                                                                                        koptions_post))
+            install_options = InstallOptions.reduce(chain(
+                    [global_install_options()],
+                    distro_tree.install_options(),
+                    system.install_options(distro_tree),
+                    [recipe.generated_install_options(),
+                     InstallOptions.from_strings(recipe.ks_meta,
+                        recipe.kernel_options, recipe.kernel_options_post),
+                     InstallOptions.from_strings(ks_meta, None, koptions_post)]))
 
             ks_appends = [ks_append.ks_append for ks_append \
                           in recipe.ks_appends]

@@ -247,8 +247,9 @@ class SystemsController(controllers.Controller):
 
         # ensure system-specific defaults are used
         # (overriden by this method's arguments)
-        options = system.install_options(distro_tree).combined_with(
-                InstallOptions.from_strings(ks_meta or '',
+        options = system.manual_provision_install_options(distro_tree)\
+            .combined_with(InstallOptions.from_strings(
+                    ks_meta or '',
                     kernel_options or '',
                     kernel_options_post or ''))
         if 'ks' not in options.kernel_options:

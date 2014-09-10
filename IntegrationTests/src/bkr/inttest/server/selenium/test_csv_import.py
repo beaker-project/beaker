@@ -248,10 +248,11 @@ class CSVImportTest(WebDriverTestCase):
 
         with session.begin():
             system = System.query.filter(System.fqdn == fqdn).one()
-            self.assertEqual(system.install_options(distro_tree).ks_meta['mode'],
-                             'cmdline')
-            self.assertEqual(system.install_options(distro_tree).kernel_options_post['console'],
-                             'ttyS0')
+            arch = Arch.by_name(u'x86_64')
+            osmajor = OSMajor.by_name(u'MyEnterpriseLinux')
+            p = system.provisions[arch].provision_families[osmajor]
+            self.assertEquals(p.ks_meta, u'mode=cmdline')
+            self.assertEquals(p.kernel_options_post, u'console=ttyS0')
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1058549
     def test_groups_non_existent_system(self):

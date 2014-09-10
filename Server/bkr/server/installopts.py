@@ -109,6 +109,11 @@ class InstallOptions(object):
                 _consolidate(self.kernel_options, other.kernel_options),
                 _consolidate(self.kernel_options_post, other.kernel_options_post))
 
+    @classmethod
+    def reduce(cls, iterable):
+        return reduce(lambda left, right: left.combined_with(right),
+                iterable, cls({}, {}, {}))
+
 def global_install_options():
     return InstallOptions.from_strings(
             config.get('beaker.ks_meta', ''),

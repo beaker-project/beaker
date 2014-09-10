@@ -8,6 +8,7 @@ import sys
 import logging
 from datetime import datetime, timedelta
 from hashlib import md5
+from itertools import chain
 import urllib
 import xml.dom.minidom
 import lxml.etree
@@ -513,42 +514,30 @@ class System(DeclarativeMappedObject, ActivityMixin):
 
     def install_options(self, distro_tree):
         """
-        Return install options based on distro selected.
+        Yields install options based on distro selected.
         Inherit options from Arch -> Family -> Update
         """
-        # Don't forget to keep VirtResource.install_options and 
-        # GuestResource.install_options consistent with this!
-        osmajor = distro_tree.distro.osversion.osmajor
-        result = global_install_options()
-        result = result.combined_with(osmajor.default_install_options())
-        # arch=None means apply to all arches
-        if None in osmajor.install_options_by_arch:
-            op = osmajor.install_options_by_arch[None]
-            op_opts = InstallOptions.from_strings(op.ks_meta, op.kernel_options,
-                    op.kernel_options_post)
-            result = result.combined_with(op_opts)
-        if distro_tree.arch in osmajor.install_options_by_arch:
-            opa = osmajor.install_options_by_arch[distro_tree.arch]
-            opa_opts = InstallOptions.from_strings(opa.ks_meta, opa.kernel_options,
-                    opa.kernel_options_post)
-            result = result.combined_with(opa_opts)
-        result = result.combined_with(distro_tree.install_options())
         if distro_tree.arch in self.provisions:
             pa = self.provisions[distro_tree.arch]
-            pa_opts = InstallOptions.from_strings(pa.ks_meta, pa.kernel_options,
+            yield InstallOptions.from_strings(pa.ks_meta, pa.kernel_options,
                     pa.kernel_options_post)
-            result = result.combined_with(pa_opts)
             if distro_tree.distro.osversion.osmajor in pa.provision_families:
                 pf = pa.provision_families[distro_tree.distro.osversion.osmajor]
-                pf_opts = InstallOptions.from_strings(pf.ks_meta,
+                yield InstallOptions.from_strings(pf.ks_meta,
                         pf.kernel_options, pf.kernel_options_post)
-                result = result.combined_with(pf_opts)
                 if distro_tree.distro.osversion in pf.provision_family_updates:
                     pfu = pf.provision_family_updates[distro_tree.distro.osversion]
-                    pfu_opts = InstallOptions.from_strings(pfu.ks_meta,
+                    yield InstallOptions.from_strings(pfu.ks_meta,
                             pfu.kernel_options, pfu.kernel_options_post)
-                    result = result.combined_with(pfu_opts)
-        return result
+
+    def manual_provision_install_options(self, distro_tree):
+        """
+        Manual as in, not a recipe.
+        """
+        return InstallOptions.reduce(chain(
+                [global_install_options()],
+                distro_tree.install_options(),
+                self.install_options(distro_tree)))
 
     @property
     def has_efi(self):
@@ -1113,7 +1102,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     # and ignore any errors.
                     try:
                         from bkr.server.kickstart import generate_kickstart
-                        install_options = self.install_options(self.reprovision_distro_tree)
+                        install_options = self.manual_provision_install_options(
+                                self.reprovision_distro_tree)
                         if 'ks' not in install_options.kernel_options:
                             rendered_kickstart = generate_kickstart(install_options,
                                     distro_tree=self.reprovision_distro_tree,

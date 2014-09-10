@@ -604,7 +604,22 @@ class DistroTree(DeclarativeMappedObject):
                 return image
 
     def install_options(self):
-        return InstallOptions.from_strings(self.ks_meta,
+        """
+        Yields install options for this distro tree, as well as any inherited 
+        from the OS major level.
+        """
+        osmajor = self.distro.osversion.osmajor
+        yield osmajor.default_install_options()
+        # arch=None means apply to all arches
+        if None in osmajor.install_options_by_arch:
+            op = osmajor.install_options_by_arch[None]
+            yield InstallOptions.from_strings(op.ks_meta, op.kernel_options,
+                    op.kernel_options_post)
+        if self.arch in osmajor.install_options_by_arch:
+            opa = osmajor.install_options_by_arch[self.arch]
+            yield InstallOptions.from_strings(opa.ks_meta, opa.kernel_options,
+                    opa.kernel_options_post)
+        yield InstallOptions.from_strings(self.ks_meta,
                 self.kernel_options, self.kernel_options_post)
 
 class DistroTreeRepo(DeclarativeMappedObject):

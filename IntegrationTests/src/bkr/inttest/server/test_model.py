@@ -132,7 +132,7 @@ class TestSystem(unittest.TestCase):
         system = data_setup.create_system()
         system.provisions[distro_tree.arch] = Provision(arch=distro_tree.arch,
                 kernel_options='console=ttyS0 ksdevice=eth0 vnc')
-        opts = system.install_options(distro_tree).combined_with(
+        opts = system.manual_provision_install_options(distro_tree).combined_with(
                 InstallOptions.from_strings('', u'ksdevice=eth1 !vnc', ''))
         # ksdevice should be overriden but console should be inherited
         # noverifyssl comes from server-test.cfg

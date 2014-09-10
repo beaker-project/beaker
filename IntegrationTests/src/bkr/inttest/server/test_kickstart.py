@@ -1881,7 +1881,7 @@ mysillypackage
         # recipe defined at all (which can happen when systems are
         # switched to manual mode instead of automatic)
         tree = self.rhel62_server_x86_64
-        ks = generate_kickstart(self.system.install_options(tree),
+        ks = generate_kickstart(self.system.manual_provision_install_options(tree),
                                 tree, self.system, self.user).kickstart
         compare_expected('RedHatEnterpriseLinux6-manual-defaults', None, ks)
 
@@ -1889,7 +1889,7 @@ mysillypackage
         # We need one or the other in order to find the lab controller
         tree = self.rhel62_server_x86_64
         self.assertRaises(ValueError, generate_kickstart,
-                          self.system.install_options(tree),
+                          self.system.manual_provision_install_options(tree),
                           tree, None, None)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=834147
@@ -2516,7 +2516,7 @@ part /mnt/testarea2 --size=10240 --fstype btrfs
         self.system.provisions[self.system.arch[0]] = Provision(arch=self.system.arch[0],
                                                                 ks_meta=u'remote_post=http://path/to/myscript')
         tree = self.rhel62_server_x86_64
-        install_options = self.system.install_options(tree)
+        install_options = self.system.manual_provision_install_options(tree)
         ks = generate_kickstart(install_options, tree, self.system, self.user).kickstart
         self.assertIn("fetch remote_script http://path/to/myscript "
                       "&& chmod +x remote_script && ./remote_script", ks.splitlines())
