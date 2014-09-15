@@ -63,9 +63,11 @@ def _lucene_term_clause(column, term):
 
 _lucene_range_term_separator_pattern = re.compile(r'\s+TO\s+')
 def _lucene_range_clause(column, range_term):
-    range_terms = _lucene_range_term_separator_pattern.split(range_term)
+    start_inclusive = range_term.startswith('[')
+    end_inclusive = range_term.endswith(']')
+    range_terms = _lucene_range_term_separator_pattern.split(range_term[1:-1])
     if len(range_terms) != 2:
-        return _lucene_term_clause(column, u'[%s]' % range_term)
+        return _lucene_term_clause(column, range_term)
     start, end = range_terms
     if start == u'*':
         start_clause = true()
@@ -75,7 +77,10 @@ def _lucene_range_clause(column, range_term):
         except ValueError:
             start_clause = false()
         else:
-            start_clause = column >= start_value
+            if start_inclusive:
+                start_clause = column >= start_value
+            else:
+                start_clause = column > start_value
     if end == u'*':
         end_clause = true()
     else:
@@ -86,14 +91,17 @@ def _lucene_range_clause(column, range_term):
         else:
             if isinstance(end_value, datetime.datetime):
                 end_value = end_value.replace(hour=23, minute=59, second=59)
-            end_clause = column <= end_value
+            if end_inclusive:
+                end_clause = column <= end_value
+            else:
+                end_clause = column < end_value
     return and_(start_clause, end_clause)
 
 _lucene_query_pattern = re.compile(r"""
     (?P<negation>-)?
     (?:(?P<field>[^'"\s]+):)?
     (?:['"](?P<quoted_term>[^'"]*)['"]
-    |  \[(?P<range_term>[^\]]*)\]
+    |  (?P<range_term>[\[{] [^\]]* [\]}])
     |  (?P<term>\S+)
     )""",
     re.VERBOSE)

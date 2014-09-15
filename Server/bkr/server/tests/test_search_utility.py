@@ -112,6 +112,16 @@ class LuceneQueryTest(unittest.TestCase):
                 {'memory': System.memory}, [System.memory])
         self.assert_clause_equals(clause, and_(false(), false()))
 
+    def test_integer_exclusive_range(self):
+        clause = lucene_to_sqlalchemy(u'memory:{1024 TO 2048]',
+                {'memory': System.memory}, [System.memory])
+        self.assert_clause_equals(clause,
+                and_(System.memory > 1024, System.memory <= 2048))
+        clause = lucene_to_sqlalchemy(u'memory:[1024 TO 2048}',
+                {'memory': System.memory}, [System.memory])
+        self.assert_clause_equals(clause,
+                and_(System.memory >= 1024, System.memory < 2048))
+
     def test_datetime_range(self):
         clause = lucene_to_sqlalchemy(u'date_added:[2014-08-01 TO 2014-08-31]',
                 {'date_added': System.date_added}, [System.date_added])
@@ -135,6 +145,18 @@ class LuceneQueryTest(unittest.TestCase):
                 {'date_added': System.date_added}, [System.date_added])
         self.assert_clause_equals(clause, and_(false(), false()))
 
+    def test_datetime_exclusive_range(self):
+        clause = lucene_to_sqlalchemy(u'date_added:{2014-08-01 TO 2014-08-31]',
+                {'date_added': System.date_added}, [System.date_added])
+        self.assert_clause_equals(clause,
+                and_(System.date_added > datetime.datetime(2014, 8, 1, 0, 0),
+                     System.date_added <= datetime.datetime(2014, 8, 31, 23, 59, 59)))
+        clause = lucene_to_sqlalchemy(u'date_added:[2014-08-01 TO 2014-08-31}',
+                {'date_added': System.date_added}, [System.date_added])
+        self.assert_clause_equals(clause,
+                and_(System.date_added >= datetime.datetime(2014, 8, 1, 0, 0),
+                     System.date_added < datetime.datetime(2014, 8, 31, 23, 59, 59)))
+
     def test_string_range(self):
         clause = lucene_to_sqlalchemy(u'fqdn:[aaa TO zzz]',
                 {'fqdn': System.fqdn}, [System.fqdn])
@@ -149,6 +171,16 @@ class LuceneQueryTest(unittest.TestCase):
         clause = lucene_to_sqlalchemy(u'fqdn:[* TO *]',
                 {'fqdn': System.fqdn}, [System.fqdn])
         self.assert_clause_equals(clause, and_(true(), true()))
+
+    def test_string_exclusive_range(self):
+        clause = lucene_to_sqlalchemy(u'fqdn:{aaa TO zzz]',
+                {'fqdn': System.fqdn}, [System.fqdn])
+        self.assert_clause_equals(clause,
+                and_(System.fqdn > u'aaa', System.fqdn <= u'zzz'))
+        clause = lucene_to_sqlalchemy(u'fqdn:[aaa TO zzz}',
+                {'fqdn': System.fqdn}, [System.fqdn])
+        self.assert_clause_equals(clause,
+                and_(System.fqdn >= u'aaa', System.fqdn < u'zzz'))
 
     def test_nonexistent_field(self):
         clause = lucene_to_sqlalchemy(u'favourite_color:green',
