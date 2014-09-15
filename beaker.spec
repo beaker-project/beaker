@@ -53,6 +53,7 @@ Source9:        https://github.com/wyuenho/backbone-pageable/archive/61912d577bb
 Source10:        https://github.com/medialize/URI.js/archive/40a89137c5bc297f73467290c39ca596f891dcb9/URI.js-40a89137c5bc297f73467290c39ca596f891dcb9.tar.gz
 Source11:        https://github.com/makeusabrew/bootbox/archive/a557eb187a72ab375ef34970f4f231739de2b40d/bootbox-a557eb187a72ab375ef34970f4f231739de2b40d.tar.gz
 Source12:        https://github.com/ifightcrime/bootstrap-growl/archive/eba6d7685c842f83764290c9ab5e82f7d4ffea22/bootstrap-growl-eba6d7685c842f83764290c9ab5e82f7d4ffea22.tar.gz
+Source13:       https://github.com/eternicode/bootstrap-datepicker/archive/b374f23971817d507bded0dc16892e87a6d2fe42/bootstrap-datepicker-b374f23971817d507bded0dc16892e87a6d2fe42.tar.gz
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
@@ -339,6 +340,7 @@ tar -C Server/assets/backbone-pageable --strip-components=1 -xzf %{SOURCE9}
 tar -C Server/assets/URI.js --strip-components=1 -xzf %{SOURCE10}
 tar -C Server/assets/bootbox --strip-components=1 -xzf %{SOURCE11}
 tar -C Server/assets/bootstrap-growl --strip-components=1 -xzf %{SOURCE12}
+tar -C Server/assets/bootstrap-datepicker --strip-components=1 -xzf %{SOURCE13}
 
 %build
 make \

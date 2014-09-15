@@ -37,6 +37,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             filters=['less', 'cssrewrite', YCSSMin()],
             output='beaker-%(version)s.css',
             depends=['*.less', 'bootstrap/less/*.less', 'font-awesome/less/*.less',
+                'bootstrap-datepicker/less/*.less',
                 'bootstrap-select/bootstrap-select.css'])
     env.register('js',
             # third-party
@@ -48,6 +49,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'bootstrap/js/bootstrap-button.js',
             'bootstrap/js/bootstrap-collapse.js',
             'typeahead.js/dist/typeahead.js',
+            'bootstrap-datepicker/js/bootstrap-datepicker.js',
             'bootstrap-select/bootstrap-select.js',
             'bootstrap-growl/jquery.bootstrap-growl.js',
             'bootbox/bootbox.js',

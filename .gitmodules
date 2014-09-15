@@ -35,3 +35,6 @@
 [submodule "bootstrap-growl"]
 	path = Server/assets/bootstrap-growl
 	url = https://github.com/ifightcrime/bootstrap-growl.git
+[submodule "bootstrap-datepicker"]
+	path = Server/assets/bootstrap-datepicker
+	url = https://github.com/eternicode/bootstrap-datepicker.git
