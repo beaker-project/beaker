@@ -58,8 +58,10 @@ var BeakerBackgridFilter = Backbone.View.extend({
         'keypress input': 'maybe_changed',
         'change input': 'maybe_changed',
         'input input': 'maybe_changed',
+        'click .trigger-query-builder': 'show_query_builder',
     },
-    initialize: function () {
+    initialize: function (options) {
+        this.columns = options.columns;
         this.collection.queryParams['q'] = _.bind(this.val, this);
     },
     render: function () {
@@ -67,7 +69,12 @@ var BeakerBackgridFilter = Backbone.View.extend({
         return this;
     },
     val: function () {
-        return this.$('input').val();
+        if (arguments.length) {
+            this.$('input').val(arguments[0]);
+            this.maybe_changed();
+        } else {
+            return this.$('input').val();
+        }
     },
     submit: function (evt) {
         this.last_val = this.val();
@@ -78,6 +85,11 @@ var BeakerBackgridFilter = Backbone.View.extend({
         if (this.val() != this.last_val)
             this.submit();
     }, 500 /* ms */),
+    show_query_builder: function () {
+        var builder = new QueryBuilder({columns: this.columns});
+        // receive built query back into this.val() when the modal is done
+        this.listenTo(builder, 'done', this.val);
+    },
 });
 
 // Derived from: backgrid-paginator <http://github.com/wyuenho/backgrid-paginator>
@@ -113,6 +125,7 @@ window.BeakerGrid = Backbone.View.extend({
         });
         this.filter_control = new BeakerBackgridFilter({
             collection: collection,
+            columns: options.columns,
         });
         this.top_paginator = new BeakerBackgridPaginator({
             collection: collection,

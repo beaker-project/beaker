@@ -71,6 +71,7 @@ def _create_env(source_dir, output_dir, **kwargs):
             'bootstrap-select-defaults.js',
             'distro-model.js',
             'distro-picker.js',
+            'query-builder.js',
             'recipe-tasks.js',
             'reserve-workflow.js',
             'system-access-policy.js',

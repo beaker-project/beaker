@@ -1,0 +1,43 @@
+
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+
+.query-builder {
+    width: 700px;
+    .query {
+        .well;
+        .well-small;
+    }
+    select {
+        width: auto;
+    }
+    .remove {
+        color: @gray;
+        text-decoration: none;
+    }
+    .add {
+        color: @gray;
+        text-decoration: none;
+        line-height: @inputHeight;
+    }
+    .bool-operator {
+        line-height: @inputHeight;
+    }
+    .query-builder-row {
+        margin-left: 10px;
+        margin-bottom: @baseLineHeight / 2;
+    }
+    // L shaped thingy to make it look like a treeview
+    .query-builder-row:before {
+        content: "";
+        display: inline-block;
+        vertical-align: top;
+        width: 12px;
+        height: @inputHeight / 2;
+        border-left: 1px solid @tableBorder;
+        border-bottom: 1px solid @tableBorder;
+        margin-right: 8px;
+    }
+}

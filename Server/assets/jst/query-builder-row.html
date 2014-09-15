@@ -1,0 +1,19 @@
+<select name="field">
+  <% _.each(columns, function (column) { %>
+    <option value="<%- column.name %>"><%- column.label %></option>
+  <% }) %>
+</select>
+<select name="operator">
+  <option value="=">=</option>
+  <option value="!=">&#x2260;</option>
+  <option value="&gt;">&gt;</option>
+  <option value="&gt;=">&#x2265;</option>
+  <option value="&lt;">&lt;</option>
+  <option value="&lt;=">&#x2264;</option>
+  <option value="contains">contains substring</option>
+  <option value="!contains">omits substring</option>
+  <option value="null">is null</option>
+  <option value="!null">is not null</option>
+</select>
+<input type="text" name="value"/>
+<a href="#" class="remove"><i class="icon-remove-sign" /></a>
