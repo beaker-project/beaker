@@ -117,9 +117,7 @@
    <div class="tab-pane" id="labinfo" py:if="widgets['labinfo']">
     ${widgets['labinfo'].display(method='get', action=widgets_action['labinfo'], value=value, options=widgets_options['labinfo'])}
    </div>
-      <div class="tab-pane" id="history">
-        <i class="icon-spinner icon-spin"/> Loading&hellip;
-      </div>
+      <div class="tab-pane" id="history"></div>
    <div class="tab-pane" id="tasks">
     ${task_widget.display(
     value=widgets_options['tasks'],

@@ -65,7 +65,6 @@ def _create_env(source_dir, output_dir, **kwargs):
                 output='beaker-jst-%(version)s.js'),
             'local-datetime.js',
             'link-tabs-to-anchor.js',
-            'backgrid-paginator.js',
             'beaker-backgrid.js',
             'beaker-typeaheads.js',
             'beaker-bootbox.js',
