@@ -668,6 +668,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
         Return install options based on distro selected.
         Inherit options from Arch -> Family -> Update
         """
+        # Don't forget to keep VirtResource.install_options and 
+        # GuestResource.install_options consistent with this!
         osmajor = distro_tree.distro.osversion.osmajor
         result = global_install_options()
         result = result.combined_with(osmajor.default_install_options())

@@ -3468,9 +3468,25 @@ class VirtResource(RecipeResource):
         return span
 
     def install_options(self, distro_tree):
-        return global_install_options()\
-                .combined_with(InstallOptions.from_strings('', u'console=tty0 console=ttyS0,115200n8', ''))\
-                .combined_with(distro_tree.install_options())
+        # This needs to stay consistent with System.install_options
+        osmajor = distro_tree.distro.osversion.osmajor
+        result = global_install_options()
+        result = result.combined_with(osmajor.default_install_options())
+        # arch=None means apply to all arches
+        if None in osmajor.install_options_by_arch:
+            op = osmajor.install_options_by_arch[None]
+            op_opts = InstallOptions.from_strings(op.ks_meta, op.kernel_options,
+                    op.kernel_options_post)
+            result = result.combined_with(op_opts)
+        if distro_tree.arch in osmajor.install_options_by_arch:
+            opa = osmajor.install_options_by_arch[distro_tree.arch]
+            opa_opts = InstallOptions.from_strings(opa.ks_meta, opa.kernel_options,
+                    opa.kernel_options_post)
+            result = result.combined_with(opa_opts)
+        result = result.combined_with(distro_tree.install_options())
+        result = result.combined_with(InstallOptions.from_strings(
+                '', u'console=tty0 console=ttyS0,115200n8', ''))
+        return result
 
     def release(self):
         try:
@@ -3506,8 +3522,23 @@ class GuestResource(RecipeResource):
         return self.fqdn # just text, not a link
 
     def install_options(self, distro_tree):
-        return global_install_options().combined_with(
-                distro_tree.install_options())
+        # This needs to stay consistent with System.install_options
+        osmajor = distro_tree.distro.osversion.osmajor
+        result = global_install_options()
+        result = result.combined_with(osmajor.default_install_options())
+        # arch=None means apply to all arches
+        if None in osmajor.install_options_by_arch:
+            op = osmajor.install_options_by_arch[None]
+            op_opts = InstallOptions.from_strings(op.ks_meta, op.kernel_options,
+                    op.kernel_options_post)
+            result = result.combined_with(op_opts)
+        if distro_tree.arch in osmajor.install_options_by_arch:
+            opa = osmajor.install_options_by_arch[distro_tree.arch]
+            opa_opts = InstallOptions.from_strings(opa.ks_meta, opa.kernel_options,
+                    opa.kernel_options_post)
+            result = result.combined_with(opa_opts)
+        result = result.combined_with(distro_tree.install_options())
+        return result
 
     def allocate(self):
         self.mac_address = self._lowest_free_mac()

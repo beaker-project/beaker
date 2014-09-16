@@ -132,11 +132,23 @@ Task results are aggegated to recipe results, recipe results are aggregated
 to recipe set results and recipe set results are aggregated to job results
 in a similar fashion.
 
-To help filter out failures that are due to external environment issues
-(such as an outage of the lab network), results supports an acknowledgement
-system, where results may be accepted or rejected to indicate whether or
-not they represent a true failure or an incidental failure not related to
-the specific components being tested.
+
+Result comments and waivers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Beaker has an optional mechanism for reviewing job results.
+
+Each recipe set in a job can be annotated with a response: either "ack" 
+(acknowledgment), indicating that the results have been reviewed and are valid, 
+or "nak" (negative acknowledgment), indicating that the results have been 
+reviewed and are waived. A failure could be waived if it was caused by 
+a problem in the external environment and is not related to the components 
+being tested (for example, an outage of the lab network). The recipe set can 
+also be annotated with a comment explaining the reason for the review.
+
+Reviewing results is optional. If all results in the recipe set are Pass, its 
+response is set to "ack" by default. Otherwise the recipe set is marked "needs 
+review" until a reviewer updates the response to "ack" or "nak".
 
 
 Watchdog timers
@@ -218,8 +230,8 @@ either specific job identifiers or aggregating the results of multiple jobs
 with a common whiteboard setting, the matrix report displays a summary of
 the results of the tasks within the selected jobs, grouped by architecture.
 
-The matrix report can be filtered to exclude any results that have been
-determined to be caused by external factors.
+The matrix report can be filtered to exclude any results that have been waived 
+as part of the results review.
 
 
 System provisioning

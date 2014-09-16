@@ -173,6 +173,13 @@ Running jobs
 
 .. automethod:: taskactions.stop
 
+.. jobs.set_response should actually be in tasksactions namespace, it takes 
+   a taskspec/taskid/tid like J:123
+
+.. currentmodule:: bkr.server.jobs
+
+.. automethod:: jobs.set_response
+
 
 General Beaker information
 --------------------------
