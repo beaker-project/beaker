@@ -56,7 +56,7 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
     def check_row_is_absent(self, row):
         pane = self.browser.find_element_by_id('access-policy')
         pane.find_element_by_xpath(
-                './/table[not(tbody/tr/td[1][text()="%s"])]' % row)
+                './/table[not(tbody/tr/td[1][normalize-space(string(.))="%s"])]' % row)
 
     def find_checkbox(self, row, column):
         """
