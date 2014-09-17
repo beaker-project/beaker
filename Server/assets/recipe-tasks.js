@@ -10,7 +10,8 @@ window.RecipeTasksView = Backbone.View.extend({
     events: {
         'show .results-tabs a': 'tab_shown',
     },
-    initialize: function () {
+    initialize: function (options) {
+        this.recipe_id = options.recipe_id;
         // lazy load failed tab
         this.$('.failed-tab').one('show', _.bind(this.load_failed, this));
 
@@ -43,7 +44,7 @@ window.RecipeTasksView = Backbone.View.extend({
         var $pane = this.$('.results-pane');
         $pane.html('<i class="icon-spinner icon-spin"></i> Loading&hellip;');
         return $.ajax({
-            url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&recipe_id=' + this.options.recipe_id,
+            url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&recipe_id=' + this.recipe_id,
             dataType: 'html',
             success: function (data) { $pane.html(data); },
             error: function (jqxhr, status, error) { $pane.addClass('alert alert-error').text(error); },
@@ -53,7 +54,7 @@ window.RecipeTasksView = Backbone.View.extend({
         var $pane = this.$('.failed-pane');
         $pane.html('<i class="icon-spinner icon-spin"></i> Loading&hellip;');
         return $.ajax({
-            url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&is_failed=1&recipe_id=' + this.options.recipe_id,
+            url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&is_failed=1&recipe_id=' + this.recipe_id,
             dataType: 'html',
             success: function (data) { $pane.html(data); },
             error: function (jqxhr, status, error) { $pane.addClass('alert alert-error').text(error); },
@@ -61,14 +62,14 @@ window.RecipeTasksView = Backbone.View.extend({
     },
     get_saved_state: function () {
         try {
-            return localStorage.getItem('beaker_recipe_' + this.options.recipe_id);
+            return localStorage.getItem('beaker_recipe_' + this.recipe_id);
         } catch (e) {
             return undefined;
         }
     },
     set_saved_state: function (value) {
         try {
-            localStorage.setItem('beaker_recipe_' + this.options.recipe_id, value);
+            localStorage.setItem('beaker_recipe_' + this.recipe_id, value);
         } catch (e) {
             // ignore
         }

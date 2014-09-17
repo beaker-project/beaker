@@ -42,6 +42,12 @@ var AccessPolicyRules = Backbone.Collection.extend({
 });
 
 window.AccessPolicy = Backbone.Model.extend({
+    initialize: function (attributes, options) {
+        this.system = options.system;
+    },
+    url: function () {
+        return _.result(this.system, 'url') + 'access-policy';
+    },
     parse: function (data) {
         data['rules'] = (!_.isEmpty(data['rules']) ?
                 new AccessPolicyRules(data['rules'], {parse: true}) : null);
@@ -68,6 +74,12 @@ window.CommandQueue = Backbone.PageableCollection.extend({
         totalRecords: null,
         sortKey: 'sort_by',
         order: 'order',
+    },
+    initialize: function (attributes, options) {
+        this.system = options.system;
+    },
+    url: function () {
+        return _.result(this.system, 'url') + 'commands/';
     },
     parseState: function (response) {
         return {totalRecords: response.count};
@@ -97,6 +109,12 @@ window.SystemActivity = Backbone.PageableCollection.extend({
         sortKey: 'sort_by',
         order: 'order',
     },
+    initialize: function (attributes, options) {
+        this.system = options.system;
+    },
+    url: function () {
+        return _.result(this.system, 'url') + 'activity/';
+    },
     parseState: function (response) {
         return {totalRecords: response.count};
     },
@@ -106,13 +124,10 @@ window.SystemActivity = Backbone.PageableCollection.extend({
 });
 
 window.System = Backbone.Model.extend({
-    initialize: function () {
-        this.command_queue = new CommandQueue([], {
-            url: this.url + 'commands/',
-        });
-        this.activity = new SystemActivity([], {
-            url: this.url + 'activity/',
-        });
+    initialize: function (attributes, options) {
+        this.url = options.url;
+        this.command_queue = new CommandQueue([], {system: this});
+        this.activity = new SystemActivity([], {system: this});
         // if the system object changes, chances are there are new activity 
         // records describing the change so we refresh activity
         this.on('change', function () { this.activity.fetch(); });
@@ -127,7 +142,7 @@ window.System = Backbone.Model.extend({
         data['previous_reservation'] = (!_.isEmpty(data['previous_reservation']) ?
                 new Reservation(data['previous_reservation'], {parse: true}) : null);
         data['access_policy'] = new AccessPolicy(data['access_policy'],
-                {url: this.url + 'access-policy', parse: true});
+                {parse: true, system: this});
         data['reprovision_distro_tree'] = (!_.isEmpty(data['reprovision_distro_tree']) ?
                 new DistroTree(data['reprovision_distro_tree'], {parse: true}) : null);
         return data;

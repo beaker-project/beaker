@@ -45,7 +45,7 @@ Source1:        https://github.com/twbs/bootstrap/archive/d9b502dfb876c40b073500
 Source2:        https://github.com/FortAwesome/Font-Awesome/archive/b1a8ad47303509e70e56079396fad2afadfd96d5/font-awesome-b1a8ad47303509e70e56079396fad2afadfd96d5.tar.gz
 Source3:        https://github.com/twitter/typeahead.js/archive/2bd1119ecdd5ed4bb6b78c83b904d70adc49e023/typeahead.js-2bd1119ecdd5ed4bb6b78c83b904d70adc49e023.tar.gz
 Source4:        https://github.com/jashkenas/underscore/archive/edbf2952c2b71f81c6449aef384bdf233a0d63bc/underscore-edbf2952c2b71f81c6449aef384bdf233a0d63bc.tar.gz
-Source5:        https://github.com/jashkenas/backbone/archive/699fe3271262043bb137bae97bd0003d6d193f27/backbone-699fe3271262043bb137bae97bd0003d6d193f27.tar.gz
+Source5:        https://github.com/jashkenas/backbone/archive/53f77901a4ea9c7cf75d3db93ddddf491998d90f/backbone-53f77901a4ea9c7cf75d3db93ddddf491998d90f.tar.gz
 Source6:        https://github.com/moment/moment/archive/604c7942de38749e768ff8e327301ea6917c7c73/moment-604c7942de38749e768ff8e327301ea6917c7c73.tar.gz
 Source7:        https://github.com/silviomoreto/bootstrap-select/archive/c0c90090e5abeb5c10291430ae2a1778371f5630/bootstrap-select-c0c90090e5abeb5c10291430ae2a1778371f5630.tar.gz
 Source8:        https://github.com/wyuenho/backgrid/archive/ff4b033d6f33b3af543e735869b225f4ac984acf/backgrid-ff4b033d6f33b3af543e735869b225f4ac984acf.tar.gz
