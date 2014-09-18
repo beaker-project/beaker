@@ -16,35 +16,16 @@ being upgraded to a new version.
    sensible order.
 
 
-.. release notes for 1.0 follow... uncomment these when 1.0 is a real thing again
+Unreleased changes
+------------------
 
-    What's new in Beaker 1.0?
-    -------------------------
+The following changes will appear in the next Beaker release.
 
-    After more than 5 years of active development, Beaker is finally taking the
-    plunge and declaring a 1.0 release!
+.. toctree::
+   :maxdepth: 2
+   :glob:
 
-    The primary new feature in Beaker 1.0 is the initial implementation of the
-    :ref:`proposal-enhanced-user-groups` design proposal.
-
-    .. toctree::
-       :maxdepth: 2
-       :glob:
-
-       release-1.0/*
-
-.. uncomment after 0.18
-
-    Unreleased changes
-    ------------------
-
-    The following changes will appear in the next Beaker release.
-
-    .. toctree::
-       :maxdepth: 2
-       :glob:
-
-       next/*
+   next/*
 
 
 Beaker 0.18
