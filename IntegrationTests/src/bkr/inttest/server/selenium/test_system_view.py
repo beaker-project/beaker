@@ -12,6 +12,7 @@ import logging
 import time
 from urlparse import urljoin
 from urllib import urlencode, quote
+import requests
 import rdflib.graph
 from turbogears.database import session
 
@@ -23,6 +24,7 @@ from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System,
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_system_search_results, \
         delete_and_confirm, logout, click_menu_item, BootstrapSelect
+from bkr.inttest.server.requests_utils import login as requests_login, patch_json
 from selenium.webdriver.support.ui import Select
 from bkr.inttest.assertions import wait_for_condition, assert_sorted
 
@@ -220,6 +222,14 @@ class SystemViewTestWD(WebDriverTestCase):
         # but we should still be at the system rename modal
         modal.find_element_by_css_selector('input[name=fqdn]:invalid')
 
+        # should be rejected server-side also
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() + 'systems/%s/' % self.system.fqdn,
+                session=s, data=dict(fqdn=u'lol...?'))
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text, u'Invalid FQDN for system: lol...?')
+
     def test_rejects_non_ascii_chars_in_fqdn(self):
         b = self.browser
         login(b)
@@ -232,6 +242,14 @@ class SystemViewTestWD(WebDriverTestCase):
         # we can't actually check the HTML5 validation error,
         # but we should still be at the system rename modal
         modal.find_element_by_css_selector('input[name=fqdn]:invalid')
+
+        # should be rejected server-side also
+        s = requests.Session()
+        requests_login(s)
+        response = patch_json(get_server_base() + 'systems/%s/' % self.system.fqdn,
+                session=s, data=dict(fqdn=u'löööööl'))
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text, u'Invalid FQDN for system: löööööl')
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=683003
     def test_forces_fqdn_to_lowercase(self):

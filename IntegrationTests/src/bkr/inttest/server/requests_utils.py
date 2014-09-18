@@ -24,6 +24,9 @@ def post_json(url, **kwargs):
 def put_json(url, **kwargs):
     return json_request('PUT', url, **kwargs)
 
+def patch_json(url, **kwargs):
+    return json_request('PATCH', url, **kwargs)
+
 def login(session, user=None, password=None):
     if user is None and password is None:
         user = data_setup.ADMIN_USER

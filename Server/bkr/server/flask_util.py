@@ -91,7 +91,7 @@ class PlainTextHTTPException(HTTPException):
     def get_body(self, environ):
         return self.description
     def get_headers(self, environ):
-        return [('Content-Type', 'text/plain')]
+        return [('Content-Type', 'text/plain; charset=UTF-8')]
 
 class BadRequest400(PlainTextHTTPException):
     code = 400
@@ -129,9 +129,9 @@ def convert_internal_errors():
     try:
         yield
     except InsufficientSystemPermissions as exc:
-        raise Forbidden403(str(exc))
+        raise Forbidden403(unicode(exc))
     except (BX, NoResultFound, ValueError) as exc:
-        raise BadRequest400(str(exc))
+        raise BadRequest400(unicode(exc))
 
 def auth_required(f):
     """Decorator that reports a 401 error if the user is not logged in"""
