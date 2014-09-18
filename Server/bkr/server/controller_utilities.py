@@ -28,29 +28,6 @@ def _custom_result(x):
     e.text = x.result
     return e
 
-class _FKLogEntry:
-    def __init__(self,form_field,mapper_class,mapper_column_name,description=None):
-        if description is None:
-            log.debug('No description passed to %s, using form_field value of %s instead' % (self.__class__.__name__,form_field))
-        self.description = description or form_field
-        self.form_field = form_field
-        self.mapper_class = mapper_class
-        self.mapper_column_name = mapper_column_name
-
-
-class _SystemSaveFormHandler:
-
-    @classmethod
-    def status_change_handler(cls,current_val,new_val,**kw): 
-        if not new_val.bad and current_val and current_val.bad:
-            kw['status_reason'] = None  #remove the status notes
-        return kw 
-
-
-class SystemSaveForm:
-    handler = _SystemSaveFormHandler
-    fk_log_entry = _FKLogEntry 
-
 
 class SearchOptions:
     

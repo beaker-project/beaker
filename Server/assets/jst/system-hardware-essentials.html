@@ -1,0 +1,56 @@
+<form class="form-horizontal">
+  <div class="control-group">
+    <label class="control-label" for="arches">Supported Architectures</label>
+    <div class="controls">
+      <select id="arches" name="arches" multiple <% if (!can_change_hardware) { %>disabled<% } %>>
+        <% _.each(possible_arches, function (arch) { %>
+          <option value="<%- arch %>"><%- arch %></option>
+        <% }) %>
+      </select>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="lab_controller_id">Lab Controller</label>
+    <div class="controls">
+      <select id="lab_controller_id" name="lab_controller_id" <% if (!can_change_hardware) { %>disabled<% } %>>
+        <option value="">(none)</option>
+        <% _.each(possible_lab_controllers, function (lc) { %>
+          <option value="<%- lc.id %>"><%- lc.fqdn %></option>
+        <% }) %>
+      </select>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="location">Location</label>
+    <div class="controls">
+      <input type="text" id="location" name="location" class="input-xlarge"
+          <% if (!can_change_hardware) { %>disabled<% } %> />
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="lender">Lender</label>
+    <div class="controls">
+      <input type="text" id="lender" name="lender" class="input-xlarge"
+          <% if (!can_change_hardware) { %>disabled<% } %> />
+      <span class="help-block">The "lender" is the organization which has lent this system to Beaker’s inventory.</span>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="kernel_type">Kernel Type</label>
+    <div class="controls">
+      <select id="kernel_type" name="kernel_type" <% if (!can_change_hardware) { %>disabled<% } %>>
+        <% _.each(possible_kernel_types, function (kt) { %>
+          <option value="<%- kt %>"><%- kt %></option>
+        <% }) %>
+      </select>
+      <span class="help-block">Kernel types are only relevant for the ARM architecture.</span>
+    </div>
+  </div>
+  <% if (can_change_hardware) { %>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <button type="reset" class="btn">Revert</button>
+      <span class="sync-status"></span>
+    </div>
+  <% } %>
+</form>

@@ -179,7 +179,7 @@ class LabControllers(RPCRoot):
                     image['kernel_type'] = 'default'
                 try:
                     kernel_type = KernelType.by_name(image['kernel_type'])
-                except NoResultFound:
+                except ValueError:
                     continue # ignore
                 dti = DistroTreeImage.lazy_create(distro_tree=distro_tree,
                         image_type=image_type, kernel_type=kernel_type,

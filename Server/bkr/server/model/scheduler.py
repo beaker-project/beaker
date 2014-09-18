@@ -759,22 +759,15 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
         return query
 
     @classmethod
-    def provision_system_job(cls, distro_tree_id, **kw):
+    def provision_system_job(cls, distro_trees, pick='auto', **kw):
         """ Create a new reserve job, if system_id is defined schedule it too """
         job = Job(ttasks=0, owner=identity.current.user, retention_tag=RetentionTag.get_default())
         if kw.get('whiteboard'):
             job.whiteboard = kw.get('whiteboard')
-        if not isinstance(distro_tree_id, list):
-            distro_tree_id = [distro_tree_id]
-
         if job.owner.rootpw_expired:
             raise BX(_(u"Your root password has expired, please change or clear it in order to submit jobs."))
 
-        for id in distro_tree_id:
-            try:
-                distro_tree = DistroTree.by_id(id)
-            except InvalidRequestError:
-                raise BX(u'Invalid distro tree ID %s' % id)
+        for distro_tree in distro_trees:
             recipeSet = RecipeSet(ttasks=2)
             recipe = MachineRecipe(ttasks=2)
             # Inlcude the XML definition so that cloning this job will act as expected.
@@ -782,15 +775,33 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             recipe.distro_tree = distro_tree
             # Don't report panic's for reserve workflow.
             recipe.panic = 'ignore'
-            system_id = kw.get('system_id')
-            if system_id:
-                try:
-                    system = System.by_id(kw.get('system_id'), identity.current.user)
-                except InvalidRequestError:
-                    raise BX(u'Invalid System ID %s' % system_id)
+            if pick == 'fqdn':
+                system = kw.get('system')
+                # Some extra sanity checks, to help out the user
+                # XXX update this if/when force="" is used
+                if system.status != SystemStatus.automated:
+                    raise BX(_(u'%s cannot be reserved through the scheduler' % system))
+                if not system.can_reserve(job.owner):
+                    raise BX(_(u'You do not have access to reserve %s' % system))
+                if not system.in_lab_with_distro_tree(distro_tree):
+                    raise BX(_(u'%s is not available on %s'
+                            % (distro_tree, system.lab_controller)))
+                if not system.compatible_with_distro_tree(distro_tree):
+                    raise BX(_(u'%s does not support %s' % (system, distro_tree)))
                 # Inlcude the XML definition so that cloning this job will act as expected.
                 recipe.host_requires = system.to_xml().toxml()
                 recipe.systems.append(system)
+            elif pick == 'lab':
+                lab_controller = kw.get('lab')
+                if not distro_tree.url_in_lab(lab_controller):
+                    raise BX(_(u'%s is not available on %s'
+                            % (distro_tree, lab_controller)))
+                recipe.host_requires = ("""<and><labcontroller op="=" value="%s" />"""
+                        """<system_type op="=" value="Machine" /></and>"""
+                        % lab_controller.fqdn)
+                recipeSet.lab_controller = lab_controller
+            else:
+                pass # leave hostrequires completely unset
             if kw.get('ks_meta'):
                 recipe.ks_meta = kw.get('ks_meta')
             if kw.get('koptions'):
@@ -805,7 +816,6 @@ class Job(TaskBase, DeclarativeMappedObject, ActivityMixin):
             reserveTask = RecipeTask.from_task(
                     Task.by_name(u'/distribution/reservesys'))
             if kw.get('reservetime'):
-                #FIXME add DateTimePicker to ReserveSystem Form
                 reserveTask.params.append(RecipeTaskParam( name = 'RESERVETIME',
                                                                 value = kw.get('reservetime')
                                                             )
@@ -2647,7 +2657,7 @@ class MachineRecipe(Recipe):
         return systems
 
     @classmethod
-    def hypothetical_candidate_systems(cls, user, distro_tree):
+    def hypothetical_candidate_systems(cls, user, distro_tree=None):
         """
         If a recipe were constructed according to the given arguments, what 
         would its candidate systems be?
@@ -2660,8 +2670,9 @@ class MachineRecipe(Recipe):
         systems = systems.filter(System.can_reserve(user))
         # XXX adjust this condition when we have force=""
         systems = systems.filter(System.status == SystemStatus.automated)
-        systems = systems.filter(System.compatible_with_distro_tree(distro_tree))
-        systems = systems.filter(System.in_lab_with_distro_tree(distro_tree))
+        if distro_tree:
+            systems = systems.filter(System.compatible_with_distro_tree(distro_tree))
+            systems = systems.filter(System.in_lab_with_distro_tree(distro_tree))
         systems = System.scheduler_ordering(user, query=systems)
         return systems
 

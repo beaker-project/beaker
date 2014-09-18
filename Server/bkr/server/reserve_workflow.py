@@ -4,125 +4,97 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from turbogears import expose, flash, redirect
+from turbogears import expose, url
+from flask import request
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import InvalidRequestError
 from bkr.server import identity
-from bkr.server.widgets import ReserveWorkflow as ReserveWorkflowWidget
-from bkr.server.widgets import ReserveSystem
+from bkr.server.app import app
+from bkr.server.flask_util import BadRequest400, \
+        convert_internal_errors, auth_required
 from bkr.server.model import (Distro, Job, System, Arch, OSMajor, DistroTag,
-        SystemType, OSVersion, DistroTree, LabController,
-        LabControllerDistroTree, SystemStatus, MachineRecipe)
-from bkr.server.jobs import Jobs as JobController
-from bkr.common.bexceptions import BX
+        SystemType, OSVersion, DistroTree, LabController, MachineRecipe)
 from bkr.server.bexceptions import DatabaseLookupError
 
 import logging
 log = logging.getLogger(__name__)
 
-class ReserveWorkflow:
-    widget = ReserveWorkflowWidget(
-            action='reserve',
-            get_distros_rpc='get_distro_options',
-            get_distro_trees_rpc='get_distro_tree_options')
-    reserveform = ReserveSystem()
-  
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def doit(self, distro_tree_id, **kw):
-        """ Create a new reserve job, if system_id is defined schedule it too """
-        if 'system_id' in kw:
-            kw['id'] = kw['system_id']
-         
+MAX_DAYS_PROVISION = 7
+DEFAULT_RESERVE_DAYS = 1
+
+@app.route('/reserveworkflow/doit', methods=['POST'])
+@auth_required
+def doit():
+    distro_trees = []
+    for id in request.form.getlist('distro_tree_id'):
         try:
-            provision_system_job = Job.provision_system_job(distro_tree_id, **kw)
-        except BX, msg:
-            flash(_(u"%s" % msg))
-            redirect(u".")
-        JobController.success_redirect(provision_system_job.id)
+            distro_trees.append(DistroTree.by_id(id))
+        except NoResultFound:
+            raise BadRequest400('Distro tree %r does not exist' % id)
+    job_details = {}
+    job_details['pick'] = request.form.get('pick') or 'auto'
+    if job_details['pick'] == 'fqdn':
+        try:
+            job_details['system'] = System.by_fqdn(request.form.get('system'),
+                    identity.current.user)
+        except NoResultFound:
+            raise BadRequest400('System %s not found' % request.form.get('system'))
+    elif job_details['pick'] == 'lab':
+        try:
+            job_details['lab'] = LabController.by_name(request.form.get('lab'))
+        except NoResultFound:
+            raise BadRequest400('Lab controller %s not found' % request.form.get('lab'))
+    days = int(request.form.get('reserve_days') or DEFAULT_RESERVE_DAYS)
+    days = min(days, MAX_DAYS_PROVISION)
+    job_details['reservetime'] = days * 24 * 60 * 60
+    job_details['whiteboard'] = request.form.get('whiteboard')
+    job_details['ks_meta'] = request.form.get('ks_meta')
+    job_details['koptions'] = request.form.get('koptions')
+    job_details['koptions_post'] = request.form.get('koptions_post')
+    with convert_internal_errors():
+        job = Job.provision_system_job(distro_trees, **job_details)
+    return 'Created %s' % job.t_id, 201, [('Location', url('/jobs/%s' % job.id))]
 
-    @expose(template='bkr.server.templates.form')
-    @identity.require(identity.not_anonymous())
-    def reserve(self, distro_tree_id, system_id=None, lab_controller_id=None):
-        """ Either queue or provision the system now """
-        if system_id == 'search':
-            redirect('/reserve_system', distro_tree_id=distro_tree_id)
-        elif system_id:
-            try:
-                system = System.by_id(system_id, identity.current.user)
-            except InvalidRequestError:
-                flash(_(u'Invalid System ID %s' % system_id))
-            system_name = system.fqdn
-        else:
-            system_name = 'Any System'
-        distro_names = [] 
-
-        return_value = dict(
-                            system_id = system_id, 
-                            system = system_name,
-                            distro = '',
-                            distro_tree_ids = [],
-                            )
-        warn = None
-        if not isinstance(distro_tree_id, list):
-            distro_tree_id = [distro_tree_id]
-        for id in distro_tree_id:
-            try:
-                distro_tree = DistroTree.by_id(id)
-            except NoResultFound:
-                flash(_(u'Invalid distro tree ID %s') % id)
-            else:
-                query = MachineRecipe.hypothetical_candidate_systems(
-                        identity.current.user, distro_tree)
-                if query.count() < 1:
-                    warn = _(u'No systems compatible with %s') % distro_tree
-                distro_names.append(unicode(distro_tree))
-                return_value['distro_tree_ids'].append(id)
-        distro = ", ".join(distro_names)
-        return_value['distro'] = distro
-        
-        return dict(form=self.reserveform,
-                    action='./doit',
-                    value = return_value,
-                    warn=warn,
-                    options = None,
-                    title='Reserve %s' % system_name)
+class ReserveWorkflow:
 
     @identity.require(identity.not_anonymous())
-    @expose(template='bkr.server.templates.generic') 
+    @expose(template='bkr.server.templates.reserve_workflow')
     def index(self, **kwargs):
-        value = dict((k, v) for k, v in kwargs.iteritems()
-                if k in ['osmajor', 'tag', 'distro'])
+        # CherryPy will give us distro_tree_id as a scalar if it only has one 
+        # value, but we want it to always be a list of int
+        if not kwargs.get('distro_tree_id'):
+            kwargs['distro_tree_id'] = []
+        elif not isinstance(kwargs['distro_tree_id'], list):
+            kwargs['distro_tree_id'] = [int(kwargs['distro_tree_id'])]
+        else:
+            kwargs['distro_tree_id'] = [int(x) for x in kwargs['distro_tree_id']]
+
+        # If we got a distro_tree_id but no osmajor or distro, fill those in 
+        # with the right values so that the distro picker is populated properly
+        if kwargs['distro_tree_id']:
+            distro_tree = DistroTree.by_id(kwargs['distro_tree_id'][0])
+            if not kwargs.get('distro'):
+                kwargs['distro'] = distro_tree.distro.name
+            if not kwargs.get('osmajor'):
+                kwargs['osmajor'] = distro_tree.distro.osversion.osmajor.osmajor
+
         options = {}
-        tags = DistroTag.used()
-        # It's important that  'None selected' is prepended
-        # rather then appended to the list of tags, as that will ensure
-        # it is the default option in the drop down.
-        options['tag'] = [('', 'None selected')] + \
-                [(tag.tag, tag.tag) for tag in tags]
-        options['osmajor'] = [('', 'None selected')] + \
-                [(osmajor.osmajor, osmajor.osmajor) for osmajor
-                in OSMajor.ordered_by_osmajor(OSMajor.in_any_lab())]
-        options['distro'] = self._get_distro_options(**kwargs)
-        options['lab_controller_id'] = [(None, 'None selected')] + \
-                LabController.get_all(valid=True)
-        options['distro_tree_id'] = self._get_distro_tree_options(**kwargs)
-
-        attrs = {}
-        if not options['distro']:
-            attrs['distro'] = dict(disabled=True)
-
+        options['tag'] = [tag.tag for tag in DistroTag.used()]
+        options['osmajor'] = [osmajor.osmajor for osmajor in
+                OSMajor.ordered_by_osmajor(OSMajor.in_any_lab())]
+        options['distro'] = self._get_distro_options(
+                osmajor=kwargs.get('osmajor'), tag=kwargs.get('tag'))
+        options['distro_tree_id'] = self._get_distro_tree_options(
+                distro=kwargs.get('distro'))
+        options['lab'] = [lc.fqdn for lc in
+                LabController.query.filter(LabController.removed == None)]
         return dict(title=_(u'Reserve Workflow'),
-                    widget=self.widget,
-                    value=value,
-                    widget_options=options,
-                    widget_attrs=attrs)
+                selection=kwargs, options=options)
 
     @expose(allow_json=True)
     def get_distro_options(self, **kwargs):
         return {'options': self._get_distro_options(**kwargs)}
 
-    def _get_distro_options(self, osmajor=None, tag=None, **kwargs):
+    def _get_distro_options(self, osmajor=None, tag=None, system=None, **kwargs):
         """
         Returns a list of distro names for the given osmajor and tag.
         """
@@ -134,13 +106,19 @@ class ReserveWorkflow:
                 .order_by(Distro.date_created.desc())
         if tag:
             distros = distros.filter(Distro._tags.any(DistroTag.tag == tag))
+        if system:
+            try:
+                system = System.by_fqdn(system, identity.current.user)
+            except NoResultFound:
+                return []
+            distros = system.distros(query=distros)
         return [name for name, in distros.values(Distro.name)]
 
     @expose(allow_json=True)
     def get_distro_tree_options(self, **kwargs):
         return {'options': self._get_distro_tree_options(**kwargs)}
 
-    def _get_distro_tree_options(self, distro=None, lab_controller_id=None, **kwargs):
+    def _get_distro_tree_options(self, distro=None, system=None, **kwargs):
         """
         Returns a list of distro trees for the given distro.
         """
@@ -151,14 +129,12 @@ class ReserveWorkflow:
         except DatabaseLookupError:
             return []
         trees = distro.dyn_trees.join(DistroTree.arch)\
+                .filter(DistroTree.lab_controller_assocs.any())\
                 .order_by(DistroTree.variant, Arch.arch)
-        if lab_controller_id:
+        if system:
             try:
-                lc = LabController.by_id(lab_controller_id)
+                system = System.by_fqdn(system, identity.current.user)
             except NoResultFound:
                 return []
-            trees = trees.filter(DistroTree.lab_controller_assocs.any(
-                    LabControllerDistroTree.lab_controller == lc))
-        else:
-            trees = trees.filter(DistroTree.lab_controller_assocs.any())
+            trees = system.distro_trees(query=trees)
         return [(tree.id, unicode(tree)) for tree in trees]

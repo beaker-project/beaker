@@ -45,7 +45,15 @@ Source1:        https://github.com/twbs/bootstrap/archive/d9b502dfb876c40b073500
 Source2:        https://github.com/FortAwesome/Font-Awesome/archive/b1a8ad47303509e70e56079396fad2afadfd96d5/font-awesome-b1a8ad47303509e70e56079396fad2afadfd96d5.tar.gz
 Source3:        https://github.com/twitter/typeahead.js/archive/2bd1119ecdd5ed4bb6b78c83b904d70adc49e023/typeahead.js-2bd1119ecdd5ed4bb6b78c83b904d70adc49e023.tar.gz
 Source4:        https://github.com/jashkenas/underscore/archive/edbf2952c2b71f81c6449aef384bdf233a0d63bc/underscore-edbf2952c2b71f81c6449aef384bdf233a0d63bc.tar.gz
-Source5:        https://github.com/jashkenas/backbone/archive/699fe3271262043bb137bae97bd0003d6d193f27/backbone-699fe3271262043bb137bae97bd0003d6d193f27.tar.gz
+Source5:        https://github.com/jashkenas/backbone/archive/53f77901a4ea9c7cf75d3db93ddddf491998d90f/backbone-53f77901a4ea9c7cf75d3db93ddddf491998d90f.tar.gz
+Source6:        https://github.com/moment/moment/archive/604c7942de38749e768ff8e327301ea6917c7c73/moment-604c7942de38749e768ff8e327301ea6917c7c73.tar.gz
+Source7:        https://github.com/silviomoreto/bootstrap-select/archive/c0c90090e5abeb5c10291430ae2a1778371f5630/bootstrap-select-c0c90090e5abeb5c10291430ae2a1778371f5630.tar.gz
+Source8:        https://github.com/wyuenho/backgrid/archive/ff4b033d6f33b3af543e735869b225f4ac984acf/backgrid-ff4b033d6f33b3af543e735869b225f4ac984acf.tar.gz
+Source9:        https://github.com/wyuenho/backbone-pageable/archive/61912d577bb5289a80654e89deeb8dc505f283bd/backbone-pageable-61912d577bb5289a80654e89deeb8dc505f283bd.tar.gz
+Source10:        https://github.com/medialize/URI.js/archive/40a89137c5bc297f73467290c39ca596f891dcb9/URI.js-40a89137c5bc297f73467290c39ca596f891dcb9.tar.gz
+Source11:        https://github.com/makeusabrew/bootbox/archive/a557eb187a72ab375ef34970f4f231739de2b40d/bootbox-a557eb187a72ab375ef34970f4f231739de2b40d.tar.gz
+Source12:        https://github.com/ifightcrime/bootstrap-growl/archive/eba6d7685c842f83764290c9ab5e82f7d4ffea22/bootstrap-growl-eba6d7685c842f83764290c9ab5e82f7d4ffea22.tar.gz
+Source13:       https://github.com/eternicode/bootstrap-datepicker/archive/b374f23971817d507bded0dc16892e87a6d2fe42/bootstrap-datepicker-b374f23971817d507bded0dc16892e87a6d2fe42.tar.gz
 
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch
@@ -222,7 +230,6 @@ Requires:       %{name}-client = %{version}-%{release}
 Requires:       %{name}-lab-controller = %{version}-%{release}
 Requires:       python-nose >= 0.10
 Requires:       selenium-python >= 2.12
-Requires:       java-openjdk >= 1:1.6.0
 Requires:       Xvfb
 Requires:       firefox
 Requires:       lsof
@@ -326,6 +333,14 @@ tar -C Server/assets/font-awesome --strip-components=1 -xzf %{SOURCE2}
 tar -C Server/assets/typeahead.js --strip-components=1 -xzf %{SOURCE3}
 tar -C Server/assets/underscore --strip-components=1 -xzf %{SOURCE4}
 tar -C Server/assets/backbone --strip-components=1 -xzf %{SOURCE5}
+tar -C Server/assets/moment --strip-components=1 -xzf %{SOURCE6}
+tar -C Server/assets/bootstrap-select --strip-components=1 -xzf %{SOURCE7}
+tar -C Server/assets/backgrid --strip-components=1 -xzf %{SOURCE8}
+tar -C Server/assets/backbone-pageable --strip-components=1 -xzf %{SOURCE9}
+tar -C Server/assets/URI.js --strip-components=1 -xzf %{SOURCE10}
+tar -C Server/assets/bootbox --strip-components=1 -xzf %{SOURCE11}
+tar -C Server/assets/bootstrap-growl --strip-components=1 -xzf %{SOURCE12}
+tar -C Server/assets/bootstrap-datepicker --strip-components=1 -xzf %{SOURCE13}
 
 %build
 make \

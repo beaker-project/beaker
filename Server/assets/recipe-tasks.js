@@ -8,9 +8,10 @@
 
 window.RecipeTasksView = Backbone.View.extend({
     events: {
-        'show .results-tabs a': 'set_cookie',
+        'show .results-tabs a': 'tab_shown',
     },
-    initialize: function () {
+    initialize: function (options) {
+        this.recipe_id = options.recipe_id;
         // lazy load failed tab
         this.$('.failed-tab').one('show', _.bind(this.load_failed, this));
 
@@ -25,9 +26,9 @@ window.RecipeTasksView = Backbone.View.extend({
     },
     activate_tab: function () {
         // 1. Is window.location.hash pointing at a task in our results?
-        // 2. Is there a state saved in a cookie?
+        // 2. Is there a state saved in localStorage?
         // 3. Hide by default
-        var cookie_value = $.cookie('recipe_' + this.options.recipe_id);
+        var cookie_value = this.get_saved_state();
         if (window.location.hash && this.$('.results-pane ' + window.location.hash).length) {
             this.$('.results-tab').tab('show').addClass('active');
             window.location.hash = window.location.hash;
@@ -43,7 +44,7 @@ window.RecipeTasksView = Backbone.View.extend({
         var $pane = this.$('.results-pane');
         $pane.html('<i class="icon-spinner icon-spin"></i> Loading&hellip;');
         return $.ajax({
-            url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&recipe_id=' + this.options.recipe_id,
+            url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&recipe_id=' + this.recipe_id,
             dataType: 'html',
             success: function (data) { $pane.html(data); },
             error: function (jqxhr, status, error) { $pane.addClass('alert alert-error').text(error); },
@@ -53,15 +54,28 @@ window.RecipeTasksView = Backbone.View.extend({
         var $pane = this.$('.failed-pane');
         $pane.html('<i class="icon-spinner icon-spin"></i> Loading&hellip;');
         return $.ajax({
-            url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&is_failed=1&recipe_id=' + this.options.recipe_id,
+            url: '../tasks/do_search?tasks_tgp_order=id&tasks_tgp_limit=0&is_failed=1&recipe_id=' + this.recipe_id,
             dataType: 'html',
             success: function (data) { $pane.html(data); },
             error: function (jqxhr, status, error) { $pane.addClass('alert alert-error').text(error); },
         });
     },
-    set_cookie: function (evt) {
-        var new_cookie_value = $(evt.target).data('cookieValue');
-        $.cookie('recipe_' + this.options.recipe_id, new_cookie_value);
+    get_saved_state: function () {
+        try {
+            return localStorage.getItem('beaker_recipe_' + this.recipe_id);
+        } catch (e) {
+            return undefined;
+        }
+    },
+    set_saved_state: function (value) {
+        try {
+            localStorage.setItem('beaker_recipe_' + this.recipe_id, value);
+        } catch (e) {
+            // ignore
+        }
+    },
+    tab_shown: function (evt) {
+        this.set_saved_state($(evt.target).data('cookieValue'));
     },
 });
 

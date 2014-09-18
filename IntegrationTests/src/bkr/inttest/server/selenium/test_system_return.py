@@ -4,34 +4,39 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import requests
 from turbogears.database import session
 from bkr.server.model import SystemStatus
-from bkr.inttest.server.selenium import SeleniumTestCase, WebDriverTestCase
-from bkr.inttest import data_setup, with_transaction, get_server_base
+from bkr.inttest.server.selenium import WebDriverTestCase
+from bkr.inttest import data_setup, get_server_base
 from bkr.inttest.server.webdriver_utils import login, is_text_present
-
+from bkr.inttest.server.requests_utils import login as requests_login, put_json
 
 class SystemReturnTestWD(WebDriverTestCase):
 
     def setUp(self):
-        with session.begin():
-            self.recipe = data_setup.create_recipe()
-            data_setup.create_job_for_recipes([self.recipe])
-            data_setup.mark_recipe_running(self.recipe)
         self.browser = self.get_browser()
 
     def test_cannot_return_running_recipe(self):
+        with session.begin():
+            recipe = data_setup.create_recipe()
+            data_setup.create_job_for_recipes([recipe])
+            data_setup.mark_recipe_running(recipe)
+            system = recipe.resource.system
         b = self.browser
-        system = self.recipe.resource.system
         login(b)
         b.get(get_server_base() + 'view/%s' % system.fqdn)
         # "Return" button should be absent
-        b.find_element_by_xpath('//form[@name="form"'
-                                'and not(.//a[normalize-space(string(.))="Return"])]')
+        b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")'
+                ' and not(.//a[text()="Return"])]')
         # try doing it directly
-        b.get(get_server_base() + 'user_change?id=%s' % system.id)
-        self.assertEquals(b.find_element_by_css_selector('.flash').text,
-            "Failed to return %s: Currently running R:%s" % (system.fqdn, self.recipe.id))
+        s = requests.Session()
+        requests_login(s)
+        response = put_json(get_server_base() +
+                'systems/%s/reservations/+current' % system.fqdn,
+                session=s, data=dict(finish_time='now'))
+        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.text, 'Currently running %s' % recipe.t_id)
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=1007789
     def test_can_return_manual_reservation_when_automated(self):
@@ -46,73 +51,58 @@ class SystemReturnTestWD(WebDriverTestCase):
         # Take
         b.get(get_server_base() + 'view/%s' % system.fqdn)
         b.find_element_by_link_text('Take').click()
-        self.assertEquals(b.find_element_by_css_selector('.flash').text,
-                          "Reserved %s" % (system.fqdn))
+        b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")]'
+                '//span[@class="label" and text()="Reserved"]')
 
         # toggle status to Automated
         with session.begin():
             system.status = SystemStatus.automated
-        session.expunge_all()
 
         # Attempt to return
         b.get(get_server_base() + 'view/%s' % system.fqdn)
         b.find_element_by_link_text('Return').click()
-        self.assertEquals(b.find_element_by_css_selector('.flash').text,
-                          "Returned %s" % (system.fqdn))
-
-class SystemReturnTest(SeleniumTestCase):
-
-    @with_transaction
-    def setUp(self):
-        self.user = data_setup.create_user(password='password')
-        self.system = data_setup.create_system(shared=True,
-                status=SystemStatus.manual)
-        self.lc  = data_setup.create_labcontroller(fqdn='remove_me')
-        self.system.lab_controller = self.lc
-        self.selenium = self.get_selenium()
-        self.selenium.start()
+        b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")]'
+                '//span[@class="label" and text()="Idle"]')
 
     def test_cant_return_sneakily(self):
-        self.login() #login as admin
-        sel = self.selenium
-        sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load(30000)
-        sel.click('link=Take')
-        sel.wait_for_page_to_load(30000)
-
-        self.logout()
-        self.login(user=self.user.user_name, password='password')
-        sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load(30000)
+        with session.begin():
+            system = data_setup.create_system(shared=True,
+                    status=SystemStatus.manual)
+            user = data_setup.create_user(password=u'password')
+        b = self.browser
+        login(b) #login as admin
+        b.get(get_server_base() + 'view/%s' % system.fqdn)
+        b.find_element_by_link_text('Take').click()
+        b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")]'
+                '//span[@class="label" and text()="Reserved"]')
 
         # Test for https://bugzilla.redhat.com/show_bug.cgi?id=747328
-        sel.open('user_change?id=%s' % self.system.id)
-        sel.wait_for_page_to_load("30000")
-        self.assertIn('cannot unreserve system', sel.get_text('css=.flash'))
+        s = requests.Session()
+        requests_login(s, user.user_name, 'password')
+        response = put_json(get_server_base() +
+                'systems/%s/reservations/+current' % system.fqdn,
+                session=s, data=dict(finish_time='now'))
+        self.assertEquals(response.status_code, 403)
+        self.assertIn('cannot unreserve system', response.text)
 
     def test_return_with_no_lc(self):
-        sel = self.selenium
-        self.login(user=self.user.user_name, password='password')
-        sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load('30000')
-        sel.click('link=Take')
-        sel.wait_for_page_to_load('30000')
+        with session.begin():
+            lc = data_setup.create_labcontroller()
+            system = data_setup.create_system(shared=True,
+                    status=SystemStatus.manual, lab_controller=lc)
+            user = data_setup.create_user(password=u'password')
+        b = self.browser
+        login(b, user.user_name, 'password')
+        b.get(get_server_base() + 'view/%s' % system.fqdn)
+        b.find_element_by_link_text('Take').click()
+        b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")]'
+                '//span[@class="label" and text()="Reserved"]')
 
         # Let's remove the LC
-        self.logout()
-        self.login()
-        sel.open("labcontrollers/")
-        sel.wait_for_page_to_load('30000')
-        sel.click("//a[@onclick=\"has_watchdog('%s')\"]" % self.lc.id)
-        sel.wait_for_page_to_load("30000")
+        with session.begin():
+            system.lc = None
 
-        self.logout()
-        self.login(user=self.user.user_name, password='password')
-        sel.open('view/%s' % self.system.fqdn)
-        sel.wait_for_page_to_load('30000')
-        sel.click('link=Return')
-        sel.wait_for_page_to_load('30000')
-        text = sel.get_text('//body')
-        self.assert_('Returned %s' % self.system.fqdn in text)
-
-
+        b.get(get_server_base() + 'view/%s' % system.fqdn)
+        b.find_element_by_link_text('Return').click()
+        b.find_element_by_xpath('//div[contains(@class, "system-quick-usage")]'
+                '//span[@class="label" and text()="Idle"]')

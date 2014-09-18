@@ -204,8 +204,10 @@ def create_distro_tree(distro=None, distro_name=None, osmajor=u'DansAwesomeLinux
             kernel_type=KernelType.by_name(u'default'),
             path=u'pxeboot/initrd')
     existing_urls = [lc_distro_tree.url for lc_distro_tree in distro_tree.lab_controller_assocs]
-    # make it available in all lab controllers
-    for lc in (lab_controllers or LabController.query):
+    # make it available in all lab controllers by default
+    if lab_controllers is None:
+        lab_controllers = LabController.query
+    for lc in lab_controllers:
         default_urls = [u'%s://%s%s/distros/%s/%s/%s/os/' % (scheme, lc.fqdn,
                 scheme == 'nfs' and ':' or '',
                 distro_tree.distro.name, distro_tree.variant,

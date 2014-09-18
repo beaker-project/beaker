@@ -99,7 +99,7 @@ class DistroViewTest(WebDriverTestCase):
         self.assertEquals(b.find_element_by_xpath(
                 '//table//tr[td[1]/a/text()="%s"]/td[4]'
                 % not_expired_tree.id).text,
-                'Pick System Pick Any System')
+                'Provision')
         self.assertEquals(b.find_element_by_xpath(
                 '//table//tr[td[1]/a/text()="%s"]/td[4]'
                 % expired_tree.id).text,

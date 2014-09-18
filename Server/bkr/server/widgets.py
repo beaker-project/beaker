@@ -330,59 +330,6 @@ class GroupPermissions(Widget):
         </div>
         """
 
-class ReserveSystem(HorizontalForm):
-    fields = [ 
-          HiddenField(name='system_id'),
-              Label(name='system', label=_(u'System to Provision')),
-              Label(name='distro', label=_(u'Distro Tree to Provision')),
-              TextField(name='whiteboard', attrs=dict(size=50),
-                        label=_(u'Job Whiteboard')),
-              TextField(name='ks_meta', attrs=dict(size=50),
-                        label=_(u'KickStart MetaData')),
-              TextField(name='koptions', attrs=dict(size=50),
-                        label=_(u'Kernel Options (Install)')),
-              TextField(name='koptions_post', 
-                        attrs=dict(size=50),
-                        label=_(u'Kernel Options (Post)')),
-             ]
-    submit_text = 'Queue Job'
-
-    def update_params(self,d): 
-        log.debug(d)
-        if 'value' in d:
-            if 'distro_tree_ids' in d['value']:
-                if(isinstance(d['value']['distro_tree_ids'],list)):
-                    for distro_tree_id in d['value']['distro_tree_ids']:
-                        d['hidden_fields'] = [HiddenField(name='distro_tree_id', attrs={'value' : distro_tree_id})] + d['hidden_fields'][0:]
-                
-
-        super(ReserveSystem,self).update_params(d)
-
-
-class ReserveWorkflow(Form): 
-    javascript = [LocalJSLink('bkr', '/static/javascript/loader_v2.js'),
-                  LocalJSLink('bkr', '/static/javascript/reserve_workflow_v8.js'),
-                 ] 
-    template="bkr.server.templates.reserve_workflow"
-    fields = [
-        SingleSelectField(name='osmajor', label=_(u'Family'),
-            validator=validators.UnicodeString(),
-            css_classes=['distro_filter_criterion']),
-        SingleSelectField(name='tag', label=_(u'Tag'),
-            validator=validators.UnicodeString(),
-            css_classes=['distro_filter_criterion']),
-        SingleSelectField(name='distro', label=_(u'Distro'),
-            validator=validators.UnicodeString(),
-            css_classes=['distro_tree_filter_criterion']),
-        SingleSelectField(name='lab_controller_id', label=_(u'Lab'),
-            validator=validators.Int(),
-            css_classes=['distro_tree_filter_criterion']),
-        MultipleSelectField(name='distro_tree_id', label=_(u'Distro Tree'),
-                size=7, validator=validators.Int()),
-    ]
-    params = ['get_distros_rpc', 'get_distro_trees_rpc']
-
-
 class MyButton(Button):
     template="bkr.server.templates.my_button"
     params = ['type', 'button_label', 'name']
@@ -495,7 +442,7 @@ class MatrixDataGrid(DataGrid):
 
 class myPaginateDataGrid(PaginateDataGrid):
     template = "bkr.server.templates.my_paginate_datagrid"
-    params = ['add_action']
+    params = ['add_action', 'add_script']
 
 class LabControllerDataGrid(myPaginateDataGrid):
     javascript = [LocalJSLink('bkr','/static/javascript/lab_controller_remove.js'),
@@ -830,47 +777,6 @@ class SearchBar(RepeatingFormField):
 class ProvisionForm(RepeatingFormField):
     pass
 
-class SystemCommandsForm(Form):
-    template = "bkr.server.templates.system_commands_form"
-    member_widgets = ["id", "power", "lab_controller"]
-    params = ['options', 'action', 'can_power', 'is_user',
-              'power_enabled', 'netboot_enabled']
-
-    def __init__(self, *args, **kw):
-        super(SystemCommandsForm, self).__init__(*args, **kw)
-        self.id = HiddenField(name="id")
-        self.power = HiddenField(name="power")
-        self.lab_controller = HiddenField(name="lab_controller")
-
-    def display(self, value, *args, **kw):
-        if 'options' in kw:
-            kw.update(kw['options'])
-        system = value
-        kw['power_enabled'] = bool(system.power and system.lab_controller)
-        kw['netboot_enabled'] = bool(system.lab_controller)
-        kw['fqdn'] = system.fqdn
-        return super(SystemCommandsForm, self).display(value, *args, **kw)
-
-class PowerActionHistory(CompoundWidget):
-    template = "bkr.server.templates.power_history_grid"
-    member_widgets = ['grid']
-    def __init__(self):
-        self.grid  = BeakerDataGrid(fields = [DataGrid.Column(name='user',title='User',
-                                                                          getter=lambda x: x.user),
-                                                  DataGrid.Column(name='service', title='Service',
-                                                                          getter=lambda x: x.service),
-                                                  DataGrid.Column(name='created', title='Submitted',
-                                                                          getter=lambda x: x.created,
-                                                                          options=dict(datetime=True)),
-                                                  DataGrid.Column(name='action', title='Action',
-                                                                          getter=lambda x: x.action),
-                                                  DataGrid.Column(name='status',title='Status',
-                                                                          getter=lambda x: x.status),
-                                                  DataGrid.Column(name='new_value',title='Message',
-                                                                          getter=lambda x: x.new_value)])
-
-
-
 class TaskSearchForm(RemoteForm): 
     template = "bkr.server.templates.task_search_form"
     params = ['options','hidden']
@@ -935,47 +841,6 @@ class LabInfoForm(HorizontalForm):
                 d['value']['weight'] = labinfo.weight
                 d['value']['wattage'] = labinfo.wattage
                 d['value']['cooling'] = labinfo.cooling
-
-class PowerForm(HorizontalForm):
-    fields = [
-        HiddenField(name="fqdn"),
-        HiddenField(name="power"),
-        SingleSelectField(name='power_type_id',
-            label=_(u'Power Type'),
-            options=model.PowerType.get_all,
-            validator=validators.NotEmpty()),
-        TextField(name='power_address', label=_(u'Power Address'),
-            validator=validators.UnicodeString(if_empty='')),
-        TextField(name='power_user', label=_(u'Power Login')),
-        TextField(name='power_passwd', label=_(u'Power Password')),
-        TextField(name='power_id', label=_(u'Power Port/Plug/etc')),
-        TextField(name='power_quiescent_period', label=_(u'Quiescent Period'),
-            validator=validators.Int(not_empty=True),
-            default=model.Power.default_quiescent_period),
-        RadioButtonList(name='release_action',
-            label=_(u'Release Action'),
-            options=[(ra, unicode(ra)) for ra in model.ReleaseAction],
-            default=model.ReleaseAction.power_off,
-            validator=ValidEnumValue(model.ReleaseAction)),
-        SingleSelectField(name='reprovision_distro_tree_id',
-            label=_(u'Reprovision Distro'),
-            options=[],
-            validator=validators.Int(non_empty=True)),
-    ]
-    submit_text = _(u'Save Power Changes')
-
-    def update_params(self, d):
-        super(PowerForm, self).update_params(d)
-        if 'power' in d['value']:
-            if d['value']['power']:
-                power = d['value']['power']
-                d['value']['power_type_id'] = power.power_type_id
-                d['value']['power_address'] = power.power_address
-                d['value']['power_user'] = power.power_user
-                d['value']['power_passwd'] = power.power_passwd
-                d['value']['power_id'] = power.power_id
-                d['value']['power_quiescent_period'] = power.power_quiescent_period
-
 
 class ExcludedFamilies(FormField):
     template = """
@@ -1103,27 +968,6 @@ class SystemKeys(Form):
                 d['options'].get('key_values_string', [])),
                 key=lambda kv: (kv.key.key_name, kv.key_value))
 
-class SystemArches(Form):
-    template = "bkr.server.templates.system_arches"
-    member_widgets = ["id", "arch", "delete_link"]
-    params = ['options', 'readonly', 'arches']
-    delete_link = DeleteLinkWidgetForm()
-
-    def __init__(self, *args, **kw):
-        super(SystemArches, self).__init__(*args, **kw)
-        self.id    = HiddenField(name="id")
-        self.arch  = AutoCompleteField(name='arch',
-                                      search_controller="/arches/by_name",
-                                      search_param="name",
-                                      result_name="arches")
-
-    def update_params(self, d):
-        super(SystemArches, self).update_params(d)
-        if 'readonly' in d['options']:
-            d['readonly'] = d['options']['readonly']
-        if 'arches' in d['options']:
-            d['arches'] = d['options']['arches']
-
 class DistroTags(Form):
     template = "bkr.server.templates.distro_tags"
     member_widgets = ["id", "tag", "delete_link"]
@@ -1171,51 +1015,6 @@ class SystemGroups(Form):
         if 'system_id' in d['options']:
             d['system_id'] = d['options']['system_id']
 
-
-class SystemProvision(Form):
-    javascript = [LocalJSLink('bkr', '/static/javascript/provision_v2.js')]
-    template = "bkr.server.templates.system_provision"
-    member_widgets = ["id", "prov_install", "ks_meta", "power",
-                      "koptions", "koptions_post", "reboot","schedule_reserve_days"]
-    params = ['options', 'lab_controller', 'power_enabled', 'reserved',
-              'provisioning_notes', 'provisioning_panel_id',
-              'provisioning_button_label']
-
-    MAX_DAYS_PROVISION = 7
-    DEFAULT_RESERVE_DAYS = 0.5
-
-    def __init__(self, *args, **kw):
-        super(SystemProvision, self).__init__(*args, **kw)
-        self.id           = HiddenField(name="id")
-        self.power        = HiddenField(name="power")
-        self.schedule_reserve_days = SingleSelectField(name='reserve_days',
-                                                       label=_('Days to reserve for'),
-                                                       options = range(1, self.MAX_DAYS_PROVISION + 1),
-                                                       validator=validators.NotEmpty())
-        self.prov_install = SingleSelectField(name='prov_install',
-                                             label=_(u'Distro'),
-                                             options=[],
-                                             attrs={'size': 12, 'class': 'input-block-level'},
-                                             validator=validators.NotEmpty())
-        self.ks_meta       = TextField(name='ks_meta', attrs=dict(size=50),
-                                       label=_(u'KickStart MetaData'))
-        self.koptions      = TextField(name='koptions', attrs=dict(size=50),
-                                       label=_(u'Kernel Options (Install)'))
-        self.koptions_post = TextField(name='koptions_post', 
-                                       attrs=dict(size=50),
-                                       label=_(u'Kernel Options (Post)'))
-        self.reboot        = CheckBox(name='reboot',
-                                       label=_(u'Reboot System?'),
-                                       default=True)
-
-    def update_params(self, d): 
-        super(SystemProvision, self).update_params(d)
-        for param in ['reserved', 'lab_controller', 'provisioning_notes',
-                      'provisioning_panel_id', 'provisioning_button_label']:
-            d[param] = d['options'].get(param)
-        if 'power' in d['value']:
-            if d['value']['power']:
-                d['power_enabled'] = True
 
 class SystemInstallOptions(Form):
     javascript = [LocalJSLink('bkr', '/static/javascript/install_options.js')]
@@ -1302,191 +1101,6 @@ class SystemExclude(Form):
 class SystemDetails(Widget):
     template = "bkr.server.templates.system_details"
     params = ['system']
-
-class SystemHistory(CompoundWidget): 
-    template = "bkr.server.templates.system_activity"
-    member_widgets = ['grid', 'search_bar']
-    params = ['searchvalue', 'all_history']
-    
-    def __init__(self):
-        #filter_column_options = model.Activity.distinct_field_names() 
-        self.grid  = myPaginateDataGrid(fields = [PaginateDataGrid.Column(name='user',title='User',getter=lambda x: x.user,options=dict(sortable=True)),
-                                                  PaginateDataGrid.Column(name='service', title='Service', getter=lambda x: x.service, options=dict(sortable=True)),
-                                                  PaginateDataGrid.Column(name='created', title='Created',
-                                                    getter=lambda x: x.created,
-                                                    options=dict(sortable=True, datetime=True)),
-                                                  PaginateDataGrid.Column(name='field_name', title='Field Name', getter=lambda x: x.field_name, options=dict(sortable=True)),
-                                                  PaginateDataGrid.Column(name='action', title='Action', getter=lambda x: x.action, options=dict(sortable=True)),
-                                                  PaginateDataGrid.Column(name='old_value',title='Old Value', getter=lambda x: x.old_value,options=dict(sortable=True)), 
-                                                  PaginateDataGrid.Column(name='new_value',title='New Value',getter=lambda x: x.new_value, options=dict(sortable=True))]) 
-
-        self.search_bar = SearchBar(name='historysearch',
-                           label=_(u'History Search'),    
-                           table = search_utility.History.search.create_complete_search_table(),
-                           search_controller=url("/get_search_options_history"), 
-                           )
-
-    def display(self,value=None,**params):
-        if 'options' in params:
-            if 'searchvalue' in params['options']:
-                params['searchvalue'] = params['options']['searchvalue']
-        if 'action' in params:
-            params['all_history'] = params['action']
-        return super(SystemHistory, self).display(value,**params)
-                
-    
-
-class SystemForm(Form):
-    javascript = [LocalJSLink('bkr', '/static/javascript/provision_v2.js'),
-                  LocalJSLink('bkr', '/static/javascript/install_options.js'),
-                  LocalJSLink('bkr', '/static/javascript/searchbar_v9.js'),
-                  JSLink(static,'ajax.js'),
-                 ]
-    template = "bkr.server.templates.system_form"
-    params = ['id','readonly',
-              'user_change','user_change_text', 'running_job',
-              'show_loan_options',
-              'owner_change', 'owner_change_text']
-    user_change = '/user_change'
-    owner_change = '/owner_change'
-    fields = [
-               HiddenField(name='id'),
-               TextField(name='fqdn',
-                         label=_(u'System Name'),
-                         validator=Hostname(not_empty=True),
-                         attrs={'maxlength':'255',
-                                'size':'60'}),
-               SingleSelectField(name='status',
-                                 label=_(u'Condition'),
-                                 options=[(status, unicode(status)) for status in model.SystemStatus],
-                                 validator=ValidEnumValue(model.SystemStatus)),
-               TextArea(name='status_reason', label=_(u'Condition Report'),attrs={'rows':3,'cols':27},validator=validators.MaxLength(255)),
-               SingleSelectField(name='lab_controller_id',
-                                 label=_(u'Lab Controller'),
-                                 options=lambda: [(0,"None")] + model.LabController.get_all(valid=True),
-                                 validator=validators.Int()),
-               TextField(name='vendor', label=_(u'Vendor')),
-               TextField(name='model', label=_(u'Model')),
-               TextField(name='date_added', label=_(u'Date Created')),
-               TextField(name='date_modified', label=_(u'Last Modification')),
-               TextField(name='date_lastcheckin', label=_(u'Last Inventoried')),
-               TextField(name='serial', label=_(u'Serial Number')),
-               SingleSelectField(name='type',
-                                 label=_(u'Type'),
-                                 options=[(type, unicode(type)) for type in model.SystemType],
-                                 validator=ValidEnumValue(model.SystemType)),
-               TextField(name='location', label=_(u'Location')),
-               TextField(name='lender', label=_(u'Lender'),
-                         help_text=_(u'Name of the organisation which has '
-                            'lent this system to Beaker\'s inventory')),
-               TextField(name='user', label=_(u'Current User')),
-               TextField(name='owner', label=_(u'Owner')),
-               TextField(name='loaned', label=_(u'Loaned To')),
-               TextField(name='contact', label=_(u'Contact')),
-               AutoCompleteField(name='group',
-                                      search_controller=url("/groups/by_name"),
-                                      search_param="name",
-                                      result_name="groups"),
-               TextField(name='mac_address', label=_(u'Mac Address'),
-                         attrs={'maxlength': 18}, validator=validators.MaxLength(18)),
-               TextField(name='cc', label=_(u'Notify CC')),
-               SingleSelectField(name='hypervisor_id',
-                                 label=_(u'Hypervisor'),
-                                 options=lambda: [(0, 'None')] + model.Hypervisor.get_all_types(),
-                                 validator=validators.Int()),
-               SingleSelectField(name='kernel_type_id',
-                                 label=_(u'Kernel Type'),
-                                 options=model.KernelType.get_all_types,
-                                 validator=validators.Int()),
-    ]
-
-    def display_value(self, item, hidden_fields, value=None):
-        if item not in [hfield.name for hfield in hidden_fields]:
-            return value
-
-    def display(self, value, options={}, **params):
-        # Some loan related options, if we have a value.
-        if value:
-            params['loan_comment'] = value.loan_comment
-            # It's currently loaned or we have perm to add a new loan
-            if identity.current.user:
-                params['show_loan_options'] = \
-                    value.can_return_loan(identity.current.user) or \
-                    value.can_lend(identity.current.user) or \
-                    value.can_borrow(identity.current.user)
-            else:
-                params['show_loan_options'] = False
-        else:
-            params['loan_comment'] = None
-            params['show_loan_options'] = None
-        if not options.get('edit'):
-            params['display_system_property'] = \
-                lambda f: self.custom_value_for(f, value)
-        return super(SystemForm, self).display(value, options=options, **params)
-
-    def custom_value_for(self, item, value):
-        """ Return system property fit for display
-
-        Default is to return the item attribute of value, otherwise
-        custom attribute values can be returned.
-        """
-        mapper = dict(lab_controller_id=lambda: value.lab_controller and \
-                                                 value.lab_controller.fqdn,
-                      kernel_type_id=lambda: value.kernel_type and \
-                                             value.kernel_type.kernel_type,
-                      hypervisor_id=lambda: value.hypervisor and \
-                                              value.hypervisor.hypervisor)
-        property_func = mapper.get(item)
-        if property_func:
-            property_value = property_func()
-        else:
-            property_value = getattr(value, item, None)
-
-        span = Element('span', {'class': 'form-control-static'})
-        if property_value is not None:
-            span.text = unicode(property_value)
-        return span
-
-    def update_params(self, d):
-        super(SystemForm, self).update_params(d)
-        if d['options'].get('edit'):
-            d['display_system_property'] = lambda f: self.display_field_for(f, d["value_for"](f))
-        if d["options"].has_key("loan"):
-            d["loan"] = d["options"]["loan"]
-        if d["options"].has_key("report_problem"):
-            d["report_problem"] = d["options"]["report_problem"]
-        if d["options"].has_key("system_actions"):
-            d["system_actions"] = d["options"]["system_actions"]
-        else:
-            d['system_actions'] = None
-        if d["options"].has_key("system"):
-            d["system"] = d["options"]["system"]
-        if d["options"].has_key("owner_change"):
-            d["owner_change"] = d["options"]["owner_change"]
-        if d["options"].has_key("user_change"):
-            d["user_change"] = d["options"]["user_change"]
-        if d["options"].has_key("owner_change_text"):
-            d["owner_change_text"] = d["options"]["owner_change_text"]
-        if d["options"].has_key("user_change_text"):
-            d["user_change_text"] = d["options"]["user_change_text"]
-        if d["options"].has_key("loan_widget"):
-            d["loan_widget"] = d["options"]["loan_widget"]
-        if d["options"].has_key("running_job"):
-            d["running_job"] = d["options"]["running_job"]
-        d["id"] = d["value_for"]("id")
-        if d["value"] and "owner" in d["value"] and d["value"]["owner"]:
-            d["owner_email_link"] = d["value"]["owner"].email_link
-        else:
-            d["owner_email_link"] = ""
-        if d["value"] and "user" in d["value"] and d["value"]["user"]:
-            d["user_email_link"] = d["value"]["user"].email_link
-        else:
-            d["user_email_link"] = ""
-        if d["value"] and "loaned" in d["value"] and d["value"]["loaned"]:
-            d["loaned_email_link"] = d["value"]["loaned"].email_link
-        else:
-            d["loaned_email_link"] = ""
-
 
 class TasksWidget(CompoundWidget):
     template = "bkr.server.templates.tasks_widget"
@@ -1692,25 +1306,6 @@ class AlphaNavBar(Widget):
         self.keyword = keyword
 
 
-class RequestLoan(RemoteForm):
-    template = 'bkr.server.templates.request_loan'
-    fields = [TextArea(name='message', label='Loan Request',
-        validator=validators.NotEmpty()),]
-    member_widgets=['submit']
-    desc = 'Request Loan'
-    submit = Button(name='submit')
-    submit_text = 'Request'
-    on_success = 'success(\'Your loan request has been sent succesfully\')'
-    on_failure = 'failure(\'We were unable to send you loan request at this time\')';
-
-    def update_params(self, d):
-        super(RequestLoan, self).update_params(d)
-        d['system'] = d['options']['system']
-        d['hidden_fields'] = [HiddenField(name='system', attrs = {'value' : d['system']})]
-        d['submit'].attrs.update({'onClick' : "return ! system_action_remote_form_request('%s', %s, '%s');" % (
-            d['options']['name'], jsonify.encode(self.get_options(d)), d['action'])})
-
-
 class JobWhiteboard(RPC, CompoundWidget):
     """
     Widget for displaying/updating a job's whiteboard. Saves asynchronously using js.
@@ -1739,72 +1334,6 @@ class JobWhiteboard(RPC, CompoundWidget):
         super(JobWhiteboard, self).update_params(d)
         d['form_attrs']['onsubmit'] = "return !remoteFormRequest(this, null, %s);" % (
             jsonify.encode(self.get_options(d)))
-
-
-class LoanWidget(RPC, TableForm, CompoundWidget):
-    template = "bkr.server.templates.loan_widget"
-    fields = [TextField(name='loaned', label='Loan To'),
-              TextArea(name='loan_comment', label='Comment'),
-              HiddenField(name='fqdn'),]
-    member_widgets = ['update_loan', 'return_loan']
-    params = ['attrs']
-    # Displayed in dialog
-    attrs = {'style': 'display:none'}
-    action = url("../systems/update_loan")
-    update_loan = MyButton(name='update', button_label='Update Loan')
-    return_loan = MyButton(name='return', button_label='Return Loan')
-    name = 'update_loan'
-
-    def __init__(self, *args, **kw):
-        super(LoanWidget, self).__init__(*args, **kw)
-        self.javascript.extend([LocalJSLink('bkr',
-            '/static/javascript/loan_v2.js'),
-            LocalJSLink('bkr',
-            '/static/javascript/jquery.timers-1.2.js')])
-
-    def display(self, value, comment, *args, **params):
-        # Form fields use their name as the key in 'value' arg
-        # to get their value
-        value['loan_comment'] = comment
-        return super(LoanWidget, self).display(value, *args, **params)
-
-    def update_params(self, d):
-        super(LoanWidget, self).update_params(d)
-        d['update_loan'].attrs.update({'onClick' :  "return ! "
-            "loan_action_remote_form_request('%s', %s, '%s', "
-            "update_loan_callback);" % (
-            d['name'], jsonify.encode(self.get_options(d)), url('../systems/update_loan'))})
-
-        d['return_loan'].attrs.update({'onClick' :  "return ! "
-            "loan_action_remote_form_request('%s', %s, '%s', "
-            "update_loan_callback);" % (
-            d['name'], jsonify.encode(self.get_options(d)), url('../systems/return_loan'))})
-
-        system = model.System.by_fqdn(d['value']['fqdn'], identity.current.user)
-        if identity.current.user and system.can_lend(identity.current.user) \
-                or system.can_borrow(identity.current.user):
-            for field in d['fields']:
-                if field.attrs.get('disabled'):
-                    del field.attrs['disabled']
-            d['update_loan'].attrs.update({'style': 'display:block'})
-        else:
-            for field in d['fields']:
-                field.attrs.update({'disabled': 'readonly'})
-            d['update_loan'].attrs.update({'style': 'display:none'})
-
-        if system.can_return_loan(identity.current.user):
-            d['return_loan'].attrs.update({'style': 'display:block'})
-        else:
-            d['return_loan'].attrs.update({'style': 'display:none'})
-
-
-class SystemActions(CompoundWidget):
-    template = 'bkr.server.templates.system_actions'
-    problem  = ReportProblemForm(name='problem')
-    loan = RequestLoan(name='loan')
-    member_widgets = ['problem', 'loan']
-    params = ['report_problem_options', 'loan_options']
-    name = 'system_actions'
 
 
 class TaskActionWidget(RPC):

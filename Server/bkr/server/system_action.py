@@ -30,15 +30,3 @@ class SystemAction(object):
                 u'Status', None, description)
         system.activity.append(activity)
         return {}
-
-    @expose(format='json')
-    @identity.require(identity.not_anonymous())
-    @validate(validators = {'system' : CheckSystemValid()})
-    def loan_request(self, message, system, tg_errors=None, *args, **kw):
-        if tg_errors:
-            raise HTTPError(status=400, message=tg_errors)
-        requester = identity.current.user
-        to = system.owner.email_address
-        message = message.strip()
-        mail.system_loan_request(system, message, requester, to)
-        return {}

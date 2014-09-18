@@ -26,7 +26,8 @@ from bkr.server.model import System, SystemStatus, SystemActivity, TaskStatus, \
         VirtResource, OSMajor, OSMajorInstallOptions, Watchdog, RecipeSet, \
         RecipeVirtStatus, MachineRecipe, GuestRecipe, Disk, Task, TaskResult, \
         Group, User, ActivityMixin, SystemAccessPolicy, SystemPermission, \
-        RecipeTask, RecipeTaskResult, DeclarativeMappedObject, OSVersion, RecipeReservationRequest
+        RecipeTask, RecipeTaskResult, DeclarativeMappedObject, OSVersion, \
+        RecipeReservationRequest, ReleaseAction
 from bkr.server.bexceptions import BeakerException
 from sqlalchemy.sql import not_
 from sqlalchemy.exc import OperationalError
@@ -180,7 +181,27 @@ class TestSystem(unittest.TestCase):
             system.fqdn = 'invalid_system_fqdn'
             self.fail('Must fail or die')
         except ValueError as e:
-            self.assertIn('System has an invalid FQDN', str(e))
+            self.assertIn('Invalid FQDN for system', str(e))
+
+    def test_distros(self):
+        lc = data_setup.create_labcontroller()
+        excluded_osmajor = OSMajor.lazy_create(
+                osmajor=data_setup.unique_name('osmajor_test_distros%s'))
+        tree_excluded = data_setup.create_distro_tree(arch=u'i386',
+                osmajor=excluded_osmajor.osmajor)
+        included_osmajor = OSMajor.lazy_create(
+                osmajor=data_setup.unique_name('osmajor_test_distros%s'))
+        tree_not_in_lab = data_setup.create_distro_tree(arch=u'i386',
+                osmajor=included_osmajor.osmajor, lab_controllers=[])
+        tree_in_lab = data_setup.create_distro_tree(arch=u'i386',
+                osmajor=included_osmajor.osmajor, lab_controllers=[lc])
+        system = data_setup.create_system(arch=u'i386', lab_controller=lc,
+                exclude_osmajor=[excluded_osmajor])
+        session.flush()
+        distros = system.distros()
+        self.assertNotIn(tree_excluded.distro, distros)
+        self.assertNotIn(tree_not_in_lab.distro, distros)
+        self.assertIn(tree_in_lab.distro, distros)
 
 class SystemFilterMethodsTest(unittest.TestCase):
     """
@@ -695,6 +716,21 @@ class SystemAccessPolicyTest(unittest.TestCase):
         self.assert_(SystemAccessPolicy.query
                 .filter(SystemAccessPolicy.id == self.policy.id)
                 .filter(SystemAccessPolicy.grants(user, perm)).count())
+
+
+class SystemReleaseAction(unittest.TestCase):
+
+    def setUp(self):
+        session.begin()
+
+    def tearDown(self):
+        session.commit()
+
+    def test_power_default(self):
+        system = data_setup.create_system()
+        session.flush()
+        self.assertEqual(system.release_action, ReleaseAction.power_off)
+
 
 class TestJob(unittest.TestCase):
 

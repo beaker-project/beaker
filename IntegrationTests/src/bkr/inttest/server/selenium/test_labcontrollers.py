@@ -8,7 +8,7 @@ import time
 import datetime
 from threading import Thread, Event
 from turbogears.database import session
-from bkr.inttest.server.selenium import SeleniumTestCase, XmlRpcTestCase, \
+from bkr.inttest.server.selenium import XmlRpcTestCase, \
     WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, is_activity_row_present
 from bkr.inttest import data_setup, get_server_base, fix_beakerd_repodata_perms

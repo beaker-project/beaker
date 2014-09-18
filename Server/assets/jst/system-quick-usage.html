@@ -1,0 +1,58 @@
+<% if (!_.isEmpty(current_loan)) { %>
+  <p>
+    <span class="label label-info">Loaned</span>
+    to <a href="mailto:<%- current_loan.get('recipient').get('email_address') %>" title="<%- current_loan.get('recipient').get('display_name') %> &lt;<%- current_loan.get('recipient').get('email_address') %>&gt;"><%- current_loan.get('recipient').get('user_name') %></a>.
+    <% /* IMPLEMENTME add "since", needs proper loan records */ %>
+  </p>
+<% } %>
+<p>
+  <% if (current_reservation) { %>
+    <span class="label">Reserved</span>
+    by <a href="mailto:<%- current_reservation.get('user').get('email_address') %>" title="<%- current_reservation.get('user').get('display_name') %> &lt;<%- current_reservation.get('user').get('email_address') %>&gt;"><%- current_reservation.get('user').get('user_name') %></a>
+    <% if (current_reservation.get('type') == 'recipe') { %>
+      for <a href="<%- window.beaker_url_prefix %>recipes/<%- current_reservation.get('recipe_id') %>">R:<%- current_reservation.get('recipe_id') %></a>
+    <% } %>
+    <time datetime="<%- moment.utc(current_reservation.get('start_time')).toISOString() %>"
+          title="<%- current_reservation.get('start_time') %>">
+      <%- moment.utc(current_reservation.get('start_time')).local().fromNow() %></time>.
+  <% } else { %>
+    <span class="label">Idle</span> since
+    <% var idle_since = previous_reservation ? previous_reservation.get('finish_time') : created_date; %>
+    <time datetime="<%- moment.utc(idle_since).toISOString() %>"
+          title="<%- idle_since %>">
+      <%- moment.utc(idle_since).local().fromNow() %></time>.
+  <% } %>
+</p>
+<% if (queue_size) { %>
+  <p><%- queue_size %> queued recipes could use this system.</p>
+<% } %>
+<p>
+  <% if (can_return) { %>
+    <a href="#" class="btn btn-block return">Return</a>
+  <% } else if (can_take && can_return_loan) { %>
+    <% /*
+    Normally we want to show only *one* quick action button here, to avoid 
+    bloating the "quick info" boxes. However this is a special case for the 
+    situation where a system is loaned to the current user. In that case there 
+    are two equally likely actions they might want to do: take the system (if 
+    they just got the loan), or return the loan (if they have already 
+    taken+returned the system and are now done with it).
+    */ %>
+    <div class="btn-group btn-group-justified">
+      <a href="#" class="btn take">Take</a>
+      <a href="#" class="btn return-loan">Return Loan</a>
+    </div>
+  <% } else if (can_take) { %>
+    <a href="#" class="btn btn-block take">Take</a>
+  <% } else if (can_return_loan) { %>
+    <a href="#" class="btn btn-block return-loan">Return Loan</a>
+  <% } else if (can_borrow) { %>
+    <a href="#" class="btn btn-block borrow">Borrow</a>
+  <% } else if (can_reserve) { %>
+    <a href="<%- beaker_url_prefix %>reserveworkflow/?system=<%- fqdn %>" class="btn btn-block">Schedule Reservation</a>
+  <% } else if (_.isEmpty(window.beaker_current_user)) { %>
+    <button type="button" class="btn btn-block" disabled="disabled">Not logged in</button>
+  <% } else { %>
+    <button type="button" class="btn btn-block request-loan">Request Loan</button>
+  <% } %>
+</p>

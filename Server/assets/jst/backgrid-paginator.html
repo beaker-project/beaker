@@ -1,0 +1,26 @@
+<div class="pagination-beside">
+  <span class="item-count">Items found: <%- totalRecords %></span>
+</div>
+<ul>
+  <%
+    var start = Math.max(Math.min(currentPage - 2, totalPages - 4), 1);
+    var end = Math.min(Math.max(currentPage, 3) + 2, totalPages);
+  %>
+  <% if (start > 2) { %>
+    <li><a href="#" data-page="1">1&hellip;</a></li>
+  <% } else if (start == 2) { %>
+    <li><a href="#" data-page="1">1</a></li>
+  <% } %>
+  <% for (var i = start; i <= end; i ++) { %>
+    <% if (currentPage == i) { %>
+      <li class="active"><span><%= i %></span></li>
+    <% } else { %>
+      <li><a href="#" data-page="<%= i %>"><%= i %></a></li>
+    <% } %>
+  <% } %>
+  <% if (end < totalPages - 1) { %>
+    <li><a href="#" data-page="<%= totalPages %>">&hellip;<%= totalPages %></a></li>
+  <% } else if (end == totalPages - 1) { %>
+    <li><a href="#" data-page="<%= totalPages %>"><%= totalPages %></a></li>
+  <% } %>
+</ul>

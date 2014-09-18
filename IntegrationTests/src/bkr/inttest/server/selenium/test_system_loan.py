@@ -23,34 +23,44 @@ class SystemLoanTest(WebDriverTestCase):
     def go_to_loan_page(self):
         b = self.browser
         b.get(get_server_base() + 'view/%s' % self.system.fqdn)
-        b.find_element_by_link_text('Loan Settings').click()
+        b.find_element_by_xpath('//ul[contains(@class, "system-nav")]'
+                '//a[text()="Loan"]').click()
 
     def change_loan(self, loanee, comment=None):
         b = self.browser
-        WebDriverWait(b,5).until(lambda driver: driver. \
-            find_element_by_name("update_loan.loaned").is_displayed() is True)
-        loan_field = b.find_element_by_name("update_loan.loaned")
-        loan_field.clear()
-        loan_field.send_keys(loanee)
+        tab = b.find_element_by_id('loan')
+        tab.find_element_by_xpath('.//button[text()="Lend"]').click()
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_name('recipient').send_keys(loanee)
         if comment:
-            comment_field = b.find_element_by_name("update_loan.loan_comment")
-            comment_field.clear()
-            comment_field.send_keys(comment)
-        b.find_element_by_name("update_loan.update").click()
+            modal.find_element_by_name('comment').send_keys(comment)
+        modal.find_element_by_tag_name('form').submit()
+
+    def borrow(self):
+        b = self.browser
+        tab = b.find_element_by_id('loan')
+        tab.find_element_by_xpath('.//button[text()="Borrow"]').click()
+
+    def return_loan(self):
+        b = self.browser
+        tab = b.find_element_by_id('loan')
+        tab.find_element_by_xpath('.//button[text()="Return Loan"]').click()
 
     def verify_loan_update(self, user):
         b = self.browser
-        b.find_element_by_xpath('//span[@id="loanee-name" and '
-            'normalize-space(text())="%s"]' % user)
+        tab = b.find_element_by_id('loan')
+        if user:
+            tab.find_element_by_xpath('.//p[contains(text(), '
+                    '"The system is currently loaned to")]')
+            tab.find_element_by_xpath('.//a[text()="%s"]' % user)
+        else:
+            tab.find_element_by_xpath('.//p[text()="The system is not currently loaned."]')
 
-    # https://bugzilla.redhat.com/show_bug.cgi?id=999391
-    def verify_loan_error(self, status, error):
-        # FIXME: Do we need to display status code?
-        fmt = 'Your request failed with the following error: %s'
-        msg = fmt % error
+    def verify_loan_error(self, error):
         b = self.browser
-        b.find_element_by_xpath('//p[normalize-space(text())="%s"]' % msg)
-
+        modal = b.find_element_by_class_name('modal')
+        self.assertIn(error, 
+                modal.find_element_by_class_name('alert-error').text)
 
     def test_return_loan(self):
         with session.begin():
@@ -65,7 +75,7 @@ class SystemLoanTest(WebDriverTestCase):
         # Login as average Joe, and click 'Return Loan'
         login(b, user.user_name, 'password')
         self.go_to_loan_page()
-        b.find_element_by_name('update_loan.return').click()
+        self.return_loan()
         self.verify_loan_update('')
         logout(b)
 
@@ -81,12 +91,8 @@ class SystemLoanTest(WebDriverTestCase):
             u'Loan Comment').first()
         self.assertEqual(sys_activity_comment.old_value, u'')
         self.assertEqual(sys_activity_comment.new_value, comment)
-        # Let's clear the user field
-        b.find_element_by_name('update_loan.loaned').clear()
-        b.find_element_by_name('update_loan.update').click()
-        # This is equivalent to a loan return
-        b.find_element_by_xpath('//textarea[@name='
-            '"update_loan.loan_comment" and normalize-space(text())=""]')
+        # Let's return the loan
+        self.return_loan()
         self.verify_loan_update('')
         # Test going from 'admin' -> '' in SystemActivity
         sys = System.by_fqdn(self.system.fqdn, user)
@@ -110,11 +116,7 @@ class SystemLoanTest(WebDriverTestCase):
         self.verify_loan_update(user.user_name)
         # Reload page
         self.go_to_loan_page()
-        self.assertEqual(b.find_element_by_id('loanee-name').text,
-            user.user_name)
-        loaned_to = b.find_element_by_name('update_loan.loaned'). \
-            get_attribute('value')
-        self.assertEqual(user.user_name, loaned_to)
+        self.verify_loan_update(user.user_name)
         # Test going from '' -> user in SystemActivity
         sys = self.system
         sys_activity = sys.dyn_activity.filter(SystemActivity.field_name ==
@@ -133,7 +135,8 @@ class SystemLoanTest(WebDriverTestCase):
         self.verify_loan_update(user.user_name)
         # Reload page
         self.go_to_loan_page()
-        loan_comment = b.find_element_by_name('update_loan.loan_comment').text
+        tab = b.find_element_by_id('loan')
+        loan_comment = tab.find_element_by_class_name('system-loan-comment').text
         self.assertEqual(comment, loan_comment)
 
 
@@ -167,8 +170,10 @@ class SystemLoanTest(WebDriverTestCase):
         b = self.browser
         login(b, user=user.user_name, password=p_word)
         self.go_to_loan_page()
-        loan_action = b.find_element_by_id('update_loan').text
-        self.assertTrue('Loan to' not in loan_action)
+        tab = b.find_element_by_id('loan')
+        tab.find_element_by_xpath('.//button[text()="Return Loan"]')
+        self.assertNotIn('Borrow', tab.text)
+        self.assertNotIn('Lend', tab.text)
 
     def test_can_change_loan_when_system_has_loanee(self):
         with session.begin():
@@ -189,7 +194,7 @@ class SystemLoanTest(WebDriverTestCase):
             self.assertEqual(reserved_activity.field_name, 'Loaned To')
             self.assertEqual(reserved_activity.old_value, user.user_name)
             self.assertEqual(reserved_activity.new_value, user2.user_name)
-            self.assertEqual(reserved_activity.service, 'WEBUI')
+            self.assertEqual(reserved_activity.service, 'HTTP')
 
     def test_user_with_perms_can_borrow(self):
         with session.begin():
@@ -199,7 +204,7 @@ class SystemLoanTest(WebDriverTestCase):
         b = self.browser
         login(b, user=user.user_name, password='password')
         self.go_to_loan_page()
-        self.change_loan(user.user_name)
+        self.borrow()
         self.verify_loan_update(user.user_name)
 
     def test_user_with_borrow_perms_cannot_lend(self):
@@ -211,22 +216,22 @@ class SystemLoanTest(WebDriverTestCase):
         b = self.browser
         login(b, user=user.user_name, password='password')
         self.go_to_loan_page()
-        self.change_loan(loanee_name)
-        error = "%s cannot lend this system to %s" % (user.user_name, loanee_name)
-        self.verify_loan_error(403, error)
+        tab = b.find_element_by_id('loan')
+        tab.find_element_by_xpath('.//button[text()="Borrow"]')
+        self.assertNotIn('Lend', tab.text)
 
     def test_cannot_lend_to_invalid_user(self):
         with session.begin():
             user = data_setup.create_user(password='password')
             self.system.custom_access_policy.add_rule(
-                    permission=SystemPermission.loan_self, user=user)
+                    permission=SystemPermission.loan_any, user=user)
         b = self.browser
         login(b, user=user.user_name, password='password')
         self.go_to_loan_page()
         loanee_name = "this_is_not_a_valid_user_name_for_any_test"
         self.change_loan(loanee_name)
         error = "user name %s is invalid" % loanee_name
-        self.verify_loan_error(400, error)
+        self.verify_loan_error(error)
 
     # https://bugzilla.redhat.com/show_bug.cgi?id=1121748
     def test_cannot_lend_to_ldap_user_with_extra_whitespace(self):
@@ -236,4 +241,4 @@ class SystemLoanTest(WebDriverTestCase):
         # jgillard is defined in ldap-data.ldif
         self.change_loan(u' jgillard')
         error = 'user name jgillard is invalid'
-        self.verify_loan_error(400, error)
+        self.verify_loan_error(error)

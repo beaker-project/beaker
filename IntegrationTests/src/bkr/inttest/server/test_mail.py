@@ -8,7 +8,7 @@ import email
 import re
 import unittest2 as unittest
 from turbogears.database import session
-from bkr.server.model import Arch
+from bkr.server.model import Arch, TaskResult
 from bkr.server.util import absolute_url
 from bkr.inttest import data_setup, mail_capture, get_server_base
 import bkr.server.mail
@@ -204,6 +204,15 @@ class JobCompletionNotificationTest(unittest.TestCase):
         # Subject header might be split across multiple lines
         subject = re.sub(r'\s+', ' ', msg['Subject'])
         self.assert_(whiteboard in subject, subject)
+
+    def test_distro_name(self):
+        with session.begin():
+            job = data_setup.create_job()
+            data_setup.mark_job_complete(job, result=TaskResult.fail)
+        self.assertEqual(len(self.mail_capture.captured_mails), 1)
+        sender, rcpts, raw_msg = self.mail_capture.captured_mails[0]
+        msg = email.message_from_string(raw_msg)
+        self.assertNotIn('Distro(', msg.get_payload(decode=True))
 
 class GroupMembershipNotificationTest(unittest.TestCase):
 

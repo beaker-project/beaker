@@ -13,3 +13,28 @@
 [submodule "backbone"]
 	path = Server/assets/backbone
 	url = https://github.com/jashkenas/backbone.git
+[submodule "moment"]
+	path = Server/assets/moment
+	url = https://github.com/moment/moment.git
+[submodule "bootstrap-select"]
+	path = Server/assets/bootstrap-select
+	url = https://github.com/silviomoreto/bootstrap-select
+[submodule "backgrid"]
+	path = Server/assets/backgrid
+	url = https://github.com/wyuenho/backgrid.git
+[submodule "backbone-pageable"]
+	path = Server/assets/backbone-pageable
+	url = https://github.com/wyuenho/backbone-pageable.git
+[submodule "URI.js"]
+	path = Server/assets/URI.js
+	url = https://github.com/medialize/URI.js.git
+[submodule "bootbox"]
+	path = Server/assets/bootbox
+	url = https://github.com/makeusabrew/bootbox.git
+	branch = v3.x
+[submodule "bootstrap-growl"]
+	path = Server/assets/bootstrap-growl
+	url = https://github.com/ifightcrime/bootstrap-growl.git
+[submodule "bootstrap-datepicker"]
+	path = Server/assets/bootstrap-datepicker
+	url = https://github.com/eternicode/bootstrap-datepicker.git

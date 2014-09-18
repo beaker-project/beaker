@@ -40,6 +40,9 @@ class EnumSymbol(object):
     def __unicode__(self):
         return self.value
 
+    def __json__(self):
+        return self.value
+
 class EnumMeta(type):
     """Generate new DeclEnum classes."""
 

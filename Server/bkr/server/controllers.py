@@ -13,11 +13,11 @@ import bkr.server.search_utility as su
 from bkr.server.model import (TaskBase, Device, System, SystemGroup,
         SystemActivity, Key, OSMajor, DistroTree, Arch, TaskPriority,
         Group, GroupActivity, RecipeSet, RecipeSetActivity, User, LabInfo,
-        ReleaseAction, PowerType, LabController, Hypervisor, KernelType,
-        SystemType, Distro, Note, Power, Job, InstallOptions, ExcludeOSMajor,
+        ReleaseAction, LabController, Hypervisor, KernelType,
+        SystemType, Distro, Note, Job, InstallOptions, ExcludeOSMajor,
         ExcludeOSVersion, OSVersion, Provision, ProvisionFamily,
         ProvisionFamilyUpdate, SystemStatus, Key_Value_Int, Key_Value_String,
-        SystemAccessPolicy, SystemPermission, MachineRecipe)
+        SystemAccessPolicy, SystemPermission, MachineRecipe, DistroTag)
 from bkr.server.power import PowerTypes
 from bkr.server.keytypes import KeyTypes
 from bkr.server.CSV_import_export import CSV
@@ -38,11 +38,10 @@ from bkr.server.retention_tags import RetentionTag as RetentionTagController
 from bkr.server.watchdog import Watchdogs
 from bkr.server.systems import SystemsController
 from bkr.server.system_action import SystemAction as SystemActionController
-from bkr.server.widgets import TaskSearchForm, SystemArches, SearchBar, \
-    SystemForm, SystemProvision, SystemInstallOptions, SystemGroups, \
-    SystemNotes, SystemKeys, SystemExclude, SystemHistory, SystemDetails, \
-    SystemCommandsForm, LabInfoForm, PowerActionHistory, LoanWidget, \
-    myPaginateDataGrid, PowerForm, AutoCompleteTextField, SystemActions
+from bkr.server.widgets import TaskSearchForm, SearchBar, \
+    SystemInstallOptions, SystemGroups, \
+    SystemNotes, SystemKeys, SystemExclude, SystemDetails, \
+    LabInfoForm, myPaginateDataGrid
 from bkr.server.preferences import Preferences
 from bkr.server.authentication import Auth
 from bkr.server.xmlrpccontroller import RPCRoot
@@ -53,7 +52,7 @@ from bkr.server.tasks import Tasks
 from bkr.server.task_actions import TaskActions
 from bkr.server.kickstart import KickstartController
 from bkr.server.controller_utilities import Utility, \
-    SystemSaveForm, restrict_http_method
+    restrict_http_method
 from bkr.server.bexceptions import BeakerException, BX
 from cherrypy import request, response
 from cherrypy.lib.cptools import serve_file
@@ -170,47 +169,14 @@ class Root(RPCRoot):
                 controller, entry_point.name)
         locals()[entry_point.name] = controller
 
-    id         = widgets.HiddenField(name='id')
-    submit     = widgets.SubmitButton(name='submit')
-
-    autoUsers = AutoCompleteTextField(name='user',
-        search_controller=url("/users/by_name"), search_param="input",
-        result_name="matches")
-
-    loan_form     = widgets.TableForm(
-        'Loan',
-        fields = [id, autoUsers,],
-        action = 'save_data',
-        submit_text = _(u'Change'),
-    )
-
-    class OwnerFormValidatorSchema(validators.Schema):
-        user = validators.NotEmpty()
-
-    owner_form    = widgets.TableForm(
-        'Owner',
-        fields = [id, autoUsers,],
-        action = 'save_data',
-        submit_text = _(u'Change'),
-        validator=OwnerFormValidatorSchema(),
-    )
-
-    system_form = SystemForm()
-    power_form = PowerForm(name='power')
     labinfo_form = LabInfoForm(name='labinfo')
-    commands_form = SystemCommandsForm(name='commands')
-    power_history = PowerActionHistory()
     system_details = SystemDetails()
-    system_activity = SystemHistory()
     system_exclude = SystemExclude(name='excluded_families')
     system_keys = SystemKeys(name='keys')
     system_notes = SystemNotes(name='notes')
     system_groups = SystemGroups(name='groups')
     system_installoptions = SystemInstallOptions(name='installoptions')
-    system_provision = SystemProvision(name='provision')
-    arches_form = SystemArches(name='arches') 
     task_form = TaskSearchForm(name='tasks')
-    system_actions = SystemActions()
 
 
     @expose(format='json')
@@ -234,11 +200,6 @@ class Root(RPCRoot):
     @expose(format='json')
     def get_search_options_task(self,table_field, *args, **kw):
         return su.Task.search.get_search_options(table_field, *args, **kw)
-
-
-    @expose(format='json')
-    def get_search_options_history(self,table_field, *args, **kw):
-        return su.History.search.get_search_options(table_field, *args, **kw)
 
     @expose(format='json')
     def get_operators_keyvalue(self,keyvalue_field,*args,**kw):
@@ -384,39 +345,38 @@ class Root(RPCRoot):
     @identity.require(identity.not_anonymous())
     @paginate('list',default_order='fqdn', limit=20)
     def reserve_system(self, *args,**kw):
-        
-        def reserve_link(x, distro_tree):
-            if x.is_free(identity.current.user):
-                return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
-                        % (x.id, distro_tree.id), 'Reserve Now', elem_class='btn')
-            else:
-                return make_link("/reserveworkflow/reserve?system_id=%s&distro_tree_id=%s"
-                        % (x.id, distro_tree.id), 'Queue Reservation', elem_class='btn')
-        try:
-            distro_tree = DistroTree.by_id(kw['distro_tree_id'])
-        except KeyError:
-            flash(_(u'Need a  valid distro to search on'))
-            redirect(url('/reserveworkflow',**kw))
-        except NoResultFound:
-            flash(_(u'Invalid distro tree id %s') % kw['distro_tree_id'])
-            redirect(url('/reserveworkflow',**kw))
+        if kw.get('distro_tree_id'):
+            try:
+                distro_tree = DistroTree.by_id(kw['distro_tree_id'])
+            except NoResultFound:
+                flash(_(u'Invalid distro tree id %s') % kw['distro_tree_id'])
+                redirect(url('/reserveworkflow/', **kw))
+        else:
+            distro_tree = None
         # XXX add force here when we support it
-        avail_systems_distro_query = MachineRecipe.hypothetical_candidate_systems(
+        query = MachineRecipe.hypothetical_candidate_systems(
                 identity.current.user, distro_tree)\
                 .order_by(None)
         warn = None
-        if avail_systems_distro_query.count() < 1:
+        if query.count() < 1:
             warn = u'No Systems compatible with %s' % distro_tree
-
-        getter = lambda x: reserve_link(x, distro_tree)
-        direct_column = Utility.direct_column(title='Action',getter=getter)
-        return_dict = self._systems(systems=avail_systems_distro_query,
+        def reserve_link(x):
+            href = url('/reserveworkflow/', system=x.fqdn, **kw)
+            if x.is_free(identity.current.user):
+                label = 'Reserve Now'
+            else:
+                label = 'Queue Reservation'
+            a = kid.Element('a', href=href)
+            a.attrib['class'] = 'btn'
+            a.text = label
+            return a
+        direct_column = Utility.direct_column(title='Action', getter=reserve_link)
+        return_dict = self._systems(systems=query,
                 title=u'Reserve Systems', direct_columns=[(8, direct_column)],
                 *args, **kw)
         return_dict['warn_msg'] = warn
         return_dict['tg_template'] = "bkr.server.templates.reserve_grid"
         return_dict['action'] = '/reserve_system'
-        return_dict['options']['extra_hiddens'] = {'distro_tree_id': distro_tree.id}
         return return_dict
 
     def _history_search(self,activity,**kw):
@@ -562,8 +522,11 @@ class Root(RPCRoot):
         if 'direct_columns' in kw: #Let's add our direct columns here
             for index,col in kw['direct_columns']:
                 my_fields.insert(index - 1, col)
+        add_script = None
+        if not identity.current.anonymous:
+            add_script = 'new SystemAddModal();'
         display_grid = myPaginateDataGrid(fields=my_fields,
-                add_action='/new' if not identity.current.anonymous else None)
+                add_script=add_script)
         col_data = Utility.result_columns(columns)
         return dict(title=title,
                     grid = display_grid,
@@ -629,34 +592,6 @@ class Root(RPCRoot):
     @expose()
     @identity.require(identity.not_anonymous())
     @restrict_http_method('post')
-    def arch_remove(self, system_id=None, arch_id=None):
-        removed = None
-        if system_id and arch_id:
-            try:
-                system = System.by_id(system_id,identity.current.user)
-            except NoResultFound:
-                flash(_(u"Invalid Permision"))
-                redirect("/")
-        else:
-            flash(_(u"system_id and arch_id must be provided"))
-            redirect("/")
-        if system.can_edit(identity.current.user):
-            for arch in system.arch:
-                if arch.id == int(arch_id):
-                    system.arch.remove(arch)
-                    removed = arch
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Arch', arch.arch, "")
-                    system.activity.append(activity)
-        if removed:
-            system.date_modified = datetime.utcnow()
-            flash(_(u"%s Removed" % removed.arch))
-        else:
-            flash(_(u"Arch ID not found"))
-        redirect("./view/%s" % system.fqdn)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    @restrict_http_method('post')
     def group_remove(self, system_id=None, group_id=None):
         removed = None
         if system_id and group_id:
@@ -684,138 +619,7 @@ class Root(RPCRoot):
             flash(_(u"Group ID not found"))
         redirect("./view/%s" % system.fqdn)
 
-    @expose(template="bkr.server.templates.form-post")
-    @identity.require(identity.not_anonymous())
-    def new(self, **kwargs):
-        options = {}
-        options['edit'] = True
-        return dict(
-            title    = 'New System',
-            form     = self.system_form,
-            widgets  = {},
-            action   = url('/save'),
-            value    = None,
-            options  = options)
-
-    def _get_system_options(self, system):
-        options = {}
-        our_user = identity.current.user
-        if our_user and system.can_change_owner(our_user):
-            options['owner_change_text'] = 'Change'
-
-        options['loan_widget'] = LoanWidget()
-
-        if our_user:
-            if (system.open_reservation and
-                  system.open_reservation.type != 'recipe' and
-                  system.can_unreserve(our_user)):
-                options['user_change_text'] = 'Return'
-            elif system.is_free(our_user) and system.can_reserve_manually(our_user):
-                options['user_change_text'] = 'Take'
-
-        if system.open_reservation is not None and \
-            system.open_reservation.recipe:
-                job_id = system.open_reservation.recipe.recipeset.job.id
-                options['running_job'] = '/jobs/%s' % job_id
-
-        options['system_actions'] = self.system_actions
-        options['loan'] = {'system' : system.fqdn, 'name' : 'request_loan',
-            'action' : '../system_action/loan_request'}
-        options['report_problem'] = {'system' : system,
-            'name' : 'report_problem', 'action' : '../system_action/report_system_problem'}
-        return options
-
-    # Automated systems may still be provisioned directly if loaned to
-    # a user who then takes out a manual reservation
-    # See https://bugzilla.redhat.com/show_bug.cgi?id=1015131
-    def _get_provisioning_details(self, system, user):
-        # Automated provisioning may be direct or through the scheduler
-        # We avoid the word "immediate", as it is misleading when the system
-        # has no automatic power control configured (the netboot files are
-        # written immediately, but you have to reboot the system to trigger
-        # reprovisioning).
-        # We avoid "on next reboot", as it is misleading when automatic power
-        # control *is* configured (since Beaker will reboot the system
-        # automatically).
-        # We avoid the word "manually" as it suggests there may be more to do
-        # after clicking the "Provision" button (which is only the case if
-        # power control is not configured).
-        _scheduled_panel = "scheduled"
-        _direct_panel = "direct"
-        # Figure out exactly what the user is allowed to do
-        # This is annoyingly complicated, but hard to simplify at all without
-        # breaking existing use cases :P
-        automated = (system.status == SystemStatus.automated)
-        reserved = system.has_manual_reservation(user)
-        borrowed = (system.loaned == user)
-        can_reserve = user and system.can_reserve(user)
-        notes = []
-        show_panel = None
-        if user is None:
-            notes.append(_("You are not logged in."))
-        else:
-            if reserved:
-                show_panel = _direct_panel
-                if automated and can_reserve:
-                    # Automated mode, but currently have a manual reservation
-                    notes.append(_("System will be provisioned directly. "
-                                   "Return this system to use a scheduled job instead."))
-                else:
-                    # Either in manual mode and currently have a manual reservation
-                    # or else in automated mode and don't have access to reserve it again
-                    notes.append(_("System will be provisioned directly."))
-                if not can_reserve:
-                    # We don't have permission to reserve it again (e.g. loan returned, access policy changed)
-                    notes.append(_("After returning this system, you will "
-                                   "no longer be able to provision it."))
-            elif not can_reserve:
-                # No access at all, cannot provision
-                notes.append(_("You do not have access to provision this system."))
-            elif not automated:
-                # Manual mode, just need to reserve it first
-                notes.append(_("Reserve this system to provision it."))
-            else:
-                # Automated mode, can schedule a job, but also want to give
-                # instructions on how to manually provision it instead.
-                show_panel = _scheduled_panel
-                if not borrowed:
-                    # Automated mode, need a loan *and* a reservation first
-                    notes.append(_("Provisioning will use a scheduled job. "
-                                   "Borrow and reserve this system to provision it directly instead."))
-                else:
-                    # Automated mode, have a loan, just need to reserve it
-                    notes.append(_("Provisioning will use a scheduled job. "
-                                   "Reserve this system to provision it directly instead."))
-        # Determine provisioning panel details
-        if show_panel == _scheduled_panel:
-            panel_id = "scheduled-provisioning"
-            button_label = "Schedule provision"
-        elif show_panel == _direct_panel:
-            panel_id = "direct-provisioning"
-            button_label = "Provision"
-        else:
-            panel_id = button_label = None
-        # Provisioning command action
-        if reserved:
-            provision_action = '/action_provision'
-        else:
-            provision_action = '/schedule_provision'
-        # Additional provisioning details
-        distro_trees = [(dt.id, unicode(dt)) for dt in
-                          system.distro_trees().order_by(Distro.name,
-                                                         DistroTree.variant,
-                                                         DistroTree.arch_id)]
-        provision_options = dict(reserved = reserved,
-                                 lab_controller = system.lab_controller,
-                                 prov_install = distro_trees,
-                                 provisioning_notes = notes,
-                                 provisioning_panel_id = panel_id,
-                                 provisioning_button_label = button_label)
-        return provision_action, provision_options
-
-
     @expose(template="bkr.server.templates.system")
-    @paginate('history_data',limit=30,default_order='-id')
     def _view_system_as_html(self, fqdn=None, **kw):
         if fqdn: 
             try:
@@ -823,14 +627,6 @@ class Root(RPCRoot):
             except InvalidRequestError:
                 flash( _(u"Unable to find %s" % fqdn) )
                 redirect("/")
-
-            #Let's deal with a history search here
-            histories_return = self.histories(SystemActivity.query.with_parent(system,"activity"), **kw)
-            history_options = {}
-            if 'searchvalue' in histories_return:
-                history_options['searchvalue'] = histories_return['searchvalue']
-            if 'simplesearch' in histories_return:
-                history_options['simplesearch'] = histories_return['simplesearch'] 
         elif kw.get('id'):
             try:
                 system = System.by_id(kw['id'],identity.current.user)
@@ -846,29 +642,23 @@ class Root(RPCRoot):
             is_user = (system.user == our_user)
             has_loan = (system.loaned == our_user)
             can_reserve = system.can_reserve(our_user)
-            can_power = system.can_power(our_user)
         else:
             readonly = True
             is_user = False
             has_loan = False
             can_reserve = False
-            can_power = False
         title = system.fqdn
-        options = self._get_system_options(system)
-        options['edit'] = False
-        provision_action, provision_options = (
-            self._get_provisioning_details(system, our_user))
-
-        if 'activities_found' in histories_return:
-            historical_data = histories_return['activities_found']
-        else:
-            # data grid will apply its own ordering
-            historical_data = system.dyn_activity.order_by(None)
+        distro_picker_options = {
+            'tag': [tag.tag for tag in DistroTag.used()],
+            'osmajor': [osmajor.osmajor for osmajor in
+                OSMajor.ordered_by_osmajor(OSMajor.in_lab(system.lab_controller))],
+        }
 
         if readonly:
             attrs = dict(readonly = 'True')
         else:
             attrs = dict()
+        options = {}
         options['readonly'] = readonly
         options['reprovision_distro_tree_id'] = [(dt.id, unicode(dt)) for dt in
                 system.distro_trees().order_by(Distro.name,
@@ -890,45 +680,28 @@ class Root(RPCRoot):
                         exclude   = self.system_exclude,
                         keys      = self.system_keys,
                         notes     = self.system_notes,
-                        groups    = self.system_groups,
-                        install   = self.system_installoptions,
-                        arches    = self.arches_form,
                       )
-        widgets['provision'] = self.system_provision
-        widgets['power'] = self.power_form
-        widgets['commands_form'] = self.commands_form
-        widgets['power_history'] = self.power_history
         # Lab Info is deprecated, only show it if the system has existing data
         widgets['labinfo'] = self.labinfo_form if system.labinfo else None
 
         return dict(
             title           = title,
             readonly        = readonly,
-            form            = self.system_form,
-            action          = url('/save'),
             value           = system,
             options         = options,
-            history_data    = historical_data,
             task_widget     = self.task_form,
-            history_widget  = self.system_activity,
+            groups_widget   = self.system_groups,
+            install_widget  = self.system_installoptions,
             widgets         = widgets,
-            widgets_action  = dict( power     = url('/save_power'),
-                                    history   = url('/view/%s' % fqdn),
-                                    labinfo   = url('/save_labinfo'),
+            widgets_action  = dict( labinfo   = url('/save_labinfo'),
                                     exclude   = url('/save_exclude'),
                                     keys      = url('/save_keys'),
                                     notes     = url('/save_note'),
                                     groups    = url('/save_group'),
                                     install   = url('/save_install'),
-                                    provision = url(provision_action),
-                                    commands_form = url('/action_power'),
-                                    arches    = url('/save_arch'),
                                     tasks     = '/tasks/do_search',
                                   ),
-            widgets_options = dict(power  = options,
-                                   power_history = system.command_queue[:10], # XXX filter to power commands
-                                   history   = history_options or {},
-                                   labinfo   = options,
+            widgets_options = dict(labinfo   = options,
                                    exclude   = options,
                                    keys      = dict(readonly = readonly,
                                                 key_values_int = system.key_values_int,
@@ -941,14 +714,10 @@ class Root(RPCRoot):
                                    install   = dict(readonly = readonly,
                                                 provisions = system.provisions,
                                                 prov_arch = [(arch.id, arch.arch) for arch in system.arch]),
-                                   provision = provision_options,
-                                   commands_form = dict(is_user=is_user,
-                                                        can_power=can_power),
-                                   arches    = dict(readonly = readonly,
-                                                    arches = system.arch),
                                    tasks      = dict(system_id = system.id,
                                                      arch = [(0, 'All')] + [(arch.id, arch.arch) for arch in system.arch],
                                                      hidden = dict(system = 1)),
+                                   distro_picker=distro_picker_options,
                                   ),
         )
     _view_system_as_html.exposed = False # exposed indirectly by view()
@@ -967,28 +736,6 @@ class Root(RPCRoot):
         else:
             cherrypy.response.headers['Content-Type'] = 'application/rdf+xml'
             return graph.serialize(format='pretty-xml')
-
-    @identity.require(identity.not_anonymous())
-    @expose('bkr.server.templates.form-post')
-    def edit(self, fqdn=None, **kw):
-        our_user = identity.current.user
-        id = kw.get('id')
-        if id:
-            system = System.by_id(id, our_user)
-        elif fqdn:
-            system = System.by_fqdn(fqdn, our_user)
-        if system and not system.can_edit(user=our_user):
-            flash(_(u"You do not have permission to edit %s" % fqdn))
-            redirect('/')
-        title = system.fqdn
-        options = self._get_system_options(system)
-        options['edit'] = True
-        form = SystemForm()
-        return dict(form=form, 
-                    options=options, 
-                    title=title, 
-                    value=system, 
-                    action=url('/save'))
 
     @cherrypy.expose
     def view(self, fqdn=None, **kwargs):
@@ -1016,134 +763,6 @@ class Root(RPCRoot):
         note.deleted = datetime.utcnow()
         session.flush()
         return ('1',)
-
-    @expose(template='bkr.server.templates.form')
-    @identity.require(identity.not_anonymous())
-    def owner_change(self, id=None, **kwargs):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to find system with id of %s" % id) )
-            redirect("/")
-        if not system.can_change_owner(identity.current.user):
-            flash( _(u"Insufficient permissions to change owner"))
-            redirect("/")
-
-        return dict(
-            title   = "Change Owner for %s" % system.fqdn,
-            form = self.owner_form,
-            action = '/save_owner',
-            options = None,
-            value = {'id': system.id},
-        )
-    
-    @expose()
-    @validate(form=owner_form)
-    @error_handler(owner_change)
-    @identity.require(identity.not_anonymous())
-    def save_owner(self, id, *args, **kw):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to find system with id of %s" % id) )
-            redirect("/")
-        if not system.can_change_owner(identity.current.user):
-            flash( _(u"Insufficient permissions to change owner"))
-            redirect("/")
-        user = User.by_user_name(kw['user'])
-        activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed',
-                u'Owner', unicode(system.owner), unicode(user))
-        system.activity.append(activity)
-        system.owner = user
-        system.date_modified = datetime.utcnow()
-        flash( _(u"OK") )
-        redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def user_change(self, id):
-        try:
-            system = System.by_id(id, identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to find system with id of %s" % id) )
-            redirect("/")
-        if system.user:
-            try:
-                system.unreserve_manually_reserved(service=u'WEBUI',
-                                                   user=identity.current.user)
-                flash(_(u'Returned %s') % system.fqdn)
-            except BeakerException, e:
-                log.exception('Failed to return')
-                flash(_(u'Failed to return %s: %s') % (system.fqdn, e))
-        else:
-            try:
-                system.reserve_manually(service=u'WEBUI',
-                                        user=identity.current.user)
-                flash(_(u'Reserved %s') % system.fqdn)
-            except BeakerException, e:
-                log.exception('Failed to reserve')
-                flash(_(u'Failed to reserve %s: %s') % (system.fqdn, e))
-        redirect("/view/%s" % system.fqdn)
-
-    system_cc_form = widgets.TableForm(
-        'cc',
-        fields=[
-            id,
-            ExpandingForm(
-                name='cc',
-                label=_(u'Notify CC'),
-                fields=[
-                    widgets.TextField(name='email_address', label=_(u'E-mail address'),
-                        validator=validators.Email()),
-                ],
-            ),
-        ],
-        submit_text=_(u'Change'),
-    )
-
-    @expose(template='bkr.server.templates.form-post')
-    @identity.require(identity.not_anonymous())
-    def cc_change(self, system_id):
-        try:
-            system = System.by_id(system_id, identity.current.user)
-        except InvalidRequestError:
-            flash(_(u'Unable to find system with id of %s' % system_id))
-            redirect('/')
-        if not system.can_edit(identity.current.user):
-            flash(_(u'Insufficient permissions to edit CC list'))
-            redirect('/')
-        return dict(
-            title=_(u'Notify CC list for %s') % system.fqdn,
-            form=self.system_cc_form,
-            action=url('/save_cc'),
-            options=None,
-            value={'id': system.id, 'cc': system._system_ccs},
-        )
-
-    @error_handler(cc_change)
-    @expose()
-    @identity.require(identity.not_anonymous())
-    @validate(form=system_cc_form)
-    def save_cc(self, id, cc):
-        try:
-            system = System.by_id(id, identity.current.user)
-        except InvalidRequestError:
-            flash(_(u'Unable to find system with id of %s' % id))
-            redirect('/')
-        if not system.can_edit(identity.current.user):
-            flash(_(u'Insufficient permissions to edit CC list'))
-            redirect('/')
-        orig_value = list(system.cc)
-        new_value = [item['email_address']
-                for item in cc if item['email_address']]
-        system.cc = new_value
-        system.activity.append(SystemActivity(user=identity.current.user,
-                service=u'WEBUI', action=u'Changed', field_name=u'Cc',
-                old_value=u'; '.join(orig_value),
-                new_value=u'; '.join(new_value)))
-        system.date_modified = datetime.utcnow()
-        flash(_(u'Notify CC list for system %s changed') % system.fqdn)
-        redirect('/view/%s' % system.fqdn)
 
     @error_handler(view)
     @expose()
@@ -1177,216 +796,6 @@ class Root(RPCRoot):
         flash( _(u"Saved Lab Info") )
         redirect("/view/%s" % system.fqdn)
 
-    @error_handler(view)
-    @expose()
-    @identity.require(identity.not_anonymous())
-    @validate(form=power_form)
-    def save_power(self,
-                   fqdn,
-                   power_address,
-                   power_type_id,
-                   release_action,
-                   power_quiescent_period,
-                   **kw):
-        try:
-            system = System.by_fqdn(fqdn, identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to save Power for system %r" % fqdn) )
-            redirect("/")
-
-        if kw.get('reprovision_distro_tree_id'):
-            try:
-                reprovision_distro_tree = DistroTree.by_id(kw['reprovision_distro_tree_id'])
-            except NoResultFound:
-                reprovision_distro_tree = None
-            system.activity.append(SystemActivity(user=identity.current.user,
-                    service='WEBUI', action='Changed',
-                    field_name='reprovision_distro_tree',
-                    old_value=unicode(system.reprovision_distro_tree),
-                    new_value=unicode(reprovision_distro_tree)))
-            system.reprovision_distro_tree = reprovision_distro_tree
-
-        if release_action != system.release_action:
-            system.activity.append(SystemActivity(identity.current.user, u'WEBUI',
-                    u'Changed', u'release_action',
-                    unicode(system.release_action), unicode(release_action)))
-            system.release_action = release_action
-
-        if system.power:
-            power_quiescent_period = int(power_quiescent_period)
-            if power_quiescent_period != system.power.power_quiescent_period:
-                # Quiescent period changed
-                activity = SystemActivity(identity.current.user, 'WEBUI',
-                    'Changed', 'power_quiescent_period',
-                    system.power.power_quiescent_period,
-                    power_quiescent_period)
-                system.power.power_quiescent_period = power_quiescent_period
-                system.activity.append(activity)
-            if power_address != system.power.power_address:
-                #Power Address Changed
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_address', system.power.power_address, power_address )
-                system.power.power_address = power_address
-                system.activity.append(activity)
-            if kw.get('power_user'):
-                if kw['power_user'] != system.power.power_user:
-                    #Power User Changed
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_user', '********', '********' )
-                    system.power.power_user = kw['power_user']
-                    system.activity.append(activity)
-            else:
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'power_user', '********', '********' )
-                system.activity.append(activity)
-                system.power.power_user = None
-            if kw.get('power_passwd'):
-                if kw['power_passwd'] != system.power.power_passwd:
-                    #Power Passwd Changed
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_passwd', '********', '********' )
-                    system.power.power_passwd = kw['power_passwd']
-                    system.activity.append(activity)
-            else:
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'power_passwd', '********', '********' )
-                system.activity.append(activity)
-                system.power.power_passwd = None
-            if kw.get('power_id'):
-                if kw['power_id'] != system.power.power_id:
-                    #Power ID Changed
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_id', system.power.power_id, kw['power_id'] )
-                    system.power.power_id = kw['power_id']
-                    system.activity.append(activity)
-            else:
-                activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'power_id', system.power.power_id, '' )
-                system.activity.append(activity)
-                system.power.power_id = None
-            if power_type_id != system.power.power_type_id:
-                #Power Type Changed
-                if int(power_type_id) == 0:
-                    system.power = None
-                else:
-                    try:
-                        power_type = PowerType.by_id(power_type_id)
-                    except InvalidRequestError:
-                        flash( _(u"Invalid power type %s" % power_type_id) )
-                        redirect("/view/%s" % system.fqdn)
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', 'power_type', system.power.power_type.name, power_type.name )
-                    system.power.power_type = power_type
-                    system.activity.append(activity)
-            flash( _(u"Updated Power") )
-        else:
-            try:
-                power_type = PowerType.by_id(power_type_id)
-            except InvalidRequestError:
-                flash( _(u"Invalid power type %s" % power_type_id) )
-                redirect("/view/%s" % system.fqdn)
-            power = Power(power_type=power_type, power_address=power_address)
-            if kw.get('power_user'):
-                power.power_user = kw['power_user']
-            if kw.get('power_passwd'):
-                power.power_passwd = kw['power_passwd']
-            if kw.get('power_id'):
-                power.power_id = kw['power_id']
-            system.power = power
-            flash( _(u"Saved Power") )
-        system.date_modified = datetime.utcnow()
-        redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    @validate(form=system_form)
-    @error_handler(new)
-    @identity.require(identity.not_anonymous())
-    def save(self, **kw):
-        if kw.get('id'):
-            try:
-                query = System.query.filter(System.fqdn ==kw['fqdn'])
-                for sys_object in query:
-                    if str(sys_object.id) != str(kw['id']):
-                        flash( _(u"%s already exists!" % kw['fqdn']))
-                        redirect("/") 
-                system = System.by_id(kw['id'],identity.current.user)
-            except InvalidRequestError:
-                flash( _(u"Unable to save %s" % kw['id']) )
-                redirect("/")
-           
-        else:
-            if System.query.filter(System.fqdn == kw['fqdn']).count() != 0:
-                flash( _(u"%s already exists!" % kw['fqdn']) )
-                redirect("/")
-            system = System(fqdn=kw['fqdn'],owner=identity.current.user)
-            session.add(system)
-            # new systems are visible to everybody by default
-            system.custom_access_policy = SystemAccessPolicy()
-            system.custom_access_policy.add_rule(SystemPermission.view,
-                    everybody=True)
-
-        if kw['lab_controller_id'] == 0:
-            kw['lab_controller'] = None
-        else:
-            kw['lab_controller'] = LabController.by_id(kw['lab_controller_id'])
-        if kw['hypervisor_id'] == 0:
-            kw['hypervisor'] = None
-        else:
-            kw['hypervisor'] = Hypervisor.by_id(kw['hypervisor_id'])
-        kw['kernel_type'] = KernelType.by_id(kw['kernel_type_id'])
-
-        # Don't change lab controller while the system is in use
-        if system.lab_controller != kw['lab_controller'] and \
-                system.open_reservation is not None:
-            flash(_(u'Unable to change lab controller while system is in use '
-                    '(return the system first)'))
-            redirect('/view/%s' % system.fqdn)
-
-        log_fields = [ 'fqdn', 'vendor', 'lender', 'model', 'serial', 'location', 
-                       'mac_address', 'status', 'status_reason', 
-                       'lab_controller', 'type', 'hypervisor', 'kernel_type']
-
-        for field in log_fields:
-            try:
-                current_val = getattr(system,field)
-            except AttributeError:
-                flash(_(u'Field %s is not a valid system property' % field)) 
-                continue
-
-            new_val = kw.get(field)
-             
-            if unicode(current_val) != unicode(new_val): 
-                function_name = '%s_change_handler' % field
-                field_change_handler = getattr(SystemSaveForm.handler,function_name,None)
-                if field_change_handler is not None:
-                    kw = field_change_handler(current_val,new_val,**kw)
-                if current_val:
-                    current_val = unicode(current_val)
-                if new_val:
-                    new_val = unicode(new_val)
-                activity = SystemActivity(identity.current.user, u'WEBUI', u'Changed', unicode(field), current_val, new_val)
-                system.activity.append(activity)
-                
-        system.status = kw['status']
-        system.location=kw['location']
-        system.model=kw['model']
-        system.type = kw['type']
-        system.serial=kw['serial']
-        system.vendor=kw['vendor']
-        system.lender=kw['lender']
-        system.hypervisor=kw['hypervisor']
-        system.fqdn=kw['fqdn']
-        system.status_reason = kw['status_reason']
-        system.date_modified = datetime.utcnow()
-        system.kernel_type = kw['kernel_type']
-
-        # Change Lab Controller
-        system.lab_controller = kw['lab_controller']
-        system.mac_address=kw['mac_address']
-
-        # We can't compute a new checksum, so let's just clear it so that it 
-        # always compares false
-        if system.checksum is not None:
-            system.activity.append(SystemActivity(user=identity.current.user,
-                    service=u'WEBUI', action=u'Changed', field_name=u'checksum',
-                    old_value=system.checksum, new_value=None))
-            system.checksum = None
-
-        session.add(system)
-        redirect("/view/%s" % system.fqdn)
-
     @expose()
     @identity.require(identity.not_anonymous())
     def save_keys(self, id, **kw):
@@ -1416,28 +825,6 @@ class Root(RPCRoot):
 
     @expose()
     @identity.require(identity.not_anonymous())
-    @restrict_http_method('post')
-    def save_arch(self, id, **kw):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to Add arch for %s" % id) )
-            redirect("/")
-        # Add an Arch
-        if kw.get('arch').get('text'):
-            try:
-                arch = Arch.by_name(kw['arch']['text'])
-            except InvalidRequestError:
-                flash(_(u'No such arch %s') % kw['arch']['text'])
-                redirect('/view/%s' % system.fqdn)
-            system.arch.append(arch)
-            activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Arch', "", kw['arch']['text'])
-            system.activity.append(activity)
-            system.date_modified = datetime.utcnow()
-        redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
     def save_group(self, id, **kw):
         try:
             system = System.by_id(id,identity.current.user)
@@ -1460,131 +847,6 @@ class Root(RPCRoot):
             group.activity.append(gactivity)
             system.activity.append(activity)
             system.date_modified = datetime.utcnow()
-        redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def action_power(self, id, action, **kw):
-        try:
-            system = System.by_id(id,identity.current.user)
-        except InvalidRequestError:
-            flash( _(u"Unable to look up system id:%s via your login" % id) )
-            redirect("/")
-
-        if not system.power or not system.lab_controller:
-            flash(_(u'System is not configured for power support'))
-            redirect('/view/%s' % system.fqdn)
-        if not system.can_power(identity.current.user):
-            flash(_(u'You do not have permission to control this system'))
-            redirect('/view/%s' % system.fqdn)
-
-        system.action_power(service='WEBUI', action=action)
-        flash(_(u"%s power %s command enqueued" % (system.fqdn, action)))
-        redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def schedule_provision(self,id, prov_install=None, ks_meta=None, koptions=None, koptions_post=None, reserve_days=None, **kw):
-        distro_tree_id = prov_install
-        try:
-            user = identity.current.user
-            system = System.by_id(id,user)
-        except InvalidRequestError:
-            flash( _(u"Unable to save scheduled provision for %s" % id) )
-            redirect("/")
-        try:
-            distro_tree = DistroTree.by_id(distro_tree_id)
-        except InvalidRequestError:
-            flash( _(u"Unable to lookup distro tree for %s") % distro_tree_id)
-            redirect(u"/view/%s" % system.fqdn)
-
-        if user.rootpw_expired:
-            flash( _(u"Your root password has expired, please change or clear it in order to submit jobs.") )
-            redirect(u"/view/%s" % system.fqdn)
-
-        reserve_days = int(reserve_days)
-        if reserve_days is None:#This should not happen
-            log.debug('reserve_days has not been set in provision page, using default')
-            reserve_days = SystemProvision.DEFAULT_RESERVE_DAYS
-        else: 
-            if reserve_days > SystemProvision.MAX_DAYS_PROVISION: #Someone is trying to cheat
-                log.debug('User has tried to set provision to %s days, which is more than the allowable %s days' % (reserve_days,SystemProvision.DEFAULT_RESERVE_DAYS))
-                reserve_days = SystemProvision.DEFAULT_RESERVE_DAYS
-
-        reserve_time =  ((reserve_days * 24) * 60) * 60    
-        job_details = dict(whiteboard = u'Provision %s' % distro_tree,
-                            distro_tree_id = distro_tree.id,
-                            system_id = id,
-                            ks_meta = ks_meta,
-                            koptions = koptions,
-                            koptions_post = koptions_post,
-                            reservetime = reserve_time)
-
-        try:                               
-            provision_system_job = Job.provision_system_job(**job_details)
-        except BX, msg:
-            flash(_(u"%s" % msg))
-            redirect(u"/view/%s" % system.fqdn)
-
-        self.jobs.success_redirect(provision_system_job.id)
-    
-    @expose()
-    @identity.require(identity.not_anonymous())
-    def action_provision(self, id, prov_install=None, ks_meta=None, 
-                             koptions=None, koptions_post=None, reboot=None):
-
-        """
-        Immediately provision a Manual system. The system must already be reserved.
-        """
-        distro_tree_id = prov_install
-        try:
-            user = identity.current.user
-            system = System.by_id(id,user)
-        except InvalidRequestError:
-            flash( _(u"Unable to save scheduled provision for %s" % id) )
-            redirect("/")
-        try:
-            distro_tree = DistroTree.by_id(distro_tree_id)
-        except InvalidRequestError:
-            flash(_(u"Unable to lookup distro tree for %s") % distro_tree_id)
-            redirect(u"/view/%s" % system.fqdn)
-
-        if user.rootpw_expired:
-            flash( _(u"Your root password has expired, please change or clear it in order to submit jobs.") )
-            redirect(u"/view/%s" % system.fqdn)
-        if system.user != user:
-            flash(_(u'Reserve a system before provisioning'))
-            redirect(u'view/%s' % system.fqdn)
-
-        try:
-            from bkr.server.kickstart import generate_kickstart
-            install_options = system.manual_provision_install_options(distro_tree)\
-                .combined_with(InstallOptions.from_strings(
-                        ks_meta, koptions, koptions_post))
-            if 'ks' not in install_options.kernel_options:
-                kickstart = generate_kickstart(install_options,
-                        distro_tree=distro_tree, system=system, user=user)
-                install_options.kernel_options['ks'] = kickstart.link
-            system.configure_netboot(distro_tree,
-                    install_options.kernel_options_str, service=u'WEBUI')
-        except Exception, msg:
-            log.exception('Failed to provision system %s', id)
-            activity = SystemActivity(user=identity.current.user, service=u'WEBUI',
-                    action=u'Provision', field_name=u'Distro Tree',
-                    old_value=u'', new_value=u'%s: %s' % (msg, distro_tree))
-            system.activity.append(activity)
-            flash(_(u"%s" % msg))
-            redirect("/view/%s" % system.fqdn)
-
-        activity = SystemActivity(user=identity.current.user, service=u'WEBUI',
-                action=u'Provision', field_name=u'Distro Tree',
-                old_value=u'', new_value=u'Success: %s' % distro_tree)
-        system.activity.append(activity)
-
-        if reboot:
-            system.action_power(action='reboot', service='WEBUI')
-
-        flash(_(u"Successfully Provisioned %s with %s") % (system.fqdn, distro_tree))
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -1721,10 +983,6 @@ class Root(RPCRoot):
             del system.provisions[arch]
         system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
-
-    @expose()
-    def search_history(self):
-        pass
 
     @expose()
     @identity.require(identity.not_anonymous())

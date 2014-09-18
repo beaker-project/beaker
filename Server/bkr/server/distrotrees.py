@@ -83,13 +83,8 @@ class DistroTrees(RPCRoot):
                     list=query)
 
     def _provision_system_link(self, distro_tree):
-        div = Element('div')
-        div.append(make_link('/reserve_system?distro_tree_id=%s'
-                % distro_tree.id, 'Pick System'))
-        div.append(Element('br'))
-        div.append(make_link('/reserveworkflow/reserve?distro_tree_id=%s'
-                % distro_tree.id, 'Pick Any System'))
-        return div
+        return make_link('/reserveworkflow/?distro_tree_id=%s'
+                % distro_tree.id, 'Provision', elem_class='btn')
 
     @expose(template='bkr.server.templates.distrotree')
     def default(self, id, *args, **kwargs):
@@ -159,7 +154,7 @@ gpgcheck=0
             redirect('.')
         try:
             lab_controller = LabController.by_id(lab_controller_id)
-        except NoResultFound:
+        except ValueError:
             flash(_(u'Invalid lab controller id %s') % lab_controller_id)
             redirect(str(distro_tree.id))
 

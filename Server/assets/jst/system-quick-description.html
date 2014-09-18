@@ -1,0 +1,17 @@
+<p><%- vendor || '(unknown vendor)' %> <%- model || '(unknown model)' %><br/>
+<%- cpu_model_name %><br/>
+<% if (memory) { %><%- memory %>&#160;MB memory<% } %><% if (disk_space != null) { %>, <%- Math.round(disk_space / (1000.0*1000.0*1000.0)) %>&#160;GB disk space<% } %></p>
+<ul class="unstyled">
+  <% if (!lab_controller_id) { %>
+    <li><i class="icon-exclamation-sign icon-fixed-width"></i> Not attached to a lab controller</li>
+  <% } %>
+  <% if (_.isEmpty(arches)) { %>
+    <li><i class="icon-exclamation-sign icon-fixed-width"></i> No supported architectures defined</li>
+  <% } %>
+  <% if (has_power) { %>
+    <li><i class="icon-ok icon-fixed-width"></i> Remote power control available</li>
+  <% } else { %>
+    <li><i class="icon-remove icon-fixed-width"></i> Remote power control not available</li>
+  <% } %>
+  <% /* IMPLEMENTME has_console */ %>
+</ul>

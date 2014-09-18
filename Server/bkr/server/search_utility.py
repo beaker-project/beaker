@@ -5,13 +5,16 @@
 # (at your option) any later version.
 
 import datetime
+import decimal
 import model
 import re
 import sqlalchemy
 from copy import copy
 from turbogears import flash
+import sqlalchemy.types
 from sqlalchemy import or_, and_, not_
 from sqlalchemy.sql import visitors, select
+from sqlalchemy.sql.expression import true, false
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import aliased, joinedload
@@ -29,6 +32,115 @@ def get_alias_target(aliased_class):
     except ImportError:
         return aliased_class._AliasedClass__target
     return inspect(aliased_class).mapper.entity #pylint: disable=E1102
+
+def _lucene_coerce_for_column(column, term):
+    if isinstance(column.type, sqlalchemy.types.Integer):
+        return int(term)
+    elif isinstance(column.type, sqlalchemy.types.Numeric):
+        try:
+            return decimal.Decimal(term)
+        except decimal.InvalidOperation:
+            raise ValueError()
+    elif isinstance(column.type, sqlalchemy.types.DateTime):
+        return datetime.datetime.strptime(term, '%Y-%m-%d')
+    else: # treat everything else as a string
+        return term
+
+def _lucene_term_clause(column, term):
+    if term == u'*':
+        return column != None
+    try:
+        value = _lucene_coerce_for_column(column, term)
+    except ValueError:
+        return false()
+    if isinstance(column.type, sqlalchemy.types.DateTime):
+        # date searches are implicitly a range across one day
+        return and_(column >= value,
+                column <= value.replace(hour=23, minute=59, second=59))
+    if isinstance(column.type, sqlalchemy.types.String) and '*' in value:
+        return column.like(value.replace('*', '%'))
+    return column == value
+
+_lucene_range_term_separator_pattern = re.compile(r'\s+TO\s+')
+def _lucene_range_clause(column, range_term):
+    start_inclusive = range_term.startswith('[')
+    end_inclusive = range_term.endswith(']')
+    range_terms = _lucene_range_term_separator_pattern.split(range_term[1:-1])
+    if len(range_terms) != 2:
+        return _lucene_term_clause(column, range_term)
+    start, end = range_terms
+    if start == u'*':
+        start_clause = true()
+    else:
+        try:
+            start_value = _lucene_coerce_for_column(column, start)
+        except ValueError:
+            start_clause = false()
+        else:
+            if start_inclusive:
+                start_clause = column >= start_value
+            else:
+                start_clause = column > start_value
+    if end == u'*':
+        end_clause = true()
+    else:
+        try:
+            end_value = _lucene_coerce_for_column(column, end)
+        except ValueError:
+            end_clause = false()
+        else:
+            if isinstance(end_value, datetime.datetime):
+                end_value = end_value.replace(hour=23, minute=59, second=59)
+            if end_inclusive:
+                end_clause = column <= end_value
+            else:
+                end_clause = column < end_value
+    return and_(start_clause, end_clause)
+
+_lucene_query_pattern = re.compile(r"""
+    (?P<negation>-)?
+    (?:(?P<field>[^'"\s]+):)?
+    (?:['"](?P<quoted_term>[^'"]*)['"]
+    |  (?P<range_term>[\[{] [^\]]* [\]}])
+    |  (?P<term>\S+)
+    )""",
+    re.VERBOSE)
+
+def lucene_to_sqlalchemy(querystring, search_columns, default_columns):
+    """
+    Parses the given *querystring* using a Lucene-like syntax and converts it 
+    to a SQLAlchemy filter clause. The *search_columns* parameter is 
+    a mapping of field names (in the query string) to SQLAlchemy columns.
+
+    http://lucene.apache.org/core/3_6_0/queryparsersyntax.html
+
+    Maybe one day we will be using Lucene/Solr for real...
+    """
+    # This only understands the subset of Lucene syntax used by the search 
+    # bar. In particular, grouping using parentheses is not supported.
+    # We should probably use a proper parser instead of a hacky regexp.
+    clauses = []
+    for match in _lucene_query_pattern.finditer(querystring):
+        if match.group('range_term') is not None:
+            term = match.group('range_term')
+            func = _lucene_range_clause
+        elif match.group('quoted_term') is not None:
+            term = match.group('quoted_term')
+            func = _lucene_term_clause
+        else:
+            term = match.group('term')
+            func = _lucene_term_clause
+        if match.group('field') is None:
+            clause = or_(*[func(column, term) for column in default_columns])
+        elif match.group('field') in search_columns:
+            column = search_columns[match.group('field')]
+            clause = func(column, term)
+        else:
+            clause = false()
+        if match.group('negation'):
+            clause = not_(clause)
+        clauses.append(clause)
+    return and_(*clauses)
 
 class MyColumn(object):
     """

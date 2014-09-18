@@ -1,17 +1,4 @@
 <div xmlns:py="http://purl.org/kid/ns#">
-<h3>System</h3>
-<table class="table table-bordered" style="max-width: 20em;">
-  <tbody>
-    <tr>
-      <th>Memory</th>
-      <td><span py:if="system.memory">${system.memory} MB</span></td>
-    </tr>
-    <tr>
-      <th>NUMA Nodes</th>
-      <td><span py:if="system.numa">${system.numa.nodes}</span></td>
-    </tr>
-  </tbody>
-</table>
 
 <span py:if="system.cpu">
 <h3>CPU</h3>

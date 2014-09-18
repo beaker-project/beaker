@@ -13,6 +13,7 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Integer,
 from sqlalchemy.sql import select, exists, and_, or_, not_
 from sqlalchemy.orm import relationship, backref, dynamic_loader
 from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.associationproxy import association_proxy
 from turbogears.database import session
 from bkr.server import identity
@@ -76,7 +77,16 @@ class KernelType(DeclarativeMappedObject):
     uboot = Column(Boolean, default=False)
 
     def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__, self.kernel_type)
+
+    def __unicode__(self):
         return self.kernel_type
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __json__(self):
+        return unicode(self)
 
     @classmethod
     def get_all_types(cls):
@@ -91,7 +101,10 @@ class KernelType(DeclarativeMappedObject):
 
     @classmethod
     def by_name(cls, kernel_type):
-        return cls.query.filter_by(kernel_type=kernel_type).one()
+        try:
+            return cls.query.filter_by(kernel_type=kernel_type).one()
+        except NoResultFound:
+            raise ValueError('No such kernel type %r' % kernel_type)
 
 class Arch(DeclarativeMappedObject):
 
@@ -105,7 +118,16 @@ class Arch(DeclarativeMappedObject):
         self.arch = arch
 
     def __repr__(self):
-        return '%s' % self.arch
+        return '%s(%r)' % (self.__class__.__name__, self.arch)
+
+    def __unicode__(self):
+        return self.arch
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __json__(self):
+        return unicode(self)
 
     @classmethod
     def get_all(cls):
@@ -117,7 +139,10 @@ class Arch(DeclarativeMappedObject):
 
     @classmethod
     def by_name(cls, arch):
-        return cls.query.filter_by(arch=arch).one()
+        try:
+            return cls.query.filter_by(arch=arch).one()
+        except NoResultFound:
+            raise ValueError('No such arch %r' % arch)
 
     @classmethod
     def list_by_name(cls, name):
@@ -169,6 +194,19 @@ class OSMajor(DeclarativeMappedObject):
                     .join(Distro.__table__)
                     .join(OSVersion.__table__))
                 .where(OSVersion.osmajor_id == OSMajor.id)
+                .correlate(OSMajor.__table__))
+
+    @classmethod
+    def in_lab(cls, lab, query=None):
+        if query is None:
+            query = cls.query
+        return query.filter(exists([1], from_obj=
+                LabControllerDistroTree.__table__
+                    .join(DistroTree.__table__)
+                    .join(Distro.__table__)
+                    .join(OSVersion.__table__))
+                .where(OSVersion.osmajor_id == OSMajor.id)
+                .where(LabControllerDistroTree.lab_controller == lab)
                 .correlate(OSMajor.__table__))
 
     @classmethod
@@ -433,8 +471,17 @@ class Distro(DeclarativeMappedObject):
     def __unicode__(self):
         return self.name
 
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
     def __repr__(self):
         return '%s(name=%r)' % (self.__class__.__name__, self.name)
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+        }
 
     @property
     def link(self):
@@ -502,6 +549,14 @@ class DistroTree(DeclarativeMappedObject):
         query = cls.query.filter(DistroTree.lab_controller_assocs.any())
         query = apply_distro_filter(filter, query)
         return query.order_by(DistroTree.date_created.desc())
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'distro': self.distro,
+            'variant': self.variant,
+            'arch': self.arch,
+        }
 
     def expire(self, lab_controller=None, service=u'XMLRPC'):
         """ Expire this tree """

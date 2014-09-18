@@ -1,0 +1,81 @@
+<form class="form-horizontal">
+  <div class="control-group">
+    <label class="control-label" for="power_type">Power Type</label>
+    <div class="controls">
+      <select id="power_type" name="power_type">
+        <% _.each(possible_power_types, function (s) { %>
+          <option value="<%- s %>"><%- s %></option>
+        <% }) %>
+      </select>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="power_address">Power Address</label>
+    <div class="controls">
+      <input type="text" id="power_address" name="power_address" />
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="power_user">Power Login</label>
+    <div class="controls">
+      <input type="text" id="power_user" name="power_user" />
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="power_password">Power Password</label>
+    <div class="controls">
+      <input type="text" id="power_password" name="power_password" />
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="power_id">Power ID</label>
+    <div class="controls">
+      <input type="text" id="power_id" name="power_id" />
+      <span class="help-block">The meaning of the power ID depends on which 
+      power type is selected. Typically this field identifies a particular 
+      plug, socket, port, or virtual guest name.</span>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="power_quiescent_period">Quiescent Period</label>
+    <div class="controls">
+      <div class="input-append">
+        <input type="number" class="input-small"
+            id="power_quiescent_period" name="power_quiescent_period"
+            required min="0" step="1" pattern="[0-9]+" title="Number of whole seconds >= 0" />
+        <span class="add-on">seconds</span>
+      </div>
+      <span class="help-block">Beaker will delay at least this long between 
+      consecutive power commands. Use this for systems which are sensitive to 
+      rapid power switching.</span>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label">Release Action</label>
+    <div class="controls">
+      <% _.each(possible_release_actions, function (s) { %>
+        <label class="radio">
+          <input type="radio" name="release_action" value="<%- s %>" />
+          <%- s %>
+        </label>
+      <% }) %>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label">Re-Provision Distro Tree</label>
+    <div class="controls">
+      <div class="input-append" id="reprovision_distro_tree">
+        <input type="hidden" name="reprovision_distro_tree_id"/>
+        <span class="uneditable-input"></span>
+        <button type="button" class="btn">Select</button>
+      </div>
+    </div>
+  </div>
+  <% if (!readonly) { %>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <button type="reset" class="btn">Revert</button>
+    <span class="sync-status"></span>
+  </div>
+  <% } %>
+</form>

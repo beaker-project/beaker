@@ -108,6 +108,17 @@ class CommandActivity(Activity):
         self.callback = callback
         self.quiescent_period = quiescent_period
 
+    def __json__(self):
+        return {
+            'id': self.id,
+            'submitted': self.created,
+            'user': self.user,
+            'service': self.service,
+            'action': self.action,
+            'message': self.new_value,
+            'status': unicode(self.status),
+        }
+
     def object_name(self):
         return "Command: %s %s" % (self.object.fqdn, self.action)
 
@@ -149,6 +160,15 @@ class Reservation(DeclarativeMappedObject):
     type = Column(Unicode(30), index=True, nullable=False)
     user = relationship(User, backref=backref('reservations',
             order_by=[start_time.desc()]))
+
+    def __json__(self):
+        return {
+            'type': self.type,
+            'user': self.user,
+            'start_time': self.start_time,
+            'finish_time': self.finish_time,
+            'recipe_id': self.recipe.id if self.recipe else None,
+        }
 
 # this only really exists to make reporting efficient
 class SystemStatusDuration(DeclarativeMappedObject):
@@ -225,7 +245,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
     __tablename__ = 'system'
     __table_args__ = {'mysql_engine': 'InnoDB'}
     id = Column(Integer, autoincrement=True, primary_key=True)
-    fqdn = Column(Unicode(255), nullable=False)
+    fqdn = Column(Unicode(255), nullable=False, unique=True)
     serial = Column(Unicode(1024))
     date_added = Column(DateTime, default=datetime.utcnow, nullable=False)
     date_modified = Column(DateTime)
@@ -251,7 +271,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
     loan_id = Column(Integer, ForeignKey('tg_user.user_id'))
     loaned = relationship(User, primaryjoin=loan_id == User.user_id)
     loan_comment = Column(Unicode(1000))
-    release_action = Column(ReleaseAction.db_type())
+    release_action = Column(ReleaseAction.db_type(),
+        default=ReleaseAction.power_off, nullable=False)
     reprovision_distro_tree_id = Column(Integer, ForeignKey('distro_tree.id'))
     reprovision_distro_tree = relationship(DistroTree)
     hypervisor_id = Column(Integer, ForeignKey('hypervisor.id'))
@@ -292,7 +313,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
     command_queue = relationship(CommandActivity, backref='object',
             cascade='all, delete, delete-orphan',
             order_by=[CommandActivity.created.desc(), CommandActivity.id.desc()])
-    dyn_command_queue = dynamic_loader(CommandActivity)
+    dyn_command_queue = dynamic_loader(CommandActivity,
+            order_by=[CommandActivity.created.desc(), CommandActivity.id.desc()])
     _system_ccs = relationship('SystemCc', backref='system',
             cascade='all, delete, delete-orphan')
     reservations = relationship(Reservation, backref='system',
@@ -339,7 +361,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if not fqdn:
             raise ValueError('System must have an associated FQDN')
         if not is_valid_fqdn(fqdn):
-            raise ValueError('System has an invalid FQDN: %s' % fqdn)
+            raise ValueError('Invalid FQDN for system: %s' % fqdn)
 
         return fqdn
 
@@ -360,6 +382,135 @@ class System(DeclarativeMappedObject, ActivityMixin):
             xmland.appendChild(require)
         host_requires.appendChild(xmland)
         return host_requires
+
+    def __json__(self):
+        # Delayed import to avoid circular dependency
+        from . import Recipe
+        data = {
+            'id': self.id,
+            'fqdn': self.fqdn,
+            'lab_controller_id': None,
+            'possible_lab_controllers': [{'id': lc.id, 'fqdn': lc.fqdn}
+                    for lc in LabController.query],
+            'owner': self.owner,
+            'notify_cc': list(self.cc),
+            'status': self.status,
+            'possible_statuses': list(SystemStatus),
+            'status_reason': self.status_reason,
+            'type': self.type,
+            'possible_types': list(SystemType),
+            'arches': self.arch,
+            'possible_arches': Arch.query.all(),
+            'kernel_type': self.kernel_type,
+            'possible_kernel_types': KernelType.query.all(),
+            'location': self.location,
+            'lender': self.lender,
+            'release_action': self.release_action,
+            'possible_release_actions': list(ReleaseAction),
+            'reprovision_distro_tree': self.reprovision_distro_tree,
+            # The actual power settings are not included here because they must 
+            # not be exposed to unprivileged users.
+            'has_power': bool(self.power) and bool(self.power.power_type),
+            'has_console': False, # IMPLEMENTME
+            'created_date': self.date_added,
+            'hardware_scan_date': self.date_lastcheckin,
+            'hypervisor': self.hypervisor,
+            'possible_hypervisors': Hypervisor.query.all(),
+            'model': self.model,
+            'vendor': self.vendor,
+            'serial_number': self.serial,
+            'mac_address': self.mac_address,
+            'memory': self.memory,
+            'numa_nodes': None,
+            'cpu_model_name': None,
+            'disk_space': None,
+            'queue_size': None,
+        }
+        if self.lab_controller:
+            data['lab_controller_id'] = self.lab_controller.id
+        if identity.current.user and self.can_view_power(identity.current.user):
+            if self.power:
+                data.update(self.power.__json__())
+            else:
+                data.update(Power.empty_json())
+        if self.numa:
+            data.update({
+                'numa_nodes': self.numa.nodes,
+            })
+        if self.cpu:
+            data.update({
+                'cpu_model_name': self.cpu.model_name,
+            })
+        if self.disks:
+            data['disk_space'] = sum(disk.size for disk in self.disks)
+        if self.status == SystemStatus.automated:
+            data['queue_size'] = Recipe.query\
+                .filter(Recipe.status == TaskStatus.queued)\
+                .filter(Recipe.systems.contains(self))\
+                .count()
+        # XXX replace with actual recipe data
+        recipes = self.dyn_recipes.filter(
+                Recipe.finish_time >= datetime.utcnow() - timedelta(days=7))
+        data['recipes_run_past_week'] = recipes.count()
+        data['recipes_aborted_past_week'] = recipes.filter(
+                Recipe.status == TaskStatus.aborted).count()
+        # XXX replace with actual status duration data?
+        data['status_since'] = self.status_durations[0].start_time
+        if self.open_reservation:
+            data['current_reservation'] = self.open_reservation
+        else:
+            data['current_reservation'] = None
+        data['previous_reservation'] = self.dyn_reservations\
+                .filter(Reservation.finish_time != None)\
+                .order_by(Reservation.finish_time.desc()).first()
+        if self.loaned is not None:
+            data['current_loan'] = self.get_loan_details()
+        else:
+            data['current_loan'] = None
+        if self.custom_access_policy:
+            data['access_policy'] = self.custom_access_policy
+        else:
+            data['access_policy'] = SystemAccessPolicy.empty_json()
+        # XXX replace with actual access policy data?
+        if identity.current.user:
+            u = identity.current.user
+            data['can_change_fqdn'] = self.can_edit(u)
+            data['can_change_owner'] = self.can_change_owner(u)
+            data['can_edit_policy'] = self.can_edit_policy(u)
+            data['can_change_notify_cc'] = self.can_edit(u)
+            data['can_change_status'] = self.can_edit(u)
+            data['can_change_type'] = self.can_edit(u)
+            data['can_change_hardware'] = self.can_edit(u)
+            data['can_change_power'] = self.can_edit(u)
+            data['can_view_power'] = self.can_view_power(u)
+            data['can_power'] = self.can_power(u)
+            data['can_take'] = self.is_free(u) and self.can_reserve_manually(u)
+            data['can_return'] = (self.open_reservation is not None
+                    and self.open_reservation.type != 'recipe'
+                    and self.can_unreserve(u))
+            data['can_borrow'] = (self.loaned is not u and self.can_borrow(u))
+            data['can_lend'] = self.can_lend(u)
+            data['can_return_loan'] = (self.loaned is not None
+                    and self.can_return_loan(u))
+            data['can_reserve'] = self.can_reserve(u)
+        else:
+            data['can_change_fqdn'] = False
+            data['can_change_owner'] = False
+            data['can_edit_policy'] = False
+            data['can_change_notify_cc'] = False
+            data['can_change_status'] = False
+            data['can_change_type'] = False
+            data['can_change_hardware'] = False
+            data['can_change_power'] = False
+            data['can_view_power'] = False
+            data['can_power'] = False
+            data['can_take'] = False
+            data['can_return'] = False
+            data['can_borrow'] = False
+            data['can_lend'] = False
+            data['can_return_loan'] = False
+            data['can_reserve'] = False
+        return data
 
     @classmethod
     def all(cls, user):
@@ -498,6 +649,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
             recipe_id = open_reservation.recipe.id
             raise BX(_(u'Currently running R:%s' % recipe_id))
         self.unreserve(reservation=open_reservation, *args, **kw)
+        return open_reservation
 
     def excluded_families(self):
         """
@@ -622,6 +774,22 @@ class System(DeclarativeMappedObject, ActivityMixin):
             return true()
         return or_(SystemAccessPolicy.grants(user, SystemPermission.edit_system),
                 cls.owner == user)
+
+    def can_view_power(self, user):
+        """
+        Does the given user have permission to view power settings for this 
+        system?
+        """
+        self._ensure_user_is_authenticated(user)
+        if self.owner == user:
+            return True
+        if user.is_admin():
+            return True
+        if (self.custom_access_policy and
+            self.custom_access_policy.grants(user, SystemPermission.edit_system) or
+            self.custom_access_policy.grants(user, SystemPermission.view_power)):
+            return True
+        return False
 
     def can_lend(self, user):
         """
@@ -750,14 +918,12 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if not self.loaned:
             return {}
         return {
-                   "recipient": self.loaned.user_name,
+                   "recipient": self.loaned,
                    "comment": self.loan_comment,
                }
 
     def grant_loan(self, recipient, comment, service):
         """Grants a loan to the designated user if permitted"""
-        if recipient is None:
-            recipient = identity.current.user.user_name
         self.change_loan(recipient, comment, service)
 
     def return_loan(self, service):
@@ -929,10 +1095,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
 
     def updateHypervisor(self, hypervisor):
         if hypervisor:
-            try:
-                hvisor = Hypervisor.by_name(hypervisor)
-            except InvalidRequestError:
-                raise BX(_('Invalid Hypervisor: %s' % hypervisor))
+            hvisor = Hypervisor.by_name(hypervisor)
         else:
             hvisor = None
         if self.hypervisor != hvisor:
@@ -1063,12 +1226,28 @@ class System(DeclarativeMappedObject, ActivityMixin):
                                              Arch.id==arch.id))
         return excluded
 
-    def distro_trees(self, only_in_lab=True):
+    def distros(self, query=None):
+        """
+        List of distros that support this system
+        """
+        if not query:
+            query = Distro.query
+        # Tempting to use exists() here but it will not work due to the inner 
+        # query also joining to distro, so we cannot correlate... instead we 
+        # must join against the distro_tree subquery
+        trees_subquery = self.distro_trees().statement\
+                .with_only_columns([Distro.id.distinct().label('inner_distro_id')])\
+                .alias('inner_distro_trees')
+        query = query.join((trees_subquery, trees_subquery.c.inner_distro_id == Distro.id))
+        return query
+
+    def distro_trees(self, only_in_lab=True, query=None):
         """
         List of distro trees that support this system
         """
-        query = DistroTree.query\
-                .join(DistroTree.distro, Distro.osversion, OSVersion.osmajor)\
+        if not query:
+            query = DistroTree.query
+        query = query.join(DistroTree.distro, Distro.osversion, OSVersion.osmajor)\
                 .options(contains_eager(DistroTree.distro, Distro.osversion, OSVersion.osmajor))
         if only_in_lab:
             query = query.filter(DistroTree.lab_controller_assocs.any(
@@ -1089,38 +1268,35 @@ class System(DeclarativeMappedObject, ActivityMixin):
     def action_release(self, service=u'Scheduler'):
         # Attempt to remove Netboot entry and turn off machine
         self.clear_netboot(service=service)
-        if self.release_action:
-            if self.release_action == ReleaseAction.power_off:
-                self.action_power(action=u'off', service=service)
-            elif self.release_action == ReleaseAction.leave_on:
-                self.action_power(action=u'on', service=service)
-            elif self.release_action == ReleaseAction.reprovision:
-                if self.reprovision_distro_tree:
-                    # There are plenty of things that can go wrong here if the 
-                    # system or distro tree is misconfigured. But we don't want 
-                    # that to prevent the recipe from being stopped, so we log 
-                    # and ignore any errors.
-                    try:
-                        from bkr.server.kickstart import generate_kickstart
-                        install_options = self.manual_provision_install_options(
-                                self.reprovision_distro_tree)
-                        if 'ks' not in install_options.kernel_options:
-                            rendered_kickstart = generate_kickstart(install_options,
-                                    distro_tree=self.reprovision_distro_tree,
-                                    system=self, user=self.owner)
-                            install_options.kernel_options['ks'] = rendered_kickstart.link
-                        self.configure_netboot(self.reprovision_distro_tree,
-                                install_options.kernel_options_str,
-                                service=service)
-                        self.action_power(action=u'reboot', service=service)
-                    except Exception:
-                        log.exception('Failed to re-provision %s on %s, ignoring',
-                                self.reprovision_distro_tree, self)
-            else:
-                raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
-        # Default is to power off, if we can
-        elif self.power:
+        if self.release_action == ReleaseAction.power_off:
             self.action_power(action=u'off', service=service)
+        elif self.release_action == ReleaseAction.leave_on:
+            self.action_power(action=u'on', service=service)
+        elif self.release_action == ReleaseAction.reprovision:
+            if self.reprovision_distro_tree:
+                # There are plenty of things that can go wrong here if the 
+                # system or distro tree is misconfigured. But we don't want 
+                # that to prevent the recipe from being stopped, so we log 
+                # and ignore any errors.
+                try:
+                    from bkr.server.kickstart import generate_kickstart
+                    install_options = self.manual_provision_install_options(
+                            self.reprovision_distro_tree)
+                    if 'ks' not in install_options.kernel_options:
+                        rendered_kickstart = generate_kickstart(install_options,
+                            distro_tree=self.reprovision_distro_tree,
+                            system=self, user=self.owner)
+                        install_options.kernel_options['ks'] = rendered_kickstart.link
+                    self.configure_netboot(self.reprovision_distro_tree,
+                        install_options.kernel_options_str,
+                        service=service)
+                    self.action_power(action=u'reboot', service=service)
+                except Exception:
+                    log.exception('Failed to re-provision %s on %s, ignoring',
+                        self.reprovision_distro_tree, self)
+        else:
+            raise ValueError('Not a valid ReleaseAction: %r' % self.release_action)
+
 
     def configure_netboot(self, distro_tree, kernel_options, service=u'Scheduler',
             callback=None):
@@ -1131,6 +1307,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
                 service=service, callback=callback)
         command.distro_tree = distro_tree
         command.kernel_options = kernel_options
+        return command
 
     def action_power(self, action=u'reboot', service=u'Scheduler',
             callback=None, delay=0):
@@ -1140,18 +1317,18 @@ class System(DeclarativeMappedObject, ActivityMixin):
             self.enqueue_command(u'off', service=service,
                     callback=callback, delay=delay,
                     quiescent_period=self.power.power_quiescent_period)
-            self.enqueue_command(u'on', service=service,
+            return self.enqueue_command(u'on', service=service,
                     callback=callback, delay=delay,
                     quiescent_period=self.power.power_quiescent_period)
         else:
-            self.enqueue_command(action, service=service,
+            return self.enqueue_command(action, service=service,
                     callback=callback, delay=delay,
                     quiescent_period=self.power.power_quiescent_period)
 
     def clear_netboot(self, service=u'Scheduler'):
         if not self.lab_controller:
             return
-        self.enqueue_command(u'clear_netboot', service=service)
+        return self.enqueue_command(u'clear_netboot', service=service)
 
     def enqueue_command(self, action, service, callback=None,
             quiescent_period=None, delay=None):
@@ -1351,7 +1528,16 @@ class Hypervisor(DeclarativeMappedObject):
     hypervisor = Column(Unicode(100), nullable=False)
 
     def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__, self.hypervisor)
+
+    def __unicode__(self):
         return self.hypervisor
+
+    def __str__(self):
+        return unicode(self).encode('utf8')
+
+    def __json__(self):
+        return unicode(self)
 
     @classmethod
     def get_all_types(cls):
@@ -1366,7 +1552,10 @@ class Hypervisor(DeclarativeMappedObject):
 
     @classmethod
     def by_name(cls, hvisor):
-        return cls.query.filter_by(hypervisor=hvisor).one()
+        try:
+            return cls.query.filter_by(hypervisor=hvisor).one()
+        except NoResultFound:
+            raise ValueError('No such hypervisor %r' % hvisor)
 
 
 class SystemAccessPolicy(DeclarativeMappedObject):
@@ -1381,6 +1570,31 @@ class SystemAccessPolicy(DeclarativeMappedObject):
             name='system_access_policy_system_id_fk'))
     system = relationship(System,
             backref=backref('custom_access_policy', uselist=False))
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'rules': self.rules,
+            'possible_permissions': [
+                {'value': unicode(permission),
+                 'label': unicode(permission.label)}
+                for permission in SystemPermission],
+        }
+
+    @classmethod
+    def empty_json(cls):
+        """
+        Returns the JSON representation of a default empty policy, to be used 
+        in the cases where a system's policy has not been initialized yet.
+        """
+        return {
+            'id': None,
+            'rules': [],
+            'possible_permissions': [
+                {'value': unicode(permission),
+                 'label': unicode(permission.label)}
+                for permission in SystemPermission],
+        }
 
     @hybrid_method
     def grants(self, user, permission):
@@ -1460,11 +1674,20 @@ class SystemAccessPolicyRule(DeclarativeMappedObject):
             name='system_access_policy_rule_group_id_fk'))
     group = relationship(Group, backref=backref('system_access_policy_rules',
                                                 cascade='all, delete, delete-orphan'))
-    permission = Column(SystemPermission.db_type())
+    permission = Column(SystemPermission.db_type(), nullable=False)
 
     def __repr__(self):
         return '<grant %s to %s>' % (self.permission,
                 self.group or self.user or 'everybody')
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'user': self.user.user_name if self.user else None,
+            'group': self.group.group_name if self.group else None,
+            'everybody': self.everybody,
+            'permission': unicode(self.permission),
+        }
 
     @hybrid_property
     def everybody(self):
@@ -1771,6 +1994,35 @@ class Power(DeclarativeMappedObject):
     power_id = Column(String(255))
     power_quiescent_period = Column(Integer, default=default_quiescent_period,
         nullable=False)
+
+    def __json__(self):
+        return {
+            'id': self.id,
+            'power_type': self.power_type.name,
+            'power_address': self.power_address,
+            'power_user': self.power_user,
+            'power_password': self.power_passwd,
+            'power_id': self.power_id,
+            'power_quiescent_period': self.power_quiescent_period,
+            'possible_power_types': [t.name for t in PowerType.query.order_by(PowerType.name)],
+        }
+
+    @classmethod
+    def empty_json(cls):
+        """
+        Returns the JSON representation of a default empty power config, to be 
+        used in the cases where a system's power config has not been 
+        initialized yet.
+        """
+        return {
+            'power_type': None,
+            'power_address': None,
+            'power_user': None,
+            'power_password': None,
+            'power_id': None,
+            'power_quiescent_period': cls.default_quiescent_period,
+            'possible_power_types': [t.name for t in PowerType.query.order_by(PowerType.name)],
+        }
 
 # note model
 class Note(DeclarativeMappedObject):

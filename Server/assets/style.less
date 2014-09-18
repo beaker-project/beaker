@@ -4,11 +4,67 @@
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
 
-@import "bootstrap/less/bootstrap.less";
-@import "bootstrap/less/responsive.less";
+// These are all the LESS files making up Bootstrap, in the order they are 
+// defined in boostrap.less and responsive.less. Unneeded bits are commented out 
+// as an optimisation.
+@import "bootstrap/less/variables.less";
+@import "bootstrap/less/mixins.less";
+// CSS Reset
+@import "bootstrap/less/reset.less";
+// Grid system and page structure
+@import "bootstrap/less/scaffolding.less";
+@import "bootstrap/less/grid.less";
+@import "bootstrap/less/layouts.less";
+// Base CSS
+@import "bootstrap/less/type.less";
+@import "bootstrap/less/code.less";
+@import "bootstrap/less/forms.less";
+@import "bootstrap/less/tables.less";
+// Components: common
+//@import "bootstrap/less/sprites.less";
+@import "bootstrap/less/dropdowns.less";
+@import "bootstrap/less/wells.less";
+@import "bootstrap/less/component-animations.less";
+@import "bootstrap/less/close.less";
+// Components: Buttons & Alerts
+@import "bootstrap/less/buttons.less";
+@import "bootstrap/less/button-groups.less";
+@import "bootstrap/less/alerts.less"; // Note: alerts share common CSS with buttons and thus have styles in buttons.less
+// Components: Nav
+@import "bootstrap/less/navs.less";
+@import "bootstrap/less/navbar.less";
+//@import "bootstrap/less/breadcrumbs.less";
+@import "bootstrap/less/pagination.less";
+//@import "bootstrap/less/pager.less";
+// Components: Popovers
+@import "bootstrap/less/modals.less";
+//@import "bootstrap/less/tooltip.less";
+//@import "bootstrap/less/popovers.less";
+// Components: Misc
+//@import "bootstrap/less/thumbnails.less";
+@import "bootstrap/less/media.less";
+@import "bootstrap/less/labels-badges.less";
+@import "bootstrap/less/progress-bars.less";
+//@import "bootstrap/less/accordion.less";
+//@import "bootstrap/less/carousel.less";
+//@import "bootstrap/less/hero-unit.less";
+// Utility classes
+@import "bootstrap/less/utilities.less"; // Has to be last to override when necessary
+// Responsive classes
+@import "bootstrap/less/responsive-utilities.less";
+// Media queries
+@import "bootstrap/less/responsive-1200px-min.less";
+@import "bootstrap/less/responsive-768px-979px.less";
+@import "bootstrap/less/responsive-767px-max.less";
+// Responsive navbar
+@import "bootstrap/less/responsive-navbar.less";
+
 @import "font-awesome/less/font-awesome.less";
 @import "typeahead.js-bootstrap.less";
+@import "bootstrap-datepicker/less/datepicker.less";
+@import (less) "bootstrap-select/bootstrap-select.css";
 @import "datatables-bootstrap.less";
+@import "backgrid.less";
 
 // overrides for Bootstrap variables
 @sansFontFamily:  "Liberation Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -25,6 +81,16 @@
 // overrides for FontAwesome variables
 @FontAwesomePath: "font-awesome/font";
 
+// workaround for https://github.com/twitter/typeahead.js/issues/147
+.modal-body {
+    overflow: visible;
+}
+
+// workaround for missing margin above help-block with bootstrap-select
+.form-horizontal .bootstrap-select + .help-block {
+    margin-top: @baseLineHeight / 2;
+}
+
 // heading sizes (Bootstrap's are too generous)
 h1, h2, h3 { line-height: @baseLineHeight * 2; }
 h1 { font-size: @baseFontSize * 2.25; }
@@ -37,9 +103,18 @@ h1 small { font-size: @baseFontSize * 1.5; }
 h2 small { font-size: @baseFontSize * 1.25; }
 h3 small { font-size: @baseFontSize * 1.25; }
 
+// Friendly datetimes with the real timestamp in title.
+time[title] {
+    border-bottom: 1px dashed @gray;
+}
+
 // We have some forms in table cells, and the bottom margin (from Bootstrap) 
 // ruins the row height.
 td form, td input, td select, td .input-append, td .input-prepend {
+    margin-bottom: 0 !important;
+}
+// Same for forms in modals.
+.modal form {
     margin-bottom: 0 !important;
 }
 
@@ -66,6 +141,36 @@ td form, td input, td select, td .input-append, td .input-prepend {
 .form-control-static {
     display: inline-block;
     padding-top: 5px; // corresponds to .control-label
+}
+
+// Justified button groups. Add to a .btn-group to make it fill 100% width, with 
+// equal button widths. Only works with <a class="btn"/>.
+// Taken from Bootstrap 3, plus some border fixes.
+.btn-group-justified {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    & > .btn, & > .btn-group {
+        float: none;
+        display: table-cell;
+        width: 1%;
+    }
+    & > .btn-group .btn {
+        width: 100%;
+    }
+    & > .btn, & > .btn-group > .btn {
+        border-right-width: 0;
+        &:last-child {
+            border-right-width: 1px;
+        }
+    }
+}
+
+// Text inside btn-toolbars
+// Use <span class="btn-group btn-group-text">Some text</span>
+.btn-group-text {
+    font-size: @baseFontSize;
 }
 
 // buttons in grid cells
@@ -129,12 +234,17 @@ input.tt-hint {
     font-size: @baseFontSize;
 }
 
+// "Growl-like" notifications
+.alert.bootstrap-growl {
+    box-shadow: 0px 2px 14px rgba(50, 50, 50, 0.5);
+}
+
 @import "master.less";
+@import "system.less";
 @import "job.less";
 @import "recipe-tasks.less";
-@import "reserve-workflow.less";
 @import "job-matrix.less";
-@import "system.less";
+@import "query-builder.less";
 
 // Site-specific styles. The beaker-server package creates site.less as 
 // a symlink to /dev/null if it doesn't exist. Admins can overwrite the symlink 

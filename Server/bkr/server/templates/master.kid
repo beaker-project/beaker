@@ -9,6 +9,9 @@
     </script>
     <link py:for="css in tg_css" py:replace="css.display()" />
     <link py:for="js in tg_js_head" py:replace="js.display()" />
+    <script type="text/javascript" py:if="tg.identity.user">
+    window.beaker_current_user = new User(${tg.to_json(tg.identity.user)});
+    </script>
     <meta py:replace="item[:]"/>
 </head>
 

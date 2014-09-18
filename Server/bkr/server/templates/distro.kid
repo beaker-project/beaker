@@ -44,8 +44,7 @@
       <td>${tree.arch}</td>
       <td>
         <div py:if="tree.lab_controller_assocs" class="btn-group">
-          <a class="btn" href="${tg.url('/reserve_system', distro_tree_id=tree.id)}">Pick System</a>
-          <a class="btn" href="${tg.url('/reserveworkflow/reserve', distro_tree_id=tree.id)}">Pick Any System</a>
+          <a class="btn" href="${tg.url('/reserveworkflow/', distro_tree_id=tree.id)}">Provision</a>
         </div>
       </td>
     </tr>

@@ -53,6 +53,11 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         self.assertEquals(cell.value_of_css_property('background-color'),
                 'transparent')
 
+    def check_row_is_absent(self, row):
+        pane = self.browser.find_element_by_id('access-policy')
+        pane.find_element_by_xpath(
+                './/table[not(tbody/tr/td[1][normalize-space(string(.))="%s"])]' % row)
+
     def find_checkbox(self, row, column):
         """
         Returns the <input type="checkbox"/> for the given row and column labels.
@@ -128,12 +133,12 @@ class SystemAccessPolicyWebUITest(WebDriverTestCase):
         checkbox.click()
         self.check_row_is_dirty('sidekicks')
         pane.find_element_by_xpath('.//button[text()="Save changes"]').click()
-        self.check_row_is_not_dirty('sidekicks')
+        # "sidekicks" row is completely absent now due to having no permissions
+        self.check_row_is_absent('sidekicks')
 
         # refresh to check it is persisted
         b.get(get_server_base() + 'view/%s/' % self.system.fqdn)
         b.find_element_by_link_text('Access Policy').click()
-        # "sidekicks" row is completely absent now due to having no permissions
         pane = b.find_element_by_id('access-policy')
         self.assertNotIn('sidekicks', pane.text)
 
@@ -231,8 +236,8 @@ class SystemAccessPolicyHTTPTest(unittest.TestCase):
         json = response.json()
         self.assertEquals(json['id'], self.policy.id)
         self.assertEquals([p['value'] for p in json['possible_permissions']],
-                ['view', 'edit_policy', 'edit_system', 'loan_any', 'loan_self',
-                 'control_system', 'reserve'])
+                ['view', 'view_power', 'edit_policy', 'edit_system',
+                 'loan_any', 'loan_self', 'control_system', 'reserve'])
         self.assertItemsEqual(json['rules'], [
             {'id': self.policy.rules[0].id, 'permission': 'view',
              'everybody': True, 'user': None, 'group': None},

@@ -916,7 +916,7 @@ class XmlArch(ElementWrapper):
             # - '!=' - search for system which does not have given arch
             try:
                 arch = Arch.by_name(value)
-            except NoResultFound:
+            except ValueError:
                 return (joins, None)
             if op == '__eq__':
                 query = System.arch.contains(arch)
