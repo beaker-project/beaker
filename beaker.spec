@@ -95,7 +95,7 @@ BuildRequires:  python-turbojson13
 %else
 BuildRequires:  python-turbojson
 %endif
-BuildRequires:  python-sqlalchemy >= 0.6
+BuildRequires:  python-sqlalchemy >= 0.8
 BuildRequires:  python-xmltramp
 BuildRequires:  python-lxml
 BuildRequires:  python-ldap
@@ -172,7 +172,7 @@ Requires:       python-turbojson13
 %else
 Requires:       python-turbojson
 %endif
-Requires:       python-sqlalchemy >= 0.6
+Requires:       python-sqlalchemy >= 0.8
 Requires:       intltool
 Requires:       python-decorator
 Requires:       python-xmltramp
