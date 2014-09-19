@@ -6,7 +6,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import unittest
+import unittest2 as unittest
 from turbogears.database import session
 from bkr.inttest import data_setup, with_transaction
 from bkr.inttest.client import run_client,create_client_config
@@ -64,3 +64,22 @@ class JobSubmitTest(unittest.TestCase):
         #out = run_client(['bkr', 'job-submit', '-'],
         #        input=self.job_xml_with_encoding('ISO-2022-JP', u'日本語'))
         #self.assert_(out.startswith('Submitted:'), out)
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1142714
+    def test_no_args_reads_from_stdin(self):
+        jobxml = '''
+            <job>
+                <whiteboard/>
+                <recipeSet>
+                    <recipe>
+                        <distroRequires>
+                            <distro_name op="=" value="BlueShoeLinux5-5" />
+                        </distroRequires>
+                        <hostRequires/>
+                        <task name="/distribution/install" />
+                    </recipe>
+                </recipeSet>
+            </job>
+            '''
+        out = run_client(['bkr', 'job-submit'], input=jobxml)
+        self.assertIn("Submitted: ['J:", out)

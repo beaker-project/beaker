@@ -16,13 +16,18 @@ Synopsis
 
 | :program:`bkr job-submit` [*options*]
 |       [--debug] [--convert] [--combine] [--ignore-missing-tasks]
-|       [:option:`--dryrun` | :option:`--wait`] <jobxml>...
+|       [:option:`--dryrun` | :option:`--wait`]
+|       [<filename>...]
 
 Description
 -----------
 
-Specify one or more <jobxml> filenames to be submitted to Beaker. Pass '-' to 
-read from stdin.
+Reads Beaker job XML descriptions and submits them to Beaker.
+
+Specify one or more filenames containing job XML to be submitted. If multiple 
+filenames are given, each one is submitted as a separate job. If no filenames 
+are given, job XML is read from stdin. The special filename '-' also reads from 
+stdin.
 
 Options
 -------
@@ -163,6 +168,8 @@ class Job_Submit(BeakerCommand):
         ignore_missing_tasks = kwargs.pop('ignore_missing_tasks', False)
 
         jobs = args
+        if not jobs:
+            jobs = ['-'] # read one job from stdin by default
         job_schema = lxml.etree.RelaxNG(lxml.etree.parse(
                 pkg_resources.resource_stream('bkr.common', 'schema/beaker-job.rng')))
 
