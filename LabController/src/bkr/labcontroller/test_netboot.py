@@ -420,10 +420,10 @@ class Grub2PPC64Test(NetBootTestCase):
     def test_configure_then_clear(self):
         netboot.configure_ppc64(TEST_FQDN,
                 'console=ttyS0,115200 ks=http://lol/')
-        grub2_config_path = os.path.join(self.tftp_root, 'boot', 'grub2','grub.cfg-7F0000FF')
+        grub2_config_path = os.path.join(self.tftp_root, 'ppc','grub.cfg-7F0000FF')
         self.assertEquals(open(grub2_config_path).read(), """\
-linux  ../../images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=grub2
-initrd ../../images/fqdn.example.invalid/initrd
+linux  ../images/fqdn.example.invalid/kernel console=ttyS0,115200 ks=http://lol/ netboot_method=grub2
+initrd ../images/fqdn.example.invalid/initrd
 
 boot
 """)

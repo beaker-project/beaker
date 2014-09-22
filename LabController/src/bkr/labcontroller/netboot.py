@@ -475,20 +475,17 @@ def configure_ppc64(fqdn, kernel_options):
     Calls configure_grub2() to create the machine config files and symlink
     to the grub2 boot loader:
 
-    <get_tftp_root()>/boot/grub2/grub.cfg-<pxe_basename(fqdn)>
-    <get_tftp_root()>/boot/grub2/grub.cfg
+    <get_tftp_root()>/ppc/grub.cfg-<pxe_basename(fqdn)>
+    <get_tftp_root()>/ppc/grub.cfg
     <get_tftp_root()>/ppc/<pxe_basename(fqdn).lower()-grub2> -> ../boot/grub2/powerpc-ieee1275/core.elf
 
     """
-    grub2_conf_dir = os.path.join(get_tftp_root(), 'boot', 'grub2')
-    makedirs_ignore(grub2_conf_dir, mode=0755)
-    makedirs_ignore(os.path.join(grub2_conf_dir, 'powerpc-ieee1275'), mode=0755)
     ppc_dir = os.path.join(get_tftp_root(), 'ppc')
     makedirs_ignore(ppc_dir, mode=0755)
 
-    grub_cfg_file = os.path.join(grub2_conf_dir, "grub.cfg-%s" % pxe_basename(fqdn))
+    grub_cfg_file = os.path.join(ppc_dir, "grub.cfg-%s" % pxe_basename(fqdn))
     logger.debug('Writing grub2/ppc64 config for %s as %s', fqdn, grub_cfg_file)
-    configure_grub2(fqdn, grub2_conf_dir, "../..", grub_cfg_file, kernel_options)
+    configure_grub2(fqdn, ppc_dir, "..", grub_cfg_file, kernel_options)
 
     grub2_symlink = '%s-grub2' % pxe_basename(fqdn).lower()
     logger.debug('Creating grub2 symlink for %s as %s', fqdn, grub2_symlink)
@@ -500,16 +497,13 @@ def clear_ppc64(fqdn):
     Calls clear_grub2() to remove the machine config file and symlink to
     the grub2 boot loader
     """
-    grub2_conf_dir = os.path.join(get_tftp_root(), 'boot', 'grub2')
+    ppc_dir = os.path.join(get_tftp_root(), 'ppc')
     grub2_config = "grub.cfg-%s" % pxe_basename(fqdn)
     logger.debug('Removing grub2/ppc64 config for %s as %s', fqdn, grub2_config)
-    clear_grub2(os.path.join(grub2_conf_dir, grub2_config))
-
-    unlink_ignore(os.path.join(grub2_conf_dir, grub2_config))
-    ppc_dir = os.path.join(get_tftp_root(), 'ppc')
+    clear_grub2(os.path.join(ppc_dir, grub2_config))
     grub2_symlink = '%s-grub2' % pxe_basename(fqdn).lower()
     logger.debug('Removing grub2 symlink for %s as %s', fqdn, grub2_symlink)
-    unlink_ignore(os.path.join(ppc_dir, grub2_symlink))
+    clear_grub2(os.path.join(ppc_dir, grub2_symlink))
 
 # Mass configuration
 

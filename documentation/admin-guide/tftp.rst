@@ -90,7 +90,7 @@ removes them once the installation is complete.
     with the IPv4 address of the test system, represented as 8
     hexadecimal digits (using lowercase letters).
 
-:file:`boot/grub2/grub.cfg-{0A1043DE}`
+:file:`ppc/grub.cfg-{0A1043DE}`
     Configuration for GRUB2 for PowerPC (PPC64) systems. The filename
     is suffixed with the IPv4 address of the test system, represented
     as 8 hexadecimal digits (using uppercase letters).
@@ -142,7 +142,7 @@ Other files in the TFTP root directory
     If this file does not exist, Beaker populates it with a simple default 
     configuration that immediately exits.
 
-:file:`boot/grub2/grub.cfg`
+:file:`ppc/grub.cfg`
     Default configuration used by PowerPC systems when no system-specific 
     configuration exists.
 
