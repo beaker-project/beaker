@@ -224,23 +224,20 @@ class Users(AdminPage):
 
         # Return all systems in use by this user
         for system in System.query.filter(System.user==user):
-            msg = ''
-            try:
-                reservation = system.open_reservation
-                system.unreserve(reservation=reservation,
-                    service=method, user=user)
-            except BX, error_msg:
-                msg = 'Error: %s Action: %s' % (error_msg,system.release_action)
-                system.activity.append(SystemActivity(identity.current.user, method, '%s' % system.release_action, 'Return', '', msg))
-                system.activity.append(SystemActivity(identity.current.user, method, 'Returned', 'User', '%s' % user, ''))
+            reservation = system.open_reservation
+            system.unreserve(reservation=reservation, service=method, user=user)
         # Return all loaned systems in use by this user
         for system in System.query.filter(System.loaned==user):
-            system.activity.append(SystemActivity(identity.current.user, method, 'Changed', 'Loaned To', '%s' % system.loaned, 'None'))
+            system.record_activity(user=identity.current.user, service=method,
+                    action=u'Changed', field=u'Loaned To',
+                    old=u'%s' % system.loaned, new=u'None')
             system.loaned = None
         # Change the owner to the caller
         for system in System.query.filter(System.owner==user):
             system.owner = identity.current.user
-            system.activity.append(SystemActivity(identity.current.user, method, 'Changed', 'Owner', '%s' % user, '%s' % identity.current.user))
+            system.record_activity(user=identity.current.user, service=method,
+                    action=u'Changed', field=u'Owner',
+                    old=u'%s' % user, new=u'%s' % identity.current.user)
         # Finally remove the user
         user.removed=datetime.utcnow()
 

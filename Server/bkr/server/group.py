@@ -420,9 +420,9 @@ class Groups(AdminPage):
             redirect("./edit?group_id=%s" % kw['group_id'])
         group.systems.append(system)
         activity = GroupActivity(identity.current.user, u'WEBUI', u'Added', u'System', u"", system.fqdn)
-        sactivity = SystemActivity(identity.current.user, u'WEBUI', u'Added', u'Group', u"", group.display_name)
         group.activity.append(activity)
-        system.activity.append(sactivity)
+        system.record_activity(user=identity.current.user, service=u'WEBUI',
+                action=u'Added', field=u'Group', old=u"", new=group.display_name)
         flash( _(u"OK") )
         redirect("./edit?group_id=%s" % kw.get('group_id'))
 
@@ -700,9 +700,9 @@ class Groups(AdminPage):
 
         group.systems.remove(system)
         activity = GroupActivity(identity.current.user, u'WEBUI', u'Removed', u'System', system.fqdn, u"")
-        sactivity = SystemActivity(identity.current.user, u'WEBUI', u'Removed', u'Group', group.display_name, u"")
         group.activity.append(activity)
-        system.activity.append(sactivity)
+        system.record_activity(user=identity.current.user, service=u'WEBUI',
+                action=u'Removed', field=u'Group', old=group.display_name, new=u"")
         flash( _(u"%s Removed" % system.fqdn))
         raise redirect("./edit?group_id=%s" % group_id)
 

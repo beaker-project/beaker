@@ -281,8 +281,9 @@ class CSV(RPCRoot):
                 else:
                     newdata = None
                 if unicode(newdata) != unicode(current_data):
-                    activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '%s' % current_data, '%s' % newdata)
-                    system.activity.append(activity)
+                    system.record_activity(user=identity.current.user, service=u'CSV',
+                            action=u'Changed', field=key,
+                            old=u'%s' % current_data, new=u'%s' % newdata)
                     setattr(csv_object,key,newdata)
 
     def to_datastruct(self):
@@ -324,10 +325,9 @@ class CSV_System(CSV):
                 current_data = getattr(system, key, None)
                 if unicode(newdata) != unicode(current_data):
                     setattr(system,key,newdata)
-                    activity = SystemActivity(identity.current.user,
-                                              'CSV', 'Changed', key, '%s' %
-                                              current_data, '%s' % newdata)
-                    system.activity.append(activity)
+                    system.record_activity(user=identity.current.user,
+                            service=u'CSV', action=u'Changed', field=key,
+                            old=u'%s' % current_data, new=u'%s' % newdata)
         # import arch
         if 'arch' in data:
             arch_objs = []
@@ -341,10 +341,9 @@ class CSV_System(CSV):
                                          (system.fqdn, arch))
                     arch_objs.append(arch_obj)
             if system.arch != arch_objs:
-                activity = SystemActivity(identity.current.user,
-                                          'CSV', 'Changed', 'arch', '%s' %
-                                          system.arch, '%s' % arch_objs)
-                system.activity.append(activity)
+                system.record_activity(user=identity.current.user,
+                        service=u'CSV', action=u'Changed', field=u'arch',
+                        old=u'%s' % system.arch, new=u'%s' % arch_objs)
                 system.arch = arch_objs
 
         # import cc
@@ -353,10 +352,9 @@ class CSV_System(CSV):
             if data['cc']:
                 cc_objs = data['cc'].split(',')
             if system.cc != cc_objs:
-                activity = SystemActivity(identity.current.user,
-                                          'CSV', 'Changed', 'cc', '%s' % 
-                                          system.cc, '%s' % cc_objs)
-                system.activity.append(activity)
+                system.record_activity(user=identity.current.user,
+                        service=u'CSV', action=u'Changed', field=u'cc',
+                        old=u'%s' % system.cc, new=u'%s' % cc_objs)
                 system.cc = cc_objs
 
         # import labController
@@ -370,10 +368,9 @@ class CSV_System(CSV):
             else:
                 lab_controller = None
             if system.lab_controller != lab_controller:
-                activity = SystemActivity(identity.current.user,
-                                          'CSV', 'Changed', 'lab_controller', '%s' %
-                                          system.lab_controller, '%s' % lab_controller)
-                system.activity.append(activity)
+                system.record_activity(user=identity.current.user,
+                        service=u'CSV', action=u'Changed', field=u'lab_controller',
+                        old=u'%s' % system.lab_controller, new=u'%s' % lab_controller)
                 system.lab_controller = lab_controller
 
         # import owner
@@ -386,10 +383,9 @@ class CSV_System(CSV):
             else:
                 owner = None
             if system.owner != owner:
-                activity = SystemActivity(identity.current.user,
-                                          'CSV', 'Changed', 'owner', '%s' %
-                                          system.owner, '%s' % owner)
-                system.activity.append(activity)
+                system.record_activity(user=identity.current.user,
+                        service=u'CSV', action=u'Changed', field=u'owner',
+                        old=u'%s' % system.owner, new=u'%s' % owner)
                 system.owner = owner
         # import status
         if 'status' in data and data['status']:
@@ -399,10 +395,9 @@ class CSV_System(CSV):
                 raise ValueError("%s: Invalid Status %s" %
                                  (system.fqdn, data['status']))
             if system.status != systemstatus:
-                activity = SystemActivity(identity.current.user, 
-                                          'CSV', 'Changed', 'status', '%s' %
-                                          system.status, '%s' % systemstatus)
-                system.activity.append(activity)
+                system.record_activity(user=identity.current.user,
+                        service=u'CSV', action=u'Changed', field=u'status',
+                        old=u'%s' % system.status, new=u'%s' % systemstatus)
                 system.status = systemstatus
 
         # import type
@@ -415,10 +410,9 @@ class CSV_System(CSV):
                 raise ValueError("%s: Invalid Type %s" %
                                  (system.fqdn, data['type']))
             if system.type != systemtype:
-                activity = SystemActivity(identity.current.user,
-                                          'CSV', 'Changed', 'type', '%s' %
-                                          system.type, '%s' % systemtype)
-                system.activity.append(activity)
+                system.record_activity(user=identity.current.user,
+                        service=u'CSV', action=u'Changed', field=u'type',
+                        old=u'%s' % system.type, new=u'%s' % systemtype)
                 system.type = systemtype
         # import secret
         if 'secret' in data:
@@ -505,8 +499,8 @@ class CSV_Power(CSV):
                     newdata = None
                 current_data = getattr(csv_object, key, None)
                 if unicode(newdata) != unicode(current_data):
-                    activity = SystemActivity(identity.current.user, 'CSV', 'Changed', key, '***', '***')
-                    system.activity.append(activity)
+                    system.record_activity(user=identity.current.user, service=u'CSV',
+                            action=u'Changed', field=key, old=u'***', new=u'***')
                     setattr(csv_object,key,newdata)
 
         # import power_type
@@ -521,8 +515,9 @@ class CSV_Power(CSV):
                                                          data['power_type']))
                 return False
             if csv_object.power_type != power_type:
-                activity = SystemActivity(identity.current.user, 'CSV', 'Changed', 'power_type', '%s' % csv_object.power_type, '%s' % power_type)
-                system.activity.append(activity)
+                system.record_activity(user=identity.current.user, service=u'CSV',
+                        action=u'Changed', field=u'power_type',
+                        old=u'%s' % csv_object.power_type, new=u'%s' % power_type)
                 csv_object.power_type = power_type
 
         return True
@@ -610,14 +605,18 @@ class CSV_Exclude(CSV):
                     exclude_osversion = ExcludeOSVersion(osversion=osversion,
                                                          arch=arch)
                     system.excluded_osversion.append(exclude_osversion)
-                    activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Excluded_families', '', '%s/%s' % (osversion, arch))
-                    system.activity.append(activity)
+                    system.record_activity(user=identity.current.user, service=u'CSV',
+                            action=u'Added', field=u'Excluded_families',
+                            old=u'', new=u'%s/%s' % (osversion, arch))
             else:
                 if data['excluded'] == 'False':
                     for old_osversion in system.excluded_osversion_byarch(arch):
                         if old_osversion.osversion == osversion:
-                            activity = SystemActivity(identity.current.user, 'CSV', 'Removed', 'Excluded_families', '%s/%s' % (old_osversion.osversion, arch),'')
-                            system.activity.append(activity)
+                            system.record_activity(user=identity.current.user,
+                                    service=u'CSV', action=u'Removed',
+                                    field=u'Excluded_families',
+                                    old=u'%s/%s' % (old_osversion.osversion, arch),
+                                    new=u'')
                             session.delete(old_osversion)
         if not data['update'] and data['family']:
             try:
@@ -630,14 +629,16 @@ class CSV_Exclude(CSV):
                 if data['excluded'].lower() == 'true':
                     exclude_osmajor = ExcludeOSMajor(osmajor=osmajor, arch=arch)
                     system.excluded_osmajor.append(exclude_osmajor)
-                    activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Excluded_families', '', '%s/%s' % (osmajor, arch))
-                    system.activity.append(activity)
+                    system.record_activity(user=identity.current.user, service=u'CSV',
+                            action=u'Added', field=u'Excluded_families',
+                            old=u'', new=u'%s/%s' % (osmajor, arch))
             else:
                 if data['excluded'].lower() == 'false':
                     for old_osmajor in system.excluded_osmajor_byarch(arch):
                         if old_osmajor.osmajor == osmajor:
-                            activity = SystemActivity(identity.current.user, 'CSV', 'Removed', 'Excluded_families', '%s/%s' % (old_osmajor.osmajor, arch),'')
-                            system.activity.append(activity)
+                            system.record_activity(user=identity.current.user, service=u'CSV',
+                                    action=u'Removed', field=u'Excluded_families',
+                                    old=u'%s/%s' % (old_osmajor.osmajor, arch), new=u'')
                             session.delete(old_osmajor)
         return True
 
@@ -750,13 +751,19 @@ class CSV_Install(CSV):
             installlog = '%s' % arch
 
         if 'ks_meta' in data and prov.ks_meta != data['ks_meta']:
-            system.activity.append(SystemActivity(identity.current.user,'CSV','Changed', 'InstallOption:ks_meta:%s' % installlog, prov.ks_meta, data['ks_meta']))
+            system.record_activity(user=identity.current.user, service=u'CSV',
+                    action=u'Changed', field=u'InstallOption:ks_meta:%s' % installlog,
+                    old=prov.ks_meta, new=data['ks_meta'])
             prov.ks_meta = data['ks_meta']
         if 'kernel_options' in data and prov.kernel_options != data['kernel_options']:
-            system.activity.append(SystemActivity(identity.current.user,'CSV','Changed', 'InstallOption:kernel_options:%s' % installlog, prov.kernel_options, data['kernel_options']))
+            system.record_activity(user=identity.current.user, service=u'CSV',
+                    action=u'Changed', field=u'InstallOption:kernel_options:%s' % installlog,
+                    old=prov.kernel_options, new=data['kernel_options'])
             prov.kernel_options = data['kernel_options']
         if 'kernel_options_post' in data and prov.kernel_options_post != data['kernel_options_post']:
-            system.activity.append(SystemActivity(identity.current.user,'CSV','Changed', 'InstallOption:kernel_options_post:%s' % installlog, prov.kernel_options_post, data['kernel_options_post']))
+            system.record_activity(user=identity.current.user, service=u'CSV',
+                    action=u'Changed', field=u'InstallOption:kernel_options_post:%s' % installlog,
+                    old=prov.kernel_options_post, new=data['kernel_options_post'])
             prov.kernel_options_post = data['kernel_options_post']
 
         return True
@@ -846,15 +853,17 @@ class CSV_KeyValue(CSV):
             deleted = smart_bool(data['deleted'])
         if deleted:
             if key_value in system_key_values:
-                activity = SystemActivity(identity.current.user, 'CSV', 'Removed', 'Key/Value', '%s/%s' % (data['key'],data['key_value']), '')
-                system.activity.append(activity)
+                system.record_activity(user=identity.current.user, service=u'CSV',
+                        action=u'Removed', field=u'Key/Value',
+                        old=u'%s/%s' % (data['key'],data['key_value']), new=u'')
                 system_key_values.remove(key_value)
                 if not key_value.id:
                     session.expunge(key_value)
         else:
             if key_value not in system_key_values:
-                activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'Key/Value', '', '%s/%s' % (data['key'],data['key_value']))
-                system.activity.append(activity)
+                system.record_activity(user=identity.current.user, service=u'CSV',
+                        action=u'Added', field=u'Key/Value', old=u'',
+                        new=u'%s/%s' % (data['key'],data['key_value']))
                 system_key_values.append(key_value)
 
         session.add(key_value)
@@ -938,14 +947,15 @@ class CSV_GroupSystem(CSV):
                 deleted = smart_bool(data['deleted'])
             if deleted:
                 if group in system.groups:
-                    activity = SystemActivity(identity.current.user, 'CSV', 'Removed', 'group', '%s' % group, '')
-                    system.activity.append(activity)
+                    system.record_activity(user=identity.current.user, service=u'CSV',
+                            action=u'Removed', field=u'group',
+                            old=u'%s' % group, new=u'')
                     system.groups.remove(group)
             else:
                 if group not in system.groups:
                     system.groups.append(group)
-                    activity = SystemActivity(identity.current.user, 'CSV', 'Added', 'group', '', '%s' % group)
-                    system.activity.append(activity)
+                    system.record_activity(user=identity.current.user, service=u'CSV',
+                            action=u'Added', field=u'group', old=u'', new=u'%s' % group)
         else:
             log.append("%s: group can't be empty!" % system.fqdn)
             return False

@@ -2364,11 +2364,10 @@ class Recipe(TaskBase, DeclarativeMappedObject):
                     callback=u'bkr.server.model.auto_cmd_handler')
             self.resource.system.action_power(action=u'reboot',
                                      callback=u'bkr.server.model.auto_cmd_handler')
-            self.resource.system.activity.append(SystemActivity(
-                    user=self.recipeset.job.owner,
+            self.resource.system.record_activity(user=self.recipeset.job.owner,
                     service=u'Scheduler', action=u'Provision',
-                    field_name=u'Distro Tree', old_value=u'',
-                    new_value=unicode(self.distro_tree)))
+                    field=u'Distro Tree', old=u'',
+                    new=unicode(self.distro_tree))
         elif isinstance(self.resource, VirtResource):
             self.resource.kernel_options = install_options.kernel_options_str
             manager = dynamic_virt.VirtManager(self.recipeset.job.owner)

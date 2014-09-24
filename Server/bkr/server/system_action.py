@@ -26,7 +26,7 @@ class SystemAction(object):
             recipe = None
         mail.system_problem_report(system, description,
             recipe, identity.current.user)
-        activity = SystemActivity(identity.current.user, u'WEBUI', u'Reported problem',
-                u'Status', None, description)
-        system.activity.append(activity)
+        system.record_activity(user=identity.current.user, service=u'WEBUI',
+                action=u'Reported problem', field=u'Status',
+                old=None, new=description)
         return {}

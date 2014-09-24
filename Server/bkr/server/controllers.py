@@ -579,9 +579,11 @@ class Root(RPCRoot):
                     else:
                         system.key_values_string.remove(key_value)
                     removed = key_value
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Key/Value', "%s/%s" % (removed.key.key_name, removed.key_value), "")
-                    system.activity.append(activity)
-        
+                    system.record_activity(user=identity.current.user, service=u'WEBUI',
+                            action=u'Removed', field=u'Key/Value',
+                            old=u"%s/%s" % (removed.key.key_name, removed.key_value),
+                            new=u"")
+
         if removed:
             system.date_modified = datetime.utcnow()
             flash(_(u"removed %s/%s" % (removed.key.key_name,removed.key_value)))
@@ -608,10 +610,11 @@ class Root(RPCRoot):
                 if group.group_id == int(group_id):
                     system.groups.remove(group)
                     removed = group
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Group', group.display_name, "")
+                    system.record_activity(user=identity.current.user, service=u'WEBUI',
+                            action=u'Removed', field=u'Group',
+                            old=group.display_name, new=u"")
                     gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Removed', 'System', "", system.fqdn)
                     group.activity.append(gactivity)
-                    system.activity.append(activity)
         if removed:
             system.date_modified = datetime.utcnow()
             flash(_(u"%s Removed" % removed.display_name))
@@ -788,9 +791,10 @@ class Root(RPCRoot):
                 else:
                     new_value = kw[field]
                 if new_value != orig_value:
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Changed', field, '%s' % orig_value, kw[field] )
+                    system.record_activity(user=identity.current.user, service=u'WEBUI',
+                            action=u'Changed', field=field,
+                            old=u'%s' % orig_value, new=kw[field])
                     setattr(labinfo, field, kw[field])
-                    system.activity.append(activity) 
         system.labinfo = labinfo
         system.date_modified = datetime.utcnow()
         flash( _(u"Saved Lab Info") )
@@ -818,8 +822,9 @@ class Root(RPCRoot):
             else:
                 key_value = Key_Value_String(key,kw['key_value'])
                 system.key_values_string.append(key_value)
-            activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Key/Value', "", "%s/%s" % (kw['key_name'],kw['key_value']) )
-            system.activity.append(activity)
+            system.record_activity(user=identity.current.user, service=u'WEBUI',
+                    action=u'Added', field=u'Key/Value', old=u"",
+                    new=u"%s/%s" % (kw['key_name'],kw['key_value']))
             system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
@@ -842,10 +847,10 @@ class Root(RPCRoot):
                 flash(_(u"System '%s' is already in group '%s'" % (system.fqdn, group.group_name)))
                 redirect("/view/%s" % system.fqdn)
             system.groups.append(group)
-            activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Group', "", kw['group']['text'])
+            system.record_activity(user=identity.current.user, service=u'WEBUI',
+                    action=u'Added', field=u'Group', old=u"", new=kw['group']['text'])
             gactivity = GroupActivity(identity.current.user, 'WEBUI', 'Added', 'System', "", system.fqdn)
             group.activity.append(gactivity)
-            system.activity.append(activity)
             system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
 
@@ -883,17 +888,19 @@ class Root(RPCRoot):
                 for new_families in excluded_osmajor:
                     if new_families not in [osmajor.osmajor.id for osmajor in system.excluded_osmajor_byarch(arch)]:
                         new_excluded_osmajor = ExcludeOSMajor(osmajor=OSMajor.by_id(new_families),arch=arch)
-                        activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Excluded_families', "", "%s/%s" % (new_excluded_osmajor.osmajor, arch))
+                        system.record_activity(user=identity.current.user,
+                                service=u'WEBUI', action=u'Added', field=u'Excluded_families',
+                                old=u"", new=u"%s/%s" % (new_excluded_osmajor.osmajor, arch))
                         system.excluded_osmajor.append(new_excluded_osmajor)
-                        system.activity.append(activity)
             else:
                 excluded_osmajor = []
             for old_families in system.excluded_osmajor_byarch(arch):
                 if old_families.osmajor.id not in excluded_osmajor:
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Excluded_families', "%s/%s" % (old_families.osmajor, arch), "")
+                    system.record_activity(user=identity.current.user, service=u'WEBUI',
+                            action=u'Removed', field=u'Excluded_families',
+                            old=u"%s/%s" % (old_families.osmajor, arch), new=u"")
                     session.delete(old_families)
-                    system.activity.append(activity)
-                    
+
             if kw.get('excluded_families_subsection') and \
              kw['excluded_families_subsection'].has_key(arch.arch):
                 if isinstance(kw['excluded_families_subsection'][arch.arch], list):
@@ -903,16 +910,18 @@ class Root(RPCRoot):
                 for new_osversion in excluded_osversion:
                     if new_osversion not in [osversion.osversion.id for osversion in system.excluded_osversion_byarch(arch)]:
                         new_excluded_osversion = ExcludeOSVersion(osversion=OSVersion.by_id(new_osversion),arch=arch)
-                        activity = SystemActivity(identity.current.user, 'WEBUI', 'Added', 'Excluded_families', "", "%s/%s" % (new_excluded_osversion.osversion, arch))
+                        system.record_activity(user=identity.current.user, service=u'WEBUI',
+                                action=u'Added', field=u'Excluded_families',
+                                old=u"", new=u"%s/%s" % (new_excluded_osversion.osversion, arch))
                         system.excluded_osversion.append(new_excluded_osversion)
-                        system.activity.append(activity)
             else:
                 excluded_osversion = []
             for old_osversion in system.excluded_osversion_byarch(arch):
                 if old_osversion.osversion.id not in excluded_osversion:
-                    activity = SystemActivity(identity.current.user, 'WEBUI', 'Removed', 'Excluded_families', "%s/%s" % (old_osversion.osversion, arch), "")
+                    system.record_activity(user=identity.current.user, service=u'WEBUI',
+                            action=u'Removed', field=u'Excluded_families',
+                            old=u"%s/%s" % (old_osversion.osversion, arch), new=u"")
                     session.delete(old_osversion)
-                    system.activity.append(activity)
         redirect("/view/%s" % system.fqdn)
 
     @expose()
@@ -935,51 +944,51 @@ class Root(RPCRoot):
             osversion = OSVersion.by_id(int(kw['osversion_id']))
             prov = system.provisions[arch].provision_families[osversion.osmajor]\
                     .provision_family_updates[osversion]
-            system.activity.append(SystemActivity(user=identity.current.user,
+            system.record_activity(user=identity.current.user,
                     service=u'WEBUI', action=u'Removed',
-                    field_name=u'InstallOption:ks_meta:%s/%s' % (arch, osversion),
-                    old_value=prov.ks_meta, new_value=None))
-            system.activity.append(SystemActivity(user=identity.current.user,
+                    field=u'InstallOption:ks_meta:%s/%s' % (arch, osversion),
+                    old=prov.ks_meta, new=None)
+            system.record_activity(user=identity.current.user,
                     service=u'WEBUI', action=u'Removed',
-                    field_name=u'InstallOption:kernel_options:%s/%s' % (arch, osversion),
-                    old_value=prov.kernel_options, new_value=None))
-            system.activity.append(SystemActivity(user=identity.current.user,
+                    field=u'InstallOption:kernel_options:%s/%s' % (arch, osversion),
+                    old=prov.kernel_options, new=None)
+            system.record_activity(user=identity.current.user,
                     service=u'WEBUI', action=u'Removed',
-                    field_name=u'InstallOption:kernel_options_post:%s/%s' % (arch, osversion),
-                    old_value=prov.kernel_options_post, new_value=None))
+                    field=u'InstallOption:kernel_options_post:%s/%s' % (arch, osversion),
+                    old=prov.kernel_options_post, new=None)
             del system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates[osversion]
         elif kw.get('osmajor_id'):
             # remove osmajor option
             osmajor = OSMajor.by_id(int(kw['osmajor_id']))
             prov = system.provisions[arch].provision_families[osmajor]
-            system.activity.append(SystemActivity(user=identity.current.user,
+            system.record_activity(user=identity.current.user,
                     service=u'WEBUI', action=u'Removed',
-                    field_name=u'InstallOption:ks_meta:%s/%s' % (arch, osmajor),
-                    old_value=prov.ks_meta, new_value=None))
-            system.activity.append(SystemActivity(user=identity.current.user,
+                    field=u'InstallOption:ks_meta:%s/%s' % (arch, osmajor),
+                    old=prov.ks_meta, new=None)
+            system.record_activity(user=identity.current.user,
                     service=u'WEBUI', action=u'Removed',
-                    field_name=u'InstallOption:kernel_options:%s/%s' % (arch, osmajor),
-                    old_value=prov.kernel_options, new_value=None))
-            system.activity.append(SystemActivity(user=identity.current.user,
+                    field=u'InstallOption:kernel_options:%s/%s' % (arch, osmajor),
+                    old=prov.kernel_options, new=None)
+            system.record_activity(user=identity.current.user,
                     service=u'WEBUI', action=u'Removed',
-                    field_name=u'InstallOption:kernel_options_post:%s/%s' % (arch, osmajor),
-                    old_value=prov.kernel_options_post, new_value=None))
+                    field=u'InstallOption:kernel_options_post:%s/%s' % (arch, osmajor),
+                    old=prov.kernel_options_post, new=None)
             del system.provisions[arch].provision_families[osmajor]
         else:
             # remove arch option
             prov = system.provisions[arch]
-            system.activity.append(SystemActivity(user=identity.current.user,
+            system.record_activity(user=identity.current.user,
                     service=u'WEBUI', action=u'Removed',
-                    field_name=u'InstallOption:ks_meta:%s' % arch,
-                    old_value=prov.ks_meta, new_value=None))
-            system.activity.append(SystemActivity(user=identity.current.user,
+                    field=u'InstallOption:ks_meta:%s' % arch,
+                    old=prov.ks_meta, new=None)
+            system.record_activity(user=identity.current.user,
                     service=u'WEBUI', action=u'Removed',
-                    field_name=u'InstallOption:kernel_options:%s' % arch,
-                    old_value=prov.kernel_options, new_value=None))
-            system.activity.append(SystemActivity(user=identity.current.user,
+                    field=u'InstallOption:kernel_options:%s' % arch,
+                    old=prov.kernel_options, new=None)
+            system.record_activity(user=identity.current.user,
                     service=u'WEBUI', action=u'Removed',
-                    field_name=u'InstallOption:kernel_options_post:%s' % arch,
-                    old_value=prov.kernel_options_post, new_value=None))
+                    field=u'InstallOption:kernel_options_post:%s' % arch,
+                    old=prov.kernel_options_post, new=None)
             del system.provisions[arch]
         system.date_modified = datetime.utcnow()
         redirect("/view/%s" % system.fqdn)
@@ -1002,13 +1011,22 @@ class Root(RPCRoot):
                     if system.provisions[arch].provision_families.has_key(osversion.osmajor):
                         if system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates.has_key(osversion):
                             provision = system.provisions[arch].provision_families[osversion.osmajor].provision_family_updates[osversion]
-                            action = "Changed"
+                            action = u"Changed"
                         else:
                             provision = ProvisionFamilyUpdate()
-                            action = "Added"
-                        system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:ks_meta:%s/%s' % (arch, osversion), provision.ks_meta, kw['prov_ksmeta']))
-                        system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options:%s/%s' % (arch, osversion), provision.kernel_options, kw['prov_koptions']))
-                        system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options_post:%s/%s' % (arch, osversion), provision.kernel_options_post, kw['prov_koptionspost']))
+                            action = u"Added"
+                        system.record_activity(user=identity.current.user,
+                                service=u'WEBUI', action=action,
+                                field=u'InstallOption:ks_meta:%s/%s' % (arch, osversion),
+                                old=provision.ks_meta, new=kw['prov_ksmeta'])
+                        system.record_activity(user=identity.current.user,
+                                service=u'WEBUI', action=action,
+                                field=u'InstallOption:kernel_options:%s/%s' % (arch, osversion),
+                                old=provision.kernel_options, new=kw['prov_koptions'])
+                        system.record_activity(user=identity.current.user,
+                                service=u'WEBUI', action=action,
+                                field=u'InstallOption:kernel_options_post:%s/%s' % (arch, osversion),
+                                old=provision.kernel_options_post, new=kw['prov_koptionspost'])
                         provision.ks_meta=kw['prov_ksmeta']
                         provision.kernel_options=kw['prov_koptions']
                         provision.kernel_options_post=kw['prov_koptionspost']
@@ -1020,13 +1038,22 @@ class Root(RPCRoot):
                 if system.provisions.has_key(arch):
                     if system.provisions[arch].provision_families.has_key(osmajor):
                         provision = system.provisions[arch].provision_families[osmajor]
-                        action = "Changed"
+                        action = u"Changed"
                     else:
                         provision = ProvisionFamily()
-                        action = "Added"
-                    system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:ks_meta:%s/%s' % (arch, osmajor), provision.ks_meta, kw['prov_ksmeta']))
-                    system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options:%s/%s' % (arch, osmajor), provision.kernel_options, kw['prov_koptions']))
-                    system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options_post:%s/%s' % (arch, osmajor), provision.kernel_options_post, kw['prov_koptionspost']))
+                        action = u"Added"
+                    system.record_activity(user=identity.current.user,
+                            service=u'WEBUI', action=action,
+                            field=u'InstallOption:ks_meta:%s/%s' % (arch, osmajor),
+                            old=provision.ks_meta, new=kw['prov_ksmeta'])
+                    system.record_activity(user=identity.current.user,
+                            service=u'WEBUI', action=action,
+                            field=u'InstallOption:kernel_options:%s/%s' % (arch, osmajor),
+                            old=provision.kernel_options, new=kw['prov_koptions'])
+                    system.record_activity(user=identity.current.user,
+                            service=u'WEBUI', action=action,
+                            field=u'InstallOption:kernel_options_post:%s/%s' % (arch, osmajor),
+                            old=provision.kernel_options_post, new=kw['prov_koptionspost'])
                     provision.ks_meta=kw['prov_ksmeta']
                     provision.kernel_options=kw['prov_koptions']
                     provision.kernel_options_post=kw['prov_koptionspost']
@@ -1039,9 +1066,18 @@ class Root(RPCRoot):
                 else:
                     provision = Provision()
                     action = "Added"
-                system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:ks_meta:%s' % arch, provision.ks_meta, kw['prov_ksmeta']))
-                system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options:%s' % arch, provision.kernel_options, kw['prov_koptions']))
-                system.activity.append(SystemActivity(identity.current.user, 'WEBUI', action, 'InstallOption:kernel_options_post:%s' % arch, provision.kernel_options_post, kw['prov_koptionspost']))
+                system.record_activity(user=identity.current.user,
+                        service=u'WEBUI', action=action,
+                        field=u'InstallOption:ks_meta:%s' % arch,
+                        old=provision.ks_meta, new=kw['prov_ksmeta'])
+                system.record_activity(user=identity.current.user,
+                        service=u'WEBUI', action=action,
+                        field=u'InstallOption:kernel_options:%s' % arch,
+                        old=provision.kernel_options, new=kw['prov_koptions'])
+                system.record_activity(user=identity.current.user,
+                        service=u'WEBUI', action=action,
+                        field=u'InstallOption:kernel_options_post:%s' % arch,
+                        old=provision.kernel_options_post, new=kw['prov_koptionspost'])
                 provision.ks_meta=kw['prov_ksmeta']
                 provision.kernel_options=kw['prov_koptions']
                 provision.kernel_options_post=kw['prov_koptionspost']

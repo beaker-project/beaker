@@ -135,10 +135,10 @@ class CommandActivity(Activity):
         self.status = new_status
 
     def log_to_system_history(self):
-        sa = SystemActivity(self.user, self.service, self.action, u'Power', u'',
-                            self.new_value and u'%s: %s' % (self.status, self.new_value) \
-                            or u'%s' % self.status)
-        self.system.activity.append(sa)
+        self.system.record_activity(user=self.user, service=self.service,
+                action=self.action, field=u'Power', old=u'',
+                new=self.new_value and u'%s: %s' % (self.status, self.new_value)
+                    or unicode(self.status))
 
     def abort(self, msg=None):
         log.error('Command %s aborted: %s', self.id, msg)
@@ -989,19 +989,17 @@ class System(DeclarativeMappedObject, ActivityMixin):
             comment = None
 
         if user != self.loaned:
-            activity = SystemActivity(identity.current.user, service,
-                u'Changed', u'Loaned To',
-                u'%s' % self.loaned if self.loaned else '',
-                u'%s' % user if user else '')
+            self.record_activity(user=identity.current.user, service=service,
+                    action=u'Changed', field=u'Loaned To',
+                    old=u'%s' % self.loaned if self.loaned else '',
+                    new=u'%s' % user if user else '')
             self.loaned = user
-            self.activity.append(activity)
 
         if self.loan_comment != comment:
-            activity = SystemActivity(identity.current.user, service,
-                u'Changed', u'Loan Comment', u'%s' % self.loan_comment if
-                self.loan_comment else '' , u'%s' % comment if
-                comment else '')
-            self.activity.append(activity)
+            self.record_activity(user=identity.current.user, service=service,
+                    action=u'Changed', field=u'Loan Comment',
+                    old=u'%s' % self.loan_comment if self.loan_comment else '',
+                    new=u'%s' % comment if comment else '')
             self.loan_comment = comment
 
         return loaning_to if loaning_to else ''
@@ -1048,34 +1046,34 @@ class System(DeclarativeMappedObject, ActivityMixin):
                     new_int_kvs.remove((kv.key, kv.key_value))
                 else:
                     self.key_values_int.remove(kv)
-                    self.activity.append(SystemActivity(user=identity.current.user,
-                            service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
-                            old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
-                            new_value=None))
+                    self.record_activity(user=identity.current.user,
+                            service=u'XMLRPC', action=u'Removed', field=u'Key/Value',
+                            old=u'%s/%s' % (kv.key.key_name, kv.key_value),
+                            new=None)
         for kv in list(self.key_values_string):
             if kv.key in keys_to_update:
                 if (kv.key, kv.key_value) in new_string_kvs:
                     new_string_kvs.remove((kv.key, kv.key_value))
                 else:
                     self.key_values_string.remove(kv)
-                    self.activity.append(SystemActivity(user=identity.current.user,
-                            service=u'XMLRPC', action=u'Removed', field_name=u'Key/Value',
-                            old_value=u'%s/%s' % (kv.key.key_name, kv.key_value),
-                            new_value=None))
+                    self.record_activity(user=identity.current.user,
+                            service=u'XMLRPC', action=u'Removed', field=u'Key/Value',
+                            old=u'%s/%s' % (kv.key.key_name, kv.key_value),
+                            new=None)
 
         # Now we can just add the new ones
         for key, value in new_int_kvs:
             self.key_values_int.append(Key_Value_Int(key, value))
-            self.activity.append(SystemActivity(user=identity.current.user,
+            self.record_activity(user=identity.current.user,
                     service=u'XMLRPC', action=u'Added',
-                    field_name=u'Key/Value', old_value=None,
-                    new_value=u'%s/%s' % (key.key_name, value)))
+                    field=u'Key/Value', old=None,
+                    new=u'%s/%s' % (key.key_name, value))
         for key, value in new_string_kvs:
             self.key_values_string.append(Key_Value_String(key, value))
-            self.activity.append(SystemActivity(user=identity.current.user,
+            self.record_activity(user=identity.current.user,
                     service=u'XMLRPC', action=u'Added',
-                    field_name=u'Key/Value', old_value=None,
-                    new_value=u'%s/%s' % (key.key_name, value)))
+                    field=u'Key/Value', old=None,
+                    new=u'%s/%s' % (key.key_name, value))
 
         self.date_modified = datetime.utcnow()
         return 0
@@ -1090,20 +1088,18 @@ class System(DeclarativeMappedObject, ActivityMixin):
         md5sum = md5("%s" % inventory).hexdigest()
         if self.checksum == md5sum:
             return 0
-        self.activity.append(SystemActivity(user=identity.current.user,
-                service=u'XMLRPC', action=u'Changed', field_name=u'checksum',
-                old_value=self.checksum, new_value=md5sum))
+        self.record_activity(user=identity.current.user,
+                service=u'XMLRPC', action=u'Changed', field=u'checksum',
+                old=self.checksum, new=md5sum)
         self.checksum = md5sum
         for key in inventory:
             if key in self.ALLOWED_ATTRS:
                 if key in self.PRESERVED_ATTRS and getattr(self, key, None):
                     continue
                 setattr(self, key, inventory[key])
-                self.activity.append(SystemActivity(
-                        user=identity.current.user,
+                self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Changed',
-                        field_name=key, old_value=None,
-                        new_value=inventory[key]))
+                        field=key, old=None, new=inventory[key])
             else:
                 try:
                     method = self.get_update_method(key)
@@ -1121,11 +1117,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
         else:
             hvisor = None
         if self.hypervisor != hvisor:
-            self.activity.append(SystemActivity(
-                    user=identity.current.user,
+            self.record_activity(user=identity.current.user,
                     service=u'XMLRPC', action=u'Changed',
-                    field_name=u'Hypervisor', old_value=self.hypervisor,
-                    new_value=hvisor))
+                    field=u'Hypervisor', old=self.hypervisor, new=hvisor)
             self.hypervisor = hvisor
 
     def updateArch(self, archinfo):
@@ -1133,11 +1127,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
             new_arch = Arch.lazy_create(arch=arch)
             if new_arch not in self.arch:
                 self.arch.append(new_arch)
-                self.activity.append(SystemActivity(
-                        user=identity.current.user,
+                self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Added',
-                        field_name=u'Arch', old_value=None,
-                        new_value=new_arch.arch))
+                        field=u'Arch', old=None, new=new_arch.arch)
 
     def updateDisk(self, diskinfo):
         currentDisks = []
@@ -1147,21 +1139,17 @@ class System(DeclarativeMappedObject, ActivityMixin):
             disk = Disk(**disk)
             if disk not in self.disks:
                 self.disks.append(disk)
-                self.activity.append(SystemActivity(
-                        user=identity.current.user,
+                self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Added',
-                        field_name=u'Disk', old_value=None,
-                        new_value=disk.size))
+                        field=u'Disk', old=None, new=disk.size)
             currentDisks.append(disk)
 
         for disk in self.disks:
             if disk not in currentDisks:
                 self.disks.remove(disk)
-                self.activity.append(SystemActivity(
-                        user=identity.current.user,
+                self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Removed',
-                        field_name=u'Disk', old_value=disk.size,
-                        new_value=None))
+                        field=u'Disk', old=disk.size, new=None)
 
     def updateDevices(self, deviceinfo):
         currentDevices = []
@@ -1177,21 +1165,17 @@ class System(DeclarativeMappedObject, ActivityMixin):
                                    description = device['description'])
             if mydevice not in self.devices:
                 self.devices.append(mydevice)
-                self.activity.append(SystemActivity(
-                        user=identity.current.user,
+                self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Added',
-                        field_name=u'Device', old_value=None,
-                        new_value=mydevice.id))
+                        field=u'Device', old=None, new=mydevice.id)
             currentDevices.append(mydevice)
         # Remove any old entries
         for device in self.devices[:]:
             if device not in currentDevices:
                 self.devices.remove(device)
-                self.activity.append(SystemActivity(
-                        user=identity.current.user,
+                self.record_activity(user=identity.current.user,
                         service=u'XMLRPC', action=u'Removed',
-                        field_name=u'Device', old_value=device.id,
-                        new_value=None))
+                        field=u'Device', old=device.id, new=None)
 
     def updateCpu(self, cpuinfo):
         # Remove all old CPU data
@@ -1213,22 +1197,20 @@ class System(DeclarativeMappedObject, ActivityMixin):
                   flags      = cpuinfo['CpuFlags'])
 
         self.cpu = cpu
-        self.activity.append(SystemActivity(
-                user=identity.current.user,
+        self.record_activity(user=identity.current.user,
                 service=u'XMLRPC', action=u'Changed',
-                field_name=u'CPU', old_value=None,
-                new_value=None)) # XXX find a good way to record the actual changes
+                field=u'CPU', old=None,
+                new=None) # XXX find a good way to record the actual changes
 
     def updateNuma(self, numainfo):
         if self.numa:
             session.delete(self.numa)
         if numainfo.get('nodes', None) is not None:
             self.numa = Numa(nodes=numainfo['nodes'])
-        self.activity.append(SystemActivity(
-                user=identity.current.user,
+        self.record_activity(user=identity.current.user,
                 service=u'XMLRPC', action=u'Changed',
-                field_name=u'NUMA', old_value=None,
-                new_value=None)) # XXX find a good way to record the actual changes
+                field=u'NUMA', old=None,
+                new=None) # XXX find a good way to record the actual changes
 
     def excluded_osmajor_byarch(self, arch):
         """
@@ -1393,8 +1375,8 @@ class System(DeclarativeMappedObject, ActivityMixin):
         except Exception:
             user = None
         log.warning('Marking system %s as broken' % self.fqdn)
-        sa = SystemActivity(user, service, u'Changed', u'Status', unicode(self.status), u'Broken')
-        self.activity.append(sa)
+        self.record_activity(user=user, service=service, action=u'Changed',
+                field=u'Status', old=unicode(self.status), new=u'Broken')
         self.status = SystemStatus.broken
         self.date_modified = datetime.utcnow()
         mail.broken_system_notify(self, reason, recipe)
@@ -1481,9 +1463,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
         self.user = user # do it here too, so that the ORM is aware
         reservation = Reservation(user=user, type=reservation_type)
         self.reservations.append(reservation)
-        self.activity.append(SystemActivity(user=user,
-                service=service, action=u'Reserved', field_name=u'User',
-                old_value=u'', new_value=user.user_name))
+        self.record_activity(user=user,
+                service=service, action=u'Reserved', field=u'User',
+                old=u'', new=user.user_name)
         log.debug('Created reservation for system %r with type %r, service %r, user %r',
                 self, reservation_type, service, user)
         return reservation
@@ -1511,10 +1493,9 @@ class System(DeclarativeMappedObject, ActivityMixin):
         old_user = self.user
         self.user = None
         self.action_release(service=service)
-        activity = SystemActivity(user=user,
-                service=service, action=u'Returned', field_name=u'User',
-                old_value=old_user.user_name, new_value=u'')
-        self.activity.append(activity)
+        self.record_activity(user=user,
+                service=service, action=u'Returned', field=u'User',
+                old=old_user.user_name, new=u'')
 
     def add_note(self, text, user, service=u'WEBUI'):
         note = Note(user=user, text=text)

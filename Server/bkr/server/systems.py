@@ -223,10 +223,10 @@ class SystemsController(controllers.Controller):
             options.kernel_options['ks'] = rendered_kickstart.link
         system.configure_netboot(distro_tree, options.kernel_options_str,
                 service=u'XMLRPC')
-        system.activity.append(SystemActivity(user=identity.current.user,
+        system.record_activity(user=identity.current.user,
                 service=u'XMLRPC', action=u'Provision',
-                field_name=u'Distro Tree', old_value=u'',
-                new_value=u'Success: %s' % distro_tree))
+                field=u'Distro Tree', old=u'',
+                new=u'Success: %s' % distro_tree)
 
         if reboot:
             system.action_power(action='reboot', service=u'XMLRPC')
