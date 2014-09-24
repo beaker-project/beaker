@@ -196,6 +196,20 @@ class SystemViewTestWD(WebDriverTestCase):
         b.find_element_by_xpath('//span[@class="label label-warning"'
                 ' and text()="Out of service"]')
 
+    # https://bugzilla.redhat.com/show_bug.cgi?id=980352
+    def test_condition_report_too_long(self):
+        b = self.browser
+        login(b)
+        self.go_to_system_view(tab='Scheduler Settings')
+        tab = b.find_element_by_id('scheduler-settings')
+        BootstrapSelect(tab.find_element_by_name('status'))\
+            .select_by_visible_text('Broken')
+        tab.find_element_by_name('status_reason').send_keys(u'reallylong' * 500)
+        tab.find_element_by_xpath('.//button[text()="Save Changes"]').click()
+        self.assertIn(
+                'System condition report is longer than 4000 characters',
+                tab.find_element_by_class_name('alert-error').text)
+
     def test_rejects_fqdn_with_whitespace(self):
         b = self.browser
         login(b)

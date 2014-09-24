@@ -20,7 +20,8 @@ from sqlalchemy import (Table, Column, ForeignKey, UniqueConstraint, Index,
 from sqlalchemy.sql import select, and_, or_, not_, case, func
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import (mapper, relationship, backref,
-        column_property, dynamic_loader, contains_eager, validates)
+        column_property, dynamic_loader, contains_eager, validates,
+        object_mapper)
 from sqlalchemy.orm.interfaces import AttributeExtension
 from sqlalchemy.orm.attributes import NEVER_SET
 from sqlalchemy.orm.collections import attribute_mapped_collection
@@ -364,6 +365,16 @@ class System(DeclarativeMappedObject, ActivityMixin):
             raise ValueError('Invalid FQDN for system: %s' % fqdn)
 
         return fqdn
+
+    @validates('status_reason')
+    def validate_status_reason(self, key, value):
+        if value is None:
+            return value
+        max_length = object_mapper(self).columns[key].type.length
+        if len(value) > max_length:
+            raise ValueError('System condition report is longer than '
+                    '%s characters' % max_length)
+        return value
 
     def to_xml(self, clone=False):
         """ Return xml describing this system """
