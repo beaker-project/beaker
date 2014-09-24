@@ -50,13 +50,14 @@ var SystemCommandsToolbar = Backbone.View.extend({
                      at: 0, // add to the front of the local collection
                      success: _.bind(this.enqueued, this),
                      error: _.bind(this.error, this)});
+        } else {
+            this.model.command_queue.create(
+                    {action: command},
+                    {wait: true,
+                     at: 0, // add to the front of the local collection
+                     success: _.bind(this.enqueued, this),
+                     error: _.bind(this.error, this)});
         }
-        this.model.command_queue.create(
-                {action: command},
-                {wait: true,
-                 at: 0, // add to the front of the local collection
-                 success: _.bind(this.enqueued, this),
-                 error: _.bind(this.error, this)});
     },
     enqueued: function () {
         this.$('.sync-status').empty();
