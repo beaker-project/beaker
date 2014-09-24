@@ -20,7 +20,7 @@ from bkr.inttest import data_setup, get_server_base, \
         assertions, with_transaction
 from bkr.server.model import Arch, Key, Key_Value_String, Key_Value_Int, System, \
         Provision, ProvisionFamily, ProvisionFamilyUpdate, Hypervisor, \
-        SystemStatus, LabInfo, ReleaseAction
+        SystemStatus, LabInfo, ReleaseAction, PowerType
 from bkr.inttest.server.selenium import WebDriverTestCase
 from bkr.inttest.server.webdriver_utils import login, check_system_search_results, \
         delete_and_confirm, logout, click_menu_item, BootstrapSelect
@@ -496,6 +496,33 @@ class SystemViewTestWD(WebDriverTestCase):
                     self.assertEqual(activity.new_value, 'LeaveOn')
             if activities_to_find:
                 raise AssertionError('Could not find activity entries for %s' % ' '.join(activities_to_find))
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1059535
+    def test_activity_is_not_logged_when_leaving_power_settings_empty(self):
+        # The bug was that we were recording a change to power_user or 
+        # power_passwd because it changed from NULL to ''.
+        with session.begin():
+            self.system.power.power_type = PowerType.lazy_create(name=u'ilo')
+            self.system.power.power_user = None
+            self.system.power.power_passwd = None
+            self.system.power.power_id = None
+            PowerType.lazy_create(name=u'drac')
+            self.assertEquals(len(self.system.activity), 0)
+        b = self.browser
+        login(b)
+        self.go_to_system_view(tab='Power Settings')
+        tab = b.find_element_by_id('power-settings')
+        # change power type but leave the other fields empty
+        BootstrapSelect(tab.find_element_by_name('power_type'))\
+            .select_by_visible_text('drac')
+        tab.find_element_by_tag_name('form').submit()
+        tab.find_element_by_xpath('.//span[@class="sync-status" and not(text())]')
+        with session.begin():
+            session.refresh(self.system)
+            self.assertEquals(len(self.system.activity), 1,
+                    'Expecting only one activity row for power_type but found: %r'
+                    % self.system.activity)
+            self.assertEquals(self.system.activity[0].field_name, u'power_type')
 
     def test_add_install_options(self):
         orig_date_modified = self.system.date_modified

@@ -444,20 +444,26 @@ def update_system(fqdn):
             if new_power_address != system.power.power_address:
                 record_activity(u'power_address', system.power.power_address,
                         data['power_address'])
-                system.power.power_address = data['power_address']
+                system.power.power_address = new_power_address
                 changed = True
-        if 'power_user' in data and data['power_user'] != system.power.power_user:
-            record_activity(u'power_user', u'********', u'********')
-            system.power.power_user = data['power_user']
-            changed = True
-        if 'power_password' in data and data['power_password'] != system.power.power_passwd:
-            record_activity(u'power_passwd', u'********', u'********')
-            system.power.power_passwd = data['power_password']
-            changed = True
-        if 'power_id' in data and data['power_id'] != system.power.power_id:
-            record_activity(u'power_id', system.power.power_id, data['power_id'])
-            system.power.power_id = data['power_id']
-            changed = True
+        if 'power_user' in data:
+            new_power_user = data['power_user'] or u''
+            if new_power_user != (system.power.power_user or u''):
+                record_activity(u'power_user', u'********', u'********')
+                system.power.power_user = new_power_user
+                changed = True
+        if 'power_password' in data:
+            new_power_password = data['power_password'] or u''
+            if new_power_password != (system.power.power_passwd or u''):
+                record_activity(u'power_passwd', u'********', u'********')
+                system.power.power_passwd = new_power_password
+                changed = True
+        if 'power_id' in data:
+            new_power_id = data['power_id'] or u''
+            if new_power_id != (system.power.power_id or u''):
+                record_activity(u'power_id', system.power.power_id, new_power_id)
+                system.power.power_id = new_power_id
+                changed = True
         if 'power_quiescent_period' in data:
             new_qp = int(data['power_quiescent_period'])
             if new_qp != system.power.power_quiescent_period:
