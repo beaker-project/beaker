@@ -261,7 +261,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
     type = Column(SystemType.db_type(), nullable=False)
     status = column_property(Column(SystemStatus.db_type(), nullable=False),
             extension=SystemStatusAttributeExtension())
-    status_reason = Column(Unicode(255))
+    status_reason = Column(Unicode(4000))
     deleted = Column(Boolean, default=False)
     memory = Column(Integer)
     checksum = Column(String(32))
