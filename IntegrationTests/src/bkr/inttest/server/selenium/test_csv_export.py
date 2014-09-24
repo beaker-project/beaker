@@ -161,7 +161,7 @@ class CSVExportTest(WebDriverTestCase):
             unprivileged_user = data_setup.create_user(password=u'asdf')
             privileged_user = data_setup.create_user(password=u'asdf')
             system = data_setup.create_system(shared=True)
-            system.custom_access_policy.add_rule(SystemPermission.edit_system,
+            system.custom_access_policy.add_rule(SystemPermission.view_power,
                     user=privileged_user)
         b = self.browser
         login(b, user=privileged_user.user_name, password=u'asdf')

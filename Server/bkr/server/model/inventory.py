@@ -775,6 +775,7 @@ class System(DeclarativeMappedObject, ActivityMixin):
         return or_(SystemAccessPolicy.grants(user, SystemPermission.edit_system),
                 cls.owner == user)
 
+    @hybrid_method
     def can_view_power(self, user):
         """
         Does the given user have permission to view power settings for this 
@@ -790,6 +791,15 @@ class System(DeclarativeMappedObject, ActivityMixin):
             self.custom_access_policy.grants(user, SystemPermission.view_power)):
             return True
         return False
+
+    @can_view_power.expression
+    def can_view_power(cls, user): #pylint: disable=E0213
+        cls._ensure_user_is_authenticated(user)
+        if user.is_admin():
+            return true()
+        return or_(SystemAccessPolicy.grants(user, SystemPermission.edit_system),
+                SystemAccessPolicy.grants(user, SystemPermission.view_power),
+                cls.owner == user)
 
     def can_lend(self, user):
         """
