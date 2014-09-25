@@ -81,13 +81,13 @@ window.SystemQuickUsage = Backbone.View.extend({
         this.$el.append(
             $('<div class="alert alert-error"/>')
             .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$('a.btn').button('reset');
     },
     take: function (evt) {
         evt.preventDefault();
         if (this.request_in_progress) return;
         this.request_in_progress = true;
-        $(evt.currentTarget).addClass('disabled')
-            .html('<i class="fa fa-spinner fa-spin"></i> Taking&hellip;');
+        $(evt.currentTarget).button('loading');
         this.model.take({
             success: _.bind(this.success, this),
             error: _.bind(this.error, this),
@@ -97,19 +97,18 @@ window.SystemQuickUsage = Backbone.View.extend({
         evt.preventDefault();
         if (this.request_in_progress) return;
         this.request_in_progress = true;
-        $(evt.currentTarget).addClass('disabled')
-            .html('<i class="fa fa-spinner fa-spin"></i> Returning&hellip;');
+        $(evt.currentTarget).button('loading');
         this.model.return({
             success: _.bind(this.success, this),
             error: _.bind(this.error, this),
         });
     },
+
     borrow: function (evt) {
         evt.preventDefault();
         if (this.request_in_progress) return;
         this.request_in_progress = true;
-        $(evt.currentTarget).addClass('disabled')
-            .html('<i class="fa fa-spinner fa-spin"></i> Borrowing&hellip;');
+        $(evt.currentTarget).button('loading');
         this.model.borrow({
             success: _.bind(this.success, this),
             error: _.bind(this.error, this),
@@ -124,8 +123,7 @@ window.SystemQuickUsage = Backbone.View.extend({
         evt.preventDefault();
         if (this.request_in_progress) return;
         this.request_in_progress = true;
-        $(evt.currentTarget).addClass('disabled')
-            .html('<i class="fa fa-spinner fa-spin"></i> Returning loan&hellip;');
+        $(evt.currentTarget).button('loading');
         this.model.return_loan({
             success: _.bind(this.success, this),
             error: _.bind(this.error, this),

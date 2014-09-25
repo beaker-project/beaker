@@ -61,6 +61,9 @@ class SystemLoanTest(WebDriverTestCase):
         modal = b.find_element_by_class_name('modal')
         self.assertIn(error, 
                 modal.find_element_by_class_name('alert-error').text)
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1144203
+        modal = b.find_element_by_class_name('modal')
+        modal.find_element_by_xpath('.//button[text()="Save changes"]')
 
     def test_return_loan(self):
         with session.begin():

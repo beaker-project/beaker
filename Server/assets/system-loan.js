@@ -22,18 +22,14 @@ window.SystemLoanView = Backbone.View.extend({
         this.$el.html(this.template(this.model.attributes));
     },
     borrow: function () {
-        this.$('button').prop('disabled', true);
-        this.$('.sync-status').html(
-                '<i class="fa fa-spinner fa-spin"></i> Borrowing&hellip;');
+        this.$('.borrow').button('loading');
         this.model.borrow({error: _.bind(this.error, this)});
     },
     lend: function () {
         new SystemLendModal({model: this.model});
     },
     'return': function () {
-        this.$('button').prop('disabled', true);
-        this.$('.sync-status').html(
-                '<i class="fa fa-spinner fa-spin"></i> Returning&hellip;');
+        this.$('.return').button('loading');
         this.model.return_loan({error: _.bind(this.error, this)});
     },
     request_loan: function () {
@@ -43,6 +39,7 @@ window.SystemLoanView = Backbone.View.extend({
         this.$el.append(
             $('<div class="alert alert-error"/>')
             .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$('button').button('reset');
     },
 });
 
@@ -63,9 +60,7 @@ var SystemLendModal = Backbone.View.extend({
         this.$el.html(this.template(this.model.attributes));
     },
     submit: function (evt) {
-        this.$('button').prop('disabled', true);
-        this.$('button[type=submit]').html(
-                '<i class="fa fa-spinner fa-spin"></i> Saving&hellip;');
+        this.$('button').button('loading');
         this.model.lend(
             this.$('input[name=recipient]').val(),
             this.$('textarea[name=comment]').val(),
@@ -80,6 +75,7 @@ var SystemLendModal = Backbone.View.extend({
         this.$('.modal-footer').prepend(
             $('<div class="alert alert-error"/>')
             .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$('button').button('reset');
     },
 });
 
@@ -101,9 +97,7 @@ window.SystemLoanRequestModal = Backbone.View.extend({
     },
     submit: function (evt) {
         evt.preventDefault();
-        this.$('button').prop('disabled', true);
-        this.$('button[type=submit]').html(
-                '<i class="fa fa-spinner fa-spin"></i> Sending&hellip;');
+        this.$('button').button('loading');
         this.model.request_loan(
             this.$('[name=message]').val(),
             {success: _.bind(this.save_success, this),
@@ -119,6 +113,7 @@ window.SystemLoanRequestModal = Backbone.View.extend({
         this.$('.modal-footer').prepend(
             $('<div class="alert alert-error"/>')
             .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$('button').button('reset');
     },
 });
 

@@ -25,9 +25,7 @@ var SystemRenameModal = Backbone.View.extend({
     },
     submit: function (evt) {
         evt.preventDefault();
-        this.$('button').prop('disabled', true);
-        this.$('button[type=submit]').html(
-                '<i class="fa fa-spinner fa-spin"></i> Renaming&hellip;');
+        this.$('button').button('loading');
         this.model.save({fqdn: this.$('input[name=fqdn]').val()},
             {patch: true, wait: true})
             .done(_.bind(this.save_success, this))
@@ -43,6 +41,7 @@ var SystemRenameModal = Backbone.View.extend({
         this.$('.modal-footer').prepend(
             $('<div class="alert alert-error"/>')
             .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$('button').button('reset');
     },
 });
 

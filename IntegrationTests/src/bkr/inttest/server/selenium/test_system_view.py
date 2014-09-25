@@ -123,6 +123,7 @@ class SystemViewTestWD(WebDriverTestCase):
         modal.find_element_by_tag_name('form').submit()
         self.assertIn('already exists',
                 modal.find_element_by_class_name('alert-error').text)
+        modal.find_element_by_xpath('.//button[contains(text(), "Rename")]')
 
     def test_update_system(self):
         orig_date_modified = self.system.date_modified
@@ -650,6 +651,15 @@ class SystemViewTestWD(WebDriverTestCase):
         tab = b.find_element_by_id('owner')
         tab.find_element_by_xpath('.//button[contains(text(), "Change")]').click()
         modal = b.find_element_by_class_name('modal')
+        # Invalid user
+        modal.find_element_by_name('user_name').send_keys('$!7676')
+        modal.find_element_by_tag_name('form').submit()
+        self.assertIn(
+            'No such user', 
+            modal.find_element_by_class_name('alert-error').text)
+        modal.find_element_by_xpath('.//button[contains(text(), "Save changes")]')
+        # Valid user
+        modal.find_element_by_name('user_name').clear()
         modal.find_element_by_name('user_name').send_keys(new_owner.user_name)
         modal.find_element_by_tag_name('form').submit()
         tab.find_element_by_xpath('p[1]/a[text()="%s"]' % new_owner.user_name)

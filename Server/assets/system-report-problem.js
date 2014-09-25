@@ -24,9 +24,7 @@ window.SystemReportProblemModal = Backbone.View.extend({
     },
     submit: function (evt) {
         evt.preventDefault();
-        this.$('button').prop('disabled', true);
-        this.$('button[type=submit]').html(
-                '<i class="fa fa-spinner fa-spin"></i> Sending&hellip;');
+        this.$('button').button('loading');
         this.model.report_problem(
             this.$('[name=message]').val(),
             {success: _.bind(this.save_success, this),
@@ -42,6 +40,7 @@ window.SystemReportProblemModal = Backbone.View.extend({
         this.$('.modal-footer').prepend(
             $('<div class="alert alert-error"/>')
             .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$('button').button('reset');
     },
 });
 

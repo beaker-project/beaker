@@ -28,7 +28,7 @@
 <% } %>
 <p>
   <% if (can_return) { %>
-    <a href="#" class="btn btn-block return">Return</a>
+    <a href="#" class="btn btn-block return" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Returning&hellip;">Return</a>
   <% } else if (can_take && can_return_loan) { %>
     <% /*
     Normally we want to show only *one* quick action button here, to avoid 
@@ -39,20 +39,20 @@
     taken+returned the system and are now done with it).
     */ %>
     <div class="btn-group btn-group-justified">
-      <a href="#" class="btn take">Take</a>
-      <a href="#" class="btn return-loan">Return Loan</a>
+      <a href="#" class="btn take" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Taking&hellip;">Take</a>
+      <a href="#" class="btn return-loan" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Returning loan&hellip;">Return Loan</a>
     </div>
   <% } else if (can_take) { %>
-    <a href="#" class="btn btn-block take">Take</a>
+    <a href="#" class="btn btn-block take" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Taking&hellip;">Take</a>
   <% } else if (can_return_loan) { %>
-    <a href="#" class="btn btn-block return-loan">Return Loan</a>
+    <a href="#" class="btn btn-block return-loan" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Returning loan&hellip;">Return Loan</a>
   <% } else if (can_borrow) { %>
-    <a href="#" class="btn btn-block borrow">Borrow</a>
+    <a href="#" class="btn btn-block borrow" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Borrowing&hellip;">Borrow</a>
   <% } else if (can_reserve) { %>
     <a href="<%- beaker_url_prefix %>reserveworkflow/?system=<%- fqdn %>" class="btn btn-block">Schedule Reservation</a>
   <% } else if (_.isEmpty(window.beaker_current_user)) { %>
     <button type="button" class="btn btn-block" disabled="disabled">Not logged in</button>
   <% } else { %>
-    <button type="button" class="btn btn-block request-loan">Request Loan</button>
+    <button type="button" class="btn btn-block request-loan" data-loading-text="<i class='fa fa-spinner fa-spin'></i> Requesting loan&hellip;">Request Loan</button>
   <% } %>
 </p>

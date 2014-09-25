@@ -107,9 +107,7 @@ var SystemHardwareDetailsEdit = Backbone.View.extend({
         this.$el.html(this.template(this.model.attributes));
     },
     submit: function (evt) {
-        this.$('button').prop('disabled', true);
-        this.$('button[type=submit]').html(
-                '<i class="fa fa-spinner fa-spin"></i> Saving&hellip;');
+        this.$('button').button('loading');
         var attributes = _.object(_.map(this.$('input, select'),
                 function (elem) { return [elem.name, $(elem).val()]; }));
         this.model.save(
@@ -126,6 +124,7 @@ var SystemHardwareDetailsEdit = Backbone.View.extend({
         this.$('.modal-footer').prepend(
             $('<div class="alert alert-error"/>')
             .text(xhr.statusText + ': ' + xhr.responseText));
+        this.$('button').button('reset');
     },
 });
 
