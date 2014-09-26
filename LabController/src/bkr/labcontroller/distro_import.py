@@ -311,8 +311,8 @@ class ComposeInfoLegacy(ComposeInfoMixin, Importer):
                 build.process(urls_arch, options)
                 self.distro_trees.append(build.tree)
             except BX, err:
-                exit_status = 1
                 if not options.ignore_missing:
+                    exit_status = 1
                     logging.warn(err)
 
         return exit_status
@@ -642,22 +642,20 @@ sources = Workstation/source/SRPMS
         repopath = self.parser.get('variant-%s.%s' % (variant, arch), 
                                'repository', '')
         if repopath:
-            repos.append(dict(
-                              repoid=variant,
-                              type=repotype,
-                              path=os.path.join(rpath,repopath),
-                             )
-                        )
+            if url_exists(os.path.join(repo_base, rpath, repopath, 'repodata')):
+                repos.append(dict(repoid=variant, type=repotype,
+                        path=os.path.join(rpath, repopath)))
+            else:
+                logging.warn('%s repo found in .composeinfo but does not exist', variant)
 
         debugrepopath = self.parser.get('variant-%s.%s' % (variant, arch), 
                                'debuginfo', '')
         if debugrepopath:
-            repos.append(dict(
-                              repoid='%s-debuginfo' % variant,
-                              type='debug',
-                              path=os.path.join(rpath,debugrepopath),
-                             )
-                        )
+            if url_exists(os.path.join(repo_base, rpath, debugrepopath, 'repodata')):
+                repos.append(dict(repoid='%s-debuginfo' % variant, type='debug',
+                        path=os.path.join(rpath, debugrepopath)))
+            else:
+                logging.warn('%s-debuginfo repo found in .composeinfo but does not exist', variant)
         return repos
 
     def process(self, urls, options):
@@ -679,7 +677,7 @@ sources = Workstation/source/SRPMS
                                                 len(os_dir.split('/')))])
 
                 # find our repos, but relative from os_dir
-                repos = self.find_repos(self.parser.url, rpath, variant, arch)
+                repos = self.find_repos(os.path.join(self.parser.url, os_dir), rpath, variant, arch)
 
                 urls_variant_arch = [os.path.join(url, os_dir) for url in urls]
                 try:
@@ -694,8 +692,8 @@ sources = Workstation/source/SRPMS
                     build.process(urls_variant_arch, options, repos, isos_path)
                     self.distro_trees.append(build.tree)
                 except BX, err:
-                    exit_status = 1
                     if not options.ignore_missing:
+                        exit_status = 1
                         logging.warn(err)
         return exit_status
 

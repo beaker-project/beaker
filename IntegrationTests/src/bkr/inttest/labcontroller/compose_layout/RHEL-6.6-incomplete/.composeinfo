@@ -1,0 +1,664 @@
+[compose]
+date = 20140925
+id = RHEL-6.6-20140925.n.0
+respin = 0
+type = nightly
+
+[product]
+family = Red Hat Enterprise Linux
+name = RHEL-6.6-20140925.n.0
+short = RHEL
+variants = Client,ComputeNode,Server,Workstation
+version = 6.6
+
+[product-Server-SAP]
+is_layered = true
+name = SAP
+short = SAP
+version = 6.6
+
+[product-Server-SAPHANA]
+is_layered = true
+name = SAP HANA
+short = SAPHANA
+version = 6.6
+
+[variant-Client]
+arches = i386,x86_64
+id = Client
+name = Client
+type = variant
+uid = Client
+variants = Client-optional
+
+[variant-Client-optional]
+arches = i386,x86_64
+id = optional
+name = optional
+type = optional
+uid = Client-optional
+
+[variant-Client-optional.i386]
+debug_dir = Client/optional/i386/debug
+debug_packages = Client/optional/i386/debug
+debug_repository = Client/optional/i386/debug
+debug_tree = Client/optional/i386/debug
+debuginfo = Client/optional/i386/debug
+os_dir = Client/optional/i386/os
+os_tree = Client/optional/i386/os
+packages = Client/optional/i386/os/Packages
+repository = Client/optional/i386/os
+source_dir = Client/optional/source/SRPMS
+source_packages = Client/optional/source/SRPMS
+source_repository = Client/optional/source/SRPMS
+source_tree = Client/optional/source/SRPMS
+
+[variant-Client-optional.x86_64]
+debug_dir = Client/optional/x86_64/debug
+debug_packages = Client/optional/x86_64/debug
+debug_repository = Client/optional/x86_64/debug
+debug_tree = Client/optional/x86_64/debug
+debuginfo = Client/optional/x86_64/debug
+os_dir = Client/optional/x86_64/os
+os_tree = Client/optional/x86_64/os
+packages = Client/optional/x86_64/os/Packages
+repository = Client/optional/x86_64/os
+source_dir = Client/optional/source/SRPMS
+source_packages = Client/optional/source/SRPMS
+source_repository = Client/optional/source/SRPMS
+source_tree = Client/optional/source/SRPMS
+
+[variant-Client.i386]
+debug_dir = Client/i386/debug
+debug_packages = Client/i386/debug
+debug_repository = Client/i386/debug
+debug_tree = Client/i386/debug
+debuginfo = Client/i386/debug
+iso_dir = Client/i386/iso
+isos = Client/i386/iso
+jigdo_dir = Client/i386/jigdo
+jigdos = Client/i386/jigdo
+os_dir = Client/i386/os
+os_tree = Client/i386/os
+packages = Client/i386/os/Packages
+repository = Client/i386/os
+source_dir = Client/source/SRPMS
+source_iso_dir = Client/source/iso
+source_isos = Client/source/iso
+source_jigdo_dir = Client/source/jigdo
+source_jigdos = Client/source/jigdo
+source_packages = Client/source/SRPMS
+source_repository = Client/source/SRPMS
+source_tree = Client/source/SRPMS
+
+[variant-Client.x86_64]
+debug_dir = Client/x86_64/debug
+debug_packages = Client/x86_64/debug
+debug_repository = Client/x86_64/debug
+debug_tree = Client/x86_64/debug
+debuginfo = Client/x86_64/debug
+iso_dir = Client/x86_64/iso
+isos = Client/x86_64/iso
+jigdo_dir = Client/x86_64/jigdo
+jigdos = Client/x86_64/jigdo
+os_dir = Client/x86_64/os
+os_tree = Client/x86_64/os
+packages = Client/x86_64/os/Packages
+repository = Client/x86_64/os
+source_dir = Client/source/SRPMS
+source_iso_dir = Client/source/iso
+source_isos = Client/source/iso
+source_jigdo_dir = Client/source/jigdo
+source_jigdos = Client/source/jigdo
+source_packages = Client/source/SRPMS
+source_repository = Client/source/SRPMS
+source_tree = Client/source/SRPMS
+
+[variant-ComputeNode]
+arches = x86_64
+id = ComputeNode
+name = Compute Node
+type = variant
+uid = ComputeNode
+variants = ComputeNode-ScalableFileSystem,ComputeNode-optional
+
+[variant-ComputeNode-ScalableFileSystem]
+arches = x86_64
+id = ScalableFileSystem
+name = Scalable Filesystem Support
+type = addon
+uid = ComputeNode-ScalableFileSystem
+
+[variant-ComputeNode-ScalableFileSystem.x86_64]
+debug_dir = ComputeNode/x86_64/debug
+debug_packages = ComputeNode/x86_64/debug
+debug_repository = ComputeNode/x86_64/debug
+debug_tree = ComputeNode/x86_64/debug
+debuginfo = ComputeNode/x86_64/debug
+os_dir = ComputeNode/x86_64/os
+os_tree = ComputeNode/x86_64/os
+packages = ComputeNode/x86_64/os/ScalableFileSystem
+repository = ComputeNode/x86_64/os/ScalableFileSystem
+source_dir = ComputeNode/source/SRPMS
+source_packages = ComputeNode/source/SRPMS
+source_repository = ComputeNode/source/SRPMS
+source_tree = ComputeNode/source/SRPMS
+
+[variant-ComputeNode-optional]
+arches = x86_64
+id = optional
+name = optional
+type = optional
+uid = ComputeNode-optional
+
+[variant-ComputeNode-optional.x86_64]
+debug_dir = ComputeNode/optional/x86_64/debug
+debug_packages = ComputeNode/optional/x86_64/debug
+debug_repository = ComputeNode/optional/x86_64/debug
+debug_tree = ComputeNode/optional/x86_64/debug
+debuginfo = ComputeNode/optional/x86_64/debug
+os_dir = ComputeNode/optional/x86_64/os
+os_tree = ComputeNode/optional/x86_64/os
+packages = ComputeNode/optional/x86_64/os/Packages
+repository = ComputeNode/optional/x86_64/os
+source_dir = ComputeNode/optional/source/SRPMS
+source_packages = ComputeNode/optional/source/SRPMS
+source_repository = ComputeNode/optional/source/SRPMS
+source_tree = ComputeNode/optional/source/SRPMS
+
+[variant-ComputeNode.x86_64]
+debug_dir = ComputeNode/x86_64/debug
+debug_packages = ComputeNode/x86_64/debug
+debug_repository = ComputeNode/x86_64/debug
+debug_tree = ComputeNode/x86_64/debug
+debuginfo = ComputeNode/x86_64/debug
+iso_dir = ComputeNode/x86_64/iso
+isos = ComputeNode/x86_64/iso
+jigdo_dir = ComputeNode/x86_64/jigdo
+jigdos = ComputeNode/x86_64/jigdo
+os_dir = ComputeNode/x86_64/os
+os_tree = ComputeNode/x86_64/os
+packages = ComputeNode/x86_64/os/Packages
+repository = ComputeNode/x86_64/os
+source_dir = ComputeNode/source/SRPMS
+source_iso_dir = ComputeNode/source/iso
+source_isos = ComputeNode/source/iso
+source_jigdo_dir = ComputeNode/source/jigdo
+source_jigdos = ComputeNode/source/jigdo
+source_packages = ComputeNode/source/SRPMS
+source_repository = ComputeNode/source/SRPMS
+source_tree = ComputeNode/source/SRPMS
+
+[variant-Server]
+arches = i386,ppc64,s390x,x86_64
+id = Server
+name = Server
+type = variant
+uid = Server
+variants = Server-HighAvailability,Server-LoadBalancer,Server-ResilientStorage,Server-SAP,Server-SAPHANA,Server-ScalableFileSystem,Server-optional
+
+[variant-Server-HighAvailability]
+arches = i386,x86_64
+id = HighAvailability
+name = Hight Availability
+type = addon
+uid = Server-HighAvailability
+
+[variant-Server-HighAvailability.i386]
+debug_dir = Server/i386/debug
+debug_packages = Server/i386/debug
+debug_repository = Server/i386/debug
+debug_tree = Server/i386/debug
+debuginfo = Server/i386/debug
+os_dir = Server/i386/os
+os_tree = Server/i386/os
+packages = Server/i386/os/HighAvailability
+repository = Server/i386/os/HighAvailability
+source_dir = Server/source/SRPMS
+source_packages = Server/source/SRPMS
+source_repository = Server/source/SRPMS
+source_tree = Server/source/SRPMS
+
+[variant-Server-HighAvailability.x86_64]
+debug_dir = Server/x86_64/debug
+debug_packages = Server/x86_64/debug
+debug_repository = Server/x86_64/debug
+debug_tree = Server/x86_64/debug
+debuginfo = Server/x86_64/debug
+os_dir = Server/x86_64/os
+os_tree = Server/x86_64/os
+packages = Server/x86_64/os/HighAvailability
+repository = Server/x86_64/os/HighAvailability
+source_dir = Server/source/SRPMS
+source_packages = Server/source/SRPMS
+source_repository = Server/source/SRPMS
+source_tree = Server/source/SRPMS
+
+[variant-Server-LoadBalancer]
+arches = i386,x86_64
+id = LoadBalancer
+name = Load Balancer
+type = addon
+uid = Server-LoadBalancer
+
+[variant-Server-LoadBalancer.i386]
+debug_dir = Server/i386/debug
+debug_packages = Server/i386/debug
+debug_repository = Server/i386/debug
+debug_tree = Server/i386/debug
+debuginfo = Server/i386/debug
+os_dir = Server/i386/os
+os_tree = Server/i386/os
+packages = Server/i386/os/LoadBalancer
+repository = Server/i386/os/LoadBalancer
+source_dir = Server/source/SRPMS
+source_packages = Server/source/SRPMS
+source_repository = Server/source/SRPMS
+source_tree = Server/source/SRPMS
+
+[variant-Server-LoadBalancer.x86_64]
+debug_dir = Server/x86_64/debug
+debug_packages = Server/x86_64/debug
+debug_repository = Server/x86_64/debug
+debug_tree = Server/x86_64/debug
+debuginfo = Server/x86_64/debug
+os_dir = Server/x86_64/os
+os_tree = Server/x86_64/os
+packages = Server/x86_64/os/LoadBalancer
+repository = Server/x86_64/os/LoadBalancer
+source_dir = Server/source/SRPMS
+source_packages = Server/source/SRPMS
+source_repository = Server/source/SRPMS
+source_tree = Server/source/SRPMS
+
+[variant-Server-ResilientStorage]
+arches = i386,x86_64
+id = ResilientStorage
+name = Resilient Storage
+type = addon
+uid = Server-ResilientStorage
+
+[variant-Server-ResilientStorage.i386]
+debug_dir = Server/i386/debug
+debug_packages = Server/i386/debug
+debug_repository = Server/i386/debug
+debug_tree = Server/i386/debug
+debuginfo = Server/i386/debug
+os_dir = Server/i386/os
+os_tree = Server/i386/os
+packages = Server/i386/os/ResilientStorage
+repository = Server/i386/os/ResilientStorage
+source_dir = Server/source/SRPMS
+source_packages = Server/source/SRPMS
+source_repository = Server/source/SRPMS
+source_tree = Server/source/SRPMS
+
+[variant-Server-ResilientStorage.x86_64]
+debug_dir = Server/x86_64/debug
+debug_packages = Server/x86_64/debug
+debug_repository = Server/x86_64/debug
+debug_tree = Server/x86_64/debug
+debuginfo = Server/x86_64/debug
+os_dir = Server/x86_64/os
+os_tree = Server/x86_64/os
+packages = Server/x86_64/os/ResilientStorage
+repository = Server/x86_64/os/ResilientStorage
+source_dir = Server/source/SRPMS
+source_packages = Server/source/SRPMS
+source_repository = Server/source/SRPMS
+source_tree = Server/source/SRPMS
+
+[variant-Server-SAP]
+arches = x86_64
+id = SAP
+name = SAP
+type = layered-product
+uid = Server-SAP
+
+[variant-Server-SAP.x86_64]
+debug_dir = Server-SAP/x86_64/debug
+debug_packages = Server-SAP/x86_64/debug
+debug_repository = Server-SAP/x86_64/debug
+debug_tree = Server-SAP/x86_64/debug
+debuginfo = Server-SAP/x86_64/debug
+iso_dir = Server-SAP/x86_64/iso
+isos = Server-SAP/x86_64/iso
+jigdo_dir = Server-SAP/x86_64/jigdo
+jigdos = Server-SAP/x86_64/jigdo
+os_dir = Server-SAP/x86_64/os
+os_tree = Server-SAP/x86_64/os
+packages = Server-SAP/x86_64/os/Packages
+repository = Server-SAP/x86_64/os
+source_dir = Server-SAP/source/SRPMS
+source_iso_dir = Server-SAP/source/iso
+source_isos = Server-SAP/source/iso
+source_jigdo_dir = Server-SAP/source/jigdo
+source_jigdos = Server-SAP/source/jigdo
+source_packages = Server-SAP/source/SRPMS
+source_repository = Server-SAP/source/SRPMS
+source_tree = Server-SAP/source/SRPMS
+
+[variant-Server-SAPHANA]
+arches = x86_64
+id = SAPHANA
+name = SAP HANA
+type = layered-product
+uid = Server-SAPHANA
+
+[variant-Server-SAPHANA.x86_64]
+debug_dir = Server-SAPHANA/x86_64/debug
+debug_packages = Server-SAPHANA/x86_64/debug
+debug_repository = Server-SAPHANA/x86_64/debug
+debug_tree = Server-SAPHANA/x86_64/debug
+debuginfo = Server-SAPHANA/x86_64/debug
+iso_dir = Server-SAPHANA/x86_64/iso
+isos = Server-SAPHANA/x86_64/iso
+jigdo_dir = Server-SAPHANA/x86_64/jigdo
+jigdos = Server-SAPHANA/x86_64/jigdo
+os_dir = Server-SAPHANA/x86_64/os
+os_tree = Server-SAPHANA/x86_64/os
+packages = Server-SAPHANA/x86_64/os/Packages
+repository = Server-SAPHANA/x86_64/os
+source_dir = Server-SAPHANA/source/SRPMS
+source_iso_dir = Server-SAPHANA/source/iso
+source_isos = Server-SAPHANA/source/iso
+source_jigdo_dir = Server-SAPHANA/source/jigdo
+source_jigdos = Server-SAPHANA/source/jigdo
+source_packages = Server-SAPHANA/source/SRPMS
+source_repository = Server-SAPHANA/source/SRPMS
+source_tree = Server-SAPHANA/source/SRPMS
+
+[variant-Server-ScalableFileSystem]
+arches = x86_64
+id = ScalableFileSystem
+name = Scalable Filesystem Support
+type = addon
+uid = Server-ScalableFileSystem
+
+[variant-Server-ScalableFileSystem.x86_64]
+debug_dir = Server/x86_64/debug
+debug_packages = Server/x86_64/debug
+debug_repository = Server/x86_64/debug
+debug_tree = Server/x86_64/debug
+debuginfo = Server/x86_64/debug
+os_dir = Server/x86_64/os
+os_tree = Server/x86_64/os
+packages = Server/x86_64/os/ScalableFileSystem
+repository = Server/x86_64/os/ScalableFileSystem
+source_dir = Server/source/SRPMS
+source_packages = Server/source/SRPMS
+source_repository = Server/source/SRPMS
+source_tree = Server/source/SRPMS
+
+[variant-Server-optional]
+arches = i386,ppc64,s390x,x86_64
+id = optional
+name = optional
+type = optional
+uid = Server-optional
+
+[variant-Server-optional.i386]
+debug_dir = Server/optional/i386/debug
+debug_packages = Server/optional/i386/debug
+debug_repository = Server/optional/i386/debug
+debug_tree = Server/optional/i386/debug
+debuginfo = Server/optional/i386/debug
+os_dir = Server/optional/i386/os
+os_tree = Server/optional/i386/os
+packages = Server/optional/i386/os/Packages
+repository = Server/optional/i386/os
+source_dir = Server/optional/source/SRPMS
+source_packages = Server/optional/source/SRPMS
+source_repository = Server/optional/source/SRPMS
+source_tree = Server/optional/source/SRPMS
+
+[variant-Server-optional.ppc64]
+debug_dir = Server/optional/ppc64/debug
+debug_packages = Server/optional/ppc64/debug
+debug_repository = Server/optional/ppc64/debug
+debug_tree = Server/optional/ppc64/debug
+debuginfo = Server/optional/ppc64/debug
+os_dir = Server/optional/ppc64/os
+os_tree = Server/optional/ppc64/os
+packages = Server/optional/ppc64/os/Packages
+repository = Server/optional/ppc64/os
+source_dir = Server/optional/source/SRPMS
+source_packages = Server/optional/source/SRPMS
+source_repository = Server/optional/source/SRPMS
+source_tree = Server/optional/source/SRPMS
+
+[variant-Server-optional.s390x]
+debug_dir = Server/optional/s390x/debug
+debug_packages = Server/optional/s390x/debug
+debug_repository = Server/optional/s390x/debug
+debug_tree = Server/optional/s390x/debug
+debuginfo = Server/optional/s390x/debug
+os_dir = Server/optional/s390x/os
+os_tree = Server/optional/s390x/os
+packages = Server/optional/s390x/os/Packages
+repository = Server/optional/s390x/os
+source_dir = Server/optional/source/SRPMS
+source_packages = Server/optional/source/SRPMS
+source_repository = Server/optional/source/SRPMS
+source_tree = Server/optional/source/SRPMS
+
+[variant-Server-optional.x86_64]
+debug_dir = Server/optional/x86_64/debug
+debug_packages = Server/optional/x86_64/debug
+debug_repository = Server/optional/x86_64/debug
+debug_tree = Server/optional/x86_64/debug
+debuginfo = Server/optional/x86_64/debug
+os_dir = Server/optional/x86_64/os
+os_tree = Server/optional/x86_64/os
+packages = Server/optional/x86_64/os/Packages
+repository = Server/optional/x86_64/os
+source_dir = Server/optional/source/SRPMS
+source_packages = Server/optional/source/SRPMS
+source_repository = Server/optional/source/SRPMS
+source_tree = Server/optional/source/SRPMS
+
+[variant-Server.i386]
+debug_dir = Server/i386/debug
+debug_packages = Server/i386/debug
+debug_repository = Server/i386/debug
+debug_tree = Server/i386/debug
+debuginfo = Server/i386/debug
+iso_dir = Server/i386/iso
+isos = Server/i386/iso
+jigdo_dir = Server/i386/jigdo
+jigdos = Server/i386/jigdo
+os_dir = Server/i386/os
+os_tree = Server/i386/os
+packages = Server/i386/os/Packages
+repository = Server/i386/os
+source_dir = Server/source/SRPMS
+source_iso_dir = Server/source/iso
+source_isos = Server/source/iso
+source_jigdo_dir = Server/source/jigdo
+source_jigdos = Server/source/jigdo
+source_packages = Server/source/SRPMS
+source_repository = Server/source/SRPMS
+source_tree = Server/source/SRPMS
+
+[variant-Server.ppc64]
+debug_dir = Server/ppc64/debug
+debug_packages = Server/ppc64/debug
+debug_repository = Server/ppc64/debug
+debug_tree = Server/ppc64/debug
+debuginfo = Server/ppc64/debug
+iso_dir = Server/ppc64/iso
+isos = Server/ppc64/iso
+jigdo_dir = Server/ppc64/jigdo
+jigdos = Server/ppc64/jigdo
+os_dir = Server/ppc64/os
+os_tree = Server/ppc64/os
+packages = Server/ppc64/os/Packages
+repository = Server/ppc64/os
+source_dir = Server/source/SRPMS
+source_iso_dir = Server/source/iso
+source_isos = Server/source/iso
+source_jigdo_dir = Server/source/jigdo
+source_jigdos = Server/source/jigdo
+source_packages = Server/source/SRPMS
+source_repository = Server/source/SRPMS
+source_tree = Server/source/SRPMS
+
+[variant-Server.s390x]
+debug_dir = Server/s390x/debug
+debug_packages = Server/s390x/debug
+debug_repository = Server/s390x/debug
+debug_tree = Server/s390x/debug
+debuginfo = Server/s390x/debug
+iso_dir = Server/s390x/iso
+isos = Server/s390x/iso
+jigdo_dir = Server/s390x/jigdo
+jigdos = Server/s390x/jigdo
+os_dir = Server/s390x/os
+os_tree = Server/s390x/os
+packages = Server/s390x/os/Packages
+repository = Server/s390x/os
+source_dir = Server/source/SRPMS
+source_iso_dir = Server/source/iso
+source_isos = Server/source/iso
+source_jigdo_dir = Server/source/jigdo
+source_jigdos = Server/source/jigdo
+source_packages = Server/source/SRPMS
+source_repository = Server/source/SRPMS
+source_tree = Server/source/SRPMS
+
+[variant-Server.x86_64]
+debug_dir = Server/x86_64/debug
+debug_packages = Server/x86_64/debug
+debug_repository = Server/x86_64/debug
+debug_tree = Server/x86_64/debug
+debuginfo = Server/x86_64/debug
+iso_dir = Server/x86_64/iso
+isos = Server/x86_64/iso
+jigdo_dir = Server/x86_64/jigdo
+jigdos = Server/x86_64/jigdo
+os_dir = Server/x86_64/os
+os_tree = Server/x86_64/os
+packages = Server/x86_64/os/Packages
+repository = Server/x86_64/os
+source_dir = Server/source/SRPMS
+source_iso_dir = Server/source/iso
+source_isos = Server/source/iso
+source_jigdo_dir = Server/source/jigdo
+source_jigdos = Server/source/jigdo
+source_packages = Server/source/SRPMS
+source_repository = Server/source/SRPMS
+source_tree = Server/source/SRPMS
+
+[variant-Workstation]
+arches = i386,x86_64
+id = Workstation
+name = Workstation
+type = variant
+uid = Workstation
+variants = Workstation-ScalableFileSystem,Workstation-optional
+
+[variant-Workstation-ScalableFileSystem]
+arches = x86_64
+id = ScalableFileSystem
+name = Scalable Filesystem Support
+type = addon
+uid = Workstation-ScalableFileSystem
+
+[variant-Workstation-ScalableFileSystem.x86_64]
+debug_dir = Workstation/x86_64/debug
+debug_packages = Workstation/x86_64/debug
+debug_repository = Workstation/x86_64/debug
+debug_tree = Workstation/x86_64/debug
+debuginfo = Workstation/x86_64/debug
+os_dir = Workstation/x86_64/os
+os_tree = Workstation/x86_64/os
+packages = Workstation/x86_64/os/ScalableFileSystem
+repository = Workstation/x86_64/os/ScalableFileSystem
+source_dir = Workstation/source/SRPMS
+source_packages = Workstation/source/SRPMS
+source_repository = Workstation/source/SRPMS
+source_tree = Workstation/source/SRPMS
+
+[variant-Workstation-optional]
+arches = i386,x86_64
+id = optional
+name = optional
+type = optional
+uid = Workstation-optional
+
+[variant-Workstation-optional.i386]
+debug_dir = Workstation/optional/i386/debug
+debug_packages = Workstation/optional/i386/debug
+debug_repository = Workstation/optional/i386/debug
+debug_tree = Workstation/optional/i386/debug
+debuginfo = Workstation/optional/i386/debug
+os_dir = Workstation/optional/i386/os
+os_tree = Workstation/optional/i386/os
+packages = Workstation/optional/i386/os/Packages
+repository = Workstation/optional/i386/os
+source_dir = Workstation/optional/source/SRPMS
+source_packages = Workstation/optional/source/SRPMS
+source_repository = Workstation/optional/source/SRPMS
+source_tree = Workstation/optional/source/SRPMS
+
+[variant-Workstation-optional.x86_64]
+debug_dir = Workstation/optional/x86_64/debug
+debug_packages = Workstation/optional/x86_64/debug
+debug_repository = Workstation/optional/x86_64/debug
+debug_tree = Workstation/optional/x86_64/debug
+debuginfo = Workstation/optional/x86_64/debug
+os_dir = Workstation/optional/x86_64/os
+os_tree = Workstation/optional/x86_64/os
+packages = Workstation/optional/x86_64/os/Packages
+repository = Workstation/optional/x86_64/os
+source_dir = Workstation/optional/source/SRPMS
+source_packages = Workstation/optional/source/SRPMS
+source_repository = Workstation/optional/source/SRPMS
+source_tree = Workstation/optional/source/SRPMS
+
+[variant-Workstation.i386]
+debug_dir = Workstation/i386/debug
+debug_packages = Workstation/i386/debug
+debug_repository = Workstation/i386/debug
+debug_tree = Workstation/i386/debug
+debuginfo = Workstation/i386/debug
+iso_dir = Workstation/i386/iso
+isos = Workstation/i386/iso
+jigdo_dir = Workstation/i386/jigdo
+jigdos = Workstation/i386/jigdo
+os_dir = Workstation/i386/os
+os_tree = Workstation/i386/os
+packages = Workstation/i386/os/Packages
+repository = Workstation/i386/os
+source_dir = Workstation/source/SRPMS
+source_iso_dir = Workstation/source/iso
+source_isos = Workstation/source/iso
+source_jigdo_dir = Workstation/source/jigdo
+source_jigdos = Workstation/source/jigdo
+source_packages = Workstation/source/SRPMS
+source_repository = Workstation/source/SRPMS
+source_tree = Workstation/source/SRPMS
+
+[variant-Workstation.x86_64]
+debug_dir = Workstation/x86_64/debug
+debug_packages = Workstation/x86_64/debug
+debug_repository = Workstation/x86_64/debug
+debug_tree = Workstation/x86_64/debug
+debuginfo = Workstation/x86_64/debug
+iso_dir = Workstation/x86_64/iso
+isos = Workstation/x86_64/iso
+jigdo_dir = Workstation/x86_64/jigdo
+jigdos = Workstation/x86_64/jigdo
+os_dir = Workstation/x86_64/os
+os_tree = Workstation/x86_64/os
+packages = Workstation/x86_64/os/Packages
+repository = Workstation/x86_64/os
+source_dir = Workstation/source/SRPMS
+source_iso_dir = Workstation/source/iso
+source_isos = Workstation/source/iso
+source_jigdo_dir = Workstation/source/jigdo
+source_jigdos = Workstation/source/jigdo
+source_packages = Workstation/source/SRPMS
+source_repository = Workstation/source/SRPMS
+source_tree = Workstation/source/SRPMS
+

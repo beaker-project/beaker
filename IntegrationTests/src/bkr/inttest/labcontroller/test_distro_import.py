@@ -179,6 +179,33 @@ class DistroImportTest(unittest.TestCase):
                             u'arch': u'x86_64',
                             u'ks_meta': None}
 
+        self.x86_64_rhel66_server_nosap = {
+            u'name': u'RHEL-6.6-20140925.n.0',
+            u'osmajor': u'RedHatEnterpriseLinux6',
+            u'osminor': u'6',
+            u'variant': u'Server',
+            u'tree_build_time' : u'1411608781',
+            u'tags': [],
+            u'repos': [
+                {u'path': u'Server', u'type': u'variant', u'repoid': u'Server'},
+                {u'path': u'HighAvailability', u'type': u'addon', u'repoid': u'HighAvailability'},
+                {u'path': u'LoadBalancer', u'type': u'addon', u'repoid': u'LoadBalancer'},
+                {u'path': u'ResilientStorage', u'type': u'addon', u'repoid': u'ResilientStorage'},
+                {u'path': u'ScalableFileSystem', u'type': u'addon', u'repoid': u'ScalableFileSystem'},
+                {u'path': u'../../../Server/optional/x86_64/os', u'type': u'optional', u'repoid': u'Server-optional'},
+            ],
+            u'images': [
+                {u'path': u'images/pxeboot/vmlinuz', u'type': u'kernel'},
+                {u'path': u'images/pxeboot/initrd.img', u'type': u'initrd'},
+            ],
+            u'arch': u'x86_64',
+            u'arches': [],
+            u'urls': [u'http://localhost:19998/RHEL-6.6-incomplete/Server/x86_64/os/'],
+            u'ks_meta': None,
+            u'kernel_options': None,
+            u'kernel_options_post': None,
+        }
+
         self.i386_rhel6 = {u'osmajor': u'RedHatEnterpriseLinux6',
                           u'name': u'RHEL6.4-20130130.0',
                           u'tree_build_time': u'1285191262.134687',
@@ -1155,6 +1182,15 @@ class DistroImportTest(unittest.TestCase):
         trees = self.dry_run_import_trees(['--arch', 'i386',
             '%sRHEL6-Server/' % self.distro_url])
         self.assertItemsEqual(trees, [self.i386_rhel6])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1140995
+    def test_incomplete_compose(self):
+        # We are importing a compose that is only selectively synced. Only 
+        # x86_64 Server should be imported, and missing add-on repos (SAP and 
+        # SAPHANA) should be skipped.
+        trees = self.dry_run_import_trees(['%sRHEL-6.6-incomplete' % self.distro_url,
+                '--ignore-missing-tree-compose'])
+        self.assertItemsEqual(trees, [self.x86_64_rhel66_server_nosap])
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=907242
     def test_cannot_import_osmajor_existing_alias(self):
