@@ -103,6 +103,33 @@ Be aware that ``/distribution/virt/start`` and ``/distribution/virt/install``
 should never be defined in the guest recipe itself.
 
 
+/distribution/virt/image-install
+================================
+
+This task is an experimental alternative to the regular 
+``/distribution/virt/install`` task for installing guest recipes. Rather than 
+booting the installer inside the guest and running through a complete 
+installation, this task fetches a cloud image and boots that.
+
+The ``CLOUD_IMAGE`` task parameter should be the URL for a suitable cloud 
+image. The image must have the ``cloud-init`` package pre-installed and 
+enabled. This task approximates the effect of the guest kickstart by generating 
+a suitable user-data file for cloud-init.
+
+Note that there are a number of limitations when using this task:
+
+* The distro tree selected by Beaker for the guest recipe is effectively
+  ignored. The distro used in the guest is determined solely by what image is 
+  given.
+
+* Similarly, it is the job submitter's responsibility to use a suitable local
+  mirror for the cloud image. (Fetching the image over an expensive WAN link is 
+  not desirable but Beaker will not prevent it.)
+
+* Not all parts of the guest kickstart are accurately applied, since the
+  installer is skipped. The task extracts ``%packages`` and ``%post`` sections, 
+  and it also handles the ``repo``, ``rootpw``, and ``selinux`` commands.
+
 .. _virt-start-task:
 
 /distribution/virt/start
