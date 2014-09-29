@@ -939,9 +939,10 @@ class System(DeclarativeMappedObject, ActivityMixin):
         if not self.loaned:
             return {}
         return {
-                   "recipient": self.loaned,
-                   "comment": self.loan_comment,
-               }
+            'recipient': self.loaned.user_name, # for compat only
+            'recipient_user': self.loaned,
+            'comment': self.loan_comment,
+        }
 
     def grant_loan(self, recipient, comment, service):
         """Grants a loan to the designated user if permitted"""

@@ -15,7 +15,7 @@ window.User = Backbone.Model.extend({});
 
 window.Loan = Backbone.Model.extend({
     parse: function (data) {
-        data['recipient'] = !_.isEmpty(data['recipient']) ? new User(data['recipient']) : null;
+        data['recipient_user'] = !_.isEmpty(data['recipient_user']) ? new User(data['recipient_user']) : null;
         return data;
     },
 });

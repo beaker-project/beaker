@@ -849,3 +849,28 @@ class TestSystemViewRDF(unittest.TestCase):
         graph = rdflib.graph.Graph()
         graph.parse(location=rdf_url, format='xml')
         self.assert_(len(graph) >= 9)
+
+class SystemStatusHTTPTest(unittest.TestCase):
+    """
+    Directly tests the HTTP interface used by bkr system-status.
+    """
+
+    def test_it(self):
+        with session.begin():
+            system = data_setup.create_system(status=u'Automated')
+            reserved_by = data_setup.create_user(u'dracula')
+            loaned_to = data_setup.create_user(u'wolfman')
+            system.reserve_manually(user=reserved_by, service=u'testdata')
+            system.loaned = loaned_to
+            system.loan_comment = u'For evil purposes'
+        response = requests.get(get_server_base() + 'systems/%s/status' % system.fqdn)
+        response.raise_for_status()
+        json = response.json()
+        self.assertEquals(json['condition'], 'Automated')
+        reservation_info = json['current_reservation']
+        self.assertEquals(reservation_info['user_name'], u'dracula') # Beaker 0.15.3
+        self.assertEquals(reservation_info['user']['user_name'], 'dracula') # Beaker 19
+        loan_info = json['current_loan']
+        self.assertEquals(loan_info['recipient'], u'wolfman') # Beaker 0.15.3
+        self.assertEquals(loan_info['recipient_user']['user_name'], 'wolfman') # Beaker 19
+        self.assertEquals(loan_info['comment'], u'For evil purposes')

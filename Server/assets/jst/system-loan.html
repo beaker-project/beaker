@@ -1,7 +1,7 @@
 <% if (!_.isEmpty(current_loan)) { %>
   <p>
     The system is currently loaned to
-    <a href="mailto:<%- current_loan.get('recipient').get('email_address') %>" title="<%- current_loan.get('recipient').get('display_name') %> &lt;<%- current_loan.get('recipient').get('email_address') %>&gt;"><%- current_loan.get('recipient').get('user_name') %></a>.
+    <a href="mailto:<%- current_loan.get('recipient_user').get('email_address') %>" title="<%- current_loan.get('recipient_user').get('display_name') %> &lt;<%- current_loan.get('recipient_user').get('email_address') %>&gt;"><%- current_loan.get('recipient_user').get('user_name') %></a>.
   </p>
   <% if (current_loan.get('comment')) { %>
   <p class="system-loan-comment"><%- current_loan.get('comment') %></p>

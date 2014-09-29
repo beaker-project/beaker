@@ -83,7 +83,7 @@ class System_Status(BeakerCommand):
             reservation_details = system_status.get('current_reservation')
             msg = ['Condition: %s' % condition]
             if reservation_details:
-                reserved_by = reservation_details.get('user', {}).get('user_name')
+                reserved_by = reservation_details.get('user_name')
                 recipe_id = reservation_details.get('recipe_id')
                 start_time = reservation_details.get('start_time')
                 msg.append('Current reservation:')
@@ -100,7 +100,7 @@ class System_Status(BeakerCommand):
 
             loan_details = system_status.get('current_loan')
             if loan_details:
-                loaned_to = loan_details.get('recipient', {}).get('user_name')
+                loaned_to = loan_details.get('recipient')
                 loan_comment = loan_details.get('comment')
                 msg.append('Current loan:')
                 if loaned_to:
