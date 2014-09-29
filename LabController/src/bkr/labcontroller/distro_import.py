@@ -684,12 +684,15 @@ sources = Workstation/source/SRPMS
                     options.variant = [variant]
                     options.arch = [arch]
                     build = Build(os.path.join(self.parser.url, os_dir))
+                    labels = self.parser.get('compose', 'label', '')
+                    tags = [label.strip() for label in (labels and labels.split() or [])]
                     try:
                         isos_path = self.parser.get('variant-%s.%s' % (variant, arch), 'isos')
                         isos_path = os.path.join(rpath, isos_path)
                     except ConfigParser.NoOptionError:
                         isos_path = None
-                    build.process(urls_variant_arch, options, repos, isos_path)
+                    build.process(urls_variant_arch, options, repos=repos,
+                            tags=tags, isos_path=isos_path)
                     self.distro_trees.append(build.tree)
                 except BX, err:
                     if not options.ignore_missing:
@@ -770,7 +773,7 @@ class TreeInfoMixin(object):
             nfs_isos_url_components[0] = 'nfs+iso'
             return urlparse.urlunparse(nfs_isos_url_components)
 
-    def process(self, urls, options, repos=None, isos_path=None):
+    def process(self, urls, options, repos=None, tags=None, isos_path=None):
         '''
         distro_data = dict(
                 name='RHEL-6-U1',
@@ -817,10 +820,10 @@ class TreeInfoMixin(object):
         self.tree['tree_build_time'] = self.options.buildtime or \
                                        self.parser.get('general','timestamp',
                                                        self.parser.last_modified)
+        common_tags = tags or [] # passed in from .composeinfo
         labels = self.parser.get('general', 'label','')
-        self.tree['tags'] = list(set(self.options.tags).union(
-                                    set(map(string.strip,
-                                    labels and labels.split(',') or []))))
+        self.tree['tags'] = list(set(self.options.tags) | set(common_tags) |
+                set(map(string.strip, labels and labels.split(',') or [])))
         self.tree['osmajor'] = "%s%s" % (family, version.split('.')[0])
         if version.find('.') != -1:
             self.tree['osminor'] = version.split('.')[1]

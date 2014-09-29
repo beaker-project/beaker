@@ -1,12 +1,13 @@
 [compose]
-date = 20140925
-id = RHEL-6.6-20140925.n.0
+date = 20140731
+id = RHEL-6.6-20140731.1
+label = Beta-1.1
 respin = 0
 type = nightly
 
 [product]
 family = Red Hat Enterprise Linux
-name = RHEL-6.6-20140925.n.0
+name = RHEL-6.6-20140731.1
 short = RHEL
 variants = Client,ComputeNode,Server,Workstation
 version = 6.6

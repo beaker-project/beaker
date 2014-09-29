@@ -180,12 +180,12 @@ class DistroImportTest(unittest.TestCase):
                             u'ks_meta': None}
 
         self.x86_64_rhel66_server_nosap = {
-            u'name': u'RHEL-6.6-20140925.n.0',
+            u'name': u'RHEL-6.6-20140731.1',
             u'osmajor': u'RedHatEnterpriseLinux6',
             u'osminor': u'6',
             u'variant': u'Server',
             u'tree_build_time' : u'1411608781',
-            u'tags': [],
+            u'tags': [u'Beta-1.1'],
             u'repos': [
                 {u'path': u'Server', u'type': u'variant', u'repoid': u'Server'},
                 {u'path': u'HighAvailability', u'type': u'addon', u'repoid': u'HighAvailability'},
@@ -1191,6 +1191,14 @@ class DistroImportTest(unittest.TestCase):
         trees = self.dry_run_import_trees(['%sRHEL-6.6-incomplete' % self.distro_url,
                 '--ignore-missing-tree-compose'])
         self.assertItemsEqual(trees, [self.x86_64_rhel66_server_nosap])
+
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1140999
+    def test_tags_from_composeinfo(self):
+        # At least some RHEL6.6 composes have a label in .composeinfo but not 
+        # .treeinfo (whether intentionally or not).
+        trees = self.dry_run_import_trees(['%sRHEL-6.6-incomplete' % self.distro_url,
+                '--ignore-missing-tree-compose'])
+        self.assertEquals(trees[0]['tags'], [u'Beta-1.1'])
 
     #https://bugzilla.redhat.com/show_bug.cgi?id=907242
     def test_cannot_import_osmajor_existing_alias(self):
